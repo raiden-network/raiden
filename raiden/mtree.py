@@ -24,20 +24,20 @@ def merkleroot(lst, proof=[], first=True):
     searching = proof.pop()
     assert searching is None or searching in lst
     out = []
-    while len(lst) > 1:
-        a, b = lst.pop(0), lst.pop(0)
+    for i in range(len(lst) / 2):
+#        a, b = lst.pop(0), lst.pop(0)
+        a, b = lst[i * 2], lst[i * 2 + 1]
         h = xorsha3(a, b)
         if a == searching:
             proof.extend((b, h))
         elif b == searching:
             proof.extend((a, h))
         out.append(h)
-    if lst:
-        h = lst.pop()
+    if len(lst) % 2:
+        h = lst[-1]
         out.append(h)
         if h == searching:
             proof.append(h)
-        assert not lst
     if len(out) > 1:
         return merkleroot(out, proof, False)
     else:
