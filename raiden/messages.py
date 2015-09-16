@@ -240,8 +240,8 @@ class Lock(rlp.Serializable):
 
     @property
     def asstring(self):
-        # note, no rlp encoding
-        return ''.join(self.__class__.exclude('cmdid', 'sender').serialize(self))
+        # return ''.join(self.__class__.exclude(['cmdid', 'sender']).serialize(self))
+        return rlp.encode([self.amount, self.expiration, self.hashlock])  # 3x faster
 
 
 class StateLock(rlp.Serializable):
