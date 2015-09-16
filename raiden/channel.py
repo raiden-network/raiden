@@ -1,5 +1,5 @@
-from contracts import SettlementChannel
-from raiden_service import RaidenService
+from contracts import NettingChannel
+import raiden_service
 from messages import Transfer, LockedTransfer, MediatedTransfer, BaseError, Lock
 from utils import ishash, isaddress, sha3
 from mtree import merkleroot, check_proof
@@ -16,8 +16,8 @@ class InsufficientBalance(BaseError):
 class Channel(object):
 
     def __init__(self, raiden, contract):
-        assert isinstance(raiden, RaidenService)
-        assert isinstance(contract, SettlementChannel)
+        assert isinstance(raiden, raiden_service.RaidenService)
+        assert isinstance(contract, NettingChannel)
         self.raiden = raiden
         self.contract = contract
 
@@ -31,18 +31,18 @@ class Channel(object):
         class Partner(object):
 
             "class mirroring the properties on the other side of the channel"
-            address = [a for a in contract.paricipants if a != self.address][0]
+            address = [a for a in contract.participants if a != self.address][0]
             nonce = 0
             locked = dict()
             transfers = []
             balance = self.contract.participants[address]['deposit']
 
             @property
-            def spendable(me):
-                return me.balance + me.outstanding_amount - self.outstanding_amount
+            def distributable(me):
+                return me.balance - self.outstanding
 
             @property
-            def outstanding_amount(me):
+            def outstanding(me):
                 return sum(t.lock.amount for t in me.locked.values())
 
             @property
@@ -58,11 +58,11 @@ class Channel(object):
         return not self.wasclosed and self.contract.isopen
 
     @property
-    def spendable(self):
-        return self.balance + self.outstanding_amount - self.partner.outstanding_amount
+    def distributable(self):
+        return self.balance - self.partner.outstanding
 
     @property
-    def outstanding_amount(self):
+    def outstanding(self):
         return sum(t.lock.amount for t in self.locked.values())
 
     def register_locked_transfer(self, transfer):
@@ -83,7 +83,7 @@ class Channel(object):
     def locksroot(self):  # fixme cache!
         return self.mk_locksroot([t.lock for t in self.locked.values()])
 
-    def apply_secret(self, secret):
+    def claim_unlocked_funds(self, secret):
         """
         the secret releases a lock
         """
@@ -100,24 +100,25 @@ class Channel(object):
             del self.partner.locked[hashlock]
 
     def receive(self, transfer):
+        assert transfer.asset == self.contract.asset_address
         assert transfer.recipient == self.address
         if transfer.nonce != self.partner.nonce:
             raise InvalidNonce()
 
         # update balance with released lock if secret
         if transfer.secret:
-            self.apply_secret(transfer.secret)
+            self.claim_unlocked_funds(transfer.secret)
 
         # collect funds
         allowance = transfer.balance - self.balance
         assert allowance >= 0
-        if allowance > self.partner.spendable:
+        if allowance > self.partner.distributable:
             raise InsufficientBalance()
 
         # register locked funds
         if isinstance(transfer, (LockedTransfer, MediatedTransfer)):
             assert transfer.lock.amount > 0
-            if allowance + transfer.lock.amount > self.partner.spendable:
+            if allowance + transfer.lock.amount > self.partner.distributable:
                 raise InsufficientBalance()
             self.register_locked_transfer(transfer)
 
@@ -128,22 +129,23 @@ class Channel(object):
         self.partner.nonce += 1
 
     def send(self, transfer):
+        assert transfer.asset == self.contract.asset_address
         assert transfer.recipient == self.partner.address
         assert transfer.nonce == self.nonce
 
         # update balance with released lock if secret
         if transfer.secret:
-            self.apply_secret(transfer.secret)
+            self.claim_unlocked_funds(transfer.secret)
 
         # dedcuct funds
         allowance = transfer.balance - self.partner.balance
         assert allowance >= 0
-        assert allowance <= self.spendable
+        assert allowance <= self.distributable
 
         # register locked funds
         if isinstance(transfer, (LockedTransfer, MediatedTransfer)):
             assert transfer.lock.amount > 0
-            assert allowance + transfer.lock.amount <= self.spendable
+            assert allowance + transfer.lock.amount <= self.distributable
             self.register_locked_transfer(transfer)
 
         # all checks passed
@@ -154,10 +156,10 @@ class Channel(object):
 
     def create_transfer(self, amount, secret=None):
         assert amount >= 0
-        assert self.spendable > amount
+        assert self.distributable > amount
         assert self.isopen
         t = Transfer(nonce=self.nonce,
-                     asset=self.contract.asset,
+                     asset=self.contract.asset_address,
                      balance=self.partner.balance + amount,
                      recipient=self.partner.address,
                      locksroot=self.partner.locksroot,  # not changed
@@ -165,14 +167,14 @@ class Channel(object):
         return t
 
     def create_locked_transfer(self, amount, expiration, hashlock):
-        assert self.spendable > amount
+        assert self.distributable > amount, 'insufficient funds'
         assert self.isopen
         assert expiration > self.contract.chain.block_number
 
         l = Lock(amount, expiration, hashlock)
         updated_locksroot = self.mk_locksroot([l] + [t.lock for t in self.partner.locks.values()])
         t = LockedTransfer(nonce=self.nonce,
-                           asset=self.contract.asset,
+                           asset=self.contract.asset_address,
                            balance=self.partner.balance,  # not changed
                            recipient=self.partner.address,
                            locksroot=updated_locksroot,

@@ -229,7 +229,6 @@ class Lock(rlp.Serializable):
             ('amount', t_int),
             ('expiration', t_int),
             ('hashlock', t_hash),
-            # ('scriptlock', t_binary),  # Future: evm bytecode which must return true
         ]
 
     def __init__(self,  amount, expiration, hashlock):
@@ -242,7 +241,35 @@ class Lock(rlp.Serializable):
     @property
     def asstring(self):
         # note, no rlp encoding
-        return ''.join(Lock.serialize(self))
+        return ''.join(self.__class__.exclude('cmdid', 'sender').serialize(self))
+
+
+class StateLock(rlp.Serializable):
+
+    """
+    NotImplemented
+
+    A Lock which depends on a certain state on the associated chain.
+
+    Therefore it comes with `data` which when passed to the `ChannelsContract`
+    will call a contract at address data[:20] with data[20:].
+    """
+    fields =  \
+        [
+            ('amount', t_int),
+            ('expiration', t_int),
+            ('data', t_hash),
+        ]
+
+    def __init__(self,  amount, expiration, data):
+        assert amount > 0
+        self.amount = amount
+        self.expiration = expiration
+        self.data = data
+
+    @property
+    def hashlock(self):
+        return sha3(''.join(self.__class__.exclude('cmdid', 'sender').serialize(self)))
 
 
 class LockedTransfer(SignedMessage):

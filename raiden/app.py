@@ -35,21 +35,29 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3):
 
     # create assets
     for i in range(num_assets):
-        blockchain.add_asset(asset_address=sha3('asset:%d' % i))
+        blockchain.add_asset(asset_address=sha3('asset:%d' % i)[:20])
+    assert len(blockchain.asset_addresses) == num_assets
 
-    # create channels
+    # create channel contracts
     for asset_address in blockchain.asset_addresses:
-        asset_channels = blockchain.get_channels(asset_address)
+        asset_channel_contracts = blockchain.get_channel_contracts(asset_address)
         for app in apps:
             capps = list(apps)  # copy
-            app_channels = asset_channels.channels_by_address(app.raiden.address)
-            while len(app_channels) < channels_per_node and capps:
+            netting_channels = asset_channel_contracts.channels_by_address(app.raiden.address)
+            while len(netting_channels) < channels_per_node and capps:
                 a = random.choice(capps)
                 capps.remove(a)
-                a_channels = asset_channels.channels_by_address(a.raiden.address)
-                if not set(app_channels).intersection(set(a_channels)) \
+                a_channels = asset_channel_contracts.channels_by_address(a.raiden.address)
+                if not set(netting_channels).intersection(set(a_channels)) \
                         and len(a_channels) < channels_per_node:
-                    c = asset_channels.new(a.raiden.address, app.raiden.address)
-                    app_channels.append(c)
+                    c = asset_channel_contracts.new(a.raiden.address, app.raiden.address)
+                    netting_channels.append(c)
+
+                    # add deposit of asset
+                    for address in (app.raiden.address, a.raiden.address):
+                        c.deposit(address, amount=10**6)
+
+    for app in apps:
+        app.raiden.setup_assets()
 
     return apps

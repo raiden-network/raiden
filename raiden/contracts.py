@@ -25,17 +25,17 @@ class BlockChain(object):
     def asset_addresses(self):
         return self.channels_by_asset.keys()
 
-    def get_channels(self, asset_address):
+    def get_channel_contracts(self, asset_address):
         return self.channels_by_asset[asset_address]
 
 
-class SettlementChannel(object):
+class NettingChannel(object):
 
     locked_time = 10  # num blocks
 
-    def __init__(self, chain, asset, address_A, address_B):
+    def __init__(self, chain, asset_address, address_A, address_B):
         self.chain = chain
-        self.asset = asset
+        self.asset_address = asset_address
         self.participants = {address_A: dict(deposit=0, last_sent_transfer=None),
                              address_B: dict(deposit=0, last_sent_transfer=None)}
         self.hashlocks = dict()
@@ -43,11 +43,15 @@ class SettlementChannel(object):
         self.closed = False  # block number
         self.settled = False
 
-    def deposit(self, address, deposit):
+    def deposit(self, address, amount):
         assert address in self.participants
-        self.participants[address]['deposit'] += deposit
+        self.participants[address]['deposit'] += amount
         if self.isopen and not self.opened:
             self.opened = self.chain.block_number
+
+    def partner(self, address):
+        assert address in self.participants
+        return [p for p in self.participants if p != address][0]
 
     @property
     def isopen(self):
@@ -127,6 +131,12 @@ class SettlementChannels(object):
         return self.channels[k]
 
     def new(self, a, b):
-        c = SettlementChannel(self.chain, self.asset_address, a, b)
+        c = NettingChannel(self.chain, self.asset_address, a, b)
         self.add(c)
         return c
+
+    def check_statelock(self, data, gaslimit):
+        "not yet implemented, see `messages.StateLock`"
+        contract_address = data[:20]
+        calldata = data[20:]
+        # call contract and return success

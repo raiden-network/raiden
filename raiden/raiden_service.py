@@ -1,6 +1,8 @@
 import rlp
 import messages
-from utils import privtoaddr
+from utils import privtoaddr, isaddress, pex
+from contracts import NettingChannel
+import channel
 
 
 class RaidenProtocol(object):
@@ -21,6 +23,40 @@ class RaidenProtocol(object):
         self.raiden_service.on_message(msg)
 
 
+class AssetManager(object):
+
+    """
+    class which handles one asset
+    """
+
+    def __init__(self, raiden, asset_address):
+        assert isinstance(raiden, RaidenService)
+        assert isaddress(asset_address)
+        self.raiden = raiden
+        self.asset_address = asset_address
+        self.channels = dict()  # receiver : Channel
+
+        # create channels for contracts
+        asset_channel_contracts = raiden.chain.get_channel_contracts(asset_address)
+        for netting_contract in asset_channel_contracts.channels_by_address(raiden.address):
+            self.add_channel(netting_contract)
+
+    def add_channel(self, contract):
+        assert isinstance(contract, NettingChannel)
+        partner = contract.partner(self.raiden.address)
+        self.channels[partner] = channel.Channel(self.raiden, contract)
+
+    @classmethod
+    def get_assets_for_address(cls, chain, address):
+        "get all assets for which there is a netting channel"
+        asset_addresses = []
+        for asset_address in chain.asset_addresses:
+            asset_channel_contracts = chain.get_channel_contracts(asset_address)
+            if asset_channel_contracts.channels_by_address(address):
+                asset_addresses.append(asset_address)
+        return asset_addresses
+
+
 class RaidenService(object):
 
     def __init__(self, chain, privkey, network_, discovery):
@@ -28,6 +64,12 @@ class RaidenService(object):
         self.privkey = privkey
         self.address = privtoaddr(privkey)
         self.protocol = RaidenProtocol(network_, discovery, self)
+        self.assets = dict()
+
+    def setup_assets(self):
+        # create asset managers
+        for asset_address in AssetManager.get_assets_for_address(self.chain, self.address):
+            self.assets[asset_address] = AssetManager(self, asset_address)
 
     def on_message(self, msg):
         method = 'on_%s' % msg.__class__.__name__.lower()
