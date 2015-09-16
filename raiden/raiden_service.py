@@ -7,14 +7,14 @@ import channel
 
 class RaidenProtocol(object):
 
-    def __init__(self, network_, discovery, raiden_service):
-        self.network = network_
+    def __init__(self, transport, discovery, raiden_service):
+        self.transport = transport
         self.discovery = discovery
         self.raiden_service = raiden_service
 
     def send(self, receiver_address, msg):
         host_port = self.discovery.get(receiver_address)
-        self.network.send(self.raiden_service, host_port, rlp.encode(msg))
+        self.transport.send(self.raiden_service, host_port, rlp.encode(msg))
 
     def receive(self, msg):
         # note, we ignore the sending endpoint, as this can not be known w/ UDP
@@ -59,11 +59,11 @@ class AssetManager(object):
 
 class RaidenService(object):
 
-    def __init__(self, chain, privkey, network_, discovery):
+    def __init__(self, chain, privkey, transport, discovery):
         self.chain = chain
         self.privkey = privkey
         self.address = privtoaddr(privkey)
-        self.protocol = RaidenProtocol(network_, discovery, self)
+        self.protocol = RaidenProtocol(transport, discovery, self)
         self.assets = dict()
 
     def setup_assets(self):

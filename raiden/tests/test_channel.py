@@ -1,11 +1,13 @@
+from raiden.mtree import merkleroot, check_proof
 from raiden.messages import Ping, Ack, deserialize
-from raiden.app import create_network, transport
-from raiden.channel import Channel
-from raiden.utils import activate_ultratb, pex, lpex
-activate_ultratb()
+from raiden.app import create_network
+from raiden.channel import Channel, LockedTransfers
+from raiden.utils import activate_ultratb, pex, lpex, sha3
+import time
+# activate_ultratb()
 
 
-def setup_messages_cb():
+def setup_messages_cb(transport):
     messages = []
 
     def cb(sender_raiden, host_port, msg):
@@ -15,10 +17,10 @@ def setup_messages_cb():
 
 
 def test_setup():
-    messages = setup_messages_cb()
+
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps
-
+    messages = setup_messages_cb(a0.transport)
     s = a0.raiden.chain.channels_by_asset[a0.raiden.chain.asset_addresses[0]]
     assert s.channels
     assert s.channels_by_address(a0.raiden.address)

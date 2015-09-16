@@ -1,8 +1,8 @@
 from raiden.messages import Ping, Ack, deserialize
-from raiden.app import create_network, transport
+from raiden.app import create_network
 
 
-def setup_messages_cb():
+def setup_messages_cb(transport):
     messages = []
 
     def cb(sender_raiden, host_port, msg):
@@ -12,9 +12,9 @@ def setup_messages_cb():
 
 
 def test_ping():
-    messages = setup_messages_cb()
     apps = create_network(num_nodes=2, num_assets=0, channels_per_node=0)
     a0, a1 = apps
+    messages = setup_messages_cb(a0.transport)
     p = Ping(nonce=0).sign(a0.raiden.address)
     a0.raiden.protocol.send(a1.raiden.address, p)
     assert len(messages) == 2  # Ping, Ack
