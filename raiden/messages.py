@@ -1,5 +1,5 @@
 # Copyright (c) 2015 Heiko Hees
-from utils import big_endian_to_int, sha3, isaddress, ishash
+from utils import big_endian_to_int, sha3, isaddress, ishash, int_to_big_endian
 import rlp
 from rlp.sedes import Binary
 from rlp.utils import encode_hex
@@ -203,16 +203,46 @@ class Transfer(SignedMessage):
             ('asset', t_address),
             ('balance', t_int),
             ('recipient', t_address),
-            ('locksroot', t_hash),
+            ('locksroot', t_hash_optional),
             ('secret', t_hash_optional),
         ]
 
-    def __init__(self, nonce, asset, balance, recipient, locksroot, hashlock='', secret=''):
+    def __init__(self, nonce, asset, balance, recipient, locksroot, secret=None):
         self.nonce = nonce
         self.asset = asset
         self.balance = balance
         self.recipient = recipient
-        self.secret = secret  # secret for settling a locked amount: hashlock = sha3(secret)
+        self.locksroot = locksroot
+        self.secret = secret or ''  # secret for settling a locked amount: hashlock = sha3(secret)
+
+
+class Lock(rlp.Serializable):
+
+    """
+    Data describing a locked `amount`.
+
+    `expiration` is the highest block_number until which the transfer can be settled
+    `hashlock` is the hashed secret, necessary to release the funds
+    """
+    fields =  \
+        [
+            ('amount', t_int),
+            ('expiration', t_int),
+            ('hashlock', t_hash),
+            # ('scriptlock', t_binary),  # Future: evm bytecode which must return true
+        ]
+
+    def __init__(self,  amount, expiration, hashlock):
+        assert amount > 0
+        assert ishash(hashlock)
+        self.amount = amount
+        self.expiration = expiration
+        self.hashlock = hashlock
+
+    @property
+    def asstring(self):
+        # note, no rlp encoding
+        return ''.join(Lock.serialize(self))
 
 
 class LockedTransfer(SignedMessage):
@@ -234,10 +264,6 @@ class LockedTransfer(SignedMessage):
         Carol can request settlement on chain by providing:
             any signed [nonce, asset, balance, recipient, locksroot, ...]
             along a merkle proof from locksroot to the not yet netted formerly locked amount
-
-    Note:
-
-
     """
     cmdid = 6
     fields = SignedMessage.fields + \
@@ -247,20 +273,16 @@ class LockedTransfer(SignedMessage):
             ('balance', t_int),
             ('recipient', t_address),
             ('locksroot', t_hash),
-            ('locked_amount', t_int),
-            ('lock_expiration', t_int),
-            ('hashlock', t_hash),
-            # ('scriptlock', t_binary),  # Future: evm bytecode which must return true
+            ('lock', Lock),
         ]
 
-    def __init__(self, nonce, asset, balance, recipient, locksroot,
-                 locked_amount, lock_expiration, hashlock):
+    def __init__(self, nonce, asset, balance, recipient, locksroot, lock):
         self.nonce = nonce
         self.asset = asset
         self.balance = balance
         self.recipient = recipient
-        self.locked_amount = locked_amount
-        self.hashlock = hashlock
+        self.locksroot = locksroot
+        self.lock = lock
 
 
 class MediatedTransfer(LockedTransfer):
@@ -294,9 +316,9 @@ class MediatedTransfer(LockedTransfer):
         ]
 
     def __init__(self, nonce, asset, balance, recipient, locksroot,
-                 locked_amount, hashlock, target, fee=0, initiator_signature=''):
+                 lock, target, fee=0, initiator_signature=''):
         super(MediatedTransfer, self).__init(self, nonce, asset, balance, recipient, locksroot,
-                                             locked_amount, hashlock)
+                                             lock)
         self.target = target
         self.fee = fee
         self.initiator_signature = initiator_signature
