@@ -1,5 +1,5 @@
-from messages import Ping, Ack, deserialize
-from app import create_network, transport
+from raiden.messages import Ping, Ack, deserialize
+from raiden.app import create_network, transport
 
 
 def setup_messages_cb():

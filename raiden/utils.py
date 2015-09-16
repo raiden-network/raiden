@@ -1,4 +1,4 @@
-from ethereum.utils import big_endian_to_int, sha3
+from ethereum.utils import big_endian_to_int, sha3, int_to_big_endian, privtoaddr
 #from ethereum.keys import privtoaddr
 from bitcoin import encode_pubkey, N, P
 

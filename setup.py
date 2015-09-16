@@ -36,7 +36,7 @@ install_requires_replacements = {
 
 install_requires = [install_requires_replacements.get(r, r) for r in install_requires]
 
-test_requirements = ['ethereum-serpent>=1.8.1']
+test_requirements = []
 
 version = '0.0.1'  # preserve format, this is read from __init__.py
 
