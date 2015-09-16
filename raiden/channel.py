@@ -9,8 +9,71 @@ class InvalidNonce(BaseError):
     pass
 
 
+class InvalidLockTime(BaseError):
+    pass
+
+
 class InsufficientBalance(BaseError):
     pass
+
+
+class LockedTransfers(object):
+
+    def __init__(self):
+        self.locked = dict()
+        self._cached_lock_hashes = []
+        self._cached_root = None
+
+    def add(self, transfer):
+        assert transfer.lock.hashlock not in self.locked
+        self.locked[transfer.lock.hashlock] = transfer
+        self._cached_lock_hashes.append(sha3(transfer.lock.asstring))
+        self._cached_root = None
+
+    def get(self, hashlock):
+        return self.locked[hashlock]
+
+    def remove(self, hashlock):
+        self._cached_lock_hashes.remove(sha3(self.get(hashlock).lock.asstring))
+        self._cached_root = None
+        del self.locked[hashlock]
+
+    def __contains__(self, hashlock):
+        return hashlock in self.locked
+
+    def __len__(self):
+        return len(self.locked)
+
+    @property
+    def outstanding(self):
+        return sum([t.lock.amount for t in self.locked.values()])
+
+    @property
+    def root(self):
+        if not self._cached_root:
+            self._cached_root = merkleroot(self._cached_lock_hashes)
+        return self._cached_root
+
+    def root_with(self, lock=None, exclude=None):
+        assert not lock or isinstance(lock, Lock)
+        assert not exclude or isinstance(exclude, Lock)
+        lock_hash = exclude_hash = None
+        # temporarily add / remove
+        if lock:
+            lock_hash = sha3(lock.asstring)
+            self._cached_lock_hashes.append(lock_hash)
+        if exclude:
+            exclude_hash = sha3(exclude.asstring)
+            self._cached_lock_hashes.remove(exclude_hash)
+        # calc
+        r = merkleroot(self._cached_lock_hashes)
+        # restore
+        if lock_hash:
+            assert lock_hash in self._cached_lock_hashes
+            self._cached_lock_hashes.remove(lock_hash)
+        if exclude:
+            self._cached_lock_hashes.append(exclude_hash)
+        return r
 
 
 class Channel(object):
@@ -24,33 +87,27 @@ class Channel(object):
         # setup
         self.address = raiden.address
         self.nonce = 0  # sending nonce
-        self.locked = dict()  # locked received
+        self.locked = LockedTransfers()  # locked received
         self.transfers = []  # transfers done
         self.balance = self.contract.participants[self.address]['deposit']
+
+        # config
+        self.min_locktime = 10  # FIXME
 
         class Partner(object):
 
             "class mirroring the properties on the other side of the channel"
             address = [a for a in contract.participants if a != self.address][0]
             nonce = 0
-            locked = dict()
+            locked = LockedTransfers()
             transfers = []
             balance = self.contract.participants[address]['deposit']
 
             @property
             def distributable(me):
-                return me.balance - self.outstanding
-
-            @property
-            def outstanding(me):
-                return sum(t.lock.amount for t in me.locked.values())
-
-            @property
-            def locksroot(me):
-                return self.mk_locksroot([t.lock for t in me.locked.values()])
+                return me.balance - self.locked.outstanding
 
         self.partner = Partner()
-
         self.wasclosed = False
 
     @property
@@ -59,45 +116,30 @@ class Channel(object):
 
     @property
     def distributable(self):
-        return self.balance - self.partner.outstanding
-
-    @property
-    def outstanding(self):
-        return sum(t.lock.amount for t in self.locked.values())
+        return self.balance - self.partner.locked.outstanding
 
     def register_locked_transfer(self, transfer):
         if transfer.recipient == self.address:
-            assert transfer.lock.hashlock not in self.locked  # mhmm
-            self.locked[transfer.lock.hashlock] = transfer
+            self.locked.add(transfer)
         else:
             assert transfer.recipient == self.partner.address
-            assert transfer.lock.hashlock not in self.partner.locke  # mhmm
-            self.partner.locked[transfer.lock.hashlock] = transfer
+            self.partner.locked.add(transfer)
 
-    @classmethod
-    def mk_locksroot(cls, locks):
-        "fingerprint of the outstanding amount"
-        return merkleroot([sha3(lock.asstring) for lock in locks])
-
-    @property
-    def locksroot(self):  # fixme cache!
-        return self.mk_locksroot([t.lock for t in self.locked.values()])
-
-    def claim_unlocked_funds(self, secret):
+    def claim_locked(self, secret):
         """
         the secret releases a lock
         """
         hashlock = sha3(secret)
         if hashlock in self.locked:
-            amount = self.locked[hashlock].lock.amount
+            amount = self.locked.get(hashlock).lock.amount
             self.balance += amount
             self.partner.balance += amount
-            del self.locked[hashlock]
+            self.locked.remove(hashlock)
         if hashlock in self.partner.locked:
-            amount = self.locked[hashlock].lock.amount
+            amount = self.partner.locked.get(hashlock).lock.amount
             self.balance -= amount
             self.partner.balance += amount
-            del self.partner.locked[hashlock]
+            self.partner.locked.remove(hashlock)
 
     def receive(self, transfer):
         assert transfer.asset == self.contract.asset_address
@@ -106,8 +148,8 @@ class Channel(object):
             raise InvalidNonce()
 
         # update balance with released lock if secret
-        if transfer.secret:
-            self.claim_unlocked_funds(transfer.secret)
+        if isinstance(transfer, Transfer) and transfer.secret:
+            self.claim_locked(transfer.secret)
 
         # collect funds
         allowance = transfer.balance - self.balance
@@ -120,6 +162,9 @@ class Channel(object):
             assert transfer.lock.amount > 0
             if allowance + transfer.lock.amount > self.partner.distributable:
                 raise InsufficientBalance()
+            if transfer.lock.expiration - self.min_locktime < self.raiden.chain.block_number:
+                raise InvalidLockTime()
+
             self.register_locked_transfer(transfer)
 
         # all checks passed
@@ -134,8 +179,8 @@ class Channel(object):
         assert transfer.nonce == self.nonce
 
         # update balance with released lock if secret
-        if transfer.secret:
-            self.claim_unlocked_funds(transfer.secret)
+        if isinstance(transfer, Transfer) and transfer.secret:
+            self.claim_locked(transfer.secret)
 
         # dedcuct funds
         allowance = transfer.balance - self.partner.balance
@@ -146,6 +191,7 @@ class Channel(object):
         if isinstance(transfer, (LockedTransfer, MediatedTransfer)):
             assert transfer.lock.amount > 0
             assert allowance + transfer.lock.amount <= self.distributable
+            assert transfer.lock.expiration - self.min_locktime >= self.raiden.chain.block_number
             self.register_locked_transfer(transfer)
 
         # all checks passed
@@ -162,7 +208,7 @@ class Channel(object):
                      asset=self.contract.asset_address,
                      balance=self.partner.balance + amount,
                      recipient=self.partner.address,
-                     locksroot=self.partner.locksroot,  # not changed
+                     locksroot=self.partner.locked.root,  # not changed
                      secret=secret)
         return t
 
@@ -172,7 +218,7 @@ class Channel(object):
         assert expiration > self.contract.chain.block_number
 
         l = Lock(amount, expiration, hashlock)
-        updated_locksroot = self.mk_locksroot([l] + [t.lock for t in self.partner.locks.values()])
+        updated_locksroot = self.partner.locked.root_with(l)
         t = LockedTransfer(nonce=self.nonce,
                            asset=self.contract.asset_address,
                            balance=self.partner.balance,  # not changed
