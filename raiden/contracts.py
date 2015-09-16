@@ -2,6 +2,12 @@ from ethereum.utils import sha3
 from utils import isaddress
 
 
+"""
+Note, these are Mocks.
+We assume, that they represent up to date information.
+"""
+
+
 class BlockChain(object):
 
     def __init__(self):
@@ -25,7 +31,7 @@ class BlockChain(object):
 
 class SettlementChannel(object):
 
-    locked_blocks = 10
+    locked_time = 10  # num blocks
 
     def __init__(self, chain, asset, address_A, address_B):
         self.chain = chain
@@ -33,12 +39,15 @@ class SettlementChannel(object):
         self.participants = {address_A: dict(deposit=0, last_sent_transfer=None),
                              address_B: dict(deposit=0, last_sent_transfer=None)}
         self.hashlocks = dict()
-        self.closed = False
+        self.opened = False  # block number
+        self.closed = False  # block number
         self.settled = False
 
     def deposit(self, address, deposit):
         assert address in self.participants
         self.participants[address]['deposit'] += deposit
+        if self.isopen and not self.opened:
+            self.opened = self.chain.block_number
 
     @property
     def isopen(self):
@@ -76,7 +85,7 @@ class SettlementChannel(object):
 
     def settle(self):
         assert not self.settled
-        assert self.closed and self.closed + self.locked_blocks <= self.chain.block_number
+        assert self.closed and self.closed + self.locked_time <= self.chain.block_number
 
         for address, d in self.participants.items():
             other = [o for o in self.participants.values() if o != d][0]
@@ -90,6 +99,8 @@ class SettlementChannel(object):
             sum(d['deposit'] for d in self.participants.values())
 
         # call asset contracts and add assets
+
+        self.settled = self.chain.block_number
 
 
 class SettlementChannels(object):
