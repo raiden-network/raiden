@@ -1,0 +1,3 @@
+https://github.com/HydraChain/hydrachain/tarball/develop
+ecdsa-recover
+pytest
