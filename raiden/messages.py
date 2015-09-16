@@ -284,6 +284,13 @@ class LockedTransfer(SignedMessage):
         self.locksroot = locksroot
         self.lock = lock
 
+    def to_mediated_transfer(self, target, fee=0, initiator_signature=''):
+        assert not self.sender  # must not yet be signed
+        self.__class__ = MediatedTransfer
+        self.target = target
+        self.fee = fee
+        self.initiator_signature = initiator_signature
+
 
 class MediatedTransfer(LockedTransfer):
 
