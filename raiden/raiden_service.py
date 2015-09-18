@@ -1,7 +1,7 @@
 import rlp
 import messages
 from utils import privtoaddr, isaddress, pex
-from contracts import NettingChannel
+from contracts import NettingChannelContract, ChannelManagerContract
 import channel
 
 
@@ -37,12 +37,17 @@ class AssetManager(object):
         self.channels = dict()  # receiver : Channel
 
         # create channels for contracts
-        asset_channel_contracts = raiden.chain.get_channel_contracts(asset_address)
-        for netting_contract in asset_channel_contracts.channels_by_address(raiden.address):
+        channelmanager = raiden.chain.channelmanager_by_asset(asset_address)
+        assert isinstance(channelmanager, ChannelManagerContract)
+        for netting_contract in channelmanager.nettingcontracts_by_address(raiden.address):
             self.add_channel(netting_contract)
 
+        # create network graph for contract
+        channelmanager = raiden.chain.channelmanager_by_asset(asset_address)
+        self.channel_graph = ChannelGraph()
+
     def add_channel(self, contract):
-        assert isinstance(contract, NettingChannel)
+        assert isinstance(contract, NettingChannelContract)
         partner = contract.partner(self.raiden.address)
         self.channels[partner] = channel.Channel(self.raiden, contract)
 
@@ -51,8 +56,9 @@ class AssetManager(object):
         "get all assets for which there is a netting channel"
         asset_addresses = []
         for asset_address in chain.asset_addresses:
-            asset_channel_contracts = chain.get_channel_contracts(asset_address)
-            if asset_channel_contracts.channels_by_address(address):
+            channelmanager = chain.channelmanager_by_asset(asset_address)
+            assert isinstance(channelmanager, ChannelManagerContract)
+            if channelmanager.nettingcontracts_by_address(address):
                 asset_addresses.append(asset_address)
         return asset_addresses
 

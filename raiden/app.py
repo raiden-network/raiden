@@ -1,6 +1,6 @@
 from raiden_service import RaidenService
 from transport import Transport, Discovery
-from contracts import BlockChain
+from contracts import BlockChain, ChannelManagerContract, NettingChannelContract
 from utils import sha3
 import copy
 
@@ -44,18 +44,21 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3):
 
     # create channel contracts
     for asset_address in chain.asset_addresses:
-        asset_channel_contracts = chain.get_channel_contracts(asset_address)
+        channelmanager = chain.channelmanager_by_asset(asset_address)
+        assert isinstance(channelmanager, ChannelManagerContract)
         for app in apps:
             capps = list(apps)  # copy
-            netting_channels = asset_channel_contracts.channels_by_address(app.raiden.address)
-            while len(netting_channels) < channels_per_node and capps:
+            netting_contracts = channelmanager.nettingcontracts_by_address(app.raiden.address)
+            while len(netting_contracts) < channels_per_node and capps:
                 a = random.choice(capps)
                 capps.remove(a)
-                a_channels = asset_channel_contracts.channels_by_address(a.raiden.address)
-                if not set(netting_channels).intersection(set(a_channels)) \
-                        and len(a_channels) < channels_per_node:
-                    c = asset_channel_contracts.new(a.raiden.address, app.raiden.address)
-                    netting_channels.append(c)
+                a_nettting_contracts = channelmanager.nettingcontracts_by_address(a.raiden.address)
+                assert isinstance(a_nettting_contracts, NettingChannelContract)
+                if not set(netting_contracts).intersection(set(a_nettting_contracts)) \
+                        and len(a_nettting_contracts) < channels_per_node:
+                    c = channelmanager.new(a.raiden.address, app.raiden.address)
+                    assert isinstance(c, NettingChannelContract)
+                    netting_contracts.append(c)
 
                     # add deposit of asset
                     for address in (app.raiden.address, a.raiden.address):

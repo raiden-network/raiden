@@ -1,4 +1,4 @@
-from contracts import NettingChannel
+from contracts import NettingChannelContract
 import raiden_service
 from messages import Transfer, LockedTransfer, MediatedTransfer, BaseError, Lock
 from utils import ishash, isaddress, sha3
@@ -80,7 +80,7 @@ class Channel(object):
 
     def __init__(self, raiden, contract):
         assert isinstance(raiden, raiden_service.RaidenService)
-        assert isinstance(contract, NettingChannel)
+        assert isinstance(contract, NettingChannelContract)
         self.raiden = raiden
         self.contract = contract
 

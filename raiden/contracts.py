@@ -12,24 +12,25 @@ class BlockChain(object):
 
     def __init__(self):
         self.block_number = 0
-        self.channels_by_asset = dict()
+        self.channelmanagercontracts = dict()
 
     def next_block(self):
         self.block_number += 1
 
     def add_asset(self, asset_address):
         assert isaddress(asset_address)
-        self.channels_by_asset[asset_address] = SettlementChannels(self, asset_address)
+        assert asset_address not in self.channelmanagercontracts
+        self.channelmanagercontracts[asset_address] = ChannelManagerContract(self, asset_address)
 
     @property
     def asset_addresses(self):
-        return self.channels_by_asset.keys()
+        return self.channelmanagercontracts.keys()
 
-    def get_channel_contracts(self, asset_address):
-        return self.channels_by_asset[asset_address]
+    def channelmanager_by_asset(self, asset_address):
+        return self.channelmanagercontracts[asset_address]
 
 
-class NettingChannel(object):
+class NettingChannelContract(object):
 
     locked_time = 10  # num blocks
 
@@ -107,31 +108,32 @@ class NettingChannel(object):
         self.settled = self.chain.block_number
 
 
-class SettlementChannels(object):
+class ChannelManagerContract(object):
 
     def __init__(self, chain, asset_address):
         self.chain = chain
         assert isaddress(asset_address)
         self.asset_address = asset_address
-        self.channels = dict()
+        self.nettingcontracts = dict()  # address_A + addressB : NettingChannelContract
 
-    def channels_by_address(self, address):
-        return [c for c in self.channels.values() if address in c.participants]
+    def nettingcontracts_by_address(self, address):
+        return [c for c in self.nettingcontracts.values() if address in c.participants]
 
     def _key(self, a, b):
-        return ''.join(sorted((a, b)))
+        return ''.join(sorted((a, b)))  # fixme replace by sha3
 
     def add(self, channel):
+        assert isinstance(channel, NettingChannelContract)
         k = self._key(*channel.participants.keys())
-        assert k not in self.channels
-        self.channels[k] = channel
+        assert k not in self.nettingcontracts
+        self.nettingcontracts[k] = channel
 
     def get(self, a, b):
         k = self._key(a, b)
-        return self.channels[k]
+        return self.nettingcontracts[k]
 
     def new(self, a, b):
-        c = NettingChannel(self.chain, self.asset_address, a, b)
+        c = NettingChannelContract(self.chain, self.asset_address, a, b)
         self.add(c)
         return c
 
