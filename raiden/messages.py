@@ -14,7 +14,7 @@ t_hash_optional = Binary.fixed_length(32, allow_empty=True)
 
 
 class RLPHashable(rlp.Serializable):
-    _rlp_data = None  # deserialized message should not be changed
+    _rlp_data = None  # FIXME, use nrew rlp feature!
 
     @property
     def hash(self):
@@ -231,6 +231,8 @@ class Lock(rlp.Serializable):
             ('hashlock', t_hash),
         ]
 
+    _cached_asstring = None
+
     def __init__(self,  amount, expiration, hashlock):
         assert amount > 0
         assert ishash(hashlock)
@@ -240,8 +242,10 @@ class Lock(rlp.Serializable):
 
     @property
     def asstring(self):
-        # return ''.join(self.__class__.exclude(['cmdid', 'sender']).serialize(self))
-        return rlp.encode([self.amount, self.expiration, self.hashlock])  # 3x faster
+        if not self._cached_asstring:
+            # return ''.join(self.__class__.exclude(['cmdid', 'sender']).serialize(self)) # slow
+            self._cached_asstring = rlp.encode([self.amount, self.expiration, self.hashlock])
+        return self._cached_asstring
 
 
 class StateLock(rlp.Serializable):
@@ -311,12 +315,15 @@ class LockedTransfer(SignedMessage):
         self.locksroot = locksroot
         self.lock = lock
 
-    def to_mediated_transfer(self, target, fee=0, initiator_signature=''):
+    def to_mediatedtransfer(self, target, fee=0, initiator_signature=''):
         assert not self.sender  # must not yet be signed
         self.__class__ = MediatedTransfer
         self.target = target
         self.fee = fee
         self.initiator_signature = initiator_signature
+
+    def to_canceltransfer(self):
+        self.__class__ = CancelTransfer
 
 
 class MediatedTransfer(LockedTransfer):
@@ -358,6 +365,25 @@ class MediatedTransfer(LockedTransfer):
         self.initiator_signature = initiator_signature
 
 
+class CancelTransfer(LockedTransfer):
+
+    """
+    gracefully cancels a transfer by reversing it
+    indicates that no route could be found
+    """
+    cmdid = 8
+
+
+class TransferTimeout(SignedMessage):
+    cmdid = 9
+
+    fields = SignedMessage.fields + [('echo', t_hash), ('hashlock', t_hash)]
+
+    def __init__(self, echo, hashlock):
+        self.echo = echo
+        self.hashlock = hashlock
+
+
 class TransferRequest(SignedMessage):
 
     """
@@ -366,18 +392,20 @@ class TransferRequest(SignedMessage):
     If the recipient agrees, it replies with an `Ack` message and
     initiates a (Mediated)Transfer.
     """
-    cmdid = 8
+    cmdid = 10
 
     fields = SignedMessage.fields + \
         [
             ('asset', t_address),
             ('amount', t_int),
+            ('haslock', t_hash),
             ('reference', t_hash_optional),
         ]
 
-    def __init__(self, asset, amount, reference=''):
+    def __init__(self, asset, amount, hashlock, reference=''):
         self.asset = asset
         self.amount = amount
+        self.hashlock = hashlock
         self.reference = reference
 
 
@@ -414,7 +442,7 @@ class ExchangeRequest(SignedMessage):
 
     Case `ask_amount & bid_amount`: Limit Order
     """
-    cmdid = 9
+    cmdid = 11
 
     fields = SignedMessage.fields + \
         [
