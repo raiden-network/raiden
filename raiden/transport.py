@@ -21,7 +21,7 @@ class Transport(object):
 class Discovery(object):
 
     """
-    Mock mapping nodeid: host, port
+    Mock mapping address: host, port
     """
 
     def __init__(self):
