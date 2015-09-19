@@ -134,11 +134,12 @@ class Channel(object):
             assert transfer.recipient == self.partner.address
             self.partner.locked.add(transfer)
 
-    def claim_locked(self, secret):
+    def claim_locked(self, secret, hashlock=None):
         """
         the secret releases a lock
+        hashlock can be given to improve speed
         """
-        hashlock = sha3(secret)
+        hashlock = hashlock or sha3(secret)
         if hashlock in self.locked:
             amount = self.locked.get(hashlock).lock.amount
             self.balance += amount
@@ -154,33 +155,33 @@ class Channel(object):
         assert transfer.asset == self.contract.asset_address
         assert transfer.recipient == self.address
         if transfer.nonce != self.partner.nonce:
-            raise InvalidNonce()
+            raise InvalidNonce(transfer)
 
         # update balance with released lock if secret
         if isinstance(transfer, Transfer) and transfer.secret:
             hashlock = sha3(transfer.secret)
             if hashlock not in self.locked:
-                raise InvalidSecret()
+                raise InvalidSecret(transfer)
             t = self.locked.get(hashlock)
             if self.locked.root_with(None, exclude=t.lock) != transfer.locksroot:
-                raise InvalidLocksRoot()
+                raise InvalidLocksRoot(transfer)
             self.claim_locked(transfer.secret)
 
         # collect funds
         allowance = transfer.balance - self.balance
         assert allowance >= 0
         if allowance > self.partner.distributable:
-            raise InsufficientBalance()
+            raise InsufficientBalance(transfer)
 
         # register locked funds
         if isinstance(transfer, (LockedTransfer, MediatedTransfer, CancelTransfer)):
             assert transfer.lock.amount > 0
             if self.locked.root_with(transfer.lock) != transfer.locksroot:
-                raise InvalidLocksRoot()
+                raise InvalidLocksRoot(transfer)
             if allowance + transfer.lock.amount > self.partner.distributable:
-                raise InsufficientBalance()
+                raise InsufficientBalance(transfer)
             if transfer.lock.expiration - self.min_locktime < self.raiden.chain.block_number:
-                raise InvalidLockTime()
+                raise InvalidLockTime(transfer)
 
             self.register_locked_transfer(transfer)
 
