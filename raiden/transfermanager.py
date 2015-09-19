@@ -1,7 +1,9 @@
-from messages import Ack, Secret, BaseError, CancelTransfer, TransferTimeout
-from messages import Transfer, MediatedTransfer, LockedTransfer
+import random
+from messages import Transfer, MediatedTransfer, LockedTransfer, SecretRequest
 import assetmanager as assetmanagermodul
-from tasks import TransferTask
+from tasks import TransferTask, ForwardSecretTask
+from utils import sha3
+import gevent
 
 
 class TransferManager(object):
@@ -25,31 +27,45 @@ class TransferManager(object):
             channel.register_transfer(transfer)
             self.raiden.protocol.send(transfer.recipient, transfer)
         else:
-            assert not secret
-            assert hashlock  # we need a hashlock sent by target to initiate a mediated transfer
+            if not (hashlock or secret):
+                secret = sha3(hex(random.getrandbits(256)))
+                hashlock = sha3(secret)
             # initiate mediated transfer
-            t = TransferTask(self.assetmanager, amount, target, hashlock)
+            t = TransferTask(self, amount, target, hashlock,
+                             expiration=None, originating_transfer=None, secret=secret)
             self.transfertasks[hashlock] = t
+            t.start()
             t.join()
 
     def request_transfer(self, amount, target):
         pass
 
     def on_transferrequest(self, request):
-        # dummy, we accept any request
+        # dummy, we accept any request, fixme
         self.transfer(self,
                       amount=request.amount,
                       target=request.sender,
                       hashlock=request.hashlock)
 
     def on_mediatedtransfer(self, transfer):
+        assert isinstance(transfer, MediatedTransfer)
+        print "ON MEDIATED TRANSFER", self.raiden
         # apply to channel
         channel = self.assetmanager.channels[transfer.sender]
         channel.register_transfer(transfer)
-        t = TransferTask(self.assetmanager, transfer.amount, transfer.target,
-                         transfer.hashlock, originating_transfer=transfer)
-        self.transfertasks[transfer.hashlock] = t
-        t.join()
+        if transfer.target == self.raiden.address:
+            # transfer received!
+            sr = SecretRequest(transfer.lock.hashlock)
+            self.raiden.sign(sr)
+            self.raiden.send(transfer.initiator, sr)
+            t = ForwardSecretTask(self, transfer.lock.hashlock, recipient=transfer.sender)
+            self.transfertasks[transfer.lock.hashlock] = t
+            t.start()
+        else:
+            t = TransferTask(self, transfer.lock.amount, transfer.target,
+                             transfer.lock.hashlock, originating_transfer=transfer)
+            self.transfertasks[transfer.lock.hashlock] = t
+            t.start()
 
     def on_transfer(self, transfer):
         # apply to channel

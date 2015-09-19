@@ -1,5 +1,7 @@
 from raiden_service import RaidenProtocol
 from utils import isaddress, pex, sha3
+import messages
+import gevent
 
 
 class Transport(object):
@@ -9,9 +11,12 @@ class Transport(object):
         self.on_send_cbs = []  # debugging
 
     def send(self, sender, host_port, message):
+        print "TRANSPORT SENDS", messages.deserialize(message)
         for cb in self.on_send_cbs:
             cb(sender, host_port, message)
-        self.protocols[host_port].receive(message)
+
+        f = self.protocols[host_port].receive
+        gevent.spawn_later(0.0001, f, message)
 
     def register(self, proto, host, port):
         assert isinstance(proto, RaidenProtocol)
@@ -51,3 +56,9 @@ class Discovery(object):
 
     def get(self, nodeid):
         return self.h[nodeid]
+
+    def nodeid_by_host_port(self, host_port):
+        for k, v in self.h:
+            if v == host_port:
+                return k
+        assert False

@@ -1,6 +1,6 @@
 import networkx as nx
 from raiden.contracts import ChannelManagerContract, NettingChannelContract
-from raiden.utils import isaddress
+from raiden.utils import isaddress, lpex, pex
 
 
 class ChannelGraph(object):
@@ -25,3 +25,14 @@ class ChannelGraph(object):
     def get_paths(self, source, target):
         assert isaddress(source) and isaddress(target)
         return nx.all_shortest_paths(self.G, source, target)
+
+    def get_paths_of_length(self, source, num_hops=1):
+        """
+        shortest_path
+
+        """
+        # return a dictionary keyed by targets
+        # with a list of nodes in a shortest path
+        # from the source to one of the targets.
+        paths = nx.shortest_path(self.G, source)
+        return [p for p in paths.values() if len(p) == num_hops + 1]

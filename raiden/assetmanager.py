@@ -1,6 +1,7 @@
 from channelgraph import ChannelGraph
 from utils import isaddress
 from contracts import NettingChannelContract, ChannelManagerContract
+import messages
 import transfermanager
 import raiden_service
 import channel
@@ -39,6 +40,11 @@ class AssetManager(object):
     def channel_isactive(self, address):
         network_activity = True  # fixme
         return network_activity and self.channels[address].isopen
+
+    def on_secret(self, msg):
+        assert isinstance(msg, messages.Secret)
+        for c in self.channels.values():
+            c.claim_locked(msg.secret, msg.hashlock)
 
     @classmethod
     def get_assets_for_address(cls, chain, address):

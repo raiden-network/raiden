@@ -1,6 +1,6 @@
 import messages
 from messages import SignedMessage
-from utils import privtoaddr, isaddress
+from utils import privtoaddr, isaddress, pex
 from raiden_protocol import RaidenProtocol
 from assetmanager import AssetManager
 from transfermanager import TransferManager
@@ -47,6 +47,9 @@ class RaidenService(object):
         self.assetmanagers = dict()
         self.api = RaidenAPI(self)
 
+    def __repr__(self):
+        return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+
     def setup_assets(self):
         # create asset managers
         for asset_address in AssetManager.get_assets_for_address(self.chain, self.address):
@@ -58,17 +61,25 @@ class RaidenService(object):
         return msg
 
     def on_message(self, msg):
+        print "\nON MESSAGE {} {}".format(self, msg)
+        method = 'on_%s' % msg.__class__.__name__.lower()
+        # update activity monitor (which also does pings to all addresses in channels)
+        getattr(self, method)(msg)
+        print "SEND ACK{} {}".format(self, msg)
+        self.protocol.send_ack(msg.sender, messages.Ack(msg.hash, self.address))
+
+    def on_message_failsafe(self, msg):
         method = 'on_%s' % msg.__class__.__name__.lower()
         # update activity monitor (which also does pings to all addresses in channels)
         try:
             getattr(self, method)(msg)
         except messages.BaseError as error:
-            self.protocol.send_ack(error)
+            self.protocol.send_ack(msg.sender, error)
         else:
             self.protocol.send_ack(msg.sender, messages.Ack(msg.hash, self.address))
 
     def send(self, recipient, msg):
-        assert msg.sender
+#        assert msg.sender
         assert isaddress(recipient)
         self.protocol.send(recipient, msg)
 
@@ -94,9 +105,13 @@ class RaidenService(object):
         for am in self.assetmanagers.values():
             if msg.hashlock in am.transfermanager.transfertasks:
                 am.transfermanager.transfertasks[msg.hashlock].on_event(msg)
-                break
+                return True
+    on_secretrequest = on_transfertimeout = on_canceltransfer = on_event_for_transfertask
 
-    on_hashlock = on_transfertimeout = on_canceltransfer = on_event_for_transfertask
+    def on_secret(self, msg):
+        self.on_event_for_transfertask(msg)
+        for am in self.assetmanagers.values():
+            am.on_secret(msg)
 
     def on_transferrequest(self, msg):
         am = self.assetmanagers[msg.asset]

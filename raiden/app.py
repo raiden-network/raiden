@@ -1,7 +1,7 @@
 from raiden_service import RaidenService
 from transport import Transport, Discovery
 from contracts import BlockChain, ChannelManagerContract, NettingChannelContract
-from utils import sha3
+from utils import sha3, pex
 import copy
 
 
@@ -51,10 +51,13 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3):
             netting_contracts = channelmanager.nettingcontracts_by_address(app.raiden.address)
             while len(netting_contracts) < channels_per_node and capps:
                 a = random.choice(capps)
+                if a == app:
+                    continue
                 capps.remove(a)
                 a_nettting_contracts = channelmanager.nettingcontracts_by_address(a.raiden.address)
                 if not set(netting_contracts).intersection(set(a_nettting_contracts)) \
                         and len(a_nettting_contracts) < channels_per_node:
+                    # print pex(a.raiden.address), pex(app.raiden.address)
                     c = channelmanager.new(a.raiden.address, app.raiden.address)
                     netting_contracts.append(c)
 
