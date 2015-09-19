@@ -1,5 +1,5 @@
 # Copyright (c) 2015 Heiko Hees
-from utils import big_endian_to_int, sha3, isaddress, ishash, int_to_big_endian
+from utils import big_endian_to_int, sha3, isaddress, ishash, int_to_big_endian, pex
 import rlp
 from rlp.sedes import Binary
 from rlp.utils import encode_hex
@@ -14,11 +14,11 @@ t_hash_optional = Binary.fixed_length(32, allow_empty=True)
 
 
 class RLPHashable(rlp.Serializable):
-    _rlp_data = None  # FIXME, use nrew rlp feature!
+    rlp_ = None
 
     @property
     def hash(self):
-        return sha3(self._rlp_data or rlp.encode(self))
+        return sha3(getattr(self, 'rlp_', None) or rlp.encode(self))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.hash == other.hash
@@ -50,15 +50,47 @@ class Signed(RLPHashable):
         return self
 
 
-class SignedMessage(Signed):
+class Message(RLPHashable):
+
+    """
+    Message also has a sender property, so that Acks can be sent
+    """
+
+    cmdid = 0
+    sender = ''
+
+    fields = [('cmdid', t_int), ('sender', t_address)]
+
+    def __repr__(self):
+        return '<{} {}>'.format(self.__class__.__name__, pex(self.hash))
+
+
+class SignedMessage(Signed, Message):
 
     """
     Base Message, dispatching is decided based on the cmdid.
     Future protocol versions can be distinguished by using a different cmdid range
     """
+
+    fields = [('cmdid', t_int), ('sender', t_address)]
+
+
+class Ack(Message):
+
+    """
+    All accepted messages should be confirmed by an `Ack`
+    which echoes the orginals Message hash
+
+    We don't sign Acks because attack vector can be mitigated and to speed up things
+    """
+
     cmdid = 0
 
-    fields = Signed.fields + [('cmdid', t_int)]
+    fields = Message.fields + [('echo', t_hash)]
+
+    def __init__(self, echo, sender=''):
+        self.echo = echo
+        self.sender = sender
 
 
 class Ping(SignedMessage):
@@ -66,27 +98,12 @@ class Ping(SignedMessage):
     """
     Ping, should be responded by an Ack message
     """
-    cmdid = 0
+    cmdid = 1
 
     fields = SignedMessage.fields + [('nonce', t_int)]
 
     def __init__(self, nonce):
         self.nonce = nonce
-
-
-class Ack(SignedMessage):
-
-    """
-    All accepted messages should be confirmed by an `Ack`
-    which echoes the orginals Message hash
-    """
-
-    cmdid = 1
-
-    fields = SignedMessage.fields + [('echo', t_hash)]
-
-    def __init__(self, echo):
-        self.echo = echo
 
 
 class BaseError(Exception):
@@ -139,27 +156,23 @@ class Rejected(SignedMessage):
         return cls(self.echo, *self.args)
 
 
-class HashLockRequest(SignedMessage):
+class SecretRequest(SignedMessage):
 
     """
     Requests the secret which unlocks a hashlock
-    proof can be empty or
-        an rlp encoded `Transfer` which is expected to unlock
     """
     cmdid = 3
 
     fields = SignedMessage.fields + \
         [
             ('hashlock', t_hash),
-            ('proof', t_binary)
         ]
 
-    def __init__(self, hashlock, proof=''):
+    def __init__(self, hashlock):
         self.hashlock = hashlock
-        self.proof = proof
 
 
-class HashLock(SignedMessage):
+class Secret(SignedMessage):
 
     """
     Provides the secret to a hashlock
@@ -168,13 +181,12 @@ class HashLock(SignedMessage):
 
     fields = SignedMessage.fields + \
         [
-            ('hashlock', t_hash),
             ('secret', t_hash)
         ]
 
-    def __init__(self, hashlock, secret):
-        self.hashlock = hashlock
+    def __init__(self, secret):
         self.secret = secret
+        self.hashlock = sha3(secret)
 
 
 class Transfer(SignedMessage):
@@ -344,25 +356,23 @@ class MediatedTransfer(LockedTransfer):
 
     Fees are always payable by the initiator.
 
-
-    `initiator_signature` is optional and signs H(asset, amount, target, hashlock)
-    It can be provided to prove and accumulate reputation.
+    `initiator` is the party that knows the secret to the `hashlock`
     """
     cmdid = 7
     fields = Transfer.fields + \
         [
             ('target', t_address),
             ('fee', t_int),
-            ('initiator_signature', t_binary)
+            ('initiator', t_address)
         ]
 
     def __init__(self, nonce, asset, balance, recipient, locksroot,
-                 lock, target, fee=0, initiator_signature=''):
+                 lock, target, initiator, fee=0):
         super(MediatedTransfer, self).__init(self, nonce, asset, balance, recipient, locksroot,
                                              lock)
         self.target = target
         self.fee = fee
-        self.initiator_signature = initiator_signature
+        self.initiator = initiator
 
 
 class CancelTransfer(LockedTransfer):
@@ -458,10 +468,11 @@ class ExchangeRequest(SignedMessage):
         self.bid_amount = bid_amount
         self.ask_amount = ask_amount
 
-# infrastructure to deserialize messages into a SignedMessage instance
-message_class_by_id = dict((c.cmdid, c) for c in SignedMessage.__subclasses__())
+# infrastructure to deserialize messages into a Message instance
+message_class_by_id = dict((c.cmdid, c) for c in
+                           Message.__subclasses__() + SignedMessage.__subclasses__())
 message_class_by_id[MediatedTransfer.cmdid] = MediatedTransfer
-cmdid_pos = [_[0] for _ in SignedMessage.fields].index('cmdid')
+cmdid_pos = [_[0] for _ in Message.fields].index('cmdid')
 sender_pos = [_[0] for _ in SignedMessage.fields].index('sender')
 for cls in message_class_by_id.values():
     assert cls.fields[cmdid_pos][0] == 'cmdid'
@@ -476,6 +487,7 @@ def deserialize(data):
     assert cmdid < 256
     cls = message_class_by_id[cmdid]
     m = cls.deserialize(rlp.decode(data), exclude=['sender', 'cmdid'])
-    m._rlp_data = data
+    m.mutable_ = True
     m.sender = sender
+    m.mutable_ = False
     return m
