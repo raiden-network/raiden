@@ -1,0 +1,38 @@
+Real Signatures
+
+ExchangeTransfers
+
+ExchangeService
+
+
+
+Fees
+
+
+ChainSynchronization
+    EVM Locks
+    Settlement Request Monitoring
+    Challenging
+    Contracts
+        compatible asset
+        settlement
+        evm code
+
+Reputation System
+    Reputation is based on age of existing channels
+        cause bad behavior would lead to closed channels
+            blame is always to the connected nodes
+                therefore nodes need to disconnect bad nodes or
+                    they are blamed for their peers malfunction
+    Automatic
+        Channel Partner Selection
+        Channel Opening
+        Channel Closing based on under performance
+
+pyethapp/Hydrachain integration
+    Service
+    Discovery
+    RPC Interface
+    Block Logs callbacks
+
+
