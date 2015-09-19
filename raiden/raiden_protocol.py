@@ -35,13 +35,19 @@ class RaidenProtocol(object):
         self.tries[msghash] = self.max_tries
         data = rlp.encode(msg)
         assert len(data) < self.max_message_size
-        while self.tries.get(msghash, 0) > 0:
-            # assert self.tries[msghash] == self.max_tries,  "DEACTIVATED MSG resents"
-            self.tries[msghash] -= 1
-            self.transport.send(self.raiden_service, host_port, data)
-            gevent.sleep(self.try_interval)
-        if msghash in self.tries:
-            assert False, "Node does not reply, fixme suspend node"
+
+        def repeater():
+            while self.tries.get(msghash, 0) > 0:
+                if not self.repeat_messages and self.tries[msghash] < self.max_tries:
+                    raise Exception(
+                        "DEACTIVATED MSG resents {} {}".format(pex(receiver_address), msg))
+                self.tries[msghash] -= 1
+                self.transport.send(self.raiden, host_port, data)
+                gevent.sleep(self.try_interval)
+            if msghash in self.tries:
+                assert False, "Node does not reply, fixme suspend node"
+
+        gevent.spawn(repeater)
 
     def send_ack(self, receiver_address, msg):
         assert isinstance(msg,  (Ack, BaseError))
