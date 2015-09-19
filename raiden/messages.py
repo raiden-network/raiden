@@ -2,7 +2,6 @@
 from utils import big_endian_to_int, sha3, isaddress, ishash, int_to_big_endian, pex
 import rlp
 from rlp.sedes import Binary
-from rlp.utils import encode_hex
 
 from rlp.sedes import big_endian_int as t_int
 from rlp.sedes import binary as t_binary
@@ -30,7 +29,11 @@ class RLPHashable(rlp.Serializable):
         return not self.__eq__(other)
 
     def __repr__(self):
-        return '<%s(%s)>' % (self.__class__.__name__, encode_hex(self.hash)[:4])
+        try:
+            h = self.hash
+        except Exception:
+            h = ''
+        return '<%s(%s)>' % (self.__class__.__name__, pex(h))
 
 
 class Signed(RLPHashable):
@@ -260,32 +263,32 @@ class Lock(rlp.Serializable):
         return self._cached_asstring
 
 
-class StateLock(rlp.Serializable):
+# class StateLock(rlp.Serializable):
 
-    """
-    NotImplemented
+#     """
+#     NotImplemented
 
-    A Lock which depends on a certain state on the associated chain.
+#     A Lock which depends on a certain state on the associated chain.
 
-    Therefore it comes with `data` which when passed to the `ChannelsContract`
-    will call a contract at address data[:20] with data[20:].
-    """
-    fields =  \
-        [
-            ('amount', t_int),
-            ('expiration', t_int),
-            ('data', t_hash),
-        ]
+#     Therefore it comes with `data` which when passed to the `ChannelsContract`
+#     will call a contract at address data[:20] with data[20:].
+#     """
+#     fields =  \
+#         [
+#             ('amount', t_int),
+#             ('expiration', t_int),
+#             ('data', t_hash),
+#         ]
 
-    def __init__(self,  amount, expiration, data):
-        assert amount > 0
-        self.amount = amount
-        self.expiration = expiration
-        self.data = data
+#     def __init__(self,  amount, expiration, data):
+#         assert amount > 0
+#         self.amount = amount
+#         self.expiration = expiration
+#         self.data = data
 
-    @property
-    def hashlock(self):
-        return sha3(''.join(self.__class__.exclude('cmdid', 'sender').serialize(self)))
+#     @property
+#     def hashlock(self):
+#         return sha3(''.join(self.__class__.exclude('cmdid', 'sender').serialize(self)))
 
 
 class LockedTransfer(SignedMessage):
@@ -327,12 +330,12 @@ class LockedTransfer(SignedMessage):
         self.locksroot = locksroot
         self.lock = lock
 
-    def to_mediatedtransfer(self, target, fee=0, initiator_signature=''):
+    def to_mediatedtransfer(self, target, fee=0, initiator=''):
         assert not self.sender  # must not yet be signed
         self.__class__ = MediatedTransfer
         self.target = target
         self.fee = fee
-        self.initiator_signature = initiator_signature
+        self.initiator = initiator
 
     def to_canceltransfer(self):
         self.__class__ = CancelTransfer
@@ -359,7 +362,7 @@ class MediatedTransfer(LockedTransfer):
     `initiator` is the party that knows the secret to the `hashlock`
     """
     cmdid = 7
-    fields = Transfer.fields + \
+    fields = LockedTransfer.fields + \
         [
             ('target', t_address),
             ('fee', t_int),
@@ -368,8 +371,8 @@ class MediatedTransfer(LockedTransfer):
 
     def __init__(self, nonce, asset, balance, recipient, locksroot,
                  lock, target, initiator, fee=0):
-        super(MediatedTransfer, self).__init(self, nonce, asset, balance, recipient, locksroot,
-                                             lock)
+        super(MediatedTransfer, self).__init__(nonce, asset, balance, recipient,
+                                               locksroot, lock)
         self.target = target
         self.fee = fee
         self.initiator = initiator
@@ -394,79 +397,80 @@ class TransferTimeout(SignedMessage):
         self.hashlock = hashlock
 
 
-class TransferRequest(SignedMessage):
+# class TransferRequest(SignedMessage):
 
-    """
-    Requests the transfer of an asset.
+#     """
+#     Requests the transfer of an asset.
 
-    If the recipient agrees, it replies with an `Ack` message and
-    initiates a (Mediated)Transfer.
-    """
-    cmdid = 10
+#     If the recipient agrees, it replies with an `Ack` message and
+#     initiates a (Mediated)Transfer.
+#     """
+#     cmdid = 10
 
-    fields = SignedMessage.fields + \
-        [
-            ('asset', t_address),
-            ('amount', t_int),
-            ('haslock', t_hash),
-            ('reference', t_hash_optional),
-        ]
+#     fields = SignedMessage.fields + \
+#         [
+#             ('asset', t_address),
+#             ('amount', t_int),
+#             ('haslock', t_hash),
+#             ('reference', t_hash_optional),
+#         ]
 
-    def __init__(self, asset, amount, hashlock, reference=''):
-        self.asset = asset
-        self.amount = amount
-        self.hashlock = hashlock
-        self.reference = reference
-
-
-class ExchangeRequest(SignedMessage):
-
-    """
-    Requests the exchange of an asset pair
-    `bid_asset`: address of the offered asset
-    `ask_asset`: address of the wanted asset
-    `bid_amount`: amount bid of the offered asset, can be zero for market orders
-    `ask_amount`: amount asked of the wanted asset, can be zero for market orders
-
-    Any of `bid_amount` , `ask_amount` must be non zero.
-
-    `ExchangeRequests` are broadcasted : TBD
-
-    Any party interested in an exchange can send a TransferRequest to the initiator.
-    They are free to only partially match the exchange offer.
+#     def __init__(self, asset, amount, hashlock, reference=''):
+#         self.asset = asset
+#         self.amount = amount
+#         self.hashlock = hashlock
+#         self.reference = reference
 
 
-    Case `bid_amount=0`: Buy market order
-    Responder must announce, which `amount` of `bit_asset` it requests.
-        Responder sends:
-            Opening MediatedTransfer which specifies the `ask_amount`.
-            TransferRequest which specifies the `bid_amount`.
-        If the initiator agrees, it sends:
-            Acks
-            MediatedTransfer matching the TransferRequest
-        It sends a Reject message otherwise.
+# class ExchangeRequest(SignedMessage):
+
+#     """
+#     Requests the exchange of an asset pair
+#     `bid_asset`: address of the offered asset
+#     `ask_asset`: address of the wanted asset
+#     `bid_amount`: amount bid of the offered asset, can be zero for market orders
+#     `ask_amount`: amount asked of the wanted asset, can be zero for market orders
+
+#     Any of `bid_amount` , `ask_amount` must be non zero.
+
+#     `ExchangeRequests` are broadcasted : TBD
+
+#     Any party interested in an exchange can send a TransferRequest to the initiator.
+#     They are free to only partially match the exchange offer.
 
 
-    Case `ask_amount=0`: Sell market order
-    Responder must announce, which `amount` of `ask_asset` it requests.
+#     Case `bid_amount=0`: Buy market order
+#     Responder must announce, which `amount` of `bit_asset` it requests.
+#         Responder sends:
+#             Opening MediatedTransfer which specifies the `ask_amount`.
+#             TransferRequest which specifies the `bid_amount`.
+#         If the initiator agrees, it sends:
+#             Acks
+#             MediatedTransfer matching the TransferRequest
+#         It sends a Reject message otherwise.
 
-    Case `ask_amount & bid_amount`: Limit Order
-    """
-    cmdid = 11
 
-    fields = SignedMessage.fields + \
-        [
-            ('bid_asset', t_address),
-            ('ask_asset', t_address),
-            ('bid_amount', t_int),
-            ('ask_amount', t_int)
-        ]
+#     Case `ask_amount=0`: Sell market order
+#     Responder must announce, which `amount` of `ask_asset` it requests.
 
-    def __init__(self, bid_asset, ask_asset,  bid_amount=0, ask_amount=0):
-        self.bid_asset = bid_asset
-        self.ask_asset = ask_asset
-        self.bid_amount = bid_amount
-        self.ask_amount = ask_amount
+#     Case `ask_amount & bid_amount`: Limit Order
+#     """
+#     cmdid = 11
+
+#     fields = SignedMessage.fields + \
+#         [
+#             ('bid_asset', t_address),
+#             ('ask_asset', t_address),
+#             ('bid_amount', t_int),
+#             ('ask_amount', t_int)
+#         ]
+
+#     def __init__(self, bid_asset, ask_asset,  bid_amount=0, ask_amount=0):
+#         self.bid_asset = bid_asset
+#         self.ask_asset = ask_asset
+#         self.bid_amount = bid_amount
+#         self.ask_amount = ask_amount
+
 
 # infrastructure to deserialize messages into a Message instance
 message_class_by_id = dict((c.cmdid, c) for c in
