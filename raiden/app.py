@@ -53,11 +53,9 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3):
                 a = random.choice(capps)
                 capps.remove(a)
                 a_nettting_contracts = channelmanager.nettingcontracts_by_address(a.raiden.address)
-                assert isinstance(a_nettting_contracts, NettingChannelContract)
                 if not set(netting_contracts).intersection(set(a_nettting_contracts)) \
                         and len(a_nettting_contracts) < channels_per_node:
                     c = channelmanager.new(a.raiden.address, app.raiden.address)
-                    assert isinstance(c, NettingChannelContract)
                     netting_contracts.append(c)
 
                     # add deposit of asset

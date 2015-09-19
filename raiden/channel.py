@@ -220,6 +220,7 @@ class Channel(object):
         self.nonce += 1
 
     def register_transfer(self, transfer):
+        assert transfer.sender
         if transfer.recipient == self.partner.address:
             self.register_sent_transfer(transfer)
         else:

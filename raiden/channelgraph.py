@@ -9,14 +9,14 @@ class ChannelGraph(object):
     Has Graph based on the channels and can find path between participants
     """
 
-    def __init__(self, contract):
-        assert isinstance(contract, ChannelManagerContract)
-        self.contract = contract
+    def __init__(self, channelmanager):
+        assert isinstance(channelmanager, ChannelManagerContract)
+        self.channelmanager = channelmanager
         self.G = nx.Graph()  # undirected graph, for bidirectional channels
         self.mk_graph()
 
     def mk_graph(self):
-        for c in self.contract.channels:
+        for c in self.channelmanager.nettingcontracts.values():
             assert isinstance(c, NettingChannelContract)
             a, b = c.participants.keys()
             assert isaddress(a) and isaddress(b)

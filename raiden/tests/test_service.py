@@ -1,5 +1,7 @@
-from raiden.messages import Ping, Ack, deserialize
+from raiden.messages import Ping, Ack, deserialize, Transfer
 from raiden.app import create_network
+from raiden.transport import UnreliableTransport
+from raiden.raiden_service import RaidenProtocol
 
 
 def setup_messages_cb(transport):

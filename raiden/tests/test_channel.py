@@ -1,39 +1,26 @@
-from raiden.mtree import merkleroot, check_proof
-from raiden.messages import Ping, Ack, deserialize
+from raiden.mtree import merkleroot
 from raiden.app import create_network
-from raiden.channel import Channel, LockedTransfers
-from raiden.utils import activate_ultratb, pex, lpex, sha3
+from raiden.utils import sha3
 import time
-# activate_ultratb()
-
-
-def setup_messages_cb(transport):
-    messages = []
-
-    def cb(sender_raiden, host_port, msg):
-        messages.append(msg)
-    transport.on_send_cbs = [cb]
-    return messages
 
 
 def test_setup():
 
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps
-    messages = setup_messages_cb(a0.transport)
-    s = a0.raiden.chain.channels_by_asset[a0.raiden.chain.asset_addresses[0]]
-    assert s.channels
-    assert s.channels_by_address(a0.raiden.address)
+    s = a0.raiden.chain.channelmanager_by_asset(a0.raiden.chain.asset_addresses[0])
+    assert s.nettingcontracts
+    assert s.nettingcontracts_by_address(a0.raiden.address)
 
-    assert a0.raiden.assets.keys() == a1.raiden.assets.keys()
-    assert len(a0.raiden.assets) == 1
+    assert a0.raiden.assetmanagers.keys() == a1.raiden.assetmanagers.keys()
+    assert len(a0.raiden.assetmanagers) == 1
 
 
 def test_transfer():
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps
-    c0 = a0.raiden.assets.values()[0].channels.values()[0]
-    c1 = a1.raiden.assets.values()[0].channels.values()[0]
+    c0 = a0.raiden.assetmanagers.values()[0].channels.values()[0]
+    c1 = a1.raiden.assetmanagers.values()[0].channels.values()[0]
 
     assert c0.contract == c1.contract
 
@@ -49,8 +36,9 @@ def test_transfer():
     assert b1 == pb0
 
     t = c0.create_transfer(amount=amount)
-    c0.send(t)
-    c1.receive(t)
+    t.sign(c0.address)
+    c0.register_transfer(t)
+    c1.register_transfer(t)
 
     assert c0.balance == c0.distributable == b0 - amount == c1.partner.balance
     assert c1.balance == c1.distributable == b1 + amount == c0.partner.balance
@@ -61,8 +49,8 @@ def test_transfer():
 def test_locked_transfer():
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps
-    c0 = a0.raiden.assets.values()[0].channels.values()[0]
-    c1 = a1.raiden.assets.values()[0].channels.values()[0]
+    c0 = a0.raiden.assetmanagers.values()[0].channels.values()[0]
+    c1 = a1.raiden.assetmanagers.values()[0].channels.values()[0]
 
     b0, b1 = c0.balance, c1.balance
 
@@ -70,9 +58,10 @@ def test_locked_transfer():
     secret = 'secret'
     expiration = a0.raiden.chain.block_number + 100
     hashlock = sha3(secret)
-    t = c0.create_locked_transfer(amount=amount, expiration=expiration, hashlock=hashlock)
-    c0.send(t)
-    c1.receive(t)
+    t = c0.create_lockedtransfer(amount=amount, expiration=expiration, hashlock=hashlock)
+    t.sign(c0.address)
+    c0.register_transfer(t)
+    c1.register_transfer(t)
 
     assert hashlock in c1.locked
     assert hashlock in c0.partner.locked
@@ -120,8 +109,8 @@ def test_locked_transfer():
 def test_interwoven_transfers(num=100):
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps
-    c0 = a0.raiden.assets.values()[0].channels.values()[0]
-    c1 = a1.raiden.assets.values()[0].channels.values()[0]
+    c0 = a0.raiden.assetmanagers.values()[0].channels.values()[0]
+    c1 = a1.raiden.assetmanagers.values()[0].channels.values()[0]
     b0, b1 = c0.balance, c1.balance
 
     amounts = range(1, num + 1)
@@ -131,9 +120,10 @@ def test_interwoven_transfers(num=100):
 
     for i, amount in enumerate(amounts):
         hashlock = sha3(secrets[i])
-        t = c0.create_locked_transfer(amount=amount, expiration=expiration, hashlock=hashlock)
-        c0.send(t)
-        c1.receive(t)
+        t = c0.create_lockedtransfer(amount=amount, expiration=expiration, hashlock=hashlock)
+        t.sign(c0.address)
+        c0.register_transfer(t)
+        c1.register_transfer(t)
 
         claimed_amount = sum([amounts[j] for j in claimed])
         distributed_amount = sum(amounts[:i + 1])
@@ -163,8 +153,8 @@ def transfer_speed(num_transfers=100, max_locked=100):
 
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps
-    c0 = a0.raiden.assets.values()[0].channels.values()[0]
-    c1 = a1.raiden.assets.values()[0].channels.values()[0]
+    c0 = a0.raiden.assetmanagers.values()[0].channels.values()[0]
+    c1 = a1.raiden.assetmanagers.values()[0].channels.values()[0]
 
     amounts = [a % 100 + 1 for a in range(1, num_transfers + 1)]
     secrets = [str(i) for i in range(num_transfers)]
@@ -174,9 +164,10 @@ def transfer_speed(num_transfers=100, max_locked=100):
 
     for i, amount in enumerate(amounts):
         hashlock = sha3(secrets[i])
-        t = c0.create_locked_transfer(amount=amount, expiration=expiration, hashlock=hashlock)
-        c0.send(t)
-        c1.receive(t)
+        t = c0.create_lockedtransfer(amount=amount, expiration=expiration, hashlock=hashlock)
+        t.sign(c0.address)
+        c0.register_transfer(t)
+        c1.register_transfer(t)
         if i > max_locked:
             idx = i - max_locked
             secret = secrets[idx]
