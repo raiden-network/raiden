@@ -1,8 +1,9 @@
 from raiden.messages import Ping, Ack, deserialize
 from raiden.app import create_network
 from raiden.transport import UnreliableTransport
-from raiden.raiden_service import RaidenProtocol
+from raiden.raiden_protocol import RaidenProtocol
 from .utils import setup_messages_cb
+import gevent
 
 
 def test_ping():
@@ -11,6 +12,8 @@ def test_ping():
     messages = setup_messages_cb(a0.transport)
     p = Ping(nonce=0).sign(a0.raiden.address)
     a0.raiden.protocol.send(a1.raiden.address, p)
+    gevent.sleep(0.1)
+
     assert len(messages) == 2  # Ping, Ack
     assert deserialize(messages[0]) == p
     a = deserialize(messages[1])
@@ -25,6 +28,7 @@ def test_ping_dropped_message():
     # mock transport with packet loss, every 3nd is lost, starting with first message
     UnreliableTransport.droprate = 3
     RaidenProtocol.try_interval = 0.1  # for fast tests
+    RaidenProtocol.repeat_messages = True
     a0.transport.__class__ = UnreliableTransport
     a1.transport.__class__ = UnreliableTransport
 
@@ -32,6 +36,7 @@ def test_ping_dropped_message():
 
     p = Ping(nonce=0).sign(a0.raiden.address)
     a0.raiden.protocol.send(a1.raiden.address, p)
+    gevent.sleep(1)
 
     assert len(messages) == 3  # Ping(dropped), Ping, Ack
     for i in [0, 1]:
@@ -47,6 +52,7 @@ def test_ping_dropped_message():
     a0.transport.counter = 2  # first message sent, 2nd dropped
     p = Ping(nonce=0).sign(a0.raiden.address)
     a0.raiden.protocol.send(a1.raiden.address, p)
+    gevent.sleep(1)
 
     for m in messages:
         print deserialize(m)
@@ -58,3 +64,5 @@ def test_ping_dropped_message():
         a = deserialize(messages[i])
         assert isinstance(a, Ack)
     assert a.echo == p.hash
+
+    RaidenProtocol.repeat_messages = False

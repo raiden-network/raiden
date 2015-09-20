@@ -27,6 +27,8 @@ def test_transfer():
     assert target in am0.channels
     a0.raiden.api.transfer(am0.asset_address, amount, target=target)
 
+    gevent.sleep(1)
+
     assert len(messages) == 2  # Transfer, Ack
     mt = deserialize(messages[0])
     assert isinstance(mt, Transfer)
