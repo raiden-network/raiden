@@ -3,7 +3,7 @@ import raiden_service
 from messages import Transfer, LockedTransfer, MediatedTransfer, BaseError, Lock
 from messages import CancelTransfer
 from utils import ishash, isaddress, sha3
-from mtree import merkleroot, check_proof
+from mtree import merkleroot, check_proof, get_proof
 
 
 class InvalidNonce(BaseError):
@@ -83,6 +83,13 @@ class LockedTransfers(object):
         if exclude:
             self._cached_lock_hashes.append(exclude_hash)
         return r
+
+    def get_proof(self, transfer):
+        hashlock = transfer.lock.hashlock
+        transfer = self.locked[hashlock]
+        proof_for = sha3(transfer.lock.asstring)
+        proof = get_proof(self._cached_lock_hashes, proof_for)
+        return proof
 
 
 class Channel(object):

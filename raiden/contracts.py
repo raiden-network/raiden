@@ -1,10 +1,24 @@
-from ethereum.utils import sha3
-from utils import isaddress
-
+from utils import isaddress, sha3
+from mtree import check_proof
+import rlp
+import messages
 
 """
 Note, these are Mocks.
 We assume, that they represent up to date information.
+
+Blockspam attack mitigation:
+    - Oracles, certifying, that previous blocks were full.
+    - Direct access to gasused of previous blocks.
+    - Heuristic, no settlements in the previous blocks.
+
+Note:
+    NettingChannelContract should be merged with ChannelManagerContract
+Todos:
+    Compatible Asset/Token/Coin Contract
+    Channel Opening sequence
+    Channel Fees (i.e. Accounts w/ higher reputation could charge a fee/deposit).
+    use channel.opened to collect reputation of an account (long lasting channels == good)
 """
 
 
@@ -37,8 +51,8 @@ class NettingChannelContract(object):
     def __init__(self, chain, asset_address, address_A, address_B):
         self.chain = chain
         self.asset_address = asset_address
-        self.participants = {address_A: dict(deposit=0, last_sent_transfer=None),
-                             address_B: dict(deposit=0, last_sent_transfer=None)}
+        self.participants = {address_A: dict(deposit=0, last_sent_transfer=None, unlocked=[]),
+                             address_B: dict(deposit=0, last_sent_transfer=None, unlocked=[])}
         self.hashlocks = dict()
         self.opened = False  # block number
         self.closed = False  # block number
@@ -59,30 +73,39 @@ class NettingChannelContract(object):
         return not self.closed and \
             min(p['deposit'] for p in self.participants.values()) > 0
 
-    def close(self, sender, *last_sent_transfers, **hashlocks):
+    def close(self, sender, last_sent_transfers, *unlocked):
         """"
-        can be called multiple times. lock period starts with first valid call
+        can be called multiple times. lock period starts with first valid call.
+
+        todo:
+            if challenged, keep track of who provided the last valid answer, punish the wrongdoer
+                here, check that participants only updates their own balance are counted,
+                    because they could sign something for the other party to blame it.
+
+        last_sent_transfers: [rlp(transfer), ] max 2
+        unlocked: [(merkle_proof, locked_rlp, secret)), ...]
+
         """
         assert sender in self.participants
         assert 0 <= len(last_sent_transfers) <= 2
 
-        # register hashlocks
-        for hashlock, secret in hashlocks.items():
-            if hashlock == sha3(secret):
-                self.hashlocks[hashlock] = secret
-
         # register / update claims
-        for t in last_sent_transfers:
+        for t in last_sent_transfers:  # fixme rlp encoded
             # check transfer signature
             assert t.sender in self.participants
 
-            # check hashlocks
-            if t.hashlock and t.hashlock not in self.hashlocks:
-                return
             # update valid claims
-            if not self.participants[t.sender]['last_sent_transfers'] or \
-                    self.participants[t.sender]['last_sent_transfers'].nonce < t.nonce:
-                self.participants[t.sender]['last_sent_transfers'] = t
+            if not self.participants[t.sender]['last_sent_transfer'] or \
+                    self.participants[t.sender]['last_sent_transfer'].nonce < t.nonce:
+                self.participants[t.sender]['last_sent_transfer'] = t
+
+        # register un-locked
+        last_sent = self.participants[self.partner(sender)]['last_sent_transfer']
+        for merkle_proof, locked_rlp, secret in unlocked:
+            locked = rlp.decode(locked_rlp, messages.Lock)
+            assert locked.hashlock == sha3(secret)
+            assert check_proof(merkle_proof, last_sent.locksroot, sha3(locked_rlp))
+            self.participants[self.partner(t.sender)]['unlocked'].append(locked)
 
         # mark closed
         if not self.closed:
@@ -90,22 +113,31 @@ class NettingChannelContract(object):
 
     def settle(self):
         assert not self.settled
-        assert self.closed and self.closed + self.locked_time <= self.chain.block_number
+        assert self.closed
+        assert self.closed + self.locked_time <= self.chain.block_number
 
         for address, d in self.participants.items():
-            other = [o for o in self.participants.values() if o != d][0]
+            other = self.participants[self.partner(address)]
             d['netted'] = d['deposit']
-            if 'last_sent_transfer' in d:
-                d['netted'] -= d['last_sent_transfer']['balance']
-            if 'last_sent_transfer' in other:
-                d['netted'] += other['last_sent_transfer']['balance']
+            if d.get('last_sent_transfer'):
+                d['netted'] = d['last_sent_transfer'].balance
+            if other.get('last_sent_transfer'):
+                d['netted'] = other['last_sent_transfer'].balance
 
-        assert sum(d['netted'] for d in self.participants.values()) == \
+        # add locked
+        for address, d in self.participants.items():
+            other = self.participants[self.partner(address)]
+            for locked in d['unlocked']:
+                d['netted'] += locked.amount
+                other['netted'] -= locked.amount
+
+        assert sum(d['netted'] for d in self.participants.values()) <= \
             sum(d['deposit'] for d in self.participants.values())
 
         # call asset contracts and add assets
-
         self.settled = self.chain.block_number
+
+        return dict((a, d['netted']) for a, d in self.participants.items())
 
 
 class ChannelManagerContract(object):

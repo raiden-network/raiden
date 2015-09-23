@@ -1,13 +1,13 @@
 import pytest
 from raiden.utils import sha3
-from raiden.mtree import merkleroot, check_proof
+from raiden.mtree import merkleroot, check_proof, get_proof
 
 
 def test_small():
     values = [x * 32 for x in 'a']
     proof_for = values[-1]
     proof = [proof_for]
-    r = merkleroot(list(values), proof)
+    r = merkleroot(values, proof)
     assert check_proof(proof, r, proof_for)
 
     r = merkleroot('')
@@ -18,16 +18,30 @@ def test_basic():
     values = [x * 32 for x in 'ab']
     proof_for = values[-1]
     proof = [proof_for]
-    r = merkleroot(list(values), proof)
+    r = merkleroot(values, proof)
     # print pex(r)
     # print 'proof', proof
     assert check_proof(proof, r, proof_for)
 
     proof_for = values[-1]
     proof = [proof_for]
-    r = merkleroot(list(values), proof)
+    r = merkleroot(values, proof)
     # print pex(r)
     # print 'proof', proof
+    assert check_proof(proof, r, proof_for)
+
+
+def test_get_proof():
+    values = [x * 32 for x in 'ab']
+    proof_for = values[-1]
+    proof = [proof_for]
+    r = merkleroot(values, proof)
+    # print pex(r)
+    # print 'proof', proof
+    assert check_proof(proof, r, proof_for)
+
+    proof_for = values[-1]
+    proof = get_proof(values, proof_for, r)
     assert check_proof(proof, r, proof_for)
 
 
@@ -35,31 +49,34 @@ def test_basic3():
     values = [x * 32 for x in 'abc']
     proof_for = values[-1]
     proof = [proof_for]
-    r = merkleroot(list(values), proof)
+    r = merkleroot(values, proof)
     # print pex(r)
     # print 'proof', pexl(proof)
     assert check_proof(proof, r, proof_for)
     proof_for = values[0]
     proof = [proof_for]
-    r = merkleroot(list(values), proof)
+    r = merkleroot(values, proof)
     # print pex(r)
     # print 'proof', pexl(proof)
     assert check_proof(proof, r, proof_for)
 
 
 def test_multiple():
+    "does not support repeated values"
     values = [x * 32 for x in 'abada']
     proof_for = values[-1]
     proof = [proof_for]
     with pytest.raises(AssertionError):
-        r = merkleroot(list(values), proof)
+        r = merkleroot(values, proof)
         assert check_proof(proof, r, proof_for)
 
 
 def do_test_many(values):
     for i, v in enumerate(values):
         proof = [v]
-        r = merkleroot(list(values), proof)
+        r = merkleroot(values, proof)
+        assert check_proof(proof, r, v)
+        proof = get_proof(values, v, r)
         assert check_proof(proof, r, v)
 
 
@@ -77,7 +94,7 @@ def do_test_speed(rounds=100, num_hashes=1000):
     values = [sha3(str(i)) for i in range(num_hashes)]
     st = time.time()
     for i in range(rounds):
-        merkleroot(list(values))
+        merkleroot(values)
     elapsed = time.time() - st
     print '%d additions per second' % (num_hashes * rounds / elapsed)
 

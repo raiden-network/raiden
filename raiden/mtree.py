@@ -19,6 +19,7 @@ def merkleroot(lst, proof=[], first=True):
         return ''
     if first:
         assert len(lst) == len(set(lst)), 'no duplicates allowed'
+        lst = list(lst)
         lst.sort()
     proof = proof or [None]
     searching = proof.pop()
@@ -51,3 +52,11 @@ def check_proof(proof, root, h):
         e = proof.pop(0)
         h = xorsha3(h, e)
     return h == root
+
+
+def get_proof(lst, proof_for, root=None):
+    proof = [proof_for]
+    r = merkleroot(lst, proof)
+    if root:
+        assert root == r
+    return proof
