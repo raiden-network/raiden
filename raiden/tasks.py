@@ -116,6 +116,8 @@ class TransferTask(gevent.Greenlet):
                 msg = Secret(self.secret)
                 self.raiden.sign(msg)
                 self.raiden.send(self.target, msg)
+                # apply secret to own channel
+                channel.claim_locked(self.secret)
                 return True
         # we did not find a path, send CancelTransfer
         if self.originating_transfer:
