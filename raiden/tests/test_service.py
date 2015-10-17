@@ -10,10 +10,10 @@ def test_ping():
     apps = create_network(num_nodes=2, num_assets=0, channels_per_node=0)
     a0, a1 = apps
     messages = setup_messages_cb(a0.transport)
-    p = Ping(nonce=0).sign(a0.raiden.address)
+    p = Ping(nonce=0)
+    a0.raiden.sign(p)
     a0.raiden.protocol.send(a1.raiden.address, p)
     gevent.sleep(0.1)
-
     assert len(messages) == 2  # Ping, Ack
     assert deserialize(messages[0]) == p
     a = deserialize(messages[1])
@@ -34,7 +34,8 @@ def test_ping_dropped_message():
 
     messages = setup_messages_cb(a0.transport)
 
-    p = Ping(nonce=0).sign(a0.raiden.address)
+    p = Ping(nonce=0)
+    a0.raiden.sign(p)
     a0.raiden.protocol.send(a1.raiden.address, p)
     gevent.sleep(1)
 
@@ -50,7 +51,8 @@ def test_ping_dropped_message():
     messages = setup_messages_cb(a0.transport)
 
     a0.transport.counter = 2  # first message sent, 2nd dropped
-    p = Ping(nonce=0).sign(a0.raiden.address)
+    p = Ping(nonce=0)
+    a0.raiden.sign(p)
     a0.raiden.protocol.send(a1.raiden.address, p)
     gevent.sleep(1)
 

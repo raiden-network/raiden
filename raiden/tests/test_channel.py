@@ -36,7 +36,7 @@ def test_transfer():
     assert b1 == pb0
 
     t = c0.create_transfer(amount=amount)
-    t.sign(c0.address)
+    c0.raiden.sign(t)
     c0.register_transfer(t)
     c1.register_transfer(t)
 
@@ -59,7 +59,7 @@ def test_locked_transfer():
     expiration = a0.raiden.chain.block_number + 100
     hashlock = sha3(secret)
     t = c0.create_lockedtransfer(amount=amount, expiration=expiration, hashlock=hashlock)
-    t.sign(c0.address)
+    c0.raiden.sign(t)
     c0.register_transfer(t)
     c1.register_transfer(t)
 
@@ -121,7 +121,7 @@ def test_interwoven_transfers(num=100):
     for i, amount in enumerate(amounts):
         hashlock = sha3(secrets[i])
         t = c0.create_lockedtransfer(amount=amount, expiration=expiration, hashlock=hashlock)
-        t.sign(c0.address)
+        c0.raiden.sign(t)
         c0.register_transfer(t)
         c1.register_transfer(t)
 
@@ -165,7 +165,7 @@ def transfer_speed(num_transfers=100, max_locked=100):
     for i, amount in enumerate(amounts):
         hashlock = sha3(secrets[i])
         t = c0.create_lockedtransfer(amount=amount, expiration=expiration, hashlock=hashlock)
-        t.sign(c0.address)
+        c0.raiden.sign(t)
         c0.register_transfer(t)
         c1.register_transfer(t)
         if i > max_locked:

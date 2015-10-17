@@ -57,8 +57,7 @@ class RaidenService(object):
 
     def sign(self, msg):
         assert isinstance(msg, SignedMessage)
-        msg.sign(self.address)
-        return msg
+        return msg.sign(self.privkey)
 
     def on_message(self, msg):
         print "\nON MESSAGE {} {}".format(self, msg)
