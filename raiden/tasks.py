@@ -86,7 +86,7 @@ class TransferTask(gevent.Greenlet):
                 continue
             # calculate fee, calc expiration
             t = channel.create_lockedtransfer(self.amount, self.expiration, self.hashlock)
-            t.to_mediatedtransfer(self.target, initiator=initiator, fee=0)  # fixme fee
+            t = t.to_mediatedtransfer(self.target, initiator=initiator, fee=0)  # fixme fee
             self.raiden.sign(t)
             channel.register_transfer(t)
 
