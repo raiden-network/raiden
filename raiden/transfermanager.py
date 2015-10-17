@@ -1,7 +1,7 @@
 import random
 from messages import Transfer, MediatedTransfer, LockedTransfer, SecretRequest
 import assetmanager as assetmanagermodul
-from tasks import TransferTask, ForwardSecretTask
+from tasks import Task, TransferTask, ForwardSecretTask
 from utils import sha3
 import gevent
 
@@ -17,6 +17,17 @@ class TransferManager(object):
         self.raiden = assetmanager.raiden
         self.assetmanager = assetmanager
         self.transfertasks = dict()  # hashlock > TransferTask
+        self.on_task_completed_callbacks = []
+
+    def on_task_started(self, task):
+        assert isinstance(task, Task)
+        self.transfertasks[task.hashlock] = task
+
+    def on_task_completed(self, task, success):
+        assert isinstance(task, Task)
+        del self.transfertasks[task.hashlock]
+        for cb in self.on_task_completed_callbacks:
+            cb(task, success)
 
     def transfer(self, amount, target, hashlock=None, secret=None):
         if target in self.assetmanager.channels and not hashlock:
@@ -33,7 +44,6 @@ class TransferManager(object):
             # initiate mediated transfer
             t = TransferTask(self, amount, target, hashlock,
                              expiration=None, originating_transfer=None, secret=secret)
-            self.transfertasks[hashlock] = t
             t.start()
             t.join()
 
@@ -59,12 +69,10 @@ class TransferManager(object):
             self.raiden.sign(sr)
             self.raiden.send(transfer.initiator, sr)
             t = ForwardSecretTask(self, transfer.lock.hashlock, recipient=transfer.sender)
-            self.transfertasks[transfer.lock.hashlock] = t
             t.start()
         else:
             t = TransferTask(self, transfer.lock.amount, transfer.target,
                              transfer.lock.hashlock, originating_transfer=transfer)
-            self.transfertasks[transfer.lock.hashlock] = t
             t.start()
 
     def on_transfer(self, transfer):

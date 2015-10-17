@@ -6,7 +6,14 @@ import gevent
 from gevent.event import AsyncResult
 
 
-class TransferTask(gevent.Greenlet):
+class Task(gevent.Greenlet):
+
+    def on_completion(self, success):
+        self.transfermanager.on_task_completed(self, success)
+        return success
+
+
+class TransferTask(Task):
 
     """
     Normal Operation (Transfer A > C)
@@ -55,6 +62,7 @@ class TransferTask(gevent.Greenlet):
         self.secret = secret
         super(TransferTask, self).__init__()
         print "INIT", self
+        self.transfermanager.on_task_started(self)
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.raiden.address))
@@ -99,7 +107,7 @@ class TransferTask(gevent.Greenlet):
                 # stale hashlock
                 if not self.isinitiator:
                     self.raiden.send(self.originating_transfer.sender, msg)
-                return False
+                return self.on_completion(False)
             elif isinstance(msg, Secret):
                 assert self.originating_transfer
                 assert msg.hashlock == self.hashlock
@@ -109,7 +117,7 @@ class TransferTask(gevent.Greenlet):
                     self.raiden.send(self.originating_transfer.sender, fwd)
                 else:
                     print "NOT FORWARDING SECRET TO ININTIATOR"
-                return True
+                return self.on_completion(True)
             elif isinstance(msg, SecretRequest):
                 assert self.isinitiator
                 assert msg.sender == self.target
@@ -118,7 +126,7 @@ class TransferTask(gevent.Greenlet):
                 self.raiden.send(self.target, msg)
                 # apply secret to own channel
                 channel.claim_locked(self.secret)
-                return True
+                return self.on_completion(True)
         # we did not find a path, send CancelTransfer
         if self.originating_transfer:
             channel = self.assetmanager.channels[self.originating_transfer.sender]
@@ -126,7 +134,7 @@ class TransferTask(gevent.Greenlet):
             channel.register_transfer(t)
             self.raiden.sign(t)
             self.raiden.send(self.originating_transfer.sender, t)
-        return False
+        return self.on_completion(False)
 
     def on_event(self, msg):
         print "SET EVENT {} {} {}".format(self, id(self.event), msg)
@@ -175,16 +183,19 @@ class TransferTask(gevent.Greenlet):
         assert False, "Not Implemented"
 
 
-class ForwardSecretTask(gevent.Greenlet):
+class ForwardSecretTask(Task):
 
     timeout = TransferTask.timeout_per_hop
 
     def __init__(self, transfermanager, hashlock, recipient):
+        self.transfermanager = transfermanager
         self.recipient = recipient
         self.hashlock = hashlock
         self.raiden = transfermanager.assetmanager.raiden
         super(ForwardSecretTask, self).__init__()
         print "INIT", self
+
+        self.transfermanager.on_task_started(self)
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.raiden.address))
@@ -203,9 +214,10 @@ class ForwardSecretTask(gevent.Greenlet):
         if not msg:
             print "TIMEOUT! " * 5
             # TransferTimeout is of no use, SecretRequest was for sender
-            return False
+            return self.on_completion(False)
         assert isinstance(msg, Secret)
         assert msg.hashlock == self.hashlock
         fwd = Secret(msg.secret)
         self.raiden.sign(fwd)
         self.raiden.send(self.recipient, fwd)
+        return self.on_completion(True)
