@@ -367,6 +367,7 @@ class LockedTransfer(SignedMessage):
     #     self.initiator = initiator
 
     def to_mediatedtransfer(self, target, fee=0, initiator=''):
+        assert self.is_mutable()
         return MediatedTransfer(self.nonce, self.asset, self.balance, self.recipient,
                                 self.locksroot, self.lock, target, initiator, fee)
 
@@ -401,6 +402,7 @@ class MediatedTransfer(LockedTransfer):
             ('fee', t_int),
             ('initiator', t_address)
         ]
+    _sedes = None  # fix for rlp.Serializable._sedes caching
 
     def __init__(self, nonce, asset, balance, recipient, locksroot,
                  lock, target, initiator, fee=0):
@@ -508,6 +510,7 @@ class TransferTimeout(SignedMessage):
 message_class_by_id = dict((c.cmdid, c) for c in
                            Message.__subclasses__() + SignedMessage.__subclasses__())
 message_class_by_id[MediatedTransfer.cmdid] = MediatedTransfer
+
 cmdid_pos = [_[0] for _ in Message.fields].index('cmdid')
 signature_pos = [_[0] for _ in SignedMessage.fields].index('signature')
 for cls in message_class_by_id.values():
