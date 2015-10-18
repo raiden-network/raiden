@@ -1,1 +1,2 @@
 pytest
+gevent>=1.1b3

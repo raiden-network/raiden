@@ -19,7 +19,8 @@ class RLPHashable(rlp.Serializable):
 
     @property
     def hash(self):
-        return sha3(rlp.encode(self, cache=True))
+        # return sha3(rlp.encode(self, cache=True))
+        return sha3(rlp.encode(self))
 
     def __eq__(self, other):
         return isinstance(other, self.__class__) and self.hash == other.hash
@@ -36,6 +37,9 @@ class RLPHashable(rlp.Serializable):
         except Exception:
             h = ''
         return '<%s(%s)>' % (self.__class__.__name__, pex(h))
+
+    def encoded(self):
+        return rlp.encode(self)
 
 
 class SignatureMissingError(Exception):
@@ -63,7 +67,7 @@ class Signed(RLPHashable):
         assert self.is_mutable()
         assert isinstance(privkey, bytes) and len(privkey) == 32
         self.signature = c_ecdsa_sign_compact(self._hash_without_signature, privkey)
-        self.make_immutable()
+        # self.make_immutable()
         return self
 
     @property
@@ -88,7 +92,7 @@ class Message(RLPHashable):
     fields = [('cmdid', t_int), ('sender', t_address)]
 
     def __repr__(self):
-        return '<{} {}>'.format(self.__class__.__name__, pex(self.hash))
+        return '<{}>'.format(self.__class__.__name__)
 
 
 class SignedMessage(Signed, Message):

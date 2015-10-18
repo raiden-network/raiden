@@ -11,7 +11,7 @@ class Transport(object):
         self.on_send_cbs = []  # debugging
 
     def send(self, sender, host_port, message):
-        print "TRANSPORT SENDS", messages.deserialize(message)
+        # print "TRANSPORT SENDS", messages.deserialize(message)
         for cb in self.on_send_cbs:
             cb(sender, host_port, message)
 

@@ -1,4 +1,3 @@
-import rlp
 import messages
 from messages import Ack, Secret, BaseError
 from utils import isaddress, sha3, pex
@@ -33,7 +32,7 @@ class RaidenProtocol(object):
         host_port = self.discovery.get(receiver_address)
         msghash = msg.hash
         self.tries[msghash] = self.max_tries
-        data = rlp.encode(msg)
+        data = msg.encoded()
         assert len(data) < self.max_message_size
 
         def repeater():
@@ -53,7 +52,7 @@ class RaidenProtocol(object):
         assert isinstance(msg,  (Ack, BaseError))
         assert isaddress(receiver_address)
         host_port = self.discovery.get(receiver_address)
-        self.transport.send(self.raiden, host_port, rlp.encode(msg))
+        self.transport.send(self.raiden, host_port, msg.encoded())
         self.sent_acks[msg.echo] = (receiver_address, msg)
 
     def receive(self, data):
