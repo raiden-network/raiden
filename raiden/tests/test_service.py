@@ -1,6 +1,6 @@
 from raiden.messages import Ping, Ack, decode
 from raiden.app import create_network
-from raiden.transport import UnreliableTransport
+from raiden.transport import UnreliableTransport, UDPTransport
 from raiden.raiden_protocol import RaidenProtocol
 from .utils import setup_messages_cb
 import gevent
@@ -22,15 +22,14 @@ def test_ping():
 
 
 def test_ping_dropped_message():
-    apps = create_network(num_nodes=2, num_assets=0, channels_per_node=0)
+    apps = create_network(num_nodes=2, num_assets=0, channels_per_node=0,
+                          transport_class=UnreliableTransport)
     a0, a1 = apps
 
     # mock transport with packet loss, every 3nd is lost, starting with first message
     UnreliableTransport.droprate = 3
     RaidenProtocol.try_interval = 0.1  # for fast tests
     RaidenProtocol.repeat_messages = True
-    a0.transport.__class__ = UnreliableTransport
-    a1.transport.__class__ = UnreliableTransport
 
     messages = setup_messages_cb()
     UnreliableTransport.network.counter = 0
@@ -70,3 +69,19 @@ def test_ping_dropped_message():
     assert a.echo == p.hash
 
     RaidenProtocol.repeat_messages = False
+
+
+def test_ping_udp():
+    apps = create_network(num_nodes=2, num_assets=0, channels_per_node=0,
+                          transport_class=UDPTransport)
+    a0, a1 = apps
+    messages = setup_messages_cb()
+    p = Ping(nonce=0)
+    a0.raiden.sign(p)
+    a0.raiden.protocol.send(a1.raiden.address, p)
+    gevent.sleep(0.1)
+    assert len(messages) == 2  # Ping, Ack
+    assert decode(messages[0]) == p
+    a = decode(messages[1])
+    assert isinstance(a, Ack)
+    assert a.echo == p.hash

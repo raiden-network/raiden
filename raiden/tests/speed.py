@@ -1,5 +1,6 @@
 import time
 from raiden.messages import Ack,  Transfer
+from raiden.transport import UDPTransport
 from raiden.app import create_network
 from utils import setup_messages_cb, dump_messages
 from raiden.tasks import TransferTask
@@ -8,9 +9,9 @@ import gevent
 
 def test_mediated_transfer(num_transfers=100):
 
-    apps = create_network(num_nodes=10, num_assets=1, channels_per_node=2)
+    apps = create_network(
+        num_nodes=10, num_assets=1, channels_per_node=2, transport_class=UDPTransport)
     a0 = apps[0]
-    messages = setup_messages_cb(a0.transport)
 
     # channels
     am0 = a0.raiden.assetmanagers.values()[0]

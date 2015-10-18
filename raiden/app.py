@@ -44,13 +44,14 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
     for asset_address in chain.asset_addresses:
         channelmanager = chain.channelmanager_by_asset(asset_address)
         assert isinstance(channelmanager, ChannelManagerContract)
+        assert channels_per_node < len(apps)
         for app in apps:
             capps = list(apps)  # copy
+            capps.remove(app)
             netting_contracts = channelmanager.nettingcontracts_by_address(app.raiden.address)
             while len(netting_contracts) < channels_per_node and capps:
                 a = random.choice(capps)
-                if a == app:
-                    continue
+                assert a != app
                 capps.remove(a)
                 a_nettting_contracts = channelmanager.nettingcontracts_by_address(a.raiden.address)
                 if not set(netting_contracts).intersection(set(a_nettting_contracts)) \
@@ -61,7 +62,7 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
 
                     # add deposit of asset
                     for address in (app.raiden.address, a.raiden.address):
-                        c.deposit(address, amount=10**6)
+                        c.deposit(address, amount=2**240)
 
     for app in apps:
         app.raiden.setup_assets()

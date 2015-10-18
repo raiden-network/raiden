@@ -22,6 +22,7 @@ class UDPTransport(object):
             self.server.sendto(data, host_port)
         except gevent.socket.error as e:
             raise e
+        DummyTransport.network.track_send(sender, host_port, data)  # debuging
 
     def register(self, proto, host, port):
         assert isinstance(proto, RaidenProtocol)
@@ -41,10 +42,13 @@ class DummyNetwork(object):
         assert isinstance(transport, DummyTransport)
         self.transports[(host, port)] = transport
 
-    def send(self, sender,  host_port, data):
+    def track_send(self, sender, host_port, data):
         self.counter += 1
         for cb in self.on_send_cbs:
             cb(sender, host_port, data)
+
+    def send(self, sender,  host_port, data):
+        self.track_send(sender, host_port, data)
         f = self.transports[host_port].receive
         gevent.spawn_later(0.00000000001, f, data)
 
@@ -82,7 +86,7 @@ class UnreliableTransport(DummyTransport):
         if self.network.counter % self.droprate:
             self.network.send(sender, host_port, data)
         else:
-            self.network.drop(sender, host_port, data)
+            self.network.track_send(sender, host_port, data)
             print('dropped data {}'.format(pex(sha3(data))))
 
 
