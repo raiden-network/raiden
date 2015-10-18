@@ -9,7 +9,7 @@ import gevent
 def test_ping():
     apps = create_network(num_nodes=2, num_assets=0, channels_per_node=0)
     a0, a1 = apps
-    messages = setup_messages_cb(a0.transport)
+    messages = setup_messages_cb()
     p = Ping(nonce=0)
     a0.raiden.sign(p)
     a0.raiden.protocol.send(a1.raiden.address, p)
@@ -32,7 +32,8 @@ def test_ping_dropped_message():
     a0.transport.__class__ = UnreliableTransport
     a1.transport.__class__ = UnreliableTransport
 
-    messages = setup_messages_cb(a0.transport)
+    messages = setup_messages_cb()
+    UnreliableTransport.network.counter = 0
 
     p = Ping(nonce=0)
     a0.raiden.sign(p)
@@ -48,9 +49,10 @@ def test_ping_dropped_message():
     assert a.echo == p.hash
 
     # try failing Ack
-    messages = setup_messages_cb(a0.transport)
+    messages = setup_messages_cb()
+    assert not messages
 
-    a0.transport.counter = 2  # first message sent, 2nd dropped
+    UnreliableTransport.network.counter = 2  # first message sent, 2nd dropped
     p = Ping(nonce=0)
     a0.raiden.sign(p)
     a0.raiden.protocol.send(a1.raiden.address, p)

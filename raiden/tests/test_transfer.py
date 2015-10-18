@@ -8,7 +8,7 @@ import gevent
 def test_transfer():
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps
-    messages = setup_messages_cb(a0.transport)
+    messages = setup_messages_cb()
 
     # channels
     am0 = a0.raiden.assetmanagers.values()[0]
@@ -47,7 +47,7 @@ def test_mediated_transfer():
 
     apps = create_network(num_nodes=10, num_assets=1, channels_per_node=2)
     a0 = apps[0]
-    messages = setup_messages_cb(a0.transport)
+    messages = setup_messages_cb()
 
     # channels
     am0 = a0.raiden.assetmanagers.values()[0]

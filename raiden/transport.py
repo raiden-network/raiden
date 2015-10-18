@@ -1,44 +1,89 @@
 from raiden_service import RaidenProtocol
 from utils import isaddress, pex, sha3
-import messages
 import gevent
+from gevent.server import DatagramServer
 
 
-class Transport(object):
+class UDPTransport(object):
 
-    def __init__(self):
-        self.protocols = dict()
-        self.on_send_cbs = []  # debugging
+    def __init__(self, host, port, protocol=None):
+        self.protocol = protocol
+        self.server = DatagramServer(('', 0), handle=self.receive)
+        self.server.start()
+        self.host = self.server.server_host
+        self.port = self.server.server_port
 
-    def send(self, sender, host_port, message):
-        # print "TRANSPORT SENDS", messages.decode(message)
-        for cb in self.on_send_cbs:
-            cb(sender, host_port, message)
+    def receive(self, data, host_port):
+        self.protocol.receive(data)
 
-        f = self.protocols[host_port].receive
-        gevent.spawn_later(0.0001, f, message)
+    def send(self, sender, host_port, data):
+        # print "TRANSPORT SENDS", datas.decode(data)
+        try:
+            self.server.sendto(data, host_port)
+        except gevent.socket.error as e:
+            raise e
 
     def register(self, proto, host, port):
         assert isinstance(proto, RaidenProtocol)
-        self.protocols[(host, port)] = proto
+        self.protocol = proto
 
 
-class UnreliableTransport(Transport):
+class DummyNetwork(object):
+
+    "global which conects the DummyTransports"
+
+    def __init__(self):
+        self.transports = dict()
+        self.on_send_cbs = []  # debugging
+        self.counter = 0
+
+    def register(self, transport, host, port):
+        assert isinstance(transport, DummyTransport)
+        self.transports[(host, port)] = transport
+
+    def send(self, sender,  host_port, data):
+        self.counter += 1
+        for cb in self.on_send_cbs:
+            cb(sender, host_port, data)
+        f = self.transports[host_port].receive
+        gevent.spawn_later(0.00000000001, f, data)
+
+    def drop(self, sender,  host_port, data):
+        "lost message"
+        self.counter += 1
+        for cb in self.on_send_cbs:
+            cb(sender, host_port, data)
+
+
+class DummyTransport(object):
+    network = DummyNetwork()
+
+    def __init__(self, host, port, protocol=None):
+        self.protocol = protocol
+        self.host, self.port = host, port
+        self.network.register(self, host, port)
+
+    def send(self, sender, host_port, data):
+        # print "TRANSPORT SENDS", datas.decode(data)
+        self.network.send(sender, host_port, data)
+
+    def receive(self, data, host_port=None):
+        self.protocol.receive(data)
+
+
+class UnreliableTransport(DummyTransport):
 
     "simulate random lost udp messages"
 
-    counter = 0
     droprate = 2  # drop every Nth message
 
-    def send(self, sender, host_port, message):
-        for cb in self.on_send_cbs:
-            cb(sender, host_port, message)
-        print 'in send unreliable', self.counter, self.counter % self.droprate
-        self.counter += 1
-        if (self.counter - 1) % self.droprate:
-            self.protocols[host_port].receive(message)
+    def send(self, sender, host_port, data):
+        print 'in send unreliable', self.network.counter, self.network.counter % self.droprate
+        if self.network.counter % self.droprate:
+            self.network.send(sender, host_port, data)
         else:
-            print('dropped message {}'.format(pex(sha3(message))))
+            self.network.drop(sender, host_port, data)
+            print('dropped data {}'.format(pex(sha3(data))))
 
 
 class Discovery(object):

@@ -44,6 +44,7 @@ class RaidenService(object):
         self.privkey = privkey
         self.address = privtoaddr(privkey)
         self.protocol = RaidenProtocol(transport, discovery, self)
+        transport.protocol = self.protocol
         self.assetmanagers = dict()
         self.api = RaidenAPI(self)
 

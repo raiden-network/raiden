@@ -1,13 +1,14 @@
 import gevent
 gevent.get_hub().SYSTEM_ERROR = BaseException
+from raiden.transport import DummyTransport
 
 
-def setup_messages_cb(transport):
+def setup_messages_cb():
     messages = []
 
     def cb(sender_raiden, host_port, msg):
         messages.append(msg)
-    transport.on_send_cbs = [cb]
+    DummyTransport.network.on_send_cbs = [cb]
     return messages
 
 

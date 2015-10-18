@@ -1,5 +1,5 @@
 from raiden_service import RaidenService
-from transport import Transport, Discovery
+from transport import DummyTransport, Discovery
 from contracts import BlockChain, ChannelManagerContract, NettingChannelContract
 from utils import sha3, pex
 import copy
@@ -9,33 +9,31 @@ class App(object):
 
     default_config = dict(host='', port=40000, privkey='')
 
-    def __init__(self, privkey, port, chain, discovery, transport):
-        self.config = copy.deepcopy(self.default_config)
-        self.config['port'] = port
-        self.raiden = RaidenService(chain, privkey, transport, discovery)
-        discovery.register(self.raiden.address, self.config['host'], self.config['port'])
-        transport.register(self.raiden.protocol, self.config['host'], self.config['port'])
-        self.transport = transport
+    def __init__(self, config, chain, discovery, transport_class=DummyTransport):
+        self.config = config
+        self.transport = transport_class(config['host'], config['port'])
+        self.raiden = RaidenService(chain, config['privkey'], self.transport, discovery)
+        discovery.register(self.raiden.address, self.transport.host, self.transport.port)
         self.discovery = discovery
 
 
-def mk_app(num, chain, discovery, transport):
-    privkey = sha3(str(num))
-    port = App.default_config['port'] + num
-    return App(privkey, port, chain, discovery, transport)
+def mk_app(num, chain, discovery, transport_class):
+    config = copy.deepcopy(App.default_config)
+    config['privkey'] = sha3(str(num))
+    config['port'] += num
+    return App(config, chain, discovery, transport_class)
 
 
-def create_network(num_nodes=8, num_assets=1, channels_per_node=3):
+def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_class=DummyTransport):
     import random
     random.seed(42)
 
     # globals
-    transport = Transport()
     discovery = Discovery()
     chain = BlockChain()
 
     # create apps
-    apps = [mk_app(i, chain, discovery, transport) for i in range(num_nodes)]
+    apps = [mk_app(i, chain, discovery, transport_class) for i in range(num_nodes)]
 
     # create assets
     for i in range(num_assets):
