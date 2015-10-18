@@ -1,108 +1,9 @@
 # Copyright (c) 2015 Heiko Hees
-from utils import big_endian_to_int, sha3, isaddress, ishash, int_to_big_endian, pex
+from utils import sha3, isaddress, ishash
 import rlp
-from rlp.sedes import Binary
-from rlp.sedes import big_endian_int as t_int
-from rlp.sedes import binary as t_binary
 from rlp.sedes import List as t_list
-from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
-from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
-
-
-t_address = Binary.fixed_length(20, allow_empty=False)
-t_hash = Binary.fixed_length(32, allow_empty=False)
-t_hash_optional = Binary.fixed_length(32, allow_empty=True)
-
-
-class RLPHashable(rlp.Serializable):
-    # _cached_rlp caches serialized object
-
-    @property
-    def hash(self):
-        # return sha3(rlp.encode(self, cache=True))
-        return sha3(rlp.encode(self))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.hash == other.hash
-
-    def __hash__(self):
-        return big_endian_to_int(self.hash)
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __repr__(self):
-        try:
-            h = self.hash
-        except Exception:
-            h = ''
-        return '<%s(%s)>' % (self.__class__.__name__, pex(h))
-
-    def encoded(self):
-        return rlp.encode(self)
-
-
-class SignatureMissingError(Exception):
-    pass
-
-
-class Signed(RLPHashable):
-
-    _sender = ''
-    signature = ''
-    fields = [('signature', t_binary)]
-
-    # def __init__(self, sender=''):
-    #     assert not sender or isaddress(sender)
-    #     super(Signed, self).__init__(sender=sender)
-
-    def __len__(self):
-        return len(rlp.encode(self))
-
-    @property
-    def _hash_without_signature(self):
-        return sha3(rlp.encode(self, self.exclude(['signature'])))
-
-    def sign(self, privkey):
-        assert self.is_mutable()
-        assert isinstance(privkey, bytes) and len(privkey) == 32
-        self.signature = c_ecdsa_sign_compact(self._hash_without_signature, privkey)
-        # self.make_immutable()
-        return self
-
-    @property
-    def sender(self):
-        if not self._sender:
-            if not self.signature:
-                raise SignatureMissingError()
-            pub = c_ecdsa_recover_compact(self._hash_without_signature, self.signature)
-            self._sender = sha3(pub[1:])[-20:]
-        return self._sender
-
-
-class Message(RLPHashable):
-
-    """
-    Message also has a sender property, so that Acks can be sent
-    """
-
-    cmdid = 0
-    sender = ''
-
-    fields = [('cmdid', t_int), ('sender', t_address)]
-
-    def __repr__(self):
-        return '<{}>'.format(self.__class__.__name__)
-
-
-class SignedMessage(Signed, Message):
-
-    """
-    Base Message, dispatching is decided based on the cmdid.
-    Future protocol versions can be distinguished by using a different cmdid range
-    """
-
-    fields = [('cmdid', t_int), ('signature', t_binary)]
+from encoding import Message, SignedMessage, Decoder, RLPHashable
+from encoding import t_int, t_address, t_hash, t_hash_optional
 
 
 class Ack(Message):
@@ -118,7 +19,7 @@ class Ack(Message):
 
     fields = Message.fields + [('echo', t_hash)]
 
-    def __init__(self, echo, sender=''):
+    def __init__(self, sender, echo):
         self.echo = echo
         self.sender = sender
 
@@ -233,7 +134,6 @@ class Transfer(SignedMessage):
     once the secret becomes available even, when the peer fails and the balance
     could not be netted.
 
-
     If `secret` is provided, this allows to settle a formerly locked transfer,
     the given secret is already reflected in the locksroot.
     """
@@ -258,7 +158,7 @@ class Transfer(SignedMessage):
         self.secret = secret or ''  # secret for settling a locked amount: hashlock = sha3(secret)
 
 
-class Lock(rlp.Serializable):
+class Lock(RLPHashable):
 
     """
     Data describing a locked `amount`.
@@ -371,7 +271,6 @@ class LockedTransfer(SignedMessage):
     #     self.initiator = initiator
 
     def to_mediatedtransfer(self, target, fee=0, initiator=''):
-        assert self.is_mutable()
         return MediatedTransfer(self.nonce, self.asset, self.balance, self.recipient,
                                 self.locksroot, self.lock, target, initiator, fee)
 
@@ -403,8 +302,8 @@ class MediatedTransfer(LockedTransfer):
     fields = LockedTransfer.fields + \
         [
             ('target', t_address),
-            ('fee', t_int),
-            ('initiator', t_address)
+            ('initiator', t_address),
+            ('fee', t_int)
         ]
     _sedes = None  # fix for rlp.Serializable._sedes caching
 
@@ -510,27 +409,4 @@ class TransferTimeout(SignedMessage):
 #         self.bid_amount = bid_amount
 #         self.ask_amount = ask_amount
 
-# infrastructure to deserialize messages into a Message instance
-message_class_by_id = dict((c.cmdid, c) for c in
-                           Message.__subclasses__() + SignedMessage.__subclasses__())
-message_class_by_id[MediatedTransfer.cmdid] = MediatedTransfer
-
-cmdid_pos = [_[0] for _ in Message.fields].index('cmdid')
-signature_pos = [_[0] for _ in SignedMessage.fields].index('signature')
-for cls in message_class_by_id.values():
-    assert cls.fields[cmdid_pos][0] == 'cmdid'
-
-
-def deserialize(data):
-    # cmdid, signature are deserialized separately
-    # cmdid to match the class
-    # signature, so we don't have it in the interface
-    cmdid = rlp.peek(data, cmdid_pos, sedes=t_int)
-    signature = rlp.peek(data, signature_pos, sedes=t_binary)
-    assert cmdid < 256
-    cls = message_class_by_id[cmdid]
-    m = cls.deserialize(rlp.decode(data), exclude=['signature', 'cmdid'])
-    m._mutable = True
-    m.signature = signature
-    m._mutable = False
-    return m
+decode = Decoder(extra_klasses=[MediatedTransfer]).decode

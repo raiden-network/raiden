@@ -1,4 +1,4 @@
-from raiden.messages import Ack, deserialize, Transfer
+from raiden.messages import Ack, decode, Transfer
 from raiden.app import create_network
 from .utils import setup_messages_cb, dump_messages
 from raiden.tasks import TransferTask
@@ -30,10 +30,10 @@ def test_transfer():
     gevent.sleep(1)
 
     assert len(messages) == 2  # Transfer, Ack
-    mt = deserialize(messages[0])
+    mt = decode(messages[0])
     assert isinstance(mt, Transfer)
     assert mt.balance == b1 + amount
-    ma = deserialize(messages[1])
+    ma = decode(messages[1])
     assert isinstance(ma, Ack)
     assert ma.echo == mt.hash
 

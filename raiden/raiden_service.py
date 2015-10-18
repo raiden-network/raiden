@@ -59,15 +59,15 @@ class RaidenService(object):
         assert isinstance(msg, SignedMessage)
         return msg.sign(self.privkey)
 
-    def on_message(self, msg):
+    def on_message(self, msg, msghash):
         print "\nON MESSAGE {} {}".format(self, msg)
         method = 'on_%s' % msg.__class__.__name__.lower()
         # update activity monitor (which also does pings to all addresses in channels)
         getattr(self, method)(msg)
         print "SEND ACK{} {}".format(self, msg)
-        self.protocol.send_ack(msg.sender, messages.Ack(msg.hash, self.address))
+        self.protocol.send_ack(msg.sender, messages.Ack(self.address, msghash))
 
-    def on_message_failsafe(self, msg):
+    def on_message_failsafe(self, msg, msghash):
         method = 'on_%s' % msg.__class__.__name__.lower()
         # update activity monitor (which also does pings to all addresses in channels)
         try:
@@ -75,7 +75,7 @@ class RaidenService(object):
         except messages.BaseError as error:
             self.protocol.send_ack(msg.sender, error)
         else:
-            self.protocol.send_ack(msg.sender, messages.Ack(msg.hash, self.address))
+            self.protocol.send_ack(msg.sender, messages.Ack(self.address, msghash))
 
     def send(self, recipient, msg):
 #        assert msg.sender

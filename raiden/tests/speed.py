@@ -1,5 +1,5 @@
 import time
-from raiden.messages import Ack, deserialize, Transfer
+from raiden.messages import Ack,  Transfer
 from raiden.app import create_network
 from utils import setup_messages_cb, dump_messages
 from raiden.tasks import TransferTask

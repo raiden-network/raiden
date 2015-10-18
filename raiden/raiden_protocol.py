@@ -30,9 +30,11 @@ class RaidenProtocol(object):
         assert not isinstance(msg, (Ack, BaseError)), msg
         print "SENDING {} > {} : {}".format(pex(self.raiden.address), pex(receiver_address), msg)
         host_port = self.discovery.get(receiver_address)
-        msghash = msg.hash
+        data = msg.encode()
+        msghash = sha3(data)
         self.tries[msghash] = self.max_tries
-        data = msg.encoded()
+        print "MSGHASH SENT", pex(msghash)
+
         assert len(data) < self.max_message_size
 
         def repeater():
@@ -52,24 +54,26 @@ class RaidenProtocol(object):
         assert isinstance(msg,  (Ack, BaseError))
         assert isaddress(receiver_address)
         host_port = self.discovery.get(receiver_address)
-        self.transport.send(self.raiden, host_port, msg.encoded())
+        self.transport.send(self.raiden, host_port, msg.encode())
         self.sent_acks[msg.echo] = (receiver_address, msg)
+        print "ACK MSGHASH SENT", pex(msg.echo)
 
     def receive(self, data):
         assert len(data) < self.max_message_size
 
         # check if we handled this message already, if so repeat Ack
-        h = sha3(data)
-        if h in self.sent_acks:
+        msghash = sha3(data)
+        if msghash in self.sent_acks:
             # assert False, "DEACTIVATED ACK RESENTS"
-            return self.send_ack(*self.sent_acks[h])
+            return self.send_ack(*self.sent_acks[msghash])
 
         # note, we ignore the sending endpoint, as this can not be known w/ UDP
-        msg = messages.deserialize(data)
+        msg = messages.decode(data)
         # handle Acks
         if isinstance(msg, Ack):
+            print "ACK MSGHASH RECEIVED", pex(msg.echo)
             del self.tries[msg.echo]
             return
 
         assert isinstance(msg, Secret) or msg.sender
-        self.raiden.on_message(msg)
+        self.raiden.on_message(msg, msghash)
