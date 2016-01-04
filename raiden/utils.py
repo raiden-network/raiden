@@ -2,6 +2,17 @@ from ethereum.utils import big_endian_to_int, sha3, int_to_big_endian, privtoadd
 #from ethereum.keys import privtoaddr
 from bitcoin import encode_pubkey, N, P
 import sys
+from Crypto.Hash import keccak as keccaklib
+
+# hashing
+
+
+def keccak_256(x):
+    return keccaklib.new(digest_bits=256, data=x)
+
+
+def keccak(seed):
+    return keccak_256(seed).digest()
 
 
 def ishash(h):

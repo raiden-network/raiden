@@ -1,6 +1,6 @@
 import pytest
-from raiden.utils import sha3
-from raiden.mtree import merkleroot, check_proof, get_proof
+from raiden.mtree import merkleroot, check_proof, get_proof, NoHash32Error
+from raiden.utils import keccak
 
 
 def test_small():
@@ -10,8 +10,32 @@ def test_small():
     r = merkleroot(values, proof)
     assert check_proof(proof, r, proof_for)
 
+
+def test_empy():
     r = merkleroot('')
     assert r == ''
+
+
+def test_multiple_empty():
+    r = merkleroot(['', ''])
+    assert r == ''
+
+
+def test_non_hash():
+    with pytest.raises(NoHash32Error):
+        merkleroot(['not32bytes', 'neither'])
+
+
+def test_single():
+    h = keccak('x')
+    assert merkleroot([h]) == h
+
+
+def test_duplicates():
+    h = keccak('x')
+    h1 = keccak('y')
+    assert merkleroot([h, h]) == h
+    assert merkleroot([h, h1, h]) == merkleroot([h, h1])
 
 
 def test_basic():
@@ -61,16 +85,6 @@ def test_basic3():
     assert check_proof(proof, r, proof_for)
 
 
-def test_multiple():
-    "does not support repeated values"
-    values = [x * 32 for x in 'abada']
-    proof_for = values[-1]
-    proof = [proof_for]
-    with pytest.raises(AssertionError):
-        r = merkleroot(values, proof)
-        assert check_proof(proof, r, proof_for)
-
-
 def do_test_many(values):
     for i, v in enumerate(values):
         proof = [v]
@@ -82,7 +96,7 @@ def do_test_many(values):
 
 def test_many(num=10):
     for nummi in range(1, num + 1):
-        values = [sha3(str(i)) for i in range(nummi)]
+        values = [keccak(str(i)) for i in range(nummi)]
         rvalues = list(reversed(values))
         r = do_test_many(values)
         r0 = do_test_many(rvalues)
@@ -91,7 +105,7 @@ def test_many(num=10):
 
 def do_test_speed(rounds=100, num_hashes=1000):
     import time
-    values = [sha3(str(i)) for i in range(num_hashes)]
+    values = [keccak(str(i)) for i in range(num_hashes)]
     st = time.time()
     for i in range(rounds):
         merkleroot(values)
