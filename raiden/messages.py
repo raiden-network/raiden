@@ -1,4 +1,18 @@
 # Copyright (c) 2015 Heiko Hees
+__all__ = (
+    'BaseError',
+    'Ack',
+    'Ping',
+    'Rejected',
+    'SecretRequest',
+    'Secret',
+    'Transfer',
+    'Lock',
+    'LockedTransfer',
+    'MediatedTransfer',
+    'CancelTransfer',
+    'TransferTimeout',
+)
 from utils import sha3, isaddress, ishash
 import rlp
 from rlp.sedes import List as t_list

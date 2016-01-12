@@ -1,3 +1,8 @@
+__all__ = (
+    'Task',
+    'TransferTask',
+    'ForwardSecretTask',
+)
 from messages import Secret,  CancelTransfer, TransferTimeout
 from messages import SecretRequest
 import transfermanager as transfermanagermodule
