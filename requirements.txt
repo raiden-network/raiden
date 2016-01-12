@@ -1,2 +1,7 @@
 pytest
+pysha3
 gevent>=1.1b3
+rlp>=0.4.3
+c_secp256k1==0.0.8
+pycryptodome>=3.3.1
+networkx
