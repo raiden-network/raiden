@@ -1,6 +1,6 @@
 from raiden.messages import Ack, decode, Transfer
 from raiden.app import create_network
-from .utils import setup_messages_cb, dump_messages
+from raiden.tests.utils import setup_messages_cb, dump_messages
 from raiden.tasks import TransferTask
 import gevent
 
@@ -98,3 +98,8 @@ def test_mediated_transfer():
     assert b_ba + amount == c_ba.balance
     assert b_bc - amount == c_bc.balance
     assert b_cb + amount == c_cb.balance
+
+
+if __name__ == '__main__':
+    test_transfer()
+    test_mediated_transfer()

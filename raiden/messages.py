@@ -144,7 +144,7 @@ class Transfer(SignedMessage):
     `locksroot` is the root of a merkle tree which records the outstanding
     locked_amounts with their hashlocks.
     this allows to keep transfering, although the there are locks outstanding.
-    this is because the recipient knwows that haslocked transfers can be settled
+    this is because the recipient knows that haslocked transfers can be settled
     once the secret becomes available even, when the peer fails and the balance
     could not be netted.
 

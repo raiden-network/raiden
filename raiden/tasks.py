@@ -94,7 +94,7 @@ class TransferTask(Task):
             if not self.assetmanager.channel_isactive(recipient):
                 continue
             channel = self.assetmanager.channels[recipient]
-            # check if we have enough funds ,fixme add limit per transfer
+            # check if we have enough funds, fixme add limit per transfer
             if self.amount > channel.distributable:
                 continue
             # calculate fee, calc expiration

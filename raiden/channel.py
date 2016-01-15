@@ -218,7 +218,7 @@ class Channel(object):
             assert transfer.lock.amount > 0
             assert allowance + transfer.lock.amount <= self.distributable
             assert transfer.lock.expiration - self.min_locktime >= self.raiden.chain.block_number
-            # check locksroot!!!
+            # fixme: check locksroot!!!
             self.register_locked_transfer(transfer)
 
         # all checks passed

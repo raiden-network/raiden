@@ -45,6 +45,8 @@ class RaidenProtocol(object):
                 self.tries[msghash] -= 1
                 self.transport.send(self.raiden, host_port, data)
                 gevent.sleep(self.try_interval)
+
+            # Each sent msg must be acked. When msg is acked its hash is removed from self.tries
             if msghash in self.tries:
                 assert False, "Node does not reply, fixme suspend node"
 
