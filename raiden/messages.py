@@ -12,6 +12,7 @@ __all__ = (
     'MediatedTransfer',
     'CancelTransfer',
     'TransferTimeout',
+    'ConfirmTransfer',
 )
 from utils import sha3, isaddress, ishash
 import rlp
@@ -31,7 +32,10 @@ class Ack(Message):
 
     cmdid = 0
 
-    fields = Message.fields + [('echo', t_hash)]
+    fields = Message.fields + \
+        [
+            ('echo', t_hash)
+        ]
 
     def __init__(self, sender, echo):
         self.echo = echo
@@ -45,7 +49,10 @@ class Ping(SignedMessage):
     """
     cmdid = 1
 
-    fields = SignedMessage.fields + [('nonce', t_int)]
+    fields = SignedMessage.fields + \
+        [
+            ('nonce', t_int)
+        ]
 
     def __init__(self, nonce):
         self.nonce = nonce
@@ -143,7 +150,7 @@ class Transfer(SignedMessage):
 
     `locksroot` is the root of a merkle tree which records the outstanding
     locked_amounts with their hashlocks.
-    this allows to keep transfering, although the there are locks outstanding.
+    this allows to keep transfering, although there are locks outstanding.
     this is because the recipient knows that haslocked transfers can be settled
     once the secret becomes available even, when the peer fails and the balance
     could not be netted.
@@ -340,12 +347,37 @@ class CancelTransfer(LockedTransfer):
 
 
 class TransferTimeout(SignedMessage):
+
+    """
+    Indicates that timeout happened during mediated transfer.
+    Transfer will not be completed.
+    """
     cmdid = 9
 
-    fields = SignedMessage.fields + [('echo', t_hash), ('hashlock', t_hash)]
+    fields = SignedMessage.fields + \
+        [
+            ('echo', t_hash),
+            ('hashlock', t_hash)
+        ]
 
     def __init__(self, echo, hashlock):
         self.echo = echo
+        self.hashlock = hashlock
+
+
+class ConfirmTransfer(SignedMessage):
+
+    """
+    `ConfirmTransfer` which signs, that `target` has received a transfer.
+    """
+    cmdid = 10
+
+    fields = SignedMessage.fields + \
+        [
+            ('hashlock', t_hash)
+        ]
+
+    def __init__(self, echo, hashlock):
         self.hashlock = hashlock
 
 
