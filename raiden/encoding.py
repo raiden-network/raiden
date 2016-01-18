@@ -5,11 +5,6 @@ from rlp import DecodingError
 from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
 from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
 import warnings
-from rlp.sedes import Binary
-from rlp.sedes import big_endian_int as t_int
-t_address = Binary.fixed_length(20, allow_empty=False)
-t_hash = Binary.fixed_length(32, allow_empty=False)
-t_hash_optional = Binary.fixed_length(32, allow_empty=True)
 
 
 class ByteSerializer(object):
