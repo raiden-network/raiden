@@ -97,12 +97,6 @@ class RLPHashable(object):
 
     @classmethod
     def decode(cls, msg):
-        """
-        decode msg to an instance of the class
-        set sender if it is a SignedMessage
-
-        rlpdata(N) | signature(65)
-        """
         byte_args = decoderlp(msg)
         return cls.deserialize(byte_args)
 
