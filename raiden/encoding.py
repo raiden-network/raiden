@@ -1,10 +1,27 @@
 # Copyright (c) 2015 Heiko Hees
-from utils import big_endian_to_int, sha3, isaddress, ishash, int_to_big_endian, pex
-from rlp.codec import consume_item, consume_length_prefix
-from rlp import DecodingError
+from raiden.utils import big_endian_to_int, sha3, isaddress, ishash, int_to_big_endian, pex
 from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
 from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
 import warnings
+import struct
+import umsgpack
+
+
+def _pack_map(obj, fp):
+    if len(obj) <= 15:
+        fp.write(struct.pack("B", 0x80 | len(obj)))
+    elif len(obj) <= 2**16 - 1:
+        fp.write(b"\xde" + struct.pack(">H", len(obj)))
+    elif len(obj) <= 2**32 - 1:
+        fp.write(b"\xdf" + struct.pack(">I", len(obj)))
+    else:
+        raise umsgpack.UnsupportedTypeException("huge array")
+
+    for k in sorted(obj.iterkeys()):
+        umsgpack.pack(k, fp)
+        umsgpack.pack(obj[k], fp)
+
+umsgpack._pack_map = _pack_map
 
 
 class ByteSerializer(object):
@@ -30,42 +47,17 @@ t_int = IntSerializer
 t_address = t_hash = t_hash_optional = ByteSerializer
 
 
-def _encode_optimized(item):
-    """RLP encode (a nested sequence of) bytes"""
-    if isinstance(item, bytes):
-        if len(item) == 1 and ord(item) < 128:
-            return item
-        prefix = length_prefix(len(item), 128)
-    else:
-        item = b''.join([_encode_optimized(x) for x in item])
-        prefix = length_prefix(len(item), 192)
-    return prefix + item
+def encode_msg(serializable_data):
+    """Encode a data via msgpack"""
+    return umsgpack.packb(serializable_data)
 
 
-def length_prefix(length, offset):
-    """Construct the prefix to lists or strings denoting their length.
-
-    :param length: the length of the item in bytes
-    :param offset: ``0x80`` when encoding raw bytes, ``0xc0`` when encoding a
-                   list
-    """
-    if length < 56:
-        return chr(offset + length)
-    else:
-        length_string = int_to_big_endian(length)
-        return chr(offset + 56 - 1 + len(length_string)) + length_string
+def decode_msg(binary_data):
+    """Decode a msgpack encoded object"""
+    return umsgpack.unpackb(binary_data)
 
 
-def decoderlp(rlpdata):
-    """Decode an RLP encoded object."""
-    try:
-        item, end = consume_item(rlpdata, 0)
-    except IndexError:
-        raise DecodingError('RLP string to short', rlpdata)
-    return item
-
-
-class RLPHashable(object):
+class MessageHashable(object):
 
     fields = []
 
@@ -84,7 +76,7 @@ class RLPHashable(object):
         return not self.__eq__(other)
 
     def encode(self):
-        return _encode_optimized(self.serialize())
+        return encode_msg(self.serialize())
 
     def serialize(self):
         "return object as a list of bytestrings"
@@ -97,11 +89,11 @@ class RLPHashable(object):
 
     @classmethod
     def decode(cls, msg):
-        byte_args = decoderlp(msg)
+        byte_args = decode_msg(msg)
         return cls.deserialize(byte_args)
 
 
-class Message(RLPHashable):
+class Message(MessageHashable):
 
     """
     Message also has a sender property, so that Acks can be sent
@@ -114,6 +106,12 @@ class Message(RLPHashable):
 
     def __repr__(self):
         return '<{}>'.format(self.__class__.__name__)
+
+    def encode(self):
+        """
+        cmdid(1) | msgpack_data(N)
+        """
+        return struct.pack("B", self.cmdid) + encode_msg(self.serialize())
 
     # def __len__(self):
     #     return len(self.encode())
@@ -140,9 +138,13 @@ class SignedMessage(Message):
     _sender = ''
 
     def encode(self):
+        """
+        cmdid(1) | msgpack_data(N) | signature(65)
+        """
+
         if not self.signature:
             raise SignatureMissingError()
-        return _encode_optimized(self.serialize()) + self.signature
+        return struct.pack("B", self.cmdid) + encode_msg(self.serialize()) + self.signature
 
     @classmethod
     def decode(cls, msg):
@@ -150,19 +152,19 @@ class SignedMessage(Message):
         decode msg to an instance of the class
         set sender if it is a SignedMessage
 
-        rlpdata(N) | signature(65)
+        msgpack_data(N) | signature(65)
         """
-        rlpdata = msg[:-65]
-        byte_args = decoderlp(rlpdata)
+        msgpack_data = msg[:-65]
+        byte_args = decode_msg(msgpack_data)
         o = cls.deserialize(byte_args)
         o.signature = msg[-65:]
-        o._recover_sender(rlpdata)
+        o._recover_sender(msgpack_data)
         return o
 
     def sign(self, privkey):
         assert not self.signature
         assert isinstance(privkey, bytes) and len(privkey) == 32
-        h = sha3(_encode_optimized(self.serialize()))
+        h = sha3(encode_msg(self.serialize()))
         self.signature = c_ecdsa_sign_compact(h, privkey)
         assert len(self.signature) == 65
         return self
@@ -176,7 +178,7 @@ class SignedMessage(Message):
     @property
     def sender(self):
         if not self._sender:
-            self._recover_sender(self.encode()[:-65])
+            self._recover_sender(self.encode()[1:-65])
         return self._sender
 
 
@@ -191,9 +193,8 @@ class Decoder(object):
         assert max(self.message_class_by_id.keys()) < 128  # assure we have 1 byte only cmdids
 
     def decode(self, data):
-        # cmdid = rlp.peek(data, 0, sedes=t_int)  # cmdid is first element
-        t, l, pos = consume_length_prefix(data, 0)
-        cmdid = t_int.deserialize(consume_item(data[pos], 0)[0])
+        # cmdid is a first byte
+        cmdid = struct.unpack("B", data[0])[0]
         cls = self.message_class_by_id[cmdid]
         print 'DECODING', cls
-        return cls.decode(data)
+        return cls.decode(data[1:])

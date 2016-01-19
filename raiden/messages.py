@@ -17,7 +17,7 @@ __all__ = (
 from utils import sha3, isaddress, ishash
 import rlp
 from rlp.sedes import List as t_list
-from encoding import Message, SignedMessage, Decoder, RLPHashable
+from encoding import Message, SignedMessage, Decoder, MessageHashable
 from encoding import t_int, t_address, t_hash, t_hash_optional
 
 
@@ -179,7 +179,7 @@ class Transfer(SignedMessage):
         self.secret = secret or ''  # secret for settling a locked amount: hashlock = sha3(secret)
 
 
-class Lock(RLPHashable):
+class Lock(MessageHashable):
 
     """
     Data describing a locked `amount`.
