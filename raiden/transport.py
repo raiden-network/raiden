@@ -31,11 +31,12 @@ class UDPTransport(object):
 
 class DummyNetwork(object):
 
-    "global which conects the DummyTransports"
+    "global which connects the DummyTransports"
+
+    on_send_cbs = []  # debugging
 
     def __init__(self):
         self.transports = dict()
-        self.on_send_cbs = []  # debugging
         self.counter = 0
 
     def register(self, transport, host, port):
@@ -61,6 +62,7 @@ class DummyNetwork(object):
 
 class DummyTransport(object):
     network = DummyNetwork()
+    on_recv_cbs = []  # debugging
 
     def __init__(self, host, port, protocol=None):
         self.protocol = protocol
@@ -71,7 +73,12 @@ class DummyTransport(object):
         # print "TRANSPORT SENDS", datas.decode(data)
         self.network.send(sender, host_port, data)
 
+    def track_recv(self, data, host_port=None):
+        for cb in self.on_recv_cbs:
+            cb(self.protocol.raiden, host_port, data)
+
     def receive(self, data, host_port=None):
+        self.track_recv(data, host_port)
         self.protocol.receive(data)
 
 
