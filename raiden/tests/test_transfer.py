@@ -1,6 +1,6 @@
 from raiden.messages import Ack, decode, Transfer
 from raiden.app import create_network
-from raiden.tests.utils import setup_messages_cb, dump_messages
+from raiden.tests.utils import setup_messages_cb, dump_messages, MessageLogger
 from raiden.tasks import TransferTask
 import gevent
 
@@ -9,6 +9,7 @@ def test_transfer():
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps
     messages = setup_messages_cb()
+    mlogger = MessageLogger()
 
     # channels
     am0 = a0.raiden.assetmanagers.values()[0]
@@ -41,6 +42,32 @@ def test_transfer():
     assert b0 - amount == c0.balance
 
     assert c0.locked.root == c1.partner.locked.root == c1.locked.root == ''
+
+    a0_messages = mlogger.get_node_messages(a0)
+    assert len(a0_messages) == 2
+    assert isinstance(a0_messages[0], Transfer)
+    assert isinstance(a0_messages[1], Ack)
+
+    a0_sent_messages = mlogger.get_node_messages(a0, only_sent=True)
+    assert len(a0_sent_messages) == 1
+    assert isinstance(a0_sent_messages[0], Transfer)
+
+    a0_recv_messages = mlogger.get_node_messages(a0, only_recv=True)
+    assert len(a0_recv_messages) == 1
+    assert isinstance(a0_recv_messages[0], Ack)
+
+    a1_messages = mlogger.get_node_messages(a1)
+    assert len(a1_messages) == 2
+    assert isinstance(a1_messages[0], Transfer)
+    assert isinstance(a1_messages[1], Ack)
+
+    a1_sent_messages = mlogger.get_node_messages(a1, only_sent=True)
+    assert len(a1_sent_messages) == 1
+    assert isinstance(a1_sent_messages[0], Ack)
+
+    a1_recv_messages = mlogger.get_node_messages(a1, only_recv=True)
+    assert len(a1_recv_messages) == 1
+    assert isinstance(a1_recv_messages[0], Transfer)
 
 
 def test_mediated_transfer():
