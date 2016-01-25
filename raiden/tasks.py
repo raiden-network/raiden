@@ -5,7 +5,6 @@ __all__ = (
 )
 from messages import Secret,  CancelTransfer, TransferTimeout
 from messages import SecretRequest
-import transfermanager as transfermanagermodule
 from utils import sha3, lpex, pex
 import gevent
 from gevent.event import AsyncResult
@@ -54,6 +53,7 @@ class TransferTask(Task):
 
     def __init__(self, transfermanager, amount, target, hashlock,
                  expiration=None, originating_transfer=None, secret=None):  # fee!
+        import transfermanager as transfermanagermodule
         assert isinstance(transfermanager, transfermanagermodule.TransferManager)
         self.transfermanager = transfermanager
         self.assetmanager = transfermanager.assetmanager
@@ -199,7 +199,6 @@ class ForwardSecretTask(Task):
         self.raiden = transfermanager.assetmanager.raiden
         super(ForwardSecretTask, self).__init__()
         print "INIT", self
-
         self.transfermanager.on_task_started(self)
 
     def __repr__(self):

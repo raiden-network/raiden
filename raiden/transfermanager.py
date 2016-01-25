@@ -1,6 +1,5 @@
 import random
 from messages import Transfer, MediatedTransfer, LockedTransfer, SecretRequest
-import assetmanager as assetmanagermodul
 from tasks import Task, TransferTask, ForwardSecretTask
 from utils import sha3
 import gevent
@@ -13,6 +12,7 @@ class TransferManager(object):
     """
 
     def __init__(self, assetmanager):
+        import assetmanager as assetmanagermodul
         assert isinstance(assetmanager, assetmanagermodul.AssetManager)
         self.raiden = assetmanager.raiden
         self.assetmanager = assetmanager
