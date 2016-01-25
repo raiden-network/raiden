@@ -39,6 +39,8 @@ class RaidenAPI(object):
 
 class RaidenService(object):
 
+    """ Runs a service on a node """
+
     def __init__(self, chain, privkey, transport, discovery):
         self.chain = chain
         self.privkey = privkey
@@ -79,7 +81,7 @@ class RaidenService(object):
             self.protocol.send_ack(msg.sender, messages.Ack(self.address, msghash))
 
     def send(self, recipient, msg):
-#        assert msg.sender
+        # assert msg.sender
         assert isaddress(recipient)
         self.protocol.send(recipient, msg)
 
