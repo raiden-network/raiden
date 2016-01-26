@@ -8,6 +8,8 @@ from messages import SecretRequest
 from utils import sha3, lpex, pex
 import gevent
 from gevent.event import AsyncResult
+from ethereum import slogging
+log = slogging.get_logger('tasks')
 
 
 class Task(gevent.Greenlet):
@@ -15,6 +17,15 @@ class Task(gevent.Greenlet):
     def on_completion(self, success):
         self.transfermanager.on_task_completed(self, success)
         return success
+
+    def on_event(self, msg):
+        log.debug("SET EVENT {} {} {}".format(self, id(self.event), msg))
+        if self.event.ready():
+            log.debug("ALREADY HAD EVENT {} {} now {}".format(self, self.event.get(), msg))
+        assert self.event and not self.event.ready()
+        self.event.set(msg)
+
+
 
 
 class TransferTask(Task):
@@ -66,7 +77,7 @@ class TransferTask(Task):
         self.originating_transfer = originating_transfer  # no sender == self initiated transfer
         self.secret = secret
         super(TransferTask, self).__init__()
-        print "INIT", self
+        log.info("INIT", task=self)
         self.transfermanager.on_task_started(self)
 
     def __repr__(self):
@@ -85,7 +96,7 @@ class TransferTask(Task):
 
         # look for shortest path
         for path in self.assetmanager.channelgraph.get_paths(self.raiden.address, self.target):
-            print "TRYING {} with path {}".format(self, lpex(path))
+            log.info("TRYING {} with path {}".format(self, lpex(path)))
             assert path[0] == self.raiden.address
             assert path[1] in self.assetmanager.channels
             assert path[-1] == self.target
@@ -105,7 +116,7 @@ class TransferTask(Task):
 
             # send mediated transfer
             msg = self.send_transfer(recipient, t, path)
-            print "SEND RETURNED {}  {}".format(self, msg)
+            log.debug("SEND RETURNED {}  {}".format(self, msg))
             if isinstance(msg, CancelTransfer):
                 continue  # try with next path
             elif isinstance(msg, TransferTimeout):
@@ -121,7 +132,7 @@ class TransferTask(Task):
                     self.raiden.sign(fwd)
                     self.raiden.send(self.originating_transfer.sender, fwd)
                 else:
-                    print "NOT FORWARDING SECRET TO ININTIATOR"
+                    log.warning("NOT FORWARDING SECRET TO ININTIATOR")
                 return self.on_completion(True)
             elif isinstance(msg, SecretRequest):
                 assert self.isinitiator
@@ -141,23 +152,16 @@ class TransferTask(Task):
             self.raiden.send(self.originating_transfer.sender, t)
         return self.on_completion(False)
 
-    def on_event(self, msg):
-        print "SET EVENT {} {} {}".format(self, id(self.event), msg)
-        if self.event.ready():
-            print "ALREADY HAD EVENT {}  {} now {}".format(self, self.event.get(), msg)
-        assert self.event and not self.event.ready()
-        self.event.set(msg)
-
     def send_transfer(self, recipient, transfer, path):
         self.event = AsyncResult()  # http://www.gevent.org/gevent.event.html
         self.raiden.send(recipient, transfer)
         timeout = self.timeout_per_hop * (len(path) - 1)  # fixme, consider no found paths
         msg = self.event.wait(timeout)
 
-        print "HAVE EVENT {} {}".format(self, msg)
+        log.debug("HAVE EVENT {} {}".format(self, msg))
 
         if msg is None:  # timeout
-            print "TIMEOUT! " * 5
+            log.error("TIMEOUT! " * 5)
             msg = TransferTimeout(echo=transfer.hash, hashlock=transfer.lock.hashlock)
             self.raiden.sign(msg)
             return msg
@@ -182,7 +186,7 @@ class TransferTask(Task):
             return msg
         elif isinstance(msg, SecretRequest):
             # reveal secret
-            print "SECRETREQUEST RECEIVED {}".format(msg)
+            log.info("SECRETREQUEST RECEIVED {}".format(msg))
             assert msg.sender == self.target
             return msg
         assert False, "Not Implemented"
@@ -198,25 +202,18 @@ class ForwardSecretTask(Task):
         self.hashlock = hashlock
         self.raiden = transfermanager.assetmanager.raiden
         super(ForwardSecretTask, self).__init__()
-        print "INIT", self
+        log.info("INIT", task=self)
         self.transfermanager.on_task_started(self)
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.raiden.address))
-
-    def on_event(self, msg):
-        print "SET EVENT {} {} {}".format(self, id(self.event), msg)
-        if self.event.ready():
-            print "ALREADY HAD EVENT {}  {} now {}".format(self, self.event.get(), msg)
-        assert self.event and not self.event.ready()
-        self.event.set(msg)
 
     def _run(self):
         self.event = AsyncResult()  # http://www.gevent.org/gevent.event.html
         timeout = self.timeout
         msg = self.event.wait(timeout)
         if not msg:
-            print "TIMEOUT! " * 5
+            log.error("TIMEOUT! " * 5)
             # TransferTimeout is of no use, SecretRequest was for sender
             return self.on_completion(False)
         assert isinstance(msg, Secret)

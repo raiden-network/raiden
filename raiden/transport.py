@@ -2,6 +2,8 @@ from raiden_service import RaidenProtocol
 from utils import isaddress, pex, sha3
 import gevent
 from gevent.server import DatagramServer
+from ethereum import slogging
+log = slogging.get_logger('transport')
 
 
 class UDPTransport(object):
@@ -89,12 +91,14 @@ class UnreliableTransport(DummyTransport):
     droprate = 2  # drop every Nth message
 
     def send(self, sender, host_port, data):
-        print 'in send unreliable', self.network.counter, self.network.counter % self.droprate
+        log.debug('in send unreliable', counter=self.network.counter,
+                  drop_this_one=not(self.network.counter % self.droprate))
+
         if self.network.counter % self.droprate:
             self.network.send(sender, host_port, data)
         else:
             self.network.track_send(sender, host_port, data)
-            print('dropped data {}'.format(pex(sha3(data))))
+            log.debug('dropped', data=format(pex(sha3(data))))
 
 
 class Discovery(object):

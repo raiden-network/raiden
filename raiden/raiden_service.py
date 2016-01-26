@@ -4,6 +4,8 @@ from utils import privtoaddr, isaddress, pex
 from raiden_protocol import RaidenProtocol
 from assetmanager import AssetManager
 from transfermanager import TransferManager
+from ethereum import slogging
+log = slogging.get_logger('service')
 
 
 class RaidenAPI(object):
@@ -63,11 +65,12 @@ class RaidenService(object):
         return msg.sign(self.privkey)
 
     def on_message(self, msg, msghash):
-        print "\nON MESSAGE {} {}".format(self, msg)
+        log.debug("-"*60)
+        log.debug("ON MESSAGE {} {}".format(self, msg))
         method = 'on_%s' % msg.__class__.__name__.lower()
         # update activity monitor (which also does pings to all addresses in channels)
         getattr(self, method)(msg)
-        print "SEND ACK{} {}".format(self, msg)
+        log.debug("SEND ACK{} {}".format(self, msg))
         self.protocol.send_ack(msg.sender, messages.Ack(self.address, msghash))
 
     def on_message_failsafe(self, msg, msghash):

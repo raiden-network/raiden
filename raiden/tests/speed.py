@@ -3,7 +3,8 @@ from raiden.transport import UDPTransport
 from raiden.app import create_network
 from raiden.tasks import TransferTask
 import gevent
-
+from ethereum import slogging
+slogging.configure("encoding:debug,protocol:debug,service:debug,tasks:debug,transport:debug")
 
 def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channels_per_node=2):
 

@@ -1,7 +1,9 @@
 import messages
 from messages import Ack, Secret, BaseError
 from utils import isaddress, sha3, pex
+from ethereum import slogging
 import gevent
+log = slogging.get_logger('protocol')
 
 
 class RaidenProtocol(object):
@@ -28,12 +30,12 @@ class RaidenProtocol(object):
     def send(self, receiver_address, msg):
         assert isaddress(receiver_address)
         assert not isinstance(msg, (Ack, BaseError)), msg
-        print "SENDING {} > {} : {}".format(pex(self.raiden.address), pex(receiver_address), msg)
+        log.info("SENDING {} > {} : {}".format(pex(self.raiden.address), pex(receiver_address), msg))
         host_port = self.discovery.get(receiver_address)
         data = msg.encode()
         msghash = sha3(data)
         self.tries[msghash] = self.max_tries
-        print "MSGHASH SENT", pex(msghash)
+        log.debug("MSGHASH SENT", msghash=pex(msghash))
 
         assert len(data) < self.max_message_size
 
@@ -58,7 +60,7 @@ class RaidenProtocol(object):
         host_port = self.discovery.get(receiver_address)
         self.transport.send(self.raiden, host_port, msg.encode())
         self.sent_acks[msg.echo] = (receiver_address, msg)
-        print "ACK MSGHASH SENT", pex(msg.echo)
+        log.debug("MSGHASH SENT", echo=pex(msg.echo))
 
     def receive(self, data):
         assert len(data) < self.max_message_size
@@ -73,7 +75,7 @@ class RaidenProtocol(object):
         msg = messages.decode(data)
         # handle Acks
         if isinstance(msg, Ack):
-            print "ACK MSGHASH RECEIVED", pex(msg.echo)
+            log.debug("ACK MSGHASH RECEIVED echo=", echo=pex(msg.echo))
             del self.tries[msg.echo]
             return
 

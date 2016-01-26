@@ -2,9 +2,11 @@
 from raiden.utils import big_endian_to_int, sha3, isaddress, ishash, int_to_big_endian, pex
 from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
 from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
+from ethereum import slogging
 import warnings
 import struct
 import umsgpack
+log = slogging.get_logger('encoding')
 
 
 def _pack_map(obj, fp):
@@ -196,5 +198,5 @@ class Decoder(object):
         # cmdid is a first byte
         cmdid = struct.unpack("B", data[0])[0]
         cls = self.message_class_by_id[cmdid]
-        print 'DECODING', cls
+        log.debug('DECODING', cls=cls)
         return cls.decode(data[1:])
