@@ -13,6 +13,9 @@ install:
  - pip install -r requirements.txt
  - pip install coveralls
 
+notifications:
+    slack: chainbot:F7iOw4oESj1hMPeoZRZsYhKC #brainbot dev-raiden slack channel
+
 # command to run tests, e.g. python setup.py test
 script:
   - coverage run --source raiden setup.py test
