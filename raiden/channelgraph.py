@@ -1,6 +1,6 @@
 import networkx as nx
 from raiden.contracts import ChannelManagerContract, NettingChannelContract
-from raiden.utils import isaddress, lpex, pex
+from raiden.utils import isaddress
 
 
 class ChannelGraph(object):

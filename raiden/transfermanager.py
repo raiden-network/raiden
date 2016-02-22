@@ -2,7 +2,6 @@ import random
 from messages import Transfer, MediatedTransfer, LockedTransfer, SecretRequest
 from tasks import Task, TransferTask, ForwardSecretTask
 from utils import sha3
-import gevent
 
 
 class TransferManager(object):

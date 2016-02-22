@@ -1,6 +1,6 @@
 from raiden.messages import Ack, decode, Transfer
 from raiden.app import create_network
-from raiden.tests.utils import setup_messages_cb, dump_messages, MessageLogger
+from raiden.tests.utils import setup_messages_cb, MessageLogger
 from raiden.tasks import TransferTask
 import gevent
 
@@ -74,7 +74,7 @@ def test_mediated_transfer():
 
     apps = create_network(num_nodes=10, num_assets=1, channels_per_node=2)
     a0 = apps[0]
-    messages = setup_messages_cb()
+    setup_messages_cb()
 
     # channels
     am0 = a0.raiden.assetmanagers.values()[0]

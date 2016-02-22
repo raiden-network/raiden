@@ -30,7 +30,8 @@ class RaidenProtocol(object):
     def send(self, receiver_address, msg):
         assert isaddress(receiver_address)
         assert not isinstance(msg, (Ack, BaseError)), msg
-        log.info("SENDING {} > {} : {}".format(pex(self.raiden.address), pex(receiver_address), msg))
+        log.info("SENDING {} > {} : {}".format(pex(self.raiden.address),
+                                               pex(receiver_address), msg))
         host_port = self.discovery.get(receiver_address)
         data = msg.encode()
         msghash = sha3(data)
@@ -55,7 +56,7 @@ class RaidenProtocol(object):
         gevent.spawn(repeater)
 
     def send_ack(self, receiver_address, msg):
-        assert isinstance(msg,  (Ack, BaseError))
+        assert isinstance(msg, (Ack, BaseError))
         assert isaddress(receiver_address)
         host_port = self.discovery.get(receiver_address)
         self.transport.send(self.raiden, host_port, msg.encode())

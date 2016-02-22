@@ -1,4 +1,3 @@
-import pytest
 from timeit import timeit
 
 setup = """
@@ -23,7 +22,7 @@ m2 = Ack(address, sha3(privkey))
 exec(setup)
 
 codecs = {
-    'rlp':     'd = {}.encode(); decode(d)',
+    'rlp': 'd = {}.encode(); decode(d)',
     'cPickle': 'd = cPickle.dumps({}, 2); cPickle.loads(d)',
     'msgpack': 'd = umsgpack.packb({}.serialize()); umsgpack.unpackb(d)'
 }
@@ -35,7 +34,7 @@ for m in ('m0', 'm1', 'm2'):
         code = code_base.format(m)
 
         exec(code)
-        print('{} encoded {} size: {}'.format(codec_name, msg_name, len(d)))
+        print('{} encoded {} size: {}'.format(codec_name, msg_name, len(d)))  # noqa
 
         result = timeit(code, setup, number=10000)
         print '{} {} (en)(de)coding speed: {}'.format(codec_name, msg_name, result)

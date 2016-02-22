@@ -1,6 +1,5 @@
-import pytest
-
 from raiden.app import create_network
+
 
 def test_create_network():
     print 'hej'

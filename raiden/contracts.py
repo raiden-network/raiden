@@ -1,13 +1,4 @@
-__all__ = (
-    'BlockChain',
-    'NettingChannelContract',
-    'ChannelManagerContract',
-)
 from utils import isaddress, sha3
-from mtree import check_proof
-import rlp
-import messages
-
 """
 Note, these are Mocks.
 We assume, that they represent up to date information.
@@ -25,6 +16,14 @@ Todos:
     Channel Fees (i.e. Accounts w/ higher reputation could charge a fee/deposit).
     use channel.opened to collect reputation of an account (long lasting channels == good)
 """
+from mtree import check_proof
+import rlp
+import messages
+__all__ = (
+    'BlockChain',
+    'NettingChannelContract',
+    'ChannelManagerContract',
+)
 
 
 class BlockChain(object):
@@ -176,6 +175,6 @@ class ChannelManagerContract(object):
 
     def check_statelock(self, data, gaslimit):
         "not yet implemented, see `messages.StateLock`"
-        contract_address = data[:20]
-        calldata = data[20:]
-        # call contract and return success
+        contract_address = data[:20]  # noqa  (FIXME)
+        calldata = data[20:]  # noqa  (FIXME)
+        # FIXME: call contract and return success

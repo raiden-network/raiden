@@ -1,7 +1,7 @@
 from raiden_service import RaidenService
 from transport import DummyTransport, Discovery
-from contracts import BlockChain, ChannelManagerContract, NettingChannelContract
-from utils import sha3, pex
+from contracts import BlockChain, ChannelManagerContract
+from utils import sha3
 import copy
 
 
@@ -62,7 +62,7 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
 
                     # add deposit of asset
                     for address in (app.raiden.address, a.raiden.address):
-                        c.deposit(address, amount=2**240)
+                        c.deposit(address, amount=2 ** 240)
 
     for app in apps:
         app.raiden.setup_assets()

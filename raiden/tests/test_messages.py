@@ -1,6 +1,6 @@
 from raiden.encoding import SignatureMissingError
 from raiden.messages import Ping, Ack, decode, Lock, MediatedTransfer
-from raiden.utils import privtoaddr, isaddress, pex, sha3
+from raiden.utils import privtoaddr, sha3
 import pytest
 
 privkey = 'x' * 32

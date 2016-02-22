@@ -1,4 +1,9 @@
 # Copyright (c) 2015 Heiko Hees
+from utils import sha3, ishash
+import rlp
+from rlp.sedes import List as t_list
+from encoding import Message, SignedMessage, Decoder, MessageHashable
+from encoding import t_int, t_address, t_hash, t_hash_optional
 __all__ = (
     'BaseError',
     'Ack',
@@ -14,11 +19,6 @@ __all__ = (
     'TransferTimeout',
     'ConfirmTransfer',
 )
-from utils import sha3, isaddress, ishash
-import rlp
-from rlp.sedes import List as t_list
-from encoding import Message, SignedMessage, Decoder, MessageHashable
-from encoding import t_int, t_address, t_hash, t_hash_optional
 
 
 class Ack(Message):
@@ -196,7 +196,7 @@ class Lock(MessageHashable):
 
     _cached_asstring = None
 
-    def __init__(self,  amount, expiration, hashlock):
+    def __init__(self, amount, expiration, hashlock):
         assert amount > 0
         assert ishash(hashlock)
         self.amount = amount
