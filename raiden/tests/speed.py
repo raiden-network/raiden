@@ -82,7 +82,7 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
     elapsed = time.time() - st
     completed_transfers = num_transfers * num_assets
     tps = completed_transfers / elapsed
-    print 'transfers completed:{} per second:{}'.format(completed_transfers, tps)
+    print 'Completed {} transfers at {} tps'.format(completed_transfers, tps)
 
 if __name__ == '__main__':
     test_mediated_transfer()
