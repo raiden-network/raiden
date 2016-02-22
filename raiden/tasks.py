@@ -1,15 +1,23 @@
+from messages import Secret, CancelTransfer, TransferTimeout
+from messages import SecretRequest
+from utils import lpex, pex
+import gevent
+from gevent.event import AsyncResult
+from ethereum import slogging
 __all__ = (
     'Task',
     'TransferTask',
     'ForwardSecretTask',
 )
-from messages import Secret,  CancelTransfer, TransferTimeout
-from messages import SecretRequest
-from utils import sha3, lpex, pex
-import gevent
-from gevent.event import AsyncResult
-from ethereum import slogging
 log = slogging.get_logger('tasks')
+
+
+class NoPath(Exception):
+    pass
+
+
+class NextPath(Exception):
+    pass
 
 
 class Task(gevent.Greenlet):
@@ -24,8 +32,6 @@ class Task(gevent.Greenlet):
             log.debug("ALREADY HAD EVENT {} {} now {}".format(self, self.event.get(), msg))
         assert self.event and not self.event.ready()
         self.event.set(msg)
-
-
 
 
 class TransferTask(Task):
@@ -117,32 +123,12 @@ class TransferTask(Task):
             # send mediated transfer
             msg = self.send_transfer(recipient, t, path)
             log.debug("SEND RETURNED {}  {}".format(self, msg))
-            if isinstance(msg, CancelTransfer):
+
+            success = self.check_path(msg, channel)
+            if success is None:
                 continue  # try with next path
-            elif isinstance(msg, TransferTimeout):
-                # stale hashlock
-                if not self.isinitiator:
-                    self.raiden.send(self.originating_transfer.sender, msg)
-                return self.on_completion(False)
-            elif isinstance(msg, Secret):
-                assert self.originating_transfer
-                assert msg.hashlock == self.hashlock
-                if self.originating_transfer.sender != self.originating_transfer.initiator:
-                    fwd = Secret(msg.secret)
-                    self.raiden.sign(fwd)
-                    self.raiden.send(self.originating_transfer.sender, fwd)
-                else:
-                    log.warning("NOT FORWARDING SECRET TO ININTIATOR")
-                return self.on_completion(True)
-            elif isinstance(msg, SecretRequest):
-                assert self.isinitiator
-                assert msg.sender == self.target
-                msg = Secret(self.secret)
-                self.raiden.sign(msg)
-                self.raiden.send(self.target, msg)
-                # apply secret to own channel
-                channel.claim_locked(self.secret)
-                return self.on_completion(True)
+            else:
+                return self.on_completion(success)
         # we did not find a path, send CancelTransfer
         if self.originating_transfer:
             channel = self.assetmanager.channels[self.originating_transfer.sender]
@@ -151,6 +137,35 @@ class TransferTask(Task):
             self.raiden.sign(t)
             self.raiden.send(self.originating_transfer.sender, t)
         return self.on_completion(False)
+
+    def check_path(self, msg, channel):
+        if isinstance(msg, CancelTransfer):
+            return None  # try with next path
+        elif isinstance(msg, TransferTimeout):
+            # stale hashlock
+            if not self.isinitiator:
+                self.raiden.send(self.originating_transfer.sender, msg)
+            return False
+        elif isinstance(msg, Secret):
+            assert self.originating_transfer
+            assert msg.hashlock == self.hashlock
+            if self.originating_transfer.sender != self.originating_transfer.initiator:
+                fwd = Secret(msg.secret)
+                self.raiden.sign(fwd)
+                self.raiden.send(self.originating_transfer.sender, fwd)
+            else:
+                log.warning("NOT FORWARDING SECRET TO ININTIATOR")
+            return True
+        elif isinstance(msg, SecretRequest):
+            assert self.isinitiator
+            assert msg.sender == self.target
+            msg = Secret(self.secret)
+            self.raiden.sign(msg)
+            self.raiden.send(self.target, msg)
+            # apply secret to own channel
+            channel.claim_locked(self.secret)
+            return True
+        return None
 
     def send_transfer(self, recipient, transfer, path):
         self.event = AsyncResult()  # http://www.gevent.org/gevent.event.html

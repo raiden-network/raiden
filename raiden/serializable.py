@@ -1,11 +1,11 @@
-__all__ = (
-  'deserialize',
-  'Msg1',
-  'Msg2',
-  'Msg3'
-)
 from raiden.utils import big_endian_to_int, sha3
 import umsgpack
+__all__ = (
+    'deserialize',
+    'Message1',
+    'Message2',
+    'Message3'
+)
 
 
 # Pluggable binary codecs
@@ -14,79 +14,83 @@ binary_decoder = umsgpack.unpackb
 
 
 class MessageBase(object):
-  """
-    Serializable message. Example:
+    """
+      Serializable message. Example:
 
-    class ACK(MessageBase):
-      cmdid = 1
-      def __init__(self):
-        pass
+      class ACK(MessageBase):
+        cmdid = 1
+        def __init__(self):
+          pass
 
-    msg = ACK()
-    msg_bin = msg.serialize()
-    msg_as_object = deserialize(msg_bin)
-  """
-  def __iter__(self):
-    yield ('cmdid', self.cmdid)
-    for k, v in self.__dict__.iteritems():
-      if hasattr(v, 'cmdid'):
-        yield (k, dict(v))
-      else:
-        yield (k, v)
+      msg = ACK()
+      msg_bin = msg.serialize()
+      msg_as_object = deserialize(msg_bin)
+    """
 
-  def serialize(self):
-    return binary_encoder(dict(self))
+    def __iter__(self):
+        yield ('cmdid', self.cmdid)
+        for k, v in self.__dict__.iteritems():
+            if hasattr(v, 'cmdid'):
+                yield (k, dict(v))
+            else:
+                yield (k, v)
 
-  def json(self):
-    return dict(self)
+    def serialize(self):
+        return binary_encoder(dict(self))
 
-  @property
-  def hash(self):
-      #warnings.warn('Expensive comparison called')
-      return sha3(self.serialize())
+    def json(self):
+        return dict(self)
 
-  def __eq__(self, other):
-      return isinstance(other, self.__class__) and self.hash == other.hash
+    @property
+    def hash(self):
+            # warnings.warn('Expensive comparison called')
+        return sha3(self.serialize())
 
-  def __hash__(self):
-      return big_endian_to_int(self.hash)
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.hash == other.hash
+
+    def __hash__(self):
+        return big_endian_to_int(self.hash)
 
 
 def deserialize(d, binary=True):
-  if binary:
-    d = binary_decoder(d)
+    if binary:
+        d = binary_decoder(d)
 
-  klasses = MessageBase.__subclasses__()
-  message_class_by_id = dict((c.cmdid, c) for c in klasses)
-  
-  cls = message_class_by_id[d['cmdid']]()
-  for k, v in d.items():
-    if isinstance(v, dict) and 'cmdid' in v:
-      setattr(cls, k, deserialize(v, binary=False))
-    else:
-      setattr(cls, k, v)
+    klasses = MessageBase.__subclasses__()
+    message_class_by_id = dict((c.cmdid, c) for c in klasses)
 
-  return cls
+    cls = message_class_by_id[d['cmdid']]()
+    for k, v in d.items():
+        if isinstance(v, dict) and 'cmdid' in v:
+            setattr(cls, k, deserialize(v, binary=False))
+        else:
+            setattr(cls, k, v)
+
+    return cls
 
 
 class Message1(MessageBase):
-  cmdid = 1
-  def __init__(self):
-    self.field = 'some field 1'
+    cmdid = 1
+
+    def __init__(self):
+        self.field = 'some field 1'
 
 
 class Message2(MessageBase):
-  cmdid = 11
-  def __init__(self):
-    self.field = 'some field 2'
-    self.msg1 = Message1()
+    cmdid = 11
+
+    def __init__(self):
+        self.field = 'some field 2'
+        self.msg1 = Message1()
 
 
 class Message3(MessageBase):
-  cmdid = 12
-  def __init__(self):
-    self.msg1 = Message1()
-    self.msg2 = Message2()
+    cmdid = 12
+
+    def __init__(self):
+        self.msg1 = Message1()
+        self.msg2 = Message2()
 
 
 msg = Message3()

@@ -6,6 +6,7 @@ import gevent
 from ethereum import slogging
 slogging.configure("encoding:debug,protocol:debug,service:debug,tasks:debug,transport:debug")
 
+
 def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channels_per_node=2):
 
     apps = create_network(
@@ -87,4 +88,4 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
 if __name__ == '__main__':
     test_mediated_transfer()
     test_mediated_transfer(num_transfers=1000)
-    #test_mediated_transfer(num_transfers=1000, num_nodes=10, num_assets=10, channels_per_node=3)
+    # test_mediated_transfer(num_transfers=1000, num_nodes=10, num_assets=10, channels_per_node=3)

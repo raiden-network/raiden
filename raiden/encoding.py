@@ -1,5 +1,5 @@
 # Copyright (c) 2015 Heiko Hees
-from raiden.utils import big_endian_to_int, sha3, isaddress, ishash, int_to_big_endian, pex
+from raiden.utils import big_endian_to_int, sha3, int_to_big_endian
 from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
 from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
 from ethereum import slogging

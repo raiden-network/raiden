@@ -81,7 +81,8 @@ def test_locked_transfer():
     assert c0.locked.root == ''
     assert c1.partner.locked.root == ''
 
-    assert c1.locked.root == merkleroot([sha3(t.lock.asstring) for t in c1.locked.locked.values()])
+    assert c1.locked.root == merkleroot(
+        [sha3(tx.lock.asstring) for tx in c1.locked.locked.values()])
     assert c0.partner.locked.root == c1.locked.root
 
     # reveal secret

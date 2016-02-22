@@ -7,7 +7,7 @@ from raiden.utils import sha3
 def test_settlement():
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps
-    messages = setup_messages_cb()
+    setup_messages_cb()
 
     # channels
     am0 = a0.raiden.assetmanagers.values()[0]

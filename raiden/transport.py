@@ -50,12 +50,12 @@ class DummyNetwork(object):
         for cb in self.on_send_cbs:
             cb(sender, host_port, data)
 
-    def send(self, sender,  host_port, data):
+    def send(self, sender, host_port, data):
         self.track_send(sender, host_port, data)
         f = self.transports[host_port].receive
         gevent.spawn_later(0.00000000001, f, data)
 
-    def drop(self, sender,  host_port, data):
+    def drop(self, sender, host_port, data):
         "lost message"
         self.counter += 1
         for cb in self.on_send_cbs:

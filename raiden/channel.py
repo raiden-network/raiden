@@ -2,8 +2,8 @@ from contracts import NettingChannelContract
 import raiden_service
 from messages import Transfer, LockedTransfer, MediatedTransfer, BaseError, Lock
 from messages import CancelTransfer
-from utils import ishash, isaddress, sha3
-from mtree import merkleroot, check_proof, get_proof
+from utils import sha3
+from mtree import merkleroot, get_proof
 
 
 class InvalidNonce(BaseError):

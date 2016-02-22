@@ -65,7 +65,7 @@ class RaidenService(object):
         return msg.sign(self.privkey)
 
     def on_message(self, msg, msghash):
-        log.debug("-"*60)
+        log.debug("-" * 60)
         log.debug("ON MESSAGE {} {}".format(self, msg))
         method = 'on_%s' % msg.__class__.__name__.lower()
         # update activity monitor (which also does pings to all addresses in channels)

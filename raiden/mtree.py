@@ -22,22 +22,15 @@ def merkleroot(lst, proof=[], first=True):
     returns: merkleroot
     """
     if first:
-        _lst = set()
-        for e in lst:
-            if e:
-                if len(e) != 32:
-                    raise NoHash32Error()
-                _lst.add(e)
-        lst = list(_lst)
-        if not lst:
-            return ''
-        lst.sort()
+        lst = build_lst(lst)
+    if not lst:
+        return ''
     proof = proof or [None]
     searching = proof.pop()
     assert searching is None or searching in lst
     out = []
     for i in range(len(lst) / 2):
-#        a, b = lst.pop(0), lst.pop(0)
+        # a, b = lst.pop(0), lst.pop(0)
         a, b = lst[i * 2], lst[i * 2 + 1]
         h = hash_pair(a, b)
         if a == searching:
@@ -56,6 +49,18 @@ def merkleroot(lst, proof=[], first=True):
         if searching:
             proof.pop()  # pop root
         return out[0]
+
+
+def build_lst(lst):
+    _lst = set()
+    for e in lst:
+        if e and len(e) != 32:
+            raise NoHash32Error()
+        elif e:
+            _lst.add(e)
+    lst = list(_lst)
+    lst.sort()
+    return lst
 
 
 def check_proof(proof, root, h):

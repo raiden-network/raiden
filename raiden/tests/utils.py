@@ -1,8 +1,8 @@
 import gevent
 from raiden.messages import decode
 from raiden.utils import pex
-gevent.get_hub().SYSTEM_ERROR = BaseException
 from raiden.transport import DummyTransport
+gevent.get_hub().SYSTEM_ERROR = BaseException
 
 
 def setup_messages_cb():
@@ -55,12 +55,12 @@ class MessageLogger(object):
 
         def sent_msg_cb(sender_raiden, host_port, msg):
             self.collect_message(sender_raiden.address, msg, MessageLog.SENT)
-            #print 'sent_msg_cb', pex(sender_raiden.address)
+            # print 'sent_msg_cb', pex(sender_raiden.address)
         DummyTransport.network.on_send_cbs.extend([sent_msg_cb])
 
         def recv_msg_cb(receiver_raiden, host_port, msg):
             self.collect_message(receiver_raiden.address, msg, MessageLog.RECV)
-            #print 'recv_msg_cb', pex(receiver_raiden.address)
+            # print 'recv_msg_cb', pex(receiver_raiden.address)
         DummyTransport.on_recv_cbs.extend([recv_msg_cb])
 
     def collect_message(self, address, msg, direction):
