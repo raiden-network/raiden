@@ -12,14 +12,6 @@ __all__ = (
 log = slogging.get_logger('tasks')
 
 
-class NoPath(Exception):
-    pass
-
-
-class NextPath(Exception):
-    pass
-
-
 class Task(gevent.Greenlet):
 
     def on_completion(self, success):
