@@ -1,9 +1,16 @@
+# -*- coding: utf8 -*-
 import random
+
+from ethereum import slogging
+
 from messages import Transfer, MediatedTransfer, LockedTransfer, SecretRequest
 from tasks import Task, TransferTask, ForwardSecretTask
 from utils import sha3
 from ethereum import slogging
 log = slogging.get_logger('transfer')
+
+
+log = slogging.get_logger('transfermanager')
 
 
 class TransferManager(object):

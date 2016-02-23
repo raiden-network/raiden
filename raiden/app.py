@@ -56,7 +56,6 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
                 a_nettting_contracts = channelmanager.nettingcontracts_by_address(a.raiden.address)
                 if not set(netting_contracts).intersection(set(a_nettting_contracts)) \
                         and len(a_nettting_contracts) < channels_per_node:
-                    # print pex(a.raiden.address), pex(app.raiden.address)
                     c = channelmanager.new(a.raiden.address, app.raiden.address)
                     netting_contracts.append(c)
 

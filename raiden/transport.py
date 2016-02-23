@@ -1,8 +1,11 @@
+# -*- coding: utf8 -*-
+import gevent
+from ethereum import slogging
+from gevent.server import DatagramServer
+
 from raiden_service import RaidenProtocol
 from utils import isaddress, pex, sha3
-import gevent
-from gevent.server import DatagramServer
-from ethereum import slogging
+
 log = slogging.get_logger('transport')
 
 
@@ -19,11 +22,8 @@ class UDPTransport(object):
         self.protocol.receive(data)
 
     def send(self, sender, host_port, data):
-        # print "TRANSPORT SENDS", datas.decode(data)
-        try:
-            self.server.sendto(data, host_port)
-        except gevent.socket.error as e:
-            raise e
+        log.info('TRANSPORT SENDS')
+        self.server.sendto(data, host_port)
         DummyTransport.network.track_send(sender, host_port, data)  # debuging
 
     def register(self, proto, host, port):
@@ -72,7 +72,7 @@ class DummyTransport(object):
         self.network.register(self, host, port)
 
     def send(self, sender, host_port, data):
-        # print "TRANSPORT SENDS", datas.decode(data)
+        log.info('TRANSPORT SENDS')
         self.network.send(sender, host_port, data)
 
     def track_recv(self, data, host_port=None):
