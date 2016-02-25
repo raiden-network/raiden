@@ -4,7 +4,8 @@ from raiden.app import create_network
 from raiden.tasks import TransferTask
 import gevent
 from ethereum import slogging
-slogging.configure("encoding:debug,protocol:debug,service:debug,tasks:debug,transport:debug")
+log = slogging.getLogger('test.speed')
+slogging.configure(":error")
 
 
 def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channels_per_node=2):
@@ -51,8 +52,7 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
         finished = gevent.event.Event()
 
         def _completion_cb(task, success):
-            print
-            print 'task completed', task, success, _completion_cb.num_transfers
+            log.info('task completed', task=task, success=success, num_transfers=_completion_cb.num_transfers)
             _completion_cb.num_transfers -= 1
             if _completion_cb.num_transfers > 0:
                 a0.raiden.api.transfer(asset_address, amount, target)
