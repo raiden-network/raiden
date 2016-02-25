@@ -7,7 +7,7 @@ import copy
 
 class App(object):
 
-    default_config = dict(host='', port=40000, privkey='')
+    default_config = dict(host='', port=40001, privkey='')
 
     def __init__(self, config, chain, discovery, transport_class=DummyTransport):
         self.config = config
