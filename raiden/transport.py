@@ -13,7 +13,7 @@ class UDPTransport(object):
 
     def __init__(self, host, port, protocol=None):
         self.protocol = protocol
-        self.server = DatagramServer(('', 0), handle=self.receive)
+        self.server = DatagramServer((host, port), handle=self.receive)
         self.server.start()
         self.host = self.server.server_host
         self.port = self.server.server_port
