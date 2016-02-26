@@ -20,6 +20,22 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
         channels_per_node=channels_per_node,
         transport_class=UDPTransport)
 
+    assert len(apps) > num_assets, len(apps)
+    #DEBUG
+    for app in apps:
+        app.raiden.chain.next_block()
+        print "block", app.raiden.chain.block_number
+        print "app address", app.raiden.address.encode('hex')
+        print "asset addresses", [aa.encode('hex') for aa in app.raiden.chain.asset_addresses]
+        for asset in app.raiden.chain.asset_addresses:
+            cm = app.raiden.chain.channelmanager_by_asset(asset)
+            print "CM", cm
+            print "nettingcontracts", cm.nettingcontracts
+        from raiden.assetmanager import AssetManager
+        print "AM", AssetManager.get_assets_for_address(app.raiden.chain, app.raiden.address)
+        print "asset managers", app.raiden.assetmanagers
+    #/DEBUG
+
     def start_transfers(idx, num_transfers):
         a0 = apps[idx]
 
@@ -77,6 +93,7 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
 
     # Start all transfers
     for i in range(num_assets):
+        print "finished", i
         f = start_transfers(i, num_transfers)
         finished_events.append(f)
 
@@ -149,6 +166,9 @@ if __name__ == '__main__':
         GreenletProfiler.set_clock_type('cpu')
         GreenletProfiler.start()
 
+    # test_mediated_transfer(num_assets=2)
+    # test_mediated_transfer(num_transfers=1000)
+    # test_mediated_transfer(num_transfers=1000, num_nodes=10, num_assets=9, channels_per_node=3)
     test_mediated_transfer(
         num_transfers=args.transfers,
         num_nodes=args.nodes,

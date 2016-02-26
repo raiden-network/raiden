@@ -4,7 +4,7 @@ from ethereum import slogging
 from gevent.server import DatagramServer
 
 from raiden_service import RaidenProtocol
-from utils import isaddress, pex, sha3
+from utils import isaddress, privtoaddr, pex, sha3
 
 log = slogging.get_logger('transport')
 
@@ -122,3 +122,32 @@ class Discovery(object):
             if v == host_port:
                 return k
         assert False
+
+
+class PredictiveDiscovery(Discovery):
+    """
+    Initialized with a list of `(host, num_nodes, start_port)` tuples,
+    this discovery is able to predict the address for any
+    (predictable) node-id.
+
+    This avoids the need of a shared discovery instance, while still
+    providing the convenience of a mock-like service.
+
+    Note, that start_port can be omitted.
+    """
+    def __init__(self, mapping, default_start_port=40001):
+        self.h = dict()
+        # [('127.0.0.1', 36), ('127.0.0.2', 15), ...]
+        for entry in mapping:
+            if len(entry) == 3:
+                start_port = entry.pop()
+            else:
+                start_port = default_start_port
+            (host, num_nodes) = entry
+            for i in range(num_nodes):
+                host_port = (host, start_port + i)
+                self.h[privtoaddr(sha3("{}:{}".format(*host_port)))] = host_port
+
+    def register(self, *args):
+        # noop
+        pass
