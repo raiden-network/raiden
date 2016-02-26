@@ -1,4 +1,3 @@
-from utils import isaddress, sha3
 """
 Note, these are Mocks.
 We assume, that they represent up to date information.
@@ -16,44 +15,25 @@ Todos:
     Channel Fees (i.e. Accounts w/ higher reputation could charge a fee/deposit).
     use channel.opened to collect reputation of an account (long lasting channels == good)
 """
+from utils import isaddress, sha3
 from mtree import check_proof
 import rlp
 import messages
+from ethereum import slogging
+log = slogging.getLogger("contracts")
+
 __all__ = (
-    'BlockChain',
     'NettingChannelContract',
     'ChannelManagerContract',
 )
-
-
-class BlockChain(object):
-
-    def __init__(self):
-        self.block_number = 0
-        self.channelmanagercontracts = dict()
-
-    def next_block(self):
-        self.block_number += 1
-
-    def add_asset(self, asset_address):
-        assert isaddress(asset_address)
-        assert asset_address not in self.channelmanagercontracts
-        self.channelmanagercontracts[asset_address] = ChannelManagerContract(self, asset_address)
-
-    @property
-    def asset_addresses(self):
-        return self.channelmanagercontracts.keys()
-
-    def channelmanager_by_asset(self, asset_address):
-        return self.channelmanagercontracts[asset_address]
 
 
 class NettingChannelContract(object):
 
     locked_time = 10  # num blocks
 
-    def __init__(self, chain, asset_address, address_A, address_B):
-        self.chain = chain
+    def __init__(self, asset_address, address_A, address_B):
+        log.debug("creating nettingchannelcontract", a=address_A.encode('hex'), b=address_B.encode('hex'))
         self.asset_address = asset_address
         self.participants = {address_A: dict(deposit=0, last_sent_transfer=None, unlocked=[]),
                              address_B: dict(deposit=0, last_sent_transfer=None, unlocked=[])}
@@ -62,11 +42,11 @@ class NettingChannelContract(object):
         self.closed = False  # block number
         self.settled = False
 
-    def deposit(self, address, amount):
+    def deposit(self, address, amount, ctx):
         assert address in self.participants
         self.participants[address]['deposit'] += amount
         if self.isopen and not self.opened:
-            self.opened = self.chain.block_number
+            self.opened = ctx['block_number']
 
     def partner(self, address):
         assert address in self.participants
@@ -77,7 +57,7 @@ class NettingChannelContract(object):
         return not self.closed and \
             min(p['deposit'] for p in self.participants.values()) > 0
 
-    def close(self, sender, last_sent_transfers, *unlocked):
+    def close(self, sender, last_sent_transfers, ctx, *unlocked):
         """"
         can be called multiple times. lock period starts with first valid call.
 
@@ -113,9 +93,9 @@ class NettingChannelContract(object):
 
         # mark closed
         if not self.closed:
-            self.closed = self.chain.block_number
+            self.closed = ctx['block_number']
 
-    def settle(self):
+    def settle(self, ctx):
         assert not self.settled
         assert self.closed
         assert self.closed + self.locked_time <= self.chain.block_number
@@ -139,7 +119,7 @@ class NettingChannelContract(object):
             sum(d['deposit'] for d in self.participants.values())
 
         # call asset contracts and add assets
-        self.settled = self.chain.block_number
+        self.settled = ctx['block_number']
 
         return dict((a, d['netted']) for a, d in self.participants.items())
 
@@ -147,13 +127,14 @@ class NettingChannelContract(object):
 class ChannelManagerContract(object):
 
     def __init__(self, chain, asset_address):
-        self.chain = chain
         assert isaddress(asset_address)
         self.asset_address = asset_address
         self.nettingcontracts = dict()  # address_A + addressB : NettingChannelContract
 
     def nettingcontracts_by_address(self, address):
-        return [c for c in self.nettingcontracts.values() if address in c.participants]
+        result = [c for c in self.nettingcontracts.values() if address in c.participants]
+        log.debug("netting_contracts_by_address for", address=address.encode('hex'), result=result, all_=self.nettingcontracts.values())
+        return result
 
     def _key(self, a, b):
         return ''.join(sorted((a, b)))  # fixme replace by sha3
@@ -163,13 +144,14 @@ class ChannelManagerContract(object):
         k = self._key(*channel.participants.keys())
         assert k not in self.nettingcontracts
         self.nettingcontracts[k] = channel
+        assert len(self.nettingcontracts)
 
     def get(self, a, b):
         k = self._key(a, b)
         return self.nettingcontracts[k]
 
     def new(self, a, b):
-        c = NettingChannelContract(self.chain, self.asset_address, a, b)
+        c = NettingChannelContract(self.asset_address, a, b)
         self.add(c)
         return c
 

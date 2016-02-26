@@ -5,6 +5,8 @@ import messages
 import transfermanager
 import raiden_service
 import channel
+from ethereum import slogging
+log = slogging.getLogger("assetmanager")
 
 
 class AssetManager(object):
@@ -38,7 +40,7 @@ class AssetManager(object):
         self.channels[partner] = channel.Channel(self.raiden, contract)
 
     def channel_isactive(self, address):
-        network_activity = True  # fixme
+        network_activity = True  # FIXME
         return network_activity and self.channels[address].isopen
 
     def on_secret(self, msg):
@@ -55,4 +57,7 @@ class AssetManager(object):
             assert isinstance(channelmanager, ChannelManagerContract)
             if channelmanager.nettingcontracts_by_address(address):
                 asset_addresses.append(asset_address)
+            else:
+                log.warning("nettingcontracts_by_address failed for", address=address.encode('hex'))
+        log.debug("returning", result=asset_addresses)
         return asset_addresses
