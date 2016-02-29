@@ -88,7 +88,82 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
     tps = completed_transfers / elapsed
     print 'Completed {} transfers at {} tps'.format(completed_transfers, tps)
 
+
+def print_serialization(pstats):
+    print('ncalls         tottime  percall  %    cumtime  percall  function')
+    total_pct = 0.0
+
+    for path_line_func, data in pstats.sort_stats('module', 'cumulative').stats.items():
+        path, line, func = path_line_func
+
+        is_rlp = 'rlp' in path
+        is_encoding = 'encoding' in path
+        is_umsgpack = 'msgpack' in path
+        if is_rlp or is_encoding or is_umsgpack:
+            # primitive calls dont count recursion
+            # total calls count recursion
+            # total time is the time for the function itself (excluding subcalls)
+            # accumulated_time is the time of the function plus the subcalls
+            primitive_calls, total_calls, total_time, acc_time, callers = data
+
+            if primitive_calls != total_calls:
+                calls = '{}/{}'.format(total_calls, primitive_calls)
+            else:
+                calls = str(primitive_calls)
+
+            pct = (total_time / float(pstats.total_tt)) * 100
+            total_pct += pct
+            print('{:<14} {:<8.3f} {:<8.3f} {:<3.2f} {:<8.3f} {:<8.3f} {}'.format(
+                calls,
+                total_time,
+                float(total_time) / total_calls,
+                pct,
+                acc_time,
+                float(acc_time) / total_calls,
+                func,
+            ))
+
+    print(' Runtime: {}, Total %: {}'.format(pstats.total_tt, total_pct))
+
+
+def print_slow_path(pstats):
+    pstats.strip_dirs().sort_stats('cumulative').print_stats(15)
+
+
+def print_slow_function(pstats):
+    pstats.strip_dirs().sort_stats('time').print_stats(15)
+
+
 if __name__ == '__main__':
-    test_mediated_transfer()
-    test_mediated_transfer(num_transfers=1000)
-    # test_mediated_transfer(num_transfers=1000, num_nodes=10, num_assets=10, channels_per_node=3)
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--transfers', default=100, type=int)
+    parser.add_argument('--nodes', default=10, type=int)
+    parser.add_argument('--assets', default=1, type=int)
+    parser.add_argument('--channels-per-node', default=2, type=int)
+    parser.add_argument('-p', '--profile', default=False, action='store_true')
+    args = parser.parse_args()
+
+    if args.profile:
+        import GreenletProfiler
+        GreenletProfiler.set_clock_type('cpu')
+        GreenletProfiler.start()
+
+    test_mediated_transfer(
+        num_transfers=args.transfers,
+        num_nodes=args.nodes,
+        num_assets=args.assets,
+        channels_per_node=args.channels_per_node,
+    )
+
+    if args.profile:
+        GreenletProfiler.stop()
+        stats = GreenletProfiler.get_func_stats()
+        pstats = GreenletProfiler.convert2pstats(stats)
+
+        print_serialization(pstats)
+        print_slow_path(pstats)
+        print_slow_function(pstats)
+
+        # stats.print_all()
+        # stats.save('profile.callgrind', type='callgrind')
