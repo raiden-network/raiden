@@ -1,12 +1,26 @@
+# -*- coding: utf8 -*-
 # Copyright (c) 2015 Heiko Hees
-from raiden.utils import big_endian_to_int, sha3, int_to_big_endian
+import warnings
+import struct
+
+import umsgpack
 from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
 from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
 from ethereum import slogging
-import warnings
-import struct
-import umsgpack
+
+from raiden.utils import big_endian_to_int, sha3, int_to_big_endian
+
 log = slogging.get_logger('encoding')
+
+
+def encode_msg(serializable_data):
+    """Encode a data via msgpack"""
+    return umsgpack.packb(serializable_data)
+
+
+def decode_msg(binary_data):
+    """Decode a msgpack encoded object"""
+    return umsgpack.unpackb(binary_data)
 
 
 def _pack_map(obj, fp):
@@ -22,8 +36,6 @@ def _pack_map(obj, fp):
     for k in sorted(obj.iterkeys()):
         umsgpack.pack(k, fp)
         umsgpack.pack(obj[k], fp)
-
-umsgpack._pack_map = _pack_map
 
 
 class ByteSerializer(object):
@@ -47,16 +59,7 @@ class IntSerializer(object):
 
 t_int = IntSerializer
 t_address = t_hash = t_hash_optional = ByteSerializer
-
-
-def encode_msg(serializable_data):
-    """Encode a data via msgpack"""
-    return umsgpack.packb(serializable_data)
-
-
-def decode_msg(binary_data):
-    """Decode a msgpack encoded object"""
-    return umsgpack.unpackb(binary_data)
+umsgpack._pack_map = _pack_map
 
 
 class MessageHashable(object):
@@ -96,12 +99,9 @@ class MessageHashable(object):
 
 
 class Message(MessageHashable):
+    """ Message also has a sender property, so that Acks can be sent. """
 
-    """
-    Message also has a sender property, so that Acks can be sent
-    """
-
-    cmdid = 0
+    cmdid = None  # this class cannot be serialized
     sender = ''
 
     fields = [('cmdid', t_int), ('sender', t_address)]
@@ -110,13 +110,8 @@ class Message(MessageHashable):
         return '<{}>'.format(self.__class__.__name__)
 
     def encode(self):
-        """
-        cmdid(1) | msgpack_data(N)
-        """
+        """ cmdid(1) | msgpack_data(N) """
         return struct.pack("B", self.cmdid) + encode_msg(self.serialize())
-
-    # def __len__(self):
-    #     return len(self.encode())
 
     @classmethod
     def deserialize(cls, byte_args):
@@ -135,6 +130,7 @@ class SignedMessage(Message):
     Future protocol versions can be distinguished by using a different cmdid range
     """
 
+    cmdid = None  # this class cannot be serialized
     fields = [('cmdid', t_int)]
     signature = ''
     _sender = ''
@@ -185,18 +181,51 @@ class SignedMessage(Message):
 
 
 class Decoder(object):
+    ''' An automatic registry for Message subclasses. '''
 
     def __init__(self, extra_klasses=None):
-        # infrastructure to deserialize messages into a Message instance
-        klasses = Message.__subclasses__() + SignedMessage.__subclasses__()
-        if extra_klasses:
-            klasses.extend(extra_klasses)
-        self.message_class_by_id = dict((c.cmdid, c) for c in klasses if c != SignedMessage)
-        assert max(self.message_class_by_id.keys()) < 128  # assure we have 1 byte only cmdids
+        classes = set([Message])
+
+        extra_klasses = extra_klasses or []
+        for klass in extra_klasses:
+            classes.add(klass)
+
+            if not issubclass(klass, Message):
+                raise ValueError('{} is not a subclass of Message'.format(klass))
+
+        cmdid_class = dict()
+        seen = set(classes)
+        while classes:
+            klass = classes.pop()
+
+            if klass.cmdid is not None:  # 0 is a valid value
+                cmdid = klass.cmdid
+                if not (0 <= cmdid <= 255):
+                    msg = '{}: Invalid cmdid {}, needs to be in the [0, 255] range.'.format(
+                        klass,
+                        cmdid,
+                    )
+                    raise ValueError(msg)
+
+                if cmdid in cmdid_class:
+                    msg = 'Conflicting cmdid among {} and {}'.format(
+                        klass,
+                        cmdid_class[cmdid]
+                    )
+                    raise ValueError(msg)
+
+                cmdid_class[cmdid] = klass
+
+            for subclass in klass.__subclasses__():
+                if subclass not in seen:
+                    seen.add(subclass)
+                    classes.add(subclass)
+
+        self.message_class_by_id = cmdid_class
 
     def decode(self, data):
         # cmdid is a first byte
-        cmdid = struct.unpack("B", data[0])[0]
+        cmdid = struct.unpack('B', data[0])[0]
         cls = self.message_class_by_id[cmdid]
         log.debug('DECODING', cls=cls)
         return cls.decode(data[1:])
