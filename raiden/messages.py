@@ -377,7 +377,7 @@ class ConfirmTransfer(SignedMessage):
             ('hashlock', t_hash)
         ]
 
-    def __init__(self, echo, hashlock):
+    def __init__(self, hashlock):
         self.hashlock = hashlock
 
 

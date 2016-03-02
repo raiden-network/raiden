@@ -2,15 +2,17 @@
 import timeit
 
 from raiden.utils import privtoaddr, sha3
+from raiden.encoding import Decoder
 from raiden.messages import (
     Ack, Ping, Rejected, SecretRequest, Secret, Transfer, Lock, LockedTransfer,
-    MediatedTransfer, CancelTransfer, TransferTimeout, ConfirmTransfer, decode,
+    MediatedTransfer, CancelTransfer, TransferTimeout, ConfirmTransfer,
 )
 
 
 privkey = 'x' * 32
 address = privtoaddr(privkey)
 hash_ = sha3(privkey)
+decode = Decoder(extra_klasses=[MediatedTransfer, CancelTransfer]).decode
 
 
 def run_timeit(message_name, message):
