@@ -1,14 +1,18 @@
+# -*- coding: utf8 -*-
 # Copyright (c) 2015 Heiko Hees
-from utils import sha3, ishash
+import warnings
+
 import rlp
-from rlp.sedes import List as t_list
-from encoding import Message, SignedMessage, Decoder, MessageHashable
-from encoding import t_int, t_address, t_hash, t_hash_optional
+
+from raiden.encoding import messages, signing
+from raiden.encoding.format import buffer_for
+from raiden.utils import sha3, ishash, big_endian_to_int
+
 __all__ = (
     'BaseError',
     'Ack',
     'Ping',
-    'Rejected',
+    # 'Rejected',
     'SecretRequest',
     'Secret',
     'Transfer',
@@ -19,43 +23,6 @@ __all__ = (
     'TransferTimeout',
     'ConfirmTransfer',
 )
-
-
-class Ack(Message):
-
-    """
-    All accepted messages should be confirmed by an `Ack`
-    which echoes the orginals Message hash
-
-    We don't sign Acks because attack vector can be mitigated and to speed up things
-    """
-
-    cmdid = 0
-
-    fields = Message.fields + \
-        [
-            ('echo', t_hash)
-        ]
-
-    def __init__(self, sender, echo):
-        self.echo = echo
-        self.sender = sender
-
-
-class Ping(SignedMessage):
-
-    """
-    Ping, should be responded by an Ack message
-    """
-    cmdid = 1
-
-    fields = SignedMessage.fields + \
-        [
-            ('nonce', t_int)
-        ]
-
-    def __init__(self, nonce):
-        self.nonce = nonce
 
 
 class BaseError(Exception):
@@ -71,8 +38,8 @@ class BaseError(Exception):
             self.echo = msg_or_echo
         super(BaseError, self).__init__(*args)
 
-    def asmessage(self):
-        return Rejected(self.echo, self.errorid, *self.args)
+    # def asmessage(self):
+    #     return Rejected(self.echo, self.errorid, *self.args)
 
     @classmethod
     def register(cls):
@@ -81,64 +48,207 @@ class BaseError(Exception):
 
 BaseError.register()
 
+# pylint: disable=too-few-public-methods,too-many-arguments
 
-class Rejected(SignedMessage):
 
+class MessageHashable(object):
+    pass
+
+
+class Message(MessageHashable):
+    # pylint: disable=no-member
+
+    @property
+    def hash(self):
+        warnings.warn('Expensive comparison called')
+        packed = self.packed()
+        return sha3(packed.data)
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.hash == other.hash
+
+    def __hash__(self):
+        return big_endian_to_int(self.hash)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    @classmethod
+    def decode(cls, packed):
+        packed = messages.wrap(packed)
+        return cls.unpack(packed)
+
+    def encode(self):
+        packed = self.packed()
+        return bytes(packed.data)
+
+    def packed(self):
+        klass = messages.CMDID_MESSAGE[self.cmdid]
+        data = buffer_for(klass)
+        data[0] = self.cmdid
+        packed = klass(data)
+        self.pack(packed)
+
+        return packed
+
+
+class SignedMessage(Message):
+    # signing is a bit problematic, we need to pack the data to sign, but the
+    # current API assumes that signing is called before, this can be improved
+    # by changing the order to packing then signing
+    def __init__(self):
+        super(SignedMessage, self).__init__()
+        self.signature = b''
+        self.sender = b''
+
+    def sign(self, private_key):
+        packed = self.packed()
+
+        field = packed.fields_spec[-1]
+        assert field.name == 'signature', 'signature is not the last field'
+
+        message_data = packed.data[:-field.size_bytes]
+        signature, public_key = signing.sign(message_data, private_key)
+
+        packed.signature = signature
+
+        self.sender = signing.address_from_key(public_key)
+        self.signature = packed.signature
+
+        return self
+
+    @classmethod
+    def decode(cls, data):
+        result = messages.wrap_and_validate(data)
+        # result = messages.wrap(data)
+
+        if result is None:
+            return
+
+        packed, public_key = result
+        message = cls.unpack(packed)  # pylint: disable=no-member
+        message.sender = signing.address_from_key(public_key)
+        return message
+
+
+class Ack(Message):
     """
-    All rejected messages should be confirmed by a `Rejected`
-    which echoes the orginals Message hash.
+    All accepted messages should be confirmed by an `Ack` which echoes the
+    orginals Message hash.
+
+    We don't sign Acks because attack vector can be mitigated and to speed up
+    things.
     """
+    cmdid = messages.ACK
 
-    cmdid = 2
-
-    fields = SignedMessage.fields + \
-        [
-            ('echo', t_hash),
-            ('errorid', t_int),
-            ('args', t_list)
-        ]
-
-    def __init__(self, echo, errorid, *args):
+    def __init__(self, sender, echo):
+        self.sender = sender
         self.echo = echo
-        self.errorid = errorid
-        self.args = args
 
-    def aserror(self):
-        cls = BaseError[self.errorid]
-        return cls(self.echo, *self.args)
+    @staticmethod
+    def unpack(packed):
+        return Ack(
+            packed.sender,
+            packed.echo,
+        )
+
+    def pack(self, packed):
+        packed.echo = self.echo
+        packed.sender = self.sender
+
+
+class Ping(SignedMessage):
+    """ Ping, should be responded by an Ack message. """
+    cmdid = messages.PING
+
+    def __init__(self, nonce):
+        super(Ping, self).__init__()
+        self.nonce = nonce
+
+    @staticmethod
+    def unpack(packed):
+        ping = Ping(packed.nonce)
+        ping.signature = packed.signature
+        return ping
+
+    def pack(self, packed):
+        packed.nonce = self.nonce
+        packed.signature = self.signature
+
+
+# class Rejected(SignedMessage):
+#     """
+#     All rejected messages should be confirmed by a `Rejected` which echoes the
+#     orginals Message hash.
+#     """
+#
+#     cmdid = messages.REJECT
+#
+#     def __init__(self, echo, errorid, *args):
+#         self.echo = echo
+#         self.errorid = errorid
+#         self.args = args
+#
+#     def aserror(self):
+#         cls = BaseError[self.errorid]
+#         return cls(self.echo, *self.args)
+#
+#     @staticmethod
+#     def unpack(packed):
+#         rejected =  Rejected(packed.echo, packed.errorid, *packed.args)
+#         rejected.signature = packed.signature
+#         return rejected
+#
+#     def pack(self, packed):
+#         packed.echo = self.echo
+#         packed.errorid = self.errorid
+#         packed.args = self.args
+#         packed.signature = self.signature
 
 
 class SecretRequest(SignedMessage):
-
-    """
-    Requests the secret which unlocks a hashlock
-    """
-    cmdid = 3
-
-    fields = SignedMessage.fields + \
-        [
-            ('hashlock', t_hash),
-        ]
+    """ Requests the secret which unlocks a hashlock. """
+    cmdid = messages.SECRETREQUEST
 
     def __init__(self, hashlock):
+        super(SecretRequest, self).__init__()
         self.hashlock = hashlock
+
+    @staticmethod
+    def unpack(packed):
+        secret_request = SecretRequest(packed.hashlock)
+        secret_request.signature = packed.signature
+        return secret_request
+
+    def pack(self, packed):
+        packed.hashlock = self.hashlock
+        packed.signature = self.signature
 
 
 class Secret(SignedMessage):
-
-    """
-    Provides the secret to a hashlock
-    """
-    cmdid = 4
-
-    fields = SignedMessage.fields + \
-        [
-            ('secret', t_hash)
-        ]
+    """ Provides the secret to a hashlock. """
+    cmdid = messages.SECRET
 
     def __init__(self, secret):
+        super(Secret, self).__init__()
         self.secret = secret
-        self.hashlock = sha3(secret)
+        self._hashlock = None
+
+    @property
+    def hashlock(self):
+        if self._hashlock is None:
+            self._hashlock = sha3(self.secret)
+        return self._hashlock
+
+    @staticmethod
+    def unpack(packed):
+        secret = Secret(packed.secret)
+        secret.signature = packed.signature
+        return secret
+
+    def pack(self, packed):
+        packed.secret = self.secret
+        packed.signature = self.signature
 
 
 class Transfer(SignedMessage):
@@ -159,24 +269,39 @@ class Transfer(SignedMessage):
     the given secret is already reflected in the locksroot.
     """
 
-    cmdid = 5
-    fields = SignedMessage.fields + \
-        [
-            ('nonce', t_int),
-            ('asset', t_address),
-            ('balance', t_int),
-            ('recipient', t_address),
-            ('locksroot', t_hash_optional),
-            ('secret', t_hash_optional),
-        ]
+    cmdid = messages.TRANSFER
 
     def __init__(self, nonce, asset, balance, recipient, locksroot, secret=None):
+        super(Transfer, self).__init__()
         self.nonce = nonce
         self.asset = asset
         self.balance = balance
         self.recipient = recipient
         self.locksroot = locksroot
         self.secret = secret or ''  # secret for settling a locked amount: hashlock = sha3(secret)
+
+    @staticmethod
+    def unpack(packed):
+        transfer = Transfer(
+            packed.nonce,
+            packed.asset,
+            packed.balance,
+            packed.recipient,
+            packed.locksroot,
+            packed.secret,
+        )
+        transfer.signature = packed.signature
+
+        return transfer
+
+    def pack(self, packed):
+        packed.nonce = self.nonce
+        packed.asset = self.asset
+        packed.balance = self.balance
+        packed.recipient = self.recipient
+        packed.locksroot = self.locksroot
+        packed.secret = self.secret
+        packed.signature = self.signature
 
 
 class Lock(MessageHashable):
@@ -187,56 +312,26 @@ class Lock(MessageHashable):
     `expiration` is the highest block_number until which the transfer can be settled
     `hashlock` is the hashed secret, necessary to release the funds
     """
-    fields =  \
-        [
-            ('amount', t_int),
-            ('expiration', t_int),
-            ('hashlock', t_hash),
-        ]
-
-    _cached_asstring = None
 
     def __init__(self, amount, expiration, hashlock):
-        assert amount > 0
+        if amount < 0:
+            raise ValueError('amount {} needs to be positive'.format(amount))
+
+        if amount > 2 ** 256:
+            raise ValueError('amount {} is too large'.format(amount))
+
         assert ishash(hashlock)
         self.amount = amount
         self.expiration = expiration
         self.hashlock = hashlock
+        self._asstring = None
 
     @property
     def asstring(self):
-        if not self._cached_asstring:
-            # return ''.join(self.__class__.exclude(['cmdid', 'sender']).serialize(self)) # slow
-            self._cached_asstring = rlp.encode([self.amount, self.expiration, self.hashlock])
-        return self._cached_asstring
+        if self._asstring is None:
+            self._asstring = rlp.encode([self.amount, self.expiration, self.hashlock])
 
-
-# class StateLock(rlp.Serializable):
-
-#     """
-#     NotImplemented
-
-#     A Lock which depends on a certain state on the associated chain.
-
-#     Therefore it comes with `data` which when passed to the `ChannelsContract`
-#     will call a contract at address data[:20] with data[20:].
-#     """
-#     fields =  \
-#         [
-#             ('amount', t_int),
-#             ('expiration', t_int),
-#             ('data', t_hash),
-#         ]
-
-#     def __init__(self,  amount, expiration, data):
-#         assert amount > 0
-#         self.amount = amount
-#         self.expiration = expiration
-#         self.data = data
-
-#     @property
-#     def hashlock(self):
-#         return sha3(''.join(self.__class__.exclude('cmdid', 'sender').serialize(self)))
+        return self._asstring
 
 
 class LockedTransfer(SignedMessage):
@@ -259,44 +354,63 @@ class LockedTransfer(SignedMessage):
             any signed [nonce, asset, balance, recipient, locksroot, ...]
             along a merkle proof from locksroot to the not yet netted formerly locked amount
     """
-    cmdid = 6
-    fields = SignedMessage.fields + \
-        [
-            ('nonce', t_int),
-            ('asset', t_address),
-            ('balance', t_int),
-            ('recipient', t_address),
-            ('locksroot', t_hash),
-            ('lock', Lock),
-        ]
+    cmdid = messages.LOCKEDTRANSFER
 
     def __init__(self, nonce, asset, balance, recipient, locksroot, lock):
+        super(LockedTransfer, self).__init__()
         self.nonce = nonce
         self.asset = asset
         self.balance = balance
         self.recipient = recipient
         self.locksroot = locksroot
+
         self.lock = lock
 
-    # def to_mediatedtransfer(self, target, fee=0, initiator=''):
-    # assert self.is_mutable()  # must not yet be signed
-    #     self.__class__ = MediatedTransfer
-
-    #     assert len(self.fields) == 11, 'wrong fields'
-    # self._sedes = None  # FIXME: why is this cached in the firstplace?
-    #     assert len(self.get_sedes()) == 11, 'wrong sedes'
-
-    #     assert 'target' in [x[0] for x in self.fields]
-    #     self.target = target
-    #     self.fee = fee
-    #     self.initiator = initiator
-
     def to_mediatedtransfer(self, target, fee=0, initiator=''):
-        return MediatedTransfer(self.nonce, self.asset, self.balance, self.recipient,
-                                self.locksroot, self.lock, target, initiator, fee)
+        return MediatedTransfer(
+            self.nonce,
+            self.asset,
+            self.balance,
+            self.recipient,
+            self.locksroot,
+            self.lock,
+            target,
+            initiator,
+            fee,
+        )
 
-    # def to_canceltransfer(self):
-    #     self.__class__ = CancelTransfer
+    @staticmethod
+    def unpack(packed):
+        lock = Lock(
+            packed.amount,
+            packed.expiration,
+            packed.hashlock,
+        )
+
+        locked_transfer = LockedTransfer(
+            packed.nonce,
+            packed.asset,
+            packed.balance,
+            packed.recipient,
+            packed.locksroot,
+            lock,
+        )
+        locked_transfer.signature = packed.signature
+        return locked_transfer
+
+    def pack(self, packed):
+        packed.nonce = self.nonce
+        packed.asset = self.asset
+        packed.balance = self.balance
+        packed.recipient = self.recipient
+        packed.locksroot = self.locksroot
+
+        lock = self.lock
+        packed.amount = lock.amount
+        packed.expiration = lock.expiration
+        packed.hashlock = lock.hashlock
+
+        packed.signature = self.signature
 
 
 class MediatedTransfer(LockedTransfer):
@@ -319,22 +433,64 @@ class MediatedTransfer(LockedTransfer):
 
     `initiator` is the party that knows the secret to the `hashlock`
     """
-    cmdid = 7
-    fields = LockedTransfer.fields + \
-        [
-            ('target', t_address),
-            ('initiator', t_address),
-            ('fee', t_int)
-        ]
-    _sedes = None  # fix for rlp.Serializable._sedes caching
+
+    cmdid = messages.MEDIATEDTRANSFER
 
     def __init__(self, nonce, asset, balance, recipient, locksroot,
                  lock, target, initiator, fee=0):
-        super(MediatedTransfer, self).__init__(nonce, asset, balance, recipient,
-                                               locksroot, lock)
+
+        if nonce > 2 ** 64:
+            raise ValueError('nonce is too large')
+
+        if fee > 2 ** 256:
+            raise ValueError('fee is too large')
+
+        if balance > 2 ** 256:
+            raise ValueError('balance is too large')
+
+        super(MediatedTransfer, self).__init__(nonce, asset, balance, recipient, locksroot, lock)
         self.target = target
         self.fee = fee
         self.initiator = initiator
+
+    @staticmethod
+    def unpack(packed):
+        lock = Lock(
+            packed.amount,
+            packed.expiration,
+            packed.hashlock,
+        )
+
+        mediated_transfer = MediatedTransfer(
+            packed.nonce,
+            packed.asset,
+            packed.balance,
+            packed.recipient,
+            packed.locksroot,
+            lock,
+            packed.target,
+            packed.initiator,
+            packed.fee,
+        )
+        mediated_transfer.signature = packed.signature
+        return mediated_transfer
+
+    def pack(self, packed):
+        packed.nonce = self.nonce
+        packed.asset = self.asset
+        packed.balance = self.balance
+        packed.recipient = self.recipient
+        packed.locksroot = self.locksroot
+        packed.target = self.target
+        packed.initiator = self.initiator
+        packed.fee = self.fee
+
+        lock = self.lock
+        packed.amount = lock.amount
+        packed.expiration = lock.expiration
+        packed.hashlock = lock.hashlock
+
+        packed.signature = self.signature
 
 
 class CancelTransfer(LockedTransfer):
@@ -343,7 +499,7 @@ class CancelTransfer(LockedTransfer):
     gracefully cancels a transfer by reversing it
     indicates that no route could be found
     """
-    cmdid = 8
+    cmdid = messages.CANCELTRANSFER
 
 
 class TransferTimeout(SignedMessage):
@@ -352,17 +508,26 @@ class TransferTimeout(SignedMessage):
     Indicates that timeout happened during mediated transfer.
     Transfer will not be completed.
     """
-    cmdid = 9
-
-    fields = SignedMessage.fields + \
-        [
-            ('echo', t_hash),
-            ('hashlock', t_hash)
-        ]
+    cmdid = messages.TRANSFERTIMEOUT
 
     def __init__(self, echo, hashlock):
+        super(TransferTimeout, self).__init__()
         self.echo = echo
         self.hashlock = hashlock
+
+    @staticmethod
+    def unpack(packed):
+        transfer_timeout = TransferTimeout(
+            packed.echo,
+            packed.hashlock,
+        )
+        transfer_timeout.signature = packed.signature
+        return transfer_timeout
+
+    def pack(self, packed):
+        packed.echo = self.echo
+        packed.hashlock = self.hashlock
+        packed.signature = self.signature
 
 
 class ConfirmTransfer(SignedMessage):
@@ -370,89 +535,40 @@ class ConfirmTransfer(SignedMessage):
     """
     `ConfirmTransfer` which signs, that `target` has received a transfer.
     """
-    cmdid = 10
-
-    fields = SignedMessage.fields + \
-        [
-            ('hashlock', t_hash)
-        ]
+    cmdid = messages.CONFIRMTRANSFER
 
     def __init__(self, hashlock):
+        super(ConfirmTransfer, self).__init__()
         self.hashlock = hashlock
 
+    @staticmethod
+    def unpack(packed):
+        confirm_transfer = ConfirmTransfer(
+            packed.hashlock,
+        )
+        confirm_transfer.signature = packed.signature
+        return confirm_transfer
 
-# class TransferRequest(SignedMessage):
-
-#     """
-#     Requests the transfer of an asset.
-
-#     If the recipient agrees, it replies with an `Ack` message and
-#     initiates a (Mediated)Transfer.
-#     """
-#     cmdid = 10
-
-#     fields = SignedMessage.fields + \
-#         [
-#             ('asset', t_address),
-#             ('amount', t_int),
-#             ('haslock', t_hash),
-#             ('reference', t_hash_optional),
-#         ]
-
-#     def __init__(self, asset, amount, hashlock, reference=''):
-#         self.asset = asset
-#         self.amount = amount
-#         self.hashlock = hashlock
-#         self.reference = reference
+    def pack(self, packed):
+        packed.hashlock = self.hashlock
+        packed.signature = self.signature
 
 
-# class ExchangeRequest(SignedMessage):
-
-#     """
-#     Requests the exchange of an asset pair
-#     `bid_asset`: address of the offered asset
-#     `ask_asset`: address of the wanted asset
-#     `bid_amount`: amount bid of the offered asset, can be zero for market orders
-#     `ask_amount`: amount asked of the wanted asset, can be zero for market orders
-
-#     Any of `bid_amount` , `ask_amount` must be non zero.
-
-#     `ExchangeRequests` are broadcasted : TBD
-
-#     Any party interested in an exchange can send a TransferRequest to the initiator.
-#     They are free to only partially match the exchange offer.
+CMDID_TO_CLASS = {
+    messages.ACK: Ack,
+    messages.PING: Ping,
+    # REJECTED: Rejected,
+    messages.SECRETREQUEST: SecretRequest,
+    messages.SECRET: Secret,
+    messages.TRANSFER: Transfer,
+    messages.LOCKEDTRANSFER: LockedTransfer,
+    messages.MEDIATEDTRANSFER: MediatedTransfer,
+    messages.CANCELTRANSFER: CancelTransfer,
+    messages.TRANSFERTIMEOUT: TransferTimeout,
+    messages.CONFIRMTRANSFER: ConfirmTransfer,
+}
 
 
-#     Case `bid_amount=0`: Buy market order
-#     Responder must announce, which `amount` of `bit_asset` it requests.
-#         Responder sends:
-#             Opening MediatedTransfer which specifies the `ask_amount`.
-#             TransferRequest which specifies the `bid_amount`.
-#         If the initiator agrees, it sends:
-#             Acks
-#             MediatedTransfer matching the TransferRequest
-#         It sends a Reject message otherwise.
-
-
-#     Case `ask_amount=0`: Sell market order
-#     Responder must announce, which `amount` of `ask_asset` it requests.
-
-#     Case `ask_amount & bid_amount`: Limit Order
-#     """
-#     cmdid = 11
-
-#     fields = SignedMessage.fields + \
-#         [
-#             ('bid_asset', t_address),
-#             ('ask_asset', t_address),
-#             ('bid_amount', t_int),
-#             ('ask_amount', t_int)
-#         ]
-
-#     def __init__(self, bid_asset, ask_asset,  bid_amount=0, ask_amount=0):
-#         self.bid_asset = bid_asset
-#         self.ask_asset = ask_asset
-#         self.bid_amount = bid_amount
-#         self.ask_amount = ask_amount
-
-decode = Decoder(extra_klasses=[MediatedTransfer]).decode
+def decode(data):
+    klass = CMDID_TO_CLASS[data[0]]
+    return klass.decode(data)

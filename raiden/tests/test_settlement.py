@@ -1,9 +1,13 @@
+# -*- coding: utf8 -*-
+import pytest
+
 from raiden.app import create_network
 from raiden.mtree import check_proof
-from .utils import setup_messages_cb
+from raiden.tests.utils import setup_messages_cb
 from raiden.utils import sha3
 
 
+@pytest.skip()
 def test_settlement():
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     a0, a1 = apps

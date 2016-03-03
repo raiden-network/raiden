@@ -66,17 +66,19 @@ class RaidenProtocol(object):
     def receive(self, data):
         assert len(data) < self.max_message_size
 
-        # check if we handled this message already, if so repeat Ack
         msghash = sha3(data)
+
+        # check if we handled this message already, if so repeat Ack
         if msghash in self.sent_acks:
             # assert False, "DEACTIVATED ACK RESENTS"
             return self.send_ack(*self.sent_acks[msghash])
 
         # note, we ignore the sending endpoint, as this can not be known w/ UDP
         msg = messages.decode(data)
+
         # handle Acks
         if isinstance(msg, Ack):
-            log.debug("ACK MSGHASH RECEIVED echo=", echo=pex(msg.echo))
+            log.debug("ACK MSGHASH RECEIVED", echo=pex(msg.echo))
             del self.tries[msg.echo]
             return
 
