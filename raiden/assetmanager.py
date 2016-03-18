@@ -1,6 +1,6 @@
 from channelgraph import ChannelGraph
 from utils import isaddress
-from contracts import NettingChannelContract, ChannelManagerContract
+from contracts import NettingChannelContract
 import messages
 import transfermanager
 import raiden_service
@@ -23,9 +23,12 @@ class AssetManager(object):
         self.channels = dict()  # receiver : Channel
 
         # create channels for contracts
-        channelmanager = raiden.chain.channelmanager_by_asset(asset_address)
-        assert isinstance(channelmanager, ChannelManagerContract)
-        for netting_contract in channelmanager.nettingcontracts_by_address(raiden.address):
+        channel_contracts = raiden.chain.contracts_by_asset_participant(
+            asset_address,
+            raiden.address,
+        )
+
+        for netting_contract in channel_contracts:
             self.add_channel(netting_contract)
 
         # create network graph for contract
@@ -47,17 +50,3 @@ class AssetManager(object):
         assert isinstance(msg, messages.Secret)
         for c in self.channels.values():
             c.claim_locked(msg.secret, msg.hashlock)
-
-    @classmethod
-    def get_assets_for_address(cls, chain, address):
-        "get all assets for which there is a netting channel"
-        asset_addresses = []
-        for asset_address in chain.asset_addresses:
-            channelmanager = chain.channelmanager_by_asset(asset_address)
-            assert isinstance(channelmanager, ChannelManagerContract)
-            if channelmanager.nettingcontracts_by_address(address):
-                asset_addresses.append(asset_address)
-            else:
-                log.warning("nettingcontracts_by_address failed for", address=address.encode('hex'))
-        log.debug("returning", result=asset_addresses)
-        return asset_addresses
