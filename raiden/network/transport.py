@@ -1,15 +1,20 @@
 # -*- coding: utf8 -*-
+'''
+This module contains the classes responsable to implement the network
+communication.
+'''
 import gevent
-from ethereum import slogging
 from gevent.server import DatagramServer
+from ethereum import slogging
 
-from raiden_service import RaidenProtocol
-from utils import isaddress, privtoaddr, pex, sha3
+from raiden.raiden_service import RaidenProtocol
+from raiden.utils import pex, sha3, privtoaddr, isaddress
 
-log = slogging.get_logger('transport')
+log = slogging.get_logger('raiden.network.transport')  # pylint: disable=invalid-name
 
 
 class UDPTransport(object):
+    ''' Node communication using the UDP protocol. '''
 
     def __init__(self, host, port, protocol=None):
         self.protocol = protocol
@@ -18,22 +23,27 @@ class UDPTransport(object):
         self.host = self.server.server_host
         self.port = self.server.server_port
 
-    def receive(self, data, host_port):
+    def receive(self, data, host_port):  # pylint: disable=unused-argument
         self.protocol.receive(data)
 
     def send(self, sender, host_port, data):
-        log.info('TRANSPORT SENDS')
         self.server.sendto(data, host_port)
-        DummyTransport.network.track_send(sender, host_port, data)  # debuging
 
-    def register(self, proto, host, port):
+        # enable debugging using the DummyNetwork callbacks
+        DummyTransport.network.track_send(sender, host_port, data)
+
+    def register(self, proto, host, port):  # pylint: disable=unused-argument
         assert isinstance(proto, RaidenProtocol)
         self.protocol = proto
 
 
 class DummyNetwork(object):
+    ''' Store global state for an in process network, this won't use a real
+    network protocol just greenlet communication.
 
-    "global which connects the DummyTransports"
+    Note:
+        Useful for debugging purposes.
+    '''
 
     on_send_cbs = []  # debugging
 
@@ -42,27 +52,33 @@ class DummyNetwork(object):
         self.counter = 0
 
     def register(self, transport, host, port):
+        ''' Register a new node in the dummy network. '''
         assert isinstance(transport, DummyTransport)
         self.transports[(host, port)] = transport
 
     def track_send(self, sender, host_port, data):
         self.counter += 1
-        for cb in self.on_send_cbs:
-            cb(sender, host_port, data)
+        for callback in self.on_send_cbs:
+            callback(sender, host_port, data)
 
     def send(self, sender, host_port, data):
         self.track_send(sender, host_port, data)
-        f = self.transports[host_port].receive
-        gevent.spawn_later(0.00000000001, f, data)
+        receive_end = self.transports[host_port].receive
+
+        gevent.spawn_later(0.00000000001, receive_end, data)
 
     def drop(self, sender, host_port, data):
-        "lost message"
         self.counter += 1
-        for cb in self.on_send_cbs:
-            cb(sender, host_port, data)
+        for callback in self.on_send_cbs:
+            callback(sender, host_port, data)
 
 
 class DummyTransport(object):
+    ''' Communication between inter-process nodes.
+
+    Note:
+        Useful for debugging purposes.
+    '''
     network = DummyNetwork()
     on_recv_cbs = []  # debugging
 
@@ -72,12 +88,11 @@ class DummyTransport(object):
         self.network.register(self, host, port)
 
     def send(self, sender, host_port, data):
-        log.info('TRANSPORT SENDS')
         self.network.send(sender, host_port, data)
 
     def track_recv(self, data, host_port=None):
-        for cb in self.on_recv_cbs:
-            cb(self.protocol.raiden, host_port, data)
+        for callback in self.on_recv_cbs:
+            callback(self.protocol.raiden, host_port, data)
 
     def receive(self, data, host_port=None):
         self.track_recv(data, host_port)
@@ -85,16 +100,24 @@ class DummyTransport(object):
 
 
 class UnreliableTransport(DummyTransport):
+    ''' A transport that simulates random loses of UDP messages.
 
-    "simulate random lost udp messages"
+    Note:
+        Useful for debugging purposes.
+    '''
 
     droprate = 2  # drop every Nth message
 
     def send(self, sender, host_port, data):
-        log.debug('in send unreliable', counter=self.network.counter,
-                  drop_this_one=not(self.network.counter % self.droprate))
+        drop = bool(self.network.counter % self.droprate)
 
-        if self.network.counter % self.droprate:
+        log.debug(
+            'in send unreliable',
+            counter=self.network.counter,
+            drop_this_one=drop,
+        )
+
+        if not drop:
             self.network.send(sender, host_port, data)
         else:
             self.network.track_send(sender, host_port, data)

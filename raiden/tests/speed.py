@@ -2,26 +2,26 @@
 import time
 
 import gevent
-
-from raiden.transport import UDPTransport
-from raiden.app import create_network
-from raiden.tasks import TransferTask
 from ethereum import slogging
 
+from raiden.app import create_udp_network
+from raiden.tasks import TransferTask
+
 log = slogging.getLogger('test.speed')
-slogging.configure(":error")
+slogging.configure(':debug')
 
 
 def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channels_per_node=2):
+    # pylint: disable=too-many-locals
 
-    apps = create_network(
+    apps = create_udp_network(
         num_nodes=num_nodes,
         num_assets=num_assets,
         channels_per_node=channels_per_node,
-        transport_class=UDPTransport)
+    )
 
-    assert len(apps) > num_assets, len(apps)
-    #DEBUG
+    assert len(apps) > num_assets
+
     for app in apps:
         app.raiden.chain.next_block()
         print "block", app.raiden.chain.block_number
@@ -31,10 +31,7 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
             cm = app.raiden.chain.channelmanager_by_asset(asset)
             print "CM", cm
             print "nettingcontracts", cm.nettingcontracts
-        from raiden.assetmanager import AssetManager
-        print "AM", AssetManager.get_assets_for_address(app.raiden.chain, app.raiden.address)
         print "asset managers", app.raiden.assetmanagers
-    #/DEBUG
 
     def start_transfers(idx, num_transfers):
         a0 = apps[idx]

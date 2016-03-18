@@ -1,11 +1,15 @@
-import messages
-from messages import SignedMessage
-from utils import privtoaddr, isaddress, pex
-from raiden_protocol import RaidenProtocol
-from assetmanager import AssetManager
-from transfermanager import TransferManager
+# -*- coding: utf8 -*-
+
 from ethereum import slogging
-log = slogging.get_logger('service')
+
+from raiden import messages
+from raiden.assetmanager import AssetManager
+from raiden.raiden_protocol import RaidenProtocol
+from raiden.transfermanager import TransferManager
+from raiden.utils import privtoaddr, isaddress, pex
+
+
+log = slogging.get_logger('service')  # pylint: disable=invalid-name
 
 
 class RaidenAPI(object):
@@ -55,13 +59,13 @@ class RaidenService(object):
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
-    def setup_assets(self):
+    def setup_assets(self, asset_list):
         # create asset managers
-        for asset_address in AssetManager.get_assets_for_address(self.chain, self.address):
+        for asset_address in asset_list:
             self.assetmanagers[asset_address] = AssetManager(self, asset_address)
 
     def sign(self, msg):
-        assert isinstance(msg, SignedMessage)
+        assert isinstance(msg, messages.SignedMessage)
         return msg.sign(self.privkey)
 
     def on_message(self, msg, msghash):
