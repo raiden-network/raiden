@@ -7,7 +7,7 @@ from ethereum import slogging
 from raiden.app import create_udp_network
 from raiden.tasks import TransferTask
 
-log = slogging.getLogger('test.speed')
+log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
 slogging.configure(':debug')
 
 
@@ -28,9 +28,8 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
         print "app address", app.raiden.address.encode('hex')
         print "asset addresses", [aa.encode('hex') for aa in app.raiden.chain.asset_addresses]
         for asset in app.raiden.chain.asset_addresses:
-            cm = app.raiden.chain.channelmanager_by_asset(asset)
-            print "CM", cm
-            print "nettingcontracts", cm.nettingcontracts
+            netting_contracts = app.raiden.chain.contracts_by_asset(asset)
+            print "nettingcontracts", netting_contracts
         print "asset managers", app.raiden.assetmanagers
 
     def start_transfers(idx, num_transfers):

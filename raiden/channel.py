@@ -1,9 +1,14 @@
-from contracts import NettingChannelContract
-import raiden_service
-from messages import Transfer, LockedTransfer, MediatedTransfer, BaseError, Lock
-from messages import CancelTransfer
-from utils import sha3
-from mtree import merkleroot, get_proof
+# -*- coding: utf8 -*-
+from ethereum import slogging
+
+from raiden.messages import (
+    Transfer, LockedTransfer, MediatedTransfer, BaseError, Lock, CancelTransfer
+)
+from raiden.utils import sha3
+from raiden.mtree import merkleroot, get_proof
+from raiden.blockchain.net_contract import NettingChannelContract
+
+log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class InvalidNonce(BaseError):
@@ -75,14 +80,14 @@ class LockedTransfers(object):
             exclude_hash = sha3(exclude.asstring)
             self._cached_lock_hashes.remove(exclude_hash)
         # calc
-        r = merkleroot(self._cached_lock_hashes)
+        root = merkleroot(self._cached_lock_hashes)
         # restore
         if lock_hash:
             assert lock_hash in self._cached_lock_hashes
             self._cached_lock_hashes.remove(lock_hash)
         if exclude:
             self._cached_lock_hashes.append(exclude_hash)
-        return r
+        return root
 
     def get_proof(self, transfer):
         hashlock = transfer.lock.hashlock
@@ -95,7 +100,10 @@ class LockedTransfers(object):
 class Channel(object):
 
     def __init__(self, raiden, contract):
-        assert isinstance(raiden, raiden_service.RaidenService)
+        # avoid cyclic import
+        from raiden.raiden_service import RaidenService
+        assert isinstance(raiden, RaidenService)
+
         assert isinstance(contract, NettingChannelContract)
         self.raiden = raiden
         self.contract = contract
@@ -212,17 +220,34 @@ class Channel(object):
             # check locksroot!!!
             self.claim_locked(transfer.secret)
 
-        # dedcuct funds
+        # deduct funds
         allowance = transfer.balance - self.partner.balance
         assert allowance >= 0
         assert allowance <= self.distributable
 
         # register locked funds
         if isinstance(transfer, (LockedTransfer, MediatedTransfer)):
-            assert transfer.lock.amount > 0
-            assert allowance + transfer.lock.amount <= self.distributable
-            assert transfer.lock.expiration - self.min_locktime >= self.raiden.chain.block_number
-            # fixme: check locksroot!!!
+            amount = transfer.lock.amount
+            distributable = self.distributable
+            expiration = transfer.lock.expiration
+            min_locktime = self.min_locktime
+            block_number = self.raiden.chain.block_number
+
+            log.debug(
+                'register_sent_transfer',
+                amount=amount,
+                allowance=allowance,
+                distributable=distributable,
+                expiration=expiration,
+                min_locktime=min_locktime,
+                block_number=block_number,
+            )
+
+            assert amount > 0
+            assert allowance + amount <= distributable
+            assert expiration - min_locktime >= block_number
+
+            # FIXME: check locksroot!!!
             self.register_locked_transfer(transfer)
 
         # all checks passed
@@ -232,7 +257,8 @@ class Channel(object):
         self.nonce += 1
 
     def register_transfer(self, transfer):
-        assert transfer.sender
+        assert transfer.sender, 'transfer is not signed'
+
         if transfer.recipient == self.partner.address:
             self.register_sent_transfer(transfer)
         else:
@@ -240,38 +266,43 @@ class Channel(object):
             self.register_received_transfer(transfer)
 
     def create_transfer(self, amount, secret=None):
-        assert amount >= 0
-        assert self.distributable > amount
-        assert self.isopen
-        t = Transfer(nonce=self.nonce,
-                     asset=self.contract.asset_address,
-                     balance=self.partner.balance + amount,
-                     recipient=self.partner.address,
-                     locksroot=self.partner.locked.root,  # not changed
-                     secret=secret)
-        return t
+        assert self.isopen, 'The channel is closed'
+
+        if amount <= 0 or amount > self.distributable:
+            log.debug('Insufficient funds', amount=amount, distributable=self.distributable)
+            raise ValueError('Insufficient funds')
+
+        transfer = Transfer(
+            nonce=self.nonce,
+            asset=self.contract.asset_address,
+            balance=self.partner.balance + amount,
+            recipient=self.partner.address,
+            locksroot=self.partner.locked.root,  # not changed
+            secret=secret,
+        )
+
+        return transfer
 
     def create_lockedtransfer(self, amount, expiration, hashlock):
-        assert self.distributable > amount, 'insufficient funds'
-        assert self.isopen
-        assert expiration > self.contract.chain.block_number
+        assert self.isopen, 'The channel is closed'
 
-        l = Lock(amount, expiration, hashlock)
-        updated_locksroot = self.partner.locked.root_with(l)
-        t = LockedTransfer(nonce=self.nonce,
-                           asset=self.contract.asset_address,
-                           balance=self.partner.balance,  # not changed
-                           recipient=self.partner.address,
-                           locksroot=updated_locksroot,
-                           lock=l)
-        return t
+        if amount <= 0 or amount > self.distributable:
+            log.debug('Insufficient funds', amount=amount, distributable=self.distributable)
+            raise ValueError('Insufficient funds')
 
-    def create_canceltransfer(self, transfer):
-        assert transfer.hashlock in self.locked
-        l = transfer.lock
-        t = self.create_locked_transfer(l.amount, l.expiration, l.hashlock)
-        t.to_canceltransfer()
-        return t
+        if expiration < self.raiden.chain.block_number:
+            raise ValueError('Expiration set to the past')
 
-    def close(self):
-        pass
+        lock = Lock(amount, expiration, hashlock)
+        updated_locksroot = self.partner.locked.root_with(lock)
+
+        locked_transfer = LockedTransfer(
+            nonce=self.nonce,
+            asset=self.contract.asset_address,
+            balance=self.partner.balance,  # not changed
+            recipient=self.partner.address,
+            locksroot=updated_locksroot,
+            lock=lock,
+        )
+
+        return locked_transfer

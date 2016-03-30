@@ -10,8 +10,7 @@ from ethereum import slogging
 from raiden.raiden_service import RaidenService
 from raiden.network.transport import DummyTransport, UDPTransport
 from raiden.network.discovery import PredictiveDiscovery
-from raiden.network.rpc.client import BlockChainClient, BlockChainService
-from raiden.network.rpc.server import BlockChainMockServer
+from raiden.network.rpc.client import BlockChainServiceMock
 from raiden.utils import sha3, pex
 
 log = slogging.get_logger('raiden.app')  # pylint: disable=invalid-name
@@ -180,9 +179,6 @@ def create_udp_network(num_nodes=8, num_assets=1, channels_per_node=3):
         raise ValueError("Can't create more channels than nodes")
 
     client_hosts = ['127.0.0.10', '127.0.0.11']
-    # block chain server
-    server_host = '127.0.0.11'
-    server_port = 7777
 
     # if num_nodes it is not even
     half_of_nodes = int(ceil(num_nodes / 2))
@@ -193,15 +189,16 @@ def create_udp_network(num_nodes=8, num_assets=1, channels_per_node=3):
         for host in client_hosts
     ))
 
+    # The mock needs to be atomic since all app's will use the same instance,
+    # for the real application the syncronization is done by the JSON-RPC
+    # server
+    blockchain_service = BlockChainServiceMock()
+
     # Each app instance is a Node in the network
     apps = []
     for host in client_hosts:
         for idx in range(half_of_nodes):
             port = INITIAL_PORT + idx
-
-            # create an rpc client and wrap with a compatible api
-            rpc_client = BlockChainClient(server_host, server_port)
-            blockchain_service = BlockChainService(rpc_client)
 
             app = mk_app(
                 blockchain_service,
@@ -213,21 +210,14 @@ def create_udp_network(num_nodes=8, num_assets=1, channels_per_node=3):
 
             apps.append(app)
 
-    # run the blockchain server
-    server = BlockChainMockServer(server_host, server_port)
-    server.start()
-
-    # create a connection to the server just created
-    chain_service = BlockChainService(BlockChainClient(server_host, server_port))
-
     for i in range(num_assets):
         asset_address = sha3('asset:%d' % i)[:20]
-        chain_service.new_channel_contract(asset_address=asset_address)
+        blockchain_service.new_channel_contract(asset_address=asset_address)
 
-    asset_list = chain_service.asset_addresses
+    asset_list = blockchain_service.asset_addresses
     assert len(asset_list) == num_assets
 
-    create_channels(chain_service, asset_list, apps, channels_per_node)
+    create_channels(blockchain_service, asset_list, apps, channels_per_node)
 
     for app in apps:
         app.raiden.setup_assets(asset_list)
