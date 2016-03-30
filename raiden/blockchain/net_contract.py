@@ -1,19 +1,6 @@
 # -*- coding: utf8 -*-
 """
 A pure python implementation of a contract responsable to open a channel.
-
-From the perspective of the blockchain this contract is responsable to store or
-lock the balance that is being exchanged in the channel, it's also
-responsability of this contract to cleanly close the channel, meaning that the
-users should receive the "right amount" of coins back.
-
-In the context of a channel the "right amount" is not as straight forward, from
-the point of view of the contract the right amount is equivalent to the latest
-valid transaction that a peer notified the contract, in the good scenario these
-transactions will also be the right ones but in a dispute scenario one party
-might be trying to close the channel with an older transaction were it's own
-netted value is higher, for this reason the contract has mechanisms to penalize
-the wrong doer given that the losing party presents a newer transaction.
 """
 import rlp
 from ethereum import slogging

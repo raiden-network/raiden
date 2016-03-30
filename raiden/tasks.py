@@ -70,7 +70,7 @@ class TransferTask(Task):
         self.amount = amount
         self.target = target
         self.hashlock = hashlock
-        self.expiration = None or 10  # fixme
+        self.expiration = self.raiden.chain.block_number + 10
         assert secret or originating_transfer
         self.originating_transfer = originating_transfer  # no sender == self initiated transfer
         self.secret = secret
