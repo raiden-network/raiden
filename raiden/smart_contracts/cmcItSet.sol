@@ -1,3 +1,10 @@
+
+/*
+    This is a very much work in progress draft of the data structure, 
+    mostly used for testing purposes so far.
+*/
+
+
 /// @dev Models a uint -> uint mapping where it is possible to iterate over all keys.
 library IterableMapping
 {
