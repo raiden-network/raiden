@@ -3,7 +3,9 @@ contract ChannelManagerContract {
     NettingContract[] nettingContracts; // need to change data structure, name persistst
 
     // Events
-    event ChannelNew(); // TODO
+    // Event that triggers when a new channel is created
+    // Gives the created channel
+    event ChannelNew(NettingContract channel);
 
     // Initialize the Contract
     function ChannelManagerContract(address assetAdr) {
@@ -28,8 +30,11 @@ contract ChannelManagerContract {
     /// @param adrB (address) address of other party.
     /// @return key (bytes32) sha3 hash of the two keys.
     function key(address adrA, address adrB) constant returns (bytes32 key){
-        return sha3(adrA, adrB);
+        if (adrA == adrB) throw;
+        if (adrA > adrB) return sha3(adrA, adrB);
+        else return sha3(adrB, adrA);
     }
+
 
     /// @notice add(NettingContract) to add a channel to the collection of NettingContracts.
     /// @dev Add a NettingContract to nettingContracts if it doesn't already exist.
@@ -46,10 +51,10 @@ contract ChannelManagerContract {
     /// @param adrA (address) address of one party.
     /// @param adrB (address) address of other party.
     /// @return channel (NettingContract) the NettingContract of the two parties.
-    // Get the unique NettingContract of two addresses
     function get(address adrA, address adrB) returns (NettingContract channel){
-        /*k = key(adrA, adrB);*/
-        /*return nettingContracts[k];*/
+        k = key(adrA, adrB);
+        return nettingContracts[k];
+        //handle if no such channel exists
     }
 
 
@@ -59,10 +64,9 @@ contract ChannelManagerContract {
     /// @param adrB (address) address of other party.
     /// @return channel (NettingContract) the NettingContract of the two parties.
     function newChannel(address adrA, address adrB) returns (NettingContract c){
-        /*c = NettingContract(assetAddress, A, B);*/
-        /*add(c);*/
-        /*return c;*/
-        ChannelNew();
+        c = NettingContract(assetAddress, adrA, adrB);
+        add(c);
+        return c;
+        ChannelNew(c);
     }
-
 }

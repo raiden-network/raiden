@@ -18,7 +18,7 @@ contract NettingContract {
     /*Participant[2] participants; // Might make more sense to use an array like this for participants */
                                  /*// since it only holds two.*/
 
-    event ChannelOpened(); // TODO
+    event ChannelOpened(address assetAdr); // TODO
     event ChannelClosed(); // TODO
     event ChannelSettled(); // TODO
 
@@ -50,7 +50,7 @@ contract NettingContract {
         opened = block.number;
 
         // trigger event
-        ChannelOpened();
+        ChannelOpened(assetAddress);
     }
 
     /// @notice partner() to get the partner or other participant of the channel
@@ -69,6 +69,8 @@ contract NettingContract {
         // if closed is not zero
         // and both participants have a 'deposit' value higher than zero
         // return true else false
+        if (closed == 0) throw;
+        if ()
     }
 
 

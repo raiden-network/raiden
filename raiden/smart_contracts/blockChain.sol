@@ -1,12 +1,10 @@
 // For iterable mapping
-import "github.com/ethereum/dapp-bin/library/iterable_mapping.sol";
+import "cmcItSet.sol";
 
 contract BlockChain {
-    /*IterableMapping.itmap channelManagerContracts; // Might be the data structure to use*/
+    IterableMappingCMC.itmap data; // Might be the data structure to use
 
     address assetAddres;
-    mapping(address => ChannelManagerContract) public channelManagerContracts;
-
 
     /// @notice addAsset(address) to add a new ChannelManagerContract to channelManagerContracts
     /// with the assetAddress as key.
@@ -17,8 +15,9 @@ contract BlockChain {
     function addAsset(address assetAddress) {
         // Check if the assetAddress already exists as key in the collection. Throw if it does.
         // Create a new ChannelManagerContract and add it to the collection.
-
-        /*channelManagerContracts[assetAddress] = ChannelManagerContract(assetAddress);*/
+        if (IterableMappingCMC.contains(data, assetAddress)) throw;
+        c = ChannelManagerContract(assetAddress);
+        IterableMappingCMC.insert(data, assetAddress, c);
     }
 
 
@@ -28,14 +27,22 @@ contract BlockChain {
     /// @param assetAddress (address) the asset address.
     /// @return cmc (ChannelManagerContract) the contract belonging to an assetAddress.
     function channelManagerByAsset(address assetAddress) constant returns (ChannelManagerContract cmc) {
-        return channelManagerContracts[assetAddress];
+        uint index = IterableMappingCMC.atIndex(data, assetAddress);
+        var (key, value) = IterableMappingCMC.iterate_get(data, index);
+        cmc = value;
     }
 
 
     /// @notice assetAddresses() to get all assetAddresses in the collection.
     /// @dev Get all assetAddresses in the collection.
     /// @return assetAddress (address[]) an array of all assetAddresses
-    function assetAddresses() returns (address[] assetAddress) {
+    function assetAddresses() returns (address[] assetAddresses) {
         // get all keys(assetAddress) in the collection and return them in an array
+        address[] addresses;
+        for (var i = IterableMappingCMC.iterate_start(data); IterableMappingCMC.iterate_valid(data, i); i = IterableMappingCMC.iterate_next(data, i)) {
+            var (key, value) = IterableMappingCMC.iterate_get(data, i);
+            addresses.push(key);;
+        }
+        assetAddresses = addresses;
     }
 }
