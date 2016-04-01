@@ -11,16 +11,17 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=no-self-use
 
-    def get_next_block(self):
+    def next_block(self):
         raise NotImplementedError
 
-    def get_block_number(self):
+    @property
+    def block_number(self):
         raise NotImplementedError
 
-    def get_asset_addresses(self):
+    def asset_addresses(self):
         raise NotImplementedError
 
-    def get_contracts_by_asset_participant(self, asset_address, participant_address):  # pylint: disable=invalid-name
+    def contracts_by_asset_participant(self, asset_address, participant_address):  # pylint: disable=invalid-name
         raise NotImplementedError
 
     def new_channel_contract(self, asset_address):

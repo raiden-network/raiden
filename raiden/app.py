@@ -143,7 +143,7 @@ def create_channels(chain_service, assets_list, apps, channels_per_node,
                 channel_contracts.append(channel)
 
                 # add deposit of asset
-                for address in (curr_app.raiden.address, peer.raiden.address):
+                for address in [curr_app.raiden.address, peer.raiden.address]:
                     channel.deposit(
                         address,
                         amount=deposit,
@@ -151,7 +151,7 @@ def create_channels(chain_service, assets_list, apps, channels_per_node,
                     )
 
 
-def create_udp_network(num_nodes=8, num_assets=1, channels_per_node=3):
+def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_class=None):
     """ Initialize a local test network using the UDP protocol.
 
     Note:
@@ -167,7 +167,7 @@ def create_udp_network(num_nodes=8, num_assets=1, channels_per_node=3):
     # TODO: check if the loopback interfaces exists
 
     log.info(
-        'creating a new UDP test network',
+        'creating a new test network',
         num_nodes=num_nodes,
         num_assets=num_assets,
         channels_per_node=channels_per_node,
@@ -203,7 +203,7 @@ def create_udp_network(num_nodes=8, num_assets=1, channels_per_node=3):
             app = mk_app(
                 blockchain_service,
                 discovery,
-                UDPTransport,
+                transport_class or UDPTransport,
                 port=port,
                 host=host,
             )
