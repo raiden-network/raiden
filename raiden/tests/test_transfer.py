@@ -1,32 +1,43 @@
-from raiden.messages import Ack, decode, Transfer
-from raiden.app import create_network
-from raiden.tests.utils import setup_messages_cb, MessageLogger
-from raiden.tasks import TransferTask
+# -*- coding: utf8 -*-
 import gevent
+
+from ethereum import slogging
+
+from raiden.app import create_network
+from raiden.messages import Ack, decode, Transfer
+from raiden.tasks import TransferTask
+from raiden.utils import pex
+from raiden.tests.utils import setup_messages_cb, MessageLogger
+
+slogging.configure(':debug')
 
 
 def test_transfer():
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-    a0, a1 = apps
+    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+
+    print('app0: {}'.format(pex(app0.raiden.address)))
+    print('app1: {}'.format(pex(app1.raiden.address)))
+
     messages = setup_messages_cb()
     mlogger = MessageLogger()
 
     # channels
-    am0 = a0.raiden.assetmanagers.values()[0]
-    am1 = a1.raiden.assetmanagers.values()[0]
+    am0 = app0.raiden.assetmanagers.values()[0]
+    am1 = app1.raiden.assetmanagers.values()[0]
 
     assert am0.asset_address == am1.asset_address
 
-    c0 = am0.channels[a1.raiden.address]
-    c1 = am1.channels[a0.raiden.address]
+    c0 = am0.channels[app1.raiden.address]
+    c1 = am1.channels[app0.raiden.address]
 
     b0 = c0.balance
     b1 = c1.balance
 
     amount = 10
-    target = a1.raiden.address
+    target = app1.raiden.address
     assert target in am0.channels
-    a0.raiden.api.transfer(am0.asset_address, amount, target=target)
+    app0.raiden.api.transfer(am0.asset_address, amount, target=target)
 
     gevent.sleep(1)
 
@@ -43,29 +54,32 @@ def test_transfer():
 
     assert c0.locked.root == c1.partner.locked.root == c1.locked.root == ''
 
-    a0_messages = mlogger.get_node_messages(a0)
+    a0_address = pex(app0.raiden.address)
+    a1_address = pex(app1.raiden.address)
+
+    a0_messages = mlogger.get_node_messages(a0_address)
     assert len(a0_messages) == 2
     assert isinstance(a0_messages[0], Transfer)
     assert isinstance(a0_messages[1], Ack)
 
-    a0_sent_messages = mlogger.get_node_messages(a0, only_sent=True)
+    a0_sent_messages = mlogger.get_node_messages(a0_address, only='sent')
     assert len(a0_sent_messages) == 1
     assert isinstance(a0_sent_messages[0], Transfer)
 
-    a0_recv_messages = mlogger.get_node_messages(a0, only_recv=True)
+    a0_recv_messages = mlogger.get_node_messages(a0_address, only='recv')
     assert len(a0_recv_messages) == 1
     assert isinstance(a0_recv_messages[0], Ack)
 
-    a1_messages = mlogger.get_node_messages(a1)
+    a1_messages = mlogger.get_node_messages(a1_address)
     assert len(a1_messages) == 2
     assert isinstance(a1_messages[0], Transfer)
     assert isinstance(a1_messages[1], Ack)
 
-    a1_sent_messages = mlogger.get_node_messages(a1, only_sent=True)
+    a1_sent_messages = mlogger.get_node_messages(a1_address, only='sent')
     assert len(a1_sent_messages) == 1
     assert isinstance(a1_sent_messages[0], Ack)
 
-    a1_recv_messages = mlogger.get_node_messages(a1, only_recv=True)
+    a1_recv_messages = mlogger.get_node_messages(a1_address, only='recv')
     assert len(a1_recv_messages) == 1
     assert isinstance(a1_recv_messages[0], Transfer)
 
@@ -73,15 +87,15 @@ def test_transfer():
 def test_mediated_transfer():
 
     apps = create_network(num_nodes=10, num_assets=1, channels_per_node=2)
-    a0 = apps[0]
+    app0 = apps[0]
     setup_messages_cb()
 
     # channels
-    am0 = a0.raiden.assetmanagers.values()[0]
+    am0 = app0.raiden.assetmanagers.values()[0]
 
     # search for a path of length=2 A > B > C
     num_hops = 2
-    source = a0.raiden.address
+    source = app0.raiden.address
     paths = am0.channelgraph.get_paths_of_length(source, num_hops)
     assert len(paths)
     for p in paths:
@@ -116,7 +130,7 @@ def test_mediated_transfer():
     # set shorter timeout for testing
     TransferTask.timeout_per_hop = 0.1
 
-    a0.raiden.api.transfer(asset_address, amount, target)
+    app0.raiden.api.transfer(asset_address, amount, target)
 
     gevent.sleep(1.)
 

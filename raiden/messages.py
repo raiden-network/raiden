@@ -6,7 +6,7 @@ import rlp
 
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
-from raiden.utils import sha3, ishash, big_endian_to_int
+from raiden.utils import sha3, ishash, big_endian_to_int, pex
 
 __all__ = (
     'BaseError',
@@ -72,6 +72,14 @@ class Message(MessageHashable):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __repr__(self):
+        packed = self.packed()
+
+        return '<{klass} [{content}]>'.format(
+            klass=self.__class__.__name__,
+            content=pex(packed.data),
+        )
 
     @classmethod
     def decode(cls, packed):
