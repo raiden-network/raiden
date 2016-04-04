@@ -1,8 +1,9 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
 
-from raiden import messages
 from raiden.assetmanager import AssetManager
+from raiden.channelgraph import ChannelGraph
+from raiden import messages
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.transfermanager import TransferManager
 from raiden.utils import privtoaddr, isaddress, pex
@@ -27,18 +28,18 @@ class RaidenAPI(object):
     def transfer(self, asset_address, amount, target):
         assert isaddress(asset_address) and isaddress(target)
         assert asset_address in self.assets
-        tm = self.raiden.assetmanagers[asset_address].transfermanager
-        assert isinstance(tm, TransferManager)
-        tm.transfer(amount, target)
+        transfer_manager = self.raiden.assetmanagers[asset_address].transfermanager
+        assert isinstance(transfer_manager, TransferManager)
+        transfer_manager.transfer(amount, target)
 
     def request_transfer(self, asset_address, amount, target):
         assert isaddress(asset_address) and isaddress(target)
         assert asset_address in self.assets
-        tm = self.raiden.assetmanagers[asset_address].transfermanager
-        assert isinstance(tm, TransferManager)
-        tm.request_transfer(amount, target)
+        transfer_manager = self.raiden.assetmanagers[asset_address].transfermanager
+        assert isinstance(transfer_manager, TransferManager)
+        transfer_manager.request_transfer(amount, target)
 
-    def exchange(self, asset_A, asset_B, amount_A=None, amount_B=None, callback=None):
+    def exchange(self, asset_a, asset_b, amount_a=None, amount_b=None, callback=None):  # pylint: disable=too-many-arguments
         pass
 
 
@@ -59,9 +60,15 @@ class RaidenService(object):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
     def setup_assets(self, asset_list):
-        # create asset managers
+        """ Initializes an AssetManager for each asset in the `asset_list`
+        creating the corresponding representation of the raiden network.
+        """
         for asset_address in asset_list:
-            self.assetmanagers[asset_address] = AssetManager(self, asset_address)
+            # create network graph for contract
+            edges = self.chain.addresses_by_asset(asset_address)
+            channel_graph = ChannelGraph(edges)
+
+            self.assetmanagers[asset_address] = AssetManager(self, asset_address, channel_graph)
 
     def sign(self, msg):
         assert isinstance(msg, messages.SignedMessage)
@@ -96,32 +103,32 @@ class RaidenService(object):
         pass  # ack already sent, activity monitor should have been notified in on_message
 
     def on_transfer(self, msg):
-        am = self.assetmanagers[msg.asset]
-        am.transfermanager.on_transfer(msg)
+        asset_manager = self.assetmanagers[msg.asset]
+        asset_manager.transfermanager.on_transfer(msg)
 
     on_lockedtransfer = on_transfer
 
     def on_mediatedtransfer(self, msg):
-        am = self.assetmanagers[msg.asset]
-        am.transfermanager.on_mediatedtransfer(msg)
+        asset_manager = self.assetmanagers[msg.asset]
+        asset_manager.transfermanager.on_mediatedtransfer(msg)
 
     # events, that need to find a TransferTask
 
     def on_event_for_transfertask(self, msg):
-        for am in self.assetmanagers.values():
-            if msg.hashlock in am.transfermanager.transfertasks:
-                am.transfermanager.transfertasks[msg.hashlock].on_event(msg)
+        for asset_manager in self.assetmanagers.values():
+            if msg.hashlock in asset_manager.transfermanager.transfertasks:
+                asset_manager.transfermanager.transfertasks[msg.hashlock].on_event(msg)
                 return True
     on_secretrequest = on_transfertimeout = on_canceltransfer = on_event_for_transfertask
 
     def on_secret(self, msg):
         self.on_event_for_transfertask(msg)
-        for am in self.assetmanagers.values():
-            am.on_secret(msg)
+        for asset_manager in self.assetmanagers.values():
+            asset_manager.on_secret(msg)
 
     def on_transferrequest(self, msg):
-        am = self.assetmanagers[msg.asset]
-        am.transfermanager.on_tranferrequest(msg)
+        asset_manager = self.assetmanagers[msg.asset]
+        asset_manager.transfermanager.on_tranferrequest(msg)
 
     # other
 

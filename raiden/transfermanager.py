@@ -1,24 +1,23 @@
 # -*- coding: utf8 -*-
 import random
 
-from messages import Transfer, MediatedTransfer, LockedTransfer, SecretRequest
-from tasks import Task, TransferTask, ForwardSecretTask
-from utils import sha3
 from ethereum import slogging
 
-log = slogging.get_logger('transfermanager')
+from raiden.messages import Transfer, MediatedTransfer, LockedTransfer, SecretRequest
+from raiden.tasks import Task, TransferTask, ForwardSecretTask
+from raiden.utils import sha3
+
+log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class TransferManager(object):
+    """ Mediates transfers for a fee. """
 
-    """
-    mediates transfers, for a fee
-    """
+    def __init__(self, assetmanager, raiden):
+        import raiden.assetmanager as assetmanager_mod
+        assert isinstance(assetmanager, assetmanager_mod.AssetManager)
 
-    def __init__(self, assetmanager):
-        import assetmanager as assetmanagermodul
-        assert isinstance(assetmanager, assetmanagermodul.AssetManager)
-        self.raiden = assetmanager.raiden
+        self.raiden = raiden
         self.assetmanager = assetmanager
         self.transfertasks = dict()  # hashlock > TransferTask
         self.on_task_completed_callbacks = []
@@ -30,57 +29,79 @@ class TransferManager(object):
     def on_task_completed(self, task, success):
         assert isinstance(task, Task)
         del self.transfertasks[task.hashlock]
-        for cb in self.on_task_completed_callbacks:
-            cb(task, success)
+        for callback in self.on_task_completed_callbacks:
+            callback(task, success)
 
     def transfer(self, amount, target, hashlock=None, secret=None):
+        """ Initiates a transfer between this node and `target` for `amount`. """
+
+        # either we direct channel with `target`
         if target in self.assetmanager.channels and not hashlock:
-            # direct connection
             channel = self.assetmanager.channels[target]
             transfer = channel.create_transfer(amount, secret=secret)
             self.raiden.sign(transfer)
             channel.register_transfer(transfer)
             self.raiden.protocol.send(transfer.recipient, transfer)
+
+        # or we need to use the network to mediate the transfer
         else:
             if not (hashlock or secret):
                 secret = sha3(hex(random.getrandbits(256)))
                 hashlock = sha3(secret)
-            # initiate mediated transfer
-            t = TransferTask(self, amount, target, hashlock,
-                             expiration=None, originating_transfer=None, secret=secret)
-            t.start()
-            t.join()
+
+            task = TransferTask(
+                self,
+                amount,
+                target,
+                hashlock,
+                expiration=None,
+                originating_transfer=None,
+                secret=secret,
+            )
+            task.start()
+            task.join()
 
     def request_transfer(self, amount, target):
         pass
 
     def on_transferrequest(self, request):
-        # dummy, we accept any request, fixme
-        self.transfer(self,
-                      amount=request.amount,
-                      target=request.sender,
-                      hashlock=request.hashlock)
+        # FIXME: Dummy, we accept any request
+        self.transfer(self, request.amount, request.sender, request.hashlock)
 
     def on_mediatedtransfer(self, transfer):
         assert isinstance(transfer, MediatedTransfer)
-        log.debug("ON MEDIATED TRANSFER", self.raiden)
-        # apply to channel
+        log.debug('ON MEDIATED TRANSFER', self.raiden)
+
         channel = self.assetmanager.channels[transfer.sender]
         channel.register_transfer(transfer)
+
+        # either we are the target of the transfer, so we need to send a
+        # SecretRequest
         if transfer.target == self.raiden.address:
-            # transfer received!
-            sr = SecretRequest(transfer.lock.hashlock)
-            self.raiden.sign(sr)
-            self.raiden.send(transfer.initiator, sr)
-            t = ForwardSecretTask(self, transfer.lock.hashlock, recipient=transfer.sender)
-            t.start()
+            secret_request = SecretRequest(transfer.lock.hashlock)
+            self.raiden.sign(secret_request)
+            self.raiden.send(transfer.initiator, secret_request)
+
+            secret_request_task = ForwardSecretTask(
+                self,
+                transfer.lock.hashlock,
+                recipient=transfer.sender,
+            )
+            secret_request_task.start()
+
+        # or we are a participating node in the network and need to keep
+        # forwarding the MediatedTransfer
         else:
-            t = TransferTask(self, transfer.lock.amount, transfer.target,
-                             transfer.lock.hashlock, originating_transfer=transfer)
-            t.start()
+            transfer_task = TransferTask(
+                self,
+                transfer.lock.amount,
+                transfer.target,
+                transfer.lock.hashlock,
+                originating_transfer=transfer,
+            )
+            transfer_task.start()
 
     def on_transfer(self, transfer):
-        # apply to channel
         assert isinstance(transfer, (Transfer, LockedTransfer))
         channel = self.assetmanager.channels[transfer.sender]
         channel.register_transfer(transfer)
@@ -90,13 +111,3 @@ class TransferManager(object):
         # if signed for me and fee:
             # broadcast
         pass
-
-
-class ExchangeManager(object):
-
-    """
-    collects and forwards exchange requests, for a fee
-    semi centralized
-    filters, so that only matching exchange requests are delivered
-    """
-    pass

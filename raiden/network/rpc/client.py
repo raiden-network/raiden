@@ -1,10 +1,10 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
 
-from raiden.utils import isaddress
+from raiden.utils import isaddress, sha3
 from raiden.blockchain.net_contract import NettingChannelContract
 
-log = slogging.getLogger('raiden.rpc.client')  # pylint: disable=invalid-name
+log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class BlockChainService(object):
@@ -69,9 +69,9 @@ class BlockChainServiceMock(object):
         """
         self.block_number += 1
 
-    def new_channel_contract(self, asset_address):
-        """ The equivalent of creating a new contract that will manage channels
-        in the blockchain.
+    def new_channel_manager_contract(self, asset_address):
+        """ The equivalent of instatiating a new `ChannelManagerContract`
+        contract that will manage channels for a given asset in the blockchain.
 
         Raises:
             ValueError: If asset_address is not a valid address or is already registered.
@@ -84,8 +84,8 @@ class BlockChainServiceMock(object):
 
         self.asset_hashchannel[asset_address] = dict()
 
-    def new_channel(self, asset_address, peer1, peer2):
-        """ Creates a new channel between peer1 and peer2.
+    def new_netting_contract(self, asset_address, peer1, peer2):
+        """ Creates a new netting contract between peer1 and peer2.
 
         Raises:
             ValueError: If peer1 or peer2 is not a valid address.
@@ -98,23 +98,34 @@ class BlockChainServiceMock(object):
 
         channel = NettingChannelContract(asset_address, peer1, peer2)
 
-        hash_ = ''.join(sorted((peer1, peer2)))  # fixme replace by sha3
+        netcontract_address = sha3(''.join(sorted((peer1, peer2))))
 
         hash_channel = self.asset_hashchannel[asset_address]
-        hash_channel[hash_] = channel
-
-        return channel
+        hash_channel[netcontract_address] = channel
 
     @property
     def asset_addresses(self):
-        """ Return all assets addresses that have a contract. """
+        """ Return all assets addresses that have a managing contract
+        associated with it.
+        """
         return self.asset_hashchannel.keys()
 
-    def contracts_by_asset(self, asset_address):
-        """ Return all channels that exists for a given asset. """
-        # this information is required for building the network graph
+    def netting_addresses(self, asset_address):
+        """ Return all netting contract addreses for the given `asset_address`. """
+        return self.asset_hashchannel[asset_address].keys()
+
+    # this information is required for building the network graph used for
+    # routing
+    def addresses_by_asset(self, asset_address):
+        """ Return a list of two-tuples `(address1, address2)`, where each tuple
+        is an existing open channel in the network for the given `asset_address`.
+        """
         hash_channel = self.asset_hashchannel[asset_address]
-        return hash_channel.values()
+
+        return [
+            channel.participants.keys()
+            for channel in hash_channel.values()
+        ]
 
     def contracts_by_asset_participant(self, asset_address, participant_address):
         """ Return all channels for a given asset that `participant_address` is
@@ -127,3 +138,32 @@ class BlockChainServiceMock(object):
             for channel in manager.values()
             if participant_address in channel.participants
         ]
+
+    def isopen(self, asset_address, netting_contract_address):
+        """ Return the current status of the channel. """
+
+        manager = self.asset_hashchannel[asset_address]
+        contract = manager[netting_contract_address]
+
+        return contract.isopen
+
+    def deposit(self, asset_address, netting_contract_address, our_address, amount):
+        manager = self.asset_hashchannel[asset_address]
+        contract = manager[netting_contract_address]
+
+        contract.deposit(our_address, amount, {})  # XXX: ctx
+
+    def partner(self, asset_address, netting_contract_address, our_address):
+        manager = self.asset_hashchannel[asset_address]
+        contract = manager[netting_contract_address]
+        return contract.partner(our_address)
+
+    def close(self, asset_address, netting_contract_address, last_sent_transfers, ctx, *unlocked):
+        manager = self.asset_hashchannel[asset_address]
+        contract = manager[netting_contract_address]
+        contract.close()
+
+    def settle(self, asset_address, netting_contract_address):
+        manager = self.asset_hashchannel[asset_address]
+        contract = manager[netting_contract_address]
+        pass

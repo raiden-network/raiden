@@ -1,30 +1,34 @@
 # -*- coding: utf8 -*-
 import networkx
 
-from raiden.blockchain.net_contract import NettingChannelContract
 from raiden.utils import isaddress
 
 
-def make_graph(netting_contracts):
+def make_graph(edge_list):
     """ Return a graph that represents the connections among the netting
     contracts.
 
     Args:
-        nettingcontracts (List[NettingChannelContract]): all the netting
-            contracts that participate in the network.
+        edge_list (List[(address1, address2)]): All the channels that compose
+            the graph.
 
     Returns:
         Graph A networkx.Graph instance were the graph nodes are nodes in the
             network and the edges are nodes that have a channel between them.
     """
+
+    for edge in edge_list:
+        if len(edge) != 2:
+            raise ValueError('All values in edge_list must be of length two (origin, destination)')
+
+        origin, destination = edge
+
+        if not isaddress(origin) or not isaddress(destination):
+            raise ValueError('All values in edge_list must be valid addresses')
+
     graph = networkx.Graph()  # undirected graph, for bidirectional channels
 
-    for channel in netting_contracts:
-        assert isinstance(channel, NettingChannelContract)
-
-        first, second = channel.participants.keys()
-        assert isaddress(first) and isaddress(second)
-
+    for first, second in edge_list:
         graph.add_edge(first, second)
 
     return graph
@@ -33,14 +37,13 @@ def make_graph(netting_contracts):
 class ChannelGraph(object):
     """ Has Graph based on the channels and can find path between participants. """
 
-    def __init__(self, netting_contracts):
+    def __init__(self, edge_list):
         """
         Args:
-            netting_contracts (List[NettingChannelContract]): All the channels
-                that compose the graph.
+            edge_list (List[(address1, address2)]): all the netting contracts
+                that participate in the network.
         """
-        self.netting_contracts = netting_contracts
-        self.graph = make_graph(netting_contracts)
+        self.graph = make_graph(edge_list)
 
     def get_paths(self, source, target):
         """Compute all shortest paths in the graph.
@@ -49,8 +52,9 @@ class ChannelGraph(object):
             generator of lists: A generator of all paths between source and
             target.
         """
+        if not isaddress(source) or not isaddress(target):
+            raise ValueError('both source and target must be valid addresses')
 
-        assert isaddress(source) and isaddress(target)
         return networkx.all_shortest_paths(self.graph, source, target)
 
     def get_paths_of_length(self, source, num_hops=1):
