@@ -135,7 +135,7 @@ def create_channels(chain_service, assets_list, apps, channels_per_node,
 
             if len(peer_channels) < channels_per_node:
 
-                channel = chain_service.new_channel(
+                channel = chain_service.new_netting_contract(
                     asset_address,
                     peer.raiden.address,
                     curr_app.raiden.address,
@@ -212,7 +212,7 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
 
     for i in range(num_assets):
         asset_address = sha3('asset:%d' % i)[:20]
-        blockchain_service.new_channel_contract(asset_address=asset_address)
+        blockchain_service.new_channel_manager_contract(asset_address=asset_address)
 
     asset_list = blockchain_service.asset_addresses
     assert len(asset_list) == num_assets
