@@ -156,7 +156,7 @@ class ChannelEndState(object):
         self.balance = participant_balance  #: current balance
         self.address = participant_address  #: node's address
 
-        self.nonce = 0  #: sending nonce
+        self.nonce = 0  #: sequential nonce, current value has not been used
         self.locked = LockedTransfers()  #: locked received
 
     def distributable(self, other):
@@ -306,25 +306,45 @@ class Channel(object):
         # self.received_transfers.append(transfer)
 
     def register_sent_transfer(self, transfer):
-        assert transfer.asset == self.asset_address
-        assert transfer.recipient == self.partner_state.address
-        assert transfer.nonce == self.our_state.nonce
+        """ Validates the transfer and update the channel state in relation to
+        the given Transfer message.
 
-        # update balance with released lock if secret
-        if isinstance(transfer, Transfer) and transfer.secret:
-            self.claim_locked(transfer.secret, transfer.locksroot)
+        The transfer must be register before it is sent, not on
+        acknowledgement. That is necessary for to reasons:
 
-        # deduct funds
+        - Guarantee that the transfer is valid.
+        - Deduct the balance early avoiding a window of time were the user
+            could intentionally or not send a transaction without funds.
+
+        Note:
+            The protocol layer is responsable to resend the message until it is
+            acknowledged.
+        """
+        if transfer.asset != self.asset_address:
+            raise ValueError('invalid asset address')
+
+        if transfer.recipient != self.partner_state.address:
+            raise ValueError('invalid address')
+
+        if transfer.nonce != self.our_state.nonce:
+            raise ValueError('invalid nonce')
+
+        # the field transfer.balance has the participant's balance
         allowance = transfer.balance - self.partner_state.balance
-        assert allowance >= 0
+        if allowance < 0:
+            raise ValueError('negative transfer')
 
         distributable = self.our_state.distributable(self.partner_state)
-        assert allowance <= distributable
+        if allowance > distributable:
+            raise ValueError('insuficient funds')
+
+        # all checks need to be done before the internal state of the channel
+        # is changed, otherwise if a check fails and state was changed the
+        # channel will be left trashed
 
         if isinstance(transfer, DirectTransfer) and transfer.secret:
             self.claim_locked(transfer.secret, transfer.locksroot)
 
-        # register locked funds
         if isinstance(transfer, (LockedTransfer, MediatedTransfer)):
             amount = transfer.lock.amount
             distributable = distributable
@@ -349,7 +369,7 @@ class Channel(object):
             # FIXME: check locksroot!!!
             self.register_locked_transfer(transfer)
 
-        # all checks passed
+        # all checks passed, update funds
         self.partner_state.balance += allowance
         self.our_state.balance -= allowance
         self.our_state.nonce += 1
@@ -382,6 +402,7 @@ class Channel(object):
         )
 
     def create_lockedtransfer(self, amount, expiration, hashlock):
+        """ Return a LockedTransfer. """
         if not self.isopen:
             raise ValueError('The channel is closed')
 

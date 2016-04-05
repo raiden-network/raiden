@@ -158,7 +158,7 @@ class BlockChainServiceMock(object):
         contract = manager[netting_contract_address]
         return contract.partner(our_address)
 
-    def close(self, asset_address, netting_contract_address, last_sent_transfers, ctx, *unlocked):
+    def close(self, asset_address, netting_contract_address, our_address, last_sent_transfers, ctx, *unlocked):
         manager = self.asset_hashchannel[asset_address]
         contract = manager[netting_contract_address]
         contract.close()

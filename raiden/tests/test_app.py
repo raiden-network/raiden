@@ -2,7 +2,6 @@ from raiden.app import create_network
 
 
 def test_create_network():
-    print 'hej'
     apps = create_network(num_nodes=10, num_assets=2, channels_per_node=4)
     assert len(apps) == 10
 

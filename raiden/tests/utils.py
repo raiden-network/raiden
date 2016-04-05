@@ -11,6 +11,7 @@ gevent.get_hub().SYSTEM_ERROR = BaseException
 
 
 def setup_messages_cb():
+    """ Record the messages sent so that we can assert on them. """
     messages = []
 
     def callback(sender_raiden, host_port, msg):  # pylint: disable=unused-argument
