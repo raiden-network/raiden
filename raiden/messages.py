@@ -140,8 +140,7 @@ class SignedMessage(Message):
 
 
 class Ack(Message):
-    """
-    All accepted messages should be confirmed by an `Ack` which echoes the
+    """ All accepted messages should be confirmed by an `Ack` which echoes the
     orginals Message hash.
 
     We don't sign Acks because attack vector can be mitigated and to speed up
@@ -185,9 +184,8 @@ class Ping(SignedMessage):
 
 
 # class Rejected(SignedMessage):
-#     """
-#     All rejected messages should be confirmed by a `Rejected` which echoes the
-#     orginals Message hash.
+#     """ All rejected messages should be confirmed by a `Rejected` which
+#     echoes the orginals Message hash.
 #     """
 #
 #     cmdid = messages.REJECT
@@ -322,15 +320,20 @@ class DirectTransfer(SignedMessage):
 
 
 class Lock(MessageHashable):
+    """ Describes a locked `amount`.
 
+    Args:
+        amount: Amount of the asset being transfered.
+        expiration: Highest block_number until which the transfer can be settled
+        hashlock: Hashed secret `sha3(secret)` used to register the transfer,
+            the real `secret` is necessary to release the locked amount.
     """
-    Data describing a locked `amount`.
-
-    `expiration` is the highest block_number until which the transfer can be settled
-    `hashlock` is the hashed secret, necessary to release the funds
-    """
+    # Lock extends MessageHashable but it is not a message, it is a
+    # serializable structure that is reused in some messages
 
     def __init__(self, amount, expiration, hashlock):
+        # guarantee that `amount` can be serialized using the available bytes
+        # in the fixed length format
         if amount < 0:
             raise ValueError('amount {} needs to be positive'.format(amount))
 
@@ -352,9 +355,7 @@ class Lock(MessageHashable):
 
 
 class LockedTransfer(SignedMessage):
-
-    """
-    `LockedTransfer` which signs, that recipient can claim `locked_amount`
+    """ `LockedTransfer` which signs, that recipient can claim `locked_amount`
     if she knows the secret to `hashlock`.
 
     The `locked_amount` is not part of the `balance` but implicit in the `locksroot`.
