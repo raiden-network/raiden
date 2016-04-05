@@ -4,7 +4,7 @@ import gevent
 from ethereum import slogging
 
 from raiden.app import create_network
-from raiden.messages import Ack, decode, Transfer
+from raiden.messages import Ack, decode, DirectTransfer
 from raiden.tasks import TransferTask
 from raiden.utils import pex
 from raiden.tests.utils import setup_messages_cb, MessageLogger
@@ -41,9 +41,9 @@ def test_transfer():
 
     gevent.sleep(1)
 
-    assert len(messages) == 2  # Transfer, Ack
+    assert len(messages) == 2  # DirectTransfer, Ack
     mt = decode(messages[0])
-    assert isinstance(mt, Transfer)
+    assert isinstance(mt, DirectTransfer)
     assert mt.balance == b1 + amount
     ma = decode(messages[1])
     assert isinstance(ma, Ack)
@@ -59,12 +59,12 @@ def test_transfer():
 
     a0_messages = mlogger.get_node_messages(a0_address)
     assert len(a0_messages) == 2
-    assert isinstance(a0_messages[0], Transfer)
+    assert isinstance(a0_messages[0], DirectTransfer)
     assert isinstance(a0_messages[1], Ack)
 
     a0_sent_messages = mlogger.get_node_messages(a0_address, only='sent')
     assert len(a0_sent_messages) == 1
-    assert isinstance(a0_sent_messages[0], Transfer)
+    assert isinstance(a0_sent_messages[0], DirectTransfer)
 
     a0_recv_messages = mlogger.get_node_messages(a0_address, only='recv')
     assert len(a0_recv_messages) == 1
@@ -72,7 +72,7 @@ def test_transfer():
 
     a1_messages = mlogger.get_node_messages(a1_address)
     assert len(a1_messages) == 2
-    assert isinstance(a1_messages[0], Transfer)
+    assert isinstance(a1_messages[0], DirectTransfer)
     assert isinstance(a1_messages[1], Ack)
 
     a1_sent_messages = mlogger.get_node_messages(a1_address, only='sent')
@@ -81,7 +81,7 @@ def test_transfer():
 
     a1_recv_messages = mlogger.get_node_messages(a1_address, only='recv')
     assert len(a1_recv_messages) == 1
-    assert isinstance(a1_recv_messages[0], Transfer)
+    assert isinstance(a1_recv_messages[0], DirectTransfer)
 
 
 def test_mediated_transfer():

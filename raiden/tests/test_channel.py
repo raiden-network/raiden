@@ -50,10 +50,10 @@ def test_transfer():
     assert balance0 == partner_balance1
     assert balance1 == partner_balance0
 
-    transfer = channel0.create_transfer(amount=amount)
-    channel0.raiden.sign(transfer)
-    channel0.register_transfer(transfer)
-    channel1.register_transfer(transfer)
+    direct_transfer = channel0.create_directtransfer(amount=amount)
+    channel0.raiden.sign(direct_transfer)
+    channel0.register_transfer(direct_transfer)
+    channel1.register_transfer(direct_transfer)
 
     assert channel0.balance == balance0 - amount
     assert channel0.balance == channel0.distributable
