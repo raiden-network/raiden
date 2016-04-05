@@ -15,7 +15,7 @@ __all__ = (
     # 'Rejected',
     'SecretRequest',
     'Secret',
-    'Transfer',
+    'DirectTransfer',
     'Lock',
     'LockedTransfer',
     'MediatedTransfer',
@@ -259,28 +259,37 @@ class Secret(SignedMessage):
         packed.signature = self.signature
 
 
-class Transfer(SignedMessage):
+class DirectTransfer(SignedMessage):
+    """ Exchange an asset through a direct channel previously openned a among
+    the participants.
 
+    Signs the unidirectional settled `balance` of `asset` to `recipient` plus
+    locked transfers.
+
+    Settled refers to the inclusion of formerly locked amounts.
+    Locked amounts are not included in the balance yet, but represented by the `locksroot`.
+
+    Args:
+        nonce: A nonce value.
+        asset: The address of the asset being exchanged in the channel.
+        balance: The participant expected balance after the transaction.
+        recipient: The address of raiden node participating in the channel.
+        locksroot: The root of a merkle tree which records the outstanding
+            locked_amounts with their hashlocks.
+
+            This allows to keep transfering, although there are locks
+            outstanding. This is because the recipient knows that haslocked
+            transfers can be settled once the secret becomes available, even
+            when the peer fails and the balance could not be netted.
+
+        secret: If provided allows to settle a formerly locked transfer,
+            the given secret is already reflected in the locksroot.
     """
-    Signs the unidirectional settled `balance` of `asset` to `recipient` plus locked transfers.
-        Settled refers to the inclusion of formerly locked amounts.
-        Locked amounts are not included in the balance yet, but represented by the `locksroot`.
 
-    `locksroot` is the root of a merkle tree which records the outstanding
-    locked_amounts with their hashlocks.
-    this allows to keep transfering, although there are locks outstanding.
-    this is because the recipient knows that haslocked transfers can be settled
-    once the secret becomes available even, when the peer fails and the balance
-    could not be netted.
-
-    If `secret` is provided, this allows to settle a formerly locked transfer,
-    the given secret is already reflected in the locksroot.
-    """
-
-    cmdid = messages.TRANSFER
+    cmdid = messages.DIRECTTRANSFER
 
     def __init__(self, nonce, asset, balance, recipient, locksroot, secret=None):
-        super(Transfer, self).__init__()
+        super(DirectTransfer, self).__init__()
         self.nonce = nonce
         self.asset = asset
         self.balance = balance
@@ -290,7 +299,7 @@ class Transfer(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        transfer = Transfer(
+        transfer = DirectTransfer(
             packed.nonce,
             packed.asset,
             packed.balance,
@@ -568,8 +577,8 @@ CMDID_TO_CLASS = {
     # REJECTED: Rejected,
     messages.SECRETREQUEST: SecretRequest,
     messages.SECRET: Secret,
-    messages.TRANSFER: Transfer,
-    messages.LOCKEDTRANSFER: LockedTransfer,
+    messages.DIRECTTRANSFER: DirectTransfer,
+    # messages.LOCKEDTRANSFER: LockedTransfer,
     messages.MEDIATEDTRANSFER: MediatedTransfer,
     messages.CANCELTRANSFER: CancelTransfer,
     messages.TRANSFERTIMEOUT: TransferTimeout,

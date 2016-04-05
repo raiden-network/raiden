@@ -3,7 +3,7 @@ import random
 
 from ethereum import slogging
 
-from raiden.messages import Transfer, MediatedTransfer, LockedTransfer, SecretRequest
+from raiden.messages import DirectTransfer, MediatedTransfer, LockedTransfer, SecretRequest
 from raiden.tasks import Task, TransferTask, ForwardSecretTask
 from raiden.utils import sha3
 
@@ -38,10 +38,10 @@ class TransferManager(object):
         # either we direct channel with `target`
         if target in self.assetmanager.channels and not hashlock:
             channel = self.assetmanager.channels[target]
-            transfer = channel.create_transfer(amount, secret=secret)
-            self.raiden.sign(transfer)
-            channel.register_transfer(transfer)
-            self.raiden.protocol.send(transfer.recipient, transfer)
+            direct_transfer = channel.create_directtransfer(amount, secret=secret)
+            self.raiden.sign(direct_transfer)
+            channel.register_transfer(direct_transfer)
+            self.raiden.protocol.send(direct_transfer.recipient, direct_transfer)
 
         # or we need to use the network to mediate the transfer
         else:
@@ -102,7 +102,7 @@ class TransferManager(object):
             transfer_task.start()
 
     def on_transfer(self, transfer):
-        assert isinstance(transfer, (Transfer, LockedTransfer))
+        assert isinstance(transfer, (DirectTransfer, LockedTransfer))
         channel = self.assetmanager.channels[transfer.sender]
         channel.register_transfer(transfer)
 

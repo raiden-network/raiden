@@ -2,7 +2,7 @@
 from ethereum import slogging
 
 from raiden.messages import (
-    Transfer, LockedTransfer, MediatedTransfer, BaseError, Lock, CancelTransfer,
+    DirectTransfer, LockedTransfer, MediatedTransfer, BaseError, Lock, CancelTransfer,
 )
 from raiden.utils import sha3
 from raiden.mtree import merkleroot, get_proof
@@ -30,7 +30,7 @@ class InsufficientBalance(BaseError):
     pass
 
 
-def create_transfer(from_, to_, asset_address, amount, secret=None):
+def create_directtransfer(from_, to_, asset_address, amount, secret=None):
     """ Create a transfer for `amount` of `asset_address` between `from_` and `to_`. """
     distributable = from_.distributable(to_)
 
@@ -42,7 +42,7 @@ def create_transfer(from_, to_, asset_address, amount, secret=None):
         )
         raise ValueError('Insufficient funds')
 
-    return Transfer(
+    return DirectTransfer(
         nonce=from_.nonce,
         asset=asset_address,
         balance=to_.balance + amount,
@@ -273,7 +273,7 @@ class Channel(object):
             raise InvalidNonce(transfer)
 
         # update balance with released lock if secret
-        if isinstance(transfer, Transfer) and transfer.secret:
+        if isinstance(transfer, DirectTransfer) and transfer.secret:
             self.claim_locked(transfer.secret, transfer.locksroot)
 
         # collect funds
@@ -321,6 +321,9 @@ class Channel(object):
         distributable = self.our_state.distributable(self.partner_state)
         assert allowance <= distributable
 
+        if isinstance(transfer, DirectTransfer) and transfer.secret:
+            self.claim_locked(transfer.secret, transfer.locksroot)
+
         # register locked funds
         if isinstance(transfer, (LockedTransfer, MediatedTransfer)):
             amount = transfer.lock.amount
@@ -363,11 +366,14 @@ class Channel(object):
         else:
             raise ValueError('Invalid address')
 
-    def create_transfer(self, amount, secret=None):
+    def create_directtransfer(self, amount, secret=None):
+        """ Return a DirectTransfer message, used for transfer that don't need
+        to be mediated.
+        """
         if not self.isopen:
             raise ValueError('The channel is closed')
 
-        return create_transfer(
+        return create_directtransfer(
             self.our_state,
             self.partner_state,
             amount,
