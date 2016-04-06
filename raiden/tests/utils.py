@@ -2,11 +2,13 @@
 from __future__ import print_function
 
 import gevent
+from ethereum import slogging
 
 from raiden.messages import decode
 from raiden.network.transport import DummyTransport
 from raiden.utils import pex
 
+log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 gevent.get_hub().SYSTEM_ERROR = BaseException
 
 
@@ -30,15 +32,14 @@ def dump_messages(message_list):
 
 
 class MessageLog(object):
-
     SENT = '>'
     RECV = '<'
 
-    def __init__(self, address, msg, direction):
+    def __init__(self, address, msg_bytes, direction):
         self.address = address
-        self.msg = msg
+        self.msg_bytes = msg_bytes
         self.direction = direction
-        self.is_decoded = False
+        self.msg = None
 
     def is_recv(self):
         return self.direction == self.RECV
@@ -48,10 +49,8 @@ class MessageLog(object):
 
     @property
     def decoded(self):
-        if self.is_decoded:
-            return self.msg
-        self.is_decoded = True
-        self.msg = decode(self.msg)
+        if self.msg is None:
+            self.msg = decode(self.msg_bytes)
         return self.msg
 
 
@@ -62,13 +61,15 @@ class MessageLogger(object):
     def __init__(self):
         self.messages_by_node = {}
 
-        def sent_msg_cb(sender_raiden, host_port, msg):
-            self.collect_message(sender_raiden.address, msg, MessageLog.SENT)
-        DummyTransport.network.on_send_cbs.extend([sent_msg_cb])
+        # register the tracing callbacks
+        DummyTransport.network.on_send_cbs.append(self.sent_msg_cb)
+        DummyTransport.on_recv_cbs.append(self.recv_msg_cb)
 
-        def recv_msg_cb(receiver_raiden, host_port, msg):
-            self.collect_message(receiver_raiden.address, msg, MessageLog.RECV)
-        DummyTransport.on_recv_cbs.extend([recv_msg_cb])
+    def sent_msg_cb(self, sender_raiden, host_port, bytes_):
+        self.collect_message(sender_raiden.address, bytes_, MessageLog.SENT)
+
+    def recv_msg_cb(self, receiver_raiden, host_port, msg):
+        self.collect_message(receiver_raiden.address, msg, MessageLog.RECV)
 
     def collect_message(self, address, msg, direction):
         msglog = MessageLog(address, msg, direction)

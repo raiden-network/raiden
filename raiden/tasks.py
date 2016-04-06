@@ -1,15 +1,20 @@
-from messages import Secret, CancelTransfer, TransferTimeout
-from messages import SecretRequest
-from utils import lpex, pex
+# -*- coding: utf8 -*-
 import gevent
 from gevent.event import AsyncResult
+
 from ethereum import slogging
+
+from raiden.messages import Secret, CancelTransfer, TransferTimeout
+from raiden.messages import SecretRequest
+from raiden.utils import lpex, pex
+
 __all__ = (
     'Task',
     'TransferTask',
     'ForwardSecretTask',
 )
-log = slogging.get_logger('tasks')
+
+log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class Task(gevent.Greenlet):
@@ -66,7 +71,7 @@ class TransferTask(Task):
         assert isinstance(transfermanager, transfermanagermodule.TransferManager)
         self.transfermanager = transfermanager
         self.assetmanager = transfermanager.assetmanager
-        self.raiden = transfermanager.assetmanager.raiden
+        self.raiden = transfermanager.raiden
         self.amount = amount
         self.target = target
         self.hashlock = hashlock
@@ -86,7 +91,7 @@ class TransferTask(Task):
         "whether this node initiated the transfer"
         return not self.originating_transfer
 
-    def _run(self):
+    def _run(self):  # pylint: disable=method-hidden
         if self.isinitiator:
             initiator = self.raiden.address
         else:
@@ -114,7 +119,7 @@ class TransferTask(Task):
 
             # send mediated transfer
             msg = self.send_transfer(recipient, t, path)
-            log.debug("SEND RETURNED {}  {}".format(self, msg))
+            log.debug('SEND RETURNED {} {}'.format(self, msg))
 
             success = self.check_path(msg, channel)
             if success is None:
@@ -165,10 +170,13 @@ class TransferTask(Task):
         timeout = self.timeout_per_hop * (len(path) - 1)  # fixme, consider no found paths
         msg = self.event.wait(timeout)
 
-        log.debug("HAVE EVENT {} {}".format(self, msg))
+        log.debug(
+            'HAVE EVENT {} {}'.format(self, msg),
+            node=pex(self.raiden.address),
+        )
 
         if msg is None:  # timeout
-            log.error("TIMEOUT! " * 5)
+            log.error('TIMEOUT! ' * 5)
             msg = TransferTimeout(echo=transfer.hash, hashlock=transfer.lock.hashlock)
             self.raiden.sign(msg)
             return msg
@@ -207,7 +215,7 @@ class ForwardSecretTask(Task):
         self.transfermanager = transfermanager
         self.recipient = recipient
         self.hashlock = hashlock
-        self.raiden = transfermanager.assetmanager.raiden
+        self.raiden = transfermanager.raiden
         super(ForwardSecretTask, self).__init__()
         log.info("INIT", task=self)
         self.transfermanager.on_task_started(self)
@@ -215,7 +223,7 @@ class ForwardSecretTask(Task):
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.raiden.address))
 
-    def _run(self):
+    def _run(self):  # pylint: disable=method-hidden
         self.event = AsyncResult()  # http://www.gevent.org/gevent.event.html
         timeout = self.timeout
         msg = self.event.wait(timeout)
