@@ -34,9 +34,8 @@ library IterableMapping
 
 
     function remove(itmap storage self, address key) returns (bool success){
-        uint keyIndex = self.data[key].keyIndex
-        if (keyIndex == 0)
-          return false;
+        uint keyIndex = self.data[key].keyIndex;
+        if (keyIndex == 0) return false;
         delete self.data[key];
         self.keys[keyIndex - 1].deleted = true;
         self.size --;
