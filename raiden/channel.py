@@ -165,7 +165,7 @@ class ChannelEndState(object):
         """
         return self.balance - other.locked.outstanding
 
-    def claim_locked(self, partner, secret, hashlock=None, locksroot=None):
+    def claim_locked(self, partner, secret, locksroot=None):
         """ Update the balance of this end of the channel by claiming the
         transfer.
 
@@ -173,8 +173,6 @@ class ChannelEndState(object):
             partner: The partner end from which we are receiving, this is
                 required to keep both ends in sync.
             secret: Releases a lock.
-            hashlock: The sha3() of the secret, can be given to improve speed
-                by avoid recomputing the sha3().
 
         Raises:
             InvalidSecret: If there is no lock register for the given secret
@@ -183,14 +181,14 @@ class ChannelEndState(object):
         Returns:
             float: The amount that was locked.
         """
-        hashlock = hashlock or sha3(secret)
+        hashlock = sha3(secret)
 
         if hashlock not in self.locked:
             raise InvalidSecret(hashlock)
 
         lock = self.locked[hashlock].lock
 
-        if locksroot and self.locked.root_with(None, exclude=lock.lock) != locksroot:
+        if locksroot and self.locked.root_with(None, exclude=lock) != locksroot:
             raise InvalidLocksRoot(hashlock)
 
         amount = lock.amount
@@ -204,16 +202,16 @@ class ChannelEndState(object):
 class Channel(object):
     # pylint: disable=too-many-instance-attributes,too-many-arguments
 
-    def __init__(self, chain, asset_address, channel_address, our_address,
+    def __init__(self, chain, asset_address, nettingcontract_address, our_address,
                  our_balance, partner_address, partner_balance):
         self.chain = chain
         self.asset_address = asset_address
-        self.channel_address = channel_address
+        self.nettingcontract_address = nettingcontract_address
 
         self.min_locktime = 10  # FIXME
         self.wasclosed = False
-        # self.received_transfers = []
-        # self.sent_transfers = []
+        self.received_transfers = []
+        self.sent_transfers = []  #: transfers that were sent, required for settling
         self.our_state = ChannelEndState(
             our_address,
             our_balance,
@@ -228,7 +226,11 @@ class Channel(object):
         if self.wasclosed:
             return False
 
-        return self.chain.isopen(self.channel_address)
+        return self.chain.isopen(self.asset_address, self.nettingcontract_address)
+
+    @property
+    def distributable(self):
+        return self.our_state.distributable(self.partner_state)
 
     def register_locked_transfer(self, transfer):
         if transfer.recipient == self.our_state.address:
@@ -237,23 +239,21 @@ class Channel(object):
             assert transfer.recipient == self.partner_state.address
             self.partner_state.locked.add(transfer)
 
-    def claim_locked(self, secret, hashlock=None):
+    def claim_locked(self, secret, locksroot=None):
         """ Claim locked transfer from any of the ends of the channel.
 
         Args:
-            secret: Releases a lock.
-            hashlock: The sha3() of the secret, can be given to improve speed
-                by avoid recomputing the sha3().
+            secret: The secret to releases a locked transfer lock.
         """
-        hashlock = hashlock or sha3(secret)
+        hashlock = sha3(secret)
 
         # sending
         if hashlock in self.our_state.locked:
-            self.our_state.claim_locked(self.partner_state, secret, hashlock)
+            self.our_state.claim_locked(self.partner_state, secret, locksroot)
 
         # receiving
         if hashlock in self.partner_state.locked:
-            self.partner_state.claim_locked(self.partner_state, secret, hashlock)
+            self.partner_state.claim_locked(self.our_state, secret, locksroot)
 
     def register_received_transfer(self, transfer):
         """
@@ -303,7 +303,7 @@ class Channel(object):
         self.our_state.balance += allowance
         self.partner_state.balance -= allowance
         self.partner_state.nonce += 1
-        # self.received_transfers.append(transfer)
+        self.received_transfers.append(transfer)
 
     def register_sent_transfer(self, transfer):
         """ Validates the transfer and update the channel state in relation to
@@ -373,9 +373,10 @@ class Channel(object):
         self.partner_state.balance += allowance
         self.our_state.balance -= allowance
         self.our_state.nonce += 1
-        # self.sent_transfers.append(transfer)
+        self.sent_transfers.append(transfer)
 
     def register_transfer(self, transfer):
+        """ Register a signed transfer, updating the channel's state accordingly. """
         if not transfer.sender:
             raise ValueError('Unsigned transfer')
 
@@ -387,8 +388,10 @@ class Channel(object):
             raise ValueError('Invalid address')
 
     def create_directtransfer(self, amount, secret=None):
-        """ Return a DirectTransfer message, used for transfer that don't need
-        to be mediated.
+        """ Return a DirectTransfer message.
+
+        This message needs to be signed and registered with the channel befored
+        sent.
         """
         if not self.isopen:
             raise ValueError('The channel is closed')
@@ -396,13 +399,17 @@ class Channel(object):
         return create_directtransfer(
             self.our_state,
             self.partner_state,
-            amount,
             self.asset_address,
+            amount,
             secret,
         )
 
     def create_lockedtransfer(self, amount, expiration, hashlock):
-        """ Return a LockedTransfer. """
+        """ Return a LockedTransfer message.
+
+        This message needs to be signed and registered with the channel befored
+        sent.
+        """
         if not self.isopen:
             raise ValueError('The channel is closed')
 
@@ -412,8 +419,8 @@ class Channel(object):
         return create_lockedtransfer(
             self.our_state,
             self.partner_state,
-            amount,
             self.asset_address,
+            amount,
             expiration,
             hashlock,
         )

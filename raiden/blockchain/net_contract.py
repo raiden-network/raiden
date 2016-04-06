@@ -9,7 +9,7 @@ from raiden.utils import sha3
 from raiden.mtree import check_proof
 from raiden import messages
 
-log = slogging.getLogger('raiden.blockchain.net_contract')  # pylint: disable=invalid-name
+log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 # Blockspam attack mitigation:
@@ -27,12 +27,15 @@ class NettingChannelContract(object):
     """ Contract code for a channel.
 
     Note:
-        This is a mock implementation.
+        Implementation in pure python that reproduces the expected behavior of
+        the blockchain NettingContract. This implementation is useful for
+        testing.
     """
 
-    locked_time = 10  # number of blocks
+    locked_time = 10
+    """ Number of blocks that we are required to wait before allowing settlement. """
 
-    def __init__(self, asset_address, address_A, address_B):
+    def __init__(self, asset_address, netcontract_address, address_A, address_B):
         log.debug(
             'creating nettingchannelcontract',
             a=address_A.encode('hex'),
@@ -40,14 +43,21 @@ class NettingChannelContract(object):
         )
 
         self.asset_address = asset_address
+        self.netcontract_address = netcontract_address
         self.participants = {
             address_A: dict(deposit=0, last_sent_transfer=None, unlocked=[]),
             address_B: dict(deposit=0, last_sent_transfer=None, unlocked=[]),
         }
         self.hashlocks = dict()
-        self.opened = None  # block number
-        self.closed = None  # block number
+
+        self.opened = None
+        """ Block number when deposit() was first called. """
+
         self.settled = False
+        """ Block number when settle was sucessfully called. """
+
+        self.closed = None
+        """ Block number when close() was first called (might be zero in testing scenarios) """
 
     @property
     def isopen(self):
@@ -57,22 +67,27 @@ class NettingChannelContract(object):
         Returns:
             bool: True if the contract is open, False otherwise
         """
+        # during testing closed can be 0 and it is falsy
+        if self.closed is not None:
+            return False
+
         lowest_deposit = min(
             state['deposit']
             for state in self.participants.values()
         )
 
         all_deposited = lowest_deposit > 0
+        return all_deposited
 
-        return not self.closed and all_deposited
-
-    def deposit(self, address, amount, ctx):
+    def deposit(self, address, amount, block_number):
         """ Deposit `amount` coins for the address `address`. """
 
         if address not in self.participants:
             msg = 'The address {address} is not a participant of this contract'.format(
                 address=address,
             )
+
+            log.debug('unknow address', address=address, participants=self.participants)
 
             raise ValueError(msg)
 
@@ -83,14 +98,14 @@ class NettingChannelContract(object):
 
         if self.isopen and self.opened is None:
             # track the block were the contract was openned
-            self.opened = ctx['block_number']
+            self.opened = block_number
 
     def partner(self, address):
         """ Returns the address of the other participant in the contract. """
 
         if address not in self.participants:
             msg = 'The address {address} is not a participant of this contract'.format(
-                address=address,
+                address=address.encode('hex'),
             )
             raise ValueError(msg)
 
@@ -155,34 +170,40 @@ class NettingChannelContract(object):
         partner = self.partner(sender)
         partner_state = self.participants[partner]
 
-        transfer = last_sent_transfers[-1]  # XXX: check me
+        if last_sent_transfers:
+            transfer = last_sent_transfers[-1]  # XXX: check me
 
         # register un-locked
-        for merkle_proof, locked_rlp, secret in unlocked:
-            locked = rlp.decode(locked_rlp, messages.Lock)  # FIXME: wont work with fixed length
+        for merkle_proof, locked, secret in unlocked:
             hashlock = locked.hashlock  # pylint: disable=no-member
 
             assert hashlock == sha3(secret)
-            assert check_proof(
-                merkle_proof,
-                partner_state['last_sent_transfer'].locksroot,
-                sha3(locked_rlp),
-            )
+
+            # the partner might not have made a transfer
+            if partner_state['last_sent_transfer'] is not None:
+                assert check_proof(
+                    merkle_proof,
+                    partner_state['last_sent_transfer'].locksroot,
+                    sha3(transfer.lock.asstring),
+                )
 
             partner_state['unlocked'].append(locked)
 
         if self.closed is None:
+            log.debug('closing contract', netcontract_address=self.netcontract_address.encode('hex'))
             self.closed = ctx['block_number']
 
     def settle(self, ctx):
         assert not self.settled
-        assert self.closed
+        # during testing closed can be 0 and it is falsy
+        assert self.closed is not None
         assert self.closed + self.locked_time <= ctx['block_number']
 
         for address, state in self.participants.items():
             other = self.participants[self.partner(address)]
             state['netted'] = state['deposit']
 
+            # FIXME: there could be no transfers
             if state.get('last_sent_transfer'):
                 state['netted'] = state['last_sent_transfer'].balance
 

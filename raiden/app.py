@@ -46,12 +46,12 @@ def print_channel_count(chain_service, asset, apps):
 
     for node in apps:
         address = node.raiden.address
-        channels = chain_service.contracts_by_asset_participant(
+        addresses = chain_service.nettingaddresses_by_asset_participant(
             asset,
             address,
         )
 
-        count[pex(address)] = len(channels)
+        count[pex(address)] = len(addresses)
 
     log.debug('total count of channels:', count=count)
 
@@ -89,66 +89,54 @@ def create_channels(chain_service, assets_list, apps, channels_per_node,
         return app.raiden.address
 
     def sort_by_channelcount(asset, app):
-        channels = chain_service.contracts_by_asset_participant(
+        addresses = chain_service.nettingaddresses_by_asset_participant(
             asset,
             app.raiden.address,
         )
 
-        return len(channels)
+        return len(addresses)
 
     # Create `channels_per_node` channels for each asset in each app
     for asset_address, curr_app in product(assets_list, sorted(apps, key=sort_by_address)):
-
-        # channelmanager = chain_service.channelmanager_by_asset(asset_address)
-        # assert isinstance(channelmanager, contracts.ChannelManagerContract)
-        # channel_contracts = channelmanager.nettingcontracts_by_address(curr_app.raiden.address)
-
         curr_address = curr_app.raiden.address
 
-        # load channels created by previous nodes
-        channel_contracts = chain_service.contracts_by_asset_participant(
+        contracts_addreses = chain_service.nettingaddresses_by_asset_participant(
             asset_address,
             curr_address,
         )
 
-        # get a list of peers that the current node doesn't have a channel with
+        # get a list of apps that the current node doesn't have a channel with
         other_apps = list(apps)
         other_apps.remove(curr_app)
 
-        for channel in channel_contracts:
-            peer = channel.partner(curr_address)
+        for address in contracts_addreses:
+            peer_address = chain_service.partner(asset_address, address, curr_address)
 
-            if peer in other_apps:
-                other_apps.remove(peer)
+            for app in other_apps:
+                if app.raiden.address == peer_address:
+                    other_apps.remove(app)
 
         print_channel_count(chain_service, asset_address, apps)
 
-        # create the missing channels
-        while len(channel_contracts) < channels_per_node:
-            peer = sorted(other_apps, key=lambda app: sort_by_channelcount(asset_address, app))[0]  # pylint: disable=cell-var-from-loop
-            other_apps.remove(peer)
+        # create and initialize the missing channels
+        while len(contracts_addreses) < channels_per_node:
+            app = sorted(other_apps, key=lambda app: sort_by_channelcount(asset_address, app))[0]  # pylint: disable=cell-var-from-loop
+            other_apps.remove(app)
 
-            peer_channels = chain_service.contracts_by_asset_participant(
+            netcontract_address = chain_service.new_netting_contract(
                 asset_address,
-                peer.raiden.address,
+                app.raiden.address,
+                curr_app.raiden.address,
             )
+            contracts_addreses.append(netcontract_address)
 
-            if len(peer_channels) < channels_per_node:
-
-                channel = chain_service.new_netting_contract(
+            for address in [curr_app.raiden.address, app.raiden.address]:
+                chain_service.deposit(
                     asset_address,
-                    peer.raiden.address,
-                    curr_app.raiden.address,
+                    netcontract_address,
+                    address,
+                    deposit,
                 )
-                channel_contracts.append(channel)
-
-                # add deposit of asset
-                for address in [curr_app.raiden.address, peer.raiden.address]:
-                    channel.deposit(
-                        address,
-                        amount=deposit,
-                        ctx=dict(block_number=chain_service.block_number),
-                    )
 
 
 def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_class=None):

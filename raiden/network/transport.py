@@ -27,13 +27,20 @@ class UDPTransport(object):
         self.protocol.receive(data)
 
         # enable debugging using the DummyNetwork callbacks
-        DummyTransport.track_recv(self.protocol.raiden, data, host_port)
+        DummyTransport.track_recv(self.protocol.raiden, host_port, data)
 
-    def send(self, sender, host_port, data):
-        self.server.sendto(data, host_port)
+    def send(self, sender, host_port, bytes_):
+        """ Send `bytes_` to `host_port`.
+
+        Args:
+            sender (address): The address of the running node.
+            host_port (Tuple[(str, int)]): Tuple with the host name and port number.
+            bytes_ (bytes): The bytes that are going to be sent throught the wire.
+        """
+        self.server.sendto(bytes_, host_port)
 
         # enable debugging using the DummyNetwork callbacks
-        DummyTransport.network.track_send(sender, host_port, data)
+        DummyTransport.network.track_send(sender, host_port, bytes_)
 
     def register(self, proto, host, port):  # pylint: disable=unused-argument
         assert isinstance(proto, RaidenProtocol)
@@ -56,18 +63,18 @@ class DummyNetwork(object):
         assert isinstance(transport, DummyTransport)
         self.transports[(host, port)] = transport
 
-    def track_send(self, sender, host_port, data):
+    def track_send(self, sender, host_port, bytes_):
         """ Register an attempt to send a packet. This method should be called
         everytime send() is used.
         """
         self.counter += 1
         for callback in self.on_send_cbs:
-            callback(sender, host_port, data)
+            callback(sender, host_port, bytes_)
 
-    def send(self, sender, host_port, data):
-        self.track_send(sender, host_port, data)
+    def send(self, sender, host_port, bytes_):
+        self.track_send(sender, host_port, bytes_)
         receive_end = self.transports[host_port].receive
-        gevent.spawn_later(0.00000000001, receive_end, data)
+        gevent.spawn_later(0.00000000001, receive_end, bytes_)
 
 
 class DummyTransport(object):
@@ -82,8 +89,8 @@ class DummyTransport(object):
 
         self.network.register(self, host, port)
 
-    def send(self, sender, host_port, data):
-        self.network.send(sender, host_port, data)
+    def send(self, sender, host_port, bytes_):
+        self.network.send(sender, host_port, bytes_)
 
     @classmethod
     def track_recv(cls, raiden, host_port, data):
@@ -100,18 +107,18 @@ class UnreliableTransport(DummyTransport):
 
     droprate = 2  # drop every Nth message
 
-    def send(self, sender, host_port, data):
+    def send(self, sender, host_port, bytes_):
         drop = bool(self.network.counter % self.droprate == 0)
 
         if not drop:
-            self.network.send(sender, host_port, data)
+            self.network.send(sender, host_port, bytes_)
         else:
             # since this path wont go to super.send we need to call track
             # ourselves
-            self.network.track_send(sender, host_port, data)
+            self.network.track_send(sender, host_port, bytes_)
 
             log.debug(
                 'dropped packed',
                 counter=self.network.counter,
-                data=format(pex(sha3(data)))
+                data=format(pex(sha3(bytes_)))
             )

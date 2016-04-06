@@ -5,7 +5,7 @@ from ethereum import slogging
 
 from raiden.messages import DirectTransfer, MediatedTransfer, LockedTransfer, SecretRequest
 from raiden.tasks import Task, TransferTask, ForwardSecretTask
-from raiden.utils import sha3
+from raiden.utils import sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -35,7 +35,7 @@ class TransferManager(object):
     def transfer(self, amount, target, hashlock=None, secret=None):
         """ Initiates a transfer between this node and `target` for `amount`. """
 
-        # either we direct channel with `target`
+        # either we have a direct channel with `target`
         if target in self.assetmanager.channels and not hashlock:
             channel = self.assetmanager.channels[target]
             direct_transfer = channel.create_directtransfer(amount, secret=secret)
@@ -70,7 +70,7 @@ class TransferManager(object):
 
     def on_mediatedtransfer(self, transfer):
         assert isinstance(transfer, MediatedTransfer)
-        log.debug('ON MEDIATED TRANSFER', self.raiden)
+        log.debug('ON MEDIATED TRANSFER', address=pex(self.raiden.address))
 
         channel = self.assetmanager.channels[transfer.sender]
         channel.register_transfer(transfer)

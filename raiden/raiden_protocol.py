@@ -63,7 +63,7 @@ class RaidenProtocol(object):
 
             # Each sent msg must be acked. When msg is acked its hash is removed from self.tries
             if msghash in self.tries:
-                # FIXME: suspend node
+                # FIXME: suspend node + recover from the failure
                 raise RuntimeError('Node does not reply')
 
         gevent.spawn(repeater)
@@ -101,7 +101,7 @@ class RaidenProtocol(object):
 
         # handle Acks
         if isinstance(msg, Ack):
-            log.debug('ACK MSGHASH RECEIVED', echo=pex(msg.echo))
+            log.debug('ACK MSGHASH RECEIVED', node=pex(self.raiden.address), echo=pex(msg.echo))
             del self.tries[msg.echo]
             return
 

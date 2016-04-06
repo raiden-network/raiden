@@ -3,6 +3,7 @@ from ethereum import slogging
 
 from raiden.assetmanager import AssetManager
 from raiden.channelgraph import ChannelGraph
+from raiden.channel import Channel
 from raiden import messages
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.transfermanager import TransferManager
@@ -60,15 +61,45 @@ class RaidenService(object):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
     def setup_assets(self, asset_list):
-        """ Initializes an AssetManager for each asset in the `asset_list`
-        creating the corresponding representation of the raiden network.
+        """ For each `asset` in `asset_list` create a corresponding
+        `AssetManager`, and for each open channel that this node has create a
+        corresponding `Channel`.
+
+        Args:
+            asset_list (List[address]): A list of asset addresses that need to
+            be considered.
         """
         for asset_address in asset_list:
             # create network graph for contract
             edges = self.chain.addresses_by_asset(asset_address)
             channel_graph = ChannelGraph(edges)
 
-            self.assetmanagers[asset_address] = AssetManager(self, asset_address, channel_graph)
+            asset_manager = AssetManager(self, asset_address, channel_graph)
+            self.assetmanagers[asset_address] = asset_manager
+
+            netting_address = self.chain.nettingaddresses_by_asset_participant(
+                asset_address,
+                self.address,
+            )
+
+            for nettingcontract_address in netting_address:
+                channel_details = self.chain.netting_contract_detail(
+                    asset_address,
+                    nettingcontract_address,
+                    self.address,
+                )
+
+                channel = Channel(
+                    self.chain,
+                    asset_address,
+                    nettingcontract_address,
+                    self.address,
+                    channel_details['our_balance'],
+                    channel_details['partner_address'],
+                    channel_details['partner_balance'],
+                )
+
+                asset_manager.add_channel(channel_details['partner_address'], channel)
 
     def sign(self, msg):
         assert isinstance(msg, messages.SignedMessage)
@@ -106,7 +137,7 @@ class RaidenService(object):
         asset_manager = self.assetmanagers[msg.asset]
         asset_manager.transfermanager.on_transfer(msg)
 
-    on_lockedtransfer = on_transfer
+    on_lockedtransfer = on_directtransfer = on_transfer
 
     def on_mediatedtransfer(self, msg):
         asset_manager = self.assetmanagers[msg.asset]
