@@ -9,6 +9,7 @@ contract NettingContract {
     struct Unlocked {} // TODO
     struct Participant
     {
+        // address addr
         uint deposit;
         Transfer[] lastSentTransfers;
         //Unlocked unlocked;
@@ -95,4 +96,8 @@ contract NettingContract {
         // trigger event
         /*ChannelSettled();*/
     //}
+
+
+    // empty function to handle wrong calls
+    function () { throw; }
 }

@@ -26,9 +26,9 @@ contract BlockChain {
     /// @dev Get the ChannelManagerContract of a given assetAddress.
     /// @param assetAddress (address) the asset address.
     /// @return cmc (ChannelManagerContract) the contract belonging to an assetAddress.
-    function channelManagerByAsset(address assetAddress) constant returns (ChannelManagerContract cmc) {
+    function channelManagerByAsset(address assetAddress) returns (ChannelManagerContract cmc) {
         uint index = IterableMappingCMC.atIndex(data, assetAddress);
-        var (key, value) = IterableMappingCMC.iterate_get(data, index);
+        var(key, value) = IterableMappingCMC.iterate_get(data, index - 1);
         cmc = value;
     }
 
@@ -45,4 +45,8 @@ contract BlockChain {
         }
         assetAddresses = addresses;
     }
+
+
+    // empty function to handle wrong calls
+    function () { throw; }
 }
