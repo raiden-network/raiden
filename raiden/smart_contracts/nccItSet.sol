@@ -1,17 +1,17 @@
-/// Iteratable data structure of the type [address k, ChannelManagerContract v]
+/// Iteratable data structure of the type [bytes32 k, NettingContract v]
 library IterableMapping
 {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
-        mapping(address => IndexValue) data;
+        mapping(bytes32 => IndexValue) data;
         KeyFlag[] keys;
         uint size;
     }
-    struct IndexValue { uint keyIndex; ChannelManagerContract value; }
-    struct KeyFlag { address key; bool deleted; }
+    struct IndexValue { uint keyIndex; NettingContract value; }
+    struct KeyFlag { bytes32 key; bool deleted; }
 
 
-    function insert(itmap storage self, address key, ChannelManagerContract value) returns (bool replaced) {
+    function insert(itmap storage self, bytes32 key, NettingContract value) returns (bool replaced) {
         uint keyIndex = self.data[key].keyIndex;
         self.data[key].value = value;
         if (keyIndex > 0)
@@ -26,7 +26,7 @@ library IterableMapping
     }
 
 
-    function remove(itmap storage self, address key) returns (bool success){
+    function remove(itmap storage self, bytes32 key) returns (bool success){
         uint keyIndex = self.data[key].keyIndex;
         if (keyIndex == 0)
           return false;
@@ -36,12 +36,12 @@ library IterableMapping
     }
 
 
-    function contains(itmap storage self, address key) returns (bool) {
+    function contains(itmap storage self, bytes32 key) returns (bool) {
         return self.data[key].keyIndex > 0;
     }
 
 
-    function atIndex(itmap storage self, address key) returns (uint index) {
+    function atIndex(itmap storage self, bytes32 key) returns (uint index) {
         return self.data[key].keyIndex;
     }
 
@@ -64,7 +64,7 @@ library IterableMapping
     }
 
 
-    function iterate_get(itmap storage self, uint keyIndex) returns (address key, ChannelManagerContract value){
+    function iterate_get(itmap storage self, uint keyIndex) returns (bytes32 key, NettingContract value){
         key = self.keys[keyIndex].key;
         value = self.data[key].value;
     }

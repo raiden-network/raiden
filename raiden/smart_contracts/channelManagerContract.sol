@@ -21,7 +21,7 @@ contract ChannelManagerContract {
     /// @dev Get channels where the given address participates.
     /// @param adr (address) the address
     /// @return channels (NettingContracts[]) all channels that a given address participates in.
-    function nettingContractsByAddress(address adr) returns (bytes32[] channels){
+    function nettingContractsByAddress(address adr) returns (NettingContract[] channels){
         for (var i = IterableMapping.iterate_start(data); IterableMapping.iterate_valid(data, i); i = IterableMapping.iterate_next(data, i)) {
             var (key, value) = IterableMapping.iterate_get(data, i);
             // should we return just the keys to the contracts or entire contracts?
@@ -59,13 +59,13 @@ contract ChannelManagerContract {
     /// @dev Get the channel of two parties
     /// @param adrA (address) address of one party.
     /// @param adrB (address) address of other party.
-    /// @return channel (bytes32) the  key of the NettingContract of the two parties.
-    function get(address adrA, address adrB) returns (bytes32 channel){
+    /// @return channel (NettingContract) the  key of the NettingContract of the two parties.
+    function get(address adrA, address adrB) returns (NettingContract channel){
         ky = key(adrA, adrB);
+        if (!IterableMapping.contains(data, ky)) throw; //handle if no such channel exists
         uint index = IterableMapping.atIndex(data, ky);
-        var (k, v) = IterableMapping.iterate_get(data, index);
-        channel = k;
-        //handle if no such channel exists
+        var (k, v) = IterableMapping.iterate_get(data, index - 1);
+        channel = v;
     }
 
 
@@ -78,7 +78,7 @@ contract ChannelManagerContract {
         k = key(adrA, adrB);
         c = NettingContract(assetAddress);
         add(k, c);
-        return c; //Maybe not return, or maybe return key instead of value
+        return c;
         ChannelNew(k, c); //Triggers event
     }
 

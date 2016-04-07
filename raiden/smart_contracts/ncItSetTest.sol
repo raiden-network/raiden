@@ -1,24 +1,23 @@
 /*
-    Wrapper and tests for the data structure of ChannelManager contracts
-    To run tests, use Solidity online compiler and execute the test funtions
-    One should see some 1's indicating success.
+    Work in process
+    Still a couple of issues
 */
 
 
-/// @dev Models a uint -> uint mapping where it is possible to iterate over all keys.
+/// Iteratable data structure of the type [bytes32 k, NettingContract v]
 library IterableMapping
 {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
-        mapping(address => IndexValue) data;
+        mapping(bytes32 => IndexValue) data;
         KeyFlag[] keys;
         uint size;
     }
-    struct IndexValue { uint keyIndex; ChannelManagerContract value; }
-    struct KeyFlag { address key; bool deleted; }
+    struct IndexValue { uint keyIndex; NettingContract value; }
+    struct KeyFlag { bytes32 key; bool deleted; }
 
 
-    function insert(itmap storage self, address key, ChannelManagerContract value) returns (bool replaced) {
+    function insert(itmap storage self, bytes32 key, NettingContract value) returns (bool replaced) {
         uint keyIndex = self.data[key].keyIndex;
         self.data[key].value = value;
         if (keyIndex > 0)
@@ -33,21 +32,22 @@ library IterableMapping
     }
 
 
-    function remove(itmap storage self, address key) returns (bool success){
+    function remove(itmap storage self, bytes32 key) returns (bool success){
         uint keyIndex = self.data[key].keyIndex;
-        if (keyIndex == 0) return false;
+        if (keyIndex == 0)
+          return false;
         delete self.data[key];
         self.keys[keyIndex - 1].deleted = true;
         self.size --;
     }
 
 
-    function contains(itmap storage self, address key) returns (bool) {
+    function contains(itmap storage self, bytes32 key) returns (bool) {
         return self.data[key].keyIndex > 0;
     }
 
 
-    function atIndex(itmap storage self, address key) returns (uint index) {
+    function atIndex(itmap storage self, bytes32 key) returns (uint index) {
         return self.data[key].keyIndex;
     }
 
@@ -70,20 +70,17 @@ library IterableMapping
     }
 
 
-    function iterate_get(itmap storage self, uint keyIndex) returns (address key, ChannelManagerContract value){
+    function iterate_get(itmap storage self, uint keyIndex) returns (bytes32 key, NettingContract value){
         key = self.keys[keyIndex].key;
         value = self.data[key].value;
     }
 }
-
-
-// How to use it:
 contract Wrapper
 {
     // Just a struct holding our data.
     IterableMapping.itmap data;
     // Insert something
-    function insert(address k, ChannelManagerContract v) returns (uint size)
+    function insert(bytes32 k, NettingContract v) returns (uint size)
     {
         // Actually calls itmap_impl.insert, auto-supplying the first parameter for us.
         IterableMapping.insert(data, k, v);
@@ -91,24 +88,24 @@ contract Wrapper
         return data.size;
     }
 
-    function contains(address k) returns (bool c) {
+    function contains(bytes32 k) returns (bool c) {
         c = IterableMapping.contains(data, k);
     }
     
     function lengthOf() returns (uint l) {
-        l = data.keys.length - 1;
+        l = data.keys.length;
     }
 
-    function get(address k) returns (address key, ChannelManagerContract value) {
+    function get(bytes32 k) returns (bytes32 key, NettingContract value) {
         uint index = IterableMapping.atIndex(data, k);
         (key, value) = IterableMapping.iterate_get(data, index -1);
     }
 
-    function remove(address k) returns (bool success) {
+    function remove(bytes32 k) returns (bool success) {
         success = IterableMapping.remove(data, k);
     }
 
-    function getIndex(address k) returns (uint i) {
+    function getIndex(bytes32 k) returns (uint i) {
         i = IterableMapping.atIndex(data, k);
     }
 
@@ -135,59 +132,77 @@ contract Wrapper
     /*}*/
 }
 
-contract cmcItSetTest {
+contract NettingContractTest {
+    bytes32 constant TEST_KEY2 = 0xBEEEEF;
+    bytes32 constant TEST_KEY3 = 0x654321;
+    address constant TEST_ADDRESS1 = 0x123456;
+    address constant TEST_ADDRESS2 = 0x654321;
+    address constant ASSET_ADDRESS = 0xDEADBEEF;
+    bytes32 constant TEST_KEY1 = sha3(TEST_ADDRESS1, TEST_ADDRESS2);
 
-    address constant TEST_ADDRESS1 = 0x123345;
-    address constant ASSET_ADDRESS = 0xC0FFEE;
-    address constant TEST_ADDRESS3 = 0xABCDEF;
 
-
-    function testInsert() returns (bool has, bool isIn){
-        ChannelManagerContract cmc = new ChannelManagerContract(ASSET_ADDRESS);
+    function testInsert() returns (bool isIn, bool has, bool hasPar) {
+        NettingContract nc = new NettingContract(ASSET_ADDRESS);
         Wrapper wrp = new Wrapper();
-        wrp.insert(TEST_ADDRESS1, cmc);
-        has = wrp.contains(TEST_ADDRESS1);
-        var(a, c) = wrp.get(TEST_ADDRESS1);
-        isIn = c.assetAddress() == ASSET_ADDRESS && a == TEST_ADDRESS1; 
-        return;
+        wrp.insert(TEST_KEY1, nc);
+        isIn = wrp.contains(TEST_KEY1);
+        var(k, c) = wrp.get(TEST_KEY1);
+        has = k == TEST_KEY1 && c.assetAddress() == ASSET_ADDRESS;
+        hasPar = c.participants[0].addr == TEST_ADDRESS1;
     }
-
+    
     function testRemove() returns (bool removed, bool isIn, bool exist) {
-        ChannelManagerContract cmc = new ChannelManagerContract(ASSET_ADDRESS);
+        NettingContract nc = new NettingContract(ASSET_ADDRESS);
         Wrapper wrp = new Wrapper();
-        wrp.insert(TEST_ADDRESS1, cmc);
-        wrp.lengthOf() == 1;
-        exist = wrp.contains(TEST_ADDRESS1);
-        wrp.remove(TEST_ADDRESS1);
-        removed = wrp.lengthOf() == 0;
-        isIn = false == wrp.contains(TEST_ADDRESS1);
+        wrp.insert(TEST_KEY1, nc);
+        wrp.lengthOf() == 2; //why is lenght 2?
+        exist = wrp.contains(TEST_KEY1);
+        wrp.remove(TEST_KEY1);
+        removed = wrp.lengthOf() == 1;
+        isIn = false == wrp.contains(TEST_KEY1);
         return;
     }
-    
-    function testIndex() returns (bool at) {
-        ChannelManagerContract cmc = new ChannelManagerContract(ASSET_ADDRESS);
-        Wrapper wrp = new Wrapper();
-        wrp.insert(TEST_ADDRESS1, cmc);
-        at = 1 == wrp.getIndex(TEST_ADDRESS1);
-        return;
-    }
-    
-    // TODO 
-    function testGetAllAddresses() returns (bool success) {
-        ChannelManagerContract cmc = new ChannelManagerContract(ASSET_ADDRESS);
-        Wrapper wrp = new Wrapper();
-        wrp.insert(TEST_ADDRESS1, cmc);
-        wrp.insert(TEST_ADDRESS3, cmc);
-        //address[] a = wrp.getAllKeys(); // not working
-        //success = a.lengthOf() == 2;
-        return;
-    }
+
 }
 
-contract ChannelManagerContract {
+// Just for the sake of interface
+contract NettingContract {
+    uint lockedTime;
     address public assetAddress;
+    uint public opened;
+    uint public closed;
+    uint public settled;
+    address public TEST_ADDRESS1 = 0x123456;
+    address public TEST_ADDRESS2 = 0x654321;
     
-    function ChannelManagerContract(address testAddress) {
-        assetAddress = testAddress;
+    struct Transfer {} // TODO
+    struct Unlocked {} // TODO
+    struct Participant
+    {
+        address addr;
+        uint deposit;
+        //Transfer[] lastSentTransfers;
+        //Unlocked unlocked;
+    }
+    //mapping(address => Participant) public participants;
+
+    Participant[2] public participants; // Might make more sense to use an array like this for participants */
+                                 /*// since it only holds two.*/
+
+    event ChannelOpened(address assetAdr); // TODO
+    event ChannelClosed(); // TODO
+    event ChannelSettled(); // TODO
+
+    function NettingContract(address assetAdr) {
+        opened = 0;
+        closed = 0;
+        settled = 0;
+        assetAddress = assetAdr;
+        participants[0].addr = TEST_ADDRESS1;
+        participants[1].addr = TEST_ADDRESS2;
+    }
+    
+    function testPar() returns (bool test) {
+        test = participants[0].addr == TEST_ADDRESS1;
     }
 }
