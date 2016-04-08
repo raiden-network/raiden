@@ -1,6 +1,6 @@
 # Raiden Network
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/heikoheiko/raiden?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/brainbot-com/raiden?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 Raiden Network is a proposed extension to Ethereum which scales-out asset transfer capacity.
 
