@@ -48,63 +48,89 @@ def test_transfer():
 
 def test_locked_transfer():
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-    a0, a1 = apps
-    c0 = a0.raiden.assetmanagers.values()[0].channels.values()[0]
-    c1 = a1.raiden.assetmanagers.values()[0].channels.values()[0]
-
-    b0, b1 = c0.balance, c1.balance
+    app0, app1 = apps
+    channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
+    channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
 
     amount = 10
+    expiration = app0.raiden.chain.block_number + 100
+
     secret = 'secret'
-    expiration = a0.raiden.chain.block_number + 100
     hashlock = sha3(secret)
-    t = c0.create_lockedtransfer(amount=amount, expiration=expiration, hashlock=hashlock)
-    c0.raiden.sign(t)
-    c0.register_transfer(t)
-    c1.register_transfer(t)
 
-    assert hashlock in c1.locked
-    assert hashlock in c0.partner.locked
-    assert len(c0.locked) == 0
-    assert len(c0.partner.locked) == 1
-    assert len(c1.locked) == 1
-    assert len(c1.partner.locked) == 0
+    balance0 = channel0.balance
+    balance1 = channel1.balance
+    transfer = channel0.create_lockedtransfer(
+        amount=amount,
+        expiration=expiration,
+        hashlock=hashlock,
+    )
 
-    assert c0.balance == b0
-    assert c0.distributable == c0.balance - amount
-    assert c1.balance == c1.distributable == b1
-    assert c0.locked.outstanding == 0
-    assert c0.partner.locked.outstanding == amount
-    assert c1.locked.outstanding == amount
-    assert c1.partner.locked.outstanding == 0
+    channel0.raiden.sign(transfer)
+    channel0.register_transfer(transfer)
+    channel1.register_transfer(transfer)
 
-    assert c0.locked.root == ''
-    assert c1.partner.locked.root == ''
+    # assert hashlock in channel0.locked
+    assert hashlock in channel1.locked
+    assert hashlock in channel0.partner.locked
+    # assert hashlock in channel1.partner.locked
 
-    assert c1.locked.root == merkleroot(
-        [sha3(tx.lock.asstring) for tx in c1.locked.locked.values()])
-    assert c0.partner.locked.root == c1.locked.root
+    root1 = merkleroot([
+        sha3(transaction.lock.asstring)
+        for transaction in channel1.locked.locked.values()
+    ])
+
+    assert channel0.balance == balance0
+    assert channel0.distributable == balance0 - amount
+    assert len(channel0.locked) == 0
+    assert channel0.locked.outstanding == 0
+    assert channel0.locked.root == ''
+
+    assert channel1.balance == balance1
+    assert channel1.distributable == balance1
+    assert channel1.locked.outstanding == amount
+    assert len(channel1.locked) == 1
+    assert channel1.locked.root == root1
+
+    assert channel0.partner.balance == balance1
+    assert channel0.partner.distributable == balance1
+    assert len(channel0.partner.locked) == 1
+    assert channel0.partner.locked.outstanding == amount
+    assert channel0.partner.locked.root == root1
+
+    assert channel1.partner.balance == balance0
+    assert channel1.partner.distributable == balance0 - amount
+    assert len(channel1.partner.locked) == 0
+    assert channel1.partner.locked.outstanding == 0
+    assert channel1.partner.locked.root == ''
 
     # reveal secret
+    channel0.claim_locked(secret)
+    channel1.claim_locked(secret)
 
-    c0.claim_locked(secret)
-    c1.claim_locked(secret)
+    assert channel0.balance == balance0 - amount
+    assert channel0.distributable == balance0 - amount
+    assert len(channel0.locked) == 0
+    assert channel0.locked.outstanding == 0
+    assert channel0.locked.root == ''
 
-    assert c0.balance == b0 - amount
-    assert c0.distributable == c0.balance
-    assert c1.balance == c1.distributable == b1 + amount
-    assert c0.locked.outstanding == 0
-    assert c0.partner.locked.outstanding == 0
-    assert c1.locked.outstanding == 0
-    assert c1.partner.locked.outstanding == 0
-    assert len(c0.locked) == 0
-    assert len(c0.partner.locked) == 0
-    assert len(c1.locked) == 0
-    assert len(c1.partner.locked) == 0
-    assert c0.locked.root == ''
-    assert c1.partner.locked.root == ''
-    assert c1.locked.root == ''
-    assert c0.partner.locked.root == ''
+    assert channel1.balance == balance1 + amount
+    assert channel1.distributable == balance1 + amount
+    assert channel1.locked.outstanding == 0
+    assert len(channel1.locked) == 0
+    assert channel1.locked.root == ''
+
+    assert channel0.partner.balance == balance1 + amount
+    assert channel0.partner.distributable == balance1 + amount
+    assert len(channel0.partner.locked) == 0
+    assert channel0.partner.locked.outstanding == 0
+    assert channel0.partner.locked.root == ''
+
+    assert channel1.partner.balance == balance0 - amount
+    assert channel1.partner.distributable == balance0 - amount
+    assert len(channel1.partner.locked) == 0
+    assert channel1.partner.locked.outstanding == 0
+    assert channel1.partner.locked.root == ''
 
 
 def test_interwoven_transfers(num=100):

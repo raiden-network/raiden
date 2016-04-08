@@ -147,11 +147,15 @@ class Channel(object):
         hashlock can be given to improve speed
         """
         hashlock = hashlock or sha3(secret)
+
+        # receiving
         if hashlock in self.locked:
             amount = self.locked.get(hashlock).lock.amount
             self.balance += amount
-            self.partner.balance += amount
+            self.partner.balance -= amount
             self.locked.remove(hashlock)
+
+        # sending
         if hashlock in self.partner.locked:
             amount = self.partner.locked.get(hashlock).lock.amount
             self.balance -= amount
