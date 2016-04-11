@@ -1,4 +1,5 @@
-from raiden.app import create_network
+# -*- coding: utf8 -*-
+from raiden.tests.utils import create_network
 
 
 def test_create_network():

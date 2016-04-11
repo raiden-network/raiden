@@ -6,7 +6,7 @@ import time
 import pytest
 
 from raiden.mtree import merkleroot
-from raiden.app import create_network
+from raiden.tests.utils import create_network
 from raiden.utils import sha3
 from raiden.messages import DirectTransfer
 

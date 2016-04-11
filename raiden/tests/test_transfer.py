@@ -5,7 +5,7 @@ import gevent
 import pytest
 from ethereum import slogging
 
-from raiden.app import create_network, create_chain_network
+from raiden.tests.utils import create_network, create_chain_network
 from raiden.messages import decode, Ack, DirectTransfer, CancelTransfer
 from raiden.tasks import MediatedTransferTask
 from raiden.utils import pex

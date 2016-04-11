@@ -17,6 +17,16 @@ def make_address():
 
 class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
+
+    def __init__(self, host_port, registry_address):
+        """
+        Args:
+            host_port (Tuple[(str, int)]): two-tuple with the (address, host)
+                of the JSON-RPC server.
+        """
+        self.host_port = host_port
+        self.registry_address = registry_address
+
     # pylint: disable=no-self-use,invalid-name,too-many-arguments
     def next_block(self):
         raise NotImplementedError()
