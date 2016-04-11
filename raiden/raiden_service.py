@@ -3,7 +3,7 @@ from ethereum import slogging
 
 from raiden.assetmanager import AssetManager
 from raiden.channelgraph import ChannelGraph
-from raiden.channel import Channel
+from raiden.channel import Channel, ChannelEndState
 from raiden import messages
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.transfermanager import TransferManager
@@ -60,7 +60,7 @@ class RaidenService(object):
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
-    def setup_assets(self, asset_list):
+    def setup_assets(self, asset_list, min_locktime):
         """ For each `asset` in `asset_list` create a corresponding
         `AssetManager`, and for each open channel that this node has create a
         corresponding `Channel`.
@@ -89,14 +89,23 @@ class RaidenService(object):
                     self.address,
                 )
 
+                our_state = ChannelEndState(
+                    self.address,
+                    channel_details['our_balance'],
+                )
+
+                partner_state = ChannelEndState(
+                    channel_details['partner_address'],
+                    channel_details['partner_balance'],
+                )
+
                 channel = Channel(
                     self.chain,
                     asset_address,
                     nettingcontract_address,
-                    self.address,
-                    channel_details['our_balance'],
-                    channel_details['partner_address'],
-                    channel_details['partner_balance'],
+                    our_state,
+                    partner_state,
+                    min_locktime=min_locktime,
                 )
 
                 asset_manager.add_channel(channel_details['partner_address'], channel)
@@ -146,10 +155,17 @@ class RaidenService(object):
     # events, that need to find a TransferTask
 
     def on_event_for_transfertask(self, msg):
+        if isinstance(msg, messages.LockedTransfer):
+            hashlock = msg.lock.hashlock
+        else:
+            # TransferTimeout, Secret, SecretRequest, ConfirmTransfer
+            hashlock = msg.hashlock
+
         for asset_manager in self.assetmanagers.values():
-            if msg.hashlock in asset_manager.transfermanager.transfertasks:
-                asset_manager.transfermanager.transfertasks[msg.hashlock].on_event(msg)
+            if hashlock in asset_manager.transfermanager.transfertasks:
+                asset_manager.transfermanager.transfertasks[hashlock].on_event(msg)
                 return True
+
     on_secretrequest = on_transfertimeout = on_canceltransfer = on_event_for_transfertask
 
     def on_secret(self, msg):

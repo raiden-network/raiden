@@ -4,7 +4,7 @@ import random
 from ethereum import slogging
 
 from raiden.messages import DirectTransfer, MediatedTransfer, LockedTransfer, SecretRequest
-from raiden.tasks import Task, TransferTask, ForwardSecretTask
+from raiden.tasks import Task, MediatedTransferTask, ForwardSecretTask
 from raiden.utils import sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -19,7 +19,7 @@ class TransferManager(object):
 
         self.raiden = raiden
         self.assetmanager = assetmanager
-        self.transfertasks = dict()  # hashlock > TransferTask
+        self.transfertasks = dict()  # hashlock > MediatedTransferTask
         self.on_task_completed_callbacks = []
 
     def on_task_started(self, task):
@@ -49,7 +49,7 @@ class TransferManager(object):
                 secret = sha3(hex(random.getrandbits(256)))
                 hashlock = sha3(secret)
 
-            task = TransferTask(
+            task = MediatedTransferTask(
                 self,
                 amount,
                 target,
@@ -92,7 +92,7 @@ class TransferManager(object):
         # or we are a participating node in the network and need to keep
         # forwarding the MediatedTransfer
         else:
-            transfer_task = TransferTask(
+            transfer_task = MediatedTransferTask(
                 self,
                 transfer.lock.amount,
                 transfer.target,

@@ -5,10 +5,13 @@ import gevent
 from ethereum import slogging
 
 from raiden.app import create_network
-from raiden.tasks import TransferTask
+from raiden.tasks import MediatedTransferTask
 
 log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
 slogging.configure(':debug')
+
+# set shorter timeout for testing
+MediatedTransferTask.timeout_per_hop = 0.1
 
 
 def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channels_per_node=2):
@@ -40,8 +43,8 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
             assert p[0] == source
         path = paths[0]
         target = path[-1]
-        assert path in am0.channelgraph.get_paths(source, target)
-        assert min(len(p) for p in am0.channelgraph.get_paths(source, target)) == num_hops + 1
+        assert path in am0.channelgraph.get_shortest_paths(source, target)
+        assert min(len(p) for p in am0.channelgraph.get_shortest_paths(source, target)) == num_hops + 1
 
         assetmanagers_by_address = dict((a.raiden.address, a.raiden.assetmanagers) for a in apps)
 
@@ -52,8 +55,6 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
         asset_address = am0.asset_address
 
         amount = 10
-        # set shorter timeout for testing
-        TransferTask.timeout_per_hop = 0.1
 
         finished = gevent.event.Event()
 

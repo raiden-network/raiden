@@ -1,11 +1,9 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
 
-from raiden.messages import (
-    DirectTransfer, LockedTransfer, MediatedTransfer, BaseError, Lock, CancelTransfer,
-)
-from raiden.utils import sha3
+from raiden.messages import DirectTransfer, LockedTransfer, BaseError, Lock
 from raiden.mtree import merkleroot, get_proof
+from raiden.utils import sha3
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -28,53 +26,6 @@ class InvalidLockTime(BaseError):
 
 class InsufficientBalance(BaseError):
     pass
-
-
-def create_directtransfer(from_, to_, asset_address, amount, secret=None):
-    """ Create a transfer for `amount` of `asset_address` between `from_` and `to_`. """
-    distributable = from_.distributable(to_)
-
-    if amount <= 0 or amount > distributable:
-        log.debug(
-            'Insufficient funds',
-            amount=amount,
-            distributable=distributable,
-        )
-        raise ValueError('Insufficient funds')
-
-    return DirectTransfer(
-        nonce=from_.nonce,
-        asset=asset_address,
-        balance=to_.balance + amount,
-        recipient=to_.address,
-        locksroot=to_.locked.root,  # not changed
-        secret=secret,
-    )
-
-
-def create_lockedtransfer(from_, to_, asset_address, amount, expiration, hashlock):  # pylint: disable=too-many-arguments
-    distributable = from_.distributable(to_)
-
-    if amount <= 0 or amount > distributable:
-        log.debug(
-            'Insufficient funds',
-            amount=amount,
-            distributable=distributable,
-        )
-        raise ValueError('Insufficient funds')
-
-    lock = Lock(amount, expiration, hashlock)
-
-    updated_locksroot = to_.locked.root_with(lock)
-
-    return LockedTransfer(
-        nonce=from_.nonce,
-        asset=asset_address,
-        balance=to_.balance,  # not changed
-        recipient=to_.address,
-        locksroot=updated_locksroot,
-        lock=lock,
-    )
 
 
 class LockedTransfers(object):
@@ -160,7 +111,7 @@ class ChannelEndState(object):
         self.locked = LockedTransfers()  #: locked received
 
     def distributable(self, other):
-        """ Return the available amount of the asset that can be transfer in
+        """ Return the available amount of the asset that can be transfered in
         the channel `(total - locked)`.
         """
         return self.balance - other.locked.outstanding
@@ -202,24 +153,18 @@ class ChannelEndState(object):
 class Channel(object):
     # pylint: disable=too-many-instance-attributes,too-many-arguments
 
-    def __init__(self, chain, asset_address, nettingcontract_address, our_address,
-                 our_balance, partner_address, partner_balance):
+    def __init__(self, chain, asset_address, nettingcontract_address,
+                 our_state, partner_state, min_locktime):
         self.chain = chain
         self.asset_address = asset_address
         self.nettingcontract_address = nettingcontract_address
+        self.our_state = our_state
+        self.partner_state = partner_state
+        self.min_locktime = min_locktime
 
-        self.min_locktime = 10  # FIXME
         self.wasclosed = False
         self.received_transfers = []
         self.sent_transfers = []  #: transfers that were sent, required for settling
-        self.our_state = ChannelEndState(
-            our_address,
-            our_balance,
-        )
-        self.partner_state = ChannelEndState(
-            partner_address,
-            partner_balance,
-        )
 
     @property
     def isopen(self):
@@ -230,185 +175,156 @@ class Channel(object):
 
     @property
     def distributable(self):
+        """ Return the available amount of the asset that our end of the
+        channel can transfer.
+        """
         return self.our_state.distributable(self.partner_state)
-
-    def register_locked_transfer(self, transfer):
-        if transfer.recipient == self.our_state.address:
-            self.our_state.locked.add(transfer)
-        else:
-            assert transfer.recipient == self.partner_state.address
-            self.partner_state.locked.add(transfer)
 
     def claim_locked(self, secret, locksroot=None):
         """ Claim locked transfer from any of the ends of the channel.
 
         Args:
-            secret: The secret to releases a locked transfer lock.
+            secret: The secret that releases a locked transfer.
         """
         hashlock = sha3(secret)
 
-        # sending
+        # receiving a secret (releasing our funds)
         if hashlock in self.our_state.locked:
             self.our_state.claim_locked(self.partner_state, secret, locksroot)
 
-        # receiving
+        # sending a secret (updating the mirror)
         if hashlock in self.partner_state.locked:
             self.partner_state.claim_locked(self.our_state, secret, locksroot)
 
-    def register_received_transfer(self, transfer):
-        """
+    def register_transfer(self, transfer):
+        """ Register a signed transfer, updating the channel's state accordingly. """
+
+        if transfer.recipient == self.partner_state.address:
+            self.register_transfer_from_to(
+                transfer,
+                from_state=self.our_state,
+                to_state=self.partner_state,
+            )
+            self.sent_transfers.append(transfer)
+
+        elif transfer.recipient == self.our_state.address:
+            self.register_transfer_from_to(
+                transfer,
+                from_state=self.partner_state,
+                to_state=self.our_state,
+            )
+            self.received_transfers.append(transfer)
+
+        else:
+            raise ValueError('Invalid address')
+
+    def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa
+        """ Validates and register a signed transfer, updating the channel's state accordingly.
+
+        Note:
+            The transfer must be register before it is sent, not on
+            acknowledgement. That is necessary for to reasons:
+
+            - Guarantee that the transfer is valid.
+            - Deduct the balance early avoiding a window of time were the user
+                could intentionally or not send a transaction without funds.
+
         Raises:
-            InvalidSecret: If there is no lock register for the given secret.
+            InsufficientBalance: If the transfer is negative or above the distributable amount.
             InvalidLocksRoot: If locksroot check fails.
-            ValueError: If there is an address mismatch (asset or node address).
+            InvalidLockTime: If the transfer has expired.
             InvalidNonce: If the expected nonce does not match.
+            InvalidSecret: If there is no lock registered for the given secret.
+            ValueError: If there is an address mismatch (asset or node address).
         """
         if transfer.asset != self.asset_address:
             raise ValueError('Asset address mismatch')
 
-        if transfer.recipient != self.our_state.address:
-            raise ValueError('Address mismatch')
+        if transfer.recipient != to_state.address:
+            raise ValueError('Unknow recipient')
 
-        if transfer.nonce != self.partner_state.nonce:
+        if transfer.sender != from_state.address:
+            raise ValueError('Unsigned transfer')
+
+        # nonce is changed only when a transfer is registered, if the test fail
+        # either we are out of sync or it's an forged transfer
+        if transfer.nonce != from_state.nonce:
             raise InvalidNonce(transfer)
 
-        # update balance with released lock if secret
-        if isinstance(transfer, DirectTransfer) and transfer.secret:
-            self.claim_locked(transfer.secret, transfer.locksroot)
+        # transfer.balance has a new balance for the channel participant
+        transfer_amount = transfer.balance - to_state.balance
+        distributable = from_state.distributable(to_state)
 
-        # collect funds
-        allowance = transfer.balance - self.our_state.balance
-        assert allowance >= 0
+        if transfer_amount < 0:
+            raise ValueError('Negative transfer')
 
-        partner_distributable = self.partner_state.distributable(self.our_state)
-        if allowance > partner_distributable:
+        if transfer_amount > distributable:
             raise InsufficientBalance(transfer)
 
-        # register locked funds
-        if isinstance(transfer, (LockedTransfer, MediatedTransfer, CancelTransfer)):
-            assert transfer.lock.amount > 0
-
-            if self.our_state.locked.root_with(transfer.lock) != transfer.locksroot:
-                raise InvalidLocksRoot(transfer)
-
-            if allowance + transfer.lock.amount > partner_distributable:
+        if isinstance(transfer, LockedTransfer):
+            if transfer_amount + transfer.lock.amount > distributable:
                 raise InsufficientBalance(transfer)
+
+            if to_state.locked.root_with(transfer.lock) != transfer.locksroot:
+                raise InvalidLocksRoot(transfer)
 
             if transfer.lock.expiration - self.min_locktime < self.chain.block_number:
                 raise InvalidLockTime(transfer)
-
-            self.register_locked_transfer(transfer)
-
-        # all checks passed
-        self.our_state.balance += allowance
-        self.partner_state.balance -= allowance
-        self.partner_state.nonce += 1
-        self.received_transfers.append(transfer)
-
-    def register_sent_transfer(self, transfer):
-        """ Validates the transfer and update the channel state in relation to
-        the given Transfer message.
-
-        The transfer must be register before it is sent, not on
-        acknowledgement. That is necessary for to reasons:
-
-        - Guarantee that the transfer is valid.
-        - Deduct the balance early avoiding a window of time were the user
-            could intentionally or not send a transaction without funds.
-
-        Note:
-            The protocol layer is responsable to resend the message until it is
-            acknowledged.
-        """
-        if transfer.asset != self.asset_address:
-            raise ValueError('invalid asset address')
-
-        if transfer.recipient != self.partner_state.address:
-            raise ValueError('invalid address')
-
-        if transfer.nonce != self.our_state.nonce:
-            raise ValueError('invalid nonce')
-
-        # the field transfer.balance has the participant's balance
-        allowance = transfer.balance - self.partner_state.balance
-        if allowance < 0:
-            raise ValueError('negative transfer')
-
-        distributable = self.our_state.distributable(self.partner_state)
-        if allowance > distributable:
-            raise ValueError('insuficient funds')
 
         # all checks need to be done before the internal state of the channel
         # is changed, otherwise if a check fails and state was changed the
         # channel will be left trashed
 
+        if isinstance(transfer, LockedTransfer):
+            to_state.locked.add(transfer)
+
         if isinstance(transfer, DirectTransfer) and transfer.secret:
-            self.claim_locked(transfer.secret, transfer.locksroot)
-
-        if isinstance(transfer, (LockedTransfer, MediatedTransfer)):
-            amount = transfer.lock.amount
-            distributable = distributable
-            expiration = transfer.lock.expiration
-            min_locktime = self.min_locktime
-            block_number = self.chain.block_number
-
-            log.debug(
-                'register_sent_transfer',
-                amount=amount,
-                allowance=allowance,
-                distributable=distributable,
-                expiration=expiration,
-                min_locktime=min_locktime,
-                block_number=block_number,
+            to_state.claim_locked(
+                from_state,
+                transfer.secret,
+                transfer.locksroot,
             )
 
-            assert amount > 0
-            assert allowance + amount <= distributable
-            assert expiration - min_locktime >= block_number
-
-            # FIXME: check locksroot!!!
-            self.register_locked_transfer(transfer)
-
-        # all checks passed, update funds
-        self.partner_state.balance += allowance
-        self.our_state.balance -= allowance
-        self.our_state.nonce += 1
-        self.sent_transfers.append(transfer)
-
-    def register_transfer(self, transfer):
-        """ Register a signed transfer, updating the channel's state accordingly. """
-        if not transfer.sender:
-            raise ValueError('Unsigned transfer')
-
-        if transfer.recipient == self.partner_state.address:
-            self.register_sent_transfer(transfer)
-        elif transfer.recipient == self.our_state.address:
-            self.register_received_transfer(transfer)
-        else:
-            raise ValueError('Invalid address')
+        # all checks passed, update balances
+        to_state.balance += transfer_amount
+        from_state.balance -= transfer_amount
+        from_state.nonce += 1
 
     def create_directtransfer(self, amount, secret=None):
         """ Return a DirectTransfer message.
 
-        This message needs to be signed and registered with the channel befored
+        This message needs to be signed and registered with the channel before
         sent.
         """
         if not self.isopen:
             raise ValueError('The channel is closed')
 
-        return create_directtransfer(
-            self.our_state,
-            self.partner_state,
-            self.asset_address,
-            amount,
-            secret,
+        from_ = self.our_state
+        to_ = self.partner_state
+
+        distributable = from_.distributable(to_)
+
+        if amount <= 0 or amount > distributable:
+            log.debug(
+                'Insufficient funds',
+                amount=amount,
+                distributable=distributable,
+            )
+            raise ValueError('Insufficient funds')
+
+        return DirectTransfer(
+            nonce=from_.nonce,
+            asset=self.asset_address,
+            balance=to_.balance + amount,
+            recipient=to_.address,
+            locksroot=to_.locked.root,  # not changed
+            secret=secret,
         )
 
     def create_lockedtransfer(self, amount, expiration, hashlock):
         """ Return a LockedTransfer message.
 
-        This message needs to be signed and registered with the channel befored
-        sent.
+        This message needs to be signed and registered with the channel before sent.
         """
         if not self.isopen:
             raise ValueError('The channel is closed')
@@ -416,11 +332,73 @@ class Channel(object):
         if expiration < self.chain.block_number:
             raise ValueError('Expiration set to the past')
 
-        return create_lockedtransfer(
-            self.our_state,
-            self.partner_state,
-            self.asset_address,
+        from_ = self.our_state
+        to_ = self.partner_state
+
+        distributable = from_.distributable(to_)
+
+        if amount <= 0 or amount > distributable:
+            log.debug(
+                'Insufficient funds',
+                amount=amount,
+                distributable=distributable,
+            )
+            raise ValueError('Insufficient funds')
+
+        lock = Lock(amount, expiration, hashlock)
+
+        updated_locksroot = to_.locked.root_with(lock)
+
+        return LockedTransfer(
+            nonce=from_.nonce,
+            asset=self.asset_address,
+            balance=to_.balance,  # not changed
+            recipient=to_.address,
+            locksroot=updated_locksroot,
+            lock=lock,
+        )
+
+    def create_mediatedtransfer(self, transfer_initiator, transfer_target, fee,
+                                amount, expiration, hashlock):
+        """ Return a MediatedTransfer message.
+
+        This message needs to be signed and registered with the channel before
+        sent.
+
+        Args:
+            transfer_initiator (address): The node that requested the transfer.
+            transfer_target (address): The node that the transfer is destinated to.
+            amount (float): How much asset is being transfered.
+            expiration (int): The maximum block number until the transfer
+                message can be received.
+        """
+
+        locked_transfer = self.create_lockedtransfer(
             amount,
             expiration,
             hashlock,
         )
+
+        mediated_transfer = locked_transfer.to_mediatedtransfer(
+            transfer_target,
+            transfer_initiator,
+            fee,
+        )
+        return mediated_transfer
+
+    def create_canceltransfer_for(self, transfer):
+        """ Return a message CancelTransfer for `transfer`. """
+        lock = transfer.lock
+
+        if lock.hashlock not in self.our_state.locked:
+            raise ValueError('Unknow hashlock')
+
+        locked_transfer = self.create_lockedtransfer(
+            lock.amount,
+            lock.expiration,
+            lock.hashlock,
+        )
+
+        cancel_transfer = locked_transfer.to_canceltransfer()
+
+        return cancel_transfer

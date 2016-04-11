@@ -101,7 +101,11 @@ class RaidenProtocol(object):
 
         # handle Acks
         if isinstance(msg, Ack):
-            log.debug('ACK MSGHASH RECEIVED', node=pex(self.raiden.address), echo=pex(msg.echo))
+            log.debug('ACK MSGHASH RECEIVED {} [echo={}]'.format(
+                pex(self.raiden.address),
+                pex(msg.echo)
+            ))
+
             del self.tries[msg.echo]
             return
 

@@ -45,7 +45,7 @@ class ChannelGraph(object):
         """
         self.graph = make_graph(edge_list)
 
-    def get_paths(self, source, target):
+    def get_shortest_paths(self, source, target):
         """Compute all shortest paths in the graph.
 
         Returns:

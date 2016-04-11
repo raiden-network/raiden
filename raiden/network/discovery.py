@@ -41,11 +41,11 @@ class PredictiveDiscovery(Discovery):
         # [('127.0.0.1', 36), ('127.0.0.2', 15), ...]
         for entry in mapping:
             if len(entry) == 3:
-                start_port = entry.pop()
+                start_port = entry[-1]
             else:
                 start_port = default_start_port
 
-            (host, num_nodes) = entry
+            (host, num_nodes) = entry[:2]
 
             for i in range(num_nodes):
                 host_port = (host, start_port + i)

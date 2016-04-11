@@ -2,12 +2,10 @@
 """
 A pure python implementation of a contract responsable to open a channel.
 """
-import rlp
 from ethereum import slogging
 
-from raiden.utils import sha3
+from raiden.utils import sha3, pex
 from raiden.mtree import check_proof
-from raiden import messages
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -21,6 +19,19 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 #     Channel Opening sequence
 #     Channel Fees (i.e. Accounts w/ higher reputation could charge a fee/deposit).
 #     use channel.opened to collect reputation of an account (long lasting channels == good)
+
+
+def is_newer_transfer(transfer, sender_state):
+    """ Helper to check if `transfer` is from a newer block than
+    sender_state's lastest transfer.
+    """
+
+    last_transfer = sender_state.get('last_sent_transfer')
+
+    if last_transfer is None:
+        return True
+
+    return last_transfer.nonce < transfer.nonce
 
 
 class NettingChannelContract(object):
@@ -38,8 +49,8 @@ class NettingChannelContract(object):
     def __init__(self, asset_address, netcontract_address, address_A, address_B):
         log.debug(
             'creating nettingchannelcontract',
-            a=address_A.encode('hex'),
-            b=address_B.encode('hex'),
+            a=pex(address_A),
+            b=pex(address_B),
         )
 
         self.asset_address = asset_address
@@ -105,7 +116,7 @@ class NettingChannelContract(object):
 
         if address not in self.participants:
             msg = 'The address {address} is not a participant of this contract'.format(
-                address=address.encode('hex'),
+                address=pex(address),
             )
             raise ValueError(msg)
 
@@ -135,19 +146,6 @@ class NettingChannelContract(object):
             their own balance are counted, because they could sign something
             for the other party to blame it.
         """
-
-        def is_newer_transfer(transfer, sender_state):
-            """ Helper to check if `transfer` is from a newer block than
-            sender_state's lastest transfer.
-            """
-
-            last_transfer = sender_state.get('last_sent_transfer')
-
-            if last_transfer is None:
-                return True
-
-            return last_transfer.nonce < transfer.nonce
-
         if sender not in self.participants:
             raise ValueError(
                 'Sender is not a participant of this contract, he cannot close '
@@ -158,7 +156,7 @@ class NettingChannelContract(object):
             raise ValueError('last_sent_transfers cannot have more than 2 items.')
 
         # keep the latest claim
-        for transfer in last_sent_transfers:  # fixme rlp encoded
+        for transfer in last_sent_transfers:
             if transfer.sender not in self.participants:
                 raise ValueError('Invalid tansfer, sender is not a participant')
 
@@ -190,7 +188,7 @@ class NettingChannelContract(object):
             partner_state['unlocked'].append(locked)
 
         if self.closed is None:
-            log.debug('closing contract', netcontract_address=self.netcontract_address.encode('hex'))
+            log.debug('closing contract', netcontract_address=pex(self.netcontract_address))
             self.closed = ctx['block_number']
 
     def settle(self, ctx):

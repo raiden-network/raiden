@@ -384,7 +384,7 @@ class LockedTransfer(SignedMessage):
 
         self.lock = lock
 
-    def to_mediatedtransfer(self, target, fee=0, initiator=''):
+    def to_mediatedtransfer(self, target, initiator='', fee=0):
         return MediatedTransfer(
             self.nonce,
             self.asset,
@@ -395,6 +395,16 @@ class LockedTransfer(SignedMessage):
             target,
             initiator,
             fee,
+        )
+
+    def to_canceltransfer(self):
+        return CancelTransfer(
+            self.nonce,
+            self.asset,
+            self.balance,
+            self.recipient,
+            self.locksroot,
+            self.lock,
         )
 
     @staticmethod
@@ -512,19 +522,53 @@ class MediatedTransfer(LockedTransfer):
 
 
 class CancelTransfer(LockedTransfer):
-
-    """
-    gracefully cancels a transfer by reversing it
-    indicates that no route could be found
+    """ Gracefully cancels a transfer by reversing it, indicates that no route
+    could be found.
     """
     cmdid = messages.CANCELTRANSFER
 
+    @staticmethod
+    def unpack(packed):
+        lock = Lock(
+            packed.amount,
+            packed.expiration,
+            packed.hashlock,
+        )
+
+        locked_transfer = CancelTransfer(
+            packed.nonce,
+            packed.asset,
+            packed.balance,
+            packed.recipient,
+            packed.locksroot,
+            lock,
+        )
+        locked_transfer.signature = packed.signature
+        return locked_transfer
+
+    def pack(self, packed):
+        packed.nonce = self.nonce
+        packed.asset = self.asset
+        packed.balance = self.balance
+        packed.recipient = self.recipient
+        packed.locksroot = self.locksroot
+
+        lock = self.lock
+        packed.amount = lock.amount
+        packed.expiration = lock.expiration
+        packed.hashlock = lock.hashlock
+
+        packed.signature = self.signature
+
 
 class TransferTimeout(SignedMessage):
+    """ Indicates that timeout happened during mediated transfer.
 
-    """
-    Indicates that timeout happened during mediated transfer.
-    Transfer will not be completed.
+    This message is used when a node in a mediated chain doesn't consider any
+    of it's following nodes available. If node `A` is trying to send a transfer
+    to `D` throught `B1`, if `B1` consider all candidates for `c` unavailable
+    it will send a TransferTimeout back to `A`. `A` can try all other
+    candidates for `b` until it considers all it's paths unavailable.
     """
     cmdid = messages.TRANSFERTIMEOUT
 
@@ -549,10 +593,7 @@ class TransferTimeout(SignedMessage):
 
 
 class ConfirmTransfer(SignedMessage):
-
-    """
-    `ConfirmTransfer` which signs, that `target` has received a transfer.
-    """
+    """ `ConfirmTransfer` which signs, that `target` has received a transfer. """
     cmdid = messages.CONFIRMTRANSFER
 
     def __init__(self, hashlock):
@@ -579,6 +620,8 @@ CMDID_TO_CLASS = {
     messages.SECRETREQUEST: SecretRequest,
     messages.SECRET: Secret,
     messages.DIRECTTRANSFER: DirectTransfer,
+    # LockedTransfer is not intended to be sent across the wire, it is a
+    # "marker" for messages with locks
     # messages.LOCKEDTRANSFER: LockedTransfer,
     messages.MEDIATEDTRANSFER: MediatedTransfer,
     messages.CANCELTRANSFER: CancelTransfer,
