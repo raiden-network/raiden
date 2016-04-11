@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-from raiden.app import create_network
+from raiden.tests.utils import create_network
 from raiden.blockchain.net_contract import NettingChannelContract
 from raiden.mtree import check_proof, merkleroot
 from raiden.tests.utils import setup_messages_cb

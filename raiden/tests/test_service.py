@@ -3,7 +3,7 @@ import gevent
 
 from ethereum import slogging
 
-from raiden.app import create_network
+from raiden.tests.utils import create_network
 from raiden.messages import Ping, Ack, decode
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.network.transport import UnreliableTransport, UDPTransport

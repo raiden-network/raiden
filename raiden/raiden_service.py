@@ -60,55 +60,71 @@ class RaidenService(object):
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
-    def setup_assets(self, asset_list, min_locktime):
-        """ For each `asset` in `asset_list` create a corresponding
-        `AssetManager`, and for each open channel that this node has create a
-        corresponding `Channel`.
+    def setup_asset(self, asset_address, min_locktime):
+        """ Initialize a `AssetManager`, and for each open channel that this
+        node has create a corresponding `Channel`.
 
         Args:
-            asset_list (List[address]): A list of asset addresses that need to
-            be considered.
+            asset_address (address): A list of asset addresses that need to
+                be considered.
+            min_locktime (int): Minimum number of blocks required for the
+                settling of a netting contract.
         """
-        for asset_address in asset_list:
-            # create network graph for contract
+        netting_address = self.chain.nettingaddresses_by_asset_participant(
+            asset_address,
+            self.address,
+        )
+
+        asset_manager = self.get_or_create_asset_manager(asset_address)
+
+        for nettingcontract_address in netting_address:
+            self.setup_channel(
+                asset_manager,
+                asset_address,
+                nettingcontract_address,
+                min_locktime,
+            )
+
+    def get_or_create_asset_manager(self, asset_address):
+        """ Return the AssetManager for the given `asset_address`. """
+        if asset_address not in self.assetmanagers:
             edges = self.chain.addresses_by_asset(asset_address)
             channel_graph = ChannelGraph(edges)
 
             asset_manager = AssetManager(self, asset_address, channel_graph)
             self.assetmanagers[asset_address] = asset_manager
 
-            netting_address = self.chain.nettingaddresses_by_asset_participant(
-                asset_address,
-                self.address,
-            )
+        return self.assetmanagers[asset_address]
 
-            for nettingcontract_address in netting_address:
-                channel_details = self.chain.netting_contract_detail(
-                    asset_address,
-                    nettingcontract_address,
-                    self.address,
-                )
+    def setup_channel(self, asset_manager, asset_address, nettingcontract_address, min_locktime):
+        """ Initialize the Channel for the given netting contract. """
 
-                our_state = ChannelEndState(
-                    self.address,
-                    channel_details['our_balance'],
-                )
+        channel_details = self.chain.netting_contract_detail(
+            asset_address,
+            nettingcontract_address,
+            self.address,
+        )
 
-                partner_state = ChannelEndState(
-                    channel_details['partner_address'],
-                    channel_details['partner_balance'],
-                )
+        our_state = ChannelEndState(
+            self.address,
+            channel_details['our_balance'],
+        )
 
-                channel = Channel(
-                    self.chain,
-                    asset_address,
-                    nettingcontract_address,
-                    our_state,
-                    partner_state,
-                    min_locktime=min_locktime,
-                )
+        partner_state = ChannelEndState(
+            channel_details['partner_address'],
+            channel_details['partner_balance'],
+        )
 
-                asset_manager.add_channel(channel_details['partner_address'], channel)
+        channel = Channel(
+            self.chain,
+            asset_address,
+            nettingcontract_address,
+            our_state,
+            partner_state,
+            min_locktime=min_locktime,
+        )
+
+        asset_manager.add_channel(channel_details['partner_address'], channel)
 
     def sign(self, msg):
         assert isinstance(msg, messages.SignedMessage)
