@@ -22,7 +22,12 @@ DEFAULT_DEPOSIT = 2 ** 240
 
 
 class App(object):  # pylint: disable=too-few-public-methods
-    default_config = dict(host='', port=INITIAL_PORT, privkey='')
+    default_config = dict(
+        host='',
+        port=INITIAL_PORT,
+        privkey='',
+        min_locktime=10,
+    )
 
     def __init__(self, config, chain, discovery, transport_class=DummyTransport):
         self.config = config
@@ -56,8 +61,8 @@ def print_channel_count(chain_service, asset, apps):
     log.debug('total count of channels:', count=count)
 
 
-def create_channels(chain_service, assets_list, apps, channels_per_node,
-                    deposit=DEFAULT_DEPOSIT):
+def create_network_channels(blockchain_service, assets_list, apps,
+                            channels_per_node, deposit=DEFAULT_DEPOSIT):
     """ For each asset create `channel_per_node` channels for each app in `apps`.
 
     This function will instantiate the requested number of mock contracts
@@ -89,7 +94,7 @@ def create_channels(chain_service, assets_list, apps, channels_per_node,
         return app.raiden.address
 
     def sort_by_channelcount(asset, app):
-        addresses = chain_service.nettingaddresses_by_asset_participant(
+        addresses = blockchain_service.nettingaddresses_by_asset_participant(
             asset,
             app.raiden.address,
         )
@@ -100,7 +105,7 @@ def create_channels(chain_service, assets_list, apps, channels_per_node,
     for asset_address, curr_app in product(assets_list, sorted(apps, key=sort_by_address)):
         curr_address = curr_app.raiden.address
 
-        contracts_addreses = chain_service.nettingaddresses_by_asset_participant(
+        contracts_addreses = blockchain_service.nettingaddresses_by_asset_participant(
             asset_address,
             curr_address,
         )
@@ -110,20 +115,20 @@ def create_channels(chain_service, assets_list, apps, channels_per_node,
         other_apps.remove(curr_app)
 
         for address in contracts_addreses:
-            peer_address = chain_service.partner(asset_address, address, curr_address)
+            peer_address = blockchain_service.partner(asset_address, address, curr_address)
 
             for app in other_apps:
                 if app.raiden.address == peer_address:
                     other_apps.remove(app)
 
-        print_channel_count(chain_service, asset_address, apps)
+        print_channel_count(blockchain_service, asset_address, apps)
 
         # create and initialize the missing channels
         while len(contracts_addreses) < channels_per_node:
             app = sorted(other_apps, key=lambda app: sort_by_channelcount(asset_address, app))[0]  # pylint: disable=cell-var-from-loop
             other_apps.remove(app)
 
-            netcontract_address = chain_service.new_netting_contract(
+            netcontract_address = blockchain_service.new_netting_contract(
                 asset_address,
                 app.raiden.address,
                 curr_app.raiden.address,
@@ -131,7 +136,7 @@ def create_channels(chain_service, assets_list, apps, channels_per_node,
             contracts_addreses.append(netcontract_address)
 
             for address in [curr_app.raiden.address, app.raiden.address]:
-                chain_service.deposit(
+                blockchain_service.deposit(
                     asset_address,
                     netcontract_address,
                     address,
@@ -173,7 +178,7 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
 
     # globals
     discovery = PredictiveDiscovery((
-        (host, half_of_nodes)
+        (host, half_of_nodes, INITIAL_PORT)
         for host in client_hosts
     ))
 
@@ -205,9 +210,59 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
     asset_list = blockchain_service.asset_addresses
     assert len(asset_list) == num_assets
 
-    create_channels(blockchain_service, asset_list, apps, channels_per_node)
+    create_network_channels(blockchain_service, asset_list, apps, channels_per_node)
 
     for app in apps:
-        app.raiden.setup_assets(asset_list)
+        app.raiden.setup_assets(asset_list, app.config['min_locktime'])
+
+    return apps
+
+
+def create_chain_network(num_hops, deposit=None, transport_class=None):
+    """ Create a network with `num_hops` were all nodes are connect but only
+    through a single channel. """
+    host = '127.0.0.10'
+    deposit = deposit or DEFAULT_DEPOSIT
+
+    random.seed(42)
+
+    discovery = PredictiveDiscovery((
+        (host, num_hops, INITIAL_PORT),
+    ))
+
+    blockchain_service = BlockChainServiceMock()
+    asset_address = sha3('asset')[:20]
+    blockchain_service.new_channel_manager_contract(asset_address=asset_address)
+
+    apps = []
+    for idx in range(num_hops):
+        port = INITIAL_PORT + idx
+
+        app = mk_app(
+            blockchain_service,
+            discovery,
+            transport_class or UDPTransport,
+            port=port,
+            host=host,
+        )
+        apps.append(app)
+
+    for first, second in zip(apps[:-1], apps[1:]):
+        netcontract_address = blockchain_service.new_netting_contract(
+            asset_address,
+            first.raiden.address,
+            second.raiden.address,
+        )
+
+        for address in [first.raiden.address, second.raiden.address]:
+            blockchain_service.deposit(
+                asset_address,
+                netcontract_address,
+                address,
+                deposit,
+            )
+
+    for app in apps:
+        app.raiden.setup_assets([asset_address], app.config['min_locktime'])
 
     return apps
