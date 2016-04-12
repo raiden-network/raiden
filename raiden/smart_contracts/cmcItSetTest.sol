@@ -113,26 +113,12 @@ contract Wrapper
     }
 
     function getAllKeys() returns (address[] addresses) {
-        address[] arr;
         for (var i = IterableMapping.iterate_start(data); IterableMapping.iterate_valid(data, i); i = IterableMapping.iterate_next(data, i)) {
             var(key, value) = IterableMapping.iterate_get(data, i);
-            arr.push(address(key));
+            addresses[i] = key;
         }
-        addresses = arr; // this seems to not be working. What is the correct way to do this?
     }
 
-    /// This is not a helper method for this data structure. Use for ncc data structure
-    /*function getValues(address v) returns (address[] values) {*/
-        /*for (var i = IterableMapping.iterate_start(data); IterableMapping.iterate_valid(data, i); i = IterableMapping.iterate_next(data, i)) {*/
-            /*var (key, value) = IterableMapping.iterate_get(data, i);*/
-            /*// should we return just the keys to the contracts or entire contracts?*/
-            /*// The way this check is executed depends on the datastructure we decide*/
-            /*// to use for participants.*/
-            /*if (value.participants[0].addr == adr) channels.push(key);*/
-            /*else if (value.participants[1].addr == adr) channels.push(key);*/
-        /*}*/
-        /*if (channels.length == 0) throw; //maybe find other way to show that no such channel exists*/
-    /*}*/
 }
 
 contract cmcItSetTest {
@@ -172,14 +158,15 @@ contract cmcItSetTest {
         return;
     }
     
-    // TODO 
+    // THIS TEST CANNOT WORK SINCE DYNAMIC ARRAYS CANNOT BE PASSED
+    // AROUND BETWEEN CONTRACTS.
     function testGetAllAddresses() returns (bool success) {
         ChannelManagerContract cmc = new ChannelManagerContract(ASSET_ADDRESS);
         Wrapper wrp = new Wrapper();
         wrp.insert(TEST_ADDRESS1, cmc);
         wrp.insert(TEST_ADDRESS3, cmc);
         //address[] a = wrp.getAllKeys(); // not working
-        //success = a.lengthOf() == 2;
+        //success = a.length == 2;
         return;
     }
 }
