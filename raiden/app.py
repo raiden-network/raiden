@@ -61,8 +61,8 @@ def main():
 
     args = parser.parse_args()
 
-    host_port = args.rpc_server.split(':')
-    host_port = (host_port[0], int(host_port[1]))
+    rpc_connection = args.rpc_server.split(':')
+    rpc_connection = (rpc_connection[0], int(rpc_connection[1]))
     config_file = args.config_file
     host = args.host
     port = args.port
@@ -77,7 +77,7 @@ def main():
         print('Missing "privkey" in the configuration file, cannot proceed')
         sys.exit(1)
 
-    blockchain_server = BlockChainService(host_port, args.registry_address)
+    blockchain_server = BlockChainService(rpc_connection, args.registry_address)
     discovery = Discovery()
 
     for node in config['nodes']:
