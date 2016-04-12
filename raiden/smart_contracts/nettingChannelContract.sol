@@ -9,15 +9,13 @@ contract NettingContract {
     struct Unlocked {} // TODO
     struct Participant
     {
-        // address addr
+        address addr;
         uint deposit;
         Transfer[] lastSentTransfers;
         //Unlocked unlocked;
     }
-    mapping(address => Participant) public participants;
-
-    /*Participant[2] participants; // Might make more sense to use an array like this for participants */
-                                 /*// since it only holds two.*/
+    /*mapping(address => Participant) public participants;*/
+    Participant[2] participants; // We only have two participants at all times
 
     event ChannelOpened(address assetAdr); // TODO
     event ChannelClosed(); // TODO
@@ -30,15 +28,23 @@ contract NettingContract {
         assetAddress = assetAdr;
     }
 
+    function atIndex(address addr) returns (uint index) {
+        if (addr == participants[0].addr) return 0;
+        if (addr == participants[1].addr) return 1;
+    }
+
     /// @notice deposit(address, uint) to deposit amount to a participant.
     /// @dev Deposit an amount to a participating address.
     /// @param addr (address) the address of the receiving party
     /// @param amount (uint) the amount to be deposited to the address
-    function deposit(address addr, uint amount) {
-        /*if (addr not in participants) throw; // Isn't currently working. Need datastructure for this*/
-        /*if (msg.sender.balance < amount) throw;*/
-        /*participants[addr].deposit += amount;*/
-        /*if(isOpen() && opened != 0) open();*/
+    function deposit(uint amount) {
+        if (msg.sender != participants[0].addr && 
+            msg.sender != participants[1].addr) throw;
+        if (msg.sender.balance < amount) throw;
+        participants[atIndex(msg.sender)].deposit += amount;
+        // update balance of sender?
+        msg.sender.balance -= amount;
+        if(isOpen() && opened == 0) open();
     }
 
 
@@ -58,8 +64,8 @@ contract NettingContract {
     /// @dev Get the other participating party of the channel
     /// @return p (address) the partner of the calling party
     function partner() constant returns (address p) {
-        // If addr not in participants throw
-        // Return the address in participants that is not msg.sender
+        if (msg.sender == participants[0].addr) return participants[1].addr;
+        else return participants[0].addr;
     }
 
 
@@ -67,11 +73,9 @@ contract NettingContract {
     /// @dev Check if a channel is open and both parties have deposited to the channel
     /// @return open (bool) the status of the channel
     function isOpen() constant returns (bool open) {
-        // if closed is not zero
-        // and both participants have a 'deposit' value higher than zero
-        // return true else false
         if (closed == 0) throw;
-        if ()
+        if (participants[0].deposit > 0 && participants[1].deposit > 0) return true;
+        else return false;
     }
 
 

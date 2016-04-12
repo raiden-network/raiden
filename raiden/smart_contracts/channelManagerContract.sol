@@ -1,6 +1,10 @@
+import "nccItSet.sol";
+
 contract ChannelManagerContract {
+
+    IterableMappingNcc.itmap data;
+
     address assetAddress;
-    NettingContract[] nettingContracts; // need to change data structure, name persistst
 
     // Events
     // Event that triggers when a new channel is created
@@ -22,11 +26,8 @@ contract ChannelManagerContract {
     /// @param adr (address) the address
     /// @return channels (NettingContracts[]) all channels that a given address participates in.
     function nettingContractsByAddress(address adr) returns (NettingContract[] channels){
-        for (var i = IterableMapping.iterate_start(data); IterableMapping.iterate_valid(data, i); i = IterableMapping.iterate_next(data, i)) {
-            var (key, value) = IterableMapping.iterate_get(data, i);
-            // should we return just the keys to the contracts or entire contracts?
-            // The way this check is executed depends on the datastructure we decide
-            // to use for participants.
+        for (var i = IterableMappingNcc.iterate_start(data); IterableMappingNcc.iterate_valid(data, i); i = IterableMappingNcc.iterate_next(data, i)) {
+            var (key, value) = IterableMappingNcc.iterate_get(data, i);
             if (value.participants[0].addr == adr) channels.push(key);
             else if (value.participants[1].addr == adr) channels.push(key);
         }
@@ -50,8 +51,8 @@ contract ChannelManagerContract {
     /// @dev Add a NettingContract to nettingContracts if it doesn't already exist.
     /// @param channel (NettingContract) the payment channel.
     function add(bytes32 key, NettingContract channel) {
-        if (IterableMapping.contains(data, key)) throw;
-        IterableMapping.insert(data, key, channel);
+        if (IterableMappingNcc.contains(data, key)) throw;
+        IterableMappingNcc.insert(data, key, channel);
     }
 
 
@@ -59,12 +60,12 @@ contract ChannelManagerContract {
     /// @dev Get the channel of two parties
     /// @param adrA (address) address of one party.
     /// @param adrB (address) address of other party.
-    /// @return channel (NettingContract) the  key of the NettingContract of the two parties.
+    /// @return channel (NettingContract) the value of the NettingContract of the two parties.
     function get(address adrA, address adrB) returns (NettingContract channel){
         ky = key(adrA, adrB);
-        if (!IterableMapping.contains(data, ky)) throw; //handle if no such channel exists
-        uint index = IterableMapping.atIndex(data, ky);
-        var (k, v) = IterableMapping.iterate_get(data, index - 1);
+        if (!IterableMappingNcc.contains(data, ky)) throw; //handle if no such channel exists
+        uint index = IterableMappingNcc.atIndex(data, ky);
+        var (k, v) = IterableMappingNcc.iterate_get(data, index - 1);
         channel = v;
     }
 

@@ -1,10 +1,9 @@
 // For iterable mapping
 import "cmcItSet.sol";
 
-contract BlockChain {
+contract Registry {
     IterableMappingCMC.itmap data; // Might be the data structure to use
 
-    address assetAddres;
 
     /// @notice addAsset(address) to add a new ChannelManagerContract to channelManagerContracts
     /// with the assetAddress as key.
@@ -37,13 +36,10 @@ contract BlockChain {
     /// @dev Get all assetAddresses in the collection.
     /// @return assetAddress (address[]) an array of all assetAddresses
     function assetAddresses() returns (address[] assetAddresses) {
-        // get all keys(assetAddress) in the collection and return them in an array
-        address[] addresses;
         for (var i = IterableMappingCMC.iterate_start(data); IterableMappingCMC.iterate_valid(data, i); i = IterableMappingCMC.iterate_next(data, i)) {
             var (key, value) = IterableMappingCMC.iterate_get(data, i);
-            addresses.push(key);;
+            assetAddresses.push(key);;
         }
-        assetAddresses = addresses;
     }
 
 

@@ -93,7 +93,7 @@ contract Wrapper
     }
     
     function lengthOf() returns (uint l) {
-        l = data.keys.length;
+        l = data.keys.length - 1;
     }
 
     function get(bytes32 k) returns (bytes32 key, NettingContract value) {
@@ -109,58 +109,74 @@ contract Wrapper
         i = IterableMapping.atIndex(data, k);
     }
 
-    function getAllKeys() returns (address[] addresses) {
-        address[] arr;
+    function getAllKeys() returns (bytes32[] keys) {
+        bytes32[] arr;
         for (var i = IterableMapping.iterate_start(data); IterableMapping.iterate_valid(data, i); i = IterableMapping.iterate_next(data, i)) {
             var(key, value) = IterableMapping.iterate_get(data, i);
-            arr.push(address(key));
+            arr.push(key);
         }
-        addresses = arr; // this seems to not be working. What is the correct way to do this?
+        keys = arr;
     }
 
-    /// This is not a helper method for this data structure. Use for ncc data structure
-    /*function getValues(address v) returns (address[] values) {*/
-        /*for (var i = IterableMapping.iterate_start(data); IterableMapping.iterate_valid(data, i); i = IterableMapping.iterate_next(data, i)) {*/
-            /*var (key, value) = IterableMapping.iterate_get(data, i);*/
-            /*// should we return just the keys to the contracts or entire contracts?*/
-            /*// The way this check is executed depends on the datastructure we decide*/
-            /*// to use for participants.*/
-            /*if (value.participants[0].addr == adr) channels.push(key);*/
-            /*else if (value.participants[1].addr == adr) channels.push(key);*/
-        /*}*/
-        /*if (channels.length == 0) throw; //maybe find other way to show that no such channel exists*/
-    /*}*/
+    function getValues(address v) returns (NettingContract[] values) {
+        for (var i = IterableMapping.iterate_start(data); IterableMapping.iterate_valid(data, i); i = IterableMapping.iterate_next(data, i)) {
+            uint len;
+            var (key, value) = IterableMapping.iterate_get(data, i);
+            // Size of participants is 2
+            for (var j = 0; j < 2; j++) {
+                var(addr, dep) = value.participants(j);
+                if (addr == v) {
+                    values[len] = value;
+                    len++;
+                }
+            }
+        }
+        if (values.length == 0) throw; //maybe find other way to show that no such channel exists
+    }
 }
 
 contract NettingContractTest {
-    bytes32 constant TEST_KEY2 = 0xBEEEEF;
     bytes32 constant TEST_KEY3 = 0x654321;
     address constant TEST_ADDRESS1 = 0x123456;
     address constant TEST_ADDRESS2 = 0x654321;
+    address constant TEST_ADDRESS3 = 0xB00B123;
     address constant ASSET_ADDRESS = 0xDEADBEEF;
     bytes32 constant TEST_KEY1 = sha3(TEST_ADDRESS1, TEST_ADDRESS2);
+    bytes32 constant TEST_KEY2 = sha3(TEST_ADDRESS1, TEST_ADDRESS3);
 
-
-    function testInsert() returns (bool isIn, bool has, bool hasPar) {
+    function testInsert() returns (bool isIn, bool has, bool hasPar, bool hasDep) {
         NettingContract nc = new NettingContract(ASSET_ADDRESS);
         Wrapper wrp = new Wrapper();
         wrp.insert(TEST_KEY1, nc);
         isIn = wrp.contains(TEST_KEY1);
         var(k, c) = wrp.get(TEST_KEY1);
         has = k == TEST_KEY1 && c.assetAddress() == ASSET_ADDRESS;
-        hasPar = c.participants[0].addr == TEST_ADDRESS1;
+        var(addr0, deposit0) = c.participants(0);
+        var(addr1, deposit1) = c.participants(1);
+        hasPar = addr0 == TEST_ADDRESS1 && addr1 == TEST_ADDRESS2;
+        hasDep = deposit0 == 10 && deposit1 == 10;
     }
     
     function testRemove() returns (bool removed, bool isIn, bool exist) {
         NettingContract nc = new NettingContract(ASSET_ADDRESS);
         Wrapper wrp = new Wrapper();
         wrp.insert(TEST_KEY1, nc);
-        wrp.lengthOf() == 2; //why is lenght 2?
+        wrp.lengthOf() == 1;
         exist = wrp.contains(TEST_KEY1);
         wrp.remove(TEST_KEY1);
-        removed = wrp.lengthOf() == 1;
+        removed = wrp.lengthOf() == 0;
         isIn = false == wrp.contains(TEST_KEY1);
         return;
+    }
+    
+    // Will not work for testing, since dynamic arrays cannot be passed
+    // between contracts or libraries
+    function testGetValues() returns (bool yay) {
+        NettingContract nc = new NettingContract(ASSET_ADDRESS);
+        Wrapper wrp = new Wrapper();
+        wrp.insert(TEST_KEY1, nc);
+        wrp.insert(TEST_KEY2, nc);
+        //NettingContract[] a = wrp.getValues(TEST_ADDRESS1);
     }
 
 }
@@ -200,9 +216,7 @@ contract NettingContract {
         assetAddress = assetAdr;
         participants[0].addr = TEST_ADDRESS1;
         participants[1].addr = TEST_ADDRESS2;
-    }
-    
-    function testPar() returns (bool test) {
-        test = participants[0].addr == TEST_ADDRESS1;
+        participants[0].deposit = 10;
+        participants[1].deposit = 10;
     }
 }
