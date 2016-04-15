@@ -5,14 +5,29 @@ contract NettingContract {
     uint closed;
     uint settled;
 
-    struct Transfer {} // TODO
-    struct Unlocked {} // TODO
+    struct Transfer
+    {
+        address sender;
+        uint nonce;
+        address asset;
+        uint balance;
+        address recipient;
+        bytes32 locksroot;
+        bytes32 secret;
+    }
+    struct Unlocked 
+    {
+        // Depending on the encoded format
+        bytes32 merkleProof;
+        bytes32 lockedRlp;
+        bytes32 secret;
+    } 
     struct Participant
     {
         address addr;
         uint deposit;
-        Transfer[] lastSentTransfers;
-        //Unlocked unlocked;
+        Transfer[2] lastSentTransfers;
+        Unlocked[] unlocked;
     }
     /*mapping(address => Participant) public participants;*/
     Participant[2] participants; // We only have two participants at all times
@@ -20,6 +35,12 @@ contract NettingContract {
     event ChannelOpened(address assetAdr); // TODO
     event ChannelClosed(); // TODO
     event ChannelSettled(); // TODO
+    
+    modifier inParticipants {
+        if (msg.sender != participants[0].addr &&
+            msg.sender != participants[1].addr) throw;
+        _
+    }
 
     function NettingContract(address assetAdr) {
         opened = 0;
@@ -33,17 +54,13 @@ contract NettingContract {
         if (addr == participants[1].addr) return 1;
     }
 
+
     /// @notice deposit(address, uint) to deposit amount to a participant.
     /// @dev Deposit an amount to a participating address.
-    /// @param addr (address) the address of the receiving party
     /// @param amount (uint) the amount to be deposited to the address
-    function deposit(uint amount) {
-        if (msg.sender != participants[0].addr && 
-            msg.sender != participants[1].addr) throw;
+    function deposit(uint amount) inParticipants {
         if (msg.sender.balance < amount) throw;
         participants[atIndex(msg.sender)].deposit += amount;
-        // update balance of sender?
-        msg.sender.balance -= amount;
         if(isOpen() && opened == 0) open();
     }
 
@@ -62,8 +79,8 @@ contract NettingContract {
 
     /// @notice partner() to get the partner or other participant of the channel
     /// @dev Get the other participating party of the channel
-    /// @return p (address) the partner of the calling party
-    function partner() constant returns (address p) {
+    /// @return p (Participant) the partner of the calling party
+    function partner() returns (address p) {
         if (msg.sender == participants[0].addr) return participants[1].addr;
         else return participants[0].addr;
     }
@@ -81,14 +98,33 @@ contract NettingContract {
 
     /// @notice close(Transfer, unlocked[]) to close a channel between to parties
     /// @dev Close the channel between two parties
-    /// @param transfer (Transfer) the last sent transfer of the msg.sender
+    /// @param lsts (Transfer[]) the last sent transfer of the msg.sender
     /// @param unlckd (Unlocked) the struct containing locked data (a bit uncertain about this)
-    //function close(Transfer[] lastSentTransfers, Unlocked unlckd) {
-
+    function close(bytes32[] lsts, bytes32[] unlckd) inParticipants { //types are placeholder
+        //if (0 <= lastSentTransfers.length <= 2 != true) throw; 
+        
+        for(uint i = 0; i < lsts.length; i++ ) {
+            if (lsts[i].sender != participants[0].addr &&
+            lsts[i] != participants[1].addr) throw;
+            
+            if (participants[atIndex(lsts[i].sender)].lastSentTransfer.length == 0 ||
+                participants[atIndex(lsts[i].sender)].lastSentTransfer.nonce < lsts.nonce){
+                participants[atIndex(lsts[i].sender)].lastSentTransfer = lsts;
+            }
+        }
+        
+        // Difficult stuff. Not entirely sure about this
+        // TODO
+        // Register un-locked
+        Transfer lastSent = participants[partner(msg.sender)].lastSentTransfer;
+        
+        // mark locked
+        if (closed == 0) closed = block.number;
 
         // trigger event
-        /*ChannelClosed();*/
-    //}
+        //TODO
+        ChannelClosed();
+    }
 
 
     /// @notice settle() to settle the balance between the two parties
