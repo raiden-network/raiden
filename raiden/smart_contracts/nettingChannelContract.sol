@@ -35,6 +35,7 @@ contract NettingContract {
     event ChannelOpened(address assetAdr); // TODO
     event ChannelClosed(); // TODO
     event ChannelSettled(); // TODO
+    event ChennelSecretRevealed(); //TODO
     
     modifier inParticipants {
         if (msg.sender != participants[0].addr &&
@@ -100,7 +101,7 @@ contract NettingContract {
     /// @dev Close the channel between two parties
     /// @param lsts (Transfer[]) the last sent transfer of the msg.sender
     /// @param unlckd (Unlocked) the struct containing locked data (a bit uncertain about this)
-    function close(bytes32[] lsts, bytes32[] unlckd) inParticipants { //types are placeholder
+    function close(bytes lsts, bytes unlckd) inParticipants { //types are placeholder
         //if (0 <= lastSentTransfers.length <= 2 != true) throw; 
         
         for(uint i = 0; i < lsts.length; i++ ) {
