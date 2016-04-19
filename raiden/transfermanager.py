@@ -30,10 +30,12 @@ class TransferManager(object):
     def on_task_completed(self, task, success):
         assert isinstance(task, Task)
         del self.transfertasks[task.hashlock]
-        for cb in self.on_task_completed_callbacks:
+        # TODO: unique 'cb <-> task' assigment
+        while self.on_task_completed_callbacks:
+            cb = self.on_task_completed_callbacks.pop()
             cb(task, success)
 
-    def transfer(self, amount, target, hashlock=None, secret=None):
+    def transfer(self, amount, target, hashlock=None, secret=None, callback=None):
         if target in self.assetmanager.channels and not hashlock:
             # direct connection
             channel = self.assetmanager.channels[target]
@@ -41,6 +43,8 @@ class TransferManager(object):
             self.raiden.sign(transfer)
             channel.register_transfer(transfer)
             self.raiden.protocol.send(transfer.recipient, transfer)
+            # TODO: register callback (from API)
+
         else:
             if not (hashlock or secret):
                 secret = sha3(hex(random.getrandbits(256)))
@@ -48,6 +52,8 @@ class TransferManager(object):
             # initiate mediated transfer
             t = TransferTask(self, amount, target, hashlock,
                              expiration=None, originating_transfer=None, secret=secret)
+            if callback:
+                self.on_task_completed_callbacks.append(callback)
             t.start()
             t.join()
 

@@ -5,11 +5,13 @@ from raiden_protocol import RaidenProtocol
 from assetmanager import AssetManager
 from transfermanager import TransferManager
 from ethereum import slogging
+
 log = slogging.get_logger('service')
 
 
 class RaidenAPI(object):
-
+    # TODO: needs error-save input handling for webui!
+    # e.g. see if receiver address is valid first without causing exceptions (?)
     """
     the external interface to the service
     """
@@ -21,12 +23,12 @@ class RaidenAPI(object):
     def assets(self):
         return self.raiden.assetmanagers.keys()
 
-    def transfer(self, asset_address, amount, target):
+    def transfer(self, asset_address, amount, target, cb=None):
         assert isaddress(asset_address) and isaddress(target)
         assert asset_address in self.assets
         tm = self.raiden.assetmanagers[asset_address].transfermanager
         assert isinstance(tm, TransferManager)
-        tm.transfer(amount, target)
+        tm.transfer(amount, target, callback=cb)
 
     def request_transfer(self, asset_address, amount, target):
         assert isaddress(asset_address) and isaddress(target)
