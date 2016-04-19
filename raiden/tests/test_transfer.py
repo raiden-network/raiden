@@ -3,11 +3,6 @@ from raiden.app import create_network
 from raiden.tests.utils import setup_messages_cb, MessageLogger
 from raiden.tasks import TransferTask
 import gevent
-from raiden.web_ui import WebUI
-
-
-
-
 
 
 def test_transfer():
@@ -15,7 +10,6 @@ def test_transfer():
     a0, a1 = apps
     messages = setup_messages_cb()
     mlogger = MessageLogger()
-    web_ui_a0 = WebUI(a0.raiden.api)
 
     # channels
     am0 = a0.raiden.assetmanagers.values()[0]
@@ -32,25 +26,14 @@ def test_transfer():
     amount = 10
     target = a1.raiden.address
     assert target in am0.channels
-    # a0.raiden.api.transfer(am0.asset_address, amount, target=target)
-    web_ui_a0.transfer(am0.asset_address, amount, target,1)
+    a0.raiden.api.transfer(am0.asset_address, amount, target=target)
 
     gevent.sleep(1)
-    # callback handler
-
-    print web_ui_a0.published
-    # assert web_ui_a0.published[1] ==
 
     assert len(messages) == 2  # Transfer, Ack
     mt = decode(messages[0])
     assert isinstance(mt, Transfer)
     assert mt.balance == b1 + amount
-
-    # success for first transfer is True
-    # print a0.raiden.api.open_requests
-    # assert a0.raiden.api.sent_success[0] == True
-
-
     ma = decode(messages[1])
     assert isinstance(ma, Ack)
     assert ma.echo == mt.hash
@@ -92,7 +75,6 @@ def test_mediated_transfer():
     apps = create_network(num_nodes=10, num_assets=1, channels_per_node=2)
     a0 = apps[0]
     setup_messages_cb()
-    web_ui_a0 = WebUI(a0.raiden.api)
 
     # channels
     am0 = a0.raiden.assetmanagers.values()[0]
@@ -134,15 +116,10 @@ def test_mediated_transfer():
     # set shorter timeout for testing
     TransferTask.timeout_per_hop = 0.1
 
-    # a0.raiden.api.transfer(asset_address, amount, target)
-    web_ui_a0.transfer(asset_address, amount, target,2)
-
+    a0.raiden.api.transfer(asset_address, amount, target)
 
     gevent.sleep(1.)
 
-    # callback returned 'success = True' and publish_WAMP was called:
-    # assert web_ui_a0.published[2] == True
-    print web_ui_a0.published
     # check
     assert b_ab - amount == c_ab.balance
     assert b_ba + amount == c_ba.balance

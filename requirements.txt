@@ -8,3 +8,4 @@ networkx
 ethereum
 u-msgpack-python
 repoze.lru
+gevent-websocket>=0.9.5
