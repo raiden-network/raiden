@@ -1,16 +1,15 @@
 # -*- coding: utf8 -*-
-from __future__ import print_function
-
-import time
-
 import pytest
 
-from raiden.mtree import merkleroot
-from raiden.tests.utils import create_network
-from raiden.utils import sha3
-from raiden.messages import DirectTransfer
+from ethereum import slogging
 
-# pylint: disable=too-many-locals,too-many-statements,line-too-long
+from raiden.messages import DirectTransfer
+from raiden.tests.utils.network import create_network
+from raiden.tests.utils.transfer import assert_synched_channels
+from raiden.utils import sha3
+
+log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+slogging.configure(':debug')
 
 
 def test_setup():
@@ -39,19 +38,12 @@ def test_transfer():
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
 
-    our_state0 = channel0.our_state
-    our_state1 = channel1.our_state
-
-    partner_state0 = channel0.partner_state
-    partner_state1 = channel1.partner_state
-
-    address0 = our_state0.address
-    address1 = our_state1.address
-
-    balance0 = our_state0.balance
-    balance1 = our_state1.balance
+    initial_balance0 = channel0.initial_balance
+    initial_balance1 = channel1.initial_balance
 
     # check agreement on addresses
+    address0 = channel0.our_state.address
+    address1 = channel1.our_state.address
     assert channel0.asset_address == channel1.asset_address
     assert app0.raiden.assetmanagers.keys()[0] == app1.raiden.assetmanagers.keys()[0]
     assert app0.raiden.assetmanagers.values()[0].channels.keys()[0] == app1.raiden.address
@@ -68,37 +60,15 @@ def test_transfer():
         channel1.nettingcontract_address,
         address1,
     )
-    assert our_state0.initial_balance == details0['our_balance']
-    assert our_state1.initial_balance == details1['our_balance']
+    assert initial_balance0 == details0['our_balance']
+    assert initial_balance1 == details1['our_balance']
 
-    # check balances
-    assert our_state0.balance == details0['our_balance']
-    assert our_state1.balance == details1['our_balance']
-    assert our_state0.distributable(partner_state0) == our_state0.balance
-    assert our_state1.distributable(partner_state1) == our_state1.balance
-    assert our_state0.locked.outstanding == 0
-    assert our_state1.locked.outstanding == 0
-    assert our_state0.locked.root == ''
-    assert our_state1.locked.root == ''
-
-    # check hashlock are empty
-    assert len(our_state0.locked) == 0
-    assert len(our_state1.locked) == 0
-    assert len(partner_state0.locked) == 0
-    assert len(partner_state1.locked) == 0
-
-    # check the mirrors
-    assert our_state0.balance == partner_state1.balance
-    assert our_state1.balance == partner_state0.balance
-    assert our_state0.locked.outstanding == partner_state1.locked.outstanding
-    assert our_state1.locked.outstanding == partner_state0.locked.outstanding
-    assert our_state0.locked.root == partner_state1.locked.root
-    assert our_state1.locked.root == partner_state0.locked.root
-    assert our_state0.distributable(partner_state0) == partner_state1.distributable(our_state1)
-    assert partner_state0.distributable(our_state0) == our_state1.distributable(partner_state1)
+    assert_synched_channels(
+        channel0, initial_balance0, [],
+        channel1, initial_balance1, [],
+    )
 
     amount = 10
-    assert amount < our_state0.distributable(partner_state0)
 
     direct_transfer = channel0.create_directtransfer(amount=amount)
     app0.raiden.sign(direct_transfer)
@@ -106,153 +76,38 @@ def test_transfer():
     channel1.register_transfer(direct_transfer)
 
     # check the contract is intact
-    details0 = app0.raiden.chain.netting_contract_detail(
+    assert details0 == app0.raiden.chain.netting_contract_detail(
         channel0.asset_address,
         channel0.nettingcontract_address,
         address0,
     )
-    details1 = app0.raiden.chain.netting_contract_detail(
+    assert details1 == app0.raiden.chain.netting_contract_detail(
         channel1.asset_address,
         channel1.nettingcontract_address,
         address1,
     )
-    assert our_state0.initial_balance == details0['our_balance']
-    assert our_state1.initial_balance == details1['our_balance']
+    assert channel0.initial_balance == initial_balance0
+    assert channel1.initial_balance == initial_balance1
 
-    # check new balances
-    assert our_state0.balance == balance0 - amount
-    assert our_state1.balance == balance1 + amount
-    assert our_state0.distributable(partner_state0) == our_state0.balance
-    assert our_state1.distributable(partner_state1) == our_state1.balance
-    assert our_state0.locked.outstanding == 0
-    assert our_state1.locked.outstanding == 0
-    assert our_state0.locked.root == ''
-    assert our_state1.locked.root == ''
-
-    # check hashlock are empty
-    assert len(our_state0.locked) == 0
-    assert len(our_state1.locked) == 0
-    assert len(partner_state0.locked) == 0
-    assert len(partner_state1.locked) == 0
-
-    # re-check the mirrors
-    assert our_state0.balance == partner_state1.balance
-    assert our_state1.balance == partner_state0.balance
-    assert our_state0.locked.outstanding == partner_state1.locked.outstanding
-    assert our_state1.locked.outstanding == partner_state0.locked.outstanding
-    assert our_state0.locked.root == partner_state1.locked.root
-    assert our_state1.locked.root == partner_state0.locked.root
-    assert our_state0.distributable(partner_state0) == partner_state1.distributable(our_state1)
-    assert partner_state0.distributable(our_state0) == our_state1.distributable(partner_state1)
-
-
-def test_register_invalid_transfer():
-    apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
-
-    channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
-    channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
-
-    our_state0 = channel0.our_state
-    our_state1 = channel1.our_state
-
-    balance0 = channel0.our_state.balance
-    balance1 = channel1.our_state.balance
-
-    partner_state0 = channel0.partner_state
-    partner_state1 = channel1.partner_state
-
-    amount = 10
-    expiration = app0.raiden.chain.block_number + 100
-
-    secret = 'secret'
-    hashlock = sha3(secret)
-
-    transfer1 = channel0.create_lockedtransfer(
-        amount=amount,
-        expiration=expiration,
-        hashlock=hashlock,
+    assert_synched_channels(
+        channel0, initial_balance0 - amount, [],
+        channel1, initial_balance1 + amount, [],
     )
-
-    # registering a locked transfer from channel0 to channel1, this will add to
-    # the channel1's LockedTransfers and the locked amount can be claimed when
-    # the lock is received
-    app0.raiden.sign(transfer1)
-    channel0.register_transfer(transfer1)
-    channel1.register_transfer(transfer1)
-
-    locked_root = merkleroot([
-        sha3(tx.lock.asstring)
-        for tx in channel1.our_state.locked.locked.values()
-    ])
-
-    transfer2 = DirectTransfer(
-        nonce=our_state0.nonce,
-        asset=channel0.asset_address,
-        balance=partner_state0.balance + balance0 + amount,
-        recipient=partner_state0.address,
-        locksroot=partner_state0.locked.root,
-        secret='secret',
-    )
-    app0.raiden.sign(transfer2)
-
-    # this will fail because the allowance is incorrect
-    with pytest.raises(Exception):
-        channel0.register_transfer(transfer2)
-
-    with pytest.raises(Exception):
-        channel1.register_transfer(transfer2)
-
-    # check balances
-    assert our_state0.balance == balance0
-    assert our_state1.balance == balance1
-    assert our_state0.distributable(partner_state0) == balance0 - amount
-    assert our_state1.distributable(partner_state1) == balance1
-    assert our_state0.locked.outstanding == 0
-    assert our_state1.locked.outstanding == amount
-    assert our_state0.locked.root == ''
-    assert our_state1.locked.root == locked_root
-
-    # check hashlock
-    assert len(our_state0.locked) == 0
-    assert len(our_state1.locked) == 1
-    assert len(partner_state0.locked) == 1
-    assert len(partner_state1.locked) == 0
-    assert hashlock in partner_state0.locked
-    assert hashlock in our_state1.locked
-    # the locked transfer is only registered in the receiving side
-    assert hashlock not in our_state0.locked
-    assert hashlock not in partner_state1.locked
-
-    # check the mirrors
-    assert our_state0.balance == partner_state1.balance
-    assert our_state1.balance == partner_state0.balance
-    assert our_state0.locked.outstanding == partner_state1.locked.outstanding
-    assert our_state1.locked.outstanding == partner_state0.locked.outstanding
-    assert our_state0.locked.root == partner_state1.locked.root
-    assert our_state1.locked.root == partner_state0.locked.root
-    assert our_state0.distributable(partner_state0) == partner_state1.distributable(our_state1)
-    assert partner_state0.distributable(our_state0) == our_state1.distributable(partner_state1)
 
 
 def test_locked_transfer():
+    """ Simple locked transfer test. """
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
 
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
 
-    our_state0 = channel0.our_state
-    our_state1 = channel1.our_state
-
-    partner_state0 = channel0.partner_state
-    partner_state1 = channel1.partner_state
-
-    balance0 = channel0.our_state.balance
-    balance1 = channel1.our_state.balance
+    balance0 = channel0.balance
+    balance1 = channel1.balance
 
     amount = 10
-    expiration = app0.raiden.chain.block_number + 100
+    expiration = app0.raiden.chain.block_number + 15  # min_locktime <= expiration < contract.lock_time
 
     secret = 'secret'
     hashlock = sha3(secret)
@@ -266,74 +121,45 @@ def test_locked_transfer():
     channel0.register_transfer(locked_transfer)
     channel1.register_transfer(locked_transfer)
 
-    locked_root = merkleroot([
-        sha3(tx.lock.asstring)
-        for tx in channel1.our_state.locked.locked.values()
-    ])
+    # don't update balances but update the locked/distributable/outstanding
+    # values
+    assert_synched_channels(
+        channel0, balance0, [locked_transfer.lock],
+        channel1, balance1, [],
+    )
 
-    # check balances
-    assert our_state0.balance == balance0
-    assert our_state1.balance == balance1
-    assert our_state0.distributable(partner_state0) == balance0 - amount
-    assert our_state1.distributable(partner_state1) == balance1
-    assert our_state0.locked.outstanding == 0
-    assert our_state1.locked.outstanding == amount
-    assert our_state0.locked.root == ''
-    assert our_state1.locked.root == locked_root
-
-    # check hashlock
-    assert len(our_state0.locked) == 0
-    assert len(our_state1.locked) == 1
-    assert len(partner_state0.locked) == 1
-    assert len(partner_state1.locked) == 0
-    assert hashlock in partner_state0.locked
-    assert hashlock in our_state1.locked
-    # the locked transfer is only registered in the receiving side
-    assert hashlock not in our_state0.locked
-    assert hashlock not in partner_state1.locked
-
-    # check the mirrors
-    assert our_state0.balance == partner_state1.balance
-    assert our_state1.balance == partner_state0.balance
-    assert our_state0.locked.outstanding == partner_state1.locked.outstanding
-    assert our_state1.locked.outstanding == partner_state0.locked.outstanding
-    assert our_state0.locked.root == partner_state1.locked.root
-    assert our_state1.locked.root == partner_state0.locked.root
-    assert our_state0.distributable(partner_state0) == partner_state1.distributable(our_state1)
-    assert partner_state0.distributable(our_state0) == our_state1.distributable(partner_state1)
-
-    # reveal secret
     channel0.claim_locked(secret)
     channel1.claim_locked(secret)
 
-    # check new balances
-    assert our_state0.balance == balance0 - amount
-    assert our_state1.balance == balance1 + amount
-    assert our_state0.distributable(partner_state0) == balance0 - amount
-    assert our_state1.distributable(partner_state1) == balance1 + amount
-    assert our_state0.locked.outstanding == 0
-    assert our_state1.locked.outstanding == 0
-    assert our_state0.locked.root == ''
-    assert our_state1.locked.root == ''
-
-    # check hashlock are empty
-    assert len(our_state0.locked) == 0
-    assert len(our_state1.locked) == 0
-    assert len(partner_state0.locked) == 0
-    assert len(partner_state1.locked) == 0
-
-    # check the mirrors
-    assert our_state0.balance == partner_state1.balance
-    assert our_state1.balance == partner_state0.balance
-    assert our_state0.locked.outstanding == partner_state1.locked.outstanding
-    assert our_state1.locked.outstanding == partner_state0.locked.outstanding
-    assert our_state0.locked.root == partner_state1.locked.root
-    assert our_state1.locked.root == partner_state0.locked.root
-    assert our_state0.distributable(partner_state0) == partner_state1.distributable(our_state1)
-    assert partner_state0.distributable(our_state0) == our_state1.distributable(partner_state1)
+    # upon revelation of the secret both balances are updated
+    assert_synched_channels(
+        channel0, balance0 - amount, [],
+        channel1, balance1 + amount, [],
+    )
 
 
-def test_interwoven_transfers(num=100):
+def test_interwoven_transfers(num=100):  # pylint: disable=too-many-locals
+    """ Can keep doing transaction even if not all secrets have been released. """
+    def log_state():
+        unclaimed = [
+            transfer.lock.amount
+            for pos, transfer in enumerate(transfers_list)
+            if not transfers_claimed[pos]
+        ]
+
+        claimed = [
+            transfer.lock.amount
+            for pos, transfer in enumerate(transfers_list)
+            if transfers_claimed[pos]
+        ]
+        log.info(
+            'interwoven',
+            claimed_amount=claimed_amount,
+            distributed_amount=distributed_amount,
+            claimed=claimed,
+            unclaimed=unclaimed,
+        )
+
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
 
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
@@ -341,91 +167,136 @@ def test_interwoven_transfers(num=100):
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
 
-    our_state0 = channel0.our_state
-    our_state1 = channel1.our_state
+    initial_balance0 = channel0.initial_balance
+    initial_balance1 = channel1.initial_balance
 
-    partner_state0 = channel0.partner_state
-    partner_state1 = channel1.partner_state
+    expiration = app0.raiden.chain.block_number + 15
 
-    amounts = range(1, num + 1)
-    secrets = [str(i) for i in range(num)]
-    expiration = app0.raiden.chain.block_number + 100
-    claimed = []
+    unclaimed_locks = []
+    transfers_list = []
+    transfers_amount = [i for i in range(1, num + 1)]  # start at 1 because we can't use amount=0
+    transfers_secret = [str(i) for i in range(num)]
+    transfers_claimed = []
 
-    for i, amount in enumerate(amounts):
-        hashlock = sha3(secrets[i])
+    claimed_amount = 0
+    distributed_amount = 0
+
+    for i, (amount, secret) in enumerate(zip(transfers_amount, transfers_secret)):
         locked_transfer = channel0.create_lockedtransfer(
             amount=amount,
             expiration=expiration,
-            hashlock=hashlock,
+            hashlock=sha3(secret),
         )
+
+        # synchronized registration
         app0.raiden.sign(locked_transfer)
         channel0.register_transfer(locked_transfer)
         channel1.register_transfer(locked_transfer)
 
-        claimed_amount = sum(amounts[j] for j in claimed)
-        distributed_amount = sum(amounts[:i + 1])
+        # update test state
+        distributed_amount += amount
+        transfers_claimed.append(False)
+        transfers_list.append(locked_transfer)
+        unclaimed_locks.append(locked_transfer.lock)
 
-        assert our_state0.balance == our_state0.initial_balance - claimed_amount
-        assert our_state0.distributable(partner_state0) == our_state0.initial_balance - distributed_amount
-        assert our_state0.distributable(partner_state0) == our_state0.balance - distributed_amount + claimed_amount
-        assert our_state0.locked.outstanding == 0
+        log_state()
 
-        assert our_state1.balance == our_state1.distributable(partner_state1)
-        assert our_state1.balance == our_state1.initial_balance + claimed_amount
-        assert our_state1.locked.outstanding == distributed_amount - claimed_amount
+        # test the synchronization and values
+        assert_synched_channels(
+            channel0, initial_balance0 - claimed_amount, unclaimed_locks,
+            channel1, initial_balance1 + claimed_amount, [],
+        )
+        assert channel0.distributable == initial_balance0 - distributed_amount
 
-        # check the mirrors
-        assert our_state0.balance == partner_state1.balance
-        assert our_state1.balance == partner_state0.balance
-        assert our_state0.locked.outstanding == partner_state1.locked.outstanding
-        assert our_state1.locked.outstanding == partner_state0.locked.outstanding
-        assert our_state0.locked.root == partner_state1.locked.root
-        assert our_state1.locked.root == partner_state0.locked.root
-        assert our_state0.distributable(partner_state0) == partner_state1.distributable(our_state1)
-        assert partner_state0.distributable(our_state0) == our_state1.distributable(partner_state1)
-
+        # claim a transaction at every other iteration, leaving the current one
+        # in place
         if i > 0 and i % 2 == 0:
-            idx = i - 1
-            claimed.append(idx)
-            secret = secrets[idx]
+            transfer = transfers_list[i - 1]
+            secret = transfers_secret[i - 1]
+
+            # synchronized clamining
             channel0.claim_locked(secret)
             channel1.claim_locked(secret)
 
+            # update test state
+            claimed_amount += transfer.lock.amount
+            transfers_claimed[i - 1] = True
+            unclaimed_locks = [
+                unclaimed_transfer.lock
+                for pos, unclaimed_transfer in enumerate(transfers_list)
+                if not transfers_claimed[pos]
+            ]
 
-def transfer_speed(num_transfers=100, max_locked=100):
+            log_state()
 
+            # test the state of the channels after the claim
+            assert_synched_channels(
+                channel0, initial_balance0 - claimed_amount, unclaimed_locks,
+                channel1, initial_balance1 + claimed_amount, [],
+            )
+            assert channel0.distributable == initial_balance0 - distributed_amount
+
+
+def test_register_invalid_transfer():
+    """ Regression test for registration of invalid transfer.
+
+    Bhe bug occurred if a transfer with an invalid allowance but a valid secret
+    was registered, when the local end registered the transfer it would
+    "unlock" the partners asset, but the transfer wouldn't be sent because the
+    allowance check failed, leaving the channel in an inconsistent state.
+    """
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
 
-    amounts = [a % 100 + 1 for a in range(1, num_transfers + 1)]
-    secrets = [str(i) for i in range(num_transfers)]
-    expiration = app0.raiden.chain.block_number + 100
+    balance0 = channel0.our_state.balance
+    balance1 = channel1.our_state.balance
 
-    start = time.time()
+    amount = 10
+    expiration = app0.raiden.chain.block_number + 15
 
-    for i, amount in enumerate(amounts):
-        hashlock = sha3(secrets[i])
-        locked_transfer = channel0.create_lockedtransfer(
-            amount=amount,
-            expiration=expiration,
-            hashlock=hashlock,
-        )
-        app0.raiden.sign(locked_transfer)
-        channel0.register_transfer(locked_transfer)
-        channel1.register_transfer(locked_transfer)
+    secret = 'secret'
+    hashlock = sha3(secret)
 
-        if i > max_locked:
-            idx = i - max_locked
-            secret = secrets[idx]
-            channel0.claim_locked(secret)
-            channel1.claim_locked(secret)
+    transfer1 = channel0.create_lockedtransfer(
+        amount=amount,
+        expiration=expiration,
+        hashlock=hashlock,
+    )
 
-    elapsed = time.time() - start
-    print('%d transfers per second' % (num_transfers / elapsed))
+    # register a locked transfer
+    app0.raiden.sign(transfer1)
+    channel0.register_transfer(transfer1)
+    channel1.register_transfer(transfer1)
 
+    # assert the locked transfer is registered
+    assert_synched_channels(
+        channel0, balance0, [transfer1.lock],
+        channel1, balance1, [],
+    )
 
-if __name__ == '__main__':
-    transfer_speed(10000, 100)
+    # handcrafted transfer because channel.create_transfer won't create it
+    transfer2 = DirectTransfer(
+        nonce=channel0.our_state.nonce,
+        asset=channel0.asset_address,
+        balance=channel0.partner_state.balance + balance0 + amount,
+        recipient=channel0.partner_state.address,
+        locksroot=channel0.partner_state.locked.root,
+        secret=secret,
+    )
+    app0.raiden.sign(transfer2)
+
+    # this need to fail because the allowance is incorrect
+    with pytest.raises(Exception):
+        channel0.register_transfer(transfer2)
+
+    with pytest.raises(Exception):
+        channel1.register_transfer(transfer2)
+
+    # the registration of a bad transfer need fail equaly on both channels
+    assert_synched_channels(
+        channel0, balance0, [transfer1.lock],
+        channel1, balance1, []
+    )

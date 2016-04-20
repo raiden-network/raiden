@@ -3,11 +3,11 @@ import gevent
 
 from ethereum import slogging
 
-from raiden.tests.utils import create_network
 from raiden.messages import Ping, Ack, decode
-from raiden.raiden_protocol import RaidenProtocol
 from raiden.network.transport import UnreliableTransport, UDPTransport
-from raiden.tests.utils import setup_messages_cb
+from raiden.raiden_protocol import RaidenProtocol
+from raiden.tests.utils.network import create_network
+from raiden.tests.utils.messages import setup_messages_cb
 
 slogging.configure(':debug')
 

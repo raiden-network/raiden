@@ -5,11 +5,12 @@ import gevent
 import pytest
 from ethereum import slogging
 
-from raiden.tests.utils import create_network, create_chain_network
 from raiden.messages import decode, Ack, DirectTransfer, CancelTransfer
 from raiden.tasks import MediatedTransferTask
-from raiden.utils import pex
-from raiden.tests.utils import setup_messages_cb, MessageLogger
+from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
+from raiden.tests.utils.network import create_network, create_sequential_network
+from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
+from raiden.utils import pex, sha3
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':debug')
@@ -25,50 +26,42 @@ def test_transfer():
     messages = setup_messages_cb()
     mlogger = MessageLogger()
 
-    # channels
+    a0_address = pex(app0.raiden.address)
+    a1_address = pex(app1.raiden.address)
+
     asset_manager0 = app0.raiden.assetmanagers.values()[0]
     asset_manager1 = app1.raiden.assetmanagers.values()[0]
-
-    assert asset_manager0.asset_address == asset_manager1.asset_address
 
     channel0 = asset_manager0.channels[app1.raiden.address]
     channel1 = asset_manager1.channels[app0.raiden.address]
 
-    our_state0 = channel0.our_state
-    our_state1 = channel1.our_state
+    balance0 = channel0.our_state.balance
+    balance1 = channel1.our_state.balance
 
-    partner_state0 = channel0.partner_state
-    partner_state1 = channel1.partner_state
-
-    balance0 = our_state0.balance
-    balance1 = our_state1.balance
+    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert app1.raiden.address in asset_manager0.channels
 
     amount = 10
-    target = app1.raiden.address
-    assert target in asset_manager0.channels
-    app0.raiden.api.transfer(asset_manager0.asset_address, amount, target=target)
-
+    app0.raiden.api.transfer(
+        asset_manager0.asset_address,
+        amount,
+        target=app1.raiden.address,
+    )
     gevent.sleep(1)
 
+    assert_synched_channels(
+        channel0, balance0 - amount, [],
+        channel1, balance1 + amount, []
+    )
+
     assert len(messages) == 2  # DirectTransfer, Ack
-    direct_transfer = decode(messages[0])
-    assert isinstance(direct_transfer, DirectTransfer)
-    assert direct_transfer.balance == balance1 + amount
+    directtransfer_message = decode(messages[0])
+    assert isinstance(directtransfer_message, DirectTransfer)
+    assert directtransfer_message.balance == balance1 + amount
 
-    ack = decode(messages[1])
-    assert isinstance(ack, Ack)
-    assert ack.echo == direct_transfer.hash
-
-    assert balance1 + amount == our_state1.balance
-    assert balance0 - amount == our_state0.balance
-
-    assert our_state0.locked.root == ''
-    assert our_state1.locked.root == ''
-    assert our_state0.locked.root == partner_state1.locked.root
-    assert our_state1.locked.root == partner_state0.locked.root
-
-    a0_address = pex(app0.raiden.address)
-    a1_address = pex(app1.raiden.address)
+    ack_message = decode(messages[1])
+    assert isinstance(ack_message, Ack)
+    assert ack_message.echo == directtransfer_message.hash
 
     a0_messages = mlogger.get_node_messages(a0_address)
     assert len(a0_messages) == 2
@@ -102,7 +95,6 @@ def test_mediated_transfer():
     app0 = app_list[0]
     setup_messages_cb()
 
-    # channels
     am0 = app0.raiden.assetmanagers.values()[0]
 
     # search for a path of length=2 A > B > C
@@ -157,67 +149,57 @@ def test_mediated_transfer():
     assert b_cb + amount == c_cb.our_state.balance
 
 
-@pytest.skip
+@pytest.mark.xfail(reason='not implemented')
 def test_cancel_transfer():
-    app_list = create_chain_network(num_hops=3, deposit=100)
-    app0, app1, app2 = app_list  # pylint: disable=unbalanced-tuple-unpacking
+    deposit = 100
+    asset = sha3('test_cancel_transfer')[:20]
 
-    asset_address = app0.raiden.assetmanagers.keys()[0]
+    # pylint: disable=unbalanced-tuple-unpacking
+    app0, app1, app2 = create_sequential_network(num_nodes=3, deposit=deposit, asset=asset)
 
     messages = setup_messages_cb()
     mlogger = MessageLogger()
 
-    app1.raiden.api.transfer(asset_address, 80, app2.raiden.address)  # drain the channel
-    gevent.sleep(1.)
+    assert_synched_channels(
+        channel(app0, app1, asset), deposit, [],
+        channel(app1, app0, asset), deposit, []
+    )
 
-    # save state
-    asset_manager0 = app0.raiden.assetmanagers.values()[0]
-    asset_manager1 = app1.raiden.assetmanagers.values()[0]
-    channel0 = asset_manager0.channels[app1.raiden.address]
-    channel1 = asset_manager1.channels[app0.raiden.address]
-    our_state0 = channel0.our_state
-    our_state1 = channel1.our_state
-    partner_state0 = channel0.partner_state
-    partner_state1 = channel1.partner_state
-    balance0 = our_state0.balance
-    balance1 = our_state1.balance
+    assert_synched_channels(
+        channel(app1, app2, asset), deposit, [],
+        channel(app2, app1, asset), deposit, []
+    )
 
-    app0.raiden.api.transfer(asset_address, 50, app2.raiden.address)  # test CancelTransfer
-    gevent.sleep(1.)
+    # drain the channel app1 -> app2
+    amount = 80
+    direct_transfer(app1, app2, asset, amount)
 
-    # check balances
-    assert our_state0.balance == balance0
-    assert our_state1.balance == balance1
-    assert our_state0.distributable(partner_state0) == our_state0.balance
-    assert our_state1.distributable(partner_state1) == our_state1.balance
-    assert our_state0.locked.outstanding == 0
-    assert our_state1.locked.outstanding == 0
-    assert our_state0.locked.root == ''
-    assert our_state1.locked.root == ''
+    assert_synched_channels(
+        channel(app0, app1, asset), deposit, [],
+        channel(app1, app0, asset), deposit, []
+    )
 
-    # check hashlock are empty
-    assert len(our_state0.locked) == 0
-    assert len(our_state1.locked) == 0
-    assert len(partner_state0.locked) == 0
-    assert len(partner_state1.locked) == 0
+    assert_synched_channels(
+        channel(app1, app2, asset), deposit - amount, [],
+        channel(app2, app1, asset), deposit + amount, []
+    )
 
-    # check the mirrors
-    assert our_state0.balance == partner_state1.balance
-    assert our_state1.balance == partner_state0.balance
-    assert our_state0.locked.outstanding == partner_state1.locked.outstanding
-    assert our_state1.locked.outstanding == partner_state0.locked.outstanding
-    assert our_state0.locked.root == partner_state1.locked.root
-    assert our_state1.locked.root == partner_state0.locked.root
-    assert our_state0.distributable(partner_state0) == partner_state1.distributable(our_state1)
-    assert partner_state0.distributable(our_state0) == our_state1.distributable(partner_state1)
+    # app1 -> app2 is the only available path and doens't have resource, app1
+    # needs to send CancelTransfer to app0
+    transfer(app0, app2, asset, 50)
+
+    assert_synched_channels(
+        channel(app0, app1, asset), deposit, [],
+        channel(app1, app0, asset), deposit, []
+    )
+
+    assert_synched_channels(
+        channel(app1, app2, asset), deposit - amount, [],
+        channel(app2, app1, asset), deposit + amount, []
+    )
 
     assert len(messages) == 6  # DirectTransfer + MediatedTransfer + CancelTransfer + a Ack for each
 
     app1_messages = mlogger.get_node_messages(pex(app1.raiden.address), only='sent')
 
     assert isinstance(app1_messages[-1], CancelTransfer)
-
-
-if __name__ == '__main__':
-    test_transfer()
-    test_mediated_transfer()

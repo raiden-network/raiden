@@ -129,7 +129,7 @@ class NettingChannelContract(object):
     # sent to the contract.
     #
     # This implementation uses a fixed lock time
-    locked_time = 10
+    locked_time = 20
     """ Number of blocks that we are required to wait before allowing settlement. """
 
     def __init__(self, asset_address, netcontract_address, address_A, address_B):
