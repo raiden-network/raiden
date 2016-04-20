@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+""" Utilities to set-up a Raiden network. """
 from __future__ import print_function
 
 import copy
@@ -6,41 +6,15 @@ import random
 from itertools import product
 from math import ceil
 
-import gevent
-from ethereum import slogging
-
 from raiden.app import App, INITIAL_PORT
-from raiden.messages import decode
 from raiden.network.discovery import PredictiveDiscovery
 from raiden.network.rpc.client import BlockChainServiceMock
-from raiden.network.transport import DummyTransport, UDPTransport
-from raiden.utils import sha3, pex
-
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-gevent.get_hub().SYSTEM_ERROR = BaseException
+from raiden.network.transport import UDPTransport
+from raiden.utils import sha3
 
 
 DEFAULT_DEPOSIT = 2 ** 240
 """ An arbitrary initial balance for each channel in the test network. """
-
-
-def setup_messages_cb():
-    """ Record the messages sent so that we can assert on them. """
-    messages = []
-
-    def callback(sender_raiden, host_port, msg):  # pylint: disable=unused-argument
-        messages.append(msg)
-
-    DummyTransport.network.on_send_cbs.extend([callback])
-
-    return messages
-
-
-def dump_messages(message_list):
-    print('dumping {} messages'.format(len(message_list)))
-
-    for message in message_list:
-        print(message)
 
 
 def mk_app(chain, discovery, transport_class, port, host='127.0.0.1'):
@@ -50,21 +24,6 @@ def mk_app(chain, discovery, transport_class, port, host='127.0.0.1'):
     config['host'] = host
     config['privkey'] = sha3('{}:{}'.format(host, config['port']))
     return App(config, chain, discovery, transport_class)
-
-
-def print_channel_count(chain_service, asset, apps):
-    count = dict()
-
-    for node in apps:
-        address = node.raiden.address
-        addresses = chain_service.nettingaddresses_by_asset_participant(
-            asset,
-            address,
-        )
-
-        count[pex(address)] = len(addresses)
-
-    log.debug('total count of channels:', count=count)
 
 
 def create_network_channels(blockchain_service, assets_list, apps,
@@ -127,8 +86,6 @@ def create_network_channels(blockchain_service, assets_list, apps,
                 if app.raiden.address == peer_address:
                     other_apps.remove(app)
 
-        print_channel_count(blockchain_service, asset_address, apps)
-
         # create and initialize the missing channels
         while len(contracts_addreses) < channels_per_node:
             app = sorted(other_apps, key=lambda app: sort_by_channelcount(asset_address, app))[0]  # pylint: disable=cell-var-from-loop
@@ -164,13 +121,6 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
     # pylint: disable=too-many-locals
 
     # TODO: check if the loopback interfaces exists
-
-    log.info(
-        'creating a new test network',
-        num_nodes=num_nodes,
-        num_assets=num_assets,
-        channels_per_node=channels_per_node,
-    )
 
     random.seed(1337)
 
@@ -225,24 +175,31 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
     return apps
 
 
-def create_chain_network(num_hops, deposit=None, transport_class=None):
-    """ Create a network with `num_hops` were all nodes are connect but only
-    through a single channel. """
+def create_sequential_network(num_nodes, deposit, asset, transport_class=None):
+    """ Create a fully connected network with `num_nodes`, the nodes are
+    connect sequentially.
+
+    Returns:
+        A list of apps of size `num_nodes`, with the property that every
+        sequential pair in the list has an open channel with `deposit` for each
+        participant.
+    """
+    if num_nodes < 2:
+        raise ValueError('cannot create a network with less than two nodes')
+
     host = '127.0.0.10'
-    deposit = deposit or DEFAULT_DEPOSIT
 
     random.seed(42)
 
     discovery = PredictiveDiscovery((
-        (host, num_hops, INITIAL_PORT),
+        (host, num_nodes, INITIAL_PORT),
     ))
 
     blockchain_service = BlockChainServiceMock()
-    asset_address = sha3('asset')[:20]
-    blockchain_service.new_channel_manager_contract(asset_address=asset_address)
+    blockchain_service.new_channel_manager_contract(asset_address=asset)
 
     apps = []
-    for idx in range(num_hops):
+    for idx in range(num_nodes):
         port = INITIAL_PORT + idx
 
         app = mk_app(
@@ -256,99 +213,20 @@ def create_chain_network(num_hops, deposit=None, transport_class=None):
 
     for first, second in zip(apps[:-1], apps[1:]):
         netcontract_address = blockchain_service.new_netting_contract(
-            asset_address,
+            asset,
             first.raiden.address,
             second.raiden.address,
         )
 
         for address in [first.raiden.address, second.raiden.address]:
             blockchain_service.deposit(
-                asset_address,
+                asset,
                 netcontract_address,
                 address,
                 deposit,
             )
 
     for app in apps:
-        app.raiden.setup_assets([asset_address], app.config['min_locktime'])
+        app.raiden.setup_asset(asset, app.config['min_locktime'])
 
     return apps
-
-
-class MessageLog(object):
-    SENT = '>'
-    RECV = '<'
-
-    def __init__(self, address, msg_bytes, direction):
-        self.address = address
-        self.msg_bytes = msg_bytes
-        self.direction = direction
-        self.msg = None
-
-    def is_recv(self):
-        return self.direction == self.RECV
-
-    def is_sent(self):
-        return self.direction == self.SENT
-
-    @property
-    def decoded(self):
-        if self.msg is None:
-            self.msg = decode(self.msg_bytes)
-        return self.msg
-
-
-class MessageLogger(object):
-
-    """Register callbacks to collect all messages. Messages can be queried"""
-
-    def __init__(self):
-        self.messages_by_node = {}
-
-        # register the tracing callbacks
-        DummyTransport.network.on_send_cbs.append(self.sent_msg_cb)
-        DummyTransport.on_recv_cbs.append(self.recv_msg_cb)
-
-    def sent_msg_cb(self, sender_raiden, host_port, bytes_):
-        self.collect_message(sender_raiden.address, bytes_, MessageLog.SENT)
-
-    def recv_msg_cb(self, receiver_raiden, host_port, msg):
-        self.collect_message(receiver_raiden.address, msg, MessageLog.RECV)
-
-    def collect_message(self, address, msg, direction):
-        msglog = MessageLog(address, msg, direction)
-        key = pex(address)
-        self.messages_by_node.setdefault(key, [])
-        self.messages_by_node[key].append(msglog)
-
-    def get_node_messages(self, node_address, only=None):
-        """ Return list of node's messages.
-
-        Args:
-            node_messages: The hex representation of the data
-            only: Flag to filter messages, valid values are sent and recv.
-
-        Returns:
-            List[message]: The relevante messages that involved the node.
-        """
-        node_messages = self.messages_by_node.get(node_address, [])
-
-        if only == 'sent':
-            result = [
-                message
-                for message in node_messages
-                if message.is_sent()
-            ]
-        elif only == 'recv':
-            result = [
-                message
-                for message in node_messages
-                if message.is_recv()
-            ]
-        else:
-            result = node_messages
-
-        return [
-            message.decoded
-            for message in result
-        ]

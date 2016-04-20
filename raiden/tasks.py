@@ -102,10 +102,10 @@ class MediatedTransferTask(Task):
         # settle the channel
         if self.isinitiator:
             self.initiator = self.raiden.address
-            self.expiration = self.raiden.chain.block_number + 20  # +10 for min_locktime
+            self.expiration = self.raiden.chain.block_number + 18  # channel.min_locktime >= expiration < contract.locked_time
         else:
             self.initiator = originating_transfer.initiator
-            self.expiration = originating_transfer.lock.expiration - 1
+            self.expiration = originating_transfer.lock.expiration - 1  # channel.min_locktime >= expiration < contract.locked_time
 
         super(MediatedTransferTask, self).__init__()
         self.transfermanager.on_task_started(self)
@@ -222,10 +222,18 @@ class MediatedTransferTask(Task):
             if self.amount > channel.distributable:
                 continue
 
-            # our partner won't accept a locked transfer that can expire after
+            # Our partner won't accept a locked transfer that can expire after
             # the settlement period, otherwise the secret could be revealed
-            # after channel is settled and he would lose the asset
-            if self.expiration > channel.min_locktime:
+            # after channel is settled and he would lose the asset, or before
+            # the minimum required.
+            if not (channel.min_locktime <= self.expiration < channel.locked_time):
+                log.debug(
+                    'expiration is too large, channel/path cannot be used',
+                    expiration=self.expiration,
+                    channel_locktime=channel.min_locktime,
+                    nodeid=pex(path[0]),
+                    partner=pex(path[1]),
+                )
                 continue
 
             yield (path, channel)
