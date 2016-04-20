@@ -268,7 +268,8 @@ class DirectTransfer(SignedMessage):
     Locked amounts are not included in the balance yet, but represented by the `locksroot`.
 
     Args:
-        nonce: A nonce value.
+        nonce: A sequential nonce, used to protected against replay
+            attacks and to settle the channel.
         asset: The address of the asset being exchanged in the channel.
         balance: The participant expected balance after the transaction.
         recipient: The address of raiden node participating in the channel.
@@ -290,10 +291,10 @@ class DirectTransfer(SignedMessage):
         super(DirectTransfer, self).__init__()
         self.nonce = nonce
         self.asset = asset
-        self.balance = balance
-        self.recipient = recipient
-        self.locksroot = locksroot
-        self.secret = secret or ''  # secret for settling a locked amount: hashlock = sha3(secret)
+        self.balance = balance  #: updated balance of the partner after the transfer
+        self.recipient = recipient  #: the channel partner address
+        self.locksroot = locksroot  #: the merkle root that represent all pending locked transfers
+        self.secret = secret or ''  #: secret for settling a locked amount
 
     @staticmethod
     def unpack(packed):

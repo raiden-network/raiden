@@ -30,10 +30,11 @@ class App(object):  # pylint: disable=too-few-public-methods
 
     def __init__(self, config, chain, discovery, transport_class=UDPTransport):
         self.config = config
+        self.discovery = discovery
         self.transport = transport_class(config['host'], config['port'])
         self.raiden = RaidenService(chain, config['privkey'], self.transport, discovery)
+
         discovery.register(self.raiden.address, self.transport.host, self.transport.port)
-        self.discovery = discovery
 
     def stop(self):
         self.transport.server.start()
