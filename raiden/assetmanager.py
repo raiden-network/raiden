@@ -1,58 +1,42 @@
-from channelgraph import ChannelGraph
-from utils import isaddress
-from contracts import NettingChannelContract, ChannelManagerContract
-import messages
-import transfermanager
-import raiden_service
-import channel
+# -*- coding: utf8 -*-
+from ethereum import slogging
+
+from raiden import messages
+from raiden.transfermanager import TransferManager
+from raiden.utils import isaddress
+
+log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class AssetManager(object):
+    """ Manages netting contracts for a given asset. """
 
-    """
-    class which handles services for one asset
-    """
+    def __init__(self, raiden, asset_address, channel_graph):
+        """
+        Args:
+            raiden (RaidenService): a node's service
+            asset_address (address): the asset address managed by this instance
+            channelgraph (networkx.Graph): a graph representing the raiden network
+        """
+        if not isaddress(asset_address):
+            raise ValueError('asset_address must be a valid address')
 
-    def __init__(self, raiden, asset_address):
-        assert isinstance(raiden, raiden_service.RaidenService)
-        assert isaddress(asset_address)
-        self.raiden = raiden
         self.asset_address = asset_address
-        self.channels = dict()  # receiver : Channel
+        self.channelgraph = channel_graph
 
-        # create channels for contracts
-        channelmanager = raiden.chain.channelmanager_by_asset(asset_address)
-        assert isinstance(channelmanager, ChannelManagerContract)
-        for netting_contract in channelmanager.nettingcontracts_by_address(raiden.address):
-            self.add_channel(netting_contract)
+        transfermanager = TransferManager(self, raiden)
+        self.channels = dict()  #: mapping form partner_address -> channel object
+        self.transfermanager = transfermanager  #: handle's raiden transfers
 
-        # create network graph for contract
-        self.channelgraph = ChannelGraph(channelmanager)
+    def add_channel(self, partner_address, channel):
+        self.channels[partner_address] = channel
 
-        # TransferManager for asset
-        self.transfermanager = transfermanager.TransferManager(self)
-
-    def add_channel(self, contract):
-        assert isinstance(contract, NettingChannelContract)
-        partner = contract.partner(self.raiden.address)
-        self.channels[partner] = channel.Channel(self.raiden, contract)
-
-    def channel_isactive(self, address):
-        network_activity = True  # fixme
-        return network_activity and self.channels[address].isopen
+    def channel_isactive(self, partner_address):
+        network_activity = True  # FIXME
+        return network_activity and self.channels[partner_address].isopen
 
     def on_secret(self, msg):
         assert isinstance(msg, messages.Secret)
-        for c in self.channels.values():
-            c.claim_locked(msg.secret, msg.hashlock)
 
-    @classmethod
-    def get_assets_for_address(cls, chain, address):
-        "get all assets for which there is a netting channel"
-        asset_addresses = []
-        for asset_address in chain.asset_addresses:
-            channelmanager = chain.channelmanager_by_asset(asset_address)
-            assert isinstance(channelmanager, ChannelManagerContract)
-            if channelmanager.nettingcontracts_by_address(address):
-                asset_addresses.append(asset_address)
-        return asset_addresses
+        for channel in self.channels.values():
+            channel.claim_locked(msg.secret)

@@ -2,23 +2,28 @@
 import time
 
 import gevent
-
-from raiden.transport import UDPTransport
-from raiden.app import create_network
-from raiden.tasks import TransferTask
 from ethereum import slogging
 
-log = slogging.getLogger('test.speed')
-slogging.configure(":error")
+from raiden.app import create_network
+from raiden.tasks import MediatedTransferTask
+
+log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
+slogging.configure(':debug')
+
+# set shorter timeout for testing
+MediatedTransferTask.timeout_per_hop = 0.1
 
 
 def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channels_per_node=2):
+    # pylint: disable=too-many-locals
 
     apps = create_network(
         num_nodes=num_nodes,
         num_assets=num_assets,
         channels_per_node=channels_per_node,
-        transport_class=UDPTransport)
+    )
+
+    assert len(apps) > num_assets
 
     def start_transfers(idx, num_transfers):
         a0 = apps[idx]
@@ -38,8 +43,8 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
             assert p[0] == source
         path = paths[0]
         target = path[-1]
-        assert path in am0.channelgraph.get_paths(source, target)
-        assert min(len(p) for p in am0.channelgraph.get_paths(source, target)) == num_hops + 1
+        assert path in am0.channelgraph.get_shortest_paths(source, target)
+        assert min(len(p) for p in am0.channelgraph.get_shortest_paths(source, target)) == num_hops + 1
 
         assetmanagers_by_address = dict((a.raiden.address, a.raiden.assetmanagers) for a in apps)
 
@@ -50,8 +55,6 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
         asset_address = am0.asset_address
 
         amount = 10
-        # set shorter timeout for testing
-        TransferTask.timeout_per_hop = 0.1
 
         finished = gevent.event.Event()
 
@@ -77,6 +80,7 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channe
 
     # Start all transfers
     for i in range(num_assets):
+        print "finished", i
         f = start_transfers(i, num_transfers)
         finished_events.append(f)
 
@@ -149,6 +153,9 @@ if __name__ == '__main__':
         GreenletProfiler.set_clock_type('cpu')
         GreenletProfiler.start()
 
+    # test_mediated_transfer(num_assets=2)
+    # test_mediated_transfer(num_transfers=1000)
+    # test_mediated_transfer(num_transfers=1000, num_nodes=10, num_assets=9, channels_per_node=3)
     test_mediated_transfer(
         num_transfers=args.transfers,
         num_nodes=args.nodes,

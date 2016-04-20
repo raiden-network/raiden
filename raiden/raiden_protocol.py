@@ -1,9 +1,13 @@
-import messages
-from messages import Ack, Secret, BaseError
-from utils import isaddress, sha3, pex
-from ethereum import slogging
+# -*- coding: utf8 -*-
 import gevent
-log = slogging.get_logger('protocol')
+
+from ethereum import slogging
+
+from raiden import messages
+from raiden.utils import isaddress, sha3, pex
+from raiden.messages import Ack, Secret, BaseError
+
+log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class RaidenProtocol(object):
@@ -30,38 +34,58 @@ class RaidenProtocol(object):
     def send(self, receiver_address, msg):
         assert isaddress(receiver_address)
         assert not isinstance(msg, (Ack, BaseError)), msg
-        log.info("SENDING {} > {} : {}".format(pex(self.raiden.address),
-                                               pex(receiver_address), msg))
+
         host_port = self.discovery.get(receiver_address)
         data = msg.encode()
         msghash = sha3(data)
         self.tries[msghash] = self.max_tries
-        log.debug("MSGHASH SENT", msghash=pex(msghash))
+
+        log.info('SENDING {} > {} : [{}] {}'.format(
+            pex(self.raiden.address),
+            pex(receiver_address),
+            pex(msghash),
+            msg,
+        ))
 
         assert len(data) < self.max_message_size
 
         def repeater():
             while self.tries.get(msghash, 0) > 0:
                 if not self.repeat_messages and self.tries[msghash] < self.max_tries:
-                    raise Exception(
-                        "DEACTIVATED MSG resents {} {}".format(pex(receiver_address), msg))
+                    raise Exception('DEACTIVATED MSG resents {} {}'.format(
+                        pex(receiver_address),
+                        msg,
+                    ))
+
                 self.tries[msghash] -= 1
                 self.transport.send(self.raiden, host_port, data)
                 gevent.sleep(self.try_interval)
 
             # Each sent msg must be acked. When msg is acked its hash is removed from self.tries
             if msghash in self.tries:
-                assert False, "Node does not reply, fixme suspend node"
+                # FIXME: suspend node + recover from the failure
+                raise RuntimeError('Node does not reply')
 
         gevent.spawn(repeater)
 
     def send_ack(self, receiver_address, msg):
         assert isinstance(msg, (Ack, BaseError))
         assert isaddress(receiver_address)
+
         host_port = self.discovery.get(receiver_address)
+        data = msg.encode()
+        msghash = sha3(data)
+
+        log.info('SENDING ACK {} > {} : [{}] [echo={}] {}'.format(
+            pex(self.raiden.address),
+            pex(receiver_address),
+            pex(msghash),
+            pex(msg.echo),
+            msg,
+        ))
+
         self.transport.send(self.raiden, host_port, msg.encode())
         self.sent_acks[msg.echo] = (receiver_address, msg)
-        log.debug("MSGHASH SENT", echo=pex(msg.echo))
 
     def receive(self, data):
         assert len(data) < self.max_message_size
@@ -70,15 +94,18 @@ class RaidenProtocol(object):
 
         # check if we handled this message already, if so repeat Ack
         if msghash in self.sent_acks:
-            # assert False, "DEACTIVATED ACK RESENTS"
             return self.send_ack(*self.sent_acks[msghash])
 
-        # note, we ignore the sending endpoint, as this can not be known w/ UDP
+        # We ignore the sending endpoint as this can not be known w/ UDP
         msg = messages.decode(data)
 
         # handle Acks
         if isinstance(msg, Ack):
-            log.debug("ACK MSGHASH RECEIVED", echo=pex(msg.echo))
+            log.debug('ACK MSGHASH RECEIVED {} [echo={}]'.format(
+                pex(self.raiden.address),
+                pex(msg.echo)
+            ))
+
             del self.tries[msg.echo]
             return
 

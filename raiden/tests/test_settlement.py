@@ -1,84 +1,97 @@
 # -*- coding: utf8 -*-
-import pytest
-
 from raiden.app import create_network
-from raiden.mtree import check_proof
+from raiden.blockchain.net_contract import NettingChannelContract
+from raiden.mtree import check_proof, merkleroot
 from raiden.tests.utils import setup_messages_cb
 from raiden.utils import sha3
 
+# pylint: disable=too-many-locals,too-many-statements
 
-@pytest.skip()
+
 def test_settlement():
     apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-    a0, a1 = apps
+    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+
     setup_messages_cb()
 
-    # channels
-    am0 = a0.raiden.assetmanagers.values()[0]
-    am1 = a1.raiden.assetmanagers.values()[0]
+    asset_manager0 = app0.raiden.assetmanagers.values()[0]
+    asset_manager1 = app1.raiden.assetmanagers.values()[0]
 
-    assert am0.asset_address == am1.asset_address
+    chain0 = app0.raiden.chain
+    asset_address = asset_manager0.asset_address
 
-    c0 = am0.channels[a1.raiden.address]
-    c1 = am1.channels[a0.raiden.address]
+    channel0 = asset_manager0.channels[app1.raiden.address]
+    channel1 = asset_manager1.channels[app0.raiden.address]
 
-    b0 = c0.balance
-    b1 = c1.balance
+    our_state0 = channel0.our_state
+    our_state1 = channel1.our_state
 
-    lr0 = c0.locked.root
-    lr0p = c0.partner.locked.root
-    lr1 = c1.locked.root
-    lr1p = c1.partner.locked.root
+    partner_state0 = channel0.partner_state
+    partner_state1 = channel1.partner_state
+
+    balance0 = our_state0.balance
+    balance1 = our_state1.balance
 
     amount = 10
+    expiration = 10
     secret = 'secret'
     hashlock = sha3(secret)
-    target = a1.raiden.address
-    expiration = 10
-    assert target in am0.channels
 
-    t = c0.create_lockedtransfer(amount, expiration, hashlock)
-    c0.raiden.sign(t)
-    c0.register_transfer(t)
-    c1.register_transfer(t)
+    assert app1.raiden.address in asset_manager0.channels
+    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert channel0.nettingcontract_address == channel1.nettingcontract_address
 
-    # balances are unchanged, but locksroot changed
+    transfer = channel0.create_lockedtransfer(amount, expiration, hashlock)
+    app0.raiden.sign(transfer)
+    channel0.register_transfer(transfer)
+    channel1.register_transfer(transfer)
 
-    assert b1 == c1.balance
-    assert b0 == c0.balance
+    locked_root = merkleroot([
+        sha3(tx.lock.asstring)
+        for tx in channel1.our_state.locked.locked.values()
+    ])
 
-    assert c0.locked.root == lr0
-    assert c0.partner.locked.root != lr0p
+    # balances are unchanged by registering
+    assert balance0 == our_state0.balance
+    assert balance1 == our_state1.balance
 
-    assert c1.locked.root != lr1
-    assert c1.partner.locked.root == lr1p
+    # the transfer needs to be registered in the receiving end
+    assert our_state0.locked.root == ''
+    assert our_state1.locked.root == locked_root
 
-    assert c1.locked.root == c0.partner.locked.root
+    # check the mirrors
+    assert our_state0.balance == partner_state1.balance
+    assert our_state1.balance == partner_state0.balance
+    assert our_state0.locked.outstanding == partner_state1.locked.outstanding
+    assert our_state1.locked.outstanding == partner_state0.locked.outstanding
+    assert our_state0.locked.root == partner_state1.locked.root
+    assert our_state1.locked.root == partner_state0.locked.root
+    assert our_state0.distributable(partner_state0) == partner_state1.distributable(our_state1)
+    assert partner_state0.distributable(our_state0) == our_state1.distributable(partner_state1)
 
-    # now Bob learns the secret, but alice did not send a signed updated balance to reflect this
-    # Bob wants to settle
+    # Bob learns the secret, but Alice did not send a signed updated balance to
+    # reflect this Bob wants to settle
 
-    sc = c0.contract
-    assert sc == c1.contract
-
-    last_sent_transfers = [t]
+    nettingcontract_address = channel0.nettingcontract_address
+    last_sent_transfers = [transfer]
 
     # get proof, that locked transfer was in merkle tree, with locked.root
-    assert c1.locked
-    merkle_proof = c1.locked.get_proof(t)
-    # assert merkle_proof
-    # assert merkle_proof[0] == t.locked.asstring
-    root = c1.locked.root
-    assert check_proof(merkle_proof, root, sha3(t.lock.asstring))
+    assert our_state1.locked
+    merkle_proof = our_state1.locked.get_proof(transfer)
+    root = our_state1.locked.root
+    assert check_proof(merkle_proof, root, sha3(transfer.lock.asstring))
 
-    unlocked = [(merkle_proof, t.lock.asstring, secret)]
+    unlocked = [(merkle_proof, transfer.lock, secret)]
 
-    chain = a0.raiden.chain
-    chain.block_number = 1
+    chain0.close(
+        asset_address,
+        nettingcontract_address,
+        app0.raiden.address,
+        last_sent_transfers,
+        unlocked,
+    )
 
-    sc.close(a1.raiden.address, last_sent_transfers, *unlocked)
-    chain.block_number += sc.locked_time
+    for _ in range(NettingChannelContract.locked_time):
+        chain0.next_block()
 
-    r = sc.settle()
-    assert r[c1.address] == b1 + amount
-    assert r[c0.address] == b0 - amount
+    chain0.settle(asset_address, nettingcontract_address)

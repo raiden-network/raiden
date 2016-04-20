@@ -36,7 +36,7 @@ PING_CMDID = 1
 REJECTED_CMDID = 2
 SECRETREQUEST_CMDID = 3
 SECRET_CMDID = 4
-TRANSFER_CMDID = 5
+DIRECTTRANSFER_CMDID = 5
 LOCKEDTRANSFER_CMDID = 6
 MEDIATEDTRANSFER_CMDID = 7
 CANCELTRANSFER_CMDID = 8
@@ -48,7 +48,7 @@ PING = to_bigendian(PING_CMDID)
 # REJECTED = to_bigendian(REJECTED_CMDID)
 SECRETREQUEST = to_bigendian(SECRETREQUEST_CMDID)
 SECRET = to_bigendian(SECRET_CMDID)
-TRANSFER = to_bigendian(TRANSFER_CMDID)
+DIRECTTRANSFER = to_bigendian(DIRECTTRANSFER_CMDID)
 LOCKEDTRANSFER = to_bigendian(LOCKEDTRANSFER_CMDID)
 MEDIATEDTRANSFER = to_bigendian(MEDIATEDTRANSFER_CMDID)
 CANCELTRANSFER = to_bigendian(CANCELTRANSFER_CMDID)
@@ -125,14 +125,14 @@ Secret = namedbuffer(
     ]
 )
 
-Transfer = namedbuffer(
+DirectTransfer = namedbuffer(
     'transfer',
     [
-        cmdid(TRANSFER),  # [0:1]
-        pad(3),           # [1:4]
-        nonce,            # [4:12]
-        asset,            # [12:32]
-        recipient,        # [32:52]
+        cmdid(DIRECTTRANSFER),  # [0:1]
+        pad(3),                 # [1:4]
+        nonce,                  # [4:12]
+        asset,                  # [12:32]
+        recipient,              # [32:52]
         balance,
         optional_locksroot,
         optional_secret,
@@ -222,7 +222,7 @@ CMDID_MESSAGE = {
     # REJECTED: Rejected,
     SECRETREQUEST: SecretRequest,
     SECRET: Secret,
-    TRANSFER: Transfer,
+    DIRECTTRANSFER: DirectTransfer,
     LOCKEDTRANSFER: LockedTransfer,
     MEDIATEDTRANSFER: MediatedTransfer,
     CANCELTRANSFER: CancelTransfer,

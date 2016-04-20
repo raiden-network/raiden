@@ -1,35 +1,45 @@
+# -*- coding: utf8 -*-
+from __future__ import print_function
+
 import gevent
+from ethereum import slogging
+
 from raiden.messages import decode
+from raiden.network.transport import DummyTransport
 from raiden.utils import pex
-from raiden.transport import DummyTransport
+
+log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 gevent.get_hub().SYSTEM_ERROR = BaseException
 
 
 def setup_messages_cb():
+    """ Record the messages sent so that we can assert on them. """
     messages = []
 
-    def cb(sender_raiden, host_port, msg):
+    def callback(sender_raiden, host_port, msg):  # pylint: disable=unused-argument
         messages.append(msg)
-    DummyTransport.network.on_send_cbs.extend([cb])
+
+    DummyTransport.network.on_send_cbs.extend([callback])
+
     return messages
 
 
-def dump_messages(messages):
-    print 'dumping {} messages'.format(len(messages))
-    for m in messages:
-        print m
+def dump_messages(message_list):
+    print('dumping {} messages'.format(len(message_list)))
+
+    for message in message_list:
+        print(message)
 
 
 class MessageLog(object):
-
     SENT = '>'
     RECV = '<'
 
-    def __init__(self, address, msg, direction):
+    def __init__(self, address, msg_bytes, direction):
         self.address = address
-        self.msg = msg
+        self.msg_bytes = msg_bytes
         self.direction = direction
-        self.is_decoded = False
+        self.msg = None
 
     def is_recv(self):
         return self.direction == self.RECV
@@ -39,10 +49,8 @@ class MessageLog(object):
 
     @property
     def decoded(self):
-        if self.is_decoded:
-            return self.msg
-        self.is_decoded = True
-        self.msg = decode(self.msg)
+        if self.msg is None:
+            self.msg = decode(self.msg_bytes)
         return self.msg
 
 
@@ -53,15 +61,15 @@ class MessageLogger(object):
     def __init__(self):
         self.messages_by_node = {}
 
-        def sent_msg_cb(sender_raiden, host_port, msg):
-            self.collect_message(sender_raiden.address, msg, MessageLog.SENT)
-            # print 'sent_msg_cb', pex(sender_raiden.address)
-        DummyTransport.network.on_send_cbs.extend([sent_msg_cb])
+        # register the tracing callbacks
+        DummyTransport.network.on_send_cbs.append(self.sent_msg_cb)
+        DummyTransport.on_recv_cbs.append(self.recv_msg_cb)
 
-        def recv_msg_cb(receiver_raiden, host_port, msg):
-            self.collect_message(receiver_raiden.address, msg, MessageLog.RECV)
-            # print 'recv_msg_cb', pex(receiver_raiden.address)
-        DummyTransport.on_recv_cbs.extend([recv_msg_cb])
+    def sent_msg_cb(self, sender_raiden, host_port, bytes_):
+        self.collect_message(sender_raiden.address, bytes_, MessageLog.SENT)
+
+    def recv_msg_cb(self, receiver_raiden, host_port, msg):
+        self.collect_message(receiver_raiden.address, msg, MessageLog.RECV)
 
     def collect_message(self, address, msg, direction):
         msglog = MessageLog(address, msg, direction)
@@ -69,17 +77,34 @@ class MessageLogger(object):
         self.messages_by_node.setdefault(key, [])
         self.messages_by_node[key].append(msglog)
 
-    def get_node_messages(self, node, only_sent=False, only_recv=False):
-        """ Return list of node's messages. """
-        assert not (only_sent and only_recv)
+    def get_node_messages(self, node_address, only=None):
+        """ Return list of node's messages.
 
-        key = pex(node.raiden.address)
-        if only_sent:
-            filter_ = lambda t: t.is_sent()
-        elif only_recv:
-            filter_ = lambda t: t.is_recv()
+        Args:
+            node_messages: The hex representation of the data
+            only: Flag to filter messages, valid values are sent and recv.
+
+        Returns:
+            List[message]: The relevante messages that involved the node.
+        """
+        node_messages = self.messages_by_node.get(node_address, [])
+
+        if only == 'sent':
+            result = [
+                message
+                for message in node_messages
+                if message.is_sent()
+            ]
+        elif only == 'recv':
+            result = [
+                message
+                for message in node_messages
+                if message.is_recv()
+            ]
         else:
-            filter_ = lambda t: True
+            result = node_messages
 
-        ret = filter(filter_, self.messages_by_node.get(key, []))
-        return [msglog.decoded for msglog in ret]
+        return [
+            message.decoded
+            for message in result
+        ]
