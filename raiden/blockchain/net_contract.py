@@ -35,7 +35,83 @@ def is_newer_transfer(transfer, sender_state):
 
 
 class NettingChannelContract(object):
-    """ Contract code for a channel.
+    """ Contract that allows users to perform fast off-chain transactions.
+
+    The netting contract allows two parties to engage in off-chain asset
+    transfers without trust among them, with the functionality of detecting
+    frauds, penalise the wrongdoers, and to participate in an off-chain network
+    for fast and cheap transactions.
+
+    Operation
+    ---------
+
+    Off-chain transactions are done by external clients without interaction
+    with the channel's contract, the contract's role is only to secure the
+    asset and create the mechanism that allows settlement of conflicts.
+
+    The asset transfers are done through the exchange of signed messages among
+    the participants, each message works as a proof of balance for a given
+    participant at each moment. These messages are composed of:
+
+        - The message signature, proving authenticity of the message.
+        - The increasing counter `nonce`, identifying the order of the
+        transfers.
+        - The partner's current balance.
+        - The merkle root of the locked transfers tree.
+        - Possibly a `Lock` structure describing a new locked transfer.
+
+    Since the contract does not mediate these off-chain transfers, it is the
+    interest of participant to reject invalid messages, these are the points of
+    concern:
+
+        - Signatures need to be from a key recognized by the contract.
+        - `Nonce`s are unique and increasing to identify the transfer order.
+        - Negative transfers are invalid.
+        - Maintain a correct merkle root with all non-expired locked transfer
+        without a secret.
+        - A valid timeout for `Lock`ed transfers.
+
+    Transfers
+    ---------
+
+    There are two kinds of transfers that are recognized by the contract, a
+    transfer initiate by a channel participant to the other participant, called
+    a direct transfer, or a mediated transfer involving multiple channels, used
+    for cooperatively transfer assets for nodes without a direct channel.
+
+    Multiple transfers are expected to occur from the opening of a channel
+    onwards, and only the latest with it's balance is valid. The `nonce` field
+    is used by this contract to compare transfers and define which is the
+    latest, it's responsability of each participant to reject messages with an
+    decreasing or equal `nonce`, ensuring that this value is increasing, not
+    necessarilly sequential/unitarily increasing.
+
+    Direct Transfer
+    ===============
+
+    Direct transfers require only the exchange of a single signed message
+    containing the current `nonce`, with an up-to-date balance and merkle
+    proof.
+
+    Mediated Transfer
+    =================
+
+    Direct transfer are possible only with the existence of a direct channel
+    among the participants, since direct channels are expected to be the
+    exception and not the rule a different mechanism is required for indirect
+    transfers, this is done by exploiting existing channels to mediate a asset
+    transfer. The path discovery required to find which channels will be used
+    to mediate the transfer isn't part of this contract, only the means of
+    protect the individual node.
+
+    Mediated transfers require the participation of one or more intermediary
+    nodes, these intermediaries compose a path from the initiator to the
+    target. The path of length `n` has it's transfer started by the initiator
+    `1`, with each intermediary `i` mediating a transfer from `i-1` to `i+1`
+    until the the target node `n` is reached. This contract has the required
+    mechanisms to protect the individual node's assets, the contract allows any
+    `i` to safely transfer it's asset to `i+1` with the guarantee that it will
+    have the transfer from `i-1` done.
 
     Note:
         Implementation in pure python that reproduces the expected behavior of
@@ -43,6 +119,16 @@ class NettingChannelContract(object):
         testing.
     """
 
+    # The locked_time could be either fixed or variable:
+    #
+    # - For the fixed scenario, the application must not accept any locked
+    # transfers that could expire after `locked_time` blocks, at the cost of
+    # being susceptible to timming attacks.
+    # - For the variable scenario, the `locked_time` would depend on the locked
+    # transfer and to determine it's value a list of all the locks need to be
+    # sent to the contract.
+    #
+    # This implementation uses a fixed lock time
     locked_time = 10
     """ Number of blocks that we are required to wait before allowing settlement. """
 
@@ -138,7 +224,7 @@ class NettingChannelContract(object):
             ctx:
                 Block chain state used for mocking.
 
-            *unlocked (List[(merkle_proff, locked_rlp, secret)]):
+            *unlocked (List[(merkle_proof, locked_rlp, secret)]):
 
         Todo:
             if challenged, keep track of who provided the last valid answer,
@@ -201,7 +287,7 @@ class NettingChannelContract(object):
             other = self.participants[self.partner(address)]
             state['netted'] = state['deposit']
 
-            # FIXME: there could be no transfers
+            # FIXME: use the latest transfer only
             if state.get('last_sent_transfer'):
                 state['netted'] = state['last_sent_transfer'].balance
 
