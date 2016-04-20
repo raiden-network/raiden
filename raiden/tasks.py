@@ -4,7 +4,7 @@ from gevent.event import AsyncResult
 
 from ethereum import slogging
 
-from raiden.messages import Secret, CancelTransfer, TransferTimeout
+from raiden.messages import Secret, CancelTransfer, TransferTimeout, LockedTransfer
 from raiden.messages import SecretRequest
 from raiden.utils import lpex, pex
 
@@ -76,29 +76,39 @@ class MediatedTransferTask(Task):
         import transfermanager as transfermanagermodule
         assert isinstance(transfermanager, transfermanagermodule.TransferManager)
 
-        self.transfermanager = transfermanager
-        self.assetmanager = transfermanager.assetmanager
-        self.raiden = transfermanager.raiden
         self.amount = amount
-        self.target = target
+        self.assetmanager = transfermanager.assetmanager
+        self.event = None
+        self.fee = 0  # FIXME: calculate fee, calc expiration
         self.hashlock = hashlock
-        assert secret or originating_transfer
-        self.originating_transfer = originating_transfer  # no sender == self initiated transfer
-        self.isinitiator = not self.originating_transfer
+        self.originating_transfer = originating_transfer
+        self.raiden = transfermanager.raiden
+        self.secret = secret
+        self.target = target
+        self.transfermanager = transfermanager
+        self.isinitiator = bool(secret)
 
-        # FIXME: calculate fee, calc expiration
-        self.fee = 0
-        self.expiration = self.raiden.chain.block_number + 10
+        if originating_transfer and secret:
+            raise ValueError('Cannot set both secret and originating_transfer')
 
+        if not (originating_transfer or secret):
+            raise ValueError('Either originating_transfer or secret needs to be informed')
+
+        if originating_transfer and not isinstance(originating_transfer, LockedTransfer):
+            raise ValueError('originating_transfer needs to be a LockedTransfer')
+
+        # the expiration needs to be descreasing at each hop, otherwise
+        # timeouts can occur after the secret is revealed and some nodes might
+        # settle the channel
         if self.isinitiator:
             self.initiator = self.raiden.address
+            self.expiration = self.raiden.chain.block_number + 20  # +10 for min_locktime
         else:
-            self.initiator = self.originating_transfer.initiator
+            self.initiator = originating_transfer.initiator
+            self.expiration = originating_transfer.lock.expiration - 1
 
-        self.secret = secret
         super(MediatedTransferTask, self).__init__()
         self.transfermanager.on_task_started(self)
-        self.event = None
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.raiden.address))
@@ -140,10 +150,11 @@ class MediatedTransferTask(Task):
                 continue
 
             # `next_hop` doesn't have any path with a valid channel to proceed,
-            # try our next path
+            # try the next path
             if isinstance(result, CancelTransfer):
                 continue
 
+            # `check_path` failed, try next path
             if result is None:
                 continue
 
@@ -207,7 +218,14 @@ class MediatedTransferTask(Task):
             if not channel.isopen:
                 continue
 
+            # we can't intermediate the transfer if we don't have enough funds
             if self.amount > channel.distributable:
+                continue
+
+            # our partner won't accept a locked transfer that can expire after
+            # the settlement period, otherwise the secret could be revealed
+            # after channel is settled and he would lose the asset
+            if self.expiration > channel.min_locktime:
                 continue
 
             yield (path, channel)
@@ -232,11 +250,22 @@ class MediatedTransferTask(Task):
             return True
         elif isinstance(msg, SecretRequest):
             assert self.isinitiator
-            assert msg.sender == self.target
+
+            # lock.target can easilly be tampered, ensure that we are receiving
+            # the SecretRequest from the correct node
+            if msg.sender != self.target:
+                log.error('Tampered SecretRequest', secret_request=msg)
+                return None  # try the next available path
+
+            # TODO: the lock.amount can easily be tampered, check the `target`
+            # locked transfer has the correct `amount`
             msg = Secret(self.secret)
             self.raiden.sign(msg)
             self.raiden.send(self.target, msg)
-            # apply secret to own channel
+
+            # TODO: Guarantee that `target` received the secret, otherwise we
+            # updated the channel and the first hop will receive the asset, but
+            # none of the other channels will make the transfer
             channel.claim_locked(self.secret)
             return True
         return None

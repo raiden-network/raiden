@@ -33,7 +33,15 @@ class TransferManager(object):
             callback(task, success)
 
     def transfer(self, amount, target, hashlock=None, secret=None):
-        """ Initiates a transfer between this node and `target` for `amount`. """
+        """ Transfer `amount` between this node and `target`.
+
+        This method will start a asyncronous transfer, the transfer might fail
+        or succeed depending on a couple of factors:
+            - Existence of a path that can be used, through the usage of direct
+            or intermediary channels.
+            - Network speed, making the transfer suficiently fast so it doesn't
+            timeout.
+        """
 
         # either we have a direct channel with `target`
         if target in self.assetmanager.channels and not hashlock:
@@ -41,6 +49,8 @@ class TransferManager(object):
             direct_transfer = channel.create_directtransfer(amount, secret=secret)
             self.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer)
+
+            # send is async
             self.raiden.protocol.send(direct_transfer.recipient, direct_transfer)
 
         # or we need to use the network to mediate the transfer
@@ -59,7 +69,8 @@ class TransferManager(object):
                 secret=secret,
             )
             task.start()
-            task.join()
+            # Keep both paths async
+            # task.join()
 
     def request_transfer(self, amount, target):
         pass
@@ -73,7 +84,8 @@ class TransferManager(object):
         log.debug('ON MEDIATED TRANSFER', address=pex(self.raiden.address))
 
         channel = self.assetmanager.channels[transfer.sender]
-        channel.register_transfer(transfer)
+
+        channel.register_transfer(transfer)  # this raises if the transfer is invalid
 
         # either we are the target of the transfer, so we need to send a
         # SecretRequest
