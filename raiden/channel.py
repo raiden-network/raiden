@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
 
-from raiden.messages import DirectTransfer, LockedTransfer, BaseError, Lock
+from raiden.messages import CancelTransfer, DirectTransfer, LockedTransfer, BaseError, Lock
 from raiden.mtree import merkleroot, get_proof
 from raiden.utils import sha3
 
@@ -29,40 +29,85 @@ class InsufficientBalance(BaseError):
 
 
 class LockedTransfers(object):
+    """ Mapping container for transactions with locked asset, mapping lockroot
+    to transfer.
+
+    Container class used to keep track of transfers that have asset locked
+    because of the lack of the secret. The container can produce a updated
+    merkle root or proof that a given lock is included in the set.
+    """
 
     def __init__(self):
-        self.locked = dict()
-        self._cached_lock_hashes = []
-        self._cached_root = None
+        self.locked = dict()  #: A mapping from hashlock to the transfer
+        self._cached_lock_hashes = []  #: lock's hash cache `sha3(amount || expiration || hashlock)`
+        self._cached_root = None  #: the merkle proof of the current transfers
+
+    def __contains__(self, hashlock):
+        """ Return True if there is a pending transfer with the given hashlock, False otherwise. """
+        return hashlock in self.locked
+
+    def __len__(self):
+        """ Return the count of pending transfers. """
+        return len(self.locked)
+
+    def __getitem__(self, hashlock):
+        """ Lookup a pending transfer by it's hashlock. """
+        return self.locked[hashlock]
+
+    def __iter__(self):
+        return self.locked.iterkeys()
 
     def add(self, transfer):
+        """ Add a new mediated transfer into the set, registering it's lock.
+
+        This is used when a new transfer with locked asset is being created and
+        the path of nodes is being traversed from *initiator* to *target*. The
+        sender is the node from the channel that will transfer a given amount
+        of asset once the secret is revealed.
+
+        Motivation
+        ----------
+
+        The sender needs to use this method before sending a locked transfer,
+        otherwise the calculate locksroot of the transfer message will be
+        invalid and the transfer will be rejected by the partner. Since the
+        sender wants the transfer to be accepted by the receiver otherwise the
+        transfer won't proceed and the sender won't receive it's fee.
+
+        The receiver needs to use this method to update the container with a
+        _valid_ transfer, otherwise the locksroot will not contain the pending
+        transfer. The receiver needs to ensure that the merkle root has the
+        hashlock include, otherwise it won't be able to claim it.
+
+        Args:
+            transfer (LockedTransfer): The transfer to be added.
+        """
         assert transfer.lock.hashlock not in self.locked
         self.locked[transfer.lock.hashlock] = transfer
         self._cached_lock_hashes.append(sha3(transfer.lock.asstring))
         self._cached_root = None
 
+    get = __getitem__
+
     def remove(self, hashlock):
+        """ Remove a transfer from the locked set.
+
+        Args:
+            hashlock: The hashlock of the corresponding transfer.
+        """
         self._cached_lock_hashes.remove(sha3(self.get(hashlock).lock.asstring))
         self._cached_root = None
         del self.locked[hashlock]
 
-    def __contains__(self, hashlock):
-        return hashlock in self.locked
-
-    def __len__(self):
-        return len(self.locked)
-
-    def __getitem__(self, key):
-        return self.locked[key]
-
-    get = __getitem__
-
     @property
     def outstanding(self):
+        """ Return the amount of asset that is locked in this container. """
         return sum(
             transfer.lock.amount
             for transfer in self.locked.values()
         )
+
+    # XXX: Remove expired transfers?
 
     @property
     def root(self):
@@ -71,27 +116,49 @@ class LockedTransfers(object):
         return self._cached_root
 
     def root_with(self, lock=None, exclude=None):
-        assert not lock or isinstance(lock, Lock)
-        assert not exclude or isinstance(exclude, Lock)
+        """ Calculate the merkle root of the hashes in the container.
+
+        Args:
+            lock: Additional hashlock to be included in the merkle tree, used
+                to calculate the updated merkle root without changing the store.
+            exclude: Hashlock to be ignored, used to calculated a the updated
+                merkle root without changing the store.
+        """
+        if lock and not isinstance(lock, Lock):
+            raise ValueError('lock must be a Lock')
+
+        if exclude and not isinstance(exclude, Lock):
+            raise ValueError('exclude must be a Lock')
+
         lock_hash = exclude_hash = None
-        # temporarily add / remove
+
+        # temporarily add
         if lock:
             lock_hash = sha3(lock.asstring)
             self._cached_lock_hashes.append(lock_hash)
+
+        # temporarily remove
         if exclude:
             exclude_hash = sha3(exclude.asstring)
             self._cached_lock_hashes.remove(exclude_hash)
-        # calc
+
         root = merkleroot(self._cached_lock_hashes)
-        # restore
+
+        # remove the temporarily added hash
         if lock_hash:
             assert lock_hash in self._cached_lock_hashes
             self._cached_lock_hashes.remove(lock_hash)
+
+        # reinclude the temporarily removed hash
         if exclude:
             self._cached_lock_hashes.append(exclude_hash)
+
         return root
 
     def get_proof(self, transfer):
+        """ Return the merkle proof that transfer is one of the locked
+        transfers in the container.
+        """
         hashlock = transfer.lock.hashlock
         transfer = self.locked[hashlock]
         proof_for = sha3(transfer.lock.asstring)
@@ -120,6 +187,9 @@ class ChannelEndState(object):
         """ Update the balance of this end of the channel by claiming the
         transfer.
 
+        This methods needs to be called once a `Secret` message is received,
+        otherwise the nodes can get out-of-sync and messages will be rejected.
+
         Args:
             partner: The partner end from which we are receiving, this is
                 required to keep both ends in sync.
@@ -132,22 +202,34 @@ class ChannelEndState(object):
         Returns:
             float: The amount that was locked.
         """
+        # XXX: The secret is being discarded right away, it needs to be saved
+        # at least until the next partner's message with an updated balance and
+        # locksroot that acknowledges the unlocked asset
         hashlock = sha3(secret)
 
         if hashlock not in self.locked:
             raise InvalidSecret(hashlock)
 
-        lock = self.locked[hashlock].lock
+        # The balance and lockroot work hand-in-hand, both values need to be
+        # synchronized at all times with the penalty of losing asset.
+        #
+        # This section works for cooperative multitasking, for preempted
+        # multitasking synchronization needs to be done.
 
+        # start of the critical write section
+        lock = self.locked[hashlock].lock
         if locksroot and self.locked.root_with(None, exclude=lock) != locksroot:
             raise InvalidLocksRoot(hashlock)
 
+        # The update balance will be sent with the next transfer
         amount = lock.amount
-
         self.balance += amount
         partner.balance -= amount
 
+        # Important: as a sender remove the freed hashlock to avoid double
+        # netting of a locked transfer (as a receiver this is "just" synching)
         self.locked.remove(hashlock)
+        # end of the critical write section
 
 
 class Channel(object):
@@ -174,11 +256,42 @@ class Channel(object):
         return self.chain.isopen(self.asset_address, self.nettingcontract_address)
 
     @property
+    def initial_balance(self):
+        """ Return the amount of asset used to open the channel. """
+        return self.our_state.initial_balance
+
+    @property
+    def balance(self):
+        """ Return our current balance.
+
+        Balance is equal to `initial_deposit + received_amount - sent_amount`,
+        were both `receive_amount` and `sent_amount` are unlocked.
+        """
+        return self.our_state.balance
+
+    @property
     def distributable(self):
         """ Return the available amount of the asset that our end of the
-        channel can transfer.
+        channel can transfer to the partner.
         """
         return self.our_state.distributable(self.partner_state)
+
+    @property
+    def locked(self):
+        """ Return the current amount of our asset that is locked waiting for a
+        secret.
+
+        The locked value is equal to locked transfers that have being
+        initialized but the secret has not being revealed.
+        """
+        return self.partner_state.locked.outstanding
+
+    @property
+    def outstanding(self):
+        """ Return the current amount of asset that is we are waiting a secret
+        to be freed.
+        """
+        return self.our_state.locked.outstanding
 
     def claim_locked(self, secret, locksroot=None):
         """ Claim locked transfer from any of the ends of the channel.
@@ -246,8 +359,9 @@ class Channel(object):
         if transfer.sender != from_state.address:
             raise ValueError('Unsigned transfer')
 
-        # nonce is changed only when a transfer is registered, if the test fail
-        # either we are out of sync or it's an forged transfer
+        # nonce is changed only when a transfer is un/registered, if the test
+        # fail either we are out of sync, a message out of order, or it's an
+        # forged transfer
         if transfer.nonce != from_state.nonce:
             raise InvalidNonce(transfer)
 
@@ -265,11 +379,20 @@ class Channel(object):
             if transfer_amount + transfer.lock.amount > distributable:
                 raise InsufficientBalance(transfer)
 
+            # As a receiver: Check that all locked transfers are registered in
+            # the locksroot, if any hashlock is missing there is no way to
+            # claim it while the channel is closing
             if to_state.locked.root_with(transfer.lock) != transfer.locksroot:
                 raise InvalidLocksRoot(transfer)
 
+            # As a receiver: If the lock expiration is larger than the settling
+            # time a secret could be revealed after the channel is settled and
+            # we won't be able to claim the asset
             if transfer.lock.expiration - self.min_locktime < self.chain.block_number:
-                raise InvalidLockTime(transfer)
+                raise ValueError('Invalid expiration. expiration={} block_number={}'.format(
+                    transfer.lock.expiration,
+                    self.chain.block_number,
+                ))
 
         # all checks need to be done before the internal state of the channel
         # is changed, otherwise if a check fails and state was changed the
@@ -286,9 +409,14 @@ class Channel(object):
             )
 
         # all checks passed, update balances
-        to_state.balance += transfer_amount
-        from_state.balance -= transfer_amount
-        from_state.nonce += 1
+        if isinstance(transfer, CancelTransfer):
+            to_state.balance -= transfer_amount
+            from_state.balance += transfer_amount
+            from_state.nonce += 1
+        else:
+            to_state.balance += transfer_amount
+            from_state.balance -= transfer_amount
+            from_state.nonce += 1
 
     def create_directtransfer(self, amount, secret=None):
         """ Return a DirectTransfer message.
@@ -312,12 +440,17 @@ class Channel(object):
             )
             raise ValueError('Insufficient funds')
 
+        # start of critical read section
+        balance = to_.balance + amount
+        current_locksroot = to_.locked.root
+        # end of critical read section
+
         return DirectTransfer(
             nonce=from_.nonce,
             asset=self.asset_address,
-            balance=to_.balance + amount,
+            balance=balance,
             recipient=to_.address,
-            locksroot=to_.locked.root,  # not changed
+            locksroot=current_locksroot,
             secret=secret,
         )
 
@@ -329,8 +462,9 @@ class Channel(object):
         if not self.isopen:
             raise ValueError('The channel is closed')
 
-        if expiration < self.chain.block_number:
-            raise ValueError('Expiration set to the past')
+        # expiration is not sufficient for guarantee settling
+        if expiration - self.min_locktime < self.chain.block_number:
+            raise ValueError('Invalid expiration')
 
         from_ = self.our_state
         to_ = self.partner_state
@@ -347,12 +481,15 @@ class Channel(object):
 
         lock = Lock(amount, expiration, hashlock)
 
+        # start of critical read section
+        balance = to_.balance
         updated_locksroot = to_.locked.root_with(lock)
+        # end of critical read section
 
         return LockedTransfer(
             nonce=from_.nonce,
             asset=self.asset_address,
-            balance=to_.balance,  # not changed
+            balance=balance,
             recipient=to_.address,
             locksroot=updated_locksroot,
             lock=lock,
