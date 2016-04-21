@@ -41,7 +41,7 @@ class TransferManager(object):
             channel = self.assetmanager.channels[target]
             transfer = channel.create_transfer(amount, secret=secret)
             self.raiden.sign(transfer)
-            channel.register_transfer(transfer)
+            channel.register_transfer(transfer, cb=callback)
             self.raiden.protocol.send(transfer.recipient, transfer)
             # TODO: register callback (from API)
 

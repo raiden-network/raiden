@@ -1,6 +1,8 @@
 from raiden.app import create_network
 from raiden.tests.utils import setup_messages_cb
 from raiden.web_ui import WebUI, UIHandler
+import matplotlib.pyplot as plt
+import networkx as nx
 
 """ Start:
 1) `python test_webui.py`
@@ -24,6 +26,9 @@ setup_messages_cb()
 num_hops = 2
 source = a0.raiden.address
 paths = am0.channelgraph.get_paths_of_length(source, num_hops)
+graph = am0.channelgraph.G
+nx.draw(graph)
+plt.savefig('path.png')
 
 assert len(paths)
 for p in paths:
@@ -53,6 +58,7 @@ asset_address = am0.asset_address
 # b_ba = c_ba.balance
 # b_bc = c_bc.balance
 # b_cb = c_cb.balance
+# print b_ab
 
 
 a0_assets = getattr(a0_raiden.api, 'assets')

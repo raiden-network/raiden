@@ -1,9 +1,9 @@
 from geventwebsocket.server import WebSocketServer
 from geventwebsocket.resource import Resource, WebSocketApplication
 from geventwebsocket.protocols.wamp import WampProtocol, export_rpc
-from raiden.raiden_service import RaidenAPI, RaidenService
+from raiden.raiden_service import RaidenAPI, RaidenService, NoPathError, InvalidAddress
 from raiden.utils import isaddress
-import networkx as nx
+from raiden.channel import InsufficientBalance
 import os
 
 
@@ -52,52 +52,55 @@ class UIHandler(object):
 
     @export_rpc
     def transfer(self, asset_address, amount, target, id):
-        """
-        TODO: include other status messages in callback:
-        e.g. 0 ('Failed'), 1 ('Success'), 2 ('address not valid'), 3 ('no path'), ...
-        """
-        print '\n' + '-' * 10 + 'Transfer requested:' + '-' * 10 + \
-              ' \n from: \'{}\' \n to: \'{}\' \n asset: \'{}\' \n amount: {}\n'.format(
-                  self.address.encode('hex'), target, asset_address, amount) \
-            + '-' * 45 + '\n'
         try:
-            target = target.decode('hex')
-            valid = isaddress(target)
-        except TypeError or not valid:
-            print '-' * 10 + 'Error:' + '-' * 14 + '\n \'{}\' is no valid address.\n'.format(
-                target) + '-' * 30 + '\n'
-            # TODO: publish: 'invalid address format'
-            self.transfer_callback(None, False, id)
-            return
-        amount = int(amount)
-        asset_address = asset_address.decode('hex')
-        am = self.assetmanagers[asset_address]
-        is_node = target in am.channelgraph.G.nodes()
-        has_path = nx.has_path(am.channelgraph.G, self.address, target)
-        # if receiver address exists and path exists, forward transfer/callback to api
-        if is_node and has_path:
+            amount = int(amount)
+        except ValueError:
+            self.exception_handler(2)
+        # try to forward transfer to API and handle occuring excpetions
+        try:
             self.api.transfer(asset_address, amount, target,
                               lambda _, status, id=id: self.transfer_callback(_, status, id))
-        # else: directly call callback with status=False:
-        elif not is_node:
-            # TODO: publish: 'address not found'
-            print '-' * 35 + '\nAddress {} doesn\'t exist\n'.format(target.encode('hex')) +\
-                  '-' * 35
-            self.transfer_callback(None, False, id)
-        elif not has_path:
-            # TODO: publish: 'no path found'
-            print '-' * 35 + '\nNo path found connecting to: {}\n'.format(target.encode('hex')) +\
-                  '-' * 35
-            self.transfer_callback(None, False, id)
-        else:
-            # unknown error, results in 'Error' status in UI
-            self.transfer_callback(None, None, id)
+            # if cb just failes with success==False, then everything was right,except:
+            #   - no active channel was found
+            #   - or no channel had a high enough distributable (in TransferTask._run())
+        except NoPathError:
+            self.exception_handler(id, 'NO_PATH')
+        # except InsufficientBalance:
+        #     self.exception_handler(id, 'INSUFFICIENT_FUNDS')
+        except InvalidAmount:
+            self.exception_handler(id, 'INVALID_AMOUNT')
+        except InvalidAddress as ex:
+            if ex.args[1] is 'asset':
+                self.exception_handler(id, 'INVALID_ASSET')
+            elif ex.args[1] is 'receiver':
+                self.exception_handler(id, 'INVALID_TARGET')
+            else:
+                self.exception_handler(id, 'UNKNOWN')
+        except:
+            self.exception_handler(id, 'UNKNOWN')
+            # DEBUG:
+            raise
 
-    def transfer_callback(self, _, status, id):
-        data = [id, status]
+    def transfer_callback(self, _, status, id, reason=None):
+        data = [id, status, reason]
         # 7 - 'publish'
         message = [7, "http://localhost:{}/raiden#transfer_cb".format(self.port), data]
         self.publish(message)
+
+    def exception_handler(self, id, reason):
+        status_ids = {
+            'UNKNOWN': 0,
+            'NO_PATH': 1,
+            'INVALID_ASSET': 2,
+            'INVALID_TARGET': 3,
+            'INVALID_AMOUNT': 4
+            # 'INSUFFICIENT_FUNDS': 5
+        }
+        # FIXME, defaultdict, etc?
+        if not reason:
+            reason = 'UNKNOWN'
+        reason = status_ids.get(reason)
+        self.transfer_callback(None, False, id, reason=reason)
 
     @export_rpc
     def get_assets(self):

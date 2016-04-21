@@ -106,6 +106,8 @@ class Channel(object):
         self.locked = LockedTransfers()  # locked received
         self.transfers = []  # transfers done
         self.balance = self.contract.participants[self.address]['deposit']
+        # TODO: check data-structure:
+        self.transfer_callbacks = []  # list of (Transfer, callback) tuples
 
         # config
         self.min_locktime = 10  # FIXME
@@ -133,6 +135,19 @@ class Channel(object):
     @property
     def distributable(self):
         return self.balance - self.partner.locked.outstanding
+
+    def handle_callbacks(self, transfer):
+        # TODO: more readable list comprehension
+        indices = [tupl[0] for tupl in enumerate(self.transfer_callbacks)
+                   if tupl[1][0] is transfer]
+        # [(0, (transfer, cb)),
+        #  (1, (transfer, cb)),
+        #  (2, (transfer, cb)),
+        # ...]
+        for index in indices:
+            cb = self.transfer_callbacks[index][1]
+            cb(None, True)
+            del self.transfer_callbacks[index]
 
     def register_locked_transfer(self, transfer):
         if transfer.recipient == self.address:
@@ -230,10 +245,14 @@ class Channel(object):
         self.partner.balance += allowance
         self.transfers.append(transfer)
         self.nonce += 1
+        self.handle_callbacks(transfer)
 
-    def register_transfer(self, transfer):
+    def register_transfer(self, transfer, cb=None):
         assert transfer.sender
         if transfer.recipient == self.partner.address:
+            # FIXME: only here or also in register_received_transfer ?
+            if cb:
+                self.transfer_callbacks.append((transfer, cb))
             self.register_sent_transfer(transfer)
         else:
             assert transfer.recipient == self.address

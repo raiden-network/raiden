@@ -54,11 +54,24 @@
   //   return false;
   // });
 
+  function retrieve_reason(reason_id) {
+    var reasons = [
+      'UNKNOWN',
+      'NO_PATH',
+      'INVALID_ASSET',
+      'INVALID_TARGET',
+      'INVALID_AMOUNT'
+    ];
+    return reasons[parseInt(reason_id)]
+  }
+
   function subscribe_transfer(session) {
     session.subscribe("http://localhost:8080/raiden#transfer_cb", function (topic, event) {
       console.log(topic, event);
       var callback = event[0]
       var status = event[1]
+      var reason = retrieve_reason(event[2])
+      // var reason = event[2]
       // should only be one element!
       // var row = getRowByCallback(callback)
       // console.log(row)
@@ -69,6 +82,7 @@
       }
       else if (status == false){
         status_txt.html('Failed').css('color', 'red')
+        console.log(callback, status, reason)
       }
       else {
         status_txt.html('Error').css('color', 'red')

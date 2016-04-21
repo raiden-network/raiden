@@ -5,13 +5,28 @@ from raiden_protocol import RaidenProtocol
 from assetmanager import AssetManager
 from transfermanager import TransferManager
 from ethereum import slogging
+import networkx as nx
 
 log = slogging.get_logger('service')
 
+# TODO: reevaluate names of Custom Exceptions
+# base error for raiden"
+class RaidenError(Exception):
+    pass
+
+class NoPathError(RaidenError):
+    pass
+
+
+class InvalidAddress(RaidenError):
+    pass
+
+
+class InvalidAmount(RaidenError):
+    pass
+
 
 class RaidenAPI(object):
-    # TODO: needs error-save input handling for webui!
-    # e.g. see if receiver address is valid first without causing exceptions (?)
     """
     the external interface to the service
     """
@@ -24,7 +39,13 @@ class RaidenAPI(object):
         return self.raiden.assetmanagers.keys()
 
     def transfer(self, asset_address, amount, target, cb=None):
-        assert isaddress(asset_address) and isaddress(target)
+        asset_address = self.decode_address(asset_address, 'asset')
+        target = self.decode_address(target, 'receiver')
+        if amount <= 0 or type(amount) is not int:
+            raise InvalidAmount('Amount not int or > 0')
+        # only if a path exists, we forward the transfer to the RaidenService
+        if not self.raiden.has_path(asset_address, target):
+            raise NoPathError('No path to address found')
         assert asset_address in self.assets
         tm = self.raiden.assetmanagers[asset_address].transfermanager
         assert isinstance(tm, TransferManager)
@@ -39,6 +60,21 @@ class RaidenAPI(object):
 
     def exchange(self, asset_A, asset_B, amount_A=None, amount_B=None, callback=None):
         pass
+
+    @staticmethod
+    def decode_address(address, address_type):
+        assert type(address_type) is str
+        if not isaddress(address):
+            is_valid = False
+            try:
+                address = address.decode('hex')
+                is_valid = isaddress(address)
+            except TypeError:
+                pass
+            if not is_valid:
+                raise InvalidAddress('{} address is not valid.'.format(address_type),
+                                     address_type)
+            return address
 
 
 class RaidenService(object):
@@ -56,6 +92,14 @@ class RaidenService(object):
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+
+    def has_path(self, asset, target):
+        assetmanager = self.assetmanagers.get(asset)
+        if assetmanager:
+            channel = assetmanager.channelgraph.G
+            if target in channel.nodes():
+                return nx.has_path(channel, self.address, target)
+        return False
 
     def setup_assets(self):
         # create asset managers
