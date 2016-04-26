@@ -27,10 +27,10 @@ contract NettingContract {
     {
         address addr;
         uint deposit;
+        uint netted;
         Transfer lastSentTransfer;
-        Unlocked[] unlocked;
+        Unlocked unlocked;
     }
-    /*mapping(address => Participant) public participants;*/
     Participant[2] participants; // We only have two participants at all times
 
     event ChannelOpened(address assetAdr); // TODO
@@ -51,6 +51,7 @@ contract NettingContract {
         assetAddress = assetAdr;
     }
 
+    // Get the index of an address in participants
     function atIndex(address addr) returns (uint index) {
         if (addr == participants[0].addr) return 0;
         if (addr == participants[1].addr) return 1;
@@ -81,9 +82,9 @@ contract NettingContract {
 
     /// @notice partner() to get the partner or other participant of the channel
     /// @dev Get the other participating party of the channel
-    /// @return p (Participant) the partner of the calling party
-    function partner() returns (address p) {
-        if (msg.sender == participants[0].addr) return participants[1].addr;
+    /// @return p (address) the partner of the calling party
+    function partner(address a) returns (address p) {
+        if (a == participants[0].addr) return participants[1].addr;
         else return participants[0].addr;
     }
 
@@ -110,7 +111,7 @@ contract NettingContract {
             if (getSender(lsts[i]) != participants[0].addr &&
                 getSender(lsts[i]) != participants[1].addr) throw;
             
-            uint sndrIdx = atIndex(participants[getSender(lsts[i])])
+            uint sndrIdx = atIndex(getSender(lsts[i]))
             if (participants[sndrIdx].lastSentTransfer == 0 || // how to check that for no data
                 participants[sndrIdx].lastSentTransfer.nonce < getNonce(lsts[i])){
                 decode(lsts);
@@ -120,9 +121,9 @@ contract NettingContract {
         // Difficult stuff. Not entirely sure about this
         // TODO
         // Register un-locked
-        Transfer lastSent = participants[partner(msg.sender)].lastSentTransfer;
+        partnerId = atIndex(partner(msg.sender));
         
-        // mark locked
+        // mark closed
         if (closed == 0) closed = block.number;
 
         // trigger event
@@ -134,8 +135,25 @@ contract NettingContract {
     /// @notice settle() to settle the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
     /// @return participants (Participant[]) the participants with netted balances
-    //function settle() returns (Participant[] participants) {
+    function settle() returns (Participant[] participants) {
+        if (settled > 0) throw;
+        if (closed == 0) throw;
+        if (closed + lockedTime > block.number) throw;
 
+        for (uint i = 0; i < participants.length; i++) {
+            uint otherIdx = getIndex(partner(participants[i].addr)); 
+            participants[i].netted = participants[i].deposit;
+            if (participants[i].lastSentTransfer != 0) {
+                participants[i].netted = participants[i].lastSentTransfer.balance;
+            }
+            if (participants[otherIdx].lastSentTransfer != 0) {
+                participants[i].netted = participants[otherIdx].lastSentTransfer.balance;
+            }
+        }
+
+        for (uint i = 0; i < participants.length; i++) {
+            uint otherIdx = getIndex(partner(participants[i].addr)); 
+        }
 
         // trigger event
         /*ChannelSettled();*/
@@ -210,15 +228,13 @@ contract NettingContract {
         }
         // Direct Transfer
         if (message[0] == 5) {
-            var(non, ass, rec, bal, olo, ose, sig) = decodeTransfer(message);
+            var(non, ass, rec, bal, loc, sec, sig) = decodeTransfer(message);
             uint i = atIndex(msg.sender);
             participants[i].lastSentTransfer.nonce = non;
             participants[i].lastSentTransfer.asset = ass;
             participants[i].lastSentTransfer.recipient = rec;
             participants[i].lastSentTransfer.balance = bal;
-            // What to do with optionalSecret?
-            // only if optionalLocksroot is provided
-            bytes32 h = sha3(non, add, bal, rec, olo); //need the optionalLocksroot
+            bytes32 h = sha3(non, add, bal, rec, loc);
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         // Locked Transfer

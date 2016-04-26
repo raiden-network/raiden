@@ -6,8 +6,7 @@
 
 
 /// @dev Models a uint -> uint mapping where it is possible to iterate over all keys.
-library IterableMapping
-{
+library IterableMappingCMC {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
         mapping(address => IndexValue) data;

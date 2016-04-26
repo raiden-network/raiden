@@ -93,7 +93,7 @@ library Decoder {
     function decodeCancelTransfer1(bytes m) returns (uint8 nonce, uint8 expiration, 
                                                address asset, address recipient) 
     {
-        //if (m.length != 253) throw;
+        if (m.length != 253) throw;
         nonce = bytesToIntEight(slice(m, 4, 12), nonce);
         expiration = bytesToIntEight(slice(m, 12, 20), expiration);
         uint160 ia;
@@ -103,14 +103,13 @@ library Decoder {
     }
     
     function decodeCancelTransfer2(bytes m) returns (bytes32 locksroot, uint balance, 
-                                                     uint amount, bytes32 hashlock) 
+                                                     uint amount, bytes32 hashlock, bytes signature) 
     {
         locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
         balance = bytesToInt(slice(m, 92, 124), balance);
         amount = bytesToInt(slice(m, 124, 156), amount);
         hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
-        //signature = slice(m, 188, 253); //not working for tests right now, since 
-                                          // bytes encoding is buggy
+        signature = slice(m, 188, 253); 
     }
     
     /* HELPER FUNCTIONS */

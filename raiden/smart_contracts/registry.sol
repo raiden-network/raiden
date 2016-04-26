@@ -15,7 +15,7 @@ contract Registry {
         // Check if the assetAddress already exists as key in the collection. Throw if it does.
         // Create a new ChannelManagerContract and add it to the collection.
         if (IterableMappingCMC.contains(data, assetAddress)) throw;
-        c = ChannelManagerContract(assetAddress);
+        ChannelManagerContract c = ChannelManagerContract(assetAddress);
         IterableMappingCMC.insert(data, assetAddress, c);
     }
 
@@ -38,7 +38,7 @@ contract Registry {
     function assetAddresses() returns (address[] assetAddresses) {
         for (var i = IterableMappingCMC.iterate_start(data); IterableMappingCMC.iterate_valid(data, i); i = IterableMappingCMC.iterate_next(data, i)) {
             var (key, value) = IterableMappingCMC.iterate_get(data, i);
-            assetAddresses.push(key);;
+            assetAddresses[i] = key;
         }
     }
 
