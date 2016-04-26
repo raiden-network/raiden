@@ -6,7 +6,7 @@ import timeit
 
 from raiden.utils import privtoaddr, sha3
 from raiden.messages import (
-    Ack, Ping, SecretRequest, Secret, Transfer, Lock, LockedTransfer,
+    Ack, Ping, SecretRequest, Secret, DirectTransfer, Lock, LockedTransfer,
     MediatedTransfer, CancelTransfer, TransferTimeout, ConfirmTransfer, decode,
 )
 
@@ -62,15 +62,15 @@ def test_secret(iterations=ITERATIONS):
     run_timeit('Secret', msg, iterations=iterations)
 
 
-def test_transfer(iterations=ITERATIONS):
+def test_direct_transfer(iterations=ITERATIONS):
     nonce = 1
     asset = ADDRESS
     balance = 1
     recipient = ADDRESS
     locksroot = HASH
 
-    msg = Transfer(nonce, asset, balance, recipient, locksroot).sign(PRIVKEY)
-    run_timeit('Transfer', msg, iterations=iterations)
+    msg = DirectTransfer(nonce, asset, balance, recipient, locksroot).sign(PRIVKEY)
+    run_timeit('DirectTransfer', msg, iterations=iterations)
 
 
 def test_locked_transfer(iterations=ITERATIONS):
@@ -143,12 +143,66 @@ def test_all(iterations=ITERATIONS):
     # test_reject(iterations=iterations)
     # test_reject_with_args(iterations=iterations)
     test_secret_request(iterations=iterations)
-    test_transfer(iterations=iterations)
+    test_direct_transfer(iterations=iterations)
     test_locked_transfer(iterations=iterations)
     test_mediated_transfer(iterations=iterations)
     test_cancel_transfer(iterations=iterations)
     test_transfer_timeout(iterations=iterations)
     test_confirm_transfer(iterations=iterations)
+
+
+def benchmark_alternatives():
+    # pylint: disable=exec-used
+
+    setup = """
+    import cPickle
+    import umsgpack
+
+    from raiden.messages import decode, Ack, Ping, MediatedTransfer, Lock
+    from raiden.utils import privtoaddr, sha3
+
+    privkey = 'x' * 32
+    address = privtoaddr(privkey)
+
+    m0 = Ping(nonce=0)
+    m0.sign(privkey)
+
+    l1 = Lock(100, 50, sha3(address))
+    m1 = MediatedTransfer(
+        10,
+        address,
+        100,
+        address,
+        address,
+        l1,
+        address,
+        address,
+    )
+    m1.sign(privkey)
+
+    m2 = Ack(address, sha3(privkey))
+    """
+
+    exec(setup)
+
+    codecs = {
+        'rlp': 'd = {}.encode(); decode(d)',
+        'cPickle': 'd = cPickle.dumps({}, 2); cPickle.loads(d)',
+        'msgpack': 'd = umsgpack.packb({}.serialize()); umsgpack.unpackb(d)'
+    }
+
+    for variable_name in ('m0', 'm1', 'm2'):
+        message = locals()[variable_name]
+        print("\n{}".format(message))
+
+        for codec_name, code_base in codecs.items():
+            code = code_base.format(variable_name)
+
+            exec(code)
+            print('{} encoded {} size: {}'.format(codec_name, message, len(d)))  # noqa pylint: disable=undefined-variable
+
+            result = timeit.timeit(code, setup, number=10000)
+            print('{} {} (en)(de)coding speed: {}'.format(codec_name, message, result))
 
 
 @contextlib.contextmanager
@@ -161,7 +215,7 @@ def profile_session(bias=None):
 
     if bias is None:
         bias_profiler = profile.Profile()
-        runs = [bias_profiler.calibrate(100000) for __ in range(5)]
+        runs = [bias_profiler.calibrate(100000) for _ in range(5)]
         bias = min(runs)
 
         # the bias should be consistent, otherwise we need to increase the number of iterations
