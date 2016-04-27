@@ -72,7 +72,7 @@ decode_code = '''
                                                            address asset, address recipient,
                                                            address target) 
         {
-            if (m.length != 315) throw;
+            if (m.length != 325) throw;
             nonce = bytesToIntEight(slice(m, 4, 12), nonce);
             expiration = bytesToIntEight(slice(m, 12, 20), expiration);
             uint160 ia;
@@ -95,7 +95,7 @@ decode_code = '''
             balance = bytesToInt(slice(m, 164, 196), balance);
             amount = bytesToInt(slice(m, 196, 228), amount);
             fee = bytesToInt(slice(m, 228, 260), fee);
-            signature = slice(m, 260, 315);
+            signature = slice(m, 260, 325);
         }
         
         function decodeCancelTransfer1(bytes m) returns (uint8 nonce, uint8 expiration, 
@@ -158,6 +158,7 @@ def test_decode_secret():
 
     s = tester.state()
     c = s.abi_contract(decode_code, language="solidity")
+    assert data[0] == '\x04'  # make sure data has right cmdid
     o1 = c.decodeSecret(data)
     assert o1[0][26:32] == 'secret'
     assert o1[0].encode('hex') == '0000000000000000000000000000000000000000000000000000736563726574'
@@ -178,6 +179,7 @@ def test_decode_transfer():
     s = tester.state()
     c = s.abi_contract(decode_code, language="solidity")
     o1 = c.decodeTransfer(data)
+    assert data[0] == '\x05'  # make sure data has right cmdid
     assert len(data) == 213
     nonce = o1[0]
     assert nonce == 1
@@ -189,13 +191,84 @@ def test_decode_transfer():
     balance = o1[3]
     assert balance == 1
     optionalLocksroot = o1[4]
-    assert optionalLocksroot.encode('hex') == '60d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df51'
+    assert optionalLocksroot == '60d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df51'.decode('hex')
     optionalSecret = o1[5]
-    assert optionalSecret.encode('hex') == '0000000000000000000000000000000000000000000000000000000000000000'
+    assert optionalSecret == '0000000000000000000000000000000000000000000000000000000000000000'.decode('hex')
     signature = o1[6]
-    assert signature.encode('hex') == 'ff9636ccb66e73219fd166cd6ffbc9c6215f74ff31c1fd4131cf532b29ee096f65278c459253fba65bf019c723a68bb4a6153ea8378cd1b15d55825e1a291b6f00'
+    assert signature == 'ff9636ccb66e73219fd166cd6ffbc9c6215f74ff31c1fd4131cf532b29ee096f65278c459253fba65bf019c723a68bb4a6153ea8378cd1b15d55825e1a291b6f00'.decode('hex')
     with pytest.raises(TransactionFailed):
         c.decodeSecret(bad_data)
 
 
-# TODO add tests for rest of decoders
+def test_decode_mediated_transfer():
+    encoded_data = '070000000000000000000001000000000000001f0bd4060688a1800ae986e4840aebc924bb40b5bf3893263bf8b2d0373a34b8d359c5edd8231107473e20ab25eb721dd4b691516238df14f0f5d3f7a3ea0c0d77f61162072c606eff3d4ee1368ef600e960d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df515601c4475f2f6aa73d6a70a56f9c756f24d211a914cc7aff3fb80d2d8741c8680000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001d000000000000000000000000000000000000000000000000000000000000000079d1479c11af904096d7e179c4184b84fd5765f0a0ab1cf44578ef7a545e1b7157c73df9c3ee2797ee379eb05b1b239cea0eec47f9e03adc546a4c0ff7dcc3a601'
+
+    data = encoded_data.decode('hex')
+    s = tester.state()
+    c = s.abi_contract(decode_code, language="solidity")
+
+    assert data[0] == '\x07'  # make sure data has right cmdid
+    assert len(data) == 325
+    o1 = c.decodeMediatedTransfer1(data)
+    o2 = c.decodeMediatedTransfer2(data)
+    nonce = o1[0]
+    assert nonce == 1
+    expiration = o1[1]
+    assert expiration == int('000000000000001f', 16)
+    asset = o1[2]
+    assert len(asset) == 40
+    assert asset == sha3('asset')[:20].encode('hex')
+    recipient = o1[3]
+    assert len(recipient) == 40
+    assert recipient == privtoaddr('y' * 32).encode('hex')
+    target = o1[4]
+    assert len(target) == 40
+    assert target == privtoaddr('z' * 32).encode('hex')
+    initiator = o2[0]
+    assert len(initiator) == 40
+    assert initiator == privtoaddr('x' * 32).encode('hex')
+    locksroot = o2[1]
+    assert locksroot == '60d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df51'.decode('hex')
+    hashlock = o2[2]
+    assert hashlock == sha3('x' * 32)
+    balance = o2[3]
+    assert balance == 1
+    amount = o2[4]
+    assert amount == 29  #int('000000000000000000000000000000000000000000000000000000000000001d', 16)
+    fee = o2[5]
+    assert fee == 0
+    signature = o2[6]
+    assert signature == '79d1479c11af904096d7e179c4184b84fd5765f0a0ab1cf44578ef7a545e1b7157c73df9c3ee2797ee379eb05b1b239cea0eec47f9e03adc546a4c0ff7dcc3a601'.decode('hex')
+
+
+def test_decode_cancel_transfer():
+    encoded_data = '080000000000000000000001000000000000001f0bd4060688a1800ae986e4840aebc924bb40b5bf3893263bf8b2d0373a34b8d359c5edd82311074760d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df510000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000001d5601c4475f2f6aa73d6a70a56f9c756f24d211a914cc7aff3fb80d2d8741c868f4966fe93b467d28f15befd438b7aa0e7b8fbf5f00ce1abe0cc4a0ddf9bcc7c45c9863b784f474dee3c0682a5aa4c982712b98fcd60f5e5d94038008a97e251300'
+
+    data = encoded_data.decode('hex')
+    s = tester.state()
+    c = s.abi_contract(decode_code, language="solidity")
+
+    assert data[0] == '\x08'  # make sure data has right cmdid
+    assert len(data) == 253
+    o1 = c.decodeCancelTransfer1(data)
+    o2 = c.decodeCancelTransfer2(data)
+    nonce = o1[0]
+    assert nonce == 1
+    expiration = o1[1]
+    assert expiration == int('000000000000001f', 16)
+    asset = o1[2]
+    assert len(asset) == 40
+    assert asset == sha3('asset')[:20].encode('hex')
+    recipient = o1[3]
+    assert len(recipient) == 40
+    assert recipient == privtoaddr('y' * 32).encode('hex')
+    locksroot = o2[0]
+    assert locksroot == '60d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df51'.decode('hex')
+    balance = o2[1]
+    assert balance == 1
+    amount = o2[2]
+    assert amount == 29  # int('000000000000000000000000000000000000000000000000000000000000001d', 16)
+    hashlock = o2[3]
+    assert hashlock == sha3('x' * 32)
+    signature = o2[4]
+    assert signature == 'f4966fe93b467d28f15befd438b7aa0e7b8fbf5f00ce1abe0cc4a0ddf9bcc7c45c9863b784f474dee3c0682a5aa4c982712b98fcd60f5e5d94038008a97e251300'.decode('hex')

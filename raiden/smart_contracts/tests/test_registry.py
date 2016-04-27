@@ -145,9 +145,15 @@ contract Registry {
 def test_registry():
     s = tester.state()
     lib_c = s.abi_contract(library_code, language="solidity")
-    c = s.abi_contract(registry_code, language="solidity")
+    c = s.abi_contract(registry_code, language="solidity", library=lib_c.address)
 
     c.addAsset(sha3('asset')[:20])
+    c.addAsset(sha3('address')[:20])
     cmc = c.channelManagerByAsset(sha3('asset')[:20])
     assert cmc[0] == sha3('asset')[:20]
+    adrs = c.assetAddresses()
+    assert len(adrs) == 2
+    assert adrs[1] == sha3('address')[:20]
+    with pytest.raises(TransactionFailed):
+        c.addAsset(sha3('asset')[:20])
 
