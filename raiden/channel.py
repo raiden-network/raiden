@@ -85,7 +85,7 @@ class LockedTransfers(object):
         """
         assert transfer.lock.hashlock not in self.locked
         self.locked[transfer.lock.hashlock] = transfer
-        self._cached_lock_hashes.append(sha3(transfer.lock.asstring))
+        self._cached_lock_hashes.append(sha3(transfer.lock.as_bytes))
         self._cached_root = None
 
     get = __getitem__
@@ -96,7 +96,7 @@ class LockedTransfers(object):
         Args:
             hashlock: The hashlock of the corresponding transfer.
         """
-        self._cached_lock_hashes.remove(sha3(self.get(hashlock).lock.asstring))
+        self._cached_lock_hashes.remove(sha3(self.get(hashlock).lock.as_bytes))
         self._cached_root = None
         del self.locked[hashlock]
 
@@ -135,12 +135,12 @@ class LockedTransfers(object):
 
         # temporarily add
         if lock:
-            lock_hash = sha3(lock.asstring)
+            lock_hash = sha3(lock.as_bytes)
             self._cached_lock_hashes.append(lock_hash)
 
         # temporarily remove
         if exclude:
-            exclude_hash = sha3(exclude.asstring)
+            exclude_hash = sha3(exclude.as_bytes)
             self._cached_lock_hashes.remove(exclude_hash)
 
         root = merkleroot(self._cached_lock_hashes)
@@ -162,7 +162,7 @@ class LockedTransfers(object):
         """
         hashlock = transfer.lock.hashlock
         transfer = self.locked[hashlock]
-        proof_for = sha3(transfer.lock.asstring)
+        proof_for = sha3(transfer.lock.as_bytes)
         proof = get_proof(self._cached_lock_hashes, proof_for)
         return proof
 

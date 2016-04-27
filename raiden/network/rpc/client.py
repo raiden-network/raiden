@@ -63,7 +63,7 @@ class BlockChainService(object):
         raise NotImplementedError()
 
     def close(self, asset_address, netting_contract_address, our_address,
-              last_sent_transfers, ctx, *unlocked):
+              last_sent_transfers, unlocked_transfers):
         raise NotImplementedError()
 
     def settle(self, asset_address, netting_contract_address):
@@ -229,7 +229,33 @@ class BlockChainServiceMock(object):
         ctx = {
             'block_number': self.block_number,
         }
-        contract.close(our_address, last_sent_transfers, ctx, *unlocked_transfers)
+
+        transfer_encoded = [
+            transfer.encode()
+            for transfer in last_sent_transfers
+        ]
+
+        if unlocked_transfers:
+            for merkle_proof, locked_encoded, secret in unlocked_transfers:
+                merkleproof_encoded = ''.join(merkle_proof)
+
+                contract.close(
+                    ctx,
+                    our_address,
+                    transfer_encoded,
+                    locked_encoded,
+                    merkleproof_encoded,
+                    secret,
+                )
+        else:
+            contract.close(
+                ctx,
+                our_address,
+                transfer_encoded,
+                None,
+                None,
+                None,
+            )
 
     def settle(self, asset_address, netting_contract_address):
         hash_channel = self.asset_hashchannel[asset_address]
@@ -238,4 +264,3 @@ class BlockChainServiceMock(object):
             'block_number': self.block_number,
         }
         contract.settle(ctx)
-        # XXX: return?

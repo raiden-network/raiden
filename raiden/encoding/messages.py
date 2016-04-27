@@ -215,6 +215,15 @@ ConfirmTransfer = namedbuffer(
     ]
 )
 
+Lock = namedbuffer(
+    'lock',
+    [
+        expiration,
+        amount,
+        hashlock,
+    ]
+)
+
 
 CMDID_MESSAGE = {
     ACK: Ack,

@@ -6,6 +6,10 @@ from ethereum import slogging
 
 from raiden.utils import sha3, pex
 from raiden.mtree import check_proof
+from raiden.messages import decode, MediatedTransfer, CancelTransfer, DirectTransfer, Lock, LockedTransfer
+from raiden.encoding.messages import (
+    DIRECTTRANSFER, LOCKEDTRANSFER, MEDIATEDTRANSFER, CANCELTRANSFER,
+)
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -32,6 +36,20 @@ def is_newer_transfer(transfer, sender_state):
         return True
 
     return last_transfer.nonce < transfer.nonce
+
+
+def tuple32(data):
+    start = 0
+    end = 8
+
+    result = []
+    while end <= len(data):
+        pair = (data[start:end - 4], data[end - 4:end])
+        result.append(pair)
+        start = end
+        end += 8
+
+    return result
 
 
 class NettingChannelContract(object):
@@ -210,7 +228,8 @@ class NettingChannelContract(object):
         all_participants.remove(address)
         return all_participants[0]
 
-    def close(self, sender, last_sent_transfers, ctx, *unlocked):
+    def close(self, ctx, sender, transfers_encoded, locked_encoded,  # noqa
+              merkleproof_encoded, secret):
         """" Request the closing of the channel. Can be called multiple times.
         lock period starts with first valid call.
 
@@ -218,13 +237,23 @@ class NettingChannelContract(object):
             sender (address):
                 The sender address.
 
-            last_sent_transfers (List[transfer]):
-                Maximum length of 2, may be empty.
+            transfers_encoded (List[transfer]):
+                A list of maximum length of 2 containing the transfer encoded
+                using the fixed length format, may be empty.
 
             ctx:
                 Block chain state used for mocking.
 
-            *unlocked (List[(merkle_proof, locked_rlp, secret)]):
+            locked_encoded (bin):
+                The Lock to be unlocked.
+
+            merkleproof_encoded (bin):
+                A proof that the given lock is contained in the latest
+                transfer. The binary data is composed of a single hash at every
+                4bytes.
+
+            secret (bin):
+                The secret that unlocks the lock `hashlock = sha3(secret)`.
 
         Todo:
             if challenged, keep track of who provided the last valid answer,
@@ -232,14 +261,45 @@ class NettingChannelContract(object):
             their own balance are counted, because they could sign something
             for the other party to blame it.
         """
-        if sender not in self.participants:
+        # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
+        # if len(transfers_encoded):
+        #     raise ValueError('transfers_encoded needs at least 1 item.')
+
+        if len(transfers_encoded) > 2:
+            raise ValueError('transfers_encoded cannot have more than 2 items.')
+
+        if self.settled:
+            raise RuntimeError('contract is settled')
+
+        # the merkleproof can be empty, if there is only one haslock
+        has_oneofunlocked = locked_encoded or secret
+        has_allofunlocked = locked_encoded and secret
+        if has_oneofunlocked and not has_allofunlocked:
             raise ValueError(
-                'Sender is not a participant of this contract, he cannot close '
-                'the channel.'
+                'all arguments `merkle_proof`, `locked`, and `secret` must be provided'
             )
 
-        if len(last_sent_transfers) > 2:
-            raise ValueError('last_sent_transfers cannot have more than 2 items.')
+        last_sent_transfers = []
+        for data in transfers_encoded:
+            if data[0] == DIRECTTRANSFER:
+                last_sent_transfers.append(
+                    DirectTransfer.decode(data)
+                )
+            elif data[0] == MEDIATEDTRANSFER:
+                last_sent_transfers.append(
+                    MediatedTransfer.decode(data)
+                )
+            elif data[0] == CANCELTRANSFER:
+                last_sent_transfers.append(
+                    CancelTransfer.decode(data)
+                )
+            # convinience for testing only (LockedTransfer are not exchanged between nodes)
+            elif data[0] == LOCKEDTRANSFER:
+                last_sent_transfers.append(
+                    LockedTransfer.decode(data)
+                )
+            else:
+                raise ValueError('invalid transfer type {}'.format(type(data[0])))
 
         # keep the latest claim
         for transfer in last_sent_transfers:
@@ -258,20 +318,23 @@ class NettingChannelContract(object):
             transfer = last_sent_transfers[-1]  # XXX: check me
 
         # register un-locked
-        for merkle_proof, locked, secret in unlocked:
-            hashlock = locked.hashlock  # pylint: disable=no-member
+        if merkleproof_encoded:
+            merkle_proof = tuple32(merkleproof_encoded)
+            lock = Lock.from_bytes(locked_encoded)
 
-            assert hashlock == sha3(secret)
+            hashlock = lock.hashlock
+            if hashlock != sha3(secret):
+                raise ValueError('invalid secret')
 
             # the partner might not have made a transfer
             if partner_state['last_sent_transfer'] is not None:
                 assert check_proof(
                     merkle_proof,
                     partner_state['last_sent_transfer'].locksroot,
-                    sha3(transfer.lock.asstring),
+                    sha3(transfer.lock.as_bytes),
                 )
 
-            partner_state['unlocked'].append(locked)
+            partner_state['unlocked'].append(lock)
 
         if self.closed is None:
             log.debug('closing contract', netcontract_address=pex(self.netcontract_address))
