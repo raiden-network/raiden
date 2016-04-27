@@ -1,4 +1,8 @@
 # -*- coding: utf8 -*-
+"""
+A benchmark script to configure a test network and execute random Raiden
+transactions.
+"""
 from __future__ import print_function
 
 import codecs
@@ -14,13 +18,14 @@ from raiden.app import App
 from raiden.network.discovery import Discovery
 from raiden.network.rpc.client import BlockChainService
 from raiden.utils import privtoaddr, sha3
-from raiden.tests.utils import DEFAULT_DEPOSIT
+from raiden.tests.utils.network import DEFAULT_DEPOSIT
 
-
+TRANSFER_AMOUNT = 1
 ASSET_ADDRESS = sha3('tps')[:20]
 
 
 def hostport_to_privkeyaddr(host, port):
+    """ Return `(private key, address)` deterministically generated. """
     myip_port = '{}:{}'.format(host, port)
     privkey = sha3(myip_port)
     addr = privtoaddr(privkey)
@@ -28,8 +33,8 @@ def hostport_to_privkeyaddr(host, port):
     return privkey, addr
 
 
-def random_channel_graph(asset_address, blockchain_service, node_addresses, deposit):
-    """ Make the raiden network a connected graph by randomly choosing nodes to connect. """
+def random_raiden_network(asset_address, blockchain_service, node_addresses, deposit):
+    """ Creates random channels among the test nodes until we have a connected graph. """
     graph = networkx.Graph()
     graph.add_nodes_from(node_addresses)
 
@@ -63,11 +68,25 @@ def random_channel_graph(asset_address, blockchain_service, node_addresses, depo
         graph.add_edge(from_address, to_address)
 
 
-def setup_tps(rpc_connection, config_path, registry_address, asset_address, deposit):
+def setup_tps(rpc_server, config_path, channelmanager_address, asset_address, deposit):
+    """ Creates the required contract and the fully connected Raiden network
+    prior to running the test.
+
+    Args:
+        rpc_server (str): A string in the format '{host}:{port}' used to define
+            the JSON-RPC end-point.
+        config_path (str): A full/relative path to the yaml configuration file.
+        channelmanager_address (str): The address of the channel manager contract.
+        asset_address (str): The address of the asset used for testing.
+        deposit (int): The default deposit that will be made for all test nodes.
+    """
     # TODO:
     #  - create/register the channel manager
 
-    blockchain_service = BlockChainService(rpc_connection, registry_address)
+    rpc_connection = rpc_server.split(':')
+    rpc_connection = (rpc_connection[0], int(rpc_connection[1]))
+
+    blockchain_service = BlockChainService(rpc_connection, channelmanager_address)
     blockchain_service.new_channel_manager_contract(asset_address=asset_address)
 
     with codecs.open(config_path, encoding='utf8') as handler:
@@ -78,11 +97,24 @@ def setup_tps(rpc_connection, config_path, registry_address, asset_address, depo
         privkey = sha3('{}:{}'.format(node['host'], node['port']))
         node_addresses.append(privtoaddr(privkey))
 
-    random_channel_graph(asset_address, blockchain_service, node_addresses, deposit)
+    random_raiden_network(asset_address, blockchain_service, node_addresses, deposit)
 
 
-def tps_run(host, port, config, rpc_server, channelmanager_address):  # pylint: disable=too-many-locals
-    ourprivkey, ouraddress = hostport_to_privkeyaddr(host, port)
+def random_transfer(app, asset, transfer_amount):
+    channelgraph = app.raiden.asset_managers[asset].channelgraph
+
+    nodes = channelgraph.graph.nodes()
+    nodes.remove(app.raiden.address)
+
+    while True:
+        target = random.choice(nodes)
+        app.raiden.api.transfer(asset, transfer_amount, target)
+
+
+def tps_run(host, port, config, rpc_server, channelmanager_address,
+            asset_address, transfer_amount, parallel):
+    # pylint: disable=too-many-locals,too-many-arguments
+    ourprivkey, _ = hostport_to_privkeyaddr(host, port)
 
     rpc_connection = rpc_server.split(':')
     rpc_connection = (rpc_connection[0], int(rpc_connection[1]))
@@ -94,25 +126,29 @@ def tps_run(host, port, config, rpc_server, channelmanager_address):  # pylint: 
     config['port'] = port
     config['privkey'] = ourprivkey
 
-    blockchain_server = BlockChainService(rpc_connection, channelmanager_address)
+    blockchain_service = BlockChainService(rpc_server, channelmanager_address)
 
     discovery = Discovery()
-    find_ouraddress = False
+    found_ouraddress = False
     for node in config['nodes']:
-        nodeid, _ = channelmanager_address(host, port)
-        discovery.register(nodeid, node['host'], node['port'])
+        _, address = hostport_to_privkeyaddr(node['host'], node['port'])
 
-        if nodeid == ouraddress:
-            find_ouraddress = True
+        discovery.register(address, node['host'], node['port'])
 
-    if not find_ouraddress:
+        if host == node['host'] and str(port) == node['port']:
+            found_ouraddress = True
+
+    if not found_ouraddress:
         print('We are not registered in the configuration file')
         sys.exit(1)
 
-    app = App(config, blockchain_server, discovery)
+    app = App(config, blockchain_service, discovery)
 
-    for asset_address in blockchain_server.asset_addresses:
+    for asset_address in blockchain_service.asset_addresses:
         app.raiden.setup_asset(asset_address, app.config['min_locktime'])
+
+    for _ in range(parallel):
+        gevent.spawn(random_transfer, app, asset_address, transfer_amount)
 
     # wait for interrupt
     event = gevent.event.Event()
@@ -126,33 +162,62 @@ def tps_run(host, port, config, rpc_server, channelmanager_address):  # pylint: 
 
 def main():
     import argparse
+    import os
+
+    # Let the user choose a seed. This won't ensure reproducibility regarding
+    # the node's balances, because of the tranfer's timming, but it will
+    # generate the same network.
+    if 'PYTHONHASHSEED' not in os.environ:
+        raise Exception(
+            'Please set up the PYTHONHASHSEED variable to ensure a reproducible execution'
+        )
 
     parser = argparse.ArgumentParser()
 
     kind_parser = parser.add_subparsers(dest='kind')
-    runparser = kind_parser.add_parser('run')
-    setupparser = kind_parser.add_parser('setup', )
+    runparser = kind_parser.add_parser('run', help='run a single test node')
+    setupparser = kind_parser.add_parser(
+        'setup',
+        help='setup the network, creating the required channels',
+    )
 
     setupparser.add_argument('rpc_server')
     setupparser.add_argument('config')
-    setupparser.add_argument('registry_address')
+    setupparser.add_argument('channelmanager_address')
 
     runparser.add_argument('rpc_server')
     runparser.add_argument('config')
+    runparser.add_argument('channelmanager_address')
     runparser.add_argument('host')
     runparser.add_argument('port')
+    runparser.add_argument(
+        '--parallel',
+        type=int,
+        default=20,
+        help='Number of parallel transfers that will happen for a given node',
+    )
 
     args = parser.parse_args()
 
     if args.kind == 'run':
-        host = args.host
-        port = args.port
+        tps_run(
+            args.host,
+            args.port,
+            args.config,
+            args.rpc_server,
+            args.channelmanager_address,
+            ASSET_ADDRESS,
+            TRANSFER_AMOUNT,
+            args.parallel,
+        )
     elif args.kind == 'setup':
-        args.rpc_server
-        args.config
-        args.registry_address
-        ASSET_ADDRESS
-        DEFAULT_DEPOSIT
+        setup_tps(
+            args.rpc_server,
+            args.config,
+            args.channelmanager_address,
+            ASSET_ADDRESS,
+            DEFAULT_DEPOSIT,
+        )
 
 
 if __name__ == '__main__':

@@ -45,7 +45,6 @@ def transfer(initiator_app, target_app, asset, amount):
     """
 
     initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
-    sleep(initiator_app, target_app, asset)
 
 
 def direct_transfer(initiator_app, target_app, asset, amount):
@@ -54,7 +53,6 @@ def direct_transfer(initiator_app, target_app, asset, amount):
     assert has_channel, 'there is not a direct channel'
 
     initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
-    sleep(initiator_app, target_app, asset)
 
 
 def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disable=too-many-arguments
@@ -87,9 +85,6 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
         task.join()
     else:
         initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
-
-        # multiplier because we need to send the MediatedTransfer and Secret
-        sleep(initiator_app, target_app, asset, multiplier=2)
 
 
 def hidden_mediated_transfer(app_chain, asset, amount):
@@ -180,7 +175,7 @@ def assert_mirror(channel0, channel1):
 def assert_locked(channel0, lock_list):
     """ Assert the locks create from `channel`. """
     # a locked transfer is registered in the _partner_ state
-    hashroot = merkleroot(sha3(lock.asstring) for lock in lock_list)
+    hashroot = merkleroot(sha3(lock.as_bytes) for lock in lock_list)
 
     assert len(channel0.partner_state.locked) == len(lock_list)
     assert channel0.partner_state.locked.root == hashroot

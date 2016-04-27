@@ -50,8 +50,8 @@ class TransferManager(object):
             self.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer)
 
-            # send is async
-            self.raiden.protocol.send(direct_transfer.recipient, direct_transfer)
+            task = self.raiden.protocol.send(direct_transfer.recipient, direct_transfer)
+            task.join()
 
         # or we need to use the network to mediate the transfer
         else:
@@ -69,8 +69,7 @@ class TransferManager(object):
                 secret=secret,
             )
             task.start()
-            # Keep both paths async
-            # task.join()
+            task.join()
 
     def request_transfer(self, amount, target):
         pass

@@ -89,6 +89,10 @@ def main():
     for asset_address in blockchain_server.asset_addresses:
         app.raiden.setup_asset(asset_address, app.config['min_locktime'])
 
+    # TODO:
+    # - Ask for confirmation to quit if there are any locked transfers that did
+    # not timeout.
+
     # wait for interrupt
     event = gevent.event.Event()
     gevent.signal(signal.SIGQUIT, event.set)
