@@ -2,8 +2,6 @@
 # Copyright (c) 2015 Heiko Hees
 import warnings
 
-import rlp
-
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
 from raiden.utils import sha3, ishash, big_endian_to_int, pex
@@ -345,14 +343,29 @@ class Lock(MessageHashable):
         self.amount = amount
         self.expiration = expiration
         self.hashlock = hashlock
-        self._asstring = None
+        self._asbytes = None
 
     @property
-    def asstring(self):
-        if self._asstring is None:
-            self._asstring = rlp.encode([self.amount, self.expiration, self.hashlock])
+    def as_bytes(self):
+        if self._asbytes is None:
+            packed = messages.Lock(buffer_for(messages.Lock))
+            packed.amount = self.amount
+            packed.expiration = self.expiration
+            packed.hashlock = self.hashlock
 
-        return self._asstring
+            self._asbytes = packed.data
+
+        return self._asbytes
+
+    @classmethod
+    def from_bytes(cls, serialized):
+        packed = messages.Lock(serialized)
+
+        return cls(
+            packed.amount,
+            packed.expiration,
+            packed.hashlock,
+        )
 
 
 class LockedTransfer(SignedMessage):
