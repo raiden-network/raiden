@@ -97,15 +97,12 @@ class MediatedTransferTask(Task):
         if originating_transfer and not isinstance(originating_transfer, LockedTransfer):
             raise ValueError('originating_transfer needs to be a LockedTransfer')
 
-        # the expiration needs to be descreasing at each hop, otherwise
-        # timeouts can occur after the secret is revealed and some nodes might
-        # settle the channel
         if self.isinitiator:
             self.initiator = self.raiden.address
-            self.expiration = self.raiden.chain.block_number + 18  # channel.min_locktime >= expiration < contract.locked_time
+            self.expiration = self.raiden.chain.block_number + 18
         else:
             self.initiator = originating_transfer.initiator
-            self.expiration = originating_transfer.lock.expiration - 1  # channel.min_locktime >= expiration < contract.locked_time
+            self.expiration = originating_transfer.lock.expiration - 1
 
         super(MediatedTransferTask, self).__init__()
         self.transfermanager.on_task_started(self)
@@ -186,7 +183,14 @@ class MediatedTransferTask(Task):
         return self.on_completion(False)
 
     def timeout(self, from_, to_):
-        """ Return the timeout upperbound based on the worst case scenario. """
+        """ Calculates the timeout upperbound based on the worst case scenario.
+
+        Returns:
+            float: The timeout.
+        """
+
+        # TODO: Change the timeout from seconds to block number and use it as
+        # the expiration for the message
         available_paths = self.assetmanager.channelgraph.get_shortest_paths(
             from_,
             to_,

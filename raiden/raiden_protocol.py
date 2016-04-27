@@ -66,7 +66,7 @@ class RaidenProtocol(object):
                 # FIXME: suspend node + recover from the failure
                 raise RuntimeError('Node does not reply')
 
-        gevent.spawn(repeater)
+        return gevent.spawn(repeater)
 
     def send_ack(self, receiver_address, msg):
         assert isinstance(msg, (Ack, BaseError))
