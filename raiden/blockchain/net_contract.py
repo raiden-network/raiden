@@ -10,9 +10,21 @@ from raiden.messages import MediatedTransfer, CancelTransfer, DirectTransfer, Lo
 from raiden.encoding.messages import (
     DIRECTTRANSFER, LOCKEDTRANSFER, MEDIATEDTRANSFER, CANCELTRANSFER,
 )
+from raiden.encoding.signing import c_ecdsa_recover_compact, address_from_key
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
+TRANSFER_UNKNOW = 0
+""" State before close() is called."""
+
+TRANSFER_FROM_SELF = 1
+""" State for a transfer sent by the participant itself by calling close or update_transfers. """
+
+TRANSFER_FROM_THIRDPARTY = 2
+""" State used if a thirdparty updated a transfer on behalf of a node. """
+
+TRANSFER_FROM_PARTNER = 3
+""" State used for the transfer that was exchange and informed by the other node in close(). """
 
 # Blockspam attack mitigation:
 #     - Oracles, certifying, that previous blocks were full.
@@ -25,20 +37,10 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 #     use channel.opened to collect reputation of an account (long lasting channels == good)
 
 
-def is_newer_transfer(transfer, sender_state):
-    """ Helper to check if `transfer` is from a newer block than
-    sender_state's lastest transfer.
-    """
-
-    last_transfer = sender_state.get('last_sent_transfer')
-
-    if last_transfer is None:
-        return True
-
-    return last_transfer.nonce < transfer.nonce
-
-
 def tuple32(data):
+    """ A helper to split a concatenated merkle proof into it's individual
+    elements.
+    """
     start = 0
     end = 8
 
@@ -52,12 +54,45 @@ def tuple32(data):
     return result
 
 
+def decode_transfer(transfer_encoded):
+    if transfer_encoded[0] == DIRECTTRANSFER:
+        return DirectTransfer.decode(transfer_encoded)
+    elif transfer_encoded[0] == MEDIATEDTRANSFER:
+        return MediatedTransfer.decode(transfer_encoded)
+    elif transfer_encoded[0] == CANCELTRANSFER:
+        return CancelTransfer.decode(transfer_encoded)
+    # convinience for testing only (LockedTransfer are not exchanged between nodes)
+    elif transfer_encoded[0] == LOCKEDTRANSFER:
+        return LockedTransfer.decode(transfer_encoded)
+    else:
+        raise ValueError('invalid transfer type {}'.format(type(transfer_encoded[0])))
+
+
+class Participant(object):
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self):
+        self.deposit = 0
+        """ Amount of asset deposited by the participant. """
+
+        self.transfer = None
+        """ The last transfer used for settling the balances. This transfer can
+        be sent from either participant or a third-party.
+        """
+
+        self.state = TRANSFER_UNKNOW
+        """ Indicate the origin of the transfer. """
+
+        self.unlocked = []
+        """ A list of (Lock, merkle_proof, secret). """
+
+
 class NettingChannelContract(object):
     """ Contract that allows users to perform fast off-chain transactions.
 
     The netting contract allows two parties to engage in off-chain asset
     transfers without trust among them, with the functionality of detecting
-    frauds, penalise the wrongdoers, and to participate in an off-chain network
+    frauds, penalize the wrongdoers, and to participate in an off-chain network
     for fast and cheap transactions.
 
     Operation
@@ -79,14 +114,13 @@ class NettingChannelContract(object):
         - Possibly a `Lock` structure describing a new locked transfer.
 
     Since the contract does not mediate these off-chain transfers, it is the
-    interest of participant to reject invalid messages, these are the points of
-    concern:
+    interest of each participant to reject invalid messages, these are the
+    points of concern:
 
         - Signatures need to be from a key recognized by the contract.
         - `Nonce`s are unique and increasing to identify the transfer order.
         - Negative transfers are invalid.
-        - Maintain a correct merkle root with all non-expired locked transfer
-        without a secret.
+        - Maintain a correct merkle root with all non-expired locked transfer.
         - A valid timeout for `Lock`ed transfers.
 
     Transfers
@@ -102,7 +136,7 @@ class NettingChannelContract(object):
     is used by this contract to compare transfers and define which is the
     latest, it's responsability of each participant to reject messages with an
     decreasing or equal `nonce`, ensuring that this value is increasing, not
-    necessarilly sequential/unitarily increasing.
+    necessarilly sequential/unitarily.
 
     Direct Transfer
     ===============
@@ -117,10 +151,12 @@ class NettingChannelContract(object):
     Direct transfer are possible only with the existence of a direct channel
     among the participants, since direct channels are expected to be the
     exception and not the rule a different mechanism is required for indirect
-    transfers, this is done by exploiting existing channels to mediate a asset
-    transfer. The path discovery required to find which channels will be used
-    to mediate the transfer isn't part of this contract, only the means of
-    protect the individual node.
+    transfers, this is done by exploiting existing channels to mediate an asset
+    transfer.
+
+    The path discovery required to find which channels will be used to mediate
+    the transfer isn't part of this contract, only the means to protect the
+    individual assets.
 
     Mediated transfers require the participation of one or more intermediary
     nodes, these intermediaries compose a path from the initiator to the
@@ -137,18 +173,20 @@ class NettingChannelContract(object):
         testing.
     """
 
-    # The locked_time could be either fixed or variable:
-    #
-    # - For the fixed scenario, the application must not accept any locked
-    # transfers that could expire after `locked_time` blocks, at the cost of
-    # being susceptible to timming attacks.
-    # - For the variable scenario, the `locked_time` would depend on the locked
-    # transfer and to determine it's value a list of all the locks need to be
-    # sent to the contract.
-    #
-    # This implementation uses a fixed lock time
     locked_time = 20
     """ Number of blocks that we are required to wait before allowing settlement. """
+    # - Absolute block number. A maximum life time is choosen for the contract,
+    # the contract can be settled before but not after. The application must
+    # not accept any transfer that expire after the given block.
+    # - Relative block number:
+    #   - With a fixed waiting time. The application must not accept
+    #   any locked transfers that could expire more than `locked_time` blocks,
+    #   at the cost of being susceptible to timming attacks.
+    #   - With a variable waiting time. The `locked_time` depends on the locked
+    #   transfer and a list of all the lock's timeouts need to be sent to the
+    #   contract.
+    #
+    # This implementation's locked_time is a "fixed waiting time"
 
     def __init__(self, asset_address, netcontract_address, address_A, address_B):
         log.debug(
@@ -160,10 +198,9 @@ class NettingChannelContract(object):
         self.asset_address = asset_address
         self.netcontract_address = netcontract_address
         self.participants = {
-            address_A: dict(deposit=0, last_sent_transfer=None, unlocked=[]),
-            address_B: dict(deposit=0, last_sent_transfer=None, unlocked=[]),
+            address_A: Participant(),
+            address_B: Participant(),
         }
-        self.hashlocks = dict()
 
         self.opened = None
         """ Block number when deposit() was first called. """
@@ -187,7 +224,7 @@ class NettingChannelContract(object):
             return False
 
         lowest_deposit = min(
-            state['deposit']
+            state.deposit
             for state in self.participants.values()
         )
 
@@ -209,7 +246,7 @@ class NettingChannelContract(object):
         if amount < 0:
             raise ValueError('amount cannot be negative')
 
-        self.participants[address]['deposit'] += amount
+        self.participants[address].deposit += amount
 
         if self.isopen and self.opened is None:
             # track the block were the contract was openned
@@ -228,119 +265,258 @@ class NettingChannelContract(object):
         all_participants.remove(address)
         return all_participants[0]
 
-    def close(self, ctx, sender, transfers_encoded, locked_encoded,  # noqa
-              merkleproof_encoded, secret):
-        """" Request the closing of the channel. Can be called multiple times.
-        lock period starts with first valid call.
+    def _decode(self, first_encoded, second_encoded):
+        transfer1 = decode_transfer(first_encoded)
+        transfer2 = decode_transfer(second_encoded)
+
+        if transfer1.sender not in self.participants:
+            raise ValueError('Invalid transfer address')
+
+        if transfer2.sender not in self.participants:
+            raise ValueError('Invalid transfer address')
+
+        if transfer1.sender == transfer2.sender:
+            raise ValueError('Both transfer are for the same address')
+
+        return transfer1, transfer2
+
+    def close(self, ctx, first_encoded, second_encoded):
+        """" Request the closing of the channel. Can be called once by one of
+        the participants. Lock period starts counting once this method is
+        called.
 
         Args:
-            sender (address):
-                The sender address.
-
-            transfers_encoded (List[transfer]):
-                A list of maximum length of 2 containing the transfer encoded
-                using the fixed length format, may be empty.
-
             ctx:
                 Block chain state used for mocking.
 
-            locked_encoded (bin):
-                The Lock to be unlocked.
+            first_encoded:
+                One of the last sent transfers, can be a transfer from either
+                side of the cannel. May be None.
 
-            merkleproof_encoded (bin):
-                A proof that the given lock is contained in the latest
-                transfer. The binary data is composed of a single hash at every
-                4bytes.
+            second_encoded:
+                The last sent transfer from the other end of the channel, in
+                respect to `first_encoded`. May be None.
+        """
 
-            secret (bin):
-                The secret that unlocks the lock `hashlock = sha3(secret)`.
+        if self.settled:
+            raise RuntimeError('contract is settled.')
 
+        if self.closed:
+            raise RuntimeError('contract is closing.')
+
+        # Close cannot accept a message that is not from a participant,
+        # otherwise a third-party could close a channel that both participants
+        # want open
+        if ctx['msg.sender'] not in self.participants:
+            raise ValueError('Invalid call, caller is not a participant')
+
+        transfer1, transfer2 = self._decode(first_encoded, second_encoded)
+
+        # The order is undetermined
+        if transfer1.sender == ctx['msg.sender']:
+            sender = transfer1
+            partner = transfer2
+        else:
+            sender = transfer2
+            partner = transfer1
+
+        self.closed = ctx['block_number']
+
+        # Flag the transfer from the node that called close, if a new transfer
+        # appears the closer will be penalized for lying, since it know all the
+        # messages that itself sent.
+        sender_state = self.participants[sender.sender]
+        sender_state.state = TRANSFER_FROM_SELF
+        sender_state.transfer = sender
+
+        # Since the closer sent it's last message, there is an incentive to it
+        # send the partner's latest message, because the balance is defined by
+        # the value_transfered that can only increase, any message that is not
+        # the latest will result in a lower balance for itself.
+        partner_state = self.participants[partner.sender]
+        partner_state.state = TRANSFER_FROM_PARTNER
+        partner_state.trasnfer = partner
+
+    def _check_increasing(self, transfer):  # pylint: disable=no-self-use,unused-argument
+        """ Helper to penalize any participant that created a transfer message
+        which isn't monotonically increasing the value_transfered.
+        """
+        # Both messages are know to be signed by the participant, so they were
+        # not faked. Independent of the origin, if these messages disagree in
+        # value the participant must have tampered it.
+
+        penalize = False
+        # state = self.participants[transfer.sender]
+        # penalize = (
+        #     (
+        #         state.transfer.nonce < transfer.nonce and
+        #         state.transfer.value_transfered > transfer.value_transfered
+        #     ) or (
+        #         state.transfer.nonce == transfer.nonce and
+        #         state.transfer.value_transfered != transfer.value_transfered
+        #     )
+        # )
+
+        if penalize:
+            # TODO: penalize
+            raise RuntimeError('Signed message with forged values encoutered')
+
+    def _aquired_update(self, new_transfer):
+        """ Helper to validate a TRANSFER_FROM_SELF or to update a
+        TRANSFER_FROM_PARTNER.
+
+        Use this method to update the contract state with a transfer that
+        cannot be made by the caller, or to check that the transfer informed by
+        the participant is the latest.
+        """
+        state = self.participants[new_transfer.sender]
+        current_transfer = state.transfer
+
+        if state.state == TRANSFER_FROM_SELF:
+            # Each participant knows the very last transfer that it has sent,
+            # if it informed anything but the lastest transfer it is penalized.
+
+            # The message informed by the participant can be one of the following:
+            # - The correct transfer (non-tampered and the latest), and we get the
+            # correct behavior.
+            # - Not the latest transfer, in which case the node will be penalized
+            # and lose it's assets.
+            # - A valid tampered transfer with a higher nonce, were the sender can
+            # only increase the `value_transfered` and lose asset.
+
+            # XXX: how to handle unacknowledged transfers?
+
+            # TODO: penalize the node if it that called close() passing an
+            # out-of-date transfer
+            # if current_transfer.nonce < new_transfer.nonce
+            pass
+        elif state.state in (TRANSFER_FROM_THIRDPARTY, TRANSFER_FROM_PARTNER):
+            # This happens either if the closer didn't inform the partner's
+            # latest transfer or if the partner created a new and valid
+            # transfer afterwards.
+            if current_transfer.nonce < new_transfer.nonce:
+                state.transfer = new_transfer
+                state.state = TRANSFER_FROM_THIRDPARTY
+        else:
+            raise Exception('Unexpected state')
+
+    def _participant_update(self, transfer):
+        """ Helper to update the participant transfer. """
+
+        state = self.participants[transfer.sender]
+
+        if state.state == TRANSFER_FROM_SELF:
+            # TODO: penalize the participant for calling twice
+            raise RuntimeError('Participant trying to call the contract twice.')
+
+        # TODO: penalize if the participant is sending an older transfer
+        # state.transfer.nonce > transfer.nonce
+
+        state.state = TRANSFER_FROM_SELF
+        state.transfer = transfer
+
+    def update_transfers(self, ctx, first_encoded, second_encoded, signature):
+        """" Update the last know transfers. Can be called multiple times.
+
+        Args:
+            ctx:
+                Block chain state used for mocking.
+
+            first_encoded (bin):
+                One of the last sent transfers, can be a transfer from either
+                side of the cannel. May be None.
+
+            second_encoded (bin):
+                The last sent transfer from the other end of the channel, in
+                respect to `first_encoded`. May be None.
+
+            signature (bin):
+                The signature for `sha3(first_encoded || second_encoded)`.
+        """
+        if self.settled:
+            raise RuntimeError('Contract is settled.')
+
+        if not self.closed:
+            raise RuntimeError('Contract is open.')
+
+        # signature required for third-parties (could use a separate method to save gas)
+        messages_hash = sha3(first_encoded + second_encoded)
+        publickey = c_ecdsa_recover_compact(messages_hash, signature)
+        address = address_from_key(publickey)
+
+        if address not in self.participants:
+            raise ValueError('Invalid address.')
+
+        transfer1, transfer2 = self._decode(first_encoded, second_encoded)
+
+        # The order is undetermined
+        if transfer1.sender == address:
+            sender = transfer1
+            partner = transfer2
+        else:
+            sender = transfer2
+            partner = transfer1
+
+        self._check_increasing(sender)
+        self._check_increasing(partner)
+
+        is_thirdparty = ctx['msg.sender'] != address
+        if is_thirdparty:
+            self._aquired_update(partner)  # check that TRANSFER_FROM_SELF was the latest
+            self._aquired_update(sender)  # the third-party did not make the message
+        else:
+            # participant overwriting a third-party or the participant's call is first
+            self._aquired_update(partner)  # check that TRANSFER_FROM_SELF was the latest
+            self._participant_update(sender)  # check that TRANSFER_FROM_PARTNER was the latest
+
+    def unlock(self, ctx, locked_encoded, merkleproof_encoded, secret):
+        # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
+        # if len(transfers_encoded):
+        #     raise ValueError('transfers_encoded needs at least 1 item.')
+
+        if self.settled:
+            raise RuntimeError('Contract is settled.')
+
+        if not self.closed:
+            raise RuntimeError('Contract is open.')
+
+        if ctx['msg.sender'] not in self.participants:
+            raise ValueError('Unknow address.')
+
+        partner = self.partner(ctx['msg.sender'])
+        state = self.participants[partner]
+        transfer = state.transfer
+
+        if not transfer:
+            return
+
+        merkle_proof = tuple32(merkleproof_encoded)
+        lock = Lock.from_bytes(locked_encoded)
+
+        hashlock = lock.hashlock
+        if hashlock != sha3(secret):
+            raise ValueError('invalid secret')
+
+        # the partner might not have made a transfer
+        is_valid_proof = check_proof(
+            merkle_proof,
+            transfer.locksroot,
+            sha3(transfer.lock.as_bytes),
+        )
+
+        if not is_valid_proof:
+            raise ValueError('Invalid merkle proof')
+
+        transfer.append(lock)
+
+    def settle(self, ctx):
+        """
         Todo:
             if challenged, keep track of who provided the last valid answer,
             punish the wrongdoer here, check that participants only updates
             their own balance are counted, because they could sign something
             for the other party to blame it.
         """
-        # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
-        # if len(transfers_encoded):
-        #     raise ValueError('transfers_encoded needs at least 1 item.')
-
-        if len(transfers_encoded) > 2:
-            raise ValueError('transfers_encoded cannot have more than 2 items.')
-
-        if self.settled:
-            raise RuntimeError('contract is settled')
-
-        # the merkleproof can be empty, if there is only one haslock
-        has_oneofunlocked = locked_encoded or secret
-        has_allofunlocked = locked_encoded and secret
-        if has_oneofunlocked and not has_allofunlocked:
-            raise ValueError(
-                'all arguments `merkle_proof`, `locked`, and `secret` must be provided'
-            )
-
-        last_sent_transfers = []
-        for data in transfers_encoded:
-            if data[0] == DIRECTTRANSFER:
-                last_sent_transfers.append(
-                    DirectTransfer.decode(data)
-                )
-            elif data[0] == MEDIATEDTRANSFER:
-                last_sent_transfers.append(
-                    MediatedTransfer.decode(data)
-                )
-            elif data[0] == CANCELTRANSFER:
-                last_sent_transfers.append(
-                    CancelTransfer.decode(data)
-                )
-            # convinience for testing only (LockedTransfer are not exchanged between nodes)
-            elif data[0] == LOCKEDTRANSFER:
-                last_sent_transfers.append(
-                    LockedTransfer.decode(data)
-                )
-            else:
-                raise ValueError('invalid transfer type {}'.format(type(data[0])))
-
-        # keep the latest claim
-        for transfer in last_sent_transfers:
-            if transfer.sender not in self.participants:
-                raise ValueError('Invalid tansfer, sender is not a participant')
-
-            sender_state = self.participants[transfer.sender]
-
-            if is_newer_transfer(transfer, sender_state):
-                sender_state['last_sent_transfer'] = transfer
-
-        partner = self.partner(sender)
-        partner_state = self.participants[partner]
-
-        if last_sent_transfers:
-            transfer = last_sent_transfers[-1]  # XXX: check me
-
-        # register un-locked
-        if merkleproof_encoded:
-            merkle_proof = tuple32(merkleproof_encoded)
-            lock = Lock.from_bytes(locked_encoded)
-
-            hashlock = lock.hashlock
-            if hashlock != sha3(secret):
-                raise ValueError('invalid secret')
-
-            # the partner might not have made a transfer
-            if partner_state['last_sent_transfer'] is not None:
-                assert check_proof(
-                    merkle_proof,
-                    partner_state['last_sent_transfer'].locksroot,
-                    sha3(transfer.lock.as_bytes),
-                )
-
-            partner_state['unlocked'].append(lock)
-
-        if self.closed is None:
-            log.debug('closing contract', netcontract_address=pex(self.netcontract_address))
-            self.closed = ctx['block_number']
-
-    def settle(self, ctx):
         assert not self.settled
         # during testing closed can be 0 and it is falsy
         assert self.closed is not None
