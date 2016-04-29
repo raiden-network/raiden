@@ -4,16 +4,35 @@
   var current_id = 1;
   var assets;
   var tx_button = tx_button_init();
-
+  var subscriptions = []
+  // ab.debug(true, true);
   ab.connect(
       wsuri,
       // WAMP session was established
       function (session) {
           sess = session;
           console.log("Connected to " + wsuri);
+          console.log("Current id: " + current_id);
           subscribe_transfer(sess);
           get_assets(sess);
           tx_button(sess);
+          // console.log("before close");
+          // sess.close();
+          // window.onbeforeunload = function (evt, sess) {
+          //   var message = 'Are you sure you want to leave? Transaction states will be lost!';
+          //   if (typeof evt == 'undefined') {
+          //     evt = window.event;
+          //   }
+          //   if (evt) {
+          //     evt.returnValue = message;
+          //     sess.unsubscribe("http://localhost:8080/raiden#transfer_cb");
+          //     sess.close()
+          //     console.log('unsubscribed, closed')
+          //
+          //   }
+          //   // return message;
+          //   return message
+          // }
 
       },
 
@@ -24,12 +43,13 @@
           if (code == ab.CONNECTION_UNSUPPORTED) {
               window.location = "http://autobahn.ws/unsupportedbrowser";
           } else {
-              console.log(reason);
+              console.log('session gone:' + reason);
           }
       }
   );
 
 
+  // closure for button deactivate 
   function tx_button_init(){
     var is_active = false
     function toggle(session){
@@ -50,27 +70,30 @@
     return toggle;
   }
 
-  // $('.disabled').click(function(e){
-  //   return false;
-  // });
 
-  function retrieve_reason(reason_id) {
-    var reasons = [
-      'UNKNOWN',
-      'NO_PATH',
-      'INVALID_ASSET',
-      'INVALID_TARGET',
-      'INVALID_AMOUNT'
-    ];
-    return reasons[parseInt(reason_id)]
-  }
+  // callback for
+  function subscription_cb(topic, event) {
 
+   switch (topic) {
+      case "http://example.com/event#myevent1":
+         // handle event 1
+         break;
+      case "http://example.com/event#myevent2":
+         // handle event 2
+         break;
+      default:
+         break;
+   }
+};
+
+  // FIXME: first callback doesn't get called after a reload!
   function subscribe_transfer(session) {
+    console.log('subscription requested');
     session.subscribe("http://localhost:8080/raiden#transfer_cb", function (topic, event) {
       console.log(topic, event);
       var callback = event[0]
       var status = event[1]
-      var reason = retrieve_reason(event[2])
+      var reason = event[2]
       // var reason = event[2]
       // should only be one element!
       // var row = getRowByCallback(callback)
@@ -89,6 +112,11 @@
       }
     });
   }
+
+  function unsubscribe(session, topic) {
+    session.unsubscribe(topic);
+  }
+
 
   function get_assets(session) {
     session.call(

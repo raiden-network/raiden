@@ -1,10 +1,10 @@
 from geventwebsocket.server import WebSocketServer
 from geventwebsocket.resource import Resource, WebSocketApplication
 from geventwebsocket.protocols.wamp import WampProtocol, export_rpc
-from raiden.raiden_service import RaidenAPI, RaidenService, NoPathError, InvalidAddress
-from raiden.utils import isaddress
-from raiden.channel import InsufficientBalance
-import os
+from raiden.raiden_service import RaidenAPI, RaidenService, NoPathError, InvalidAddress, InvalidAmount
+# from raiden.utils import isaddress
+# from raiden.channel import InsufficientBalance
+import os, json
 
 
 #  monkey patch: gevent-websocket to support 'extra' argument
@@ -35,6 +35,34 @@ class _Resource(Resource):
         else:
             return current_app(environ, start_response)
 
+class _WampProtocol(WampProtocol):
+
+    def __init__(self, *args, **kwargs):
+        super(_WampProtocol,self).__init__(*args, **kwargs)
+
+    def on_message(self, message):
+        # FIX: handle when ws is already closed (message is None)
+        if message is None:
+            return
+
+        data = json.loads(message)
+
+        if not isinstance(data, list):
+            raise Exception('incoming data is no list')
+
+        if data[0] == self.MSG_PREFIX and len(data) == 3:
+            prefix, uri = data[1:3]
+            self.prefixes.add(prefix, uri)
+
+        elif data[0] == self.MSG_CALL and len(data) >= 3:
+            return self.rpc_call(data)
+
+        elif data[0] in (self.MSG_SUBSCRIBE, self.MSG_UNSUBSCRIBE,
+                         self.MSG_PUBLISH):
+            return self.pubsub_action(data)
+        else:
+            raise Exception("Unknown call")
+
 
 class UIHandler(object):
     """ Handles the RPC-calls from the UI and interfaces with the RaidenAPI.
@@ -55,7 +83,8 @@ class UIHandler(object):
         try:
             amount = int(amount)
         except ValueError:
-            self.exception_handler(2)
+            self.exception_handler(id, 'INVALID_AMOUNT')
+            return False
         # try to forward transfer to API and handle occuring excpetions
         try:
             self.api.transfer(asset_address, amount, target,
@@ -63,12 +92,15 @@ class UIHandler(object):
             # if cb just failes with success==False, then everything was right,except:
             #   - no active channel was found
             #   - or no channel had a high enough distributable (in TransferTask._run())
+            return True
         except NoPathError:
             self.exception_handler(id, 'NO_PATH')
+            return False
         # except InsufficientBalance:
         #     self.exception_handler(id, 'INSUFFICIENT_FUNDS')
         except InvalidAmount:
             self.exception_handler(id, 'INVALID_AMOUNT')
+            return False
         except InvalidAddress as ex:
             if ex.args[1] is 'asset':
                 self.exception_handler(id, 'INVALID_ASSET')
@@ -76,6 +108,7 @@ class UIHandler(object):
                 self.exception_handler(id, 'INVALID_TARGET')
             else:
                 self.exception_handler(id, 'UNKNOWN')
+            return False
         except:
             self.exception_handler(id, 'UNKNOWN')
             # DEBUG:
@@ -88,18 +121,8 @@ class UIHandler(object):
         self.publish(message)
 
     def exception_handler(self, id, reason):
-        status_ids = {
-            'UNKNOWN': 0,
-            'NO_PATH': 1,
-            'INVALID_ASSET': 2,
-            'INVALID_TARGET': 3,
-            'INVALID_AMOUNT': 4
-            # 'INSUFFICIENT_FUNDS': 5
-        }
-        # FIXME, defaultdict, etc?
         if not reason:
             reason = 'UNKNOWN'
-        reason = status_ids.get(reason)
         self.transfer_callback(None, False, id, reason=reason)
 
     @export_rpc
@@ -117,7 +140,7 @@ class UIHandler(object):
 
 
 class UIService(WebSocketApplication):
-    protocol_class = WampProtocol
+    protocol_class = _WampProtocol
 
     def __init__(self, ws, extra=None):
         super(UIService, self).__init__(ws)
@@ -147,11 +170,16 @@ class UIService(WebSocketApplication):
         print "WebUI registration completed\n"
 
     def on_message(self, message):
+        # TODO: handle client reload/reconnect
+
         print "message: ", message
+        if message is None:
+            return
         super(UIService, self).on_message(message)
 
     def on_close(self, reason):
         print "closed"
+
 
 
 class WebUI(object):
@@ -230,7 +258,7 @@ class WebUI(object):
                 }
         resource = _Resource(routes, extra=data)
 
-        server = WebSocketServer(("", self.port), resource, debug=False)
+        server = WebSocketServer(("", self.port), resource, debug=True)
         server.serve_forever()
 
     def stop():

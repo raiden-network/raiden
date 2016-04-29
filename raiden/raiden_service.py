@@ -74,7 +74,7 @@ class RaidenAPI(object):
             if not is_valid:
                 raise InvalidAddress('{} address is not valid.'.format(address_type),
                                      address_type)
-            return address
+        return address
 
 
 class RaidenService(object):
@@ -95,7 +95,7 @@ class RaidenService(object):
 
     def has_path(self, asset, target):
         assetmanager = self.assetmanagers.get(asset)
-        if assetmanager:
+        if assetmanager is not None:
             channel = assetmanager.channelgraph.G
             if target in channel.nodes():
                 return nx.has_path(channel, self.address, target)
