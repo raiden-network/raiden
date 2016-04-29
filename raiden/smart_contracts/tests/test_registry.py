@@ -129,6 +129,7 @@ contract Registry {
     /// @dev Get all assetAddresses in the collection.
     /// @return assetAddress (address[]) an array of all assetAddresses
     function assetAddresses() returns (address[] assetAddresses) {
+        assetAddresses = new address[](data.size)
         for (var i = IterableMappingCMC.iterate_start(data); IterableMappingCMC.iterate_valid(data, i); i = IterableMappingCMC.iterate_next(data, i)) {
             var (key, value) = IterableMappingCMC.iterate_get(data, i);
             assetAddresses[i] = key;
@@ -145,15 +146,22 @@ contract Registry {
 def test_registry():
     s = tester.state()
     lib_c = s.abi_contract(library_code, language="solidity")
-    c = s.abi_contract(registry_code, language="solidity", library=lib_c.address)
+    c = s.abi_contract(registry_code, language="solidity", libraries={'IterableMappingCMC': lib_c.address.encode('hex')})
 
     c.addAsset(sha3('asset')[:20])
     c.addAsset(sha3('address')[:20])
-    cmc = c.channelManagerByAsset(sha3('asset')[:20])
-    assert cmc[0] == sha3('asset')[:20]
-    adrs = c.assetAddresses()
-    assert len(adrs) == 2
-    assert adrs[1] == sha3('address')[:20]
+    # if address already exists, throw
     with pytest.raises(TransactionFailed):
         c.addAsset(sha3('asset')[:20])
+    assert c.data.size == 2
 
+    cmc = c.channelManagerByAsset(sha3('asset')[:20])
+    assert cmc[0] == sha3('asset')[:20]
+    # if address does not exist, throw
+    with pytest.raises(TransactionFailed):
+        c.channelManagerByAsset(sha3('mainz')[:20])
+
+    adrs = c.assetAddresses()
+    assert len(adrs) == 2
+    assert adrs[0] == sha3('asset')[:20]
+    assert adrs[1] == sha3('address')[:20]

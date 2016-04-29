@@ -26,12 +26,20 @@ contract ChannelManagerContract {
     /// @param adr (address) the address
     /// @return channels (NettingContracts[]) all channels that a given address participates in.
     function nettingContractsByAddress(address adr) returns (NettingContract[] channels){
+        channels = new NettingContract[](data.keys.length);
+        uint idx = 0;
         for (var i = IterableMappingNcc.iterate_start(data); IterableMappingNcc.iterate_valid(data, i); i = IterableMappingNcc.iterate_next(data, i)) {
             var (key, value) = IterableMappingNcc.iterate_get(data, i);
-            if (value.participants[0].addr == adr) channels.push(key);
-            else if (value.participants[1].addr == adr) channels.push(key);
+            if (value.participants[0].addr == adr) {
+                channels[idx] = (key);
+                idx++;
+            }
+            else if (value.participants[1].addr == adr) {
+                channels[idx] = (key);
+                idx++;
+            }
         }
-        if (channels.length == 0) throw; //maybe find other way to show that no such channel exists
+        if (channels[0] == 0) throw; //maybe find other way to show that no such channel exists
     }
 
 
@@ -63,9 +71,9 @@ contract ChannelManagerContract {
     /// @return channel (NettingContract) the value of the NettingContract of the two parties.
     function get(address adrA, address adrB) returns (NettingContract channel){
         ky = key(adrA, adrB);
-        if (!IterableMappingNcc.contains(data, ky)) throw; //handle if no such channel exists
+        if (IterableMappingNcc.contains(data, ky) == false) throw; //handle if no such channel exists
         uint index = IterableMappingNcc.atIndex(data, ky);
-        var (k, v) = IterableMappingNcc.iterate_get(data, index - 1);
+        var (k, v) = IterableMappingNcc.iterate_get(data, index - 1); // -1 ?
         channel = v;
     }
 
