@@ -6,7 +6,7 @@ from ethereum import slogging
 
 from raiden.utils import sha3, pex
 from raiden.mtree import check_proof
-from raiden.messages import decode, MediatedTransfer, CancelTransfer, DirectTransfer, Lock, LockedTransfer
+from raiden.messages import MediatedTransfer, CancelTransfer, DirectTransfer, Lock, LockedTransfer
 from raiden.encoding.messages import (
     DIRECTTRANSFER, LOCKEDTRANSFER, MEDIATEDTRANSFER, CANCELTRANSFER,
 )
