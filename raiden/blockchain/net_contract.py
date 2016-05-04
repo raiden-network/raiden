@@ -86,6 +86,9 @@ class Participant(object):
         self.unlocked = []
         """ A list of (Lock, merkle_proof, secret). """
 
+        self.has_deposited = False
+        """ Flag indicating if the participant has called the deposit(). """
+
 
 class NettingChannelContract(object):
     """ Contract that allows users to perform fast off-chain transactions.
@@ -223,13 +226,10 @@ class NettingChannelContract(object):
         if self.closed is not None:
             return False
 
-        lowest_deposit = min(
-            state.deposit
+        return all(
+            state.has_deposited
             for state in self.participants.values()
         )
-
-        all_deposited = lowest_deposit > 0
-        return all_deposited
 
     def deposit(self, address, amount, block_number):
         """ Deposit `amount` coins for the address `address`. """
@@ -246,7 +246,9 @@ class NettingChannelContract(object):
         if amount < 0:
             raise ValueError('amount cannot be negative')
 
-        self.participants[address].deposit += amount
+        participant = self.participants[address]
+        participant.has_deposited = True
+        participant.deposit += amount
 
         if self.isopen and self.opened is None:
             # track the block were the contract was openned
