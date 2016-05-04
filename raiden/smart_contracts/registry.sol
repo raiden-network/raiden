@@ -14,22 +14,22 @@ contract Registry {
     function addAsset(address assetAddress) {
         // only allow unique addresses
         if (IterableMappingCMC.contains(data, assetAddress)) throw;
-        ChannelManagerContract c = ChannelManagerContract(assetAddress);
+        ChannelManagerContract c = new ChannelManagerContract(assetAddress);
         IterableMappingCMC.insert(data, assetAddress, c);
     }
 
 
-    /// @notice channelManagerByAsset(address) to get the ChannelManagerContract 
+    /// @notice channelManagerByAsset(address) to get the ChannelManagerContract
     /// of the given assetAddress.
     /// @dev Get the ChannelManagerContract of a given assetAddress.
     /// @param assetAddress (address) the asset address.
-    /// @return cmc (ChannelManagerContract) the contract belonging to an assetAddress.
-    function channelManagerByAsset(address assetAddress) returns (ChannelManagerContract cmc) {
+    /// @return asAdr (address) the address belonging of an assetAddress.
+    function channelManagerByAsset(address assetAddress) returns (address asAdr) {
         // if assetAddress does not exist, throw
         if (IterableMappingCMC.contains(data, assetAddress) == false) throw;
         uint index = IterableMappingCMC.atIndex(data, assetAddress);
         var(key, value) = IterableMappingCMC.iterate_get(data, index - 1);
-        cmc = value;
+        asAdr = value.assetAddress();
     }
 
 
@@ -37,7 +37,7 @@ contract Registry {
     /// @dev Get all assetAddresses in the collection.
     /// @return assetAddress (address[]) an array of all assetAddresses
     function assetAddresses() returns (address[] assetAddresses) {
-        assetAddresses = new address[](data.size)
+        assetAddresses = new address[](data.size);
         for (var i = IterableMappingCMC.iterate_start(data); IterableMappingCMC.iterate_valid(data, i); i = IterableMappingCMC.iterate_next(data, i)) {
             var (key, value) = IterableMappingCMC.iterate_get(data, i);
             assetAddresses[i] = key;
