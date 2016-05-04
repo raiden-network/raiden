@@ -14,18 +14,6 @@ from raiden.encoding.signing import c_ecdsa_recover_compact, address_from_key
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
-TRANSFER_UNKNOW = 0
-""" State before close() is called."""
-
-TRANSFER_FROM_SELF = 1
-""" State for a transfer sent by the participant itself by calling close or update_transfers. """
-
-TRANSFER_FROM_THIRDPARTY = 2
-""" State used if a thirdparty updated a transfer on behalf of a node. """
-
-TRANSFER_FROM_PARTNER = 3
-""" State used for the transfer that was exchange and informed by the other node in close(). """
-
 # Blockspam attack mitigation:
 #     - Oracles, certifying, that previous blocks were full.
 #     - Direct access to gasused of previous blocks.
@@ -35,6 +23,11 @@ TRANSFER_FROM_PARTNER = 3
 #     Channel Opening sequence
 #     Channel Fees (i.e. Accounts w/ higher reputation could charge a fee/deposit).
 #     use channel.opened to collect reputation of an account (long lasting channels == good)
+
+
+STATE_UNKNOW = 0
+STATE_PARTICIPANT = 1
+STATE_THIRDPARTY = 2  # also used when close() is called
 
 
 def tuple32(data):
@@ -75,13 +68,13 @@ class Participant(object):
         self.deposit = 0
         """ Amount of asset deposited by the participant. """
 
+        # Used to track the latest know transfer from the partner
         self.transfer = None
-        """ The last transfer used for settling the balances. This transfer can
-        be sent from either participant or a third-party.
-        """
+        """ The transfer exchanged by the nodes used for settling. """
 
-        self.state = TRANSFER_UNKNOW
-        """ Indicate the origin of the transfer. """
+        # Used to track if the node who called close lied
+        self.transfer_from_self = None
+        """ The transfer informed by the node itself when calling close, used to detect frauds. """
 
         self.unlocked = []
         """ A list of (Lock, merkle_proof, secret). """
@@ -89,30 +82,34 @@ class Participant(object):
         self.has_deposited = False
         """ Flag indicating if the participant has called the deposit(). """
 
+        # Allow thrid-parties to update `transfer`
+        self.state = STATE_UNKNOW
+        """ From who the contract received this transfer. """
+
+
 
 class NettingChannelContract(object):
-    """ Contract that allows users to perform fast off-chain transactions.
+    """ Allows users to perform fast off-chain transactions.
 
-    The netting contract allows two parties to engage in off-chain asset
-    transfers without trust among them, with the functionality of detecting
-    frauds, penalize the wrongdoers, and to participate in an off-chain network
-    for fast and cheap transactions.
+    Two parties can engage in fast and cheap transfers without trusting each
+    other. Each party only needs to rely on the contract and it's correct
+    behavior.
 
     Operation
     ---------
 
-    Off-chain transactions are done by external clients without interaction
-    with the channel's contract, the contract's role is only to secure the
-    asset and create the mechanism that allows settlement of conflicts.
+    These transactions are done by external clients without interaction with
+    the contract, the contract's role is only to secure the asset and create
+    the mechanism that allows settlement of conflicts.
 
     The asset transfers are done through the exchange of signed messages among
-    the participants, each message works as a proof of balance for a given
-    participant at each moment. These messages are composed of:
+    the participants, each message works as a proof of the transfer made from a
+    given participant. These messages are composed of:
 
         - The message signature, proving authenticity of the message.
         - The increasing counter `nonce`, identifying the order of the
         transfers.
-        - The partner's current balance.
+        - The partner's total amount transfered, determining each balance.
         - The merkle root of the locked transfers tree.
         - Possibly a `Lock` structure describing a new locked transfer.
 
@@ -122,7 +119,8 @@ class NettingChannelContract(object):
 
         - Signatures need to be from a key recognized by the contract.
         - `Nonce`s are unique and increasing to identify the transfer order.
-        - Negative transfers are invalid.
+        - Negative transfers are invalid, and the transfered amount is always
+        increasing.
         - Maintain a correct merkle root with all non-expired locked transfer.
         - A valid timeout for `Lock`ed transfers.
 
@@ -135,27 +133,25 @@ class NettingChannelContract(object):
     for cooperatively transfer assets for nodes without a direct channel.
 
     Multiple transfers are expected to occur from the opening of a channel
-    onwards, and only the latest with it's balance is valid. The `nonce` field
-    is used by this contract to compare transfers and define which is the
-    latest, it's responsability of each participant to reject messages with an
-    decreasing or equal `nonce`, ensuring that this value is increasing, not
-    necessarilly sequential/unitarily.
+    onwards. The `nonce` field is used by this contract to compare transfers
+    and define which is the latest, it's responsability of each participant to
+    reject messages with an decreasing or equal `nonce`, ensuring that this
+    value is increasing.
 
     Direct Transfer
     ===============
 
     Direct transfers require only the exchange of a single signed message
-    containing the current `nonce`, with an up-to-date balance and merkle
-    proof.
+    containing the current `nonce`, with an up-to-date amount transfered and
+    merkle proof.
 
     Mediated Transfer
     =================
 
-    Direct transfer are possible only with the existence of a direct channel
-    among the participants, since direct channels are expected to be the
-    exception and not the rule a different mechanism is required for indirect
-    transfers, this is done by exploiting existing channels to mediate an asset
-    transfer.
+    Direct transfer depend on the existence of direct channels among the
+    participants, since direct channels are expected to be the exception and
+    not the rule a different mechanism is required for indirect transfers, this
+    is done by exploiting existing channels to mediate an asset transfer.
 
     The path discovery required to find which channels will be used to mediate
     the transfer isn't part of this contract, only the means to protect the
@@ -170,10 +166,20 @@ class NettingChannelContract(object):
     `i` to safely transfer it's asset to `i+1` with the guarantee that it will
     have the transfer from `i-1` done.
 
-    Note:
-        Implementation in pure python that reproduces the expected behavior of
-        the blockchain NettingContract. This implementation is useful for
-        testing.
+    Penalization
+    ------------
+
+    An evil participant can reduce it's spending in two ways:
+
+        1. Tampered messages: Send a transfer signed with a lower
+        `amount_transfered`.
+        2. Older messages: Send a valid but older message, which has a lower
+        `amount_transfered`.
+
+    To detect these tatics:
+
+        1. A single message with a equal or lower nonce, with a larger amount.
+        2. A single message with a higher nonce.
     """
 
     locked_time = 20
@@ -214,6 +220,9 @@ class NettingChannelContract(object):
         self.closed = None
         """ Block number when close() was first called (might be zero in testing scenarios) """
 
+        self.closer = None
+        """ The participant that called the close method. """
+
     @property
     def isopen(self):
         """ The contract is open after both participants have deposited, and if
@@ -232,7 +241,7 @@ class NettingChannelContract(object):
         )
 
     def deposit(self, address, amount, block_number):
-        """ Deposit `amount` coins for the address `address`. """
+        """ Address maked a deposit of `amount` coins. """
 
         if address not in self.participants:
             msg = 'The address {address} is not a participant of this contract'.format(
@@ -268,16 +277,22 @@ class NettingChannelContract(object):
         return all_participants[0]
 
     def _decode(self, first_encoded, second_encoded):
-        transfer1 = decode_transfer(first_encoded)
-        transfer2 = decode_transfer(second_encoded)
+        transfer1 = None
+        transfer2 = None
 
-        if transfer1.sender not in self.participants:
-            raise ValueError('Invalid transfer address')
+        if first_encoded:
+            transfer1 = decode_transfer(first_encoded)
 
-        if transfer2.sender not in self.participants:
-            raise ValueError('Invalid transfer address')
+            if transfer1.sender not in self.participants:
+                raise ValueError('Invalid transfer address')
 
-        if transfer1.sender == transfer2.sender:
+        if second_encoded:
+            transfer2 = decode_transfer(second_encoded)
+
+            if transfer2.sender not in self.participants:
+                raise ValueError('Invalid transfer address')
+
+        if first_encoded and second_encoded and transfer1.sender == transfer2.sender:
             raise ValueError('Both transfer are for the same address')
 
         return transfer1, transfer2
@@ -291,11 +306,11 @@ class NettingChannelContract(object):
             ctx:
                 Block chain state used for mocking.
 
-            first_encoded:
+            first_encoded (bin):
                 One of the last sent transfers, can be a transfer from either
                 side of the cannel. May be None.
 
-            second_encoded:
+            second_encoded (Optional[bin]):
                 The last sent transfer from the other end of the channel, in
                 respect to `first_encoded`. May be None.
         """
@@ -310,130 +325,45 @@ class NettingChannelContract(object):
         # otherwise a third-party could close a channel that both participants
         # want open
         if ctx['msg.sender'] not in self.participants:
-            raise ValueError('Invalid call, caller is not a participant')
+            raise ValueError('Caller is not a participant')
 
+        closer_state = self.participants[ctx['msg.sender']]
+        partner_state = self.participants[self.partner(ctx['msg.sender'])]
+
+        # may be None, a node is not required to make a transfer
         transfer1, transfer2 = self._decode(first_encoded, second_encoded)
 
         # The order is undetermined
         if transfer1.sender == ctx['msg.sender']:
-            sender = transfer1
+            closer = transfer1
             partner = transfer2
         else:
-            sender = transfer2
+            closer = transfer2
             partner = transfer1
 
+        closer_state.transfer = closer
+        closer_state.transfer_from_self = closer
+        closer_state.state = STATE_PARTICIPANT
+
+        partner_state.transfer = partner
+        partner_state.state = STATE_THIRDPARTY
+
         self.closed = ctx['block_number']
+        self.closer = closer_state
 
-        # Flag the transfer from the node that called close, if a new transfer
-        # appears the closer will be penalized for lying, since it know all the
-        # messages that itself sent.
-        sender_state = self.participants[sender.sender]
-        sender_state.state = TRANSFER_FROM_SELF
-        sender_state.transfer = sender
-
-        # Since the closer sent it's last message, there is an incentive to it
-        # send the partner's latest message, because the balance is defined by
-        # the value_transfered that can only increase, any message that is not
-        # the latest will result in a lower balance for itself.
-        partner_state = self.participants[partner.sender]
-        partner_state.state = TRANSFER_FROM_PARTNER
-        partner_state.trasnfer = partner
-
-    def _check_increasing(self, transfer):  # pylint: disable=no-self-use,unused-argument
-        """ Helper to penalize any participant that created a transfer message
-        which isn't monotonically increasing the value_transfered.
-        """
-        # Both messages are know to be signed by the participant, so they were
-        # not faked. Independent of the origin, if these messages disagree in
-        # value the participant must have tampered it.
-
-        penalize = False
-        # state = self.participants[transfer.sender]
-        # penalize = (
-        #     (
-        #         state.transfer.nonce < transfer.nonce and
-        #         state.transfer.value_transfered > transfer.value_transfered
-        #     ) or (
-        #         state.transfer.nonce == transfer.nonce and
-        #         state.transfer.value_transfered != transfer.value_transfered
-        #     )
-        # )
-
-        if penalize:
-            # TODO: penalize
-            raise RuntimeError('Signed message with forged values encoutered')
-
-    def _aquired_update(self, new_transfer):
-        """ Helper to validate a TRANSFER_FROM_SELF or to update a
-        TRANSFER_FROM_PARTNER.
-
-        Use this method to update the contract state with a transfer that
-        cannot be made by the caller, or to check that the transfer informed by
-        the participant is the latest.
-        """
-        state = self.participants[new_transfer.sender]
-        current_transfer = state.transfer
-
-        if state.state == TRANSFER_FROM_SELF:
-            # Each participant knows the very last transfer that it has sent,
-            # if it informed anything but the lastest transfer it is penalized.
-
-            # The message informed by the participant can be one of the following:
-            # - The correct transfer (non-tampered and the latest), and we get the
-            # correct behavior.
-            # - Not the latest transfer, in which case the node will be penalized
-            # and lose it's assets.
-            # - A valid tampered transfer with a higher nonce, were the sender can
-            # only increase the `value_transfered` and lose asset.
-
-            # XXX: how to handle unacknowledged transfers?
-
-            # TODO: penalize the node if it that called close() passing an
-            # out-of-date transfer
-            # if current_transfer.nonce < new_transfer.nonce
-            pass
-        elif state.state in (TRANSFER_FROM_THIRDPARTY, TRANSFER_FROM_PARTNER):
-            # This happens either if the closer didn't inform the partner's
-            # latest transfer or if the partner created a new and valid
-            # transfer afterwards.
-            if current_transfer.nonce < new_transfer.nonce:
-                state.transfer = new_transfer
-                state.state = TRANSFER_FROM_THIRDPARTY
-        else:
-            raise Exception('Unexpected state')
-
-    def _participant_update(self, transfer):
-        """ Helper to update the participant transfer. """
-
-        state = self.participants[transfer.sender]
-
-        if state.state == TRANSFER_FROM_SELF:
-            # TODO: penalize the participant for calling twice
-            raise RuntimeError('Participant trying to call the contract twice.')
-
-        # TODO: penalize if the participant is sending an older transfer
-        # state.transfer.nonce > transfer.nonce
-
-        state.state = TRANSFER_FROM_SELF
-        state.transfer = transfer
-
-    def update_transfers(self, ctx, first_encoded, second_encoded, signature):
-        """" Update the last know transfers. Can be called multiple times.
+    def update_transfer(self, ctx, transfer_encoded, signature):
+        """" Used by the partner to inform the latest know transfer.
 
         Args:
             ctx:
                 Block chain state used for mocking.
 
-            first_encoded (bin):
-                One of the last sent transfers, can be a transfer from either
-                side of the cannel. May be None.
-
-            second_encoded (bin):
-                The last sent transfer from the other end of the channel, in
-                respect to `first_encoded`. May be None.
+            transfer_encoded (bin):
+                Last sent transfers received by the partner (can be sent by a third party).
 
             signature (bin):
-                The signature for `sha3(first_encoded || second_encoded)`.
+                The signature for `sha3(transfer_encoded)`, allows third
+                parties to send message on behalf of a participant.
         """
         if self.settled:
             raise RuntimeError('Contract is settled.')
@@ -441,7 +371,7 @@ class NettingChannelContract(object):
         if not self.closed:
             raise RuntimeError('Contract is open.')
 
-        # signature required for third-parties (could use a separate method to save gas)
+        # required to prove authenticity from third-parties.
         messages_hash = sha3(first_encoded + second_encoded)
         publickey = c_ecdsa_recover_compact(messages_hash, signature)
         address = address_from_key(publickey)
@@ -449,33 +379,47 @@ class NettingChannelContract(object):
         if address not in self.participants:
             raise ValueError('Invalid address.')
 
-        transfer1, transfer2 = self._decode(first_encoded, second_encoded)
+        transfer = decode_transfer(transfer_encoded)
 
-        # The order is undetermined
-        if transfer1.sender == address:
-            sender = transfer1
-            partner = transfer2
-        else:
-            sender = transfer2
-            partner = transfer1
+        if not transfer.sender == self.closer.transfer_from_self.sender:
+            raise ValueError('Invalid transfer address')
 
-        self._check_increasing(sender)
-        self._check_increasing(partner)
+        state = self.participants[transfer.sender]
 
-        is_thirdparty = ctx['msg.sender'] != address
-        if is_thirdparty:
-            self._aquired_update(partner)  # check that TRANSFER_FROM_SELF was the latest
-            self._aquired_update(sender)  # the third-party did not make the message
-        else:
-            # participant overwriting a third-party or the participant's call is first
-            self._aquired_update(partner)  # check that TRANSFER_FROM_SELF was the latest
-            self._participant_update(sender)  # check that TRANSFER_FROM_PARTNER was the latest
+        tampered = False
+        if transfer and state.transfer:
+            # A message is tampered if `value_transfered` was raised without raising
+            # the `nonce`.
+            # Only need to compare against transfer_from_self because that is
+            # the only variable in uniquiely controlled by the closer.
+            tampered = (
+                (
+                    state.transfer_from_self.nonce < transfer.nonce and
+                    state.transfer_from_self.value_transfered > transfer.value_transfered
+                ) or (
+                    state.transfer_from_self.nonce == transfer.nonce and
+                    state.transfer_from_self.value_transfered != transfer.value_transfered
+                )
+            )
+
+        if tampered:
+            raise RuntimeError('Tampered message.')  # TODO: penalize
+
+        outdated = (
+            (state.transfer_from_self is None and transfer is not None)
+            or state.transfer_from_self.nonce < transfer.nonce
+        )
+
+        if outdated:
+            raise RuntimeError('Closer informed an outdated transfer.')  # TODO: penalize
+
+        if ctx['msg.sender'] == address:
+            state.transfer = transfer
+            state.state = STATE_PARTICIPANT
+        elif state.state == STATE_THIRDPARTY and state.transfer.nonce < transfer.nonce:
+            state.transfer = transfer
 
     def unlock(self, ctx, locked_encoded, merkleproof_encoded, secret):
-        # pylint: disable=too-many-arguments,too-many-locals,too-many-branches
-        # if len(transfers_encoded):
-        #     raise ValueError('transfers_encoded needs at least 1 item.')
-
         if self.settled:
             raise RuntimeError('Contract is settled.')
 
@@ -489,7 +433,8 @@ class NettingChannelContract(object):
         state = self.participants[partner]
         transfer = state.transfer
 
-        if not transfer:
+        # if partner haven't made a single transfer
+        if transfer is None:
             return
 
         merkle_proof = tuple32(merkleproof_encoded)
@@ -497,9 +442,8 @@ class NettingChannelContract(object):
 
         hashlock = lock.hashlock
         if hashlock != sha3(secret):
-            raise ValueError('invalid secret')
+            raise ValueError('Invalid secret')
 
-        # the partner might not have made a transfer
         is_valid_proof = check_proof(
             merkle_proof,
             transfer.locksroot,
@@ -512,16 +456,8 @@ class NettingChannelContract(object):
         transfer.append(lock)
 
     def settle(self, ctx):
-        """
-        Todo:
-            if challenged, keep track of who provided the last valid answer,
-            punish the wrongdoer here, check that participants only updates
-            their own balance are counted, because they could sign something
-            for the other party to blame it.
-        """
         assert not self.settled
-        # during testing closed can be 0 and it is falsy
-        assert self.closed is not None
+        assert self.closed is not None  # closed can be 0 during testing
         assert self.closed + self.locked_time <= ctx['block_number']
 
         for address, state in self.participants.items():
