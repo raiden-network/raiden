@@ -4,6 +4,7 @@ contract NettingContract {
     uint opened;
     uint closed;
     uint settled;
+    /*uint settlementTimeout; //maybe not?*/
 
     struct Transfer
     {
