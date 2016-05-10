@@ -251,6 +251,7 @@ class Channel(object):
         self.wasclosed = False
         self.received_transfers = []
         self.sent_transfers = []  #: transfers that were sent, required for settling
+        self.transfer_callbacks = []  # list of (Transfer, callback) tuples
 
     @property
     def isopen(self):
@@ -297,6 +298,16 @@ class Channel(object):
         """
         return self.our_state.locked.outstanding
 
+    def handle_callbacks(self, transfer):
+        # TODO: dict mapping transfer -> callback + cleanup
+        # TODO: handle the callbacks somewhere!
+        cb_indices = [index for index, transfer_cb in enumerate(self.transfer_callbacks)
+                      if transfer_cb[0] is transfer]
+        for i in cb_indices:
+            cb = self.transfer_callbacks[i][1]
+            cb(None, True)
+            del self.transfer_callbacks[i]
+
     def claim_locked(self, secret, locksroot=None):
         """ Claim locked transfer from any of the ends of the channel.
 
@@ -313,7 +324,7 @@ class Channel(object):
         if hashlock in self.partner_state.locked:
             self.partner_state.claim_locked(self.our_state, secret, locksroot)
 
-    def register_transfer(self, transfer):
+    def register_transfer(self, transfer, callback=None):
         """ Register a signed transfer, updating the channel's state accordingly. """
 
         if transfer.recipient == self.partner_state.address:
@@ -323,6 +334,8 @@ class Channel(object):
                 to_state=self.partner_state,
             )
             self.sent_transfers.append(transfer)
+            if callback:
+                self.transfer_callbacks.append((transfer, callback))
 
         elif transfer.recipient == self.our_state.address:
             self.register_transfer_from_to(

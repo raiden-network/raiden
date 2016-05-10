@@ -30,9 +30,11 @@ class TransferManager(object):
         assert isinstance(task, Task)
         del self.transfertasks[task.hashlock]
         for callback in self.on_task_completed_callbacks:
-            callback(task, success)
+            result = callback(task, success)
+            if result is True:
+                self.on_task_completed_callbacks.remove(callback)
 
-    def transfer(self, amount, target, hashlock=None, secret=None):
+    def transfer(self, amount, target, hashlock=None, secret=None, callback=None):
         """ Transfer `amount` between this node and `target`.
 
         This method will start a asyncronous transfer, the transfer might fail
@@ -48,8 +50,7 @@ class TransferManager(object):
             channel = self.assetmanager.channels[target]
             direct_transfer = channel.create_directtransfer(amount, secret=secret)
             self.raiden.sign(direct_transfer)
-            channel.register_transfer(direct_transfer)
-
+            channel.register_transfer(direct_transfer, callback=callback)
             task = self.raiden.protocol.send(direct_transfer.recipient, direct_transfer)
             task.join()
 
@@ -68,6 +69,8 @@ class TransferManager(object):
                 originating_transfer=None,
                 secret=secret,
             )
+            if callback:
+                self.on_task_completed_callbacks.append(callback)
             task.start()
             task.join()
 
