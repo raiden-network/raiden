@@ -68,6 +68,9 @@ class Participant(object):
         self.deposit = 0
         """ Amount of asset deposited by the participant. """
 
+        self.netted = None
+        """ Amount of asset netted after the channel is settled. """
+
         # Used to track the latest know transfer from the partner
         self.transfer = None
         """ The transfer exchanged by the nodes used for settling. """
@@ -85,7 +88,6 @@ class Participant(object):
         # Allow thrid-parties to update `transfer`
         self.state = STATE_UNKNOW
         """ From who the contract received this transfer. """
-
 
 
 class NettingChannelContract(object):
@@ -183,7 +185,8 @@ class NettingChannelContract(object):
     """
 
     locked_time = 20
-    """ Number of blocks that we are required to wait before allowing settlement. """
+    """ How many blocks will the contract wait before allowing settlement. """
+    # This could be implemented as follows:
     # - Absolute block number. A maximum life time is choosen for the contract,
     # the contract can be settled before but not after. The application must
     # not accept any transfer that expire after the given block.
@@ -194,7 +197,6 @@ class NettingChannelContract(object):
     #   - With a variable waiting time. The `locked_time` depends on the locked
     #   transfer and a list of all the lock's timeouts need to be sent to the
     #   contract.
-    #
     # This implementation's locked_time is a "fixed waiting time"
 
     def __init__(self, asset_address, netcontract_address, address_A, address_B):
@@ -214,11 +216,11 @@ class NettingChannelContract(object):
         self.opened = None
         """ Block number when deposit() was first called. """
 
-        self.settled = False
+        self.settled = None
         """ Block number when settle was sucessfully called. """
 
         self.closed = None
-        """ Block number when close() was first called (might be zero in testing scenarios) """
+        """ Block number when close() was first called (might be zero in testing scenarios). """
 
         self.closer = None
         """ The participant that called the close method. """
@@ -231,7 +233,7 @@ class NettingChannelContract(object):
         Returns:
             bool: True if the contract is open, False otherwise
         """
-        # during testing closed can be 0 and it is falsy
+        # During testing closed can be 0
         if self.closed is not None:
             return False
 
@@ -241,19 +243,19 @@ class NettingChannelContract(object):
         )
 
     def deposit(self, address, amount, block_number):
-        """ Address maked a deposit of `amount` coins. """
+        """ Method for `address` to make a deposit of `amount` asset. """
 
         if address not in self.participants:
-            msg = 'The address {address} is not a participant of this contract'.format(
+            msg = 'The address {address} is not a participant of this contract.'.format(
                 address=address,
             )
 
-            log.debug('unknow address', address=address, participants=self.participants)
+            log.debug('Unknow address.', address=address, participants=self.participants)
 
             raise ValueError(msg)
 
         if amount < 0:
-            raise ValueError('amount cannot be negative')
+            raise ValueError('Amount cannot be negative.')
 
         participant = self.participants[address]
         participant.has_deposited = True
@@ -276,9 +278,11 @@ class NettingChannelContract(object):
         all_participants.remove(address)
         return all_participants[0]
 
-    def _decode(self, first_encoded, second_encoded):
+    def _decode(self, closer_address, first_encoded, second_encoded):
         transfer1 = None
         transfer2 = None
+        closer = None
+        partner = None
 
         if first_encoded:
             transfer1 = decode_transfer(first_encoded)
@@ -286,16 +290,37 @@ class NettingChannelContract(object):
             if transfer1.sender not in self.participants:
                 raise ValueError('Invalid transfer address')
 
+            if transfer1.sender == closer_address:
+                closer = transfer1
+            else:
+                partner = transfer1
+
         if second_encoded:
             transfer2 = decode_transfer(second_encoded)
 
             if transfer2.sender not in self.participants:
                 raise ValueError('Invalid transfer address')
 
-        if first_encoded and second_encoded and transfer1.sender == transfer2.sender:
+            if transfer2.sender == closer_address:
+                closer = transfer2
+            else:
+                partner = transfer2
+
+        if transfer1 and transfer2 and transfer1.sender == transfer2.sender:
             raise ValueError('Both transfer are for the same address')
 
-        return transfer1, transfer2
+        return closer, partner
+
+    def _get_transfered_amount(self, transfer1, transfer2):
+        amount1, amount2 = 0.0, 0.0
+
+        if transfer1:
+            amount1 = transfer1.transfered_amount
+
+        if transfer2:
+            amount2 = transfer2.transfered_amount
+
+        return amount1, amount2
 
     def close(self, ctx, first_encoded, second_encoded):
         """" Request the closing of the channel. Can be called once by one of
@@ -315,11 +340,11 @@ class NettingChannelContract(object):
                 respect to `first_encoded`. May be None.
         """
 
-        if self.settled:
-            raise RuntimeError('contract is settled.')
+        if self.settled is not None:
+            raise RuntimeError('Contract is settled.')
 
-        if self.closed:
-            raise RuntimeError('contract is closing.')
+        if self.closed is not None:
+            raise RuntimeError('Contract is closing.')
 
         # Close cannot accept a message that is not from a participant,
         # otherwise a third-party could close a channel that both participants
@@ -331,15 +356,7 @@ class NettingChannelContract(object):
         partner_state = self.participants[self.partner(ctx['msg.sender'])]
 
         # may be None, a node is not required to make a transfer
-        transfer1, transfer2 = self._decode(first_encoded, second_encoded)
-
-        # The order is undetermined
-        if transfer1.sender == ctx['msg.sender']:
-            closer = transfer1
-            partner = transfer2
-        else:
-            closer = transfer2
-            partner = transfer1
+        closer, partner = self._decode(ctx['msg.sender'], first_encoded, second_encoded)
 
         closer_state.transfer = closer
         closer_state.transfer_from_self = closer
@@ -350,6 +367,14 @@ class NettingChannelContract(object):
 
         self.closed = ctx['block_number']
         self.closer = closer_state
+
+        amount1, amount2 = self._get_transfered_amount(closer, partner)
+        allowance = closer_state.deposit + partner_state.deposit
+        difference = abs(amount1 - amount2)
+
+        if difference > allowance:
+            # TODO: penalize closer
+            raise Exception('Invalid netted value')
 
     def update_transfer(self, ctx, transfer_encoded, signature):
         """" Used by the partner to inform the latest know transfer.
@@ -365,14 +390,14 @@ class NettingChannelContract(object):
                 The signature for `sha3(transfer_encoded)`, allows third
                 parties to send message on behalf of a participant.
         """
-        if self.settled:
+        if self.settled is not None:
             raise RuntimeError('Contract is settled.')
 
-        if not self.closed:
+        if self.closed is None:
             raise RuntimeError('Contract is open.')
 
         # required to prove authenticity from third-parties.
-        messages_hash = sha3(first_encoded + second_encoded)
+        messages_hash = sha3(transfer_encoded)
         publickey = c_ecdsa_recover_compact(messages_hash, signature)
         address = address_from_key(publickey)
 
@@ -406,8 +431,8 @@ class NettingChannelContract(object):
             raise RuntimeError('Tampered message.')  # TODO: penalize
 
         outdated = (
-            (state.transfer_from_self is None and transfer is not None)
-            or state.transfer_from_self.nonce < transfer.nonce
+            (state.transfer_from_self is None and transfer is not None) or
+            state.transfer_from_self.nonce < transfer.nonce
         )
 
         if outdated:
@@ -420,10 +445,10 @@ class NettingChannelContract(object):
             state.transfer = transfer
 
     def unlock(self, ctx, locked_encoded, merkleproof_encoded, secret):
-        if self.settled:
+        if self.settled is not None:
             raise RuntimeError('Contract is settled.')
 
-        if not self.closed:
+        if self.closed is None:
             raise RuntimeError('Contract is open.')
 
         if ctx['msg.sender'] not in self.participants:
@@ -455,21 +480,26 @@ class NettingChannelContract(object):
 
         transfer.append(lock)
 
+    def _get_netted(self, our_state, partner_state):
+        our_transfered_amount = 0.0
+        partner_transfered_amount = 0.0
+
+        if our_state.transfer:
+            our_transfered_amount = our_state.transfer.transfered_amount
+
+        if partner_state.transfer:
+            partner_transfered_amount = partner_state.transfer.transfered_amount
+
+        return our_state.deposit + partner_transfered_amount - our_transfered_amount
+
     def settle(self, ctx):
-        assert not self.settled
-        assert self.closed is not None  # closed can be 0 during testing
+        assert self.settled is None
+        assert self.closed is not None
         assert self.closed + self.locked_time <= ctx['block_number']
 
         for address, state in self.participants.items():
             other = self.participants[self.partner(address)]
-            state['netted'] = state['deposit']
-
-            # FIXME: use the latest transfer only
-            if state.get('last_sent_transfer'):
-                state['netted'] = state['last_sent_transfer'].balance
-
-            if other.get('last_sent_transfer'):
-                state['netted'] = other['last_sent_transfer'].balance
+            state.netted = self._get_netted(state, other)
 
         # add locked
         for address, state in self.participants.items():

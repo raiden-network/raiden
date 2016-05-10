@@ -110,10 +110,10 @@ def test_new_netting_contract():
     assert client.isopen(asset_address, netting2_address) is False
 
     peer1_last_sent_transfers = []
-    client.close(asset_address, netting1_address, peer1_address, peer1_last_sent_transfers, [])
+    client.close(asset_address, netting1_address, peer1_address, peer1_last_sent_transfers)
 
     # with pytest.raises(Exception):
-    #     client.close(asset_address, netting2_address, peer1_address, peer1_last_sent_transfers, [])
+    #     client.close(asset_address, netting2_address, peer1_address, peer1_last_sent_transfers)
 
     assert client.isopen(asset_address, netting1_address) is False
     assert client.isopen(asset_address, netting2_address) is False
@@ -124,7 +124,7 @@ def test_new_netting_contract():
     assert client.isopen(asset_address, netting2_address) is True
 
     peer2_last_sent_transfers = []
-    client.close(asset_address, netting1_address, peer2_address, peer2_last_sent_transfers, [])
+    client.close(asset_address, netting1_address, peer2_address, peer2_last_sent_transfers)
 
     assert client.isopen(asset_address, netting1_address) is False
     assert client.isopen(asset_address, netting2_address) is True

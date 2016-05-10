@@ -192,8 +192,8 @@ class BlockChainServiceMock(object):
         our_address = our_address
         partner_address = contract.partner(our_address)
 
-        our_balance = contract.participants[our_address]['deposit']
-        partner_balance = contract.participants[partner_address]['deposit']
+        our_balance = contract.participants[our_address].deposit
+        partner_balance = contract.participants[partner_address].deposit
 
         return {
             'our_address': our_address,
@@ -221,40 +221,50 @@ class BlockChainServiceMock(object):
         return contract.partner(our_address)
 
     def close(self, asset_address, netting_contract_address, our_address,  # pylint: disable=unused-argument,too-many-arguments
-              last_sent_transfers, unlocked_transfers):  # pylint: disable=unused-argument,too-many-arguments
+              last_sent_transfers):  # pylint: disable=unused-argument,too-many-arguments
 
         hash_channel = self.asset_hashchannel[asset_address]
         contract = hash_channel[netting_contract_address]
 
         ctx = {
             'block_number': self.block_number,
+            'msg.sender': our_address,
         }
 
-        transfer_encoded = [
-            transfer.encode()
-            for transfer in last_sent_transfers
-        ]
+        first_encoded = ''
+        second_encoded = ''
 
-        if unlocked_transfers:
-            for merkle_proof, locked_encoded, secret in unlocked_transfers:
-                merkleproof_encoded = ''.join(merkle_proof)
+        if len(last_sent_transfers) > 0:
+            first_encoded = last_sent_transfers[0].encode()
 
-                contract.close(
-                    ctx,
-                    our_address,
-                    transfer_encoded,
-                    locked_encoded,
-                    merkleproof_encoded,
-                    secret,
-                )
-        else:
-            contract.close(
+        if len(last_sent_transfers) == 2:
+            second_encoded = last_sent_transfers[1].encode()
+
+        contract.close(
+            ctx,
+            first_encoded,
+            second_encoded,
+        )
+
+    def unlock(self, asset_address, netting_contract_address, our_address,  # pylint: disable=unused-argument,too-many-arguments
+               unlocked_transfers):  # pylint: disable=unused-argument,too-many-arguments
+
+        hash_channel = self.asset_hashchannel[asset_address]
+        contract = hash_channel[netting_contract_address]
+
+        ctx = {
+            'block_number': self.block_number,
+            'msg.sender': our_address,
+        }
+
+        for merkle_proof, locked_encoded, secret in unlocked_transfers:
+            merkleproof_encoded = ''.join(merkle_proof)
+
+            contract.unlock(
                 ctx,
-                our_address,
-                transfer_encoded,
-                None,
-                None,
-                None,
+                locked_encoded,
+                merkleproof_encoded,
+                secret,
             )
 
     def settle(self, asset_address, netting_contract_address):
