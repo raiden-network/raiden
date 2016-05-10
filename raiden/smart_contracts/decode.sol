@@ -131,7 +131,7 @@ library Decoder {
     // helper function
     function bytesToAddress(bytes b, uint160 i) returns (address add) {
         assembly { i := mload(add(b, 0x14)) }
-        uint160 a = uint160(i);
+        uint160 a = uint160(i); // check if this is needed
         add = address(i);
     }
     

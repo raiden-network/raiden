@@ -37,7 +37,7 @@ contract NettingContract {
     event ChannelOpened(address assetAdr); // TODO
     event ChannelClosed(); // TODO
     event ChannelSettled(); // TODO
-    event ChennelSecretRevealed(); //TODO
+    event ChannelSecretRevealed(); //TODO
     
     modifier inParticipants {
         if (msg.sender != participants[0].addr &&
@@ -55,7 +55,7 @@ contract NettingContract {
     // Get the index of an address in participants
     function atIndex(address addr) returns (uint index) {
         if (addr == participants[0].addr) return 0;
-        if (addr == participants[1].addr) return 1;
+        else return 1;
     }
 
 
@@ -63,7 +63,7 @@ contract NettingContract {
     /// @dev Deposit an amount to a participating address.
     /// @param amount (uint) the amount to be deposited to the address
     function deposit(uint amount) inParticipants {
-        if (msg.sender.balance < amount) throw;
+        if (msg.sender.balance < amount) throw; // TODO check asset contract
         participants[atIndex(msg.sender)].deposit += amount;
         if(isOpen() && opened == 0) open();
     }
@@ -95,7 +95,7 @@ contract NettingContract {
     /// @return open (bool) the status of the channel
     function isOpen() constant returns (bool open) {
         if (closed == 0) throw;
-        if (participants[0].deposit > 0 && participants[1].deposit > 0) return true;
+        if (participants[0].deposit > 0 || participants[1].deposit > 0) return true;
         else return false;
     }
 
@@ -112,7 +112,7 @@ contract NettingContract {
             if (getSender(lsts[i]) != participants[0].addr &&
                 getSender(lsts[i]) != participants[1].addr) throw;
             
-            uint sndrIdx = atIndex(getSender(lsts[i]))
+            uint sndrIdx = atIndex(getSender(lsts[i]));
             if (participants[sndrIdx].lastSentTransfer == 0 || // how to check that for no data
                 participants[sndrIdx].lastSentTransfer.nonce < getNonce(lsts[i])){
                 decode(lsts);
@@ -230,7 +230,7 @@ contract NettingContract {
         // Direct Transfer
         if (message[0] == 5) {
             var(non, ass, rec, bal, loc, sec, sig) = decodeTransfer(message);
-            uint i = atIndex(msg.sender);
+            uint i = atIndex(msg.sender); // should be sender of message
             participants[i].lastSentTransfer.nonce = non;
             participants[i].lastSentTransfer.asset = ass;
             participants[i].lastSentTransfer.recipient = rec;

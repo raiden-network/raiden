@@ -193,36 +193,20 @@ library IterableMappingNcc
 }
 
 contract NettingContract {
-    uint lockedTime;
     address public assetAddress;
-    uint public opened;
-    uint public closed;
-    uint public settled;
     address public TEST_ADDRESS1 = 0x123456;
     address public TEST_ADDRESS2 = 0x654321;
     
-    struct Transfer {} // TODO
-    struct Unlocked {} // TODO
     struct Participant
     {
         address addr;
         uint deposit;
-        //Transfer[] lastSentTransfers;
-        //Unlocked unlocked;
     }
-    //mapping(address => Participant) public participants;
 
     Participant[2] public participants; // Might make more sense to use an array like this for participants */
                                  /*// since it only holds two.*/
 
-    event ChannelOpened(address assetAdr); // TODO
-    event ChannelClosed(); // TODO
-    event ChannelSettled(); // TODO
-
     function NettingContract(address assetAdr) {
-        opened = 0;
-        closed = 0;
-        settled = 0;
         assetAddress = assetAdr;
         participants[0].addr = TEST_ADDRESS1;
         participants[1].addr = TEST_ADDRESS2;
@@ -240,14 +224,14 @@ contract ChannelManagerContract {
     // Events
     // Event that triggers when a new channel is created
     // Gives the created channel
-    event ChannelNew(bytes32 key, NettingContract channel);
+    event ChannelNew(address partner);// update to use both addresses
 
     // Initialize the Contract
     /// @notice ChannelManagerContract(address) to contruct the contract
     /// @dev Initiate the contract with the constructor
     /// @param assetAdr (address) the address of an asset
     function ChannelManagerContract(address assetAdr) {
-        assetAddress = assetAdr;
+        assetAddress = 0x0bd4060688a1800ae986e4840aebc924bb40b5bf;
     }
 
 
@@ -272,9 +256,8 @@ contract ChannelManagerContract {
                 idx++;
             }
         }
-        //if (channels[0] == 0) throw; //maybe find other way to show that no such channel exists
     }
-
+    
 
     /// @notice key(address, address) to create a key of the two addressed.
     /// @dev Get a hashed key of two addresses.
@@ -283,7 +266,7 @@ contract ChannelManagerContract {
     /// @return key (bytes32) sha3 hash of the two keys.
     function key(address adrA, address adrB) returns (bytes32 key){
         if (adrA == adrB) throw;
-        if (adrA > adrB) return sha3(adrA, adrB);
+        if (adrA < adrB) return sha3(adrA, adrB);
         else return sha3(adrB, adrA);
     }
 
@@ -313,15 +296,17 @@ contract ChannelManagerContract {
 
     /// @notice newChannel(address, address) to create a new payment channel between two parties
     /// @dev Create a new channel between two parties
-    /// @param adrA (address) address of one party.
-    /// @param adrB (address) address of other party.
+    /// @param partner (address) address of one partner
     /// @return channel (NettingContract) the NettingContract of the two parties.
-    function newChannel(address adrA, address adrB) returns (NettingContract c){
-        bytes32 k = key(adrA, adrB);
-        c = NettingContract(assetAddress);
+    function newChannel(address partner) returns (NettingContract c){
+        bytes32 k = key(msg.sender, partner);
+        c = new NettingContract(getAssetAddress());
         add(k, c);
-        return c;
-        ChannelNew(k, c); //Triggers event
+        ChannelNew(partner); //Triggers event
+    }
+
+    function getAssetAddress() returns (address) {
+        return assetAddress;
     }
 
 
@@ -341,5 +326,33 @@ def test_cmc():
 
     # a0 = c.ChannelManagerContract(sha3('asset')[:20].encode('hex'))
     # assert a0.assetAddress == sha3('asset')[:20].encode('hex')
+
+    print(s.__dict__)
+
+    # test key()
+    vs = sorted((sha3('address1')[:20], sha3('address2')[:20]))
     k0 = c.key(sha3('address1')[:20], sha3('address2')[:20])
-    assert k0 == sha3(sha3('address2')[:20] + sha3('address1')[:20])
+    assert k0 == sha3(vs[0] + vs[1])
+    k1 = c.key(sha3('address2')[:20], sha3('address1')[:20])
+    assert k1 == sha3(vs[0] + vs[1])
+    with pytest.raises(TransactionFailed):
+        c.key(sha3('address1')[:20], sha3('address1')[:20])
+
+    # test newChannel()
+    assert c.getAssetAddress() == sha3('asset')[:20].encode('hex')
+    nc1 = c.newChannel(sha3('address1')[:20])
+    nc2 = c.newChannel(sha3('address3')[:20])
+    with pytest.raises(TransactionFailed):
+        c.newChannel(sha3('address1')[:20], sha3('address2')[:20])
+    with pytest.raises(TransactionFailed):
+        c.newChannel(sha3('address2')[:20], sha3('address2')[:20])
+
+    # TODO test event()
+
+    # TODO set participants addresses directly in newChannel()?
+    assert nc1.participants[0].addr == sha3(s.a0)[:20]
+    assert nc1.participants[1].addr == sha3('address1')[:20]
+
+    # test get()
+    chn1 = c.get(s.a0, sha3('address1')[:20])
+    assert chn1.assetAddress == sha3('asset')[:20].encode('hex')
