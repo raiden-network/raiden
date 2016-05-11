@@ -11,7 +11,7 @@ from raiden.web_ui import WebUI, UIHandler
 4) it is not guaranteed that a channel to a specific address exists
 """
 
-@pytest.mark.skip(reason="UI has to be tested manually")
+@pytest.mark.skipif(True, reason="UI has to be tested manually")
 def test_webui():
     app_list = create_network(num_nodes=10, num_assets=3, channels_per_node=2)
     app0 = app_list[0]
