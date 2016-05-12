@@ -8,48 +8,28 @@ from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
 
 library_code = '''
+
 contract NettingContract {
-    uint lockedTime;
     address public assetAddress;
-    uint public opened;
-    uint public closed;
-    uint public settled;
-    address public TEST_ADDRESS1 = 0x123456;
-    address public TEST_ADDRESS2 = 0x654321;
     
-    struct Transfer {} // TODO
-    struct Unlocked {} // TODO
     struct Participant
     {
         address addr;
         uint deposit;
-        //Transfer[] lastSentTransfers;
-        //Unlocked unlocked;
     }
-    //mapping(address => Participant) public participants;
 
-    Participant[2] public participants; // Might make more sense to use an array like this for participants */
-                                 /*// since it only holds two.*/
+    Participant[2] public participants;
 
-    event ChannelOpened(address assetAdr); // TODO
-    event ChannelClosed(); // TODO
-    event ChannelSettled(); // TODO
-
-    function NettingContract(address assetAdr) {
-        opened = 0;
-        closed = 0;
-        settled = 0;
+    function NettingContract(address assetAdr, address participant1, address participant2) {
         assetAddress = assetAdr;
-        participants[0].addr = TEST_ADDRESS1;
-        participants[1].addr = TEST_ADDRESS2;
+        participants[0].addr = participant1;
+        participants[1].addr = participant2;
         participants[0].deposit = 10;
         participants[1].deposit = 10;
     }
 }
 
-/// Iteratable data structure of the type [bytes32 k, NettingContract v]
-library IterableMappingNcc
-{
+library IterableMappingNcc {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
         mapping(bytes32 => IndexValue) data;
@@ -118,11 +98,11 @@ library IterableMappingNcc
         value = self.data[key].value;
     }
 }
+
 '''
 
 cmc_code = '''
-library IterableMappingNcc
-{
+library IterableMappingNcc {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
         mapping(bytes32 => IndexValue) data;
@@ -194,8 +174,6 @@ library IterableMappingNcc
 
 contract NettingContract {
     address public assetAddress;
-    address public TEST_ADDRESS1 = 0x123456;
-    address public TEST_ADDRESS2 = 0x654321;
     
     struct Participant
     {
@@ -203,13 +181,12 @@ contract NettingContract {
         uint deposit;
     }
 
-    Participant[2] public participants; // Might make more sense to use an array like this for participants */
-                                 /*// since it only holds two.*/
+    Participant[2] public participants;
 
-    function NettingContract(address assetAdr) {
+    function NettingContract(address assetAdr, address participant1, address participant2) {
         assetAddress = assetAdr;
-        participants[0].addr = TEST_ADDRESS1;
-        participants[1].addr = TEST_ADDRESS2;
+        participants[0].addr = participant1;
+        participants[1].addr = participant2;
         participants[0].deposit = 10;
         participants[1].deposit = 10;
     }
@@ -219,7 +196,7 @@ contract ChannelManagerContract {
 
     IterableMappingNcc.itmap data;
 
-    address assetAddress;
+    address public assetAddress;
 
     // Events
     // Event that triggers when a new channel is created
@@ -241,7 +218,7 @@ contract ChannelManagerContract {
     /// @param adr (address) the address
     /// @return channels (NettingContracts[]) all channels that a given address participates in.
     function nettingContractsByAddress(address adr) returns (NettingContract[] channels){
-        channels = new NettingContract[](data.keys.length);
+        channels = new NettingContract[](numberOfItems(adr));
         uint idx = 0;
         for (var i = IterableMappingNcc.iterate_start(data); IterableMappingNcc.iterate_valid(data, i); i = IterableMappingNcc.iterate_next(data, i)) {
             var (key, value) = IterableMappingNcc.iterate_get(data, i);
@@ -254,6 +231,21 @@ contract ChannelManagerContract {
             else if (addr2 == adr) {
                 channels[idx] = value;
                 idx++;
+            }
+        }
+    }
+
+    function numberOfItems(address adr) returns (uint items) {
+        items = 0;
+        for (var i = IterableMappingNcc.iterate_start(data); IterableMappingNcc.iterate_valid(data, i); i = IterableMappingNcc.iterate_next(data, i)) {
+            var (key, value) = IterableMappingNcc.iterate_get(data, i);
+            var(addr1,) = value.participants(0); // TODO: find more elegant way to do this
+            var(addr2,) = value.participants(1); // TODO: find more elegant way to do this
+            if (addr1 == adr) {
+                items++;
+            }
+            else if (addr2 == adr) {
+                items++;
             }
         }
     }
@@ -298,24 +290,19 @@ contract ChannelManagerContract {
     /// @dev Create a new channel between two parties
     /// @param partner (address) address of one partner
     /// @return channel (NettingContract) the NettingContract of the two parties.
-    function newChannel(address partner) returns (NettingContract c){
+    function newChannel(address partner) returns (NettingContract c, address sender){
         bytes32 k = key(msg.sender, partner);
-        c = new NettingContract(getAssetAddress());
+        c = new NettingContract(assetAddress, msg.sender, partner);
         add(k, c);
+        sender = msg.sender; // Only for testing purpose, should not be added to live net
         ChannelNew(partner); //Triggers event
     }
-
-    function getAssetAddress() returns (address) {
-        return assetAddress;
-    }
-
 
     // empty function to handle wrong calls
     function () { throw; }
 }
 '''
 
-@pytest.mark.xfail
 def test_cmc():
     s = tester.state()
     assert s.block.number < 1150000
@@ -324,10 +311,6 @@ def test_cmc():
     lib_c = s.abi_contract(library_code, language="solidity")
     c = s.abi_contract(cmc_code, language="solidity", libraries={'IterableMappingNcc': lib_c.address.encode('hex')})
 
-    # a0 = c.ChannelManagerContract(sha3('asset')[:20].encode('hex'))
-    # assert a0.assetAddress == sha3('asset')[:20].encode('hex')
-
-    print(s.__dict__)
 
     # test key()
     vs = sorted((sha3('address1')[:20], sha3('address2')[:20]))
@@ -339,20 +322,28 @@ def test_cmc():
         c.key(sha3('address1')[:20], sha3('address1')[:20])
 
     # test newChannel()
-    assert c.getAssetAddress() == sha3('asset')[:20].encode('hex')
+    assert c.assetAddress() == sha3('asset')[:20].encode('hex')
     nc1 = c.newChannel(sha3('address1')[:20])
     nc2 = c.newChannel(sha3('address3')[:20])
     with pytest.raises(TransactionFailed):
-        c.newChannel(sha3('address1')[:20], sha3('address2')[:20])
+        c.newChannel(sha3('address1')[:20])
     with pytest.raises(TransactionFailed):
-        c.newChannel(sha3('address2')[:20], sha3('address2')[:20])
+        c.newChannel(sha3('address3')[:20])
 
-    # TODO test event()
-
-    # TODO set participants addresses directly in newChannel()?
-    assert nc1.participants[0].addr == sha3(s.a0)[:20]
-    assert nc1.participants[1].addr == sha3('address1')[:20]
+    # TODO test event
 
     # test get()
-    chn1 = c.get(s.a0, sha3('address1')[:20])
-    assert chn1.assetAddress == sha3('asset')[:20].encode('hex')
+    chn1 = c.get(nc1[1], sha3('address1')[:20])
+    assert chn1 == nc1[0]
+    chn2 = c.get(nc2[1], sha3('address3')[:20])
+    assert chn2 == nc2[0]
+    with pytest.raises(TransactionFailed):  # should throw if key doesn't exist
+        c.get(nc1[1], sha3('iDontExist')[:20])
+
+    # test nettingContractsByAddress()
+    msg_sender_channels = c.nettingContractsByAddress(nc1[1])
+    assert len(msg_sender_channels) == 2
+    address1_channels = c.nettingContractsByAddress(sha3('address1')[:20])
+    assert len(address1_channels) == 1
+    address1_channels = c.nettingContractsByAddress(sha3('iDontExist')[:20])
+    assert len(address1_channels) == 0

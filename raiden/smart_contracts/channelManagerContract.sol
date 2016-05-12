@@ -2,7 +2,7 @@ contract ChannelManagerContract {
 
     IterableMappingNcc.itmap data;
 
-    address assetAddress;
+    address public assetAddress;
 
     // Events
     // Event that triggers when a new channel is created
@@ -24,7 +24,7 @@ contract ChannelManagerContract {
     /// @param adr (address) the address
     /// @return channels (NettingContracts[]) all channels that a given address participates in.
     function nettingContractsByAddress(address adr) returns (NettingContract[] channels){
-        channels = new NettingContract[](data.keys.length);
+        channels = new NettingContract[](numberOfItems(adr));
         uint idx = 0;
         for (var i = IterableMappingNcc.iterate_start(data); IterableMappingNcc.iterate_valid(data, i); i = IterableMappingNcc.iterate_next(data, i)) {
             var (key, value) = IterableMappingNcc.iterate_get(data, i);
@@ -37,6 +37,26 @@ contract ChannelManagerContract {
             else if (addr2 == adr) {
                 channels[idx] = value;
                 idx++;
+            }
+        }
+    }
+
+    /// @notice numberOfItems(address) to get the number of items channels that a given address 
+    /// partipates in.
+    /// @dev helper function to provide the needed length of the array for nettingContractsByAddress
+    /// @param adr (address) the address to look for
+    /// @return items (uint) the number of items the address participates in
+    function numberOfItems(address adr) returns (uint items) {
+        items = 0;
+        for (var i = IterableMappingNcc.iterate_start(data); IterableMappingNcc.iterate_valid(data, i); i = IterableMappingNcc.iterate_next(data, i)) {
+            var (key, value) = IterableMappingNcc.iterate_get(data, i);
+            var(addr1,) = value.participants(0); // TODO: find more elegant way to do this
+            var(addr2,) = value.participants(1); // TODO: find more elegant way to do this
+            if (addr1 == adr) {
+                items++;
+            }
+            else if (addr2 == adr) {
+                items++;
             }
         }
     }
@@ -83,7 +103,7 @@ contract ChannelManagerContract {
     /// @return channel (NettingContract) the NettingContract of the two parties.
     function newChannel(address partner) returns (NettingContract c){
         bytes32 k = key(msg.sender, partner);
-        c = new NettingContract(assetAddress);
+        c = new NettingContract(assetAddress, msg.sender, partner);
         add(k, c);
         ChannelNew(partner); //Triggers event
     }

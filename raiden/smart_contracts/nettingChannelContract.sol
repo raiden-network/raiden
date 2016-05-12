@@ -45,11 +45,13 @@ contract NettingContract {
         _
     }
 
-    function NettingContract(address assetAdr) {
+    function NettingContract(address assetAdr, address participant1, address participant2) {
         opened = 0;
         closed = 0;
         settled = 0;
         assetAddress = assetAdr;
+        participants[0].addr = participant1;
+        participants[1].addr = participant2;
     }
 
     // Get the index of an address in participants
