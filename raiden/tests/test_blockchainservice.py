@@ -109,8 +109,18 @@ def test_new_netting_contract():
     assert client.isopen(asset_address, netting1_address) is True
     assert client.isopen(asset_address, netting2_address) is False
 
-    peer1_last_sent_transfers = []
-    client.close(asset_address, netting1_address, peer1_address, peer1_last_sent_transfers)
+    # we need to allow the settlement of the channel even if no transfers were
+    # made
+    peer1_last_sent_transfer = None
+    peer2_last_sent_transfer = None
+
+    client.close(
+        asset_address,
+        netting1_address,
+        peer1_address,
+        peer1_last_sent_transfer,
+        peer2_last_sent_transfer,
+    )
 
     # with pytest.raises(Exception):
     #     client.close(asset_address, netting2_address, peer1_address, peer1_last_sent_transfers)
@@ -123,8 +133,7 @@ def test_new_netting_contract():
     assert client.isopen(asset_address, netting1_address) is False
     assert client.isopen(asset_address, netting2_address) is True
 
-    peer2_last_sent_transfers = []
-    client.close(asset_address, netting1_address, peer2_address, peer2_last_sent_transfers)
+    client.update_transfer(asset_address, netting1_address, peer2_address, peer2_last_sent_transfer)
 
     assert client.isopen(asset_address, netting1_address) is False
     assert client.isopen(asset_address, netting2_address) is True

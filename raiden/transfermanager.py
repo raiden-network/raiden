@@ -64,7 +64,7 @@ class TransferManager(object):
                 amount,
                 target,
                 hashlock,
-                expiration=None,
+                lock_expiration=None,
                 originating_transfer=None,
                 secret=secret,
             )

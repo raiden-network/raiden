@@ -157,16 +157,18 @@ def assert_mirror(channel0, channel1):
     """ Assert that `channel0` has a correct `partner_state` to represent
     `channel1` and vice-versa.
     """
-    assert channel0.our_state.balance == channel1.partner_state.balance
     assert channel0.our_state.locked.root == channel1.partner_state.locked.root
     assert channel0.our_state.locked.outstanding == channel1.partner_state.locked.outstanding
+    assert channel0.our_state.transfered_amount == channel1.partner_state.transfered_amount
+    assert channel0.our_state.balance(channel0.partner_state) == channel1.partner_state.balance(channel1.our_state)
 
     assert channel0.distributable == channel0.our_state.distributable(channel0.partner_state)
     assert channel0.distributable == channel1.partner_state.distributable(channel1.our_state)
 
-    assert channel1.our_state.balance == channel0.partner_state.balance
     assert channel1.our_state.locked.root == channel0.partner_state.locked.root
     assert channel1.our_state.locked.outstanding == channel0.partner_state.locked.outstanding
+    assert channel1.our_state.transfered_amount == channel0.partner_state.transfered_amount
+    assert channel1.our_state.balance(channel1.partner_state) == channel0.partner_state.balance(channel0.our_state)
 
     assert channel1.distributable == channel1.our_state.distributable(channel1.partner_state)
     assert channel1.distributable == channel0.partner_state.distributable(channel0.our_state)
@@ -191,7 +193,7 @@ def assert_balance(channel0, balance, outstanding, distributable):
     assert channel0.outstanding == outstanding
     assert channel0.distributable == distributable
 
-    assert channel0.balance == channel0.our_state.balance
+    assert channel0.balance == channel0.our_state.balance(channel0.partner_state)
     assert channel0.distributable == channel0.our_state.distributable(channel0.partner_state)
     assert channel0.outstanding == channel0.our_state.locked.outstanding
 

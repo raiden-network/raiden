@@ -68,18 +68,17 @@ class MediatedTransferTask(Task):
     # B: MediatedTransfer > C2
     # C2: MediatedTransfer > D
 
-    block_expiration = 120  # FIXME, this needs to timeout on block expiration
     timeout_per_hop = TIMEOUT_PER_HOP
 
     def __init__(self, transfermanager, amount, target, hashlock,
-                 expiration=None, originating_transfer=None, secret=None):  # fee!
+                 lock_expiration=None, originating_transfer=None, secret=None):  # fee!
         import transfermanager as transfermanagermodule
         assert isinstance(transfermanager, transfermanagermodule.TransferManager)
 
         self.amount = amount
         self.assetmanager = transfermanager.assetmanager
         self.event = None
-        self.fee = 0  # FIXME: calculate fee, calc expiration
+        self.fee = 0  # FIXME: calculate fee, calc lock_expiration
         self.hashlock = hashlock
         self.originating_transfer = originating_transfer
         self.raiden = transfermanager.raiden
@@ -99,10 +98,10 @@ class MediatedTransferTask(Task):
 
         if self.isinitiator:
             self.initiator = self.raiden.address
-            self.expiration = self.raiden.chain.block_number + 18
+            self.lock_expiration = self.raiden.chain.block_number + 18
         else:
             self.initiator = originating_transfer.initiator
-            self.expiration = originating_transfer.lock.expiration - 1
+            self.lock_expiration = originating_transfer.lock.expiration - 1
 
         super(MediatedTransferTask, self).__init__()
         self.transfermanager.on_task_started(self)
@@ -121,7 +120,7 @@ class MediatedTransferTask(Task):
                 self.target,
                 self.fee,
                 self.amount,
-                self.expiration,
+                self.lock_expiration,
                 self.hashlock,
             )
             self.raiden.sign(mediated_transfer)
@@ -230,10 +229,10 @@ class MediatedTransferTask(Task):
             # the settlement period, otherwise the secret could be revealed
             # after channel is settled and he would lose the asset, or before
             # the minimum required.
-            if not (channel.min_locktime <= self.expiration < channel.locked_time):
+            if not (channel.min_locktime <= self.lock_expiration < channel.locked_time):
                 log.debug(
-                    'expiration is too large, channel/path cannot be used',
-                    expiration=self.expiration,
+                    'lock_expiration is too large, channel/path cannot be used',
+                    lock_expiration=self.lock_expiration,
                     channel_locktime=channel.min_locktime,
                     nodeid=pex(path[0]),
                     partner=pex(path[1]),

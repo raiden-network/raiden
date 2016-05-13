@@ -78,7 +78,12 @@ def main():
         print('Missing "privkey" in the configuration file, cannot proceed')
         sys.exit(1)
 
-    blockchain_server = BlockChainService(rpc_connection, args.registry_address)
+    blockchain_server = BlockChainService(
+        rpc_connection,
+        config['privkey'],
+        privtoaddr(config['privkey']),
+        args.registry_address,
+    )
     discovery = Discovery()
 
     for node in config['nodes']:

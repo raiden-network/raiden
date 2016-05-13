@@ -66,10 +66,10 @@ class Participant(object):
 
     def __init__(self):
         self.deposit = 0
-        """ Amount of asset deposited by the participant. """
+        """ int: Amount of asset deposited by the participant. """
 
-        self.netted = None
-        """ Amount of asset netted after the channel is settled. """
+        self.netted = 0
+        """ int: Amount of asset netted after the channel is settled. """
 
         # Used to track the latest know transfer from the partner
         self.transfer = None
@@ -376,7 +376,7 @@ class NettingChannelContract(object):
             # TODO: penalize closer
             raise Exception('Invalid netted value')
 
-    def update_transfer(self, ctx, transfer_encoded, signature):
+    def update_transfer(self, ctx, transfer_encoded):
         """" Used by the partner to inform the latest know transfer.
 
         Args:
@@ -385,10 +385,6 @@ class NettingChannelContract(object):
 
             transfer_encoded (bin):
                 Last sent transfers received by the partner (can be sent by a third party).
-
-            signature (bin):
-                The signature for `sha3(transfer_encoded)`, allows third
-                parties to send message on behalf of a participant.
         """
         if self.settled is not None:
             raise RuntimeError('Contract is settled.')
@@ -396,13 +392,12 @@ class NettingChannelContract(object):
         if self.closed is None:
             raise RuntimeError('Contract is open.')
 
-        # required to prove authenticity from third-parties.
-        messages_hash = sha3(transfer_encoded)
-        publickey = c_ecdsa_recover_compact(messages_hash, signature)
-        address = address_from_key(publickey)
-
-        if address not in self.participants:
-            raise ValueError('Invalid address.')
+        # third-parties need to call a separte method that receives:
+        # - a fee amount
+        # - a signature of the transfer and fee amount, proving that the
+        #   participant requried the third-party services
+        if ctx['msg.sender'] not in self.participants:
+            raise ValueError('Caller is not participant.')
 
         transfer = decode_transfer(transfer_encoded)
 
@@ -504,18 +499,14 @@ class NettingChannelContract(object):
         # add locked
         for address, state in self.participants.items():
             other = self.participants[self.partner(address)]
-            for locked in state['unlocked']:
-                state['netted'] += locked.amount
-                other['netted'] -= locked.amount
 
-        total_netted = sum(state['netted'] for state in self.participants.values())
-        total_deposit = sum(state['deposit'] for state in self.participants.values())
+            for locked in state.unlocked:
+                state.netted += locked.amount
+                other.netted -= locked.amount
+
+        total_netted = sum(state.netted for state in self.participants.values())
+        total_deposit = sum(state.deposit for state in self.participants.values())
 
         assert total_netted <= total_deposit
 
         self.settled = ctx['block_number']
-
-        return dict(
-            (address, state['netted'])
-            for address, state in self.participants.items()
-        )

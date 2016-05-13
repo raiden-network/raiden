@@ -2,10 +2,13 @@
 import string
 import random
 
+from pyethapp.rpc_client import JSONRPCClient
+from ethereum.utils import privtoaddr, sha3
 from ethereum import slogging
 
 from raiden.utils import isaddress, sha3
 from raiden.blockchain.net_contract import NettingChannelContract
+from raiden.encoding.signing import sign
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 LETTERS = string.printable
@@ -18,7 +21,7 @@ def make_address():
 class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
 
-    def __init__(self, host_port, registry_address):
+    def __init__(self, host_port, privkey, address, registry_address):
         """
         Args:
             host_port (Tuple[(str, int)]): two-tuple with the (address, host)
@@ -26,6 +29,10 @@ class BlockChainService(object):
         """
         self.host_port = host_port
         self.registry_address = registry_address
+        self.client = JSONRPCClient(
+            sender=address,
+            privkey=privkey,
+        )
 
     # pylint: disable=no-self-use,invalid-name,too-many-arguments
     def next_block(self):
@@ -221,7 +228,7 @@ class BlockChainServiceMock(object):
         return contract.partner(our_address)
 
     def close(self, asset_address, netting_contract_address, our_address,  # pylint: disable=unused-argument,too-many-arguments
-              last_sent_transfers):  # pylint: disable=unused-argument,too-many-arguments
+              first_transfer, second_transfer):  # pylint: disable=unused-argument,too-many-arguments
 
         hash_channel = self.asset_hashchannel[asset_address]
         contract = hash_channel[netting_contract_address]
@@ -231,20 +238,35 @@ class BlockChainServiceMock(object):
             'msg.sender': our_address,
         }
 
-        first_encoded = ''
-        second_encoded = ''
+        first_encoded = None
+        second_encoded = None
 
-        if len(last_sent_transfers) > 0:
-            first_encoded = last_sent_transfers[0].encode()
+        if first_transfer is not None:
+            first_encoded = first_transfer.encode()
 
-        if len(last_sent_transfers) == 2:
-            second_encoded = last_sent_transfers[1].encode()
+        if second_transfer is not None:
+            second_encoded = second_transfer.encode()
 
         contract.close(
             ctx,
             first_encoded,
             second_encoded,
         )
+
+    def update_transfer(self, asset_address, netting_contract_address, our_address, transfer):
+        hash_channel = self.asset_hashchannel[asset_address]
+        contract = hash_channel[netting_contract_address]
+
+        ctx = {
+            'block_number': self.block_number,
+            'msg.sender': our_address,
+        }
+
+        if transfer is not None:
+            contract.update_transfer(
+                ctx,
+                transfer.encode(),
+            )
 
     def unlock(self, asset_address, netting_contract_address, our_address,  # pylint: disable=unused-argument,too-many-arguments
                unlocked_transfers):  # pylint: disable=unused-argument,too-many-arguments

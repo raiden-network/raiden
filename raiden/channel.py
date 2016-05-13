@@ -171,18 +171,28 @@ class ChannelEndState(object):
     """ Tracks the state of one of the participants in a channel. """
 
     def __init__(self, participant_address, participant_balance):
+        # since ethereum only uses integral values we cannot use float/Decimal
+        if not isinstance(participant_balance, (int, long)):
+            raise ValueError('participant_balance must be an integer.')
+
         self.initial_balance = participant_balance  #: initial balance
-        self.balance = participant_balance  #: current balance
+        self.transfered_amount = 0  #: total amount of transfered asset
         self.address = participant_address  #: node's address
 
-        self.nonce = 0  #: sequential nonce, current value has not been used
+        # 0 is used in the netting contract to represent the lack of a
+        # transfer, so this value must start at 1
+        self.nonce = 1  #: sequential nonce, current value has not been used
         self.locked = LockedTransfers()  #: locked received
+
+    def balance(self, other):
+        """ Return the current balance of the participant. """
+        return self.initial_balance - self.transfered_amount + other.transfered_amount
 
     def distributable(self, other):
         """ Return the available amount of the asset that can be transfered in
         the channel `(total - locked)`.
         """
-        return self.balance - other.locked.outstanding
+        return self.balance(other) - other.locked.outstanding
 
     def claim_locked(self, partner, secret, locksroot=None):
         """ Update the balance of this end of the channel by claiming the
@@ -222,10 +232,10 @@ class ChannelEndState(object):
         if locksroot and self.locked.root_with(None, exclude=lock) != locksroot:
             raise InvalidLocksRoot(hashlock)
 
-        # The update balance will be sent with the next transfer
+        # Indirectly update balance by setting the partner's transfered_amount,
+        # the new value needs to be checked
         amount = lock.amount
-        self.balance += amount
-        partner.balance -= amount
+        partner.transfered_amount += amount
 
         # Important: as a sender remove the freed hashlock to avoid double
         # netting of a locked transfer (as a receiver this is "just" synching)
@@ -265,13 +275,18 @@ class Channel(object):
         return self.our_state.initial_balance
 
     @property
+    def transfered_amount(self):
+        """ Return how much we transfered to partner. """
+        return self.our_state.transfer_amount
+
+    @property
     def balance(self):
         """ Return our current balance.
 
         Balance is equal to `initial_deposit + received_amount - sent_amount`,
         were both `receive_amount` and `sent_amount` are unlocked.
         """
-        return self.our_state.balance
+        return self.our_state.balance(self.partner_state)
 
     @property
     def distributable(self):
@@ -343,8 +358,7 @@ class Channel(object):
             acknowledgement. That is necessary for to reasons:
 
             - Guarantee that the transfer is valid.
-            - Deduct the balance early avoiding a window of time were the user
-                could intentionally or not send a transaction without funds.
+            - Avoiding sending a new transaction without funds.
 
         Raises:
             InsufficientBalance: If the transfer is negative or above the distributable amount.
@@ -363,24 +377,23 @@ class Channel(object):
         if transfer.sender != from_state.address:
             raise ValueError('Unsigned transfer')
 
+        if transfer.transfered_amount < from_state.transfered_amount:
+            raise ValueError('Negative transfer')
+
         # nonce is changed only when a transfer is un/registered, if the test
         # fail either we are out of sync, a message out of order, or it's an
         # forged transfer
-        if transfer.nonce != from_state.nonce:
+        if transfer.nonce < 1 or transfer.nonce != from_state.nonce:
             raise InvalidNonce(transfer)
 
-        # transfer.balance has a new balance for the channel participant
-        transfer_amount = transfer.balance - to_state.balance
+        amount = transfer.transfered_amount - from_state.transfered_amount
         distributable = from_state.distributable(to_state)
 
-        if transfer_amount < 0:
-            raise ValueError('Negative transfer')
-
-        if transfer_amount > distributable:
+        if amount > distributable:
             raise InsufficientBalance(transfer)
 
         if isinstance(transfer, LockedTransfer):
-            if transfer_amount + transfer.lock.amount > distributable:
+            if amount + transfer.lock.amount > distributable:
                 raise InsufficientBalance(transfer)
 
             # As a receiver: Check that all locked transfers are registered in
@@ -426,15 +439,8 @@ class Channel(object):
                 transfer.locksroot,
             )
 
-        # all checks passed, update balances
-        if isinstance(transfer, CancelTransfer):
-            to_state.balance -= transfer_amount
-            from_state.balance += transfer_amount
-            from_state.nonce += 1
-        else:
-            to_state.balance += transfer_amount
-            from_state.balance -= transfer_amount
-            from_state.nonce += 1
+        from_state.transfered_amount = transfer.transfered_amount
+        from_state.nonce += 1
 
     def create_directtransfer(self, amount, secret=None):
         """ Return a DirectTransfer message.
@@ -459,14 +465,14 @@ class Channel(object):
             raise ValueError('Insufficient funds')
 
         # start of critical read section
-        balance = to_.balance + amount
+        transfered_amount = from_.transfered_amount + amount
         current_locksroot = to_.locked.root
         # end of critical read section
 
         return DirectTransfer(
             nonce=from_.nonce,
             asset=self.asset_address,
-            balance=balance,
+            transfered_amount=transfered_amount,
             recipient=to_.address,
             locksroot=current_locksroot,
             secret=secret,
@@ -517,14 +523,14 @@ class Channel(object):
         lock = Lock(amount, expiration, hashlock)
 
         # start of critical read section
-        balance = to_.balance
+        transfered_amount = from_.transfered_amount
         updated_locksroot = to_.locked.root_with(lock)
         # end of critical read section
 
         return LockedTransfer(
             nonce=from_.nonce,
             asset=self.asset_address,
-            balance=balance,
+            transfered_amount=transfered_amount,
             recipient=to_.address,
             locksroot=updated_locksroot,
             lock=lock,
