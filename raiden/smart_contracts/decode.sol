@@ -1,9 +1,5 @@
-import slice.sol as slice;
-
-library Decoder {
+contract Decoder {
     
-    // Slice helper function
-    // TODO Should be replaced by slice.slb 
     function slice(bytes a, uint start, uint end) returns (bytes n) {
         if (a.length < end) throw;
         if (start < 0) throw;
@@ -21,8 +17,8 @@ library Decoder {
     }
     
     function decodeTransfer(bytes m) returns (uint8 nonce, address asset, address recipient,
-                                              uint balance, bytes32 optionalLocksroot,
-                                              bytes32 optionalSecret, bytes signature) 
+                                                uint balance, bytes32 optionalLocksroot,
+                                                bytes32 optionalSecret, bytes signature) 
     {
         if (m.length != 213) throw;
         nonce = bytesToIntEight(slice(m, 4, 12), nonce);
@@ -38,7 +34,7 @@ library Decoder {
     }
     
     function decodeLockedTransfer1(bytes m) returns (uint8 nonce, uint8 expiration, 
-                                                     address asset, address recipient) 
+                                                        address asset, address recipient) 
     {
         if (m.length != 253) throw;
         nonce = bytesToIntEight(slice(m, 4, 12), nonce);
@@ -52,7 +48,7 @@ library Decoder {
     
     function decodeLockedTransfer2(bytes m) returns 
                                     (bytes32 locksroot, uint balance, uint amount,
-                                     bytes32 hashlock, bytes signature) 
+                                        bytes32 hashlock, bytes signature) 
     {
 
         locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
@@ -63,8 +59,8 @@ library Decoder {
     }
     
     function decodeMediatedTransfer1(bytes m) returns (uint8 nonce, uint8 expiration, 
-                                                       address asset, address recipient,
-                                                       address target) 
+                                                        address asset, address recipient,
+                                                        address target) 
     {
         if (m.length != 325) throw;
         nonce = bytesToIntEight(slice(m, 4, 12), nonce);
@@ -80,9 +76,8 @@ library Decoder {
     
     function decodeMediatedTransfer2(bytes m) returns 
                                     (address initiator, bytes32 locksroot, bytes32 hashlock, 
-                                     uint balance, uint amount, uint fee, bytes signature) 
+                                        uint balance, uint amount, uint fee, bytes signature) 
     {
-        if (m.length != 325) throw;
         uint160 ii;
         initiator = bytesToAddress(slice(m, 80, 100), ii);
         locksroot = bytesToBytes32(slice(m, 100, 132), locksroot);
@@ -94,7 +89,7 @@ library Decoder {
     }
     
     function decodeCancelTransfer1(bytes m) returns (uint8 nonce, uint8 expiration, 
-                                               address asset, address recipient) 
+                                                address asset, address recipient) 
     {
         if (m.length != 253) throw;
         nonce = bytesToIntEight(slice(m, 4, 12), nonce);
@@ -106,7 +101,7 @@ library Decoder {
     }
     
     function decodeCancelTransfer2(bytes m) returns (bytes32 locksroot, uint balance, 
-                                                     uint amount, bytes32 hashlock, bytes signature) 
+                                                        uint amount, bytes32 hashlock, bytes signature) 
     {
         locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
         balance = bytesToInt(slice(m, 92, 124), balance);
@@ -131,7 +126,7 @@ library Decoder {
     // helper function
     function bytesToAddress(bytes b, uint160 i) returns (address add) {
         assembly { i := mload(add(b, 0x14)) }
-        uint160 a = uint160(i); // check if this is needed
+        uint160 a = uint160(i);
         add = address(i);
     }
     
