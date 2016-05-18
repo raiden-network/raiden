@@ -1,4 +1,5 @@
-library Slicer {
+contract Slicer {
+
     function slice(bytes a, uint start, uint end) returns (bytes n) {
         if (a.length < end) throw;
         if (start < 0) throw;
