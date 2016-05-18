@@ -405,7 +405,7 @@ class Channel(object):
             # As a receiver: If the lock expiration is larger than the settling
             # time a secret could be revealed after the channel is settled and
             # we won't be able to claim the asset
-            if transfer.lock.expiration - self.chain.block_number >= self.settle_timeout:
+            if not transfer.lock.expiration - self.chain.block_number < self.settle_timeout:
                 log.error(
                     "Transfer expiration doesn't allow for correct settlement.",
                     transfer_expiration_block=transfer.lock.expiration,
@@ -415,7 +415,7 @@ class Channel(object):
 
                 raise ValueError("Transfer expiration doesn't allow for correct settlement.")
 
-            if transfer.lock.expiration - self.chain.block_number > self.reveal_timeout:
+            if not transfer.lock.expiration - self.chain.block_number > self.reveal_timeout:
                 log.error(
                     'Expiration smaller than the minimum required.',
                     transfer_expiration_block=transfer.lock.expiration,
