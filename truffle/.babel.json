@@ -1,0 +1,167 @@
+{
+  "{\"filename\":\"/code/truffle.js\",\"env\":{},\"retainLines\":false,\"highlightCode\":true,\"suppressDeprecationMessages\":false,\"presets\":[],\"plugins\":[],\"ignore\":[],\"code\":true,\"metadata\":true,\"ast\":true,\"comments\":true,\"compact\":\"auto\",\"minified\":false,\"babelrc\":true,\"sourceType\":\"module\",\"moduleIds\":false,\"passPerPreset\":false}:6.9.0": {
+    "metadata": {
+      "usedHelpers": [],
+      "marked": [],
+      "modules": {
+        "imports": [],
+        "exports": {
+          "exported": [],
+          "specifiers": []
+        }
+      }
+    },
+    "options": {
+      "filename": "/code/truffle.js",
+      "filenameRelative": "/code/truffle.js",
+      "env": {},
+      "retainLines": false,
+      "highlightCode": true,
+      "suppressDeprecationMessages": false,
+      "presets": [],
+      "plugins": [],
+      "ignore": [],
+      "code": true,
+      "metadata": true,
+      "ast": false,
+      "comments": true,
+      "compact": "auto",
+      "minified": false,
+      "sourceMap": "both",
+      "sourceMaps": "both",
+      "sourceMapTarget": "truffle.js",
+      "sourceFileName": "truffle.js",
+      "babelrc": false,
+      "sourceType": "module",
+      "moduleIds": false,
+      "passPerPreset": false,
+      "basename": "truffle"
+    },
+    "ignored": false,
+    "code": "module.exports = {\n  build: {\n    \"index.html\": \"index.html\",\n    \"app.js\": [\"javascripts/app.js\"],\n    \"app.css\": [\"stylesheets/app.css\"],\n    \"images/\": \"images/\"\n  },\n  deploy: [\"slice.sol\"],\n  rpc: {\n    host: \"localhost\",\n    port: 4000\n  }\n};\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbInRydWZmbGUuanMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6IkFBQUEsT0FBTyxPQUFQLEdBQWlCO0FBQ2YsU0FBTztBQUNMLGtCQUFjLFlBRFQ7QUFFTCxjQUFVLENBQ1Isb0JBRFEsQ0FGTDtBQUtMLGVBQVcsQ0FDVCxxQkFEUyxDQUxOO0FBUUwsZUFBVztBQVJOLEdBRFE7QUFXZixVQUFRLENBQ04sV0FETSxDQVhPO0FBY2YsT0FBSztBQUNILFVBQU0sV0FESDtBQUVILFVBQU07QUFGSDtBQWRVLENBQWpCIiwiZmlsZSI6InRydWZmbGUuanMiLCJzb3VyY2VzQ29udGVudCI6WyJtb2R1bGUuZXhwb3J0cyA9IHtcbiAgYnVpbGQ6IHtcbiAgICBcImluZGV4Lmh0bWxcIjogXCJpbmRleC5odG1sXCIsXG4gICAgXCJhcHAuanNcIjogW1xuICAgICAgXCJqYXZhc2NyaXB0cy9hcHAuanNcIlxuICAgIF0sXG4gICAgXCJhcHAuY3NzXCI6IFtcbiAgICAgIFwic3R5bGVzaGVldHMvYXBwLmNzc1wiXG4gICAgXSxcbiAgICBcImltYWdlcy9cIjogXCJpbWFnZXMvXCJcbiAgfSxcbiAgZGVwbG95OiBbXG4gICAgXCJzbGljZS5zb2xcIlxuICBdLFxuICBycGM6IHtcbiAgICBob3N0OiBcImxvY2FsaG9zdFwiLFxuICAgIHBvcnQ6IDQwMDBcbiAgfVxufTtcbiJdfQ==",
+    "ast": null,
+    "map": {
+      "version": 3,
+      "sources": [
+        "truffle.js"
+      ],
+      "names": [],
+      "mappings": "AAAA,OAAO,OAAP,GAAiB;AACf,SAAO;AACL,kBAAc,YADT;AAEL,cAAU,CACR,oBADQ,CAFL;AAKL,eAAW,CACT,qBADS,CALN;AAQL,eAAW;AARN,GADQ;AAWf,UAAQ,CACN,WADM,CAXO;AAcf,OAAK;AACH,UAAM,WADH;AAEH,UAAM;AAFH;AAdU,CAAjB",
+      "file": "truffle.js",
+      "sourcesContent": [
+        "module.exports = {\n  build: {\n    \"index.html\": \"index.html\",\n    \"app.js\": [\n      \"javascripts/app.js\"\n    ],\n    \"app.css\": [\n      \"stylesheets/app.css\"\n    ],\n    \"images/\": \"images/\"\n  },\n  deploy: [\n    \"slice.sol\"\n  ],\n  rpc: {\n    host: \"localhost\",\n    port: 4000\n  }\n};\n"
+      ]
+    },
+    "mtime": 1463586044737
+  },
+  "{\"filename\":\"/code/environments/development/config.js\",\"env\":{},\"retainLines\":false,\"highlightCode\":true,\"suppressDeprecationMessages\":false,\"presets\":[],\"plugins\":[],\"ignore\":[],\"code\":true,\"metadata\":true,\"ast\":true,\"comments\":true,\"compact\":\"auto\",\"minified\":false,\"babelrc\":true,\"sourceType\":\"module\",\"moduleIds\":false,\"passPerPreset\":false}:6.9.0": {
+    "metadata": {
+      "usedHelpers": [],
+      "marked": [],
+      "modules": {
+        "imports": [],
+        "exports": {
+          "exported": [],
+          "specifiers": []
+        }
+      }
+    },
+    "options": {
+      "filename": "/code/environments/development/config.js",
+      "filenameRelative": "/code/environments/development/config.js",
+      "env": {},
+      "retainLines": false,
+      "highlightCode": true,
+      "suppressDeprecationMessages": false,
+      "presets": [],
+      "plugins": [],
+      "ignore": [],
+      "code": true,
+      "metadata": true,
+      "ast": false,
+      "comments": true,
+      "compact": "auto",
+      "minified": false,
+      "sourceMap": "both",
+      "sourceMaps": "both",
+      "sourceMapTarget": "config.js",
+      "sourceFileName": "config.js",
+      "babelrc": false,
+      "sourceType": "module",
+      "moduleIds": false,
+      "passPerPreset": false,
+      "basename": "config"
+    },
+    "ignored": false,
+    "code": "module.exports = {};\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImNvbmZpZy5qcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxPQUFPLE9BQVAsR0FBaUIsRUFBakIiLCJmaWxlIjoiY29uZmlnLmpzIiwic291cmNlc0NvbnRlbnQiOlsibW9kdWxlLmV4cG9ydHMgPSB7fVxuIl19",
+    "ast": null,
+    "map": {
+      "version": 3,
+      "sources": [
+        "config.js"
+      ],
+      "names": [],
+      "mappings": "AAAA,OAAO,OAAP,GAAiB,EAAjB",
+      "file": "config.js",
+      "sourcesContent": [
+        "module.exports = {}\n"
+      ]
+    },
+    "mtime": 1463571580084
+  },
+  "{\"filename\":\"/code/environments/test/config.js\",\"env\":{},\"retainLines\":false,\"highlightCode\":true,\"suppressDeprecationMessages\":false,\"presets\":[],\"plugins\":[],\"ignore\":[],\"code\":true,\"metadata\":true,\"ast\":true,\"comments\":true,\"compact\":\"auto\",\"minified\":false,\"babelrc\":true,\"sourceType\":\"module\",\"moduleIds\":false,\"passPerPreset\":false}:6.9.0": {
+    "metadata": {
+      "usedHelpers": [],
+      "marked": [],
+      "modules": {
+        "imports": [],
+        "exports": {
+          "exported": [],
+          "specifiers": []
+        }
+      }
+    },
+    "options": {
+      "filename": "/code/environments/test/config.js",
+      "filenameRelative": "/code/environments/test/config.js",
+      "env": {},
+      "retainLines": false,
+      "highlightCode": true,
+      "suppressDeprecationMessages": false,
+      "presets": [],
+      "plugins": [],
+      "ignore": [],
+      "code": true,
+      "metadata": true,
+      "ast": false,
+      "comments": true,
+      "compact": "auto",
+      "minified": false,
+      "sourceMap": "both",
+      "sourceMaps": "both",
+      "sourceMapTarget": "config.js",
+      "sourceFileName": "config.js",
+      "babelrc": false,
+      "sourceType": "module",
+      "moduleIds": false,
+      "passPerPreset": false,
+      "basename": "config"
+    },
+    "ignored": false,
+    "code": "module.exports = {};\n//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbImNvbmZpZy5qcyJdLCJuYW1lcyI6W10sIm1hcHBpbmdzIjoiQUFBQSxPQUFPLE9BQVAsR0FBaUIsRUFBakIiLCJmaWxlIjoiY29uZmlnLmpzIiwic291cmNlc0NvbnRlbnQiOlsibW9kdWxlLmV4cG9ydHMgPSB7fVxuIl19",
+    "ast": null,
+    "map": {
+      "version": 3,
+      "sources": [
+        "config.js"
+      ],
+      "names": [],
+      "mappings": "AAAA,OAAO,OAAP,GAAiB,EAAjB",
+      "file": "config.js",
+      "sourcesContent": [
+        "module.exports = {}\n"
+      ]
+    },
+    "mtime": 1463571580080
+  }
+}
