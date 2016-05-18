@@ -1,6 +1,12 @@
-/// Iteratable data structure of the type [address k, ChannelManagerContract v]
-library IterableMappingCMC
-{
+contract ChannelManagerContract {
+    address public assetAddress;
+    
+    function ChannelManagerContract(address testAddress) {
+        assetAddress = testAddress;
+    }
+}
+
+library IterableMappingCMC {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
         mapping(address => IndexValue) data;
@@ -28,8 +34,7 @@ library IterableMappingCMC
 
     function remove(itmap storage self, address key) returns (bool success){
         uint keyIndex = self.data[key].keyIndex;
-        if (keyIndex == 0)
-          return false;
+        if (keyIndex == 0) return false;
         delete self.data[key];
         self.keys[keyIndex - 1].deleted = true;
         self.size --;
