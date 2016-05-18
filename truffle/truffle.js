@@ -10,8 +10,15 @@ module.exports = {
     "images/": "images/"
   },
   deploy: [
-    "slice.sol"
-  ],
+      "slice.sol",
+
+      "HumanStandardTokenFactory.sol",
+      "HumanStandardToken.sol",
+      "SampleRecipient.sol",
+      "Standard_Token.sol",
+      "StandardToken.sol",
+      "Token.sol"
+      ],
   rpc: {
     host: "localhost",
     port: 4000
