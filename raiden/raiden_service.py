@@ -85,9 +85,10 @@ class RaidenService(object):
 
     """ Runs a service on a node """
 
-    def __init__(self, chain, privkey, transport, discovery):
+    def __init__(self, chain, privkey, transport, discovery, config):
         self.chain = chain
-        self.privkey = privkey
+        self.config = config
+        self.privkey = privkey  # or config['privkey']
         self.address = privtoaddr(privkey)
         self.protocol = RaidenProtocol(transport, discovery, self)
         transport.protocol = self.protocol
@@ -97,14 +98,14 @@ class RaidenService(object):
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
-    def setup_asset(self, asset_address, min_locktime):
+    def setup_asset(self, asset_address, reveal_timeout):
         """ Initialize a `AssetManager`, and for each open channel that this
         node has create a corresponding `Channel`.
 
         Args:
             asset_address (address): A list of asset addresses that need to
                 be considered.
-            min_locktime (int): Minimum number of blocks required for the
+            reveal_timeout (int): Minimum number of blocks required for the
                 settling of a netting contract.
         """
         netting_address = self.chain.nettingaddresses_by_asset_participant(
@@ -119,7 +120,7 @@ class RaidenService(object):
                 asset_manager,
                 asset_address,
                 nettingcontract_address,
-                min_locktime,
+                reveal_timeout,
             )
 
     def get_or_create_asset_manager(self, asset_address):
@@ -133,7 +134,7 @@ class RaidenService(object):
 
         return self.assetmanagers[asset_address]
 
-    def setup_channel(self, asset_manager, asset_address, nettingcontract_address, min_locktime):
+    def setup_channel(self, asset_manager, asset_address, nettingcontract_address, reveal_timeout):
         """ Initialize the Channel for the given netting contract. """
 
         channel_details = self.chain.netting_contract_detail(
@@ -158,7 +159,7 @@ class RaidenService(object):
             nettingcontract_address,
             our_state,
             partner_state,
-            min_locktime=min_locktime,
+            reveal_timeout,
         )
 
         asset_manager.add_channel(channel_details['partner_address'], channel)

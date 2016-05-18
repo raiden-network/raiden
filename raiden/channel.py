@@ -237,15 +237,15 @@ class Channel(object):
     # pylint: disable=too-many-instance-attributes,too-many-arguments
 
     def __init__(self, chain, asset_address, nettingcontract_address,
-                 our_state, partner_state, min_locktime):
+                 our_state, partner_state, reveal_timeout):
         self.chain = chain
         self.asset_address = asset_address
         self.nettingcontract_address = nettingcontract_address
         self.our_state = our_state
         self.partner_state = partner_state
-        self.min_locktime = min_locktime
+        self.reveal_timeout = reveal_timeout
 
-        self.locked_time = NettingChannelContract.locked_time
+        self.settle_timeout = NettingChannelContract.settle_timeout
         ''' the contract's `locked_time`, all locks need to expire with less than this value '''
 
         self.wasclosed = False
@@ -405,25 +405,25 @@ class Channel(object):
             # As a receiver: If the lock expiration is larger than the settling
             # time a secret could be revealed after the channel is settled and
             # we won't be able to claim the asset
-            if transfer.lock.expiration - self.chain.block_number >= self.locked_time:
+            if transfer.lock.expiration - self.chain.block_number >= self.settle_timeout:
                 log.error(
-                    "Transfer expiration doesn't allow for corret settlement.",
+                    "Transfer expiration doesn't allow for correct settlement.",
                     transfer_expiration_block=transfer.lock.expiration,
                     current_block=self.chain.block_number,
-                    required_locked_time=self.locked_time,
+                    settle_timeout=self.settle_timeout,
                 )
 
-                raise ValueError("Transfer expiration doesn't allow for corret settlement.")
+                raise ValueError("Transfer expiration doesn't allow for correct settlement.")
 
-            if transfer.lock.expiration - self.min_locktime < self.chain.block_number:
+            if transfer.lock.expiration - self.chain.block_number > self.reveal_timeout:
                 log.error(
-                    'Expiration smaller than the minimum requried.',
+                    'Expiration smaller than the minimum required.',
                     transfer_expiration_block=transfer.lock.expiration,
                     current_block=self.chain.block_number,
-                    minimum_required_locked_time=self.min_locktime,
+                    reveal_timeout=self.reveal_timeout,
                 )
 
-                raise ValueError('Expiration smaller than the minimum requried.')
+                raise ValueError('Expiration smaller than the declared reveal timeout')
 
         # all checks need to be done before the internal state of the channel
         # is changed, otherwise if a check fails and state was changed the
@@ -494,22 +494,22 @@ class Channel(object):
             raise ValueError('The channel is closed')
 
         # expiration is not sufficient for guarantee settling
-        if expiration - self.chain.block_number >= self.locked_time:
+        if expiration - self.chain.block_number >= self.settle_timeout:
             log.debug(
                 "Transfer expiration doesn't allow for corret settlement.",
                 expiration=expiration,
                 block_number=self.chain.block_number,
-                locked_time=self.locked_time,
+                settle_timeout=self.settle_timeout,
             )
 
             raise ValueError('Invalid expiration')
 
-        if expiration - self.min_locktime < self.chain.block_number:
+        if expiration - self.reveal_timeout < self.chain.block_number:
             log.debug(
                 'Expiration smaller than the minimum requried.',
                 expiration=expiration,
                 block_number=self.chain.block_number,
-                min_locktime=self.min_locktime,
+                reveal_timeout=self.reveal_timeout,
             )
 
             raise ValueError('Invalid expiration')

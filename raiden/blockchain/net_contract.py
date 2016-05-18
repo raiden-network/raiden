@@ -137,17 +137,17 @@ class NettingChannelContract(object):
         testing.
     """
 
-    # The locked_time could be either fixed or variable:
+    # The settle_timeout could be either fixed or variable:
     #
     # - For the fixed scenario, the application must not accept any locked
-    # transfers that could expire after `locked_time` blocks, at the cost of
+    # transfers that could expire after `settle_timeout` blocks, at the cost of
     # being susceptible to timming attacks.
-    # - For the variable scenario, the `locked_time` would depend on the locked
+    # - For the variable scenario, the `settle_timeout` would depend on the locked
     # transfer and to determine it's value a list of all the locks need to be
     # sent to the contract.
     #
     # This implementation uses a fixed lock time
-    locked_time = 20
+    settle_timeout = 20
     """ Number of blocks that we are required to wait before allowing settlement. """
 
     def __init__(self, asset_address, netcontract_address, address_A, address_B):
@@ -344,7 +344,7 @@ class NettingChannelContract(object):
         assert not self.settled
         # during testing closed can be 0 and it is falsy
         assert self.closed is not None
-        assert self.closed + self.locked_time <= ctx['block_number']
+        assert self.closed + self.settle_timeout <= ctx['block_number']
 
         for address, state in self.participants.items():
             other = self.participants[self.partner(address)]

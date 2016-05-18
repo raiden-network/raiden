@@ -25,14 +25,17 @@ class App(object):  # pylint: disable=too-few-public-methods
         host='',
         port=INITIAL_PORT,
         privkey='',
-        min_locktime=10,
+        # timespan a node requires to learn the secret before the lock expires for him (time in #blocks):
+        reveal_timeout=3,
+        # how long to wait for a transfer until CancelTransfer is sent (time in milliseconds):
+        msg_timeout=100.00
     )
 
     def __init__(self, config, chain, discovery, transport_class=UDPTransport):
         self.config = config
         self.discovery = discovery
         self.transport = transport_class(config['host'], config['port'])
-        self.raiden = RaidenService(chain, config['privkey'], self.transport, discovery)
+        self.raiden = RaidenService(chain, config['privkey'], self.transport, discovery, config)
 
         discovery.register(self.raiden.address, self.transport.host, self.transport.port)
 
@@ -87,7 +90,7 @@ def main():
     app = App(config, blockchain_server, discovery)
 
     for asset_address in blockchain_server.asset_addresses:
-        app.raiden.setup_asset(asset_address, app.config['min_locktime'])
+        app.raiden.setup_asset(asset_address, app.config['reveal_timeout'])
 
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
