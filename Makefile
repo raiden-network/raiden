@@ -9,10 +9,17 @@ help:
 	@echo "test - run tests quickly with the default Python"
 	@echo "test-all - run tests on every Python version with tox"
 	@echo "coverage - check code coverage quickly with the default Python"
-	@echo "docs - generate Sphinx HTML documentation, including API docs"
-	@echo "release - package and upload a release"
-	@echo "dist - package"
-	@echo "install - install the package to the active Python's site-packages"
+	#@echo "docs - generate Sphinx HTML documentation, including API docs"
+	#@echo "release - package and upload a release"
+	#@echo "dist - package"
+	#@echo "install - install the package to the active Python's site-packages"
+	@echo "clean-truffle - remove 'truffle init' artifacts"
+	@echo "build-truffle-container - build the truffle docker container"
+	@echo "compile - run truffle compile"
+	@echo "serve - run truffle serve"
+	@echo "deploy - run truffle deploy"
+
+
 
 clean: clean-build clean-pyc clean-test
 
@@ -68,3 +75,45 @@ dist: clean
 
 install: clean
 	python setup.py install
+
+# targets for truffle deployment
+logging_settings = :info,contracts:debug
+mkfile_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
+dockerargs := --rm 
+cmd := version
+opts := 
+call_truffle := docker run -it --user=$(process_user) -v $(mkfile_root)truffle:/code -v $(mkfile_root)raiden/smart_contracts:/code/contracts --net=host $(dockerargs) truffle $(cmd) $(opts)
+
+clean-truffle:
+	rm -rf truffle/app
+	rm -rf truffle/contracts
+	rm -rf truffle/environments
+	rm -rf truffle/test
+	rm -rf truffle/truffle.js
+
+stop:
+	killall hydrachain
+	docker stop -t 0 truffleserver && docker rm truffleserver
+
+build-truffle-container:
+	cd truffle && docker build -t truffle .
+
+blockchain:
+	rm -f blockchain.log
+	-(hydrachain -d $(shell mktemp -d) -l $(logging_settings) -c jsonrpc.corsdomain='http://localhost:8080' --log-file=blockchain.log runmultiple > /dev/null 2>&1 &)
+
+serve: deploy
+	@$(MAKE) run-truffle cmd=serve dockerargs="-d --name truffleserver"
+	@echo "serving on http://localhost:8080 accounts are [ 0x8ed66d0dd4b88fb097a3a3c8c10175b8cadb1c66 0x2ca7fd47fc3c945a1f41fbc3f65c944df5a8f523 ]"
+
+compile:
+	@$(MAKE) run-truffle cmd=compile
+
+build:
+	@$(MAKE) run-truffle cmd=build
+
+deploy:
+	@$(MAKE) run-truffle cmd=deploy
+
+run-truffle:
+	$(call_truffle)
