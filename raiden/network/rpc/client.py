@@ -2,9 +2,10 @@
 import string
 import random
 
-from pyethapp.rpc_client import JSONRPCClient
-from ethereum.utils import privtoaddr, sha3
 from ethereum import slogging
+from ethereum import _solidity
+from ethereum.utils import privtoaddr, sha3
+from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.utils import isaddress, sha3
 from raiden.blockchain.net_contract import NettingChannelContract
@@ -13,9 +14,23 @@ from raiden.encoding.signing import sign
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 LETTERS = string.printable
 
+solidity = _solidity.get_solidity()
+
 
 def make_address():
     return bytes(''.join(random.choice(LETTERS) for _ in range(20)))
+
+
+def get_contract_path(contract_name):
+    return os.path.realpath(
+        os.path.join(__file__, '..', 'smart_contracts', contract_name)
+    )
+
+
+def get_abi_from_file(filename):
+    with open(filename) as handler:
+        code = handler.read()
+        return solidity.mk_full_signature(code)
 
 
 class BlockChainService(object):
@@ -27,26 +42,71 @@ class BlockChainService(object):
             host_port (Tuple[(str, int)]): two-tuple with the (address, host)
                 of the JSON-RPC server.
         """
-        self.host_port = host_port
-        self.registry_address = registry_address
-        self.client = JSONRPCClient(
+        channel_manager_abi = get_abi_from_file(get_contract_path('channelManagerContract.sol'))
+        netting_contract_abi = get_abi_from_file(get_contract_path('nettingChannelContract.sol'))
+        registry_abi = get_abi_from_file(get_contract_path('registry.sol'))
+
+        jsonrpc_client = JSONRPCClient(
             sender=address,
             privkey=privkey,
         )
 
-    # pylint: disable=no-self-use,invalid-name,too-many-arguments
-    def next_block(self):
-        raise NotImplementedError()
+        registry_proxy = jsonrpc_client.new_abi_contract(registry_abi, registry_address)
 
-    def new_channel_manager_contract(self, asset_address):
-        raise NotImplementedError()
+        self.asset_managerproxy = dict()
+        self.contract_by_address = dict()
 
-    def new_netting_contract(self, asset_address, peer1, peer2):
-        raise NotImplementedError()
+        self.host_port = host_port
+        self.privkey = privkey
+        self.client = jsonrpc_client
+
+        self.registry_address = registry_address
+        self.registry_proxy = registry_proxy
+
+        self.channel_manager_abi = channel_manager_abi
+        self.netting_contract_abi = netting_contract_abi
+        self.registry_abi = registry_abi
+
+        if not self._code_exists(registry_address):
+            raise ValueError('Registry {} does not exists'.format(registry_address))
+
+    def _code_exists(self, address):
+        """ Return True if the address contains code, False otherwise. """
+        result = client.call('eth_getCode', address, 'latest')
+
+        return result != '0x'
+
+    def _get_manager(self, asset_address):
+        if asset_address not in self.asset_managerproxy:
+            if not self._code_exists(asset_address):
+                raise ValueError('The asset {} does not exists'.format(asset_address))
+
+            manager_address = self.registry_proxy.channelManagerByAsset(asset_address)
+
+            if not self._code_exists(manager_address):
+                # The registry returned an address that has no code!
+                raise ValueError('Got unexpected address from the contract.')
+
+            manager_proxy = self.client.new_abi_contract(self.channel_manager_abi, manager_address)
+            self.asset_managerproxy[asset_address] = manager_proxy
+
+        return self.asset_managerproxy[asset_address]
+
+    def _get_contract(self, netting_contract_address):
+        if netting_contract_address not in self.contract_by_address:
+            if not self._code_exists(netting_contract_address):
+                raise ValueError('The contract {} does not exists.'.format(netting_contract_address))
+
+            contract_proxy = self.client.new_abi_contract(self.netting_contract_abi, netting_contract_address)
+            self.contract_by_address[netting_contract_address] = contract_proxy
+
+        return self.contract_by_address[netting_contract_address]
+
+    # CALLS
 
     @property
     def asset_addresses(self):
-        raise NotImplementedError()
+        return self.registry_proxy.assetAddresses.call()
 
     def netting_addresses(self, asset_address):
         raise NotImplementedError()
@@ -55,22 +115,38 @@ class BlockChainService(object):
         raise NotImplementedError()
 
     def nettingaddresses_by_asset_participant(self, asset_address, participant_address):
-        raise NotImplementedError()
+        manager_proxy = self._get_manager(asset_address)
+        return manager_proxy.nettingContractsByAddress.call(asset_address)
 
     def netting_contract_detail(self, asset_address, contract_address, our_address):
         raise NotImplementedError()
 
     def isopen(self, asset_address, netting_contract_address):
+        contract_proxy = self._get_contract(netting_contract_address)
+        return contract_proxy.isOpen.call()
+
+    def partner(self, asset_address, netting_contract_address, our_address):
+        contract = self._get_contract(netting_contract_address)
+        return contract.nettingContractsByAddress.call(our_address)
+
+    # TRANSACTIONS
+
+    def new_channel_manager_contract(self, asset_address):
+        raise NotImplementedError()
+
+    def new_netting_contract(self, asset_address, peer1, peer2):
         raise NotImplementedError()
 
     def deposit(self, asset_address, netting_contract_address, our_address, amount):
-        raise NotImplementedError()
+        if not isinstance(amount, (int, long)):
+            raise ValueError('amount needs to be an integral number.')
 
-    def partner(self, asset_address, netting_contract_address, our_address):
-        raise NotImplementedError()
+        contract_proxy = self._get_contract(netting_contract_address)
+        transaction_hash = contract_proxy.deposit.transact(value=amount)
+        self.proxy.poll(transaction_hash.decode('hex'))
 
     def close(self, asset_address, netting_contract_address, our_address,
-              last_sent_transfers, unlocked_transfers):
+              first_transfer, second_transfer):
         raise NotImplementedError()
 
     def settle(self, asset_address, netting_contract_address):
