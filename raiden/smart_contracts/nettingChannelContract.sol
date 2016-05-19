@@ -1,4 +1,4 @@
-import "Decoder.sol";
+/*import "Decoder.sol";*/
 contract NettingContract {
     uint lockedTime;
     address assetAddress;
@@ -241,10 +241,6 @@ contract NettingContract {
         
         //participants[partnerId].unlocked.push(lock);
     }
-    function bytesToBytes32(bytes b, bytes32 i) returns (bytes32 bts) {
-        assembly { i := mload(add(b, 0x20)) }
-        bts = i;
-    }
 
     /// @notice settle() to settle the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
@@ -279,163 +275,188 @@ contract NettingContract {
     function getNonce(bytes message) returns (uint8 non) {
         // Direct Transfer
         if (message[0] == 5) {
-            (non, , , , , , ) = Decoder.decodeTransfer(message);
+            (non, , , , , , ) = decodeTransfer(message);
         }
         // Locked Transfer
         if (message[0] == 6) {
-            (non, , , ) = Decoder.decodeLockedTransfer1(message);
+            (non, , , ) = decodeLockedTransfer1(message);
         }
         // Mediated Transfer
         if (message[0] == 7) {
-            (non, , , , ) = Decoder.decodeMediatedTransfer1(message); 
+            (non, , , , ) = decodeMediatedTransfer1(message); 
         }
         // Cancel Transfer
         if (message[0] == 8) {
-            (non, , , ) = Decoder.decodeCancelTransfer1(message);
+            (non, , , ) = decodeCancelTransfer1(message);
         }
         else throw;
     }
 
     // Gets the sender of a last sent transfer
     function getSender(bytes message) returns (address sndr) {
+  
         // Secret
-        bytes sig;
-        bytes32 h;
-        bytes32 sec;
-        uint8 non;
-        address ass;
-        address rec;
-        uint bal;
-        bytes32 olo;
-        uint amo;
-        bytes32 has;
-        bytes32 loc;
-        bytes32 lock;
-        uint8 exp;
-        address tar;
-        address ini;
-        uint fee;
         if (message[0] == 4) {
-            (sec, sig) = Decoder.decodeSecret(message);
-            h = sha3(sec);
-            sndr = ecrecovery(h, sig);
+            sndr = dsec(message);
         }
         // Direct Transfer
         if (message[0] == 5) {
-            (non, ass, rec, bal, olo, , sig) = Decoder.decodeTransfer(message);
-            h = sha3(non, ass, bal, rec, olo); //need the optionalLocksroot
-            sndr = ecrecovery(h, sig);
+            sndr = ddtran(message);
         }
         // Locked Transfer
         if (message[0] == 6) {
-            (non, exp, ass, rec) = Decoder.decodeLockedTransfer1(message);
-            (loc, bal, amo, has, sig) = Decoder.decodeLockedTransfer2(message);
-            h = sha3(non, ass, bal, rec, loc, lock); //need the lock
-            sndr = ecrecovery(h, sig);
+            sndr = dltran(message);
         }
         // Mediated Transfer
         if (message[0] == 7) {
-            (non, exp, ass, rec, tar) = Decoder.decodeMediatedTransfer1(message); 
-            (ini, loc, , , , fee, sig) = Decoder.decodeMediatedTransfer2(message);
-            h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
-            sndr = ecrecovery(h, sig);
+            sndr = dmtran(message);
         }
         // Cancel Transfer
         if (message[0] == 8) {
-            (non, , ass, rec) = Decoder.decodeCancelTransfer1(message);
-            (loc, bal, , , sig) = Decoder.decodeCancelTransfer2(message);
-            h = sha3(non, ass, bal, rec, loc, lock); //need the lock
-            sndr = ecrecovery(h, sig);
+            sndr = dctran(message);
         }
         else throw;
     }
 
-    function decode(bytes message) {
-        // Secret
-        bytes sig;
-        bytes32 h;
-        bytes32 sec;
-        uint8 non;
-        address ass;
-        address rec;
-        uint bal;
-        bytes32 olo;
-        uint amo;
-        bytes32 has;
-        bytes32 loc;
+    function dsec(bytes message) returns (address sndr) {
+        var(sec, sig) = decodeSecret(message);
+        bytes32 h = sha3(sec);
+        sndr = ecrecovery(h, sig);
+    }
+    function ddtran(bytes message) returns (address sndr) {
+        var(non, ass, rec, bal, olo, , sig) = decodeTransfer(message);
+        bytes32 h = sha3(non, ass, bal, rec, olo); //need the optionalLocksroot
+        sndr = ecrecovery(h, sig);
+    }
+    function dltran(bytes message) returns (address sndr) {
         bytes32 lock;
-        uint8 exp;
-        address tar;
-        address ini;
-        uint fee;
-        bytes32 h;
+        var(non, , ass, rec) = decodeLockedTransfer1(message);
+        var(loc, bal, , has, sig) = decodeLockedTransfer2(message);
+        bytes32 h = sha3(non, ass, bal, rec, loc, lock ); //need the lock
+        sndr = ecrecovery(h, sig);
+    }
+    function dmtran(bytes message) returns (address sndr) {
+        bytes32 lock;
+        var(non, , ass, rec, tar) = decodeMediatedTransfer1(message); 
+        var(ini, loc, bal, , , fee, sig) = decodeMediatedTransfer2(message);
+        bytes32 h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
+        sndr = ecrecovery(h, sig);
+    }
+    function dctran(bytes message) returns (address sndr) {
+        bytes32 lock;
+        var(non, , ass, rec) = decodeCancelTransfer1(message);
+        var(loc, bal, , , sig) = decodeCancelTransfer2(message);
+        bytes32 h = sha3(non, ass, bal, rec, loc, lock); //need the lock
+        sndr = ecrecovery(h, sig);
+    }
+
+
+    function decode(bytes message) {
+        bytes32 hash;
+        // Secret
         uint i;
         if (message[0] == 4) {
-            (sec, sig) = Decoder.decodeSecret(message);
-            participants[atIndex(msg.sender)].lastSentTransfer.secret = sec;
-            h = sha3(sec);
-            participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+            decsec(message);
         }
         // Direct Transfer
         if (message[0] == 5) {
-            (non, ass, rec, bal, loc, sec, sig) = Decoder.decodeTransfer(message);
-            i = atIndex(msg.sender); // should be sender of message
-            participants[i].lastSentTransfer.nonce = non;
-            participants[i].lastSentTransfer.asset = ass;
-            participants[i].lastSentTransfer.recipient = rec;
-            participants[i].lastSentTransfer.balance = bal;
-            h = sha3(non, ass, bal, rec, loc);
-            participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+            decdir(message);
         }
         // Locked Transfer
         if (message[0] == 6) {
-            (non, exp, ass, rec) = Decoder.decodeLockedTransfer1(message);
-            (loc, bal, amo, has, sig) = Decoder.decodeLockedTransfer2(message);
-            i = atIndex(msg.sender);
-            participants[i].lastSentTransfer.nonce = non;
-            lockedTime = exp;
-            participants[i].lastSentTransfer.asset = ass;
-            participants[i].lastSentTransfer.recipient = rec;
-            participants[i].lastSentTransfer.locksroot = loc;
-            participants[i].lastSentTransfer.balance = bal;
-            /*participants[i].unlocked.amount = amo; // not sure we need this*/
-            participants[i].unlocked.hashlock = has;
-            h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
-            participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+            hash = decloc1(message);
+            decloc2(message, hash);
         }
         // Mediated Transfer
         if (message[0] == 7) {
-            (non, exp, ass, rec, tar) = Decoder.decodeMediatedTransfer1(message); 
-            (ini, loc, has, bal, amo, fee, sig) = Decoder.decodeMediatedTransfer2(message);
-            i = atIndex(msg.sender);
-            participants[i].lastSentTransfer.nonce = non;
-            lockedTime = exp;
-            participants[i].lastSentTransfer.asset = ass;
-            participants[i].lastSentTransfer.recipient = rec;
-            participants[i].lastSentTransfer.locksroot = loc;
-            participants[i].unlocked.hashlock = has;
-            participants[i].lastSentTransfer.balance = bal;
-            // amount not needed?
-            h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
-            participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+            hash = decmed1(message);
+            decmed2(message, hash);
         }
         // Cancel Transfer
         if (message[0] == 8) {
-            (non, exp, ass, rec) = Decoder.decodeCancelTransfer1(message);
-            (loc, bal, amo, has, sig) = Decoder.decodeCancelTransfer2(message);
-            i = atIndex(msg.sender);
-            participants[i].lastSentTransfer.nonce = non;
-            lockedTime = exp;
-            participants[i].lastSentTransfer.asset = ass;
-            participants[i].lastSentTransfer.recipient = rec;
-            participants[i].lastSentTransfer.locksroot = loc;
-            participants[i].lastSentTransfer.balance = bal;
-            /*participants[i].unlocked.amount = amo; // not sure we need this*/
-            participants[i].unlocked.hashlock = has;
-            h = sha3(non, ass, bal, rec, loc, lock); //need the lock
-            participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+            hash = deccan1(message);
+            deccan2(message, hash);
         }
         else throw;
+    }
+
+    function decsec(bytes message) {
+        uint i = atIndex(getSender(message));
+        var(sec, sig) = decodeSecret(message);
+        participants[atIndex(msg.sender)].lastSentTransfer.secret = sec;
+        bytes32 h = sha3(sec);
+        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+    }
+    function decdir(bytes message) {
+        bytes32 lock;
+        uint i = atIndex(getSender(message));
+        var(non, ass, rec, bal, loc, sec, sig) = decodeTransfer(message);
+        participants[i].lastSentTransfer.nonce = non;
+        participants[i].lastSentTransfer.asset = ass;
+        participants[i].lastSentTransfer.recipient = rec;
+        participants[i].lastSentTransfer.balance = bal;
+        bytes32 h = sha3(non, ass, bal, rec, loc);
+        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+    }
+    function decloc1(bytes message) returns (bytes32 hh) {
+        uint i = atIndex(getSender(message));
+        var(non, exp, ass, rec) = decodeLockedTransfer1(message);
+        participants[i].lastSentTransfer.nonce = non;
+        lockedTime = exp;
+        participants[i].lastSentTransfer.asset = ass;
+        participants[i].lastSentTransfer.recipient = rec;
+        hh = sha3(non, ass, rec);
+    }
+    function decloc2(bytes message, bytes32 hh) {
+        bytes32 lock;
+        uint i = atIndex(getSender(message));
+        var(loc, bal, amo, has, sig) = decodeLockedTransfer2(message);
+        participants[i].lastSentTransfer.locksroot = loc;
+        participants[i].lastSentTransfer.balance = bal;
+        participants[i].unlocked.amount = amo; // should be changed to transferedAmount
+        participants[i].unlocked.hashlock = has;
+        bytes32 h = sha3(hh, bal, loc, lock ); //need the lock
+        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+    }
+    function decmed1(bytes message) returns (bytes32 hh) {
+        uint i = atIndex(getSender(message));
+        var(non, exp, ass, rec, tar) = decodeMediatedTransfer1(message); 
+        participants[i].lastSentTransfer.nonce = non;
+        lockedTime = exp;
+        participants[i].lastSentTransfer.asset = ass;
+        participants[i].lastSentTransfer.recipient = rec;
+        hh = sha3(non, ass, rec, tar);
+    }
+    function decmed2(bytes message, bytes32 hh) {
+        bytes32 lock;
+        uint i = atIndex(getSender(message));
+        var(ini, loc, has, bal, amo, fee, sig) = decodeMediatedTransfer2(message);
+        participants[i].lastSentTransfer.locksroot = loc;
+        participants[i].unlocked.hashlock = has;
+        participants[i].lastSentTransfer.balance = bal;
+        participants[i].unlocked.amount = amo; // should be changed to transferedAmount
+        bytes32 h = sha3(hh, bal, loc, lock, ini, fee); //need the lock
+        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+    }
+    function deccan1(bytes message) returns (bytes32 hh) {
+        uint i = atIndex(getSender(message));
+        var(non, exp, ass, rec) = decodeCancelTransfer1(message);
+        participants[i].lastSentTransfer.nonce = non;
+        lockedTime = exp;
+        participants[i].lastSentTransfer.asset = ass;
+        participants[i].lastSentTransfer.recipient = rec;
+        hh = sha3(non, ass, rec);
+    }
+    function deccan2(bytes message, bytes32 hh) {
+        bytes32 lock;
+        uint i = atIndex(getSender(message));
+        var(loc, bal, amo, has, sig) = decodeCancelTransfer2(message);
+        participants[i].lastSentTransfer.locksroot = loc;
+        participants[i].lastSentTransfer.balance = bal;
+        participants[i].unlocked.amount = amo; // should be changed to transferedAmount
+        participants[i].unlocked.hashlock = has;
+        bytes32 h = sha3(hh, bal, loc, lock); //need the lock
+        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
     }
 
     // Written by Alex Beregszaszi (@axic), use it under the terms of the MIT license.
@@ -473,6 +494,7 @@ contract NettingContract {
         return ecrecovery(hash, sig) == signer;
     }
 
+
     function slice(bytes a, uint start, uint end) returns (bytes n) {
         if (a.length < end) throw;
         if (start < 0) throw;
@@ -481,6 +503,131 @@ contract NettingContract {
         for ( uint i = start; i < end; i ++) { //python style slice
             n[i-start] = a[i];
         }
+    }
+    
+    function decodeSecret(bytes m) returns (bytes32 secret, bytes signature) {
+        if (m.length != 101) throw;
+        secret = bytesToBytes32(slice(m, 4, 36), secret);
+        signature = slice(m, 36, 101);
+    }
+    
+    function decodeTransfer(bytes m) returns (uint8 nonce, address asset, address recipient,
+                                                uint balance, bytes32 optionalLocksroot,
+                                                bytes32 optionalSecret, bytes signature) 
+    {
+        if (m.length != 213) throw;
+        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
+        uint160 ia;
+        asset = bytesToAddress(slice(m, 12, 32), ia);
+        uint160 ir;
+        recipient = bytesToAddress(slice(m, 32, 52), ir);
+        balance = bytesToInt(slice(m, 52, 84), balance);
+        optionalLocksroot = bytesToBytes32(slice(m, 84, 116), optionalLocksroot);
+        optionalSecret = bytesToBytes32(slice(m, 116, 148), optionalSecret);
+        signature = slice(m, 148, 213);
+
+    }
+    
+    function decodeLockedTransfer1(bytes m) returns (uint8 nonce, uint8 expiration, 
+                                                        address asset, address recipient) 
+    {
+        if (m.length != 253) throw;
+        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
+        expiration = bytesToIntEight(slice(m, 12, 20), expiration);
+        uint160 ia;
+        asset = bytesToAddress(slice(m, 20, 40), ia);
+        uint160 ir;
+        recipient = bytesToAddress(slice(m, 40, 60), ir);
+        
+    }
+    
+    function decodeLockedTransfer2(bytes m) returns 
+                                    (bytes32 locksroot, uint balance, uint amount,
+                                        bytes32 hashlock, bytes signature) 
+    {
+
+        locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
+        balance = bytesToInt(slice(m, 92, 124), balance);
+        amount = bytesToInt(slice(m, 124, 156), amount);
+        hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
+        signature = slice(m, 188, 253);
+    }
+    
+    function decodeMediatedTransfer1(bytes m) returns (uint8 nonce, uint8 expiration, 
+                                                        address asset, address recipient,
+                                                        address target) 
+    {
+        if (m.length != 325) throw;
+        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
+        expiration = bytesToIntEight(slice(m, 12, 20), expiration);
+        uint160 ia;
+        asset = bytesToAddress(slice(m, 20, 40), ia);
+        uint160 ir;
+        recipient = bytesToAddress(slice(m, 40, 60), ir);
+        uint160 it;
+        target = bytesToAddress(slice(m, 60, 80), it);
+        
+    }
+    
+    function decodeMediatedTransfer2(bytes m) returns 
+                                    (address initiator, bytes32 locksroot, bytes32 hashlock, 
+                                        uint balance, uint amount, uint fee, bytes signature) 
+    {
+        uint160 ii;
+        initiator = bytesToAddress(slice(m, 80, 100), ii);
+        locksroot = bytesToBytes32(slice(m, 100, 132), locksroot);
+        hashlock = bytesToBytes32(slice(m, 132, 164), hashlock);
+        balance = bytesToInt(slice(m, 164, 196), balance);
+        amount = bytesToInt(slice(m, 196, 228), amount);
+        fee = bytesToInt(slice(m, 228, 260), fee);
+        signature = slice(m, 260, 325);
+    }
+    
+    function decodeCancelTransfer1(bytes m) returns (uint8 nonce, uint8 expiration, 
+                                                address asset, address recipient) 
+    {
+        if (m.length != 253) throw;
+        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
+        expiration = bytesToIntEight(slice(m, 12, 20), expiration);
+        uint160 ia;
+        asset = bytesToAddress(slice(m, 20, 40), ia);
+        uint160 ir;
+        recipient = bytesToAddress(slice(m, 40, 60), ir);
+    }
+    
+    function decodeCancelTransfer2(bytes m) returns (bytes32 locksroot, uint balance, 
+                                                        uint amount, bytes32 hashlock, bytes signature) 
+    {
+        locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
+        balance = bytesToInt(slice(m, 92, 124), balance);
+        amount = bytesToInt(slice(m, 124, 156), amount);
+        hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
+        signature = slice(m, 188, 253); 
+    }
+    
+    /* HELPER FUNCTIONS */
+    
+    function bytesToIntEight(bytes b, uint8 i) returns (uint8 res) {
+        assembly { i := mload(add(b, 0x8)) }
+        res = i;
+    }
+    
+    // helper function
+    function bytesToInt(bytes b, uint i) returns (uint res) {
+        assembly { i := mload(add(b, 0x20)) }
+        res = i;
+    }
+    
+    // helper function
+    function bytesToAddress(bytes b, uint160 i) returns (address add) {
+        assembly { i := mload(add(b, 0x14)) }
+        uint160 a = uint160(i);
+        add = address(i);
+    }
+    
+    function bytesToBytes32(bytes b, bytes32 i) returns (bytes32 bts) {
+        assembly { i := mload(add(b, 0x20)) }
+        bts = i;
     }
 
     // empty function to handle wrong calls
