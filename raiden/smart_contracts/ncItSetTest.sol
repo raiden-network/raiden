@@ -110,10 +110,11 @@ contract Wrapper
     }
 
     function getAllKeys() returns (bytes32[] keys) {
-        bytes32[] arr;
+        bytes32[] memory arr; // FIXME: w/o memory: 'uninitialized storage pointer'
         for (var i = IterableMapping.iterate_start(data); IterableMapping.iterate_valid(data, i); i = IterableMapping.iterate_next(data, i)) {
             var(key, value) = IterableMapping.iterate_get(data, i);
-            arr.push(key);
+            //arr.push(key); FIXME: push not allowed on memory bytes32
+            throw; //FIXME: broken!
         }
         keys = arr;
     }
