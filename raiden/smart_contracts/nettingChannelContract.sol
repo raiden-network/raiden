@@ -1,3 +1,4 @@
+import "Decoder.sol";
 contract NettingContract {
     uint lockedTime;
     address assetAddress;
@@ -124,7 +125,7 @@ contract NettingContract {
         // Difficult stuff. Not entirely sure about this
         // TODO
         // Register un-locked
-        partnerId = atIndex(partner(msg.sender));
+        var(partnerId) = atIndex(partner(msg.sender));
         
         // mark closed
         if (closed == 0) closed = block.number;
@@ -134,6 +135,11 @@ contract NettingContract {
         ChannelClosed();
     }
 
+
+    // FIXME: stub function 
+    function getIndex(bytes32 k) returns (uint i) {
+        9000;
+    }
 
     /// @notice settle() to settle the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
@@ -167,19 +173,19 @@ contract NettingContract {
     function getNonce(bytes message) returns (uint8 non) {
         // Direct Transfer
         if (message[0] == 5) {
-            (non, , , , , , ) = decodeTransfer(message);
+            (non, , , , , , ) = Decoder.decodeTransfer(message);
         }
         // Locked Transfer
         if (message[0] == 6) {
-            (non, , , ) = decodeLockedTransfer1(message);
+            (non, , , ) = Decoder.decodeLockedTransfer1(message);
         }
         // Mediated Transfer
         if (message[0] == 7) {
-            (non, , , , ) = decodeMediatedTransfer1(message); 
+            (non, , , , ) = Decoder.decodeMediatedTransfer1(message); 
         }
         // Cancel Transfer
         if (message[0] == 8) {
-            (non, , , ) = decodeCancelTransfer1(message);
+            (non, , , ) = Decoder.decodeCancelTransfer1(message);
         }
         else throw;
     }
@@ -187,37 +193,37 @@ contract NettingContract {
     // Gets the sender of a last sent transfer
     function getSender(bytes message) returns (address sndr) {
         // Secret
-        var(sec, sig, non, ass, rec, bal, olo, amo, has, ini);
+        var(sec, sig, non, ass, rec, bal, olo, amo, has, ini, exp, loc, lock, tar, fee);
         bytes32 h;
         if (message[0] == 4) {
-            (sec, sig) = decodeSecret(message);
+            (sec, sig) = Decoder.decodeSecret(message);
             h = sha3(sec);
             sndr = ecrecovery(h, sig);
         }
         // Direct Transfer
         if (message[0] == 5) {
-            (non, ass, rec, bal, olo, , sig) = decodeTransfer(message);
+            (non, ass, rec, bal, olo, , sig) = Decoder.decodeTransfer(message);
             h = sha3(non, ass, bal, rec, olo); //need the optionalLocksroot
             sndr = ecrecovery(h, sig);
         }
         // Locked Transfer
         if (message[0] == 6) {
-            (non, exp, ass, rec) = decodeLockedTransfer1(message);
-            (loc, bal, amo, has, sig) = decodeLockedTransfer2(message);
-            h = sha3(non, ass, bal, rec, loc, lock ); //need the lock
+            (non, exp, ass, rec) = Decoder.decodeLockedTransfer1(message);
+            (loc, bal, amo, has, sig) = Decoder.decodeLockedTransfer2(message);
+            h = sha3(non, ass, bal, rec, loc, lock); //need the lock
             sndr = ecrecovery(h, sig);
         }
         // Mediated Transfer
         if (message[0] == 7) {
-            (non, exp, ass, rec, tar) = decodeMediatedTransfer1(message); 
-            (ini, loc, , , , fee, sig) = decodeMediatedTransfer2(message);
+            (non, exp, ass, rec, tar) = Decoder.decodeMediatedTransfer1(message); 
+            (ini, loc, , , , fee, sig) = Decoder.decodeMediatedTransfer2(message);
             h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
             sndr = ecrecovery(h, sig);
         }
         // Cancel Transfer
         if (message[0] == 8) {
-            (non, , ass, rec) = decodeCancelTransfer1(message);
-            (loc, bal, , , sig) = decodeCancelTransfer2(message);
+            (non, , ass, rec) = Decoder.decodeCancelTransfer1(message);
+            (loc, bal, , , sig) = Decoder.decodeCancelTransfer2(message);
             h = sha3(non, ass, bal, rec, loc, lock); //need the lock
             sndr = ecrecovery(h, sig);
         }
@@ -226,18 +232,18 @@ contract NettingContract {
 
     function decode(bytes message) {
         // Secret
-        var(non, ass, rec, bal, loc, sec, sig);
+        var(non, ass, rec, bal, loc, sec, sig, add, exp, amo, has, lock, tar, ini, fee);
         bytes32 h;
         uint i;
         if (message[0] == 4) {
-            (sec, sig) = decodeSecret(message);
+            (sec, sig) = Decoder.decodeSecret(message);
             participants[atIndex(msg.sender)].lastSentTransfer.secret = sec;
             h = sha3(sec);
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         // Direct Transfer
         if (message[0] == 5) {
-            (non, ass, rec, bal, loc, sec, sig) = decodeTransfer(message);
+            (non, ass, rec, bal, loc, sec, sig) = Decoder.decodeTransfer(message);
             i = atIndex(msg.sender); // should be sender of message
             participants[i].lastSentTransfer.nonce = non;
             participants[i].lastSentTransfer.asset = ass;
@@ -248,8 +254,8 @@ contract NettingContract {
         }
         // Locked Transfer
         if (message[0] == 6) {
-            (non, exp, ass, rec) = decodeLockedTransfer1(message);
-            (loc, bal, amo, has, sig) = decodeLockedTransfer2(message);
+            (non, exp, ass, rec) = Decoder.decodeLockedTransfer1(message);
+            (loc, bal, amo, has, sig) = Decoder.decodeLockedTransfer2(message);
             i = atIndex(msg.sender);
             participants[i].lastSentTransfer.nonce = non;
             lockedTime = exp;
@@ -264,8 +270,8 @@ contract NettingContract {
         }
         // Mediated Transfer
         if (message[0] == 7) {
-            (non, exp, ass, rec, tar) = decodeMediatedTransfer1(message); 
-            (ini, loc, has, bal, amo, fee, sig) = decodeMediatedTransfer2(message);
+            (non, exp, ass, rec, tar) = Decoder.decodeMediatedTransfer1(message); 
+            (ini, loc, has, bal, amo, fee, sig) = Decoder.decodeMediatedTransfer2(message);
             i = atIndex(msg.sender);
             participants[i].lastSentTransfer.nonce = non;
             lockedTime = exp;
@@ -280,8 +286,8 @@ contract NettingContract {
         }
         // Cancel Transfer
         if (message[0] == 8) {
-            (non, exp, ass, rec) = decodeCancelTransfer1(message);
-            (loc, bal, amo, has, sig) = decodeCancelTransfer2(message);
+            (non, exp, ass, rec) = Decoder.decodeCancelTransfer1(message);
+            (loc, bal, amo, has, sig) = Decoder.decodeCancelTransfer2(message);
             i = atIndex(msg.sender);
             participants[i].lastSentTransfer.nonce = non;
             lockedTime = exp;
