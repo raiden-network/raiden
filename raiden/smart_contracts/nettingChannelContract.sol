@@ -5,7 +5,7 @@ contract NettingContract {
     uint opened;
     uint closed;
     uint settled;
-    /*uint settlementTimeout; //maybe not?*/
+    address closingAddress;
 
     struct Transfer
     {
@@ -16,20 +16,22 @@ contract NettingContract {
         address recipient;
         bytes32 locksroot;
         bytes32 secret;
+        uint expiration;
     }
     struct Unlocked 
     {
-        // Depending on the encoded format
-        bytes32 merkleProof;
+        bytes merkleProof;
         bytes32 hashlock;
         bytes32 secret;
         uint amount;
+        uint expiration;
     } 
     struct Participant
     {
         address addr;
         uint deposit;
         uint netted;
+        uint transferedAmount;
         Transfer lastSentTransfer;
         Unlocked unlocked;
     }
@@ -103,32 +105,39 @@ contract NettingContract {
     }
 
 
-    /// @notice close(Transfer, unlocked[]) to close a channel between to parties
+    /// @notice close(bytes, bytes) to close a channel between to parties
     /// @dev Close the channel between two parties
-    /// @param lsts (Transfer[]) the last sent transfer of the msg.sender
-    /// @param unlckd (Unlocked) the struct containing locked data (a bit uncertain about this)
-    function close(bytes[2] lsts, bytes unlckd) inParticipants { 
-        // TODO figure out how to get a list of two transfers as argument
+    /// @param firstEncoded (bytes) the last sent transfer of the msg.sender
+    function close(bytes firstEncoded) inParticipants { 
+        if (settled > 0) throw; // channel already settled
+        if (closed > 0) throw; // channel is closing
 
-        // Update valid claims
-        for(uint i = 0; i < lsts.length; i++ ) {
-            if (getSender(lsts[i]) != participants[0].addr &&
-                getSender(lsts[i]) != participants[1].addr) throw;
-            
-            uint sndrIdx = atIndex(getSender(lsts[i]));
-            if (participants[sndrIdx].lastSentTransfer == 0 || // how to check that for no data
-                participants[sndrIdx].lastSentTransfer.nonce < getNonce(lsts[i])){
-                decode(lsts);
-            }
+        // check if sender of message is a participant
+        if (getSender(firstEncoded) != participants[0].addr &&
+            getSender(firstEncoded) != participants[1].addr) throw;
+
+        uint partnerId = atIndex(partner(msg.sender));
+        uint senderId = atIndex(msg.sender);
+
+        decode(firstEncoded);
+
+        // mark closed
+        closed = block.number;
+        closingAddress = msg.sender;
+
+        uint amount1 = participants[senderId].transferedAmount;
+        uint amount2 = participants[partnerId].transferedAmount;
+
+        uint allowance = participants[senderId].deposit + participants[partnerId].deposit;
+        uint difference;
+        if(amount1 > amount2) {
+            difference = amount1 - amount2;
+        } else {
+            difference = amount2 - amount1;
         }
         
-        // Difficult stuff. Not entirely sure about this
         // TODO
-        // Register un-locked
-        var(partnerId) = atIndex(partner(msg.sender));
-        
-        // mark closed
-        if (closed == 0) closed = block.number;
+        // if (difference > allowance) penalize();
 
         // trigger event
         //TODO
@@ -136,22 +145,118 @@ contract NettingContract {
     }
 
 
-    // FIXME: stub function 
-    function getIndex(bytes32 k) returns (uint i) {
-        9000;
+    /// @notice close(bytes, bytes) to close a channel between to parties
+    /// @dev Close the channel between two parties
+    /// @param firstEncoded (bytes) the last sent transfer of the msg.sender
+    /// @param secondEncoded (bytes) the last sent transfer of the msg.sender
+    function close(bytes firstEncoded, bytes secondEncoded) inParticipants { 
+        if (settled > 0) throw; // channel already settled
+        if (closed > 0) throw; // channel is closing
+        
+        // check if the sender of either of the messages is a participant
+        if (getSender(firstEncoded) != participants[0].addr &&
+            getSender(firstEncoded) != participants[1].addr) throw;
+        if (getSender(secondEncoded) != participants[0].addr &&
+            getSender(secondEncoded) != participants[1].addr) throw;
+
+        // Don't allow both transfers to be from the same sender
+        if (getSender(firstEncoded) == getSender(secondEncoded)) throw;
+
+        uint partnerId = atIndex(partner(msg.sender));
+        uint senderId = atIndex(msg.sender);
+        
+        decode(firstEncoded);
+        decode(secondEncoded);
+
+        // mark closed
+        closed = block.number;
+        closingAddress = msg.sender;
+
+        uint amount1 = participants[senderId].transferedAmount;
+        uint amount2 = participants[partnerId].transferedAmount;
+
+        uint allowance = participants[senderId].deposit + participants[partnerId].deposit;
+        uint difference;
+        if(amount1 > amount2) {
+            difference = amount1 - amount2;
+        } else {
+            difference = amount2 - amount1;
+        }
+        
+        // TODO
+        // if (difference > allowance) penalize();
+
+        
+        // trigger event
+        //TODO
+        ChannelClosed();
+    }
+
+
+    /// @notice updateTransfer(bytes) to update last known transfer
+    /// @dev Allow the partner to update the last known transfer
+    /// @param message (bytes) the encoded transfer message
+    function updateTransfer(bytes message) inParticipants {
+        if (settled > 0) throw; // channel already settled
+        if (closed == 0) throw; // channel is open
+        if (msg.sender == closingAddress) throw; // don't allow closer to update
+        if (closingAddress == getSender(message)) throw;
+
+        decode(message);
+
+        // TODO check if tampered and penalize
+        // TODO check if outdated and penalize
+
+    }
+
+
+    /// @notice unlock(bytes, bytes, bytes32) to unlock a locked transfer
+    /// @dev Unlock a locked transfer
+    /// @param lockedEncoded (bytes) the lock
+    /// @param merkleProof (bytes) the merkle proof
+    /// @param secret (bytes32) the secret
+    function unlock(bytes lockedEncoded, bytes merkleProof, bytes32 secret) inParticipants{
+        if (settled > 0) throw; // channel already settled
+        if (closed == 0) throw; // channel is open
+
+        uint partnerId = atIndex(partner(msg.sender));
+        uint senderId = atIndex(msg.sender);
+
+        if (participants[partnerId].lastSentTransfer.nonce == 0) throw;
+
+        bytes32 h = sha3(lockedEncoded);
+
+        for (uint i = 0; i < merkleProof.length; i += 64) {
+            bytes32 left;
+            left = bytesToBytes32(slice(merkleProof, i, i + 32), left);
+            bytes32 right;
+            right = bytesToBytes32(slice(merkleProof, i + 32, i + 64), right);
+            if (h != left && h != right) throw;
+            h = sha3(left, right);
+        }
+
+        if (participants[partnerId].lastSentTransfer.locksroot != h) throw;
+
+        // TODO decode lockedEncoded into a Unlocked struct and append
+        
+        //participants[partnerId].unlocked.push(lock);
+    }
+    function bytesToBytes32(bytes b, bytes32 i) returns (bytes32 bts) {
+        assembly { i := mload(add(b, 0x20)) }
+        bts = i;
     }
 
     /// @notice settle() to settle the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
     /// @return participants (Participant[]) the participants with netted balances
+    /*
     function settle() returns (Participant[] participants) {
         if (settled > 0) throw;
         if (closed == 0) throw;
-        if (closed + lockedTime > block.number) throw;
-        uint otherIdx;
+        if (closed + lockedTime > block.number) throw; //if locked time has expired throw
 
         for (uint i = 0; i < participants.length; i++) {
-            otherIdx = getIndex(partner(participants[i].addr)); 
+            uint otherIdx = atIndex(partner(participants[i].addr)); 
             participants[i].netted = participants[i].deposit;
             if (participants[i].lastSentTransfer != 0) {
                 participants[i].netted = participants[i].lastSentTransfer.balance;
@@ -161,13 +266,14 @@ contract NettingContract {
             }
         }
 
-        for (i = 0; i < participants.length; i++) {
-            otherIdx = getIndex(partner(participants[i].addr)); 
-        }
+        //for (uint j = 0; j < participants.length; j++) {
+            //uint otherIdx = atIndex(partner(participants[j].addr)); 
+        //}
 
         // trigger event
-        /*ChannelSettled();*/
+        //ChannelSettled();
     }
+    */
 
     // Get the nonce of the last sent transfer
     function getNonce(bytes message) returns (uint8 non) {
@@ -193,8 +299,22 @@ contract NettingContract {
     // Gets the sender of a last sent transfer
     function getSender(bytes message) returns (address sndr) {
         // Secret
-        var(sec, sig, non, ass, rec, bal, olo, amo, has, ini, exp, loc, lock, tar, fee);
+        bytes sig;
         bytes32 h;
+        bytes32 sec;
+        uint8 non;
+        address ass;
+        address rec;
+        uint bal;
+        bytes32 olo;
+        uint amo;
+        bytes32 has;
+        bytes32 loc;
+        bytes32 lock;
+        uint8 exp;
+        address tar;
+        address ini;
+        uint fee;
         if (message[0] == 4) {
             (sec, sig) = Decoder.decodeSecret(message);
             h = sha3(sec);
@@ -232,7 +352,22 @@ contract NettingContract {
 
     function decode(bytes message) {
         // Secret
-        var(non, ass, rec, bal, loc, sec, sig, add, exp, amo, has, lock, tar, ini, fee);
+        bytes sig;
+        bytes32 h;
+        bytes32 sec;
+        uint8 non;
+        address ass;
+        address rec;
+        uint bal;
+        bytes32 olo;
+        uint amo;
+        bytes32 has;
+        bytes32 loc;
+        bytes32 lock;
+        uint8 exp;
+        address tar;
+        address ini;
+        uint fee;
         bytes32 h;
         uint i;
         if (message[0] == 4) {
@@ -249,7 +384,7 @@ contract NettingContract {
             participants[i].lastSentTransfer.asset = ass;
             participants[i].lastSentTransfer.recipient = rec;
             participants[i].lastSentTransfer.balance = bal;
-            h = sha3(non, add, bal, rec, loc);
+            h = sha3(non, ass, bal, rec, loc);
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         // Locked Transfer
@@ -265,7 +400,7 @@ contract NettingContract {
             participants[i].lastSentTransfer.balance = bal;
             /*participants[i].unlocked.amount = amo; // not sure we need this*/
             participants[i].unlocked.hashlock = has;
-            h = sha3(non, add, bal, rec, loc, lock, tar, ini, fee); //need the lock
+            h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         // Mediated Transfer
@@ -281,7 +416,7 @@ contract NettingContract {
             participants[i].unlocked.hashlock = has;
             participants[i].lastSentTransfer.balance = bal;
             // amount not needed?
-            h = sha3(non, add, bal, rec, loc, lock, tar, ini, fee); //need the lock
+            h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         // Cancel Transfer
@@ -297,7 +432,7 @@ contract NettingContract {
             participants[i].lastSentTransfer.balance = bal;
             /*participants[i].unlocked.amount = amo; // not sure we need this*/
             participants[i].unlocked.hashlock = has;
-            h = sha3(non, add, bal, rec, loc, lock); //need the lock
+            h = sha3(non, ass, bal, rec, loc, lock); //need the lock
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         else throw;
@@ -336,6 +471,16 @@ contract NettingContract {
 
     function ecverify(bytes32 hash, bytes sig, address signer) returns (bool) {
         return ecrecovery(hash, sig) == signer;
+    }
+
+    function slice(bytes a, uint start, uint end) returns (bytes n) {
+        if (a.length < end) throw;
+        if (start < 0) throw;
+        if (start > end) throw;
+        n = new bytes(end-start);
+        for ( uint i = start; i < end; i ++) { //python style slice
+            n[i-start] = a[i];
+        }
     }
 
     // empty function to handle wrong calls
