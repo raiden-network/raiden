@@ -6,7 +6,7 @@ from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
 
-decode_code = open("raiden/smart_contracts/decode.sol").read()
+decode_code = open("raiden/smart_contracts/Decoder.sol").read()
 
 
 def test_decode_secret():

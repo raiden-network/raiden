@@ -9,7 +9,7 @@ from ethereum.tester import TransactionFailed
 
 library_code = open("raiden/smart_contracts/cmcItSet.slb").read()
 
-registry_code = open("raiden/smart_contracts/registry.sol").read()
+registry_code = open("raiden/smart_contracts/Registry.sol").read()
 
 
 def test_registry():

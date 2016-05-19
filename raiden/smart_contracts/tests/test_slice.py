@@ -4,7 +4,7 @@ import pytest
 from ethereum import tester
 from ethereum.tester import TransactionFailed
 
-slicer_code = open("raiden/smart_contracts/slice.sol").read()
+slicer_code = open("raiden/smart_contracts/Slicer.sol").read()
 
 def test_slice():
     s = tester.state()
