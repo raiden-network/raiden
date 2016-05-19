@@ -80,18 +80,18 @@ library IterableMappingCMC {
 contract Wrapper
 {
     // Just a struct holding our data.
-    IterableMapping.itmap data;
+    IterableMappingCMC.itmap data;
     // Insert something
     function insert(address k, ChannelManagerContract v) returns (uint size)
     {
         // Actually calls itmap_impl.insert, auto-supplying the first parameter for us.
-        IterableMapping.insert(data, k, v);
+        IterableMappingCMC.insert(data, k, v);
         // We can still access members of the struct - but we should take care not to mess with them.
         return data.size;
     }
 
     function contains(address k) returns (bool c) {
-        c = IterableMapping.contains(data, k);
+        c = IterableMappingCMC.contains(data, k);
     }
     
     function lengthOf() returns (uint l) {
@@ -99,21 +99,21 @@ contract Wrapper
     }
 
     function get(address k) returns (address key, ChannelManagerContract value) {
-        uint index = IterableMapping.atIndex(data, k);
-        (key, value) = IterableMapping.iterate_get(data, index -1);
+        uint index = IterableMappingCMC.atIndex(data, k);
+        (key, value) = IterableMappingCMC.iterate_get(data, index -1);
     }
 
     function remove(address k) returns (bool success) {
-        success = IterableMapping.remove(data, k);
+        success = IterableMappingCMC.remove(data, k);
     }
 
     function getIndex(address k) returns (uint i) {
-        i = IterableMapping.atIndex(data, k);
+        i = IterableMappingCMC.atIndex(data, k);
     }
 
     function getAllKeys() returns (address[] addresses) {
-        for (var i = IterableMapping.iterate_start(data); IterableMapping.iterate_valid(data, i); i = IterableMapping.iterate_next(data, i)) {
-            var(key, value) = IterableMapping.iterate_get(data, i);
+        for (var i = IterableMappingCMC.iterate_start(data); IterableMappingCMC.iterate_valid(data, i); i = IterableMappingCMC.iterate_next(data, i)) {
+            var(key, value) = IterableMappingCMC.iterate_get(data, i);
             addresses[i] = key;
         }
     }
