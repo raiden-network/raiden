@@ -58,3 +58,4 @@ target/
 
 # truffle related
 truffle/.babel.json
+truffle/environments/development/contracts/
