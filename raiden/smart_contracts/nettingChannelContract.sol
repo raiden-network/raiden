@@ -142,9 +142,10 @@ contract NettingContract {
         if (settled > 0) throw;
         if (closed == 0) throw;
         if (closed + lockedTime > block.number) throw;
+        uint otherIdx;
 
         for (uint i = 0; i < participants.length; i++) {
-            uint otherIdx = getIndex(partner(participants[i].addr)); 
+            otherIdx = getIndex(partner(participants[i].addr)); 
             participants[i].netted = participants[i].deposit;
             if (participants[i].lastSentTransfer != 0) {
                 participants[i].netted = participants[i].lastSentTransfer.balance;
@@ -154,13 +155,13 @@ contract NettingContract {
             }
         }
 
-        for (uint i = 0; i < participants.length; i++) {
-            uint otherIdx = getIndex(partner(participants[i].addr)); 
+        for (i = 0; i < participants.length; i++) {
+            otherIdx = getIndex(partner(participants[i].addr)); 
         }
 
         // trigger event
         /*ChannelSettled();*/
-    //}
+    }
 
     // Get the nonce of the last sent transfer
     function getNonce(bytes message) returns (uint8 non) {
@@ -186,36 +187,38 @@ contract NettingContract {
     // Gets the sender of a last sent transfer
     function getSender(bytes message) returns (address sndr) {
         // Secret
+        var(sec, sig, non, ass, rec, bal, olo, amo, has, ini);
+        bytes32 h;
         if (message[0] == 4) {
-            var(sec, sig) = decodeSecret(message);
-            bytes32 h = sha3(sec);
+            (sec, sig) = decodeSecret(message);
+            h = sha3(sec);
             sndr = ecrecovery(h, sig);
         }
         // Direct Transfer
         if (message[0] == 5) {
-            var(non, ass, rec, bal, olo, , sig) = decodeTransfer(message);
-            bytes32 h = sha3(non, ass, bal, rec, olo); //need the optionalLocksroot
+            (non, ass, rec, bal, olo, , sig) = decodeTransfer(message);
+            h = sha3(non, ass, bal, rec, olo); //need the optionalLocksroot
             sndr = ecrecovery(h, sig);
         }
         // Locked Transfer
         if (message[0] == 6) {
-            var(non, exp, ass, rec) = decodeLockedTransfer1(message);
-            var(loc, bal, amo, has, sig) = decodeLockedTransfer2(message);
-            bytes32 h = sha3(non, ass, bal, rec, loc, lock ); //need the lock
+            (non, exp, ass, rec) = decodeLockedTransfer1(message);
+            (loc, bal, amo, has, sig) = decodeLockedTransfer2(message);
+            h = sha3(non, ass, bal, rec, loc, lock ); //need the lock
             sndr = ecrecovery(h, sig);
         }
         // Mediated Transfer
         if (message[0] == 7) {
-            var(non, exp, ass, rec, tar) = decodeMediatedTransfer1(message); 
-            var(ini, loc, , , , fee, sig) = decodeMediatedTransfer2(message);
-            bytes32 h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
+            (non, exp, ass, rec, tar) = decodeMediatedTransfer1(message); 
+            (ini, loc, , , , fee, sig) = decodeMediatedTransfer2(message);
+            h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
             sndr = ecrecovery(h, sig);
         }
         // Cancel Transfer
         if (message[0] == 8) {
-            var(non, , ass, rec) = decodeCancelTransfer1(message);
-            var(loc, bal, , , sig) = decodeCancelTransfer2(message);
-            bytes32 h = sha3(non, ass, bal, rec, loc, lock); //need the lock
+            (non, , ass, rec) = decodeCancelTransfer1(message);
+            (loc, bal, , , sig) = decodeCancelTransfer2(message);
+            h = sha3(non, ass, bal, rec, loc, lock); //need the lock
             sndr = ecrecovery(h, sig);
         }
         else throw;
@@ -223,28 +226,31 @@ contract NettingContract {
 
     function decode(bytes message) {
         // Secret
+        var(non, ass, rec, bal, loc, sec, sig);
+        bytes32 h;
+        uint i;
         if (message[0] == 4) {
-            var(sec, sig) = decodeSecret(message);
+            (sec, sig) = decodeSecret(message);
             participants[atIndex(msg.sender)].lastSentTransfer.secret = sec;
-            bytes32 h = sha3(sec);
+            h = sha3(sec);
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         // Direct Transfer
         if (message[0] == 5) {
-            var(non, ass, rec, bal, loc, sec, sig) = decodeTransfer(message);
-            uint i = atIndex(msg.sender); // should be sender of message
+            (non, ass, rec, bal, loc, sec, sig) = decodeTransfer(message);
+            i = atIndex(msg.sender); // should be sender of message
             participants[i].lastSentTransfer.nonce = non;
             participants[i].lastSentTransfer.asset = ass;
             participants[i].lastSentTransfer.recipient = rec;
             participants[i].lastSentTransfer.balance = bal;
-            bytes32 h = sha3(non, add, bal, rec, loc);
+            h = sha3(non, add, bal, rec, loc);
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         // Locked Transfer
         if (message[0] == 6) {
-            var(non, exp, ass, rec) = decodeLockedTransfer1(message);
-            var(loc, bal, amo, has, sig) = decodeLockedTransfer2(message);
-            uint i = atIndex(msg.sender);
+            (non, exp, ass, rec) = decodeLockedTransfer1(message);
+            (loc, bal, amo, has, sig) = decodeLockedTransfer2(message);
+            i = atIndex(msg.sender);
             participants[i].lastSentTransfer.nonce = non;
             lockedTime = exp;
             participants[i].lastSentTransfer.asset = ass;
@@ -253,14 +259,14 @@ contract NettingContract {
             participants[i].lastSentTransfer.balance = bal;
             /*participants[i].unlocked.amount = amo; // not sure we need this*/
             participants[i].unlocked.hashlock = has;
-            bytes32 h = sha3(non, add, bal, rec, loc, lock, tar, ini, fee); //need the lock
+            h = sha3(non, add, bal, rec, loc, lock, tar, ini, fee); //need the lock
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         // Mediated Transfer
         if (message[0] == 7) {
-            var(non, exp, ass, rec, tar) = decodeMediatedTransfer1(message); 
-            var(ini, loc, has, bal, amo, fee, sig) = decodeMediatedTransfer2(message);
-            uint i = atIndex(msg.sender);
+            (non, exp, ass, rec, tar) = decodeMediatedTransfer1(message); 
+            (ini, loc, has, bal, amo, fee, sig) = decodeMediatedTransfer2(message);
+            i = atIndex(msg.sender);
             participants[i].lastSentTransfer.nonce = non;
             lockedTime = exp;
             participants[i].lastSentTransfer.asset = ass;
@@ -269,14 +275,14 @@ contract NettingContract {
             participants[i].unlocked.hashlock = has;
             participants[i].lastSentTransfer.balance = bal;
             // amount not needed?
-            bytes32 h = sha3(non, add, bal, rec, loc, lock, tar, ini, fee); //need the lock
+            h = sha3(non, add, bal, rec, loc, lock, tar, ini, fee); //need the lock
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         // Cancel Transfer
         if (message[0] == 8) {
-            var(non, exp, ass, rec) = decodeCancelTransfer1(message);
-            var(loc, bal, amo, has, sig) = decodeCancelTransfer2(message);
-            uint i = atIndex(msg.sender);
+            (non, exp, ass, rec) = decodeCancelTransfer1(message);
+            (loc, bal, amo, has, sig) = decodeCancelTransfer2(message);
+            i = atIndex(msg.sender);
             participants[i].lastSentTransfer.nonce = non;
             lockedTime = exp;
             participants[i].lastSentTransfer.asset = ass;
@@ -285,7 +291,7 @@ contract NettingContract {
             participants[i].lastSentTransfer.balance = bal;
             /*participants[i].unlocked.amount = amo; // not sure we need this*/
             participants[i].unlocked.hashlock = has;
-            bytes32 h = sha3(non, add, bal, rec, loc, lock); //need the lock
+            h = sha3(non, add, bal, rec, loc, lock); //need the lock
             participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
         }
         else throw;
