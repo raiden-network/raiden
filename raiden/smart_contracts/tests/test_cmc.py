@@ -1,12 +1,11 @@
 # -*- coding: utf8 -*-
 import pytest
-from ethereum import utils
 from ethereum import tester
-from ethereum.utils import sha3, privtoaddr
+from ethereum.utils import sha3
 from ethereum.tester import TransactionFailed
 
-library_code = open("raiden/smart_contracts/channelManagerContract.slb").read()
-cmc_code = open("raiden/smart_contracts/channelManagerContract.sol").read()
+library_path = "raiden/smart_contracts/channelManagerContract.slb"
+cmc_path = "raiden/smart_contracts/channelManagerContract.sol"
 
 
 def test_cmc():
@@ -14,9 +13,8 @@ def test_cmc():
     assert s.block.number < 1150000
     s.block.number = 1158001
     assert s.block.number > 1150000
-    lib_c = s.abi_contract(library_code, language="solidity")
-    c = s.abi_contract(cmc_code, language="solidity", libraries={'IterableMappingNcc': lib_c.address.encode('hex')})
-
+    lib_c = s.abi_contract(None, path=library_path, language="solidity")
+    c = s.abi_contract(None, path=cmc_path, language="solidity", libraries={'IterableMappingNcc': lib_c.address.encode('hex')})
 
     # test key()
     vs = sorted((sha3('address1')[:20], sha3('address2')[:20]))

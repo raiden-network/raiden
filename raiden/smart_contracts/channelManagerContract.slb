@@ -1,6 +1,6 @@
 contract NettingContract {
     address public assetAddress;
-
+    
     struct Participant
     {
         address addr;
@@ -87,4 +87,3 @@ library IterableMappingNcc {
         value = self.data[key].value;
     }
 }
-
