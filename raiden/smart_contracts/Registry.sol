@@ -1,3 +1,4 @@
+/*
 library IterableMappingCMC {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
@@ -73,7 +74,9 @@ contract ChannelManagerContract {
         assetAddress = testAddress;
     }
 }
+*/
 
+import "cmcItSet.slb";
 contract Registry {
     IterableMappingCMC.itmap data;
 

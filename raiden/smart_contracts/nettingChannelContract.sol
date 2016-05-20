@@ -1,4 +1,3 @@
-/*import "Decoder.sol";*/
 contract NettingContract {
     uint lockedTime;
     address assetAddress;

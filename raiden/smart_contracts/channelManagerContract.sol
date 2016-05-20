@@ -1,3 +1,4 @@
+/*
 library IterableMappingNcc {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
@@ -87,7 +88,8 @@ contract NettingContract {
         participants[1].deposit = 10;
     }
 }
-
+*/
+import "channelManagerContract.slb";
 contract ChannelManagerContract {
 
     IterableMappingNcc.itmap data;

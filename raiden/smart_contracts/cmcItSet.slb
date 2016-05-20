@@ -1,3 +1,4 @@
+/*
 contract ChannelManagerContract {
     address public assetAddress;
     
@@ -5,7 +6,9 @@ contract ChannelManagerContract {
         assetAddress = testAddress;
     }
 }
+*/
 
+import "channelManagerContract.sol";
 library IterableMappingCMC {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
