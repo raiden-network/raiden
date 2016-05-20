@@ -1,20 +1,21 @@
 # -*- coding: utf8 -*-
+import os
 import string
 import random
 
 from ethereum import slogging
 from ethereum import _solidity
-from ethereum.utils import privtoaddr, sha3
+from ethereum.utils import sha3
 from pyethapp.rpc_client import JSONRPCClient
 
-from raiden.utils import isaddress, sha3
+import raiden
+from raiden.utils import isaddress
 from raiden.blockchain.net_contract import NettingChannelContract
-from raiden.encoding.signing import sign
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 LETTERS = string.printable
 
-solidity = _solidity.get_solidity()
+solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 
 def make_address():
@@ -22,15 +23,28 @@ def make_address():
 
 
 def get_contract_path(contract_name):
-    return os.path.realpath(
-        os.path.join(__file__, '..', 'smart_contracts', contract_name)
-    )
+    project_directory = os.path.dirname(raiden.__file__)
+    contract_path = os.path.join(project_directory, 'smart_contracts', contract_name)
+    return os.path.realpath(contract_path)
 
 
 def get_abi_from_file(filename):
     with open(filename) as handler:
         code = handler.read()
         return solidity.mk_full_signature(code)
+
+
+def get_code_signature(filename, libraries=None):
+    with open(filename) as handler:
+        code = handler.read()
+        signature = solidity.mk_full_signature(code)
+
+        if libraries is not None:
+            bytecode = solidity.compile(code, libraries=libraries)
+        else:
+            bytecode = solidity.compile(code)
+
+        return (bytecode, signature)
 
 
 class BlockChainService(object):
