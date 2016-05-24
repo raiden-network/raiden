@@ -1,23 +1,4 @@
-contract NettingContract {
-    address public assetAddress;
-    
-    struct Participant
-    {
-        address addr;
-        uint deposit;
-    }
-
-    Participant[2] public participants;
-
-    function NettingContract(address assetAdr, address participant1, address participant2) {
-        assetAddress = assetAdr;
-        participants[0].addr = participant1;
-        participants[1].addr = participant2;
-        participants[0].deposit = 10;
-        participants[1].deposit = 10;
-    }
-}
-
+import "nettingChannelContract.sol";
 library IterableMappingNcc {
     // Might have to define the NettingContract type here for insertion
     struct itmap {

@@ -1,13 +1,3 @@
-/*
-contract ChannelManagerContract {
-    address public assetAddress;
-    
-    function ChannelManagerContract(address testAddress) {
-        assetAddress = testAddress;
-    }
-}
-*/
-
 import "channelManagerContract.sol";
 library IterableMappingCMC {
     // Might have to define the NettingContract type here for insertion

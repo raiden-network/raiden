@@ -1,40 +1,30 @@
 contract NettingContract {
-    uint lockedTime;
-    address assetAddress;
-    uint opened;
-    uint closed;
-    uint settled;
-    address closingAddress;
+    uint public lockedTime;
+    address public assetAddress;
+    uint public opened;
+    uint public closed;
+    uint public settled;
+    address public closingAddress;
 
-    struct Transfer
-    {
-        address sender;
-        uint nonce;
-        address asset;
-        uint balance;
-        address recipient;
-        bytes32 locksroot;
-        bytes32 secret;
-        uint expiration;
-    }
-    struct Unlocked 
-    {
-        bytes merkleProof;
-        bytes32 hashlock;
-        bytes32 secret;
-        uint amount;
-        uint expiration;
-    } 
+
     struct Participant
     {
         address addr;
         uint deposit;
         uint netted;
         uint transferedAmount;
-        Transfer lastSentTransfer;
-        Unlocked unlocked;
+        bytes merkleProof;
+        bytes32 hashlock;
+        bytes32 secret;
+        uint expiration;
+        address sender;
+        uint nonce;
+        address asset;
+        uint balance;
+        address recipient;
+        bytes32 locksroot;
     }
-    Participant[2] participants; // We only have two participants at all times
+    Participant[2] public participants; // We only have two participants at all times
 
     event ChannelOpened(address assetAdr); // TODO
     event ChannelClosed(); // TODO
@@ -221,7 +211,7 @@ contract NettingContract {
         uint partnerId = atIndex(partner(msg.sender));
         uint senderId = atIndex(msg.sender);
 
-        if (participants[partnerId].lastSentTransfer.nonce == 0) throw;
+        if (participants[partnerId].nonce == 0) throw;
 
         bytes32 h = sha3(lockedEncoded);
 
@@ -234,7 +224,7 @@ contract NettingContract {
             h = sha3(left, right);
         }
 
-        if (participants[partnerId].lastSentTransfer.locksroot != h) throw;
+        if (participants[partnerId].locksroot != h) throw;
 
         // TODO decode lockedEncoded into a Unlocked struct and append
         
@@ -382,80 +372,80 @@ contract NettingContract {
     function decsec(bytes message) {
         uint i = atIndex(getSender(message));
         var(sec, sig) = decodeSecret(message);
-        participants[atIndex(msg.sender)].lastSentTransfer.secret = sec;
+        participants[atIndex(msg.sender)].secret = sec;
         bytes32 h = sha3(sec);
-        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecovery(h, sig);
     }
     function decdir(bytes message) {
         bytes32 lock;
         uint i = atIndex(getSender(message));
         var(non, ass, rec, bal, loc, sec, sig) = decodeTransfer(message);
-        participants[i].lastSentTransfer.nonce = non;
-        participants[i].lastSentTransfer.asset = ass;
-        participants[i].lastSentTransfer.recipient = rec;
-        participants[i].lastSentTransfer.balance = bal;
+        participants[i].nonce = non;
+        participants[i].asset = ass;
+        participants[i].recipient = rec;
+        participants[i].balance = bal;
         bytes32 h = sha3(non, ass, bal, rec, loc);
-        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecovery(h, sig);
     }
     function decloc1(bytes message) returns (bytes32 hh) {
         uint i = atIndex(getSender(message));
         var(non, exp, ass, rec) = decodeLockedTransfer1(message);
-        participants[i].lastSentTransfer.nonce = non;
+        participants[i].nonce = non;
         lockedTime = exp;
-        participants[i].lastSentTransfer.asset = ass;
-        participants[i].lastSentTransfer.recipient = rec;
+        participants[i].asset = ass;
+        participants[i].recipient = rec;
         hh = sha3(non, ass, rec);
     }
     function decloc2(bytes message, bytes32 hh) {
         bytes32 lock;
         uint i = atIndex(getSender(message));
         var(loc, bal, amo, has, sig) = decodeLockedTransfer2(message);
-        participants[i].lastSentTransfer.locksroot = loc;
-        participants[i].lastSentTransfer.balance = bal;
-        participants[i].unlocked.amount = amo; // should be changed to transferedAmount
-        participants[i].unlocked.hashlock = has;
+        participants[i].locksroot = loc;
+        participants[i].balance = bal;
+        participants[i].transferedAmount = amo;
+        participants[i].hashlock = has;
         bytes32 h = sha3(hh, bal, loc, lock ); //need the lock
-        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecovery(h, sig);
     }
     function decmed1(bytes message) returns (bytes32 hh) {
         uint i = atIndex(getSender(message));
         var(non, exp, ass, rec, tar) = decodeMediatedTransfer1(message); 
-        participants[i].lastSentTransfer.nonce = non;
+        participants[i].nonce = non;
         lockedTime = exp;
-        participants[i].lastSentTransfer.asset = ass;
-        participants[i].lastSentTransfer.recipient = rec;
+        participants[i].asset = ass;
+        participants[i].recipient = rec;
         hh = sha3(non, ass, rec, tar);
     }
     function decmed2(bytes message, bytes32 hh) {
         bytes32 lock;
         uint i = atIndex(getSender(message));
         var(ini, loc, has, bal, amo, fee, sig) = decodeMediatedTransfer2(message);
-        participants[i].lastSentTransfer.locksroot = loc;
-        participants[i].unlocked.hashlock = has;
-        participants[i].lastSentTransfer.balance = bal;
-        participants[i].unlocked.amount = amo; // should be changed to transferedAmount
+        participants[i].locksroot = loc;
+        participants[i].hashlock = has;
+        participants[i].balance = bal;
+        participants[i].transferedAmount = amo;
         bytes32 h = sha3(hh, bal, loc, lock, ini, fee); //need the lock
-        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecovery(h, sig);
     }
     function deccan1(bytes message) returns (bytes32 hh) {
         uint i = atIndex(getSender(message));
         var(non, exp, ass, rec) = decodeCancelTransfer1(message);
-        participants[i].lastSentTransfer.nonce = non;
+        participants[i].nonce = non;
         lockedTime = exp;
-        participants[i].lastSentTransfer.asset = ass;
-        participants[i].lastSentTransfer.recipient = rec;
+        participants[i].asset = ass;
+        participants[i].recipient = rec;
         hh = sha3(non, ass, rec);
     }
     function deccan2(bytes message, bytes32 hh) {
         bytes32 lock;
         uint i = atIndex(getSender(message));
         var(loc, bal, amo, has, sig) = decodeCancelTransfer2(message);
-        participants[i].lastSentTransfer.locksroot = loc;
-        participants[i].lastSentTransfer.balance = bal;
-        participants[i].unlocked.amount = amo; // should be changed to transferedAmount
-        participants[i].unlocked.hashlock = has;
+        participants[i].locksroot = loc;
+        participants[i].balance = bal;
+        participants[i].transferedAmount = amo;
+        participants[i].hashlock = has;
         bytes32 h = sha3(hh, bal, loc, lock); //need the lock
-        participants[i].lastSentTransfer.sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecovery(h, sig);
     }
 
     // Written by Alex Beregszaszi (@axic), use it under the terms of the MIT license.
