@@ -1,4 +1,4 @@
-import "channelManagerContract.sol";
+import "ChannelManagerContract.sol";
 library IterableMappingCMC {
     // Might have to define the NettingContract type here for insertion
     struct itmap {

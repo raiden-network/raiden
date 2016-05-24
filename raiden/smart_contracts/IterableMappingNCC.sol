@@ -1,16 +1,15 @@
-import "nettingChannelContract.sol";
-library IterableMappingNcc {
-    // Might have to define the NettingContract type here for insertion
+import "NettingChannelContract.sol";
+library IterableMappingNCC {
     struct itmap {
         mapping(bytes32 => IndexValue) data;
         KeyFlag[] keys;
         uint size;
     }
-    struct IndexValue { uint keyIndex; NettingContract value; }
+    struct IndexValue { uint keyIndex; NettingChannelContract value; }
     struct KeyFlag { bytes32 key; bool deleted; }
 
 
-    function insert(itmap storage self, bytes32 key, NettingContract value) returns (bool replaced) {
+    function insert(itmap storage self, bytes32 key, NettingChannelContract value) returns (bool replaced) {
         uint keyIndex = self.data[key].keyIndex;
         self.data[key].value = value;
         if (keyIndex > 0)
@@ -63,7 +62,7 @@ library IterableMappingNcc {
     }
 
 
-    function iterate_get(itmap storage self, uint keyIndex) returns (bytes32 key, NettingContract value){
+    function iterate_get(itmap storage self, uint keyIndex) returns (bytes32 key, NettingChannelContract value){
         key = self.keys[keyIndex].key;
         value = self.data[key].value;
     }

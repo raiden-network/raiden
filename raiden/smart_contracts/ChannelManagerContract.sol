@@ -1,7 +1,7 @@
-import "channelManagerContractLib.sol";
+import "IterableMappingNCC.sol";
 contract ChannelManagerContract {
 
-    IterableMappingNcc.itmap data;
+    IterableMappingNCC.itmap data;
 
     address public assetAddress;
 
@@ -23,12 +23,12 @@ contract ChannelManagerContract {
     /// the address participates in.
     /// @dev Get channels where the given address participates.
     /// @param adr (address) the address
-    /// @return channels (NettingContracts[]) all channels that a given address participates in.
-    function nettingContractsByAddress(address adr) returns (NettingContract[] channels){
-        channels = new NettingContract[](numberOfItems(adr));
+    /// @return channels (NettingChannelContracts[]) all channels that a given address participates in.
+    function nettingContractsByAddress(address adr) returns (NettingChannelContract[] channels){
+        channels = new NettingChannelContract[](numberOfItems(adr));
         uint idx = 0;
-        for (var i = IterableMappingNcc.iterate_start(data); IterableMappingNcc.iterate_valid(data, i); i = IterableMappingNcc.iterate_next(data, i)) {
-            var (key, value) = IterableMappingNcc.iterate_get(data, i);
+        for (var i = IterableMappingNCC.iterate_start(data); IterableMappingNCC.iterate_valid(data, i); i = IterableMappingNCC.iterate_next(data, i)) {
+            var (key, value) = IterableMappingNCC.iterate_get(data, i);
             var(addr1,) = value.participants(0); // TODO: find more elegant way to do this
             var(addr2,) = value.participants(1); // TODO: find more elegant way to do this
             if (addr1 == adr) {
@@ -44,8 +44,8 @@ contract ChannelManagerContract {
 
     function numberOfItems(address adr) returns (uint items) {
         items = 0;
-        for (var i = IterableMappingNcc.iterate_start(data); IterableMappingNcc.iterate_valid(data, i); i = IterableMappingNcc.iterate_next(data, i)) {
-            var (key, value) = IterableMappingNcc.iterate_get(data, i);
+        for (var i = IterableMappingNCC.iterate_start(data); IterableMappingNCC.iterate_valid(data, i); i = IterableMappingNCC.iterate_next(data, i)) {
+            var (key, value) = IterableMappingNCC.iterate_get(data, i);
             var(addr1,) = value.participants(0); // TODO: find more elegant way to do this
             var(addr2,) = value.participants(1); // TODO: find more elegant way to do this
             if (addr1 == adr) {
@@ -70,12 +70,12 @@ contract ChannelManagerContract {
     }
 
 
-    /// @notice add(NettingContract) to add a channel to the collection of NettingContracts.
-    /// @dev Add a NettingContract to nettingContracts if it doesn't already exist.
-    /// @param channel (NettingContract) the payment channel.
-    function add(bytes32 key, NettingContract channel) {
-        if (IterableMappingNcc.contains(data, key)) throw;
-        IterableMappingNcc.insert(data, key, channel);
+    /// @notice add(NettingChannelContract) to add a channel to the collection of NettingChannelContracts.
+    /// @dev Add a NettingChannelContract to nettingContracts if it doesn't already exist.
+    /// @param channel (NettingChannelContract) the payment channel.
+    function add(bytes32 key, NettingChannelContract channel) {
+        if (IterableMappingNCC.contains(data, key)) throw;
+        IterableMappingNCC.insert(data, key, channel);
     }
 
 
@@ -83,12 +83,12 @@ contract ChannelManagerContract {
     /// @dev Get the channel of two parties
     /// @param adrA (address) address of one party.
     /// @param adrB (address) address of other party.
-    /// @return channel (NettingContract) the value of the NettingContract of the two parties.
-    function get(address adrA, address adrB) returns (NettingContract channel){
+    /// @return channel (NettingChannelContract) the value of the NettingChannelContract of the two parties.
+    function get(address adrA, address adrB) returns (NettingChannelContract channel){
         bytes32 ky = key(adrA, adrB);
-        if (IterableMappingNcc.contains(data, ky) == false) throw; //handle if no such channel exists
-        uint index = IterableMappingNcc.atIndex(data, ky);
-        var (k, v) = IterableMappingNcc.iterate_get(data, index - 1); // -1 ?
+        if (IterableMappingNCC.contains(data, ky) == false) throw; //handle if no such channel exists
+        uint index = IterableMappingNCC.atIndex(data, ky);
+        var (k, v) = IterableMappingNCC.iterate_get(data, index - 1); // -1 ?
         channel = v;
     }
 
@@ -96,10 +96,10 @@ contract ChannelManagerContract {
     /// @notice newChannel(address, address) to create a new payment channel between two parties
     /// @dev Create a new channel between two parties
     /// @param partner (address) address of one partner
-    /// @return channel (NettingContract) the NettingContract of the two parties.
-    function newChannel(address partner) returns (NettingContract c, address sender){
+    /// @return channel (NettingChannelContract) the NettingChannelContract of the two parties.
+    function newChannel(address partner) returns (NettingChannelContract c, address sender){
         bytes32 k = key(msg.sender, partner);
-        c = new NettingContract(assetAddress, msg.sender, partner);
+        c = new NettingChannelContract(assetAddress, msg.sender, partner);
         add(k, c);
         sender = msg.sender; // Only for testing purpose, should not be added to live net
         ChannelNew(partner); //Triggers event

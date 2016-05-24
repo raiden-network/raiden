@@ -1,4 +1,4 @@
-contract NettingContract {
+contract NettingChannelContract {
     uint public lockedTime;
     address public assetAddress;
     uint public opened;
@@ -37,7 +37,7 @@ contract NettingContract {
         _
     }
 
-    function NettingContract(address assetAdr, address participant1, address participant2) {
+    function NettingChannelContract(address assetAdr, address participant1, address participant2) {
         opened = 0;
         closed = 0;
         settled = 0;
