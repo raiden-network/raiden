@@ -1,4 +1,4 @@
-import "cmcItSet.slb";
+import "IterableMappingCMC.sol";
 contract Registry {
     IterableMappingCMC.itmap data;
 

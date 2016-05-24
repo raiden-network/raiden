@@ -1,4 +1,4 @@
-import "channelManagerContract.slb";
+import "channelManagerContractLib.sol";
 contract ChannelManagerContract {
 
     IterableMappingNcc.itmap data;
