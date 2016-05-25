@@ -7,9 +7,9 @@ from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
 
-library_code = open("raiden/smart_contracts/cmcItSet.slb").read()
+library_path = "raiden/smart_contracts/IterableMappingCMC.sol"
 
-registry_code = open("raiden/smart_contracts/Registry.sol").read()
+registry_path = "raiden/smart_contracts/Registry.sol"
 
 
 def test_registry():
@@ -17,8 +17,8 @@ def test_registry():
     assert s.block.number < 1150000
     s.block.number = 1158001
     assert s.block.number > 1150000
-    lib_c = s.abi_contract(library_code, language="solidity")
-    c = s.abi_contract(registry_code, language="solidity", libraries={'IterableMappingCMC': lib_c.address.encode('hex')})
+    lib_c = s.abi_contract(None, path=library_path, language="solidity")
+    c = s.abi_contract(None, registry_path, language="solidity", libraries={'IterableMappingCMC': lib_c.address.encode('hex')})
 
     c.addAsset(sha3('asset')[:20])
     c.addAsset(sha3('address')[:20])

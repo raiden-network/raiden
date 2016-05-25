@@ -31,30 +31,35 @@ contract NettingChannelContract {
     event ChannelSettled(); // TODO
     event ChannelSecretRevealed(); //TODO
     
+    /// @dev modifier ensuring that on a participant of the channel can call a function
     modifier inParticipants {
         if (msg.sender != participants[0].addr &&
             msg.sender != participants[1].addr) throw;
         _
     }
 
-    function NettingChannelContract(address assetAdr, address participant1, address participant2) {
+    function NettingChannelContract(address assetAdr, address participant1, address participant2, uint lckdTime) {
         opened = 0;
         closed = 0;
         settled = 0;
         assetAddress = assetAdr;
         participants[0].addr = participant1;
         participants[1].addr = participant2;
+        lockedTime = lckdTime;
     }
 
-    // Get the index of an address in participants
+    /// @notice atIndex(address) to get the index of an address (0 or 1)
+    /// @dev get the index of an address
+    /// @param addr (address) the address you want the index of
     function atIndex(address addr) returns (uint index) {
         if (addr == participants[0].addr) return 0;
         else return 1;
     }
 
 
-    /// @notice deposit(address, uint) to deposit amount to a participant.
-    /// @dev Deposit an amount to a participating address.
+    /// @notice deposit(uint) to deposit amount to channel.
+    /// @dev Deposit an amount to the channel. At least one of the participants 
+    /// must deposit before the channel is opened.
     /// @param amount (uint) the amount to be deposited to the address
     function deposit(uint amount) inParticipants {
         if (msg.sender.balance < amount) throw; // TODO check asset contract
@@ -78,7 +83,7 @@ contract NettingChannelContract {
     /// @notice partner() to get the partner or other participant of the channel
     /// @dev Get the other participating party of the channel
     /// @return p (address) the partner of the calling party
-    function partner(address a) returns (address p) {
+    function partner(address a) private returns (address p) {
         if (a == participants[0].addr) return participants[1].addr;
         else return participants[0].addr;
     }
