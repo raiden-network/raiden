@@ -44,3 +44,10 @@ def test_ncc():
     # test partner(address)
     assert c.partner(sha3('address1')[:20]) == sha3('address2')[:20].encode('hex')
     assert c.partner(sha3('address2')[:20]) == sha3('address1')[:20].encode('hex')
+
+    # test addrAndDep()
+    a1, d1, a2, d2 = c.addrAndDep()
+    assert a1 == sha3('address1')[:20]
+    assert a2 == sha3('address2')[:20]
+    assert d1 == 30
+    assert d2 == 20
