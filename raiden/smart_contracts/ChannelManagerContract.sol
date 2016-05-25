@@ -15,7 +15,7 @@ contract ChannelManagerContract {
     /// @dev Initiate the contract with the constructor
     /// @param assetAdr (address) the address of an asset
     function ChannelManagerContract(address assetAdr) {
-        assetAddress = 0x0bd4060688a1800ae986e4840aebc924bb40b5bf;
+        assetAddress = assetAdr;
     }
 
 
@@ -42,10 +42,15 @@ contract ChannelManagerContract {
         }
     }
 
+    /// @notice numberOfItems(address) to get the number of times a given address participates 
+    /// in a channel.
+    /// @dev get amount of times an address participates in a channel
+    /// @param adr (address) adress to look for
+    /// @return items (uint) amount of channels an address participates in
     function numberOfItems(address adr) returns (uint items) {
         items = 0;
         for (var i = IterableMappingNCC.iterate_start(data); IterableMappingNCC.iterate_valid(data, i); i = IterableMappingNCC.iterate_next(data, i)) {
-            var (key, value) = IterableMappingNCC.iterate_get(data, i);
+            var(key, value) = IterableMappingNCC.iterate_get(data, i);
             var(addr1,) = value.participants(0); // TODO: find more elegant way to do this
             var(addr2,) = value.participants(1); // TODO: find more elegant way to do this
             if (addr1 == adr) {
@@ -57,6 +62,28 @@ contract ChannelManagerContract {
         }
     }
     
+    /// @notice getAllChannels() to return a list of all existing channels
+    /// @dev return a list of all existing channels
+    /// @return addresses (address[]) list of all addresses in the channel 
+    /// index 0 and 1 is a pair, index 2 and 3 is a pair etc.
+    // TODO use array of pairs
+    function getAllChannels() returns (address[] addresses) {
+        uint idx = 0;
+        addresses = new address[](data.size * 2);
+        for (var i = IterableMappingNCC.iterate_start(data); IterableMappingNCC.iterate_valid(data, i); i = IterableMappingNCC.iterate_next(data, i)) {
+            var(, v) = IterableMappingNCC.iterate_get(data, i);
+            // add first address
+            var(addr1, ) = v.participants(0);
+            addresses[idx] = addr1;
+            // increment index
+            idx++;
+            // add second address
+            var(addr2, ) = v.participants(1);
+            addresses[idx] = addr2;
+            // increment the index for next channel
+            idx++;
+        }
+    }
 
     /// @notice key(address, address) to create a key of the two addressed.
     /// @dev Get a hashed key of two addresses.
@@ -97,9 +124,9 @@ contract ChannelManagerContract {
     /// @dev Create a new channel between two parties
     /// @param partner (address) address of one partner
     /// @return channel (NettingChannelContract) the NettingChannelContract of the two parties.
-    function newChannel(address partner) returns (NettingChannelContract c, address sender){
+    function newChannel(address partner, uint lckdTime) returns (NettingChannelContract c, address sender){
         bytes32 k = key(msg.sender, partner);
-        c = new NettingChannelContract(assetAddress, msg.sender, partner);
+        c = new NettingChannelContract(assetAddress, msg.sender, partner, lckdTime);
         add(k, c);
         sender = msg.sender; // Only for testing purpose, should not be added to live net
         ChannelNew(partner); //Triggers event

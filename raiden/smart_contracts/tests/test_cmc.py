@@ -4,8 +4,8 @@ from ethereum import tester
 from ethereum.utils import sha3
 from ethereum.tester import TransactionFailed
 
-library_path = "raiden/smart_contracts/channelManagerContract.slb"
-cmc_path = "raiden/smart_contracts/channelManagerContract.sol"
+library_path = "raiden/smart_contracts/IterableMappingNCC.sol"
+cmc_path = "raiden/smart_contracts/ChannelManagerContract.sol"
 
 
 def test_cmc():
@@ -14,7 +14,7 @@ def test_cmc():
     s.block.number = 1158001
     assert s.block.number > 1150000
     lib_c = s.abi_contract(None, path=library_path, language="solidity")
-    c = s.abi_contract(None, path=cmc_path, language="solidity", libraries={'IterableMappingNcc': lib_c.address.encode('hex')})
+    c = s.abi_contract(None, path=cmc_path, language="solidity", libraries={'IterableMappingNCC': lib_c.address.encode('hex')}, constructor_parameters=['0x0bd4060688a1800ae986e4840aebc924bb40b5bf'])
 
     # test key()
     vs = sorted((sha3('address1')[:20], sha3('address2')[:20]))
@@ -47,7 +47,20 @@ def test_cmc():
     # test nettingContractsByAddress()
     msg_sender_channels = c.nettingContractsByAddress(nc1[1])
     assert len(msg_sender_channels) == 2
+    assert c.numberOfItems(nc1[1]) == 2
     address1_channels = c.nettingContractsByAddress(sha3('address1')[:20])
     assert len(address1_channels) == 1
+    assert c.numberOfItems(sha3('address1')[:20]) == 1
     address1_channels = c.nettingContractsByAddress(sha3('iDontExist')[:20])
     assert len(address1_channels) == 0
+    assert c.numberOfItems(sha3('iDontExist')[:20]) == 0
+
+    # test getAllChannels()
+    arr_of_items = c.getAllChannels()
+    assert len(arr_of_items) == 4
+    c.newChannel(sha3('address4')[:20])
+    assert len(c.getAllChannels()) == 6
+    # example usage to convert into list of tuples of participants
+    # it = iter(arr_of_items)
+    # zip(it, it)
+
