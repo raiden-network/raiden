@@ -2,7 +2,6 @@ import "IterableMappingCMC.sol";
 contract Registry {
     IterableMappingCMC.itmap data;
 
-
     /// @notice addAsset(address) to add a new ChannelManagerContract to channelManagerContracts
     /// with the assetAddress as key.
     /// @dev Add a new ChannelManagerContract to channelManagerContracts if assetAddress 
@@ -16,7 +15,6 @@ contract Registry {
         IterableMappingCMC.insert(data, assetAddress, c);
     }
 
-
     /// @notice channelManagerByAsset(address) to get the ChannelManagerContract
     /// of the given assetAddress.
     /// @dev Get the ChannelManagerContract of a given assetAddress.
@@ -29,7 +27,6 @@ contract Registry {
         var(key, value) = IterableMappingCMC.iterate_get(data, index - 1);
         asAdr = value.assetAddress();
     }
-
 
     /// @notice assetAddresses() to get all assetAddresses in the collection.
     /// @dev Get all assetAddresses in the collection.
