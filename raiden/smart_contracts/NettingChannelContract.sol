@@ -1,3 +1,5 @@
+import "HumanStandardToken.sol";
+
 contract NettingChannelContract {
     uint public lockedTime;
     address public assetAddress;
@@ -5,6 +7,7 @@ contract NettingChannelContract {
     uint public closed;
     uint public settled;
     address public closingAddress;
+    HumanStandardToken public assetToken;
 
     struct Participant
     {
@@ -29,7 +32,7 @@ contract NettingChannelContract {
     event ChannelClosed(); // TODO
     event ChannelSettled(); // TODO
     event ChannelSecretRevealed(); //TODO
-    
+
     /// @dev modifier ensuring that on a participant of the channel can call a function
     modifier inParticipants {
         if (msg.sender != participants[0].addr &&
@@ -41,7 +44,7 @@ contract NettingChannelContract {
         opened = 0;
         closed = 0;
         settled = 0;
-        assetAddress = assetAdr;
+        assetAddress = HumanStandardToken(assetAdr);
         participants[0].addr = participant1;
         participants[1].addr = participant2;
         lockedTime = lckdTime;
@@ -60,8 +63,9 @@ contract NettingChannelContract {
     /// must deposit before the channel is opened.
     /// @param amount (uint) the amount to be deposited to the address
     function deposit(uint amount) inParticipants {
-        if (msg.sender.balance < amount) throw; // TODO check asset contract
-        participants[atIndex(msg.sender)].deposit += amount;
+        if (assetAddress.balanceOf(msg.sender) < amount) throw;
+        bool s = assetAddress.transfer(this, amount);
+        if (s == true) participants[atIndex(msg.sender)].deposit += amount;
         if(isOpen() && opened == 0) open();
     }
 
@@ -72,7 +76,6 @@ contract NettingChannelContract {
     /// returns none, but changes the value of `opened` and triggers the event ChannelOpened.
     function open() private {
         opened = block.number;
-
         // trigger event
         ChannelOpened(assetAddress);
     }
@@ -88,7 +91,7 @@ contract NettingChannelContract {
     /// @notice isOpen() to check if a channel is open
     /// @dev Check if a channel is open and both parties have deposited to the channel
     /// @return open (bool) the status of the channel
-    function isOpen() returns (bool open) {
+    function isOpen() private returns (bool open) {
         if (closed == 0) throw;
         if (participants[0].deposit > 0 || participants[1].deposit > 0) return true;
         else return false;
@@ -106,7 +109,6 @@ contract NettingChannelContract {
         par2 = participants[1].addr;
         dep2 = participants[1].deposit;
     }
-
 
     /// @notice close(bytes, bytes) to close a channel between to parties
     /// @dev Close the channel between two parties
@@ -138,7 +140,7 @@ contract NettingChannelContract {
         } else {
             difference = amount2 - amount1;
         }
-        
+
         // TODO
         // if (difference > allowance) penalize();
 
@@ -155,7 +157,7 @@ contract NettingChannelContract {
     function close(bytes firstEncoded, bytes secondEncoded) inParticipants { 
         if (settled > 0) throw; // channel already settled
         if (closed > 0) throw; // channel is closing
-        
+
         // check if the sender of either of the messages is a participant
         if (getSender(firstEncoded) != participants[0].addr &&
             getSender(firstEncoded) != participants[1].addr) throw;
@@ -167,7 +169,7 @@ contract NettingChannelContract {
 
         uint partnerId = atIndex(partner(msg.sender));
         uint senderId = atIndex(msg.sender);
-        
+
         decode(firstEncoded);
         decode(secondEncoded);
 
@@ -185,11 +187,10 @@ contract NettingChannelContract {
         } else {
             difference = amount2 - amount1;
         }
-        
+
         // TODO
         // if (difference > allowance) penalize();
 
-        
         // trigger event
         //TODO
         ChannelClosed();
@@ -241,7 +242,7 @@ contract NettingChannelContract {
         if (participants[partnerId].locksroot != h) throw;
 
         // TODO decode lockedEncoded into a Unlocked struct and append
-        
+
         //participants[partnerId].unlocked.push(lock);
     }
 
@@ -297,7 +298,6 @@ contract NettingChannelContract {
 
     // Gets the sender of a last sent transfer
     function getSender(bytes message) private returns (address sndr) {
-  
         // Secret
         if (message[0] == 4) {
             sndr = dsec(message);
@@ -467,7 +467,7 @@ contract NettingChannelContract {
         bytes32 r;
         bytes32 s;
         uint8 v;
-        
+
         // FIXME: Should this throw, or return 0?
         if (sig.length != 65)
           return 0;
@@ -485,11 +485,10 @@ contract NettingChannelContract {
             // use the second best option, 'and'
             v := and(mload(add(sig, 65)), 1)
         }
-        
+
         // old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]
-        if (v < 27)
-          v += 27;
-        
+        if (v < 27) v += 27;
+
         return ecrecover(hash, v, r, s);
     }
 
@@ -507,13 +506,13 @@ contract NettingChannelContract {
             n[i-start] = a[i];
         }
     }
-    
+
     function decodeSecret(bytes m) private returns (bytes32 secret, bytes signature) {
         if (m.length != 101) throw;
         secret = bytesToBytes32(slice(m, 4, 36), secret);
         signature = slice(m, 36, 101);
     }
-    
+
     function decodeTransfer(bytes m) private 
         returns
         (uint8 nonce,
@@ -536,7 +535,7 @@ contract NettingChannelContract {
         signature = slice(m, 148, 213);
 
     }
-    
+
     function decodeLockedTransfer1(bytes m) private
         returns
         (uint8 nonce,
@@ -551,9 +550,8 @@ contract NettingChannelContract {
         asset = bytesToAddress(slice(m, 20, 40), ia);
         uint160 ir;
         recipient = bytesToAddress(slice(m, 40, 60), ir);
-        
     }
-    
+
     function decodeLockedTransfer2(bytes m) private
         returns
         (bytes32 locksroot,
@@ -569,7 +567,7 @@ contract NettingChannelContract {
         hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
         signature = slice(m, 188, 253);
     }
-    
+
     function decodeMediatedTransfer1(bytes m) private
         returns
         (uint8 nonce,
@@ -587,9 +585,8 @@ contract NettingChannelContract {
         recipient = bytesToAddress(slice(m, 40, 60), ir);
         uint160 it;
         target = bytesToAddress(slice(m, 60, 80), it);
-        
     }
-    
+
     function decodeMediatedTransfer2(bytes m) private
         returns 
         (address initiator,
