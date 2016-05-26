@@ -35,16 +35,14 @@ def get_abi_from_file(filename):
 
 
 def get_code_signature(filename, libraries=None):
-    with open(filename) as handler:
-        code = handler.read()
-        signature = solidity.mk_full_signature(code)
+    signature = solidity.mk_full_signature(None, path=filename)
 
-        if libraries is not None:
-            bytecode = solidity.compile(code, libraries=libraries)
-        else:
-            bytecode = solidity.compile(code)
+    if libraries is not None:
+        bytecode = solidity.compile(None, path=filename, libraries=libraries)
+    else:
+        bytecode = solidity.compile(None, path=filename)
 
-        return (bytecode, signature)
+    return (bytecode, signature)
 
 
 class BlockChainService(object):

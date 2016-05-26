@@ -14,12 +14,16 @@ from ethereum import _solidity
 from ethereum.keys import privtoaddr, PBKDF2_CONSTANTS
 from ethereum.utils import denoms
 from pyethapp.accounts import mk_privkey, Account
+from pyethapp.config import update_config_from_genesis_json
+from pyethapp.console_service import Console
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.network.rpc.client import BlockChainServiceMock, get_contract_path, get_code_signature
 from raiden.utils import isaddress
 
-gevent.monkey.patch_all()
+# Monkey patch subprocess.Popen used by solidity wrapper
+gevent.monkey.patch_socket()  # patch_subprocess()
+
 slogging.configure(':debug')
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
@@ -180,6 +184,11 @@ def hydrachain_network(quantity, base_port, base_datadir):
         for position in range(quantity)
     ]
 
+    addresses = [
+        privtoaddr(priv)
+        for priv in private_keys
+    ]
+
     bootstrap_nodes = [
         privkey_to_uri(private_keys[0]),
     ]
@@ -194,11 +203,33 @@ def hydrachain_network(quantity, base_port, base_datadir):
         for position in range(quantity)
     ]
 
+    alloc = {
+        addr.encode('hex'): {
+            'balance': '1606938044258990275541962092341162602522202993782792835301376',
+        }
+        for addr in addresses
+    }
+
+    genesis = {
+        'nonce': '0x00006d6f7264656e',
+        'difficulty': '0x20000',
+        'mixhash': '0x00000000000000000000000000000000000000647572616c65787365646c6578',
+        'coinbase': '0x0000000000000000000000000000000000000000',
+        'timestamp': '0x00',
+        'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
+        'extraData': '0x',
+        'gasLimit': '0x2FEFD8',
+        'alloc': alloc,
+    }
+
     all_apps = []
     for number in range(quantity):
         port = base_port + number
 
         config = konfig.get_default_config(services + [HPCApp])
+
+        # del config['eth']['genesis_hash']
+        config = update_config_from_genesis_json(config, genesis)
 
         datadir = os.path.join(base_datadir, str(number))
         konfig.setup_data_dir(datadir)
@@ -214,12 +245,20 @@ def hydrachain_network(quantity, base_port, base_datadir):
         config['jsonrpc']['listen_port'] += number
         config['client_version_string'] = 'NODE{}'.format(number)
 
+        # setting to 0 so that the CALLCODE opcode works at the start of the
+        # network
+        config['eth']['block']['HOMESTEAD_FORK_BLKNUM'] = 0
+
         config['discovery']['bootstrap_nodes'] = bootstrap_nodes
         config['discovery']['listen_port'] = port
 
         config['p2p']['listen_port'] = port
         config['p2p']['min_peers'] = min(10, quantity - 1)
         config['p2p']['max_peers'] = quantity * 2
+
+        # only one of the nodes should have the Console service running
+        if number != 0:
+            config['deactivated_services'].append(Console.name)
 
         hydrachain_app = start_app(config, accounts=[account])
         all_apps.append(hydrachain_app)
@@ -235,8 +274,6 @@ def deploy_contract(jsonrpc_client, sender, bytecode):
         gasprice=denoms.wei,
     )
 
-    gevent.sleep(1)  # let hydrachain work
-
     jsonrpc_client.poll(transaction_hash.decode('hex'))
     receipt = jsonrpc_client.call('eth_getTransactionReceipt', '0x' + transaction_hash)
     return receipt
@@ -245,7 +282,7 @@ def deploy_contract(jsonrpc_client, sender, bytecode):
 def test_blockchain():
     # pylint: disable=too-many-locals
     from hydrachain import app
-    app.slogging.configure(':ERRROR,jsonrpc:DEBUG')
+    app.slogging.configure(':ERROR,eth.chain.tx:DEBUG,jsonrpc:DEBUG,eth.vm:TRACE')
     PBKDF2_CONSTANTS['c'] = 100
     gevent.get_hub().SYSTEM_ERROR = BaseException
 
@@ -265,7 +302,7 @@ def test_blockchain():
     token_receipt = deploy_contract(jsonrpc_client, address, token_code)
 
     standardtoken_libraries = {
-        'Token': token_receipt['address'],
+        'Token': token_receipt['contractAddress'],
     }
     standardtoken_path = get_contract_path('StandardToken.sol')
     standardtoken_code, _ = get_code_signature(
@@ -275,21 +312,24 @@ def test_blockchain():
     standardtoken_receipt = deploy_contract(jsonrpc_client, address, standardtoken_code)
 
     humantoken_libraries = {
-        'StandardToken': standardtoken_receipt['address'],
-        'Token': token_receipt['address'],
+        'StandardToken': standardtoken_receipt['contractAddress'],
+        'Token': token_receipt['contractAddress'],
     }
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_code, humantoken_signature = get_code_signature(
         humantoken_path,
         libraries=humantoken_libraries,
     )
-    humantoken_receipt = deploy_contract(jsonrpc_client, address, humantoken_code)
 
-    token_abi = jsonrpc_client.new_abi_contract(
-        humantoken_signature,
-        humantoken_receipt['contractAddress'],
+    token_abi = jsonrpc_client.deploy_solidity_contract(
+        address,
+        'HumanStandardToken',
+        humantoken_path,
+        humantoken_libraries,
+        (9999, 'raiden', 2, 'Rd'),
     )
-    assert token_abi.balanceOf(address) > 0  # pylint: disable=no-member
+
+    assert token_abi.balanceOf(address) == 9999
 
     for hydrachain in hydrachain_apps:
         hydrachain.stop()
