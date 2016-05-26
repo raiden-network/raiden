@@ -648,13 +648,11 @@ contract NettingChannelContract {
         res = i;
     }
 
-    // helper function
     function bytesToInt(bytes b, uint i) private returns (uint res) {
         assembly { i := mload(add(b, 0x20)) }
         res = i;
     }
 
-    // helper function
     function bytesToAddress(bytes b, uint160 i) private returns (address add) {
         assembly { i := mload(add(b, 0x14)) }
         uint160 a = uint160(i);
