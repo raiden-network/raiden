@@ -2,11 +2,9 @@
 # Copyright (c) 2015 Heiko Hees
 import warnings
 
-import rlp
-
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
-from raiden.utils import sha3, ishash, big_endian_to_int
+from raiden.utils import sha3, ishash, big_endian_to_int, pex
 
 __all__ = (
     'BaseError',
@@ -15,7 +13,7 @@ __all__ = (
     # 'Rejected',
     'SecretRequest',
     'Secret',
-    'Transfer',
+    'DirectTransfer',
     'Lock',
     'LockedTransfer',
     'MediatedTransfer',
@@ -72,6 +70,14 @@ class Message(MessageHashable):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __repr__(self):
+        packed = self.packed()
+
+        return '<{klass} [{content}]>'.format(
+            klass=self.__class__.__name__,
+            content=pex(packed.data),
+        )
 
     @classmethod
     def decode(cls, packed):
@@ -132,8 +138,7 @@ class SignedMessage(Message):
 
 
 class Ack(Message):
-    """
-    All accepted messages should be confirmed by an `Ack` which echoes the
+    """ All accepted messages should be confirmed by an `Ack` which echoes the
     orginals Message hash.
 
     We don't sign Acks because attack vector can be mitigated and to speed up
@@ -177,9 +182,8 @@ class Ping(SignedMessage):
 
 
 # class Rejected(SignedMessage):
-#     """
-#     All rejected messages should be confirmed by a `Rejected` which echoes the
-#     orginals Message hash.
+#     """ All rejected messages should be confirmed by a `Rejected` which
+#     echoes the orginals Message hash.
 #     """
 #
 #     cmdid = messages.REJECT
@@ -251,41 +255,43 @@ class Secret(SignedMessage):
         packed.signature = self.signature
 
 
-class Transfer(SignedMessage):
+class DirectTransfer(SignedMessage):
+    """ An direct asset exchange, used when both participants have a previously
+    openned channel.
 
+    Args:
+        nonce: A sequential nonce, used to protected against replay attacks and
+            to give a total order for the messages. This nonce is per
+            participant, not shared.
+        asset: The address of the asset being exchanged in the channel.
+        transfered_amount: The total amount of asset that wast transfered to
+            the channel partner. This value is monotonicly increasing and can
+            be larger than a channels deposit, since the channels are
+            bidirecional.
+        recipient: The address of raiden node participating in the channel.
+        locksroot: The root of a merkle tree which records the current
+            outstanding locks.
+        secret: If provided allows to settle a formerly locked transfer,
+            the given secret is already reflected in the locksroot.
     """
-    Signs the unidirectional settled `balance` of `asset` to `recipient` plus locked transfers.
-        Settled refers to the inclusion of formerly locked amounts.
-        Locked amounts are not included in the balance yet, but represented by the `locksroot`.
 
-    `locksroot` is the root of a merkle tree which records the outstanding
-    locked_amounts with their hashlocks.
-    this allows to keep transfering, although there are locks outstanding.
-    this is because the recipient knows that haslocked transfers can be settled
-    once the secret becomes available even, when the peer fails and the balance
-    could not be netted.
+    cmdid = messages.DIRECTTRANSFER
 
-    If `secret` is provided, this allows to settle a formerly locked transfer,
-    the given secret is already reflected in the locksroot.
-    """
-
-    cmdid = messages.TRANSFER
-
-    def __init__(self, nonce, asset, balance, recipient, locksroot, secret=None):
-        super(Transfer, self).__init__()
+    def __init__(self, nonce, asset, transfered_amount, recipient, locksroot, secret=None):
+        super(DirectTransfer, self).__init__()
         self.nonce = nonce
         self.asset = asset
-        self.balance = balance
-        self.recipient = recipient
-        self.locksroot = locksroot
-        self.secret = secret or ''  # secret for settling a locked amount: hashlock = sha3(secret)
+        self.transfered_amount = transfered_amount  #: total amount of asset sent to partner
+        self.recipient = recipient  #: partner's address
+        self.locksroot = locksroot  #: the merkle root that represent all pending locked transfers
+        self.secret = secret or ''  #: secret for settling a locked amount
 
     @staticmethod
     def unpack(packed):
-        transfer = Transfer(
+        transfer = DirectTransfer(
             packed.nonce,
             packed.asset,
-            packed.balance,
+            packed.transfered_amount,
             packed.recipient,
             packed.locksroot,
             packed.secret,
@@ -297,7 +303,7 @@ class Transfer(SignedMessage):
     def pack(self, packed):
         packed.nonce = self.nonce
         packed.asset = self.asset
-        packed.balance = self.balance
+        packed.transfered_amount = self.transfered_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
         packed.secret = self.secret
@@ -305,15 +311,20 @@ class Transfer(SignedMessage):
 
 
 class Lock(MessageHashable):
+    """ Describes a locked `amount`.
 
+    Args:
+        amount: Amount of the asset being transfered.
+        expiration: Highest block_number until the lock can be unlocked.
+        hashlock: Hashed secret `sha3(secret)` used to register the transfer,
+            the real `secret` is necessary to release the locked amount.
     """
-    Data describing a locked `amount`.
-
-    `expiration` is the highest block_number until which the transfer can be settled
-    `hashlock` is the hashed secret, necessary to release the funds
-    """
+    # Lock extends MessageHashable but it is not a message, it is a
+    # serializable structure that is reused in some messages
 
     def __init__(self, amount, expiration, hashlock):
+        # guarantee that `amount` can be serialized using the available bytes
+        # in the fixed length format
         if amount < 0:
             raise ValueError('amount {} needs to be positive'.format(amount))
 
@@ -324,27 +335,37 @@ class Lock(MessageHashable):
         self.amount = amount
         self.expiration = expiration
         self.hashlock = hashlock
-        self._asstring = None
+        self._asbytes = None
 
     @property
-    def asstring(self):
-        if self._asstring is None:
-            self._asstring = rlp.encode([self.amount, self.expiration, self.hashlock])
+    def as_bytes(self):
+        if self._asbytes is None:
+            packed = messages.Lock(buffer_for(messages.Lock))
+            packed.amount = self.amount
+            packed.expiration = self.expiration
+            packed.hashlock = self.hashlock
 
-        return self._asstring
+            self._asbytes = packed.data
+
+        return self._asbytes
+
+    @classmethod
+    def from_bytes(cls, serialized):
+        packed = messages.Lock(serialized)
+
+        return cls(
+            packed.amount,
+            packed.expiration,
+            packed.hashlock,
+        )
 
 
 class LockedTransfer(SignedMessage):
+    """ A transfer which signs that the partner can claim `locked_amount` if
+    she knows the secret to `hashlock`.
 
-    """
-    `LockedTransfer` which signs, that recipient can claim `locked_amount`
-    if she knows the secret to `hashlock`.
-
-    The `locked_amount` is not part of the `balance` but implicit in the `locksroot`.
-
-    Bob sends Carol a hashlocked Transfer:
-        balance is not updated
-        locksroot is updated with [nonce, asset, locked_amount, recipient, hashlock]
+    The asset amount is implicitely represented in the `locksroot` and won't be
+    reflected in the `transfered_amount` until the secret is revealed.
 
     This signs Carol, that she can claim locked_amount from Bob if she knows the secret to hashlock
 
@@ -356,27 +377,37 @@ class LockedTransfer(SignedMessage):
     """
     cmdid = messages.LOCKEDTRANSFER
 
-    def __init__(self, nonce, asset, balance, recipient, locksroot, lock):
+    def __init__(self, nonce, asset, transfered_amount, recipient, locksroot, lock):
         super(LockedTransfer, self).__init__()
         self.nonce = nonce
         self.asset = asset
-        self.balance = balance
+        self.transfered_amount = transfered_amount
         self.recipient = recipient
         self.locksroot = locksroot
 
         self.lock = lock
 
-    def to_mediatedtransfer(self, target, fee=0, initiator=''):
+    def to_mediatedtransfer(self, target, initiator='', fee=0):
         return MediatedTransfer(
             self.nonce,
             self.asset,
-            self.balance,
+            self.transfered_amount,
             self.recipient,
             self.locksroot,
             self.lock,
             target,
             initiator,
             fee,
+        )
+
+    def to_canceltransfer(self):
+        return CancelTransfer(
+            self.nonce,
+            self.asset,
+            self.transfered_amount,
+            self.recipient,
+            self.locksroot,
+            self.lock,
         )
 
     @staticmethod
@@ -390,7 +421,7 @@ class LockedTransfer(SignedMessage):
         locked_transfer = LockedTransfer(
             packed.nonce,
             packed.asset,
-            packed.balance,
+            packed.transfered_amount,
             packed.recipient,
             packed.locksroot,
             lock,
@@ -401,7 +432,7 @@ class LockedTransfer(SignedMessage):
     def pack(self, packed):
         packed.nonce = self.nonce
         packed.asset = self.asset
-        packed.balance = self.balance
+        packed.transfered_amount = self.transfered_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
 
@@ -436,7 +467,7 @@ class MediatedTransfer(LockedTransfer):
 
     cmdid = messages.MEDIATEDTRANSFER
 
-    def __init__(self, nonce, asset, balance, recipient, locksroot,
+    def __init__(self, nonce, asset, transfered_amount, recipient, locksroot,
                  lock, target, initiator, fee=0):
 
         if nonce > 2 ** 64:
@@ -445,10 +476,10 @@ class MediatedTransfer(LockedTransfer):
         if fee > 2 ** 256:
             raise ValueError('fee is too large')
 
-        if balance > 2 ** 256:
-            raise ValueError('balance is too large')
+        if transfered_amount > 2 ** 256:
+            raise ValueError('transfered_amount is too large')
 
-        super(MediatedTransfer, self).__init__(nonce, asset, balance, recipient, locksroot, lock)
+        super(MediatedTransfer, self).__init__(nonce, asset, transfered_amount, recipient, locksroot, lock)
         self.target = target
         self.fee = fee
         self.initiator = initiator
@@ -464,7 +495,7 @@ class MediatedTransfer(LockedTransfer):
         mediated_transfer = MediatedTransfer(
             packed.nonce,
             packed.asset,
-            packed.balance,
+            packed.transfered_amount,
             packed.recipient,
             packed.locksroot,
             lock,
@@ -478,7 +509,7 @@ class MediatedTransfer(LockedTransfer):
     def pack(self, packed):
         packed.nonce = self.nonce
         packed.asset = self.asset
-        packed.balance = self.balance
+        packed.transfered_amount = self.transfered_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
         packed.target = self.target
@@ -494,19 +525,53 @@ class MediatedTransfer(LockedTransfer):
 
 
 class CancelTransfer(LockedTransfer):
-
-    """
-    gracefully cancels a transfer by reversing it
-    indicates that no route could be found
+    """ Indicates that no route is available, and that another path should be
+    tried.
     """
     cmdid = messages.CANCELTRANSFER
 
+    @staticmethod
+    def unpack(packed):
+        lock = Lock(
+            packed.amount,
+            packed.expiration,
+            packed.hashlock,
+        )
+
+        locked_transfer = CancelTransfer(
+            packed.nonce,
+            packed.asset,
+            packed.transfered_amount,
+            packed.recipient,
+            packed.locksroot,
+            lock,
+        )
+        locked_transfer.signature = packed.signature
+        return locked_transfer
+
+    def pack(self, packed):
+        packed.nonce = self.nonce
+        packed.asset = self.asset
+        packed.transfered_amount = self.transfered_amount
+        packed.recipient = self.recipient
+        packed.locksroot = self.locksroot
+
+        lock = self.lock
+        packed.amount = lock.amount
+        packed.expiration = lock.expiration
+        packed.hashlock = lock.hashlock
+
+        packed.signature = self.signature
+
 
 class TransferTimeout(SignedMessage):
+    """ Indicates that timeout happened during mediated transfer.
 
-    """
-    Indicates that timeout happened during mediated transfer.
-    Transfer will not be completed.
+    This message is used when a node in a mediated chain doesn't consider any
+    of it's following nodes available. If node `A` is trying to send a transfer
+    to `D` throught `B1`, if `B1` consider all candidates for `c` unavailable
+    it will send a TransferTimeout back to `A`. `A` can try all other
+    candidates for `b` until it considers all it's paths unavailable.
     """
     cmdid = messages.TRANSFERTIMEOUT
 
@@ -531,10 +596,7 @@ class TransferTimeout(SignedMessage):
 
 
 class ConfirmTransfer(SignedMessage):
-
-    """
-    `ConfirmTransfer` which signs, that `target` has received a transfer.
-    """
+    """ `ConfirmTransfer` which signs, that `target` has received a transfer. """
     cmdid = messages.CONFIRMTRANSFER
 
     def __init__(self, hashlock):
@@ -560,8 +622,10 @@ CMDID_TO_CLASS = {
     # REJECTED: Rejected,
     messages.SECRETREQUEST: SecretRequest,
     messages.SECRET: Secret,
-    messages.TRANSFER: Transfer,
-    messages.LOCKEDTRANSFER: LockedTransfer,
+    messages.DIRECTTRANSFER: DirectTransfer,
+    # LockedTransfer is not intended to be sent across the wire, it is a
+    # "marker" for messages with locks
+    # messages.LOCKEDTRANSFER: LockedTransfer,
     messages.MEDIATEDTRANSFER: MediatedTransfer,
     messages.CANCELTRANSFER: CancelTransfer,
     messages.TRANSFERTIMEOUT: TransferTimeout,

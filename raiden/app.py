@@ -1,69 +1,112 @@
-from raiden_service import RaidenService
-from transport import DummyTransport, Discovery
-from contracts import BlockChain, ChannelManagerContract
-from utils import sha3
-import copy
+# -*- coding: utf8 -*-
+from __future__ import print_function
+
+import codecs
+import sys
+import signal
+
+import yaml
+import gevent
+from ethereum import slogging
+
+from raiden.raiden_service import RaidenService
+from raiden.network.discovery import Discovery
+from raiden.network.transport import UDPTransport
+from raiden.network.rpc.client import BlockChainService
+
+log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-class App(object):
+INITIAL_PORT = 40001
 
-    default_config = dict(host='', port=40000, privkey='')
 
-    def __init__(self, config, chain, discovery, transport_class=DummyTransport):
+class App(object):  # pylint: disable=too-few-public-methods
+    default_config = dict(
+        host='',
+        port=INITIAL_PORT,
+        privkey='',
+        min_locktime=10,
+    )
+
+    def __init__(self, config, chain, discovery, transport_class=UDPTransport):
         self.config = config
+        self.discovery = discovery
         self.transport = transport_class(config['host'], config['port'])
         self.raiden = RaidenService(chain, config['privkey'], self.transport, discovery)
+
         discovery.register(self.raiden.address, self.transport.host, self.transport.port)
-        self.discovery = discovery
+
+    def stop(self):
+        self.transport.server.start()
 
 
-def mk_app(num, chain, discovery, transport_class):
-    config = copy.deepcopy(App.default_config)
-    config['privkey'] = sha3(str(num))
-    config['port'] += num
-    return App(config, chain, discovery, transport_class)
+def main():
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('rpc_server', help='The host:port of the json-rpc server')
+    parser.add_argument('registry_address', help='The asset registry contract address')
+    parser.add_argument('config_file', help='Configuration file for the raiden note')
 
+    parser.add_argument(
+        '-h',
+        '--host',
+        default='0.0.0.0',
+        help='Local address that the raiden app will bind to',
+    )
+    parser.add_argument(
+        '-p',
+        '--port',
+        default=INITIAL_PORT,
+        help='Local port that the raiden app will bind to',
+    )
 
-def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_class=DummyTransport):
-    import random
-    random.seed(42)
+    args = parser.parse_args()
 
-    # globals
+    rpc_connection = args.rpc_server.split(':')
+    rpc_connection = (rpc_connection[0], int(rpc_connection[1]))
+    config_file = args.config_file
+    host = args.host
+    port = args.port
+
+    with codecs.open(config_file, encoding='utf8') as handler:
+        config = yaml.load(handler)
+
+    config['host'] = host
+    config['port'] = port
+
+    if 'privkey' not in config:
+        print('Missing "privkey" in the configuration file, cannot proceed')
+        sys.exit(1)
+
+    blockchain_server = BlockChainService(
+        rpc_connection,
+        config['privkey'],
+        privtoaddr(config['privkey']),
+        args.registry_address,
+    )
     discovery = Discovery()
-    chain = BlockChain()
 
-    # create apps
-    apps = [mk_app(i, chain, discovery, transport_class) for i in range(num_nodes)]
+    for node in config['nodes']:
+        discovery.register(node['nodeid'], node['host'], node['port'])
 
-    # create assets
-    for i in range(num_assets):
-        chain.add_asset(asset_address=sha3('asset:%d' % i)[:20])
-    assert len(chain.asset_addresses) == num_assets
+    app = App(config, blockchain_server, discovery)
 
-    # create channel contracts
-    for asset_address in chain.asset_addresses:
-        channelmanager = chain.channelmanager_by_asset(asset_address)
-        assert isinstance(channelmanager, ChannelManagerContract)
-        assert channels_per_node < len(apps)
-        for app in apps:
-            capps = list(apps)  # copy
-            capps.remove(app)
-            netting_contracts = channelmanager.nettingcontracts_by_address(app.raiden.address)
-            while len(netting_contracts) < channels_per_node and capps:
-                a = random.choice(capps)
-                assert a != app
-                capps.remove(a)
-                a_nettting_contracts = channelmanager.nettingcontracts_by_address(a.raiden.address)
-                if not set(netting_contracts).intersection(set(a_nettting_contracts)) \
-                        and len(a_nettting_contracts) < channels_per_node:
-                    c = channelmanager.new(a.raiden.address, app.raiden.address)
-                    netting_contracts.append(c)
+    for asset_address in blockchain_server.asset_addresses:
+        app.raiden.setup_asset(asset_address, app.config['min_locktime'])
 
-                    # add deposit of asset
-                    for address in (app.raiden.address, a.raiden.address):
-                        c.deposit(address, amount=2 ** 240)
+    # TODO:
+    # - Ask for confirmation to quit if there are any locked transfers that did
+    # not timeout.
 
-    for app in apps:
-        app.raiden.setup_assets()
+    # wait for interrupt
+    event = gevent.event.Event()
+    gevent.signal(signal.SIGQUIT, event.set)
+    gevent.signal(signal.SIGTERM, event.set)
+    gevent.signal(signal.SIGINT, event.set)
+    event.wait()
 
-    return apps
+    app.stop()
+
+
+if __name__ == '__main__':
+    main()

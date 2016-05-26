@@ -1,38 +1,76 @@
-import networkx as nx
-from raiden.contracts import ChannelManagerContract, NettingChannelContract
+# -*- coding: utf8 -*-
+import networkx
+
 from raiden.utils import isaddress
 
 
+def make_graph(edge_list):
+    """ Return a graph that represents the connections among the netting
+    contracts.
+
+    Args:
+        edge_list (List[(address1, address2)]): All the channels that compose
+            the graph.
+
+    Returns:
+        Graph A networkx.Graph instance were the graph nodes are nodes in the
+            network and the edges are nodes that have a channel between them.
+    """
+
+    for edge in edge_list:
+        if len(edge) != 2:
+            raise ValueError('All values in edge_list must be of length two (origin, destination)')
+
+        origin, destination = edge
+
+        if not isaddress(origin) or not isaddress(destination):
+            raise ValueError('All values in edge_list must be valid addresses')
+
+    graph = networkx.Graph()  # undirected graph, for bidirectional channels
+
+    for first, second in edge_list:
+        graph.add_edge(first, second)
+
+    return graph
+
+
 class ChannelGraph(object):
+    """ Has Graph based on the channels and can find path between participants. """
 
-    """
-    Has Graph based on the channels and can find path between participants
-    """
+    def __init__(self, edge_list):
+        """
+        Args:
+            edge_list (List[(address1, address2)]): all the netting contracts
+                that participate in the network.
+        """
+        self.graph = make_graph(edge_list)
 
-    def __init__(self, channelmanager):
-        assert isinstance(channelmanager, ChannelManagerContract)
-        self.channelmanager = channelmanager
-        self.G = nx.Graph()  # undirected graph, for bidirectional channels
-        self.mk_graph()
+    def get_shortest_paths(self, source, target):
+        """Compute all shortest paths in the graph.
 
-    def mk_graph(self):
-        for c in self.channelmanager.nettingcontracts.values():
-            assert isinstance(c, NettingChannelContract)
-            a, b = c.participants.keys()
-            assert isaddress(a) and isaddress(b)
-            self.G.add_edge(a, b)
+        Returns:
+            generator of lists: A generator of all paths between source and
+            target.
+        """
+        if not isaddress(source) or not isaddress(target):
+            raise ValueError('both source and target must be valid addresses')
 
-    def get_paths(self, source, target):
-        assert isaddress(source) and isaddress(target)
-        return nx.all_shortest_paths(self.G, source, target)
+        return networkx.all_shortest_paths(self.graph, source, target)
 
     def get_paths_of_length(self, source, num_hops=1):
-        """
-        shortest_path
+        """ Searchs for all nodes that are `num_hops` away.
 
+        Returns:
+            list of paths: A list of all shortest paths that have length lenght
+            `num_hops + 1`
         """
         # return a dictionary keyed by targets
         # with a list of nodes in a shortest path
         # from the source to one of the targets.
-        paths = nx.shortest_path(self.G, source)
-        return [p for p in paths.values() if len(p) == num_hops + 1]
+        all_paths = networkx.shortest_path(self.graph, source)
+
+        return [
+            path
+            for path in all_paths.values()
+            if len(path) == num_hops + 1
+        ]
