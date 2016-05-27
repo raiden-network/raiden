@@ -8,6 +8,7 @@ from raiden.messages import Secret, CancelTransfer, TransferTimeout, LockedTrans
 from raiden.messages import SecretRequest
 from raiden.utils import lpex, pex
 
+
 __all__ = (
     'Task',
     'MediatedTransferTask',
@@ -15,7 +16,6 @@ __all__ = (
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
-TIMEOUT_PER_HOP = 10
 
 
 class Task(gevent.Greenlet):
@@ -68,19 +68,17 @@ class MediatedTransferTask(Task):
     # B: MediatedTransfer > C2
     # C2: MediatedTransfer > D
 
-    block_expiration = 120  # FIXME, this needs to timeout on block expiration
-    timeout_per_hop = TIMEOUT_PER_HOP
-
-    def __init__(self, transfermanager, amount, target, hashlock,
-                 expiration=None, originating_transfer=None, secret=None):  # fee!
+    def __init__(self, transfermanager, amount, target, hashlock, expiration,
+                 originating_transfer=None, secret=None):  # fee!
         import transfermanager as transfermanagermodule
         assert isinstance(transfermanager, transfermanagermodule.TransferManager)
 
         self.amount = amount
         self.assetmanager = transfermanager.assetmanager
         self.event = None
-        self.fee = 0  # FIXME: calculate fee, calc expiration
+        self.fee = 0  # FIXME: calculate fee
         self.hashlock = hashlock
+        self.expiration = expiration
         self.originating_transfer = originating_transfer
         self.raiden = transfermanager.raiden
         self.secret = secret
@@ -99,10 +97,8 @@ class MediatedTransferTask(Task):
 
         if self.isinitiator:
             self.initiator = self.raiden.address
-            self.expiration = self.raiden.chain.block_number + 18
         else:
             self.initiator = originating_transfer.initiator
-            self.expiration = originating_transfer.lock.expiration - 1
 
         super(MediatedTransferTask, self).__init__()
         self.transfermanager.on_task_started(self)
@@ -114,14 +110,15 @@ class MediatedTransferTask(Task):
 
         for path, channel in self.get_best_routes():
             next_hop = path[1]
-            timeout = self.timeout(next_hop, self.target)
 
             mediated_transfer = channel.create_mediatedtransfer(
                 self.initiator,
                 self.target,
                 self.fee,
                 self.amount,
-                self.expiration,
+                # HOTFIX: you cannot know channel.settle_timeout beforehand,since path is not yet defined
+                # FIXME: implement expiration adjustment in different task (e.g. 'InitMediatedTransferTask')
+                self.expiration if self.expiration is not None else channel.settle_timeout - 1,
                 self.hashlock,
             )
             self.raiden.sign(mediated_transfer)
@@ -132,7 +129,11 @@ class MediatedTransferTask(Task):
                 lpex(path),
             ))
 
-            msg = self.send_transfer_and_wait(next_hop, mediated_transfer, path, timeout)
+            msg_timeout = self.raiden.config['msg_timeout']
+
+            # timeout not dependent on expiration (canceltransfer/transfertimeout msgs),
+            # but should be set shorter than the expiration
+            msg = self.send_transfer_and_wait(next_hop, mediated_transfer, path, msg_timeout)
 
             log.debug('MEDIATED TRANSFER RETURNED {} {}'.format(
                 pex(self.raiden.address),
@@ -182,26 +183,6 @@ class MediatedTransferTask(Task):
 
         return self.on_completion(False)
 
-    def timeout(self, from_, to_):
-        """ Calculates the timeout upperbound based on the worst case scenario.
-
-        Returns:
-            float: The timeout.
-        """
-
-        # TODO: Change the timeout from seconds to block number and use it as
-        # the expiration for the message
-        available_paths = self.assetmanager.channelgraph.get_shortest_paths(
-            from_,
-            to_,
-        )
-
-        # The worst case is that all paths need to be tried
-        number_hops = sum(len(path) for path in available_paths)
-        timeout = self.timeout_per_hop * number_hops
-
-        return timeout
-
     def get_best_routes(self):
         """ Yield a two-tuple (path, channel) that can be used to mediate the
         transfer. The result is ordered from the best to worst path.
@@ -230,11 +211,20 @@ class MediatedTransferTask(Task):
             # the settlement period, otherwise the secret could be revealed
             # after channel is settled and he would lose the asset, or before
             # the minimum required.
-            if not (channel.min_locktime <= self.expiration < channel.locked_time):
+
+            # FIXME Hotfix, see self._run()
+            if not self.expiration:
+                expiration = channel.settle_timeout - 1
+            else:
+                expiration = self.expiration
+
+            if not (self.raiden.chain.block_number + channel.reveal_timeout <=
+                    expiration <
+                    channel.settle_timeout):
                 log.debug(
                     'expiration is too large, channel/path cannot be used',
-                    expiration=self.expiration,
-                    channel_locktime=channel.min_locktime,
+                    expiration=expiration,
+                    channel_locktime=channel.settle_timeout,
                     nodeid=pex(path[0]),
                     partner=pex(path[1]),
                 )
@@ -282,7 +272,7 @@ class MediatedTransferTask(Task):
             return True
         return None
 
-    def send_transfer_and_wait(self, recipient, transfer, path, timeout):
+    def send_transfer_and_wait(self, recipient, transfer, path, msg_timeout):
         """ Send `transfer` to `recipient` and wait for the response.
 
         Args:
@@ -290,7 +280,7 @@ class MediatedTransferTask(Task):
                 message.
             transfer: The transfer message.
             path: The current path that is being tried.
-            timeout: How long should we wait for a response from `recipient`.
+            msg_timeout: How long should we wait for a response from `recipient`.
 
         Returns:
             TransferTimeout: If the other end didn't respond
@@ -303,12 +293,12 @@ class MediatedTransferTask(Task):
         #
         # The relevant messages are: CancelTransfer, TransferTimeout,
         # SecretRequest, or Secret
-        msg = self.event.wait(timeout)
+        msg = self.event.wait(msg_timeout)
 
         # Timed out
         if msg is None:
             log.error('TIMEOUT [{}]! recipient={} didnt respond path={}'.format(
-                timeout,
+                msg_timeout,
                 pex(recipient),
                 lpex(path),
             ))
@@ -350,14 +340,25 @@ class MediatedTransferTask(Task):
 
         raise NotImplementedError()
 
+class InitMediatedTransferTask(Task):  # TODO
+    """
+    optimum initial expiration time:
+        "expiration = self.raiden.chain.block_number + channel.settle_timeout - config['reveal_timeout']"
+    PROBLEM:  we dont know yet which channel to use! channel.settle_timeout not known
+    -> create InitMediatedTransferTask, that spawns MediatedTransfers and waits for timeout/success.
+    on timeout, it alters timeout/expiration arguments, handles locks and lock forwarding
+    """
+    def __init__(self):
+        raise NotImplementedError
+
 
 class ForwardSecretTask(Task):
-    timeout = TIMEOUT_PER_HOP
 
-    def __init__(self, transfermanager, hashlock, recipient):
+    def __init__(self, transfermanager, hashlock, recipient, msg_timeout):
         self.transfermanager = transfermanager
         self.recipient = recipient
         self.hashlock = hashlock
+        self.msg_timeout = msg_timeout
         self.raiden = transfermanager.raiden
         super(ForwardSecretTask, self).__init__()
         log.info('INIT', task=self)
@@ -368,8 +369,8 @@ class ForwardSecretTask(Task):
 
     def _run(self):  # pylint: disable=method-hidden
         self.event = AsyncResult()  # http://www.gevent.org/gevent.event.html
-        timeout = self.timeout
-        msg = self.event.wait(timeout)
+        msg = self.event.wait(self.msg_timeout)
+        # returns None if msg_timeout is reached and event-value wasn't set()
         if not msg:
             log.error('TIMEOUT! ' * 5)
             # TransferTimeout is of no use, SecretRequest was for sender

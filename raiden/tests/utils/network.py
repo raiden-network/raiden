@@ -170,7 +170,7 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
 
     for app in apps:
         for asset_address in asset_list:
-            app.raiden.setup_asset(asset_address, app.config['min_locktime'])
+            app.raiden.setup_asset(asset_address, app.config['reveal_timeout'])
 
     return apps
 
@@ -227,6 +227,6 @@ def create_sequential_network(num_nodes, deposit, asset, transport_class=None):
             )
 
     for app in apps:
-        app.raiden.setup_asset(asset, app.config['min_locktime'])
+        app.raiden.setup_asset(asset, app.config['reveal_timeout'])
 
     return apps

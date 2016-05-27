@@ -65,6 +65,11 @@ class TransferManager(object):
                 amount,
                 target,
                 hashlock,
+                # FIXME:
+                # optimum value:  expiration = self.raiden.chain.block_number + channel.settle_timeout - config['reveal_timeout']
+                # PROBLEM:  we dont know yet which channel to use! channel.settle_timeout not known
+                # TODO: create InitMediatedTransferTask, that spawns MediatedTransfers and waits for timeout/success.
+                # on timeout, it alters timeout/expiration arguments, handles locks and lock forwarding
                 expiration=None,
                 originating_transfer=None,
                 secret=secret,
@@ -86,9 +91,9 @@ class TransferManager(object):
         log.debug('ON MEDIATED TRANSFER', address=pex(self.raiden.address))
 
         channel = self.assetmanager.channels[transfer.sender]
-
         channel.register_transfer(transfer)  # this raises if the transfer is invalid
 
+        config = self.raiden.config
         # either we are the target of the transfer, so we need to send a
         # SecretRequest
         if transfer.target == self.raiden.address:
@@ -100,17 +105,21 @@ class TransferManager(object):
                 self,
                 transfer.lock.hashlock,
                 recipient=transfer.sender,
+                msg_timeout=config['msg_timeout']  # FIXME additional config['secret_request_timeout'] ?
             )
             secret_request_task.start()
 
         # or we are a participating node in the network and need to keep
         # forwarding the MediatedTransfer
         else:
+            # subtract reveal_timeout from the lock expiration of the incoming transfer
+            expiration = transfer.lock.expiration - config['reveal_timeout']
             transfer_task = MediatedTransferTask(
                 self,
                 transfer.lock.amount,
                 transfer.target,
                 transfer.lock.hashlock,
+                expiration,
                 originating_transfer=transfer,
             )
             transfer_task.start()

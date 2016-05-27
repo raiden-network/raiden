@@ -107,7 +107,7 @@ def test_locked_transfer():
     balance1 = channel1.balance
 
     amount = 10
-    expiration = app0.raiden.chain.block_number + 15  # min_locktime <= expiration < contract.lock_time
+    expiration = app0.raiden.chain.block_number + 15  # reveal_timeout <= expiration < contract.lock_time
 
     secret = 'secret'
     hashlock = sha3(secret)

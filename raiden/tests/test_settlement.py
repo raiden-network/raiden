@@ -77,7 +77,7 @@ def test_settlement():
         unlocked,
     )
 
-    for _ in range(NettingChannelContract.locked_time):
+    for _ in range(NettingChannelContract.settle_timeout):
         chain0.next_block()
 
     chain0.settle(asset_address, nettingcontract_address)
@@ -120,7 +120,7 @@ def test_settled_lock():
     )
 
     # forward the block number to allow settle
-    for _ in range(NettingChannelContract.locked_time):
+    for _ in range(NettingChannelContract.settle_timeout):
         apps[2].raiden.chain.next_block()
 
     apps[1].raiden.chain.settle(asset, nettingcontract_address)
