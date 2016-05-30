@@ -28,7 +28,7 @@ contract NettingChannelContract {
     }
     Participant[2] public participants; // We only have two participants at all times
 
-    event ChannelOpened(address assetAdr); // TODO
+    event ChannelOpened(address assetAdr, address participant1, address participant2); // TODO
     event ChannelClosed(); // TODO
     event ChannelSettled(); // TODO
     event ChannelSecretRevealed(); //TODO
@@ -77,7 +77,7 @@ contract NettingChannelContract {
     function open() private {
         opened = block.number;
         // trigger event
-        ChannelOpened(assetAddress);
+        ChannelOpened(assetAddress, participants[0].addr, participants[1].addr);
     }
 
     /// @notice partner() to get the partner or other participant of the channel
