@@ -44,7 +44,8 @@ contract NettingChannelContract {
         opened = 0;
         closed = 0;
         settled = 0;
-        assetAddress = HumanStandardToken(assetAdr);
+        assetToken = HumanStandardToken(assetAdr);
+        assetAddress = assetAdr;
         participants[0].addr = participant1;
         participants[1].addr = participant2;
         lockedTime = lckdTime;
@@ -63,8 +64,8 @@ contract NettingChannelContract {
     /// must deposit before the channel is opened.
     /// @param amount (uint) the amount to be deposited to the address
     function deposit(uint amount) inParticipants {
-        if (assetAddress.balanceOf(msg.sender) < amount) throw;
-        bool s = assetAddress.transfer(this, amount);
+        if (assetToken.balanceOf(msg.sender) < amount) throw;
+        bool s = assetToken.transfer(this, amount);
         if (s == true) participants[atIndex(msg.sender)].deposit += amount;
         if(isOpen() && opened == 0) open();
     }
