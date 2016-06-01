@@ -22,7 +22,9 @@ def test_registry():
     s.block.number = 1158001
     assert s.block.number > 1150000
     lib_c = s.abi_contract(None, path=library_path, language="solidity")
+    s.mine()
     lib_ncc = s.abi_contract(None, path=ncc_path, language="solidity")
+    s.mine()
     c = s.abi_contract(None, path=registry_path, language="solidity", libraries={'IterableMappingCMC': lib_c.address.encode('hex'), 'IterableMappingNCC': lib_ncc.address.encode('hex')})
 
     c.addAsset(sha3('asset')[:20])

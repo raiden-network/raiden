@@ -94,14 +94,6 @@ contract ChannelManagerContract {
         else return sha3(adrB, adrA);
     }
 
-    /// @notice add(NettingChannelContract) to add a channel to the collection of NettingChannelContracts.
-    /// @dev Add a NettingChannelContract to nettingContracts if it doesn't already exist.
-    /// @param channel (NettingChannelContract) the payment channel.
-    function add(bytes32 key, NettingChannelContract channel) private {
-        if (IterableMappingNCC.contains(data, key)) throw;
-        IterableMappingNCC.insert(data, key, channel);
-    }
-
     /// @notice get(address, address) to get the unique channel of two parties.
     /// @dev Get the channel of two parties
     /// @param adrA (address) address of one party.
@@ -121,8 +113,8 @@ contract ChannelManagerContract {
     /// @return channel (NettingChannelContract) the NettingChannelContract of the two parties.
     function newChannel(address partner, uint lckdTime) returns (NettingChannelContract c, address sender){
         bytes32 k = key(msg.sender, partner);
-        c = new NettingChannelContract(assetAddress, msg.sender, partner, lckdTime);
-        add(k, c);
+        if (IterableMappingNCC.contains(data, k)) throw;
+        IterableMappingNCC.insert(data, k, assetAddress, msg.sender, partner, lckdTime);
         sender = msg.sender; // Only for testing purpose, should not be added to live net
         ChannelNew(partner); //Triggers event
     }
