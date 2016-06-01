@@ -17,18 +17,19 @@ library IterableMappingNCC {
         address partner,
         uint lckdTime
     )
-        returns (bool replaced
+        returns(bool replaced, NettingChannelContract nc
     ) {
         uint keyIndex = self.data[key].keyIndex;
-        self.data[key].value = new NettingChannelContract(assetAdr, sender, partner, lckdTime);
+        nc = new NettingChannelContract(assetAdr, sender, partner, lckdTime);
+        self.data[key].value = nc;
         if (keyIndex > 0)
-            return true;
+            replaced =  true;
         else {
             keyIndex = self.keys.length++;
             self.data[key].keyIndex = keyIndex + 1;
             self.keys[keyIndex].key = key;
             self.size++;
-            return false;
+            replaced = false;
         }
     }
 

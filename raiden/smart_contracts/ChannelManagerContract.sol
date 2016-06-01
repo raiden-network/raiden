@@ -114,7 +114,7 @@ contract ChannelManagerContract {
     function newChannel(address partner, uint lckdTime) returns (NettingChannelContract c, address sender){
         bytes32 k = key(msg.sender, partner);
         if (IterableMappingNCC.contains(data, k)) throw;
-        IterableMappingNCC.insert(data, k, assetAddress, msg.sender, partner, lckdTime);
+        (, c) = IterableMappingNCC.insert(data, k, assetAddress, msg.sender, partner, lckdTime);
         sender = msg.sender; // Only for testing purpose, should not be added to live net
         ChannelNew(partner); //Triggers event
     }
