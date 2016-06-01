@@ -10,9 +10,9 @@ library IterableMappingCMC {
     struct KeyFlag { address key; bool deleted; }
 
 
-    function insert(itmap storage self, address key, address assetAdr) returns (bool replaced) {
+    function insert(itmap storage self, address key, ChannelManagerContract value) returns (bool replaced) {
         uint keyIndex = self.data[key].keyIndex;
-        self.data[key].value = new ChannelManagerContract(assetAdr);
+        self.data[key].value = value;
         if (keyIndex > 0)
             return true;
         else {

@@ -9,27 +9,17 @@ library IterableMappingNCC {
     struct KeyFlag { bytes32 key; bool deleted; }
 
 
-    function insert(
-        itmap storage self,
-        bytes32 key,
-        address assetAdr,
-        address sender,
-        address partner,
-        uint lckdTime
-    )
-        returns(bool replaced, NettingChannelContract nc
-    ) {
+    function insert(itmap storage self, bytes32 key, NettingChannelContract value) returns (bool replaced) {
         uint keyIndex = self.data[key].keyIndex;
-        nc = new NettingChannelContract(assetAdr, sender, partner, lckdTime);
-        self.data[key].value = nc;
+        self.data[key].value = value;
         if (keyIndex > 0)
-            replaced =  true;
+            return true;
         else {
             keyIndex = self.keys.length++;
             self.data[key].keyIndex = keyIndex + 1;
             self.keys[keyIndex].key = key;
             self.size++;
-            replaced = false;
+            return false;
         }
     }
 

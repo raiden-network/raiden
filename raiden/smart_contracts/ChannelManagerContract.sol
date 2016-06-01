@@ -107,14 +107,22 @@ contract ChannelManagerContract {
         channel = v;
     }
 
+    /// @notice add(NettingChannelContract) to add a channel to the collection of NettingChannelContracts.
+    /// @dev Add a NettingChannelContract to nettingContracts if it doesn't already exist.
+    /// @param channel (NettingChannelContract) the payment channel.
+    function add(bytes32 key, NettingChannelContract channel) private {
+        if (IterableMappingNCC.contains(data, key)) throw;
+        IterableMappingNCC.insert(data, key, channel);
+    }
+
     /// @notice newChannel(address, address) to create a new payment channel between two parties
     /// @dev Create a new channel between two parties
     /// @param partner (address) address of one partner
     /// @return channel (NettingChannelContract) the NettingChannelContract of the two parties.
     function newChannel(address partner, uint lckdTime) returns (NettingChannelContract c, address sender){
         bytes32 k = key(msg.sender, partner);
-        if (IterableMappingNCC.contains(data, k)) throw;
-        (, c) = IterableMappingNCC.insert(data, k, assetAddress, msg.sender, partner, lckdTime);
+        c = new NettingChannelContract(assetAddress, msg.sender, partner, lckdTime);
+        add(k, c);
         sender = msg.sender; // Only for testing purpose, should not be added to live net
         ChannelNew(partner); //Triggers event
     }

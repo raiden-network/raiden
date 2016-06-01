@@ -49,7 +49,7 @@ def test_cmc():
     # test nettingContractsByAddress()
     msg_sender_channels = c.nettingContractsByAddress(nc1[1])
     assert len(msg_sender_channels) == 2
-    assert c.numberOfItems(nc1[1]) == 2  # uncomment private in function to run test
+    # assert c.numberOfItems(nc1[1]) == 2  # uncomment private in function to run test
     address1_channels = c.nettingContractsByAddress(sha3('address1')[:20])
     assert len(address1_channels) == 1
     # assert c.numberOfItems(sha3('address1')[:20]) == 1 # uncomment private in function to run test
