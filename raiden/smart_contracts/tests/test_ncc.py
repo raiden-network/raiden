@@ -4,6 +4,9 @@ from ethereum import utils
 from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
+# from ethereum.slogging import configure
+
+# configure("eth.vm:trace,:debug", log_json=True)
 
 ncc_path = "raiden/smart_contracts/NettingChannelContract.sol"
 
@@ -13,19 +16,20 @@ def test_ncc():
     assert s.block.number < 1150000
     s.block.number = 1158001
     assert s.block.number > 1150000
-    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[sha3('assetAddress')[:20], tester.k0, tester.k1, 30])
+    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[sha3('assetAddress')[:20], sha3('address1')[:20], sha3('address2')[:20], 30])
+    # c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[sha3('assetAddress')[:20], tester.k0.encode('hex'), tester.k1.encode('hex'), 30])
 
     # test global variables
-    assert c.lockedTime == 30
-    assert c.assetAddress == sha3('assetAddress')[:20].encode('hex')
-    assert c.opened == 0
-    assert c.closed == 0
-    assert c.settled == 0
-    assert c.closingAddress == ''
+    assert c.lockedTime() == 30
+    assert c.assetAddress() == sha3('assetAddress')[:20].encode('hex')
+    assert c.opened() == 0
+    assert c.closed() == 0
+    assert c.settled() == 0
 
     # test participants variables changed when constructing
-    assert c.participants[0].addr == sha3('address1')[:20]
-    assert c.participants[1].addr == sha3('address2')[:20]
+    assert c.participants(0)[0] == sha3('address1')[:20].encode('hex')
+    assert c.participants(1)[0] == sha3('address2')[:20].encode('hex')
+
 
     # test atIndex()
     assert c.atIndex(sha3('address1')[:20]) == 0

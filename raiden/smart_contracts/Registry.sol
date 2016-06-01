@@ -11,8 +11,7 @@ contract Registry {
     function addAsset(address assetAddress) {
         // only allow unique addresses
         if (IterableMappingCMC.contains(data, assetAddress)) throw;
-        ChannelManagerContract c = new ChannelManagerContract(assetAddress);
-        IterableMappingCMC.insert(data, assetAddress, c);
+        IterableMappingCMC.insert(data, assetAddress, assetAddress);
     }
 
     /// @notice channelManagerByAsset(address) to get the ChannelManagerContract
