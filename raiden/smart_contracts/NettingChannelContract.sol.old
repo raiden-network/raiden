@@ -1,4 +1,5 @@
 import "HumanStandardToken.sol";
+import "Decoder.sol";
 
 contract NettingChannelContract {
     uint public lockedTime;
@@ -8,6 +9,7 @@ contract NettingChannelContract {
     uint public settled;
     address public closingAddress;
     HumanStandardToken public assetToken;
+    Decoder public dcdr;
 
     struct Participant
     {
@@ -280,19 +282,19 @@ contract NettingChannelContract {
     function getNonce(bytes message) private returns (uint8 non) {
         // Direct Transfer
         if (message[0] == 5) {
-            (non, , , , , , ) = decodeTransfer(message);
+            (non, , , , , , ) = dcdr.decodeTransfer(message);
         }
         // Locked Transfer
         if (message[0] == 6) {
-            (non, , , ) = decodeLockedTransfer1(message);
+            (non, , , ) = dcdr.decodeLockedTransfer1(message);
         }
         // Mediated Transfer
         if (message[0] == 7) {
-            (non, , , , ) = decodeMediatedTransfer1(message); 
+            (non, , , , ) = dcdr.decodeMediatedTransfer1(message); 
         }
         // Cancel Transfer
         if (message[0] == 8) {
-            (non, , , ) = decodeCancelTransfer1(message);
+            (non, , , ) = dcdr.decodeCancelTransfer1(message);
         }
         else throw;
     }
@@ -323,35 +325,39 @@ contract NettingChannelContract {
     }
 
     function dsec(bytes message) private returns (address sndr) {
-        var(sec, sig) = decodeSecret(message);
+        var(sec, r, s, v) = dcdr.decodeSecret(message);
         bytes32 h = sha3(sec);
-        sndr = ecrecovery(h, sig);
+        sndr = ecrecover(h, v, r, s);
     }
     function ddtran(bytes message) private returns (address sndr) {
-        var(non, ass, rec, bal, olo, , sig) = decodeTransfer(message);
+        var(non, ass, rec, bal, olo, , r, s, v) = dcdr.decodeTransfer(message);
         bytes32 h = sha3(non, ass, bal, rec, olo); //need the optionalLocksroot
-        sndr = ecrecovery(h, sig);
+        sndr = ecrecover(h, v, r, s);
     }
     function dltran(bytes message) private returns (address sndr) {
         bytes32 lock;
-        var(non, , ass, rec) = decodeLockedTransfer1(message);
-        var(loc, bal, , has, sig) = decodeLockedTransfer2(message);
+        var(non, , ass, rec) = dcdr.decodeLockedTransfer1(message);
+        var(loc, bal, , has, r, s, v) = dcdr.decodeLockedTransfer2(message);
         bytes32 h = sha3(non, ass, bal, rec, loc, lock ); //need the lock
-        sndr = ecrecovery(h, sig);
+        sndr = ecrecover(h, v, r, s);
+    }
+    function dmtranHelper(bytes message) private returns (bytes32 h) {
+        bytes32 lock;
+        var(non, , ass, rec, tar) = dcdr.decodeMediatedTransfer1(message); 
+        var(ini, loc, bal, fee, , , ) = dcdr.decodeMediatedTransfer2Stripped(message);
+        h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
     }
     function dmtran(bytes message) private returns (address sndr) {
-        bytes32 lock;
-        var(non, , ass, rec, tar) = decodeMediatedTransfer1(message); 
-        var(ini, loc, bal, , , fee, sig) = decodeMediatedTransfer2(message);
-        bytes32 h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
-        sndr = ecrecovery(h, sig);
+        bytes32 hash = dmtranHelper(message);
+        var(, , , , r, s, v) = dcdr.decodeMediatedTransfer2Stripped(message);
+        sndr = ecrecover(hash, v, r, s);
     }
     function dctran(bytes message) private returns (address sndr) {
         bytes32 lock;
-        var(non, , ass, rec) = decodeCancelTransfer1(message);
-        var(loc, bal, , , sig) = decodeCancelTransfer2(message);
+        var(non, , ass, rec) = dcdr.decodeCancelTransfer1(message);
+        var(loc, bal, , , r, s, v) = dcdr.decodeCancelTransfer2(message);
         bytes32 h = sha3(non, ass, bal, rec, loc, lock); //need the lock
-        sndr = ecrecovery(h, sig);
+        sndr = ecrecover(h, v, r, s);
     }
 
 
@@ -386,25 +392,25 @@ contract NettingChannelContract {
 
     function decsec(bytes message) private {
         uint i = atIndex(getSender(message));
-        var(sec, sig) = decodeSecret(message);
+        var(sec, r, s, v) = dcdr.decodeSecret(message);
         participants[atIndex(msg.sender)].secret = sec;
         bytes32 h = sha3(sec);
-        participants[i].sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecover(h, v, r, s);
     }
     function decdir(bytes message) private {
         bytes32 lock;
         uint i = atIndex(getSender(message));
-        var(non, ass, rec, bal, loc, sec, sig) = decodeTransfer(message);
+        var(non, ass, rec, bal, loc, sec, r, s, v) = dcdr.decodeTransfer(message);
         participants[i].nonce = non;
         participants[i].asset = ass;
         participants[i].recipient = rec;
         participants[i].balance = bal;
         bytes32 h = sha3(non, ass, bal, rec, loc);
-        participants[i].sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecover(h, v, r, s);
     }
     function decloc1(bytes message) private returns (bytes32 hh) {
         uint i = atIndex(getSender(message));
-        var(non, exp, ass, rec) = decodeLockedTransfer1(message);
+        var(non, exp, ass, rec) = dcdr.decodeLockedTransfer1(message);
         participants[i].nonce = non;
         lockedTime = exp;
         participants[i].asset = ass;
@@ -414,17 +420,17 @@ contract NettingChannelContract {
     function decloc2(bytes message, bytes32 hh) private {
         bytes32 lock;
         uint i = atIndex(getSender(message));
-        var(loc, bal, amo, has, sig) = decodeLockedTransfer2(message);
+        var(loc, bal, amo, has, r, s, v) = dcdr.decodeLockedTransfer2(message);
         participants[i].locksroot = loc;
         participants[i].balance = bal;
         participants[i].transferedAmount = amo;
         participants[i].hashlock = has;
         bytes32 h = sha3(hh, bal, loc, lock ); //need the lock
-        participants[i].sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecover(h, v, r, s);
     }
     function decmed1(bytes message) private returns (bytes32 hh) {
         uint i = atIndex(getSender(message));
-        var(non, exp, ass, rec, tar) = decodeMediatedTransfer1(message); 
+        var(non, exp, ass, rec, tar) = dcdr.decodeMediatedTransfer1(message); 
         participants[i].nonce = non;
         lockedTime = exp;
         participants[i].asset = ass;
@@ -434,17 +440,17 @@ contract NettingChannelContract {
     function decmed2(bytes message, bytes32 hh) private {
         bytes32 lock;
         uint i = atIndex(getSender(message));
-        var(ini, loc, has, bal, amo, fee, sig) = decodeMediatedTransfer2(message);
+        var(ini, loc, has, bal, amo, fee, r, s, v) = dcdr.decodeMediatedTransfer2(message);
         participants[i].locksroot = loc;
         participants[i].hashlock = has;
         participants[i].balance = bal;
         participants[i].transferedAmount = amo;
         bytes32 h = sha3(hh, bal, loc, lock, ini, fee); //need the lock
-        participants[i].sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecover(h, v, r, s);
     }
     function deccan1(bytes message) private returns (bytes32 hh) {
         uint i = atIndex(getSender(message));
-        var(non, exp, ass, rec) = decodeCancelTransfer1(message);
+        var(non, exp, ass, rec) = dcdr.decodeCancelTransfer1(message);
         participants[i].nonce = non;
         lockedTime = exp;
         participants[i].asset = ass;
@@ -454,49 +460,14 @@ contract NettingChannelContract {
     function deccan2(bytes message, bytes32 hh) private {
         bytes32 lock;
         uint i = atIndex(getSender(message));
-        var(loc, bal, amo, has, sig) = decodeCancelTransfer2(message);
+        var(loc, bal, amo, has, r, s, v) = dcdr.decodeCancelTransfer2(message);
         participants[i].locksroot = loc;
         participants[i].balance = bal;
         participants[i].transferedAmount = amo;
         participants[i].hashlock = has;
         bytes32 h = sha3(hh, bal, loc, lock); //need the lock
-        participants[i].sender = ecrecovery(h, sig);
+        participants[i].sender = ecrecover(h, v, r, s);
     }
-
-    // Written by Alex Beregszaszi (@axic), use it under the terms of the MIT license.
-    function ecrecovery(bytes32 hash, bytes sig) private returns (address) {
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-
-        // FIXME: Should this throw, or return 0?
-        if (sig.length != 65)
-          return 0;
-
-        // The signature format is a compact form of:
-        //   {bytes32 r}{bytes32 s}{uint8 v}
-        // Compact means, uint8 is not padded to 32 bytes.
-        assembly {
-            r := mload(add(sig, 32))
-            s := mload(add(sig, 64))
-            // Here we are loading the last 32 bytes, including 31 bytes
-            // of 's'. There is no 'mload8' to do this.
-            //
-            // 'byte' is not working due to the Solidity parser, so lets
-            // use the second best option, 'and'
-            v := and(mload(add(sig, 65)), 1)
-        }
-
-        // old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]
-        if (v < 27) v += 27;
-
-        return ecrecover(hash, v, r, s);
-    }
-
-    function ecverify(bytes32 hash, bytes sig, address signer) private returns (bool) {
-        return ecrecovery(hash, sig) == signer;
-    }
-
 
     function slice(bytes a, uint start, uint end) private returns (bytes n) {
         if (a.length < end) throw;
@@ -508,138 +479,7 @@ contract NettingChannelContract {
         }
     }
 
-    function decodeSecret(bytes m) private returns (bytes32 secret, bytes signature) {
-        if (m.length != 101) throw;
-        secret = bytesToBytes32(slice(m, 4, 36), secret);
-        signature = slice(m, 36, 101);
-    }
-
-    function decodeTransfer(bytes m) private 
-        returns
-        (uint8 nonce,
-        address asset,
-        address recipient,
-        uint balance,
-        bytes32 optionalLocksroot,
-        bytes32 optionalSecret,
-        bytes signature)
-    {
-        if (m.length != 213) throw;
-        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
-        uint160 ia;
-        asset = bytesToAddress(slice(m, 12, 32), ia);
-        uint160 ir;
-        recipient = bytesToAddress(slice(m, 32, 52), ir);
-        balance = bytesToInt(slice(m, 52, 84), balance);
-        optionalLocksroot = bytesToBytes32(slice(m, 84, 116), optionalLocksroot);
-        optionalSecret = bytesToBytes32(slice(m, 116, 148), optionalSecret);
-        signature = slice(m, 148, 213);
-
-    }
-
-    function decodeLockedTransfer1(bytes m) private
-        returns
-        (uint8 nonce,
-        uint8 expiration, 
-        address asset,
-        address recipient) 
-    {
-        if (m.length != 253) throw;
-        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
-        expiration = bytesToIntEight(slice(m, 12, 20), expiration);
-        uint160 ia;
-        asset = bytesToAddress(slice(m, 20, 40), ia);
-        uint160 ir;
-        recipient = bytesToAddress(slice(m, 40, 60), ir);
-    }
-
-    function decodeLockedTransfer2(bytes m) private
-        returns
-        (bytes32 locksroot,
-        uint balance,
-        uint amount,
-        bytes32 hashlock,
-        bytes signature)
-    {
-
-        locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
-        balance = bytesToInt(slice(m, 92, 124), balance);
-        amount = bytesToInt(slice(m, 124, 156), amount);
-        hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
-        signature = slice(m, 188, 253);
-    }
-
-    function decodeMediatedTransfer1(bytes m) private
-        returns
-        (uint8 nonce,
-        uint8 expiration,
-        address asset,
-        address recipient,
-        address target)
-    {
-        if (m.length != 325) throw;
-        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
-        expiration = bytesToIntEight(slice(m, 12, 20), expiration);
-        uint160 ia;
-        asset = bytesToAddress(slice(m, 20, 40), ia);
-        uint160 ir;
-        recipient = bytesToAddress(slice(m, 40, 60), ir);
-        uint160 it;
-        target = bytesToAddress(slice(m, 60, 80), it);
-    }
-
-    function decodeMediatedTransfer2(bytes m) private
-        returns 
-        (address initiator,
-        bytes32 locksroot,
-        bytes32 hashlock,
-        uint balance,
-        uint amount,
-        uint fee,
-        bytes signature)
-    {
-        uint160 ii;
-        initiator = bytesToAddress(slice(m, 80, 100), ii);
-        locksroot = bytesToBytes32(slice(m, 100, 132), locksroot);
-        hashlock = bytesToBytes32(slice(m, 132, 164), hashlock);
-        balance = bytesToInt(slice(m, 164, 196), balance);
-        amount = bytesToInt(slice(m, 196, 228), amount);
-        fee = bytesToInt(slice(m, 228, 260), fee);
-        signature = slice(m, 260, 325);
-    }
-    
-    function decodeCancelTransfer1(bytes m) private
-        returns
-        (uint8 nonce,
-        uint8 expiration,
-        address asset,
-        address recipient)
-    {
-        if (m.length != 253) throw;
-        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
-        expiration = bytesToIntEight(slice(m, 12, 20), expiration);
-        uint160 ia;
-        asset = bytesToAddress(slice(m, 20, 40), ia);
-        uint160 ir;
-        recipient = bytesToAddress(slice(m, 40, 60), ir);
-    }
-
-    function decodeCancelTransfer2(bytes m) private
-    returns
-    (bytes32 locksroot,
-    uint balance,
-    uint amount,
-    bytes32 hashlock,
-    bytes signature)
-    {
-        locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
-        balance = bytesToInt(slice(m, 92, 124), balance);
-        amount = bytesToInt(slice(m, 124, 156), amount);
-        hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
-        signature = slice(m, 188, 253); 
-    }
-
-    /* HELPER FUNCTIONS */
+    /*[> HELPER FUNCTIONS <]*/
 
     function bytesToIntEight(bytes b, uint8 i) private returns (uint8 res) {
         assembly { i := mload(add(b, 0x8)) }

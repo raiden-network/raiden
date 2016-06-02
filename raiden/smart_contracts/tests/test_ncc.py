@@ -9,6 +9,7 @@ from ethereum.tester import TransactionFailed
 # configure("eth.vm:trace,:debug", log_json=True)
 
 ncc_path = "raiden/smart_contracts/NettingChannelContract.sol"
+# ncc_path = "raiden/smart_contracts/NettingChannelContract.sol.old"
 
 
 def test_ncc():
