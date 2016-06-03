@@ -112,7 +112,7 @@ compile:
 build:
 	@$(MAKE) run-truffle cmd=build
 
-deploy:
+deploy: compile
 	@$(MAKE) run-truffle cmd=deploy
 
 run-truffle:
