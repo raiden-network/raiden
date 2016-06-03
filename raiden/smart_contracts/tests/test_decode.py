@@ -23,7 +23,10 @@ def test_decode_secret():
     o1 = c.decodeSecret(data)
     assert o1[0][26:32] == 'secret'
     assert o1[0].encode('hex') == '0000000000000000000000000000000000000000000000000000736563726574'
-    assert o1[1].encode('hex') == 'd37b47b46bea9027a92a6e1c374450092016b9935c0f1e738a9516693f708f5b35937bb4e0a7de93be31585e6aa04984869477ce5283415d4e736e537e59d43501'
+    signature = 'd37b47b46bea9027a92a6e1c374450092016b9935c0f1e738a9516693f708f5b35937bb4e0a7de93be31585e6aa04984869477ce5283415d4e736e537e59d43501'
+    assert o1[1].encode('hex') == signature[:64]
+    assert o1[2].encode('hex') == signature[64:128]
+    assert o1[3] == int(signature[129])
     assert len(data) == 101
     # length doesn't match
     with pytest.raises(TransactionFailed):
@@ -55,8 +58,13 @@ def test_decode_transfer():
     assert optionalLocksroot == '60d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df51'.decode('hex')
     optionalSecret = o1[5]
     assert optionalSecret == '0000000000000000000000000000000000000000000000000000000000000000'.decode('hex')
-    signature = o1[6]
-    assert signature == 'ff9636ccb66e73219fd166cd6ffbc9c6215f74ff31c1fd4131cf532b29ee096f65278c459253fba65bf019c723a68bb4a6153ea8378cd1b15d55825e1a291b6f00'.decode('hex')
+    signature = 'ff9636ccb66e73219fd166cd6ffbc9c6215f74ff31c1fd4131cf532b29ee096f65278c459253fba65bf019c723a68bb4a6153ea8378cd1b15d55825e1a291b6f00'.decode('hex')
+    r = o1[6]
+    s = o1[7]
+    v = o1[8]
+    assert r == signature[:32]
+    assert s == signature[32:64]
+    assert v == int(signature[64].encode('hex'))
     with pytest.raises(TransactionFailed):
         c.decodeSecret(bad_data)
 
@@ -98,8 +106,13 @@ def test_decode_mediated_transfer():
     assert amount == 29  # int('000000000000000000000000000000000000000000000000000000000000001d', 16)
     fee = o2[5]
     assert fee == 0
-    signature = o2[6]
-    assert signature == '79d1479c11af904096d7e179c4184b84fd5765f0a0ab1cf44578ef7a545e1b7157c73df9c3ee2797ee379eb05b1b239cea0eec47f9e03adc546a4c0ff7dcc3a601'.decode('hex')
+    signature = '79d1479c11af904096d7e179c4184b84fd5765f0a0ab1cf44578ef7a545e1b7157c73df9c3ee2797ee379eb05b1b239cea0eec47f9e03adc546a4c0ff7dcc3a601'.decode('hex')
+    r = o2[6]
+    s = o2[7]
+    v = o2[8]
+    assert r == signature[:32]
+    assert s == signature[32:64]
+    assert v == int(signature[64].encode('hex'))
 
 
 def test_decode_cancel_transfer():
@@ -131,5 +144,10 @@ def test_decode_cancel_transfer():
     assert amount == 29  # int('000000000000000000000000000000000000000000000000000000000000001d', 16)
     hashlock = o2[3]
     assert hashlock == sha3('x' * 32)
-    signature = o2[4]
-    assert signature == 'f4966fe93b467d28f15befd438b7aa0e7b8fbf5f00ce1abe0cc4a0ddf9bcc7c45c9863b784f474dee3c0682a5aa4c982712b98fcd60f5e5d94038008a97e251300'.decode('hex')
+    signature = 'f4966fe93b467d28f15befd438b7aa0e7b8fbf5f00ce1abe0cc4a0ddf9bcc7c45c9863b784f474dee3c0682a5aa4c982712b98fcd60f5e5d94038008a97e251300'.decode('hex')
+    r = o2[4]
+    s = o2[5]
+    v = o2[6]
+    assert r == signature[:32]
+    assert s == signature[32:64]
+    assert v == int(signature[64].encode('hex'))

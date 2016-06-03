@@ -8,8 +8,9 @@ from ethereum.tester import TransactionFailed
 
 # configure("eth.vm:trace,:debug", log_json=True)
 
-ncc_path = "raiden/smart_contracts/NettingChannelContract.sol"
-# ncc_path = "raiden/smart_contracts/NettingChannelContract.sol.old"
+library_path = "raiden/smart_contracts/Decoder.sol"
+# ncc_path = "raiden/smart_contracts/NettingChannelContract.sol"
+ncc_path = "raiden/smart_contracts/NettingChannelContract.sol.old"
 
 
 def test_ncc():
@@ -17,7 +18,8 @@ def test_ncc():
     assert s.block.number < 1150000
     s.block.number = 1158001
     assert s.block.number > 1150000
-    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[sha3('assetAddress')[:20], sha3('address1')[:20], sha3('address2')[:20], 30])
+    lib_c = s.abi_contract(None, path=library_path, language="solidity")
+    c = s.abi_contract(None, path=ncc_path, language="solidity", libraries={'Decoder': lib_c.address.encode('hex')}, constructor_parameters=[sha3('assetAddress')[:20], sha3('address1')[:20], sha3('address2')[:20], 30])
 
     # test global variables
     assert c.lockedTime() == 30

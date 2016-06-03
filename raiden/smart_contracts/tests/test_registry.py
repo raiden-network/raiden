@@ -12,6 +12,7 @@ configure("eth.vm:trace,:debug", log_json=True)
 
 library_path = "raiden/smart_contracts/IterableMappingCMC.sol"
 ncc_path = "raiden/smart_contracts/IterableMappingNCC.sol"
+decoder_path = "raiden/smart_contracts/Decoder.sol"
 
 registry_path = "raiden/smart_contracts/Registry.sol"
 
@@ -25,7 +26,9 @@ def test_registry():
     s.mine()
     lib_ncc = s.abi_contract(None, path=ncc_path, language="solidity")
     s.mine()
-    c = s.abi_contract(None, path=registry_path, language="solidity", libraries={'IterableMappingCMC': lib_c.address.encode('hex'), 'IterableMappingNCC': lib_ncc.address.encode('hex')})
+    lib_dec = s.abi_contract(None, path=decoder_path, language="solidity")
+    s.mine()
+    c = s.abi_contract(None, path=registry_path, language="solidity", libraries={'IterableMappingCMC': lib_c.address.encode('hex'), 'IterableMappingNCC': lib_ncc.address.encode('hex'), 'Decoder': lib_dec.address.encode('hex')})
 
     c.addAsset(sha3('asset')[:20])
     c.addAsset(sha3('address')[:20])

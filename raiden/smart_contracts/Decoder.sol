@@ -1,4 +1,4 @@
-contract Decoder {
+library Decoder {
     
     function slice(bytes a, uint start, uint end) private returns (bytes n) {
         if (a.length < end) throw;

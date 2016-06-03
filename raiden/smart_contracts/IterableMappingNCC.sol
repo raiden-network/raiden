@@ -8,7 +8,6 @@ library IterableMappingNCC {
     struct IndexValue { uint keyIndex; NettingChannelContract value; }
     struct KeyFlag { bytes32 key; bool deleted; }
 
-
     function insert(itmap storage self, bytes32 key, NettingChannelContract value) returns (bool replaced) {
         uint keyIndex = self.data[key].keyIndex;
         self.data[key].value = value;
@@ -23,7 +22,6 @@ library IterableMappingNCC {
         }
     }
 
-
     function remove(itmap storage self, bytes32 key) returns (bool success){
         uint keyIndex = self.data[key].keyIndex;
         if (keyIndex == 0)
@@ -33,26 +31,21 @@ library IterableMappingNCC {
         self.size --;
     }
 
-
     function contains(itmap storage self, bytes32 key) returns (bool) {
         return self.data[key].keyIndex > 0;
     }
-
 
     function atIndex(itmap storage self, bytes32 key) returns (uint index) {
         return self.data[key].keyIndex;
     }
 
-
     function iterate_start(itmap storage self) returns (uint keyIndex){
         return iterate_next(self, uint(-1));
     }
 
-
     function iterate_valid(itmap storage self, uint keyIndex) returns (bool){
         return keyIndex < self.keys.length;
     }
-
 
     function iterate_next(itmap storage self, uint keyIndex) returns (uint r_keyIndex){
         keyIndex++;
@@ -60,7 +53,6 @@ library IterableMappingNCC {
             keyIndex++;
         return keyIndex;
     }
-
 
     function iterate_get(itmap storage self, uint keyIndex) returns (bytes32 key, NettingChannelContract value){
         key = self.keys[keyIndex].key;
