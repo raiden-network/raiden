@@ -100,7 +100,7 @@ build-truffle-container:
 
 blockchain:
 	rm -f blockchain.log
-	-(hydrachain -d $(shell mktemp -d) -l $(logging_settings) -c jsonrpc.corsdomain='http://localhost:8080' --log-file=blockchain.log runmultiple > /dev/null 2>&1 &)
+	-(hydrachain -d $(shell mktemp -d) -l $(logging_settings) -c p2p.listen_host="127.0.0.1" -c discovery.listen_host="127.0.0.1" -c jsonrpc.corsdomain='http://localhost:8080' --log-file=blockchain.log runmultiple > /dev/null 2>&1 &)
 
 serve: deploy
 	@$(MAKE) run-truffle cmd=serve dockerargs="-d --name truffleserver"
@@ -112,7 +112,7 @@ compile:
 build:
 	@$(MAKE) run-truffle cmd=build
 
-deploy:
+deploy: compile
 	@$(MAKE) run-truffle cmd=deploy
 
 run-truffle:
