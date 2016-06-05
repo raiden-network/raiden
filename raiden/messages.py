@@ -2,6 +2,8 @@
 # Copyright (c) 2015 Heiko Hees
 import warnings
 
+from ethereum.slogging import getLogger
+
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
 from raiden.utils import sha3, ishash, big_endian_to_int, pex
@@ -21,6 +23,8 @@ __all__ = (
     'TransferTimeout',
     'ConfirmTransfer',
 )
+
+log = getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class BaseError(Exception):

@@ -10,7 +10,6 @@ from raiden.messages import MediatedTransfer, CancelTransfer, DirectTransfer, Lo
 from raiden.encoding.messages import (
     DIRECTTRANSFER, LOCKEDTRANSFER, MEDIATEDTRANSFER, CANCELTRANSFER,
 )
-from raiden.encoding.signing import c_ecdsa_recover_compact, address_from_key
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
