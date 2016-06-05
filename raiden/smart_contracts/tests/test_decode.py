@@ -1,12 +1,16 @@
 # -*- coding: utf8 -*-
 import pytest
 
-
 from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
 
-decode_code = open("raiden/smart_contracts/Decoder.sol").read()
+from raiden.network.rpc.client import get_contract_path
+
+decoder_path = get_contract_path('Decoder.sol')
+
+with open(decoder_path) as decoder_file:
+    decode_code = decoder_file.read()
 
 
 def test_decode_secret():

@@ -4,15 +4,22 @@ import pytest
 from ethereum import tester
 from ethereum.tester import TransactionFailed
 
-slicer_code = open("raiden/smart_contracts/Slicer.sol").read()
+from raiden.network.rpc.client import get_contract_path
+
 
 def test_slice():
-    s = tester.state()
-    c = s.abi_contract(slicer_code, language="solidity")
-    o2 = c.slice("hello", 0, 2)
-    assert o2.decode('utf-8') == "he"
-    o2 = c.slice("hello", 0, 5)
-    assert o2.decode('utf-8') == "hello"
+    slicer_path = get_contract_path('Slicer.sol')
+
+    with open(slicer_path) as slicer_file:
+        slicer_code = slicer_file.read()
+
+    state = tester.state()
+    slicer = state.abi_contract(slicer_code, language='solidity')
+
+    # pylint: disable=no-member
+    assert slicer.slice('hello', 0, 2).decode('utf-8') == 'he'
+    assert slicer.slice('hello', 0, 5).decode('utf-8') == 'hello'
+
     # should throw on invalid input
     with pytest.raises(TransactionFailed):
-        c.slice("hello", 5, 8)
+        slicer.slice('hello', 5, 8)

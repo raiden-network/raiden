@@ -1,23 +1,23 @@
 # -*- coding: utf8 -*-
 import pytest
 
-
 from ethereum import utils
 from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
 from ethereum.slogging import configure
 
-configure("eth.vm:trace,:debug", log_json=True)
+from raiden.network.rpc.client import get_contract_path
 
-library_path = "raiden/smart_contracts/IterableMappingCMC.sol"
-ncc_path = "raiden/smart_contracts/IterableMappingNCC.sol"
-decoder_path = "raiden/smart_contracts/Decoder.sol"
-
-registry_path = "raiden/smart_contracts/Registry.sol"
+configure('eth.vm:trace,:debug', log_json=True)
 
 
 def test_registry():
+    library_path = get_contract_path('IterableMappingCMC.sol')
+    ncc_path = get_contract_path('IterableMappingNCC.sol')
+    decoder_path = get_contract_path('Decoder.sol')
+    registry_path = get_contract_path('Registry.sol')
+
     s = tester.state()
     assert s.block.number < 1150000
     s.block.number = 1158001

@@ -1,11 +1,14 @@
 # -*- coding: utf8 -*-
 import pytest
+
 from ethereum import tester
 from ethereum.utils import sha3
 from ethereum.tester import TransactionFailed
 
-library_path = "raiden/smart_contracts/IterableMappingNCC.sol"
-cmc_path = "raiden/smart_contracts/ChannelManagerContract.sol"
+from raiden.network.rpc.client import get_contract_path
+
+library_path = get_contract_path('IterableMappingNCC.sol')
+cmc_path = get_contract_path('ChannelManagerContract.sol')
 
 
 def test_cmc():

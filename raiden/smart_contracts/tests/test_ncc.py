@@ -1,16 +1,15 @@
 # -*- coding: utf8 -*-
 import pytest
+
 from ethereum import utils
 from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
-# from ethereum.slogging import configure
 
-# configure("eth.vm:trace,:debug", log_json=True)
+from raiden.network.rpc.client import get_contract_path
 
-library_path = "raiden/smart_contracts/Decoder.sol"
-# ncc_path = "raiden/smart_contracts/NettingChannelContract.sol"
-ncc_path = "raiden/smart_contracts/NettingChannelContract.sol.old"
+library_path = get_contract_path('Decoder.sol')
+ncc_path = get_contract_path('NettingChannelContract.sol.old')
 
 
 def test_ncc():
