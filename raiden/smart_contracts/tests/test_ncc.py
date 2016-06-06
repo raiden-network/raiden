@@ -8,8 +8,13 @@ from ethereum.tester import TransactionFailed
 
 from raiden.network.rpc.client import get_contract_path
 
+from ethereum.slogging import configure
+
+configure("eth.vm:trace, :debug", log_json=True)
+
 library_path = get_contract_path('Decoder.sol')
 ncc_path = get_contract_path('NettingChannelContract.sol.old')
+
 
 
 def test_ncc():
@@ -18,6 +23,7 @@ def test_ncc():
     s.block.number = 1158001
     assert s.block.number > 1150000
     lib_c = s.abi_contract(None, path=library_path, language="solidity")
+    s.mine()
     c = s.abi_contract(None, path=ncc_path, language="solidity", libraries={'Decoder': lib_c.address.encode('hex')}, constructor_parameters=[sha3('assetAddress')[:20], sha3('address1')[:20], sha3('address2')[:20], 30])
 
     # test global variables
