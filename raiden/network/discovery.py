@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-from raiden.utils import isaddress, privtoaddr, sha3
+from raiden.utils import isaddress, privtoaddr, sha3, pex
 
 
 class Discovery(object):
@@ -13,7 +13,10 @@ class Discovery(object):
         self.nodeid_hostport[nodeid] = (host, port)
 
     def get(self, nodeid):
-        return self.nodeid_hostport[nodeid]
+        try:
+            return self.nodeid_hostport[nodeid]
+        except KeyError:
+            raise KeyError('Unknow address {}'.format(pex(nodeid)))
 
     def nodeid_by_host_port(self, host_port):
         for nodeid, value_hostport in self.nodeid_hostport.items():
@@ -49,7 +52,7 @@ class PredictiveDiscovery(Discovery):
 
             for i in range(num_nodes):
                 host_port = (host, start_port + i)
-                nodeid = privtoaddr(sha3("{}:{}".format(*host_port)))
+                nodeid = privtoaddr(sha3('{}:{}'.format(*host_port)))
                 self.nodeid_hostport[nodeid] = host_port
 
     def register(self, *args):

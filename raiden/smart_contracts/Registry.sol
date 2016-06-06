@@ -1,10 +1,11 @@
 import "IterableMappingCMC.sol";
+
 contract Registry {
     IterableMappingCMC.itmap data;
 
     /// @notice addAsset(address) to add a new ChannelManagerContract to channelManagerContracts
     /// with the assetAddress as key.
-    /// @dev Add a new ChannelManagerContract to channelManagerContracts if assetAddress 
+    /// @dev Add a new ChannelManagerContract to channelManagerContracts if assetAddress
     /// does not already exist.
     /// @param assetAddress (address) the address of the asset
     /// @return nothing, but updates the collection of ChannelManagerContracts.
