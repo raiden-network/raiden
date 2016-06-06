@@ -10,3 +10,5 @@ ethereum>=1.3.2
 ethereum-serpent
 u-msgpack-python
 repoze.lru
+gevent-websocket==0.9.4
+hydrachain>=0.3.0
