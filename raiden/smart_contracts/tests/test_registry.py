@@ -9,7 +9,7 @@ from ethereum.slogging import configure
 
 from raiden.network.rpc.client import get_contract_path
 
-configure('eth.vm:trace,:debug', log_json=True)
+# configure('eth.vm:trace,:debug', log_json=True)
 
 
 def test_registry():

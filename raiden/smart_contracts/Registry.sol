@@ -3,6 +3,8 @@ import "IterableMappingCMC.sol";
 contract Registry {
     IterableMappingCMC.itmap data;
 
+    event AssetAdded(address assetAddress); // useful for testing
+
     /// @notice addAsset(address) to add a new ChannelManagerContract to channelManagerContracts
     /// with the assetAddress as key.
     /// @dev Add a new ChannelManagerContract to channelManagerContracts if assetAddress
@@ -14,6 +16,7 @@ contract Registry {
         if (IterableMappingCMC.contains(data, assetAddress)) throw;
         ChannelManagerContract c = new ChannelManagerContract(assetAddress);
         IterableMappingCMC.insert(data, assetAddress, c);
+        AssetAdded(assetAddress); // useful for testing
     }
 
     /// @notice channelManagerByAsset(address) to get the ChannelManagerContract
