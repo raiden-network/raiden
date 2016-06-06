@@ -28,21 +28,21 @@ def test_cmc():
 
     # test newChannel()
     assert c.assetAddress() == sha3('asset')[:20].encode('hex')
-    nc1 = c.newChannel(sha3('address1')[:20])
-    nc2 = c.newChannel(sha3('address3')[:20])
+    nc1 = c.newChannel(sha3('address1')[:20], 30)
+    nc2 = c.newChannel(sha3('address3')[:20], 30)
     with pytest.raises(TransactionFailed):
-        c.newChannel(sha3('address1')[:20])
+        c.newChannel(sha3('address1')[:20], 30)
     with pytest.raises(TransactionFailed):
-        c.newChannel(sha3('address3')[:20])
+        c.newChannel(sha3('address3')[:20], 30)
 
     # TODO test event
 
     # test get()
     print nc1[0]
-    chn1 = c.get(nc1[1], sha3('address1')[:20])
-    assert chn1 == nc1[0]
-    chn2 = c.get(nc2[1], sha3('address3')[:20])
-    assert chn2 == nc2[0]
+    chn1 = c.get(nc1[1], sha3('address1')[:20]) # nc1[1] is msg.sender of newChannel
+    assert chn1 == nc1[0] # nc1[0] is address of new NettingChannelContract
+    chn2 = c.get(nc2[1], sha3('address3')[:20]) # nc2[1] is msg.sender of newChannel
+    assert chn2 == nc2[0] # nc2[0] is msg.sender of newChannel
     with pytest.raises(TransactionFailed):  # should throw if key doesn't exist
         c.get(nc1[1], sha3('iDontExist')[:20])
 
