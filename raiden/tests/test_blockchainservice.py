@@ -9,7 +9,6 @@ import gevent.monkey
 from ethereum import slogging
 from ethereum import _solidity
 from ethereum.keys import privtoaddr
-from ethereum.utils import denoms
 from ethereum._solidity import compile_file
 from pyethapp.accounts import mk_privkey
 from pyethapp.rpc_client import JSONRPCClient
@@ -176,6 +175,7 @@ def test_blockchain():
 
     quantity = 3
     base_port = 29870
+    timeout = 3  # seconds
     tmp_datadir = tempfile.mktemp()
 
     private_keys = [
@@ -196,46 +196,79 @@ def test_blockchain():
     jsonrpc_client = JSONRPCClient(privkey=private_keys[0], print_communication=False)
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
+    humantoken_contracts = compile_file(humantoken_path, libraries=dict())
     token_abi = jsonrpc_client.deploy_solidity_contract(
         address,
         'HumanStandardToken',
-        humantoken_path,
+        humantoken_contracts,
         dict(),
         (9999, 'raiden', 2, 'Rd'),
-        timeout_ms=3,
+        timeout=timeout,
     )
 
     registry_path = get_contract_path('Registry.sol')
-    all_contracts = compile_file(registry_path, libraries=dict())
+    registry_contracts = compile_file(registry_path, libraries=dict())
     registry_abi = jsonrpc_client.deploy_solidity_contract(
         address,
         'Registry',
-        registry_path,
+        registry_contracts,
         dict(),
         tuple(),
-        timeout_ms=3,
+        timeout=timeout,
     )
+
+    log_list = jsonrpc_client.call(
+        'eth_getLogs',
+        {
+            'fromBlock': '0x0',
+            'toBlock': 'latest',
+            'topics': [],
+        },
+    )
+    assert len(log_list) == 0
 
     # pylint: disable=no-member
 
     assert token_abi.balanceOf(address) == 9999
-    registry_abi.addAsset(token_abi.address)
+    transaction_hash = registry_abi.addAsset(token_abi.address)
+    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
+
+    log_list = jsonrpc_client.call(
+        'eth_getLogs',
+        {
+            'fromBlock': '0x0',
+            'toBlock': 'latest',
+            'topics': [],
+        },
+    )
+    assert len(log_list) == 1
+    log_token_address_encoded = log_list[0]['data']
+    log_token_address = log_token_address_encoded[2:].lstrip('0').rjust(40, '0').decode('hex')
+
+    assert log_token_address == token_abi.address
 
     channel_manager_address_encoded = registry_abi.channelManagerByAsset.call(token_abi.address)
     channel_manager_abi = jsonrpc_client.new_contract_proxy(
-        all_contracts['ChannelManagerContract']['abi'],
+        registry_contracts['ChannelManagerContract']['abi'],
         channel_manager_address_encoded.decode('hex'),
     )
 
-    channel_manager_abi.newChannel(
-        addresses[1],
-        10
-    )
+    transaction_hash = channel_manager_abi.newChannel(addresses[1], 10)
+    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
 
-    app.slogging.configure(':ERROR,eth.chain.tx:DEBUG,jsonrpc:DEBUG,eth.vm:TRACE')
+    log_list = jsonrpc_client.call(
+        'eth_getLogs',
+        {
+            'fromBlock': '0x0',
+            'toBlock': 'latest',
+            'topics': [],
+        },
+    )
+    assert len(log_list) == 2
+
     channel_manager_abi.get.call(
-        '0x' + address.encode('hex'),
-        '0x' + addresses[1].encode('hex'),
+        address.encode('hex'),
+        addresses[1].encode('hex'),
     )
 
     for hydrachain in hydrachain_apps:
