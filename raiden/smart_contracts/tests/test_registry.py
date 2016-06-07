@@ -7,16 +7,20 @@ from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
 from ethereum.slogging import configure
 
-from raiden.network.rpc.client import get_contract_path
+# from raiden.network.rpc.client import get_contract_path
 
 # configure('eth.vm:trace,:debug', log_json=True)
 
 
 def test_registry():
-    library_path = get_contract_path('IterableMappingCMC.sol')
-    ncc_path = get_contract_path('IterableMappingNCC.sol')
-    decoder_path = get_contract_path('Decoder.sol')
-    registry_path = get_contract_path('Registry.sol')
+    # library_path = get_contract_path('IterableMappingCMC.sol')
+    # ncc_path = get_contract_path('IterableMappingNCC.sol')
+    # decoder_path = get_contract_path('Decoder.sol')
+    # registry_path = get_contract_path('Registry.sol')
+    library_path = "raiden/smart_contracts/IterableMappingCMC.sol"
+    ncc_path = "raiden/smart_contracts/IterableMappingNCC.sol"
+    decoder_path = "raiden/smart_contracts/Decoder.sol"
+    registry_path = "raiden/smart_contracts/Registry.sol"
 
     s = tester.state()
     assert s.block.number < 1150000
@@ -30,14 +34,14 @@ def test_registry():
     s.mine()
     c = s.abi_contract(None, path=registry_path, language="solidity", libraries={'IterableMappingCMC': lib_c.address.encode('hex'), 'IterableMappingNCC': lib_ncc.address.encode('hex'), 'Decoder': lib_dec.address.encode('hex')})
 
-    c.addAsset(sha3('asset')[:20])
+    contract_address = c.addAsset(sha3('asset')[:20])
     c.addAsset(sha3('address')[:20])
     # if address already exists, throw
     with pytest.raises(TransactionFailed):
         c.addAsset(sha3('asset')[:20])
 
     cmc = c.channelManagerByAsset(sha3('asset')[:20])
-    assert cmc == sha3('asset')[:20].encode('hex')
+    assert cmc == contract_address
     # if address does not exist, throw
     with pytest.raises(TransactionFailed):
         c.channelManagerByAsset(sha3('mainz')[:20])
