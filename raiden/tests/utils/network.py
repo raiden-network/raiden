@@ -296,7 +296,7 @@ def hydrachain_network(quantity, base_port, base_datadir):
         'timestamp': '0x00',
         'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
         'extraData': '0x',
-        'gasLimit': '0x2FEFD8',
+        'gasLimit': '0x5FEFD8',
         'alloc': alloc,
     }
 

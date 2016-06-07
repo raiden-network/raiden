@@ -193,7 +193,7 @@ def test_blockchain():
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
 
-    jsonrpc_client = JSONRPCClient(privkey=private_keys[0], print_communication=False)
+    jsonrpc_client = JSONRPCClient(privkey=private_keys[0])
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())
@@ -242,15 +242,18 @@ def test_blockchain():
         },
     )
     assert len(log_list) == 1
-    log_token_address_encoded = log_list[0]['data']
-    log_token_address = log_token_address_encoded[2:].lstrip('0').rjust(40, '0').decode('hex')
-
-    assert log_token_address == token_abi.address
 
     channel_manager_address_encoded = registry_abi.channelManagerByAsset.call(token_abi.address)
+    channel_manager_address = channel_manager_address_encoded.decode('hex')
+
+    log_channel_manager_address_encoded = log_list[0]['data']
+    log_channel_manager_address = log_channel_manager_address_encoded[2:].lstrip('0').rjust(40, '0').decode('hex')
+
+    assert channel_manager_address == log_channel_manager_address
+
     channel_manager_abi = jsonrpc_client.new_contract_proxy(
         registry_contracts['ChannelManagerContract']['abi'],
-        channel_manager_address_encoded.decode('hex'),
+        channel_manager_address,
     )
 
     transaction_hash = channel_manager_abi.newChannel(addresses[1], 10)
