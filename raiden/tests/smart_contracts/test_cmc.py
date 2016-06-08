@@ -5,15 +5,13 @@ from ethereum import tester
 from ethereum.utils import sha3
 from ethereum.tester import TransactionFailed
 
-# from raiden.network.rpc.client import get_contract_path
-
-# library_path = get_contract_path('IterableMappingNCC.sol')
-# cmc_path = get_contract_path('ChannelManagerContract.sol')
-library_path = "raiden/smart_contracts/IterableMappingNCC.sol"
-cmc_path = "raiden/smart_contracts/ChannelManagerContract.sol"
+from raiden.network.rpc.client import get_contract_path
 
 
 def test_cmc():
+    library_path = get_contract_path('IterableMappingNCC.sol')
+    cmc_path = get_contract_path('ChannelManagerContract.sol')
+
     s = tester.state()
     assert s.block.number < 1150000
     s.block.number = 1158001

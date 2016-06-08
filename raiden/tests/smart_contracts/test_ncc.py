@@ -1,24 +1,24 @@
 # -*- coding: utf8 -*-
 import pytest
 
-from ethereum import utils
 from ethereum import tester
-from ethereum.utils import sha3, privtoaddr
+from ethereum import slogging
 from ethereum.tester import TransactionFailed
 
-# from raiden.network.rpc.client import get_contract_path
+from raiden.network.rpc.client import get_contract_path
 
-token_library_path = "raiden/smart_contracts/StandardToken.sol"
-token_path = "raiden/smart_contracts/HumanStandardToken.sol"
-
-# library_path = get_contract_path('Decoder.sol')
-library_path = "raiden/smart_contracts/Decoder.sol"
-# ncc_path = get_contract_path('NettingChannelContract.sol.old')
-ncc_path = "raiden/smart_contracts/NettingChannelContract.sol.old"
+log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 tester.gas_limit = 9575081L
 
+
 def test_ncc():
+    token_library_path = get_contract_path('StandardToken.sol')
+    token_path = get_contract_path('HumanStandardToken.sol')
+
+    library_path = get_contract_path('Decoder.sol')
+    ncc_path = get_contract_path('NettingChannelContract.sol.old')
+
     s = tester.state()
     assert s.block.number < 1150000
     s.block.number = 1158001
