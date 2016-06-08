@@ -243,7 +243,7 @@ def create_sequential_network(num_nodes, deposit, asset, transport_class=None):
     return apps
 
 
-def hydrachain_network(quantity, base_port, base_datadir):
+def hydrachain_network(private_keys, base_port, base_datadir):
     """ Initializes a hydrachain network used for testing. """
     # pylint: disable=too-many-locals
     from hydrachain.app import services, start_app, HPCApp
@@ -251,16 +251,12 @@ def hydrachain_network(quantity, base_port, base_datadir):
 
     gevent.get_hub().SYSTEM_ERROR = BaseException
     PBKDF2_CONSTANTS['c'] = 100
+    quantity = len(private_keys)
 
     def privkey_to_uri(private_key):
         host = b'0.0.0.0'
         pubkey = privtopub(private_key)
         return host_port_pubkey_to_uri(host, base_port, pubkey)
-
-    private_keys = [
-        mk_privkey('raidentest:{}'.format(position))
-        for position in range(quantity)
-    ]
 
     addresses = [
         privtoaddr(priv)
@@ -341,4 +337,4 @@ def hydrachain_network(quantity, base_port, base_datadir):
         hydrachain_app = start_app(config, accounts=[account])
         all_apps.append(hydrachain_app)
 
-    return private_keys, all_apps
+    return all_apps
