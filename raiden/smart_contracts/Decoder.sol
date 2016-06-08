@@ -99,7 +99,9 @@ contract Decoder {
         uint8 expiration,
         address asset,
         address recipient,
-        address target)
+        address target,
+        address initiator,
+        bytes32 locksroot)
     {
         if (m.length != 325) throw;
         nonce = bytesToIntEight(slice(m, 4, 12), nonce);
@@ -110,13 +112,14 @@ contract Decoder {
         recipient = bytesToAddress(slice(m, 40, 60), ir);
         uint160 it;
         target = bytesToAddress(slice(m, 60, 80), it);
+        uint160 ii;
+        initiator = bytesToAddress(slice(m, 80, 100), ii);
+        locksroot = bytesToBytes32(slice(m, 100, 132), locksroot);
     }
 
     function decodeMediatedTransfer2(bytes m) 
         returns
-        (address initiator,
-        bytes32 locksroot,
-        bytes32 hashlock,
+        (bytes32 hashlock,
         uint balance,
         uint amount,
         uint fee,
@@ -124,9 +127,6 @@ contract Decoder {
         bytes32 s,
         uint8 v)
     {
-        uint160 ii;
-        initiator = bytesToAddress(slice(m, 80, 100), ii);
-        locksroot = bytesToBytes32(slice(m, 100, 132), locksroot);
         hashlock = bytesToBytes32(slice(m, 132, 164), hashlock);
         balance = bytesToInt(slice(m, 164, 196), balance);
         amount = bytesToInt(slice(m, 196, 228), amount);

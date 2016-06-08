@@ -1,5 +1,6 @@
 import "HumanStandardToken.sol";
 import "Decoder.sol";
+import "Getters.sol";
 
 contract NettingChannelContract {
     uint public lockedTime;
@@ -10,6 +11,7 @@ contract NettingChannelContract {
     address public closingAddress;
     StandardToken public assetToken;
     Decoder public dcdr;
+    Getters public getter;
 
     struct Participant
     {
@@ -43,9 +45,6 @@ contract NettingChannelContract {
     }
 
     function NettingChannelContract(StandardToken assetAdr, address participant1, address participant2, uint lckdTime) {
-        opened = 0;
-        closed = 0;
-        settled = 0;
         assetToken = StandardToken(assetAdr);
         assetAddress = assetAdr;
         participants[0].addr = participant1;
@@ -75,7 +74,7 @@ contract NettingChannelContract {
     /// @notice isOpen() to check if a channel is open
     /// @dev Check if a channel is open and both parties have deposited to the channel
     /// @return open (bool) the status of the channel
-    function isOpen() private returns (bool open) {
+    function isOpen() private returns (bool) {
         if (closed > 0) throw;
         if (participants[0].deposit > 0 || participants[1].deposit > 0) return true;
         else return false;
@@ -121,8 +120,8 @@ contract NettingChannelContract {
         if (closed > 0) throw; // channel is closing
 
         // check if sender of message is a participant
-        if (getSender(firstEncoded) != participants[0].addr &&
-            getSender(firstEncoded) != participants[1].addr) throw;
+        if (getter.getSender(firstEncoded) != participants[0].addr &&
+            getter.getSender(firstEncoded) != participants[1].addr) throw;
 
         uint partnerId = atIndex(partner(msg.sender));
         uint senderId = atIndex(msg.sender);
@@ -162,13 +161,13 @@ contract NettingChannelContract {
         if (closed > 0) throw; // channel is closing
 
         // check if the sender of either of the messages is a participant
-        if (getSender(firstEncoded) != participants[0].addr &&
-            getSender(firstEncoded) != participants[1].addr) throw;
-        if (getSender(secondEncoded) != participants[0].addr &&
-            getSender(secondEncoded) != participants[1].addr) throw;
+        if (getter.getSender(firstEncoded) != participants[0].addr &&
+            getter.getSender(firstEncoded) != participants[1].addr) throw;
+        if (getter.getSender(secondEncoded) != participants[0].addr &&
+            getter.getSender(secondEncoded) != participants[1].addr) throw;
 
         // Don't allow both transfers to be from the same sender
-        if (getSender(firstEncoded) == getSender(secondEncoded)) throw;
+        if (getter.getSender(firstEncoded) == getter.getSender(secondEncoded)) throw;
 
         uint partnerId = atIndex(partner(msg.sender));
         uint senderId = atIndex(msg.sender);
@@ -207,7 +206,7 @@ contract NettingChannelContract {
         if (settled > 0) throw; // channel already settled
         if (closed == 0) throw; // channel is open
         if (msg.sender == closingAddress) throw; // don't allow closer to update
-        if (closingAddress == getSender(message)) throw;
+        if (closingAddress == getter.getSender(message)) throw;
 
         decode(message);
 
@@ -278,89 +277,6 @@ contract NettingChannelContract {
     }
     */
 
-    // Get the nonce of the last sent transfer
-    function getNonce(bytes message) private returns (uint8 non) {
-        // Direct Transfer
-        if (message[0] == 5) {
-            (non, , , , , , ) = dcdr.decodeTransfer(message);
-        }
-        // Locked Transfer
-        if (message[0] == 6) {
-            (non, , , ) = dcdr.decodeLockedTransfer1(message);
-        }
-        // Mediated Transfer
-        if (message[0] == 7) {
-            (non, , , , ) = dcdr.decodeMediatedTransfer1(message); 
-        }
-        // Cancel Transfer
-        if (message[0] == 8) {
-            (non, , , ) = dcdr.decodeCancelTransfer1(message);
-        }
-        else throw;
-    }
-
-    // Gets the sender of a last sent transfer
-    function getSender(bytes message) private returns (address sndr) {
-        // Secret
-        if (message[0] == 4) {
-            sndr = dsec(message);
-        }
-        // Direct Transfer
-        if (message[0] == 5) {
-            sndr = ddtran(message);
-        }
-        // Locked Transfer
-        if (message[0] == 6) {
-            sndr = dltran(message);
-        }
-        // Mediated Transfer
-        if (message[0] == 7) {
-            sndr = dmtran(message);
-        }
-        // Cancel Transfer
-        if (message[0] == 8) {
-            sndr = dctran(message);
-        }
-        else throw;
-    }
-
-    function dsec(bytes message) private returns (address sndr) {
-        var(sec, r, s, v) = dcdr.decodeSecret(message);
-        bytes32 h = sha3(sec);
-        sndr = ecrecover(h, v, r, s);
-    }
-    function ddtran(bytes message) private returns (address sndr) {
-        var(non, ass, rec, bal, olo, , r, s, v) = dcdr.decodeTransfer(message);
-        bytes32 h = sha3(non, ass, bal, rec, olo); //need the optionalLocksroot
-        sndr = ecrecover(h, v, r, s);
-    }
-    function dltran(bytes message) private returns (address sndr) {
-        bytes32 lock;
-        var(non, , ass, rec) = dcdr.decodeLockedTransfer1(message);
-        var(loc, bal, , has, r, s, v) = dcdr.decodeLockedTransfer2(message);
-        bytes32 h = sha3(non, ass, bal, rec, loc, lock ); //need the lock
-        sndr = ecrecover(h, v, r, s);
-    }
-    function dmtranHelper(bytes message) private returns (bytes32 h) {
-        bytes32 lock;
-        var(non, , ass, rec, tar) = dcdr.decodeMediatedTransfer1(message); 
-        var(ini, loc, bal, fee, , , ) = dcdr.decodeMediatedTransfer2Stripped(message);
-        h = sha3(non, ass, bal, rec, loc, lock, tar, ini, fee); //need the lock
-    }
-    function dmtran(bytes message) private returns (address sndr) {
-        bytes32 hash = dmtranHelper(message);
-        var(, , , , r, s, v) = dcdr.decodeMediatedTransfer2Stripped(message);
-        sndr = ecrecover(hash, v, r, s);
-    }
-    function dctran(bytes message) private returns (address sndr) {
-        bytes32 lock;
-        var(non, , ass, rec) = dcdr.decodeCancelTransfer1(message);
-        var(loc, bal, , , r, s, v) = dcdr.decodeCancelTransfer2(message);
-        bytes32 h = sha3(non, ass, bal, rec, loc, lock); //need the lock
-        sndr = ecrecover(h, v, r, s);
-    }
-
-
     function decode(bytes message) private {
         bytes32 hash;
         // Secret
@@ -391,7 +307,7 @@ contract NettingChannelContract {
     }
 
     function decsec(bytes message) private {
-        uint i = atIndex(getSender(message));
+        uint i = atIndex(getter.getSender(message));
         var(sec, r, s, v) = dcdr.decodeSecret(message);
         participants[atIndex(msg.sender)].secret = sec;
         bytes32 h = sha3(sec);
@@ -399,7 +315,7 @@ contract NettingChannelContract {
     }
     function decdir(bytes message) private {
         bytes32 lock;
-        uint i = atIndex(getSender(message));
+        uint i = atIndex(getter.getSender(message));
         var(non, ass, rec, bal, loc, sec, r, s, v) = dcdr.decodeTransfer(message);
         participants[i].nonce = non;
         participants[i].asset = ass;
@@ -409,7 +325,7 @@ contract NettingChannelContract {
         participants[i].sender = ecrecover(h, v, r, s);
     }
     function decloc1(bytes message) private returns (bytes32 hh) {
-        uint i = atIndex(getSender(message));
+        uint i = atIndex(getter.getSender(message));
         var(non, exp, ass, rec) = dcdr.decodeLockedTransfer1(message);
         participants[i].nonce = non;
         lockedTime = exp;
@@ -419,7 +335,7 @@ contract NettingChannelContract {
     }
     function decloc2(bytes message, bytes32 hh) private {
         bytes32 lock;
-        uint i = atIndex(getSender(message));
+        uint i = atIndex(getter.getSender(message));
         var(loc, bal, amo, has, r, s, v) = dcdr.decodeLockedTransfer2(message);
         participants[i].locksroot = loc;
         participants[i].balance = bal;
@@ -429,27 +345,27 @@ contract NettingChannelContract {
         participants[i].sender = ecrecover(h, v, r, s);
     }
     function decmed1(bytes message) private returns (bytes32 hh) {
-        uint i = atIndex(getSender(message));
-        var(non, exp, ass, rec, tar) = dcdr.decodeMediatedTransfer1(message); 
+        uint i = atIndex(getter.getSender(message));
+        var(non, exp, ass, rec, tar, ini, loc) = dcdr.decodeMediatedTransfer1(message); 
         participants[i].nonce = non;
         lockedTime = exp;
         participants[i].asset = ass;
         participants[i].recipient = rec;
-        hh = sha3(non, ass, rec, tar);
+        participants[i].locksroot = loc;
+        hh = sha3(non, ass, rec, tar, ini, loc);
     }
     function decmed2(bytes message, bytes32 hh) private {
         bytes32 lock;
-        uint i = atIndex(getSender(message));
-        var(ini, loc, has, bal, amo, fee, r, s, v) = dcdr.decodeMediatedTransfer2(message);
-        participants[i].locksroot = loc;
+        uint i = atIndex(getter.getSender(message));
+        var(has, bal, amo, fee, r, s, v) = dcdr.decodeMediatedTransfer2(message);
         participants[i].hashlock = has;
         participants[i].balance = bal;
         participants[i].transferedAmount = amo;
-        bytes32 h = sha3(hh, bal, loc, lock, ini, fee); //need the lock
+        bytes32 h = sha3(hh, bal, lock, fee); //need the lock
         participants[i].sender = ecrecover(h, v, r, s);
     }
     function deccan1(bytes message) private returns (bytes32 hh) {
-        uint i = atIndex(getSender(message));
+        uint i = atIndex(getter.getSender(message));
         var(non, exp, ass, rec) = dcdr.decodeCancelTransfer1(message);
         participants[i].nonce = non;
         lockedTime = exp;
@@ -459,7 +375,7 @@ contract NettingChannelContract {
     }
     function deccan2(bytes message, bytes32 hh) private {
         bytes32 lock;
-        uint i = atIndex(getSender(message));
+        uint i = atIndex(getter.getSender(message));
         var(loc, bal, amo, has, r, s, v) = dcdr.decodeCancelTransfer2(message);
         participants[i].locksroot = loc;
         participants[i].balance = bal;
@@ -480,23 +396,6 @@ contract NettingChannelContract {
     }
 
     /*[> HELPER FUNCTIONS <]*/
-
-    function bytesToIntEight(bytes b, uint8 i) private returns (uint8 res) {
-        assembly { i := mload(add(b, 0x8)) }
-        res = i;
-    }
-
-    function bytesToInt(bytes b, uint i) private returns (uint res) {
-        assembly { i := mload(add(b, 0x20)) }
-        res = i;
-    }
-
-    function bytesToAddress(bytes b, uint160 i) private returns (address add) {
-        assembly { i := mload(add(b, 0x14)) }
-        uint160 a = uint160(i);
-        add = address(i);
-    }
-
     function bytesToBytes32(bytes b, bytes32 i) private returns (bytes32 bts) {
         assembly { i := mload(add(b, 0x20)) }
         bts = i;

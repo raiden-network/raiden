@@ -16,6 +16,7 @@ library_path = "raiden/smart_contracts/Decoder.sol"
 # ncc_path = get_contract_path('NettingChannelContract.sol.old')
 ncc_path = "raiden/smart_contracts/NettingChannelContract.sol.old"
 
+tester.gas_limit = 9575081L
 
 def test_ncc():
     s = tester.state()
