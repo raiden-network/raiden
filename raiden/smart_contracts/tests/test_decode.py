@@ -5,9 +5,10 @@ from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
 
-from raiden.network.rpc.client import get_contract_path
+# from raiden.network.rpc.client import get_contract_path
 
-decoder_path = get_contract_path('Decoder.sol')
+# decoder_path = get_contract_path('Decoder.sol')
+decoder_path = "raiden/smart_contracts/Decoder.sol"
 
 with open(decoder_path) as decoder_file:
     decode_code = decoder_file.read()
@@ -97,23 +98,23 @@ def test_decode_mediated_transfer():
     target = o1[4]
     assert len(target) == 40
     assert target == privtoaddr('z' * 32).encode('hex')
-    initiator = o2[0]
+    initiator = o1[5]
     assert len(initiator) == 40
     assert initiator == privtoaddr('x' * 32).encode('hex')
-    locksroot = o2[1]
+    locksroot = o1[6]
     assert locksroot == '60d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df51'.decode('hex')
-    hashlock = o2[2]
+    hashlock = o2[0]
     assert hashlock == sha3('x' * 32)
-    balance = o2[3]
+    balance = o2[1]
     assert balance == 1
-    amount = o2[4]
+    amount = o2[2]
     assert amount == 29  # int('000000000000000000000000000000000000000000000000000000000000001d', 16)
-    fee = o2[5]
+    fee = o2[3]
     assert fee == 0
     signature = '79d1479c11af904096d7e179c4184b84fd5765f0a0ab1cf44578ef7a545e1b7157c73df9c3ee2797ee379eb05b1b239cea0eec47f9e03adc546a4c0ff7dcc3a601'.decode('hex')
-    r = o2[6]
-    s = o2[7]
-    v = o2[8]
+    r = o2[4]
+    s = o2[5]
+    v = o2[6]
     assert r == signature[:32]
     assert s == signature[32:64]
     assert v == int(signature[64].encode('hex'))
