@@ -1,5 +1,5 @@
 contract Decoder {
-    
+
     function slice(bytes a, uint start, uint end) private returns (bytes n) {
         if (a.length < end) throw;
         if (start < 0) throw;
@@ -34,32 +34,39 @@ contract Decoder {
         (r, s, v) = sigSplit(slice(m, 36, 101));
     }
 
-    function decodeTransfer(bytes m)  
+    function decodeTransfer1(bytes m)
         returns
-        (uint8 nonce,
+        (bytes4 cmdIdPad,
+        uint8 nonce,
         address asset,
         address recipient,
-        uint balance,
-        bytes32 optionalLocksroot,
+        uint transferedAmount)
+    {
+        if (m.length != 213) throw;
+        cmdIdPad = bytesToBytes4(slice(m, 0, 4), cmdIdPad);
+        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
+        uint160 ia;
+        asset = bytesToAddress(slice(m, 12, 32), ia);
+        uint160 ir;
+        recipient = bytesToAddress(slice(m, 32, 52), ir);
+        transferedAmount = bytesToInt(slice(m, 52, 84), transferedAmount);
+    }
+
+    function decodeTransfer2(bytes m)
+        returns
+        (bytes32 optionalLocksroot,
         bytes32 optionalSecret,
         bytes32 r,
         bytes32 s,
         uint8 v)
     {
         if (m.length != 213) throw;
-        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
-        uint160 ia;
-        asset = bytesToAddress(slice(m, 12, 32), ia);
-        uint160 ir;
-        recipient = bytesToAddress(slice(m, 32, 52), ir);
-        balance = bytesToInt(slice(m, 52, 84), balance);
         optionalLocksroot = bytesToBytes32(slice(m, 84, 116), optionalLocksroot);
         optionalSecret = bytesToBytes32(slice(m, 116, 148), optionalSecret);
         (r, s, v) = sigSplit(slice(m, 148, 213));
-
     }
 
-    function decodeLockedTransfer1(bytes m) 
+    function decodeLockedTransfer1(bytes m)
         returns
         (uint8 nonce,
         uint8 expiration, 
@@ -78,7 +85,7 @@ contract Decoder {
     function decodeLockedTransfer2(bytes m) 
         returns
         (bytes32 locksroot,
-        uint balance,
+        uint transferedAmount,
         uint amount,
         bytes32 hashlock,
         bytes32 r,
@@ -87,7 +94,7 @@ contract Decoder {
     {
 
         locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
-        balance = bytesToInt(slice(m, 92, 124), balance);
+        transferedAmount = bytesToInt(slice(m, 92, 124), transferedAmount);
         amount = bytesToInt(slice(m, 124, 156), amount);
         hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
         (r, s, v) = sigSplit(slice(m, 188, 253));
@@ -120,7 +127,7 @@ contract Decoder {
     function decodeMediatedTransfer2(bytes m) 
         returns
         (bytes32 hashlock,
-        uint balance,
+        uint transferedAmount,
         uint amount,
         uint fee,
         bytes32 r,
@@ -128,17 +135,16 @@ contract Decoder {
         uint8 v)
     {
         hashlock = bytesToBytes32(slice(m, 132, 164), hashlock);
-        balance = bytesToInt(slice(m, 164, 196), balance);
+        transferedAmount = bytesToInt(slice(m, 164, 196), transferedAmount);
         amount = bytesToInt(slice(m, 196, 228), amount);
         fee = bytesToInt(slice(m, 228, 260), fee);
         (r, s, v) = sigSplit(slice(m, 260, 325));
     }
-
     function decodeMediatedTransfer2Stripped(bytes m) 
         returns
         (address initiator,
         bytes32 locksroot,
-        uint balance,
+        uint transferedAmount,
         uint fee,
         bytes32 r,
         bytes32 s,
@@ -147,7 +153,7 @@ contract Decoder {
         uint160 ii;
         initiator = bytesToAddress(slice(m, 80, 100), ii);
         locksroot = bytesToBytes32(slice(m, 100, 132), locksroot);
-        balance = bytesToInt(slice(m, 164, 196), balance);
+        transferedAmount = bytesToInt(slice(m, 164, 196), transferedAmount);
         fee = bytesToInt(slice(m, 228, 260), fee);
         (r, s, v) = sigSplit(slice(m, 260, 325));
     }
@@ -170,7 +176,7 @@ contract Decoder {
     function decodeCancelTransfer2(bytes m) 
     returns
     (bytes32 locksroot,
-    uint balance,
+    uint transferedAmount,
     uint amount,
     bytes32 hashlock,
     bytes32 r,
@@ -178,7 +184,7 @@ contract Decoder {
     uint8 v)
     {
         locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
-        balance = bytesToInt(slice(m, 92, 124), balance);
+        transferedAmount = bytesToInt(slice(m, 92, 124), transferedAmount);
         amount = bytesToInt(slice(m, 124, 156), amount);
         hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
         (r, s, v) = sigSplit(slice(m, 188, 253));
@@ -200,6 +206,11 @@ contract Decoder {
         assembly { i := mload(add(b, 0x14)) }
         uint160 a = uint160(i);
         add = address(i);
+    }
+
+    function bytesToBytes4(bytes b, bytes4 i) private returns (bytes4 bts) {
+        assembly { i := mload(add(b, 0x20)) }
+        bts = i;
     }
 
     function bytesToBytes32(bytes b, bytes32 i) private returns (bytes32 bts) {

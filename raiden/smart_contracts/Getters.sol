@@ -3,26 +3,26 @@ import "Decoder.sol";
 contract Getters {
     Decoder public dcdr;
 
-    // Get the nonce of the last sent transfer
-    function getNonce(bytes message) private returns (uint8 non) {
-        // Direct Transfer
-        if (message[0] == 5) {
-            (non, , , , , , ) = dcdr.decodeTransfer(message);
-        }
-        // Locked Transfer
-        if (message[0] == 6) {
-            (non, , , ) = dcdr.decodeLockedTransfer1(message);
-        }
-        // Mediated Transfer
-        if (message[0] == 7) {
-            (non, , , , ) = dcdr.decodeMediatedTransfer1(message); 
-        }
-        // Cancel Transfer
-        if (message[0] == 8) {
-            (non, , , ) = dcdr.decodeCancelTransfer1(message);
-        }
-        else throw;
-    }
+    /*// Get the nonce of the last sent transfer*/
+    /*function getNonce(bytes message) private returns (uint8 non) {*/
+        /*// Direct Transfer*/
+        /*if (message[0] == 5) {*/
+            /*(, non, , , , , , ) = dcdr.decodeTransfer(message);*/
+        /*}*/
+        /*// Locked Transfer*/
+        /*if (message[0] == 6) {*/
+            /*(non, , , ) = dcdr.decodeLockedTransfer1(message);*/
+        /*}*/
+        /*// Mediated Transfer*/
+        /*if (message[0] == 7) {*/
+            /*(non, , , , ) = dcdr.decodeMediatedTransfer1(message); */
+        /*}*/
+        /*// Cancel Transfer*/
+        /*if (message[0] == 8) {*/
+            /*(non, , , ) = dcdr.decodeCancelTransfer1(message);*/
+        /*}*/
+        /*else throw;*/
+    /*}*/
 
     // Gets the sender of a last sent transfer
     function getSender(bytes message) returns (address sndr) {
@@ -55,8 +55,9 @@ contract Getters {
         sndr = ecrecover(h, v, r, s);
     }
     function ddtran(bytes message) private returns (address sndr) {
-        var(non, ass, rec, bal, olo, , r, s, v) = dcdr.decodeTransfer(message);
-        bytes32 h = sha3(non, ass, bal, rec, olo); //need the optionalLocksroot
+        var(cmd, non, ass, rec, trn) = dcdr.decodeTransfer1(message);
+        var(olo, ops, r, s, v) = dcdr.decodeTransfer2(message);
+        bytes32 h = sha3(cmd, non, ass, trn, rec, olo, ops); //need the optionalLocksroot
         sndr = ecrecover(h, v, r, s);
     }
     function dltran(bytes message) private returns (address sndr) {
