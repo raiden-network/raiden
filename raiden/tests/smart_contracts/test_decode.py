@@ -5,10 +5,9 @@ from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
 
-# from raiden.network.rpc.client import get_contract_path
+from raiden.network.rpc.client import get_contract_path
 
-# decoder_path = get_contract_path('Decoder.sol')
-decoder_path = "raiden/smart_contracts/Decoder.sol"
+decoder_path = get_contract_path('Decoder.sol')
 
 with open(decoder_path) as decoder_file:
     decode_code = decoder_file.read()
