@@ -166,7 +166,7 @@ def test_new_netting_contract():
 
 
 @pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
-def test_blockchain():
+def test_blockchain(request):
     # pylint: disable=too-many-locals
     from hydrachain import app
     app.slogging.configure(':ERROR,eth.chain.tx:DEBUG,jsonrpc:DEBUG')
@@ -187,6 +187,11 @@ def test_blockchain():
     ]
 
     hydrachain_apps = hydrachain_network(private_keys, base_port, tmp_datadir)
+
+    @request.addfinalizer
+    def cleanup():
+        for hydrachain in hydrachain_apps:
+            hydrachain.stop()
 
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
@@ -271,6 +276,3 @@ def test_blockchain():
         address.encode('hex'),
         addresses[1].encode('hex'),
     )
-
-    for hydrachain in hydrachain_apps:
-        hydrachain.stop()
