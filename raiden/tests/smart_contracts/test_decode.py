@@ -46,26 +46,29 @@ def test_decode_transfer():
     bad_data = bad_encoded_data.decode('hex')
     s = tester.state()
     c = s.abi_contract(decode_code, language="solidity")
-    o1 = c.decodeTransfer(data)
+    o1 = c.decodeTransfer1(data)
+    o2 = c.decodeTransfer2(data)
     assert data[0] == '\x05'  # make sure data has right cmdid
     assert len(data) == 213
-    nonce = o1[0]
+    cmd_id_pad = o1[0]
+    assert cmd_id_pad == '05000000'.decode('hex')
+    nonce = o1[1]
     assert nonce == 1
-    asset = o1[1]
+    asset = o1[2]
     assert asset == sha3('asset')[:20].encode('hex')
-    recipient = o1[2]
+    recipient = o1[3]
     assert len(recipient) == 40
     assert recipient == privtoaddr('y' * 32).encode('hex')
-    balance = o1[3]
-    assert balance == 1
-    optionalLocksroot = o1[4]
+    transfered_amount = o1[4]
+    assert transfered_amount == 1
+    optionalLocksroot = o2[0]
     assert optionalLocksroot == '60d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df51'.decode('hex')
-    optionalSecret = o1[5]
+    optionalSecret = o2[1]
     assert optionalSecret == '0000000000000000000000000000000000000000000000000000000000000000'.decode('hex')
     signature = 'ff9636ccb66e73219fd166cd6ffbc9c6215f74ff31c1fd4131cf532b29ee096f65278c459253fba65bf019c723a68bb4a6153ea8378cd1b15d55825e1a291b6f00'.decode('hex')
-    r = o1[6]
-    s = o1[7]
-    v = o1[8]
+    r = o2[2]
+    s = o2[3]
+    v = o2[4]
     assert r == signature[:32]
     assert s == signature[32:64]
     assert v == int(signature[64].encode('hex'))
