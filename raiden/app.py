@@ -8,6 +8,7 @@ import signal
 import yaml
 import gevent
 from ethereum import slogging
+from ethereum.utils import privtoaddr
 
 from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
@@ -25,9 +26,9 @@ class App(object):  # pylint: disable=too-few-public-methods
         host='',
         port=INITIAL_PORT,
         privkey='',
-        # timespan a node requires to learn the secret before the lock expires for him (time in #blocks):
+        # number of blocks that a node requires to learn the secret before the lock expires
         reveal_timeout=3,
-        # how long to wait for a transfer until CancelTransfer is sent (time in milliseconds):
+        # how long to wait for a transfer until CancelTransfer is sent (time in milliseconds)
         msg_timeout=100.00
     )
 
@@ -81,7 +82,12 @@ def main():
         print('Missing "privkey" in the configuration file, cannot proceed')
         sys.exit(1)
 
-    blockchain_server = BlockChainService(rpc_connection, args.registry_address)
+    blockchain_server = BlockChainService(
+        rpc_connection,
+        config['privkey'],
+        privtoaddr(config['privkey']),
+        args.registry_address,
+    )
     discovery = Discovery()
 
     for node in config['nodes']:

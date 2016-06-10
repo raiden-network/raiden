@@ -21,24 +21,35 @@ class RaidenProtocol(object):
     try_interval = 1.
     max_tries = 5
     max_message_size = 1200
-    repeat_messages = False  # default for testing, w/o packet loss
 
     def __init__(self, transport, discovery, raiden):
         self.transport = transport
         self.discovery = discovery
         self.raiden = raiden
 
-        self.tries = dict()  # msg hash: count_tries
+        self.number_of_tries = dict()  # msg hash: count_tries
         self.sent_acks = dict()  # msghash: Ack
 
     def send(self, receiver_address, msg):
-        assert isaddress(receiver_address)
-        assert not isinstance(msg, (Ack, BaseError)), msg
+        if not isaddress(receiver_address):
+            raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
-        host_port = self.discovery.get(receiver_address)
+        if isinstance(msg, (Ack, BaseError)):
+            raise ValueError('Do not use send for Ack messages or Erorrs')
+
+        if len(msg.encode()) > self.max_message_size:
+            raise ValueError('message size excedes the maximum {}'.format(self.max_message_size))
+
+        return gevent.spawn(self._repeat_until_ack, receiver_address, msg)
+
+    def _repeat_until_ack(self, receiver_address, msg):
         data = msg.encode()
+        host_port = self.discovery.get(receiver_address)
+
+        # msghash is removed from the `number_of_tries` once a Ack is
+        # received, resend until we receive it or give up
         msghash = sha3(data)
-        self.tries[msghash] = self.max_tries
+        self.number_of_tries[msghash] = 0
 
         log.info('SENDING {} > {} : [{}] {}'.format(
             pex(self.raiden.address),
@@ -47,26 +58,17 @@ class RaidenProtocol(object):
             msg,
         ))
 
-        assert len(data) < self.max_message_size
-
-        def repeater():
-            while self.tries.get(msghash, 0) > 0:
-                if not self.repeat_messages and self.tries[msghash] < self.max_tries:
-                    raise Exception('DEACTIVATED MSG resents {} {}'.format(
-                        pex(receiver_address),
-                        msg,
-                    ))
-
-                self.tries[msghash] -= 1
-                self.transport.send(self.raiden, host_port, data)
-                gevent.sleep(self.try_interval)
-
-            # Each sent msg must be acked. When msg is acked its hash is removed from self.tries
-            if msghash in self.tries:
+        while msghash in self.number_of_tries:
+            if self.number_of_tries[msghash] > self.max_tries:
                 # FIXME: suspend node + recover from the failure
-                raise RuntimeError('Node does not reply')
+                raise Exception('DEACTIVATED MSG resents {} {}'.format(
+                    pex(receiver_address),
+                    msg,
+                ))
 
-        return gevent.spawn(repeater)
+            self.number_of_tries[msghash] += 1
+            self.transport.send(self.raiden, host_port, data)
+            gevent.sleep(self.try_interval)
 
     def send_ack(self, receiver_address, msg):
         assert isinstance(msg, (Ack, BaseError))
@@ -88,7 +90,10 @@ class RaidenProtocol(object):
         self.sent_acks[msg.echo] = (receiver_address, msg)
 
     def receive(self, data):
-        assert len(data) < self.max_message_size
+        # ignore large packets
+        if len(data) > self.max_message_size:
+            log.error('receive packet larger than maximum size', length=len(data))
+            return
 
         msghash = sha3(data)
 
@@ -99,15 +104,13 @@ class RaidenProtocol(object):
         # We ignore the sending endpoint as this can not be known w/ UDP
         msg = messages.decode(data)
 
-        # handle Acks
         if isinstance(msg, Ack):
             log.debug('ACK MSGHASH RECEIVED {} [echo={}]'.format(
                 pex(self.raiden.address),
                 pex(msg.echo)
             ))
 
-            del self.tries[msg.echo]
-            return
-
-        assert isinstance(msg, Secret) or msg.sender
-        self.raiden.on_message(msg, msghash)
+            del self.number_of_tries[msg.echo]
+        else:
+            assert isinstance(msg, Secret) or msg.sender
+            self.raiden.on_message(msg, msghash)

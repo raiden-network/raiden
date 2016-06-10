@@ -8,7 +8,6 @@ from raiden.messages import Secret, CancelTransfer, TransferTimeout, LockedTrans
 from raiden.messages import SecretRequest
 from raiden.utils import lpex, pex
 
-
 __all__ = (
     'Task',
     'MediatedTransferTask',
@@ -68,17 +67,13 @@ class MediatedTransferTask(Task):
     # B: MediatedTransfer > C2
     # C2: MediatedTransfer > D
 
-    def __init__(self, transfermanager, amount, target, hashlock, expiration,
-                 originating_transfer=None, secret=None):  # fee!
-        import transfermanager as transfermanagermodule
-        assert isinstance(transfermanager, transfermanagermodule.TransferManager)
-
+    def __init__(self, transfermanager, amount, target, hashlock,
+                 lock_expiration=None, originating_transfer=None, secret=None):  # fee!
         self.amount = amount
         self.assetmanager = transfermanager.assetmanager
         self.event = None
         self.fee = 0  # FIXME: calculate fee
         self.hashlock = hashlock
-        self.expiration = expiration
         self.originating_transfer = originating_transfer
         self.raiden = transfermanager.raiden
         self.secret = secret
@@ -97,8 +92,10 @@ class MediatedTransferTask(Task):
 
         if self.isinitiator:
             self.initiator = self.raiden.address
+            self.lock_expiration = self.raiden.chain.block_number + 18
         else:
             self.initiator = originating_transfer.initiator
+            self.lock_expiration = originating_transfer.lock.expiration - 1
 
         super(MediatedTransferTask, self).__init__()
         self.transfermanager.on_task_started(self)
@@ -118,7 +115,7 @@ class MediatedTransferTask(Task):
                 self.amount,
                 # HOTFIX: you cannot know channel.settle_timeout beforehand,since path is not yet defined
                 # FIXME: implement expiration adjustment in different task (e.g. 'InitMediatedTransferTask')
-                self.expiration if self.expiration is not None else channel.settle_timeout - 1,
+                self.lock_expiration if self.lock_expiration is not None else channel.settle_timeout - 1,
                 self.hashlock,
             )
             self.raiden.sign(mediated_transfer)
@@ -213,17 +210,16 @@ class MediatedTransferTask(Task):
             # the minimum required.
 
             # FIXME Hotfix, see self._run()
-            if not self.expiration:
-                expiration = channel.settle_timeout - 1
+            if not self.lock_expiration:
+                lock_expiration = channel.settle_timeout - 1
             else:
-                expiration = self.expiration
+                lock_expiration = self.lock_expiration
 
-            if not (self.raiden.chain.block_number + channel.reveal_timeout <=
-                    expiration <
-                    channel.settle_timeout):
+            reveal_expiration = self.raiden.chain.block_number + channel.reveal_timeout
+            if not reveal_expiration <= lock_expiration < channel.settle_timeout:
                 log.debug(
-                    'expiration is too large, channel/path cannot be used',
-                    expiration=expiration,
+                    'lock_expiration is too large, channel/path cannot be used',
+                    lock_expiration=lock_expiration,
                     channel_locktime=channel.settle_timeout,
                     nodeid=pex(path[0]),
                     partner=pex(path[1]),
@@ -355,13 +351,16 @@ class InitMediatedTransferTask(Task):  # TODO
 class ForwardSecretTask(Task):
 
     def __init__(self, transfermanager, hashlock, recipient, msg_timeout):
+        log.info('INIT', task=self)
+
         self.transfermanager = transfermanager
         self.recipient = recipient
         self.hashlock = hashlock
         self.msg_timeout = msg_timeout
         self.raiden = transfermanager.raiden
+        self.event = None
+
         super(ForwardSecretTask, self).__init__()
-        log.info('INIT', task=self)
         self.transfermanager.on_task_started(self)
 
     def __repr__(self):

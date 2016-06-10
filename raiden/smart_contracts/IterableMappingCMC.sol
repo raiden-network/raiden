@@ -1,17 +1,16 @@
-/// Iteratable data structure of the type [bytes32 k, NettingContract v]
-library IterableMappingNcc
-{
+import "ChannelManagerContract.sol";
+library IterableMappingCMC {
     // Might have to define the NettingContract type here for insertion
     struct itmap {
-        mapping(bytes32 => IndexValue) data;
+        mapping(address => IndexValue) data;
         KeyFlag[] keys;
         uint size;
     }
-    struct IndexValue { uint keyIndex; NettingContract value; }
-    struct KeyFlag { bytes32 key; bool deleted; }
+    struct IndexValue { uint keyIndex; ChannelManagerContract value; }
+    struct KeyFlag { address key; bool deleted; }
 
 
-    function insert(itmap storage self, bytes32 key, NettingContract value) returns (bool replaced) {
+    function insert(itmap storage self, address key, ChannelManagerContract value) returns (bool replaced) {
         uint keyIndex = self.data[key].keyIndex;
         self.data[key].value = value;
         if (keyIndex > 0)
@@ -26,22 +25,21 @@ library IterableMappingNcc
     }
 
 
-    function remove(itmap storage self, bytes32 key) returns (bool success){
+    function remove(itmap storage self, address key) returns (bool success){
         uint keyIndex = self.data[key].keyIndex;
-        if (keyIndex == 0)
-          return false;
+        if (keyIndex == 0) return false;
         delete self.data[key];
         self.keys[keyIndex - 1].deleted = true;
         self.size --;
     }
 
 
-    function contains(itmap storage self, bytes32 key) returns (bool) {
+    function contains(itmap storage self, address key) returns (bool) {
         return self.data[key].keyIndex > 0;
     }
 
 
-    function atIndex(itmap storage self, bytes32 key) returns (uint index) {
+    function atIndex(itmap storage self, address key) returns (uint index) {
         return self.data[key].keyIndex;
     }
 
@@ -64,7 +62,7 @@ library IterableMappingNcc
     }
 
 
-    function iterate_get(itmap storage self, uint keyIndex) returns (bytes32 key, NettingContract value){
+    function iterate_get(itmap storage self, uint keyIndex) returns (address key, ChannelManagerContract value){
         key = self.keys[keyIndex].key;
         value = self.data[key].value;
     }

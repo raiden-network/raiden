@@ -16,7 +16,12 @@ from raiden.utils import pex, sha3
 slogging.configure(':debug')
 
 # set shorter timeout for testing
-MediatedTransferTask.timeout_per_hop = 0.1
+MediatedTransferTask.timeout_per_hop = 0.3
+
+
+def teardown_module(module):  # pylint: disable=unused-argument
+    from raiden.tests.utils.tests import cleanup_tasks
+    cleanup_tasks()
 
 
 def test_transfer():
@@ -35,8 +40,8 @@ def test_transfer():
     channel0 = asset_manager0.channels[app1.raiden.address]
     channel1 = asset_manager1.channels[app0.raiden.address]
 
-    balance0 = channel0.our_state.balance
-    balance1 = channel1.our_state.balance
+    balance0 = channel0.balance
+    balance1 = channel1.balance
 
     assert asset_manager0.asset_address == asset_manager1.asset_address
     assert app1.raiden.address in asset_manager0.channels
@@ -57,7 +62,7 @@ def test_transfer():
     assert len(messages) == 2  # DirectTransfer, Ack
     directtransfer_message = decode(messages[0])
     assert isinstance(directtransfer_message, DirectTransfer)
-    assert directtransfer_message.balance == balance1 + amount
+    assert directtransfer_message.transfered_amount == amount
 
     ack_message = decode(messages[1])
     assert isinstance(ack_message, Ack)
@@ -131,10 +136,10 @@ def test_mediated_transfer():
     c_cb = ams_by_address[hop3][asset_address].channels[hop2]
 
     # initial channel balances
-    b_ab = c_ab.our_state.balance
-    b_ba = c_ba.our_state.balance
-    b_bc = c_bc.our_state.balance
-    b_cb = c_cb.our_state.balance
+    b_ab = c_ab.balance
+    b_ba = c_ba.balance
+    b_bc = c_bc.balance
+    b_cb = c_cb.balance
 
     amount = 10
 
@@ -143,10 +148,10 @@ def test_mediated_transfer():
     gevent.sleep(1.)
 
     # check
-    assert b_ab - amount == c_ab.our_state.balance
-    assert b_ba + amount == c_ba.our_state.balance
-    assert b_bc - amount == c_bc.our_state.balance
-    assert b_cb + amount == c_cb.our_state.balance
+    assert b_ab - amount == c_ab.balance
+    assert b_ba + amount == c_ba.balance
+    assert b_bc - amount == c_bc.balance
+    assert b_cb + amount == c_cb.balance
 
 
 @pytest.mark.xfail(reason='not implemented')

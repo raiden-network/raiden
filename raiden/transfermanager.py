@@ -51,6 +51,7 @@ class TransferManager(object):
             direct_transfer = channel.create_directtransfer(amount, secret=secret)
             self.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer, callback=callback)
+
             task = self.raiden.protocol.send(direct_transfer.recipient, direct_transfer)
             task.join()
 
@@ -70,7 +71,7 @@ class TransferManager(object):
                 # PROBLEM:  we dont know yet which channel to use! channel.settle_timeout not known
                 # TODO: create InitMediatedTransferTask, that spawns MediatedTransfers and waits for timeout/success.
                 # on timeout, it alters timeout/expiration arguments, handles locks and lock forwarding
-                expiration=None,
+                lock_expiration=None,
                 originating_transfer=None,
                 secret=secret,
             )
@@ -94,6 +95,7 @@ class TransferManager(object):
         channel.register_transfer(transfer)  # this raises if the transfer is invalid
 
         config = self.raiden.config
+
         # either we are the target of the transfer, so we need to send a
         # SecretRequest
         if transfer.target == self.raiden.address:
@@ -114,6 +116,7 @@ class TransferManager(object):
         else:
             # subtract reveal_timeout from the lock expiration of the incoming transfer
             expiration = transfer.lock.expiration - config['reveal_timeout']
+
             transfer_task = MediatedTransferTask(
                 self,
                 transfer.lock.amount,

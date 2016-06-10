@@ -74,3 +74,9 @@ class ChannelGraph(object):
             for path in all_paths.values()
             if len(path) == num_hops + 1
         ]
+
+    def has_path(self, source, target):
+        """ Return True if there is a path connectin source and target, False
+        otherwise.
+        """
+        return networkx.has_path(self.graph, source, target)
