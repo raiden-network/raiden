@@ -105,12 +105,19 @@ class RaidenProtocol(object):
         msg = messages.decode(data)
 
         if isinstance(msg, Ack):
-            log.debug('ACK MSGHASH RECEIVED {} [echo={}]'.format(
-                pex(self.raiden.address),
-                pex(msg.echo)
-            ))
+            # we might receive the same Ack more than once
+            if msg.echo in self.number_of_tries:
+                log.debug('ACK RECEIVED {} [echo={}]'.format(
+                    pex(self.raiden.address),
+                    pex(msg.echo)
+                ))
 
-            del self.number_of_tries[msg.echo]
+                del self.number_of_tries[msg.echo]
+            else:
+                log.debug('DUPLICATED ACK RECEIVED {} [echo={}]'.format(
+                    pex(self.raiden.address),
+                    pex(msg.echo)
+                ))
         else:
             assert isinstance(msg, Secret) or msg.sender
             self.raiden.on_message(msg, msghash)
