@@ -73,7 +73,7 @@ locksroot = make_field('locksroot', 32, '32s')
 hashlock = make_field('hashlock', 32, '32s')
 secret = make_field('secret', 32, '32s')
 echo = make_field('echo', 32, '32s')
-balance = make_field('balance', 32, '32s', integer(0, BYTE ** 32))
+transfered_amount = make_field('transfered_amount', 32, '32s', integer(0, BYTE ** 32))
 amount = make_field('amount', 32, '32s', integer(0, BYTE ** 32))
 fee = make_field('fee', 32, '32s', integer(0, BYTE ** 32))
 
@@ -133,7 +133,7 @@ DirectTransfer = namedbuffer(
         nonce,                  # [4:12]
         asset,                  # [12:32]
         recipient,              # [32:52]
-        balance,
+        transfered_amount,
         optional_locksroot,
         optional_secret,
         signature,
@@ -150,7 +150,7 @@ LockedTransfer = namedbuffer(
         asset,                  # [20:40]
         recipient,              # [40:60]
         locksroot,
-        balance,
+        transfered_amount,
         amount,
         hashlock,
         signature,
@@ -170,7 +170,7 @@ MediatedTransfer = namedbuffer(
         initiator,                # [80:100]
         locksroot,
         hashlock,
-        balance,
+        transfered_amount,
         amount,
         fee,
         signature,
@@ -187,7 +187,7 @@ CancelTransfer = namedbuffer(
         asset,                  # [20:40]
         recipient,              # [40:60]
         locksroot,
-        balance,
+        transfered_amount,
         amount,
         hashlock,
         signature,

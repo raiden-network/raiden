@@ -240,7 +240,7 @@ def test_interwoven_transfers(num=100):  # pylint: disable=too-many-locals
 def test_register_invalid_transfer():
     """ Regression test for registration of invalid transfer.
 
-    Bhe bug occurred if a transfer with an invalid allowance but a valid secret
+    The bug occurred if a transfer with an invalid allowance but a valid secret
     was registered, when the local end registered the transfer it would
     "unlock" the partners asset, but the transfer wouldn't be sent because the
     allowance check failed, leaving the channel in an inconsistent state.
@@ -251,8 +251,8 @@ def test_register_invalid_transfer():
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
 
-    balance0 = channel0.our_state.balance
-    balance1 = channel1.our_state.balance
+    balance0 = channel0.balance
+    balance1 = channel1.balance
 
     amount = 10
     expiration = app0.raiden.chain.block_number + 15
@@ -281,7 +281,7 @@ def test_register_invalid_transfer():
     transfer2 = DirectTransfer(
         nonce=channel0.our_state.nonce,
         asset=channel0.asset_address,
-        balance=channel0.partner_state.balance + balance0 + amount,
+        transfered_amount=channel1.balance + balance0 + amount,
         recipient=channel0.partner_state.address,
         locksroot=channel0.partner_state.locked.root,
         secret=secret,

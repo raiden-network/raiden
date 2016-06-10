@@ -60,20 +60,26 @@ def test_settlement():
     # reflect this Bob wants to settle
 
     nettingcontract_address = channel0.nettingcontract_address
-    last_sent_transfers = [transfermessage]
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
     merkle_proof = channel1.our_state.locked.get_proof(transfermessage)
     root = channel1.our_state.locked.root
     assert check_proof(merkle_proof, root, sha3(transfermessage.lock.as_bytes))
 
-    unlocked = [(merkle_proof, transfermessage.lock, secret)]
-
     chain0.close(
         asset_address,
         nettingcontract_address,
         app0.raiden.address,
-        last_sent_transfers,
+        transfermessage,
+        None,
+    )
+
+    unlocked = [(merkle_proof, transfermessage.lock, secret)]
+
+    chain0.unlock(
+        asset_address,
+        nettingcontract_address,
+        app0.raiden.address,
         unlocked,
     )
 

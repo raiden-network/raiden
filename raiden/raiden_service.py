@@ -1,22 +1,29 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
-import networkx as nx
 
 from raiden.assetmanager import AssetManager
 from raiden.channelgraph import ChannelGraph
 from raiden.channel import Channel, ChannelEndState
 from raiden import messages
 from raiden.raiden_protocol import RaidenProtocol
-from raiden.transfermanager import TransferManager
 from raiden.utils import privtoaddr, isaddress, pex
 
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
-# TODO: reevaluate names of Custom Exceptions
-# base error for raiden"
+
+def safe_address_decode(address):
+    try:
+        address = address.decode('hex')
+    except TypeError:
+        pass
+
+    return address
+
+
 class RaidenError(Exception):
     pass
+
 
 class NoPathError(RaidenError):
     pass
@@ -31,9 +38,7 @@ class InvalidAmount(RaidenError):
 
 
 class RaidenAPI(object):
-    """
-    the external interface to the service
-    """
+    """ The external interface to the service. """
 
     def __init__(self, raiden):
         self.raiden = raiden
@@ -43,52 +48,48 @@ class RaidenAPI(object):
         return self.raiden.assetmanagers.keys()
 
     def transfer(self, asset_address, amount, target, callback=None):
-        asset_address = self.decode_address(asset_address, 'asset')
-        target = self.decode_address(target, 'receiver')
-        if amount <= 0 or type(amount) is not int:
-            raise InvalidAmount('Amount not int or > 0')
-        # only if a path exists, we forward the transfer to the RaidenService
+        if not isinstance(amount, (int, long)):
+            raise InvalidAmount('Amount not a number')
+
+        if amount <= 0:
+            raise InvalidAmount('Amount negative')
+
+        asset_address = safe_address_decode(asset_address)
+        target = safe_address_decode(target)
+
+        if not isaddress(asset_address) or asset_address not in self.assets:
+            raise InvalidAddress('asset address is not valid.')
+
+        if not isaddress(target):
+            raise InvalidAddress('target address is not valid.')
+
         if not self.raiden.has_path(asset_address, target):
             raise NoPathError('No path to address found')
-        assert asset_address in self.assets
+
         transfer_manager = self.raiden.assetmanagers[asset_address].transfermanager
-        assert isinstance(transfer_manager, TransferManager)
         transfer_manager.transfer(amount, target, callback=callback)
 
     def request_transfer(self, asset_address, amount, target):
-        assert isaddress(asset_address) and isaddress(target)
-        assert asset_address in self.assets
+        if not isaddress(asset_address) or asset_address not in self.assets:
+            raise InvalidAddress('asset address is not valid.')
+
+        if not isaddress(target):
+            raise InvalidAddress('target address is not valid.')
+
         transfer_manager = self.raiden.assetmanagers[asset_address].transfermanager
-        assert isinstance(transfer_manager, TransferManager)
         transfer_manager.request_transfer(amount, target)
 
     def exchange(self, asset_a, asset_b, amount_a=None, amount_b=None, callback=None):  # pylint: disable=too-many-arguments
         pass
 
-    @staticmethod
-    def decode_address(address, address_type):
-        assert type(address_type) is str
-        if not isaddress(address):
-            is_valid = False
-            try:
-                address = address.decode('hex')
-                is_valid = isaddress(address)
-            except TypeError:
-                pass
-            if not is_valid:
-                raise InvalidAddress('{} address is not valid.'.format(address_type),
-                                     address_type)
-        return address
-
 
 class RaidenService(object):
-
     """ Runs a service on a node """
 
-    def __init__(self, chain, privkey, transport, discovery, config):
+    def __init__(self, chain, privkey, transport, discovery, config):  # pylint: disable=too-many-arguments
         self.chain = chain
         self.config = config
-        self.privkey = privkey  # or config['privkey']
+        self.privkey = privkey
         self.address = privtoaddr(privkey)
         self.protocol = RaidenProtocol(transport, discovery, self)
         transport.protocol = self.protocol
@@ -165,12 +166,11 @@ class RaidenService(object):
         asset_manager.add_channel(channel_details['partner_address'], channel)
 
     def has_path(self, asset, target):
-        assetmanager = self.assetmanagers.get(asset)
-        if assetmanager is not None:
-            channel = assetmanager.channelgraph.graph
-            if target in channel.nodes():
-                return nx.has_path(channel, self.address, target)
-        return False
+        if asset not in self.assetmanagers:
+            return False
+
+        graph = self.assetmanagers[asset].channelgraph
+        return graph.has_path(self.address, target)
 
     def sign(self, msg):
         assert isinstance(msg, messages.SignedMessage)

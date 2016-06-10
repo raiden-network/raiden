@@ -12,6 +12,11 @@ from raiden.tests.utils.messages import setup_messages_cb
 slogging.configure(':debug')
 
 
+def teardown_module(module):  # pylint: disable=unused-argument
+    from raiden.tests.utils.tests import cleanup_tasks
+    cleanup_tasks()
+
+
 def test_ping():
     apps = create_network(num_nodes=2, num_assets=0, channels_per_node=0)
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking

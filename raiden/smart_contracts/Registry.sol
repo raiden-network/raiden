@@ -1,37 +1,37 @@
-// For iterable mapping
-import "cmcItSet.sol";
+import "IterableMappingCMC.sol";
 
 contract Registry {
-    IterableMappingCMC.itmap data; // Might be the data structure to use
+    IterableMappingCMC.itmap data;
 
+    event AssetAdded(address contractAddress); // useful for testing
 
     /// @notice addAsset(address) to add a new ChannelManagerContract to channelManagerContracts
     /// with the assetAddress as key.
-    /// @dev Add a new ChannelManagerContract to channelManagerContracts if assetAddress 
+    /// @dev Add a new ChannelManagerContract to channelManagerContracts if assetAddress
     /// does not already exist.
     /// @param assetAddress (address) the address of the asset
     /// @return nothing, but updates the collection of ChannelManagerContracts.
-    function addAsset(address assetAddress) {
+    function addAsset(address assetAddress) returns (address contractAddress) {
         // only allow unique addresses
         if (IterableMappingCMC.contains(data, assetAddress)) throw;
         ChannelManagerContract c = new ChannelManagerContract(assetAddress);
         IterableMappingCMC.insert(data, assetAddress, c);
+        contractAddress = address(c);
+        AssetAdded(address(c)); // useful for testing
     }
-
 
     /// @notice channelManagerByAsset(address) to get the ChannelManagerContract
     /// of the given assetAddress.
     /// @dev Get the ChannelManagerContract of a given assetAddress.
     /// @param assetAddress (address) the asset address.
     /// @return asAdr (address) the address belonging of an assetAddress.
-    function channelManagerByAsset(address assetAddress) returns (address asAdr) {
+    function channelManagerByAsset(address assetAddress) returns (address conAdr) {
         // if assetAddress does not exist, throw
         if (IterableMappingCMC.contains(data, assetAddress) == false) throw;
         uint index = IterableMappingCMC.atIndex(data, assetAddress);
         var(key, value) = IterableMappingCMC.iterate_get(data, index - 1);
-        asAdr = value.assetAddress();
+        conAdr = address(value);
     }
-
 
     /// @notice assetAddresses() to get all assetAddresses in the collection.
     /// @dev Get all assetAddresses in the collection.
@@ -43,23 +43,6 @@ contract Registry {
             assetAddresses[i] = key;
         }
     }
-
-
-    // ONLY FOR TESTING PURPOSES
-    /*
-    address constant TEST_ADDRESS1 = 0x123345;
-    address constant ASSET_ADDRESS = 0xC0FFEE;
-    address constant TEST_ADDRESS2 = 0xDEADBEEF;
-    address constant TEST_ADDRESS3 = 0xABCDEF;
-    function testGetAllAddresses() returns (bool success, address[] a) {
-        ChannelManagerContract cmc = new ChannelManagerContract(ASSET_ADDRESS);
-        addAsset(TEST_ADDRESS1);
-        addAsset(TEST_ADDRESS2);
-        addAsset(TEST_ADDRESS3);
-        success = data.size == 3;
-        a = assetAddresses();
-    }
-    */
 
     // empty function to handle wrong calls
     function () { throw; }

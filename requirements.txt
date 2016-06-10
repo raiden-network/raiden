@@ -1,12 +1,14 @@
 pytest
 pysha3
+pyethapp
 gevent>=1.1b3
 rlp>=0.4.3
-c_secp256k1==0.0.8
+secp256k1==0.12.1
 pycryptodome>=3.3.1
 networkx
-ethereum>=1.3.0
+ethereum>=1.3.2
 ethereum-serpent
 u-msgpack-python
 repoze.lru
 gevent-websocket==0.9.4
+hydrachain>=0.3.0
