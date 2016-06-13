@@ -26,6 +26,11 @@ solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 LETTERS = string.printable
 
 
+def teardown_module(module):  # pylint: disable=unused-argument
+    from raiden.tests.utils.tests import cleanup_tasks
+    cleanup_tasks()
+
+
 def addr(seed):
     return privtoaddr(privkey(seed))
 
@@ -166,10 +171,10 @@ def test_new_netting_contract():
 
 
 @pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
-def test_blockchain():
+def test_blockchain(request):
     # pylint: disable=too-many-locals
     from hydrachain import app
-    app.slogging.configure(':ERROR,eth.chain.tx:DEBUG,jsonrpc:DEBUG')
+    app.slogging.configure(':ERROR')
 
     quantity = 3
     base_port = 29870
@@ -191,7 +196,7 @@ def test_blockchain():
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
 
-    jsonrpc_client = JSONRPCClient(privkey=private_keys[0])
+    jsonrpc_client = JSONRPCClient(privkey=private_keys[0], print_communication=False)
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())
@@ -271,6 +276,3 @@ def test_blockchain():
         address.encode('hex'),
         addresses[1].encode('hex'),
     )
-
-    for hydrachain in hydrachain_apps:
-        hydrachain.stop()

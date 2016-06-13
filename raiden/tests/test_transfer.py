@@ -16,7 +16,12 @@ from raiden.utils import pex, sha3
 slogging.configure(':debug')
 
 # set shorter timeout for testing
-MediatedTransferTask.timeout_per_hop = 0.1
+MediatedTransferTask.timeout_per_hop = 0.3
+
+
+def teardown_module(module):  # pylint: disable=unused-argument
+    from raiden.tests.utils.tests import cleanup_tasks
+    cleanup_tasks()
 
 
 def test_transfer():
