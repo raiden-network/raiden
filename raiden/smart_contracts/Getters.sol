@@ -27,26 +27,30 @@ contract Getters {
     // Gets the sender of a last sent transfer
     function getSender(bytes message) returns (address sndr) {
         // Secret
-        if (message[0] == 4) {
+        if (decideCMD(message) == 4) {
             sndr = dsec(message);
         }
         // Direct Transfer
-        if (message[0] == 5) {
+        if (decideCMD(message) == 5) {
             sndr = ddtran(message);
         }
         // Locked Transfer
-        if (message[0] == 6) {
+        if (decideCMD(message) == 6) {
             sndr = dltran(message);
         }
         // Mediated Transfer
-        if (message[0] == 7) {
+        if (decideCMD(message) == 7) {
             sndr = dmtran(message);
         }
         // Cancel Transfer
-        if (message[0] == 8) {
+        if (decideCMD(message) == 8) {
             sndr = dctran(message);
         }
-        else throw;
+        /*else throw;*/
+    }
+
+    function decideCMD(bytes message) private returns (uint number) {
+        number = uint(message[0]);
     }
 
     function dsec(bytes message) private returns (address sndr) {
@@ -57,7 +61,7 @@ contract Getters {
     function ddtran(bytes message) private returns (address sndr) {
         var(cmd, non, ass, rec, trn) = dcdr.decodeTransfer1(message);
         var(olo, ops, r, s, v) = dcdr.decodeTransfer2(message);
-        bytes32 h = sha3(cmd, non, ass, trn, rec, olo, ops); //need the optionalLocksroot
+        bytes32 h = sha3(cmd, non, ass, rec, trn, olo, ops); //need the optionalLocksroot
         sndr = ecrecover(h, v, r, s);
     }
     function dltran(bytes message) private returns (address sndr) {

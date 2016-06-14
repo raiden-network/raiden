@@ -174,14 +174,14 @@ contract Decoder {
     }
 
     function decodeCancelTransfer2(bytes m) 
-    returns
-    (bytes32 locksroot,
-    uint transferedAmount,
-    uint amount,
-    bytes32 hashlock,
-    bytes32 r,
-    bytes32 s,
-    uint8 v)
+        returns
+        (bytes32 locksroot,
+        uint transferedAmount,
+        uint amount,
+        bytes32 hashlock,
+        bytes32 r,
+        bytes32 s,
+        uint8 v)
     {
         locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
         transferedAmount = bytesToInt(slice(m, 92, 124), transferedAmount);

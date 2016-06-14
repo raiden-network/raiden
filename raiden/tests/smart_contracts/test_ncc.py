@@ -92,10 +92,11 @@ def test_ncc():
 
     # test close(message)
 
-    lock = Lock(30, 31, sha3(tester.k0))
+    lock = Lock(30, 31, sha3(tester.a0))
     locksroot = merkleroot([sha3(lock.as_bytes)],)
-    msg = DirectTransfer(1, token.address, 15, tester.a1, locksroot)
+    msg = DirectTransfer(1, token.address, 15, tester.a1, locksroot).sign(tester.k0)
     packed = msg.packed()
     direct_transfer = str(packed.data)
+    print direct_transfer.encode('hex')
 
-    c.close(direct_transfer)
+    # c.closeOneWay(direct_transfer)

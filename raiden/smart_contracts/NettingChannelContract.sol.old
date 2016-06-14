@@ -115,7 +115,7 @@ contract NettingChannelContract {
     /// @notice close(bytes) to close a channel between to parties
     /// @dev Close the channel between two parties
     /// @param firstEncoded (bytes) the last sent transfer of the msg.sender
-    function close(bytes firstEncoded) inParticipants { 
+    function closeOneWay(bytes firstEncoded) inParticipants { 
         if (settled > 0) throw; // channel already settled
         if (closed > 0) throw; // channel is closing
 
@@ -126,7 +126,7 @@ contract NettingChannelContract {
         uint partnerId = atIndex(partner(msg.sender));
         uint senderId = atIndex(msg.sender);
 
-        decode(firstEncoded);
+        /*decode(firstEncoded);*/
 
         // mark closed
         closed = block.number;
@@ -156,7 +156,7 @@ contract NettingChannelContract {
     /// @dev Close the channel between two parties
     /// @param firstEncoded (bytes) the last sent transfer of the msg.sender
     /// @param secondEncoded (bytes) the last sent transfer of the msg.sender
-    function close(bytes firstEncoded, bytes secondEncoded) inParticipants { 
+    function closeTwoWay(bytes firstEncoded, bytes secondEncoded) inParticipants { 
         if (settled > 0) throw; // channel already settled
         if (closed > 0) throw; // channel is closing
 
@@ -280,30 +280,34 @@ contract NettingChannelContract {
     function decode(bytes message) private {
         bytes32 hash;
         // Secret
-        if (message[0] == 4) {
+        if (decideCMD(message) == 4) {
             assignSecret(message);
         }
         // Direct Transfer
-        if (message[0] == 5) {
+        if (decideCMD(message) == 5) {
             hash = assignDirect1(message);
             assignDirect2(message, hash);
         }
         // Locked Transfer
-        if (message[0] == 6) {
+        if (decideCMD(message) == 6) {
             hash = assignLocked1(message);
             assignLocked2(message, hash);
         }
         // Mediated Transfer
-        if (message[0] == 7) {
+        if (decideCMD(message) == 7) {
             hash = assignMediated1(message);
             assignMediated2(message, hash);
         }
         // Cancel Transfer
-        if (message[0] == 8) {
+        if (decideCMD(message) == 8) {
             hash = assignCancel1(message);
             assignCancel2(message, hash);
         }
         else throw;
+    }
+
+    function decideCMD(bytes message) private returns (uint number) {
+        number = uint(message[0]);
     }
 
     function assignSecret(bytes message) private {
