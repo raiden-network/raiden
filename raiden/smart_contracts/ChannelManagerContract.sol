@@ -96,11 +96,10 @@ contract ChannelManagerContract {
 
     /// @notice get(address, address) to get the unique channel of two parties.
     /// @dev Get the channel of two parties
-    /// @param adrA (address) address of one party.
-    /// @param adrB (address) address of other party.
+    /// @param partner (address) address of the partner.
     /// @return channel (NettingChannelContract) the value of the NettingChannelContract of the two parties.
-    function get(address adrA, address adrB) returns (NettingChannelContract channel){
-        bytes32 ky = key(adrA, adrB);
+    function get(address partner) returns (NettingChannelContract channel){
+        bytes32 ky = key(msg.sender, partner);
         if (IterableMappingNCC.contains(data, ky) == false) throw; //handle if no such channel exists
         uint index = IterableMappingNCC.atIndex(data, ky);
         var (k, v) = IterableMappingNCC.iterate_get(data, index - 1); // -1 ?

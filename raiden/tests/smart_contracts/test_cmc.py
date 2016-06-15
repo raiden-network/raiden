@@ -42,12 +42,12 @@ def test_cmc():
 
     # test get()
     print nc1[0]
-    chn1 = c.get(nc1[1], sha3('address1')[:20]) # nc1[1] is msg.sender of newChannel
+    chn1 = c.get(sha3('address1')[:20]) # nc1[1] is msg.sender of newChannel
     assert chn1 == nc1[0] # nc1[0] is address of new NettingChannelContract
-    chn2 = c.get(nc2[1], sha3('address3')[:20]) # nc2[1] is msg.sender of newChannel
+    chn2 = c.get(sha3('address3')[:20]) # nc2[1] is msg.sender of newChannel
     assert chn2 == nc2[0] # nc2[0] is msg.sender of newChannel
     with pytest.raises(TransactionFailed):  # should throw if key doesn't exist
-        c.get(nc1[1], sha3('iDontExist')[:20])
+        c.get(sha3('iDontExist')[:20])
 
     # test nettingContractsByAddress()
     msg_sender_channels = c.nettingContractsByAddress(nc1[1])
