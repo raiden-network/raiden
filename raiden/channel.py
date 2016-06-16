@@ -267,6 +267,10 @@ class Channel(object):
         if self.wasclosed:
             return False
 
+        # TODO:
+        # - cache this result and listen for logs (assume it starts open and
+        #   set it close once the log happen)
+        # - lift the chain dependency
         return self.chain.isopen(self.asset_address, self.nettingcontract_address)
 
     @property

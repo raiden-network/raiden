@@ -77,7 +77,7 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
             amount,
             target_app.address,
             hashlock,
-            expiration=None,
+            lock_expiration=None,
             originating_transfer=None,
             secret=secret,
         )

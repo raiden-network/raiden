@@ -351,8 +351,6 @@ class InitMediatedTransferTask(Task):  # TODO
 class ForwardSecretTask(Task):
 
     def __init__(self, transfermanager, hashlock, recipient, msg_timeout):
-        log.info('INIT', task=self)
-
         self.transfermanager = transfermanager
         self.recipient = recipient
         self.hashlock = hashlock
@@ -362,6 +360,8 @@ class ForwardSecretTask(Task):
 
         super(ForwardSecretTask, self).__init__()
         self.transfermanager.on_task_started(self)
+
+        log.info('INIT', task=self)
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.raiden.address))

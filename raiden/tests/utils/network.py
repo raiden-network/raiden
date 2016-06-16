@@ -5,22 +5,20 @@ import copy
 import os
 import random
 from itertools import product
-from math import ceil
+from math import floor
 
-import gevent
 from devp2p.crypto import privtopub
 from devp2p.utils import host_port_pubkey_to_uri
-from ethereum.keys import privtoaddr, PBKDF2_CONSTANTS
+from ethereum.keys import privtoaddr
 from ethereum.slogging import getLogger
-from pyethapp.accounts import mk_privkey, Account
+from pyethapp.accounts import Account
 from pyethapp.config import update_config_from_genesis_json
 from pyethapp.console_service import Console
+from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.app import App, INITIAL_PORT
-from raiden.network.discovery import PredictiveDiscovery
+from raiden.network.discovery import Discovery
 from raiden.network.rpc.client import BlockChainServiceMock
-from raiden.network.transport import UDPTransport
-from raiden.utils import sha3
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -28,17 +26,23 @@ DEFAULT_DEPOSIT = 2 ** 240
 """ An arbitrary initial balance for each channel in the test network. """
 
 
-def mk_app(chain, discovery, transport_class, port, host='127.0.0.1'):
+def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0.0.1'):  # pylint: disable=too-many-arguments
     ''' Instantiates an Raiden app with the given configuration. '''
     config = copy.deepcopy(App.default_config)
+
     config['port'] = port
     config['host'] = host
-    config['privkey'] = sha3('{}:{}'.format(host, config['port']))
-    return App(config, chain, discovery, transport_class)
+    config['privkey'] = privkey_bin
+
+    return App(
+        config,
+        chain,
+        discovery,
+        transport_class,
+    )
 
 
-def create_network_channels(blockchain_service, assets_list, apps,
-                            channels_per_node, deposit=DEFAULT_DEPOSIT):
+def create_network_channels(assets_list, apps, channels_per_node, deposit):
     """ For each asset create `channel_per_node` channels for each app in `apps`.
 
     This function will instantiate the requested number of mock contracts
@@ -70,7 +74,7 @@ def create_network_channels(blockchain_service, assets_list, apps,
         return app.raiden.address
 
     def sort_by_channelcount(asset, app):
-        addresses = blockchain_service.nettingaddresses_by_asset_participant(
+        addresses = app.raiden.chain.nettingaddresses_by_asset_participant(
             asset,
             app.raiden.address,
         )
@@ -79,6 +83,7 @@ def create_network_channels(blockchain_service, assets_list, apps,
 
     # Create `channels_per_node` channels for each asset in each app
     for asset_address, curr_app in product(assets_list, sorted(apps, key=sort_by_address)):
+        blockchain_service = curr_app.raiden.chain
         curr_address = curr_app.raiden.address
 
         contracts_addreses = blockchain_service.nettingaddresses_by_asset_participant(
@@ -104,12 +109,20 @@ def create_network_channels(blockchain_service, assets_list, apps,
 
             netcontract_address = blockchain_service.new_netting_contract(
                 asset_address,
-                app.raiden.address,
                 curr_app.raiden.address,
+                app.raiden.address,
             )
             contracts_addreses.append(netcontract_address)
 
-            for address in [curr_app.raiden.address, app.raiden.address]:
+            for app in [curr_app, app]:
+                address = app.raiden.address
+
+                blockchain_service.asset_approve(
+                    asset_address,
+                    netcontract_address,
+                    deposit,
+                )
+
                 blockchain_service.deposit(
                     asset_address,
                     netcontract_address,
@@ -118,7 +131,9 @@ def create_network_channels(blockchain_service, assets_list, apps,
                 )
 
 
-def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_class=None):
+def create_network(private_keys, assets_addresses, registry_address,  # pylint: disable=too-many-arguments
+                   channels_per_node, deposit, transport_class,
+                   blockchain_service_class):
     """ Initialize a local test network using the UDP protocol.
 
     Note:
@@ -131,62 +146,75 @@ def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_cla
     """
     # pylint: disable=too-many-locals
 
-    # TODO: check if the loopback interfaces exists
-
     random.seed(1337)
+    num_nodes = len(private_keys)
 
     if channels_per_node > num_nodes:
         raise ValueError("Can't create more channels than nodes")
 
-    client_hosts = ['127.0.0.10', '127.0.0.11']
-
     # if num_nodes it is not even
-    half_of_nodes = int(ceil(num_nodes / 2))
+    half_of_nodes = int(floor(len(private_keys) / 2))
 
     # globals
-    discovery = PredictiveDiscovery((
-        (host, half_of_nodes, INITIAL_PORT)
-        for host in client_hosts
-    ))
+    discovery = Discovery()
 
     # The mock needs to be atomic since all app's will use the same instance,
     # for the real application the syncronization is done by the JSON-RPC
     # server
-    blockchain_service = BlockChainServiceMock()
+    blockchain_service_class = blockchain_service_class or BlockChainServiceMock
 
     # Each app instance is a Node in the network
     apps = []
-    for host in client_hosts:
-        for idx in range(half_of_nodes):
-            port = INITIAL_PORT + idx
+    for idx, privatekey_bin in enumerate(private_keys):
 
-            app = mk_app(
-                blockchain_service,
-                discovery,
-                transport_class or UDPTransport,
-                port=port,
-                host=host,
-            )
+        # TODO: check if the loopback interfaces exists
+        # split the nodes into two different networks
+        if idx > half_of_nodes:
+            host = '127.0.0.11'
+        else:
+            host = '127.0.0.10'
 
-            apps.append(app)
+        nodeid = privtoaddr(privatekey_bin)
+        port = INITIAL_PORT + idx
 
-    for i in range(num_assets):
-        asset_address = sha3('asset:%d' % i)[:20]
-        blockchain_service.new_channel_manager_contract(asset_address=asset_address)
+        discovery.register(nodeid, host, port)
 
-    asset_list = blockchain_service.asset_addresses
-    assert len(asset_list) == num_assets
+        jsonrpc_client = JSONRPCClient(
+            privkey=privatekey_bin,
+            print_communication=False,
+        )
+        blockchain_service = blockchain_service_class(
+            jsonrpc_client,
+            registry_address,
+        )
 
-    create_network_channels(blockchain_service, asset_list, apps, channels_per_node)
+        app = create_app(
+            privatekey_bin,
+            blockchain_service,
+            discovery,
+            transport_class,
+            port=port,
+            host=host,
+        )
+
+        apps.append(app)
+
+    create_network_channels(
+        assets_addresses,
+        apps,
+        channels_per_node,
+        deposit,
+    )
 
     for app in apps:
-        for asset_address in asset_list:
-            app.raiden.setup_asset(asset_address, app.config['reveal_timeout'])
+        for asset in assets_addresses:
+            app.raiden.setup_asset(asset, app.config['reveal_timeout'])
 
     return apps
 
 
-def create_sequential_network(num_nodes, deposit, asset, transport_class=None):
+def create_sequential_network(private_keys, deposit, asset, registry_address,  # pylint: disable=too-many-arguments
+                              transport_class, blockchain_service_class):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
@@ -195,42 +223,54 @@ def create_sequential_network(num_nodes, deposit, asset, transport_class=None):
         sequential pair in the list has an open channel with `deposit` for each
         participant.
     """
-    if num_nodes < 2:
-        raise ValueError('cannot create a network with less than two nodes')
-
-    host = '127.0.0.10'
+    # pylint: disable=too-many-locals
 
     random.seed(42)
 
-    discovery = PredictiveDiscovery((
-        (host, num_nodes, INITIAL_PORT),
-    ))
+    host = '127.0.0.10'
+    num_nodes = len(private_keys)
 
-    blockchain_service = BlockChainServiceMock()
-    blockchain_service.new_channel_manager_contract(asset_address=asset)
+    if num_nodes < 2:
+        raise ValueError('cannot create a network with less than two nodes')
+
+    discovery = Discovery()
+    blockchain_service_class = blockchain_service_class or BlockChainServiceMock
 
     apps = []
-    for idx in range(num_nodes):
+    for idx, privatekey_bin in enumerate(private_keys):
         port = INITIAL_PORT + idx
+        nodeid = privtoaddr(privatekey_bin)
 
-        app = mk_app(
+        discovery.register(nodeid, host, port)
+
+        jsonrpc_client = JSONRPCClient(
+            privkey=privatekey_bin,
+            print_communication=False,
+        )
+        blockchain_service = blockchain_service_class(
+            jsonrpc_client,
+            registry_address,
+        )
+
+        app = create_app(
+            privatekey_bin,
             blockchain_service,
             discovery,
-            transport_class or UDPTransport,
+            transport_class,
             port=port,
             host=host,
         )
         apps.append(app)
 
     for first, second in zip(apps[:-1], apps[1:]):
-        netcontract_address = blockchain_service.new_netting_contract(
+        netcontract_address = first.raiden.chain.new_netting_contract(
             asset,
             first.raiden.address,
             second.raiden.address,
         )
 
         for address in [first.raiden.address, second.raiden.address]:
-            blockchain_service.deposit(
+            first.raiden.chain.deposit(
                 asset,
                 netcontract_address,
                 address,
@@ -243,45 +283,27 @@ def create_sequential_network(num_nodes, deposit, asset, transport_class=None):
     return apps
 
 
-def hydrachain_network(private_keys, base_port, base_datadir):
+def create_hydrachain_network(private_keys, hydrachain_private_keys, p2p_base_port, base_datadir):
     """ Initializes a hydrachain network used for testing. """
     # pylint: disable=too-many-locals
     from hydrachain.app import services, start_app, HPCApp
     import pyethapp.config as konfig
 
-    gevent.get_hub().SYSTEM_ERROR = BaseException
-    PBKDF2_CONSTANTS['c'] = 100
-    quantity = len(private_keys)
-
     def privkey_to_uri(private_key):
         host = b'0.0.0.0'
         pubkey = privtopub(private_key)
-        return host_port_pubkey_to_uri(host, base_port, pubkey)
+        return host_port_pubkey_to_uri(host, p2p_base_port, pubkey)
 
-    addresses = [
+    account_addresses = [
         privtoaddr(priv)
         for priv in private_keys
     ]
 
-    bootstrap_nodes = [
-        privkey_to_uri(private_keys[0]),
-    ]
-
-    validator_keys = [
-        mk_privkey('raidenvalidator:{}'.format(position))
-        for position in range(quantity)
-    ]
-
-    validator_addresses = [
-        privtoaddr(validator_keys[position])
-        for position in range(quantity)
-    ]
-
     alloc = {
-        addr.encode('hex'): {
+        address.encode('hex'): {
             'balance': '1606938044258990275541962092341162602522202993782792835301376',
         }
-        for addr in addresses
+        for address in account_addresses
     }
 
     genesis = {
@@ -292,17 +314,22 @@ def hydrachain_network(private_keys, base_port, base_datadir):
         'timestamp': '0x00',
         'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
         'extraData': '0x',
-        'gasLimit': '0x5FEFD8',
+        'gasLimit': '0x2FEFD8', # Morden's gasLimit.
         'alloc': alloc,
     }
 
+    bootstrap_nodes = [
+        privkey_to_uri(hydrachain_private_keys[0]),
+    ]
+
+    validators_addresses = [
+        privtoaddr(private_key)
+        for private_key in hydrachain_private_keys
+    ]
+
     all_apps = []
-    for number in range(quantity):
-        port = base_port + number
-
+    for number, private_key in enumerate(hydrachain_private_keys):
         config = konfig.get_default_config(services + [HPCApp])
-
-        # del config['eth']['genesis_hash']
         config = update_config_from_genesis_json(config, genesis)
 
         datadir = os.path.join(base_datadir, str(number))
@@ -310,12 +337,12 @@ def hydrachain_network(private_keys, base_port, base_datadir):
 
         account = Account.new(
             password='',
-            key=validator_keys[number],
+            key=private_key,
         )
 
         config['data_dir'] = datadir
-        config['node']['privkey_hex'] = private_keys[number].encode('hex')
-        config['hdc']['validators'] = validator_addresses
+        config['hdc']['validators'] = validators_addresses
+        config['node']['privkey_hex'] = private_key.encode('hex')
         config['jsonrpc']['listen_port'] += number
         config['client_version_string'] = 'NODE{}'.format(number)
 
@@ -324,14 +351,14 @@ def hydrachain_network(private_keys, base_port, base_datadir):
         config['eth']['block']['HOMESTEAD_FORK_BLKNUM'] = 0
 
         config['discovery']['bootstrap_nodes'] = bootstrap_nodes
-        config['discovery']['listen_port'] = port
+        config['discovery']['listen_port'] = p2p_base_port + number
 
-        config['p2p']['listen_port'] = port
-        config['p2p']['min_peers'] = min(10, quantity - 1)
-        config['p2p']['max_peers'] = quantity * 2
+        config['p2p']['listen_port'] = p2p_base_port + number
+        config['p2p']['min_peers'] = min(10, len(hydrachain_private_keys) - 1)
+        config['p2p']['max_peers'] = len(hydrachain_private_keys) * 2
 
         # only one of the nodes should have the Console service running
-        if number != 0:
+        if number != 0 and Console.name not in config['deactivated_services']:
             config['deactivated_services'].append(Console.name)
 
         hydrachain_app = start_app(config, accounts=[account])

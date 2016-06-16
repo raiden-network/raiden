@@ -3,12 +3,29 @@ from __future__ import print_function
 
 import time
 
-from raiden.tests.utils import create_network
+from raiden.tests.utils.network import create_network
 from raiden.utils import sha3
 
 
 def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-many-locals
-    apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
+    num_nodes = 2
+    num_assets = 1
+
+    private_keys = [
+        sha3('speed:{}'.format(position))
+        for position in range(num_nodes)
+    ]
+
+    assets = [
+        sha3('asset:{}'.format(number))[:20]
+        for number in range(num_assets)
+    ]
+
+    apps = create_network(
+        private_keys,
+        assets,
+        channels_per_node=1,
+    )
 
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]

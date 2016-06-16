@@ -4,7 +4,6 @@ import pytest
 from ethereum import slogging
 
 from raiden.messages import DirectTransfer
-from raiden.tests.utils.network import create_network
 from raiden.tests.utils.transfer import assert_synched_channels
 from raiden.utils import sha3
 
@@ -12,14 +11,16 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 slogging.configure(':debug')
 
 
-def test_setup():
-    apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+@pytest.mark.parametrize('privatekey_seed', ['setup:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_setup(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     channel0 = app0.raiden.chain.nettingaddresses_by_asset_participant(
         app0.raiden.chain.asset_addresses[0],
         app0.raiden.address,
     )
+
     channel1 = app0.raiden.chain.nettingaddresses_by_asset_participant(
         app0.raiden.chain.asset_addresses[0],
         app1.raiden.address,
@@ -30,10 +31,10 @@ def test_setup():
     assert len(app0.raiden.assetmanagers) == 1
 
 
-def test_transfer():
-    apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+@pytest.mark.parametrize('privatekey_seed', ['transfer:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_transfer(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
@@ -95,10 +96,10 @@ def test_transfer():
     )
 
 
-def test_locked_transfer():
-    """ Simple locked transfer test. """
-    apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+@pytest.mark.parametrize('privatekey_seed', ['locked_transfer:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_locked_transfer(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
@@ -107,7 +108,9 @@ def test_locked_transfer():
     balance1 = channel1.balance
 
     amount = 10
-    expiration = app0.raiden.chain.block_number + 15  # reveal_timeout <= expiration < contract.lock_time
+
+    # reveal_timeout <= expiration < contract.lock_time
+    expiration = app0.raiden.chain.block_number + 15
 
     secret = 'secret'
     hashlock = sha3(secret)
@@ -138,7 +141,11 @@ def test_locked_transfer():
     )
 
 
-def test_interwoven_transfers(num=100):  # pylint: disable=too-many-locals
+@pytest.mark.parametrize('privatekey_seed', ['interwoven_transfers:{}'])
+@pytest.mark.parametrize('deposit', [2 ** 30])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('number_of_transfers', [100])
+def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: disable=too-many-locals
     """ Can keep doing transaction even if not all secrets have been released. """
     def log_state():
         unclaimed = [
@@ -160,9 +167,7 @@ def test_interwoven_transfers(num=100):  # pylint: disable=too-many-locals
             unclaimed=unclaimed,
         )
 
-    apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
@@ -174,9 +179,11 @@ def test_interwoven_transfers(num=100):  # pylint: disable=too-many-locals
 
     unclaimed_locks = []
     transfers_list = []
-    transfers_amount = [i for i in range(1, num + 1)]  # start at 1 because we can't use amount=0
-    transfers_secret = [str(i) for i in range(num)]
     transfers_claimed = []
+
+    # start at 1 because we can't use amount=0
+    transfers_amount = [i for i in range(1, number_of_transfers + 1)]
+    transfers_secret = [str(i) for i in range(number_of_transfers)]
 
     claimed_amount = 0
     distributed_amount = 0
@@ -237,7 +244,9 @@ def test_interwoven_transfers(num=100):  # pylint: disable=too-many-locals
             assert channel0.distributable == initial_balance0 - distributed_amount
 
 
-def test_register_invalid_transfer():
+@pytest.mark.parametrize('privatekey_seed', ['register_invalid_transfer:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_register_invalid_transfer(raiden_network):
     """ Regression test for registration of invalid transfer.
 
     The bug occurred if a transfer with an invalid allowance but a valid secret
@@ -245,8 +254,7 @@ def test_register_invalid_transfer():
     "unlock" the partners asset, but the transfer wouldn't be sent because the
     allowance check failed, leaving the channel in an inconsistent state.
     """
-    apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]

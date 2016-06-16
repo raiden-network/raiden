@@ -3,9 +3,10 @@ import time
 
 import gevent
 from ethereum import slogging
+from ethereum.utils import sha3
 
-from raiden.app import create_network
 from raiden.tasks import MediatedTransferTask
+from raiden.tests.utils.network import create_network
 
 log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
 slogging.configure(':debug')
@@ -16,10 +17,19 @@ MediatedTransferTask.timeout_per_hop = 0.1
 
 def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1, channels_per_node=2):
     # pylint: disable=too-many-locals
+    private_keys = [
+        sha3('mediated_transfer:{}'.format(position))
+        for position in range(num_nodes)
+    ]
+
+    assets = [
+        sha3('asset:{}'.format(number))[:20]
+        for number in range(num_assets)
+    ]
 
     apps = create_network(
-        num_nodes=num_nodes,
-        num_assets=num_assets,
+        private_keys,
+        assets,
         channels_per_node=channels_per_node,
     )
 

@@ -4,13 +4,11 @@ import pytest
 from raiden.blockchain.net_contract import NettingChannelContract
 from raiden.mtree import check_proof
 from raiden.tests.utils.messages import setup_messages_cb
-from raiden.tests.utils.network import create_network, create_sequential_network
 from raiden.tests.utils.transfer import (
     assert_synched_channels,
     channel,
     direct_transfer,
     get_received_transfer,
-    # get_sent_transfer,
     hidden_mediated_transfer,
     transfer,
 )
@@ -19,9 +17,10 @@ from raiden.utils import sha3
 # pylint: disable=too-many-locals,too-many-statements
 
 
-def test_settlement():
-    apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+@pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_settlement(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     setup_messages_cb()
 
@@ -90,25 +89,25 @@ def test_settlement():
 
 
 @pytest.mark.xfail()
-def test_settled_lock():
+@pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
+@pytest.mark.parametrize('number_of_nodes', [4])
+def test_settled_lock(asset_address, raiden_network):
     """ After a lock has it's secret revealed and a transfer happened, the lock
     cannot be used to net any value with the contract.
     """
-    deposit = 100
-    asset = sha3('test_settled_lock')[:20]
+    asset = asset_address[0]
     amount = 30
 
-    # pylint: disable=unbalanced-tuple-unpacking
-    apps = create_sequential_network(num_nodes=4, deposit=deposit, asset=asset)
+    app0, app1, app2, app3 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     # mediated transfer with the secret revealed
-    transfer(apps[0], apps[3], asset, amount)
+    transfer(app0, app3, asset, amount)
 
     # create the latest transfer
-    direct_transfer(apps[0], apps[1], asset, amount)
+    direct_transfer(app0, app1, asset, amount)
 
     secret = ''  # need to get the secret
-    attack_channel = channel(apps[2], apps[1], asset)
+    attack_channel = channel(app2, app1, asset)
     secret_transfer = get_received_transfer(attack_channel, 0)
     last_transfer = get_received_transfer(attack_channel, 1)
     nettingcontract_address = attack_channel.nettingcontract_address
@@ -117,26 +116,28 @@ def test_settled_lock():
     merkle_proof = attack_channel.our_state.locked.get_proof(secret_transfer)
 
     # call close giving the secret for a transfer that has being revealed
-    apps[1].raiden.chain.close(
+    app1.raiden.chain.close(
         asset,
         nettingcontract_address,
-        apps[1].raiden.address,
+        app1.raiden.address,
         [last_transfer],
         [(merkle_proof, secret_transfer.lock, secret)],
     )
 
     # forward the block number to allow settle
     for _ in range(NettingChannelContract.settle_timeout):
-        apps[2].raiden.chain.next_block()
+        app2.raiden.chain.next_block()
 
-    apps[1].raiden.chain.settle(asset, nettingcontract_address)
+    app1.raiden.chain.settle(asset, nettingcontract_address)
 
     # check that the attack FAILED
-    # contract = apps[1].raiden.chain.asset_hashchannel[asset][nettingcontract_address]
+    # contract = app1.raiden.chain.asset_hashchannel[asset][nettingcontract_address]
 
 
 @pytest.mark.xfail()
-def test_start_end_attack():
+@pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
+@pytest.mark.parametrize('number_of_nodes', [3])
+def test_start_end_attack(asset_address, raiden_chain, deposit):
     """ An attacker can try to steal assets from a hub or the last node in a
     path.
 
@@ -149,41 +150,41 @@ def test_start_end_attack():
     The intention is to make the hub transfer the asset but for him to be
     unable to require the asset A1.
     """
-    asset = sha3('test_two_attack')[:20]
-    deposit = 100
     amount = 30
-    apps = create_sequential_network(num_nodes=3, deposit=deposit, asset=asset)
+
+    asset = asset_address[0]
+    app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     # The attacker creates a mediated transfer from it's account A1, to it's
     # account A2, throught the hub H
-    secret = hidden_mediated_transfer(apps, asset, amount)
+    secret = hidden_mediated_transfer(raiden_chain, asset, amount)
 
-    attack_channel = channel(apps[2], apps[1], asset)
+    attack_channel = channel(app2, app1, asset)
     attack_transfer = get_received_transfer(attack_channel, 0)
     attack_contract = attack_channel.nettingcontract_address
-    hub_contract = channel(apps[1], apps[0], asset).nettingcontract_address
+    hub_contract = channel(app1, app0, asset).nettingcontract_address
 
     # the attacker can create a merkle proof of the locked transfer
     merkle_proof = attack_channel.our_state.locked.get_proof(attack_transfer)
 
     # start the settle counter
-    apps[2].raiden.chain.close(
+    app2.raiden.chain.close(
         asset,
         attack_contract,
-        apps[2].raiden.address,
+        app2.raiden.address,
         [attack_transfer],
         [],
     )
 
     # wait until the last block to reveal the secret
     for _ in range(attack_transfer.lock.expiration - 1):
-        apps[2].raiden.chain.next_block()
+        app2.raiden.chain.next_block()
 
     # since the attacker knows the secret he can net the lock
-    apps[2].raiden.chain.close(
+    app2.raiden.chain.close(
         asset,
         attack_contract,
-        apps[2].raiden.address,
+        app2.raiden.address,
         [attack_transfer],
         [(merkle_proof, attack_transfer.lock, secret)],
     )
@@ -193,28 +194,28 @@ def test_start_end_attack():
     # claim the asset from the channel A1 - H
 
     # the attacker settle the contract
-    apps[2].raiden.chain.next_block()
-    apps[2].raiden.chain.settle(asset, attack_contract)
+    app2.raiden.chain.next_block()
+    app2.raiden.chain.settle(asset, attack_contract)
 
     # at this point the attack has the "stolen" funds
-    attack_contract = apps[2].raiden.chain.asset_hashchannel[asset][attack_contract]
-    assert attack_contract.participants[apps[2].raiden.address]['netted'] == deposit + amount
-    assert attack_contract.participants[apps[1].raiden.address]['netted'] == deposit - amount
+    attack_contract = app2.raiden.chain.asset_hashchannel[asset][attack_contract]
+    assert attack_contract.participants[app2.raiden.address]['netted'] == deposit + amount
+    assert attack_contract.participants[app1.raiden.address]['netted'] == deposit - amount
 
     # and the hub's channel A1-H doesn't
-    hub_contract = apps[1].raiden.chain.asset_hashchannel[asset][hub_contract]
-    assert hub_contract.participants[apps[0].raiden.address]['netted'] == deposit
-    assert hub_contract.participants[apps[1].raiden.address]['netted'] == deposit
+    hub_contract = app1.raiden.chain.asset_hashchannel[asset][hub_contract]
+    assert hub_contract.participants[app0.raiden.address]['netted'] == deposit
+    assert hub_contract.participants[app1.raiden.address]['netted'] == deposit
 
     # to mitigate the attack the Hub _needs_ to use a lower expiration for the
     # locked transfer between H-A2 than A1-H, since for A2 to acquire the asset
     # it needs to make the secret public in the block chain we publish the
     # secret through an event and the Hub will be able to require it's funds
-    apps[1].raiden.chain.next_block()
+    app1.raiden.chain.next_block()
 
     # XXX: verify that the Hub has found the secret, close and settle the channel
 
     # the hub has acquired it's asset
-    hub_contract = apps[1].raiden.chain.asset_hashchannel[asset][hub_contract]
-    assert hub_contract.participants[apps[0].raiden.address]['netted'] == deposit + amount
-    assert hub_contract.participants[apps[1].raiden.address]['netted'] == deposit - amount
+    hub_contract = app1.raiden.chain.asset_hashchannel[asset][hub_contract]
+    assert hub_contract.participants[app0.raiden.address]['netted'] == deposit + amount
+    assert hub_contract.participants[app1.raiden.address]['netted'] == deposit - amount

@@ -41,7 +41,7 @@ class App(object):  # pylint: disable=too-few-public-methods
         discovery.register(self.raiden.address, self.transport.host, self.transport.port)
 
     def stop(self):
-        self.transport.server.start()
+        self.transport.stop()
 
 
 def main():

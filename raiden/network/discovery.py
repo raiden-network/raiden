@@ -24,36 +24,3 @@ class Discovery(object):
                 return nodeid
 
         assert False
-
-
-class PredictiveDiscovery(Discovery):
-    """
-    Initialized with a list of `(host, num_nodes, start_port)` tuples,
-    this discovery is able to predict the address for any
-    (predictable) node-id.
-
-    This avoids the need of a shared discovery instance, while still
-    providing the convenience of a mock-like service.
-
-    Note, that start_port can be omitted.
-    """
-
-    def __init__(self, mapping, default_start_port=40001):
-        super(PredictiveDiscovery, self).__init__()
-
-        # [('127.0.0.1', 36), ('127.0.0.2', 15), ...]
-        for entry in mapping:
-            if len(entry) == 3:
-                start_port = entry[-1]
-            else:
-                start_port = default_start_port
-
-            (host, num_nodes) = entry[:2]
-
-            for i in range(num_nodes):
-                host_port = (host, start_port + i)
-                nodeid = privtoaddr(sha3('{}:{}'.format(*host_port)))
-                self.nodeid_hostport[nodeid] = host_port
-
-    def register(self, *args):
-        pass
