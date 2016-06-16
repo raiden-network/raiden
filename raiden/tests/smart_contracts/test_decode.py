@@ -4,6 +4,8 @@ import pytest
 from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
+from raiden.mtree import merkleroot
+from raiden.messages import Lock, CancelTransfer, DirectTransfer, MediatedTransfer, Secret
 
 from raiden.network.rpc.client import get_contract_path
 
@@ -11,6 +13,25 @@ decoder_path = get_contract_path('Decoder.sol')
 
 with open(decoder_path) as decoder_file:
     decode_code = decoder_file.read()
+
+INITIATOR_PRIVKEY = 'x' * 32
+INITIATOR_ADDRESS = privtoaddr(INITIATOR_PRIVKEY)
+SECRET = 'secret'
+
+RECIPIENT_PRIVKEY = 'y' * 32
+RECIPIENT_ADDRESS = privtoaddr(RECIPIENT_PRIVKEY)
+
+TARGET_PRIVKEY = 'z' * 32
+TARGET_ADDRESS = privtoaddr(TARGET_PRIVKEY)
+
+ASSET_ADDRESS = sha3('asset')[:20]
+
+HASHLOCK = sha3(INITIATOR_PRIVKEY)
+LOCK_AMOUNT = 29
+LOCK_EXPIRATION = 31
+LOCK = Lock(LOCK_AMOUNT, LOCK_EXPIRATION, HASHLOCK)
+LOCKSROOT = merkleroot([
+    sha3(LOCK.as_bytes), ])   # print direct_transfer.encode('hex')
 
 
 def test_decode_secret():
@@ -30,7 +51,7 @@ def test_decode_secret():
     signature = 'd37b47b46bea9027a92a6e1c374450092016b9935c0f1e738a9516693f708f5b35937bb4e0a7de93be31585e6aa04984869477ce5283415d4e736e537e59d43501'
     assert o1[1].encode('hex') == signature[:64]
     assert o1[2].encode('hex') == signature[64:128]
-    assert o1[3] == int(signature[129])
+    assert o1[3] == int(signature[129]) + 27
     assert len(data) == 101
     # length doesn't match
     with pytest.raises(TransactionFailed):
@@ -40,35 +61,53 @@ def test_decode_secret():
 
 
 def test_decode_transfer():
-    encoded_data = '0500000000000000000000010bd4060688a1800ae986e4840aebc924bb40b5bf3893263bf8b2d0373a34b8d359c5edd823110747000000000000000000000000000000000000000000000000000000000000000160d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df510000000000000000000000000000000000000000000000000000000000000000ff9636ccb66e73219fd166cd6ffbc9c6215f74ff31c1fd4131cf532b29ee096f65278c459253fba65bf019c723a68bb4a6153ea8378cd1b15d55825e1a291b6f00'
     bad_encoded_data = '0500000000000000000000010bd4060688a1800ae986e4840aebc924bb40b5bf3893263bf8b2d0373a34b8d359c5edd823110747000000000000000000000000000000000000000000000000000000000000000160d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df510000000000000000000000000000000000000000000000000000000000000000ff9636ccb66e73219fd166cd6ffbc9c6215f74ff31c1fd4131cf532b29ee096f65278c459253fba65bf019c723a68bb4a6153ea8378cd1b15d55825e1a291b6f0001'
-    data = encoded_data.decode('hex')
     bad_data = bad_encoded_data.decode('hex')
+
+    nonce = 1
+    asset = ASSET_ADDRESS
+    balance = 1
+    recipient = RECIPIENT_ADDRESS
+    locksroot = LOCKSROOT
+
+    msg = DirectTransfer(
+        nonce,
+        asset,
+        balance,
+        recipient,
+        locksroot,
+    ).sign(INITIATOR_PRIVKEY)
+    packed = msg.packed()
+    data = str(packed.data)
+
     s = tester.state()
     c = s.abi_contract(decode_code, language="solidity")
-    o1 = c.decodeTransfer(data)
+    o1 = c.decodeTransfer1(data)
+    o2 = c.decodeTransfer2(data)
     assert data[0] == '\x05'  # make sure data has right cmdid
     assert len(data) == 213
-    nonce = o1[0]
-    assert nonce == 1
-    asset = o1[1]
-    assert asset == sha3('asset')[:20].encode('hex')
-    recipient = o1[2]
+    cmd_id_pad = o1[0]
+    assert cmd_id_pad == data[:4]
+    nonce = o1[1]
+    assert nonce == packed.nonce
+    asset = o1[2]
+    assert asset == str(packed.asset).encode('hex')
+    recipient = o1[3]
     assert len(recipient) == 40
-    assert recipient == privtoaddr('y' * 32).encode('hex')
-    balance = o1[3]
-    assert balance == 1
-    optionalLocksroot = o1[4]
-    assert optionalLocksroot == '60d09b4687c162154b290ee5fcbd7c6285590969b3c873e94b690ee9c4f5df51'.decode('hex')
-    optionalSecret = o1[5]
+    assert recipient == str(packed.recipient).encode('hex')
+    transfered_amount = o1[4]
+    assert transfered_amount == packed.transfered_amount
+    optionalLocksroot = o2[0]
+    assert optionalLocksroot == str(packed.locksroot)
+    optionalSecret = o2[1]
     assert optionalSecret == '0000000000000000000000000000000000000000000000000000000000000000'.decode('hex')
-    signature = 'ff9636ccb66e73219fd166cd6ffbc9c6215f74ff31c1fd4131cf532b29ee096f65278c459253fba65bf019c723a68bb4a6153ea8378cd1b15d55825e1a291b6f00'.decode('hex')
-    r = o1[6]
-    s = o1[7]
-    v = o1[8]
+    signature = str(packed.signature)
+    r = o2[2]
+    s = o2[3]
+    v = o2[4]
     assert r == signature[:32]
     assert s == signature[32:64]
-    assert v == int(signature[64].encode('hex'))
+    assert v == int(signature[64].encode('hex')) + 27
     with pytest.raises(TransactionFailed):
         c.decodeSecret(bad_data)
 
@@ -116,7 +155,7 @@ def test_decode_mediated_transfer():
     v = o2[6]
     assert r == signature[:32]
     assert s == signature[32:64]
-    assert v == int(signature[64].encode('hex'))
+    assert v == int(signature[64].encode('hex')) + 27
 
 
 def test_decode_cancel_transfer():
@@ -154,4 +193,4 @@ def test_decode_cancel_transfer():
     v = o2[6]
     assert r == signature[:32]
     assert s == signature[32:64]
-    assert v == int(signature[64].encode('hex'))
+    assert v == int(signature[64].encode('hex')) + 27

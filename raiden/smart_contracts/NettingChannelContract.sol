@@ -1,4 +1,4 @@
-import "HumanStandardToken.sol";
+import "StandardToken.sol";
 
 contract NettingChannelContract {
     uint public lockedTime;
@@ -7,7 +7,7 @@ contract NettingChannelContract {
     uint public closed;
     uint public settled;
     address public closingAddress;
-    HumanStandardToken public assetToken;
+    StandardToken public assetToken;
 
     struct Participant
     {
@@ -15,6 +15,7 @@ contract NettingChannelContract {
         uint deposit;
         uint netted;
         uint transferedAmount;
+        uint amount;
         bytes merkleProof;
         bytes32 hashlock;
         bytes32 secret;
@@ -22,7 +23,6 @@ contract NettingChannelContract {
         address sender;
         uint nonce;
         address asset;
-        uint balance;
         address recipient;
         bytes32 locksroot;
     }
@@ -41,10 +41,7 @@ contract NettingChannelContract {
     }
 
     function NettingChannelContract(address assetAdr, address participant1, address participant2, uint lckdTime) {
-        opened = 0;
-        closed = 0;
-        settled = 0;
-        assetToken = HumanStandardToken(assetAdr);
+        assetToken = StandardToken(assetAdr);
         assetAddress = assetAdr;
         participants[0].addr = participant1;
         participants[1].addr = participant2;
@@ -63,9 +60,9 @@ contract NettingChannelContract {
     /// @dev Deposit an amount to the channel. At least one of the participants 
     /// must deposit before the channel is opened.
     /// @param amount (uint) the amount to be deposited to the address
-    function deposit(uint amount) inParticipants {
-        if (assetToken.balanceOf(msg.sender) < amount) throw;
-        bool s = assetToken.transfer(this, amount);
+    function deposit(uint256 amount) inParticipants {
+        if (assetToken.balanceOf(msg.sender) <= amount) throw;
+        bool s = assetToken.transferFrom(msg.sender, address(this), amount);
         if (s == true) participants[atIndex(msg.sender)].deposit += amount;
         if(isOpen() && opened == 0) open();
     }
@@ -73,7 +70,7 @@ contract NettingChannelContract {
     /// @notice isOpen() to check if a channel is open
     /// @dev Check if a channel is open and both parties have deposited to the channel
     /// @return open (bool) the status of the channel
-    function isOpen() private returns (bool open) {
+    function isOpen() private returns (bool) {
         if (closed > 0) throw;
         if (participants[0].deposit > 0 || participants[1].deposit > 0) return true;
         else return false;

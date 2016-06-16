@@ -5,6 +5,9 @@ from ethereum import tester
 from ethereum import slogging
 from ethereum.tester import TransactionFailed
 
+from raiden.mtree import merkleroot
+from raiden.utils import privtoaddr, sha3
+from raiden.messages import Lock, CancelTransfer, DirectTransfer, MediatedTransfer, Secret
 from raiden.network.rpc.client import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -86,3 +89,14 @@ def test_ncc():
     assert a2 == tester.a1.encode('hex')
     assert d1 == 30
     assert d2 == 0
+
+    # test close(message)
+
+    lock = Lock(30, 31, sha3(tester.a0))
+    locksroot = merkleroot([sha3(lock.as_bytes)],)
+    msg = DirectTransfer(1, token.address, 15, tester.a1, locksroot).sign(tester.k0)
+    packed = msg.packed()
+    direct_transfer = str(packed.data)
+    print direct_transfer.encode('hex')
+
+    # c.closeOneWay(direct_transfer)

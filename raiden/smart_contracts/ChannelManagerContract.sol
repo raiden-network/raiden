@@ -1,8 +1,9 @@
 import "IterableMappingNCC.sol";
+import "StandardToken.sol";
 contract ChannelManagerContract {
     IterableMappingNCC.itmap data;
 
-    address public assetAddress;
+    StandardToken public assetToken;
 
     // Events
     // Event that triggers when a new channel is created
@@ -14,7 +15,7 @@ contract ChannelManagerContract {
     /// @dev Initiate the contract with the constructor
     /// @param assetAdr (address) the address of an asset
     function ChannelManagerContract(address assetAdr) {
-        assetAddress = assetAdr;
+        assetToken = StandardToken(assetAdr);
     }
 
     /// @notice nettingContractsByAddress(address) to get nettingContracts that 
@@ -96,11 +97,10 @@ contract ChannelManagerContract {
 
     /// @notice get(address, address) to get the unique channel of two parties.
     /// @dev Get the channel of two parties
-    /// @param adrA (address) address of one party.
-    /// @param adrB (address) address of other party.
+    /// @param partner (address) address of the partner.
     /// @return channel (NettingChannelContract) the value of the NettingChannelContract of the two parties.
-    function get(address adrA, address adrB) returns (NettingChannelContract channel){
-        bytes32 ky = key(adrA, adrB);
+    function get(address partner) returns (NettingChannelContract channel){
+        bytes32 ky = key(msg.sender, partner);
         if (IterableMappingNCC.contains(data, ky) == false) throw; //handle if no such channel exists
         uint index = IterableMappingNCC.atIndex(data, ky);
         var (k, v) = IterableMappingNCC.iterate_get(data, index - 1); // -1 ?
@@ -121,7 +121,7 @@ contract ChannelManagerContract {
     /// @return channel (NettingChannelContract) the NettingChannelContract of the two parties.
     function newChannel(address partner, uint lckdTime) returns (NettingChannelContract c, address sender){
         bytes32 k = key(msg.sender, partner);
-        c = new NettingChannelContract(assetAddress, msg.sender, partner, lckdTime);
+        c = new NettingChannelContract(assetToken, msg.sender, partner, lckdTime);
         add(k, c);
         sender = msg.sender; // Only for testing purpose, should not be added to live net
         ChannelNew(partner); //Triggers event
