@@ -1,6 +1,6 @@
 contract Decoder {
 
-    function slice(bytes a, uint start, uint end) private returns (bytes n) {
+    function slice(bytes a, uint start, uint end) returns (bytes n) {
         if (a.length < end) throw;
         if (start < 0) throw;
         if (start > end) throw;
@@ -10,7 +10,7 @@ contract Decoder {
         }
     }
 
-    function sigSplit(bytes message) private returns (bytes32 r, bytes32 s, uint8 v) {
+    function sigSplit(bytes message) returns (bytes32 r, bytes32 s, uint8 v) {
         if (message.length != 65) throw;
 
         // The signature format is a compact form of:
@@ -26,6 +26,8 @@ contract Decoder {
             // use the second best option, 'and'
             v := and(mload(add(message, 65)), 1)
         }
+        // old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]
+        if(v < 27) v += 27;
     }
 
     function decodeSecret(bytes m) returns (bytes32 secret, bytes32 r, bytes32 s, uint8 v) {

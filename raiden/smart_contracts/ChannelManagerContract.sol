@@ -1,8 +1,9 @@
 import "IterableMappingNCC.sol";
+import "StandardToken.sol";
 contract ChannelManagerContract {
     IterableMappingNCC.itmap data;
 
-    address public assetAddress;
+    StandardToken public assetToken;
 
     // Events
     // Event that triggers when a new channel is created
@@ -14,7 +15,7 @@ contract ChannelManagerContract {
     /// @dev Initiate the contract with the constructor
     /// @param assetAdr (address) the address of an asset
     function ChannelManagerContract(address assetAdr) {
-        assetAddress = assetAdr;
+        assetToken = StandardToken(assetAdr);
     }
 
     /// @notice nettingContractsByAddress(address) to get nettingContracts that 
@@ -120,7 +121,7 @@ contract ChannelManagerContract {
     /// @return channel (NettingChannelContract) the NettingChannelContract of the two parties.
     function newChannel(address partner, uint lckdTime) returns (NettingChannelContract c, address sender){
         bytes32 k = key(msg.sender, partner);
-        c = new NettingChannelContract(assetAddress, msg.sender, partner, lckdTime);
+        c = new NettingChannelContract(assetToken, msg.sender, partner, lckdTime);
         add(k, c);
         sender = msg.sender; // Only for testing purpose, should not be added to live net
         ChannelNew(partner); //Triggers event

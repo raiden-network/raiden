@@ -32,7 +32,9 @@ contract Getters {
         }
         // Direct Transfer
         if (decideCMD(message) == 5) {
-            sndr = ddtran(message);
+            bytes memory mes = slice(message, 0, 148);
+            bytes memory sig = slice(message, 148, 213);
+            sndr = ddtran(mes, sig);
         }
         // Locked Transfer
         if (decideCMD(message) == 6) {
@@ -53,16 +55,26 @@ contract Getters {
         number = uint(message[0]);
     }
 
+    function ecTest(bytes message, bytes sig) returns (address) {
+        bytes32 hash = sha3(message);
+        var(r, s, v) = dcdr.sigSplit(sig);
+        return ecrecover(hash, v, r, s);
+    }
+
     function dsec(bytes message) private returns (address sndr) {
         var(sec, r, s, v) = dcdr.decodeSecret(message);
         bytes32 h = sha3(sec);
         sndr = ecrecover(h, v, r, s);
     }
-    function ddtran(bytes message) private returns (address sndr) {
+    function ddtranTEST(bytes message) returns (bytes32 h) {
         var(cmd, non, ass, rec, trn) = dcdr.decodeTransfer1(message);
         var(olo, ops, r, s, v) = dcdr.decodeTransfer2(message);
-        bytes32 h = sha3(cmd, non, ass, rec, trn, olo, ops); //need the optionalLocksroot
-        sndr = ecrecover(h, v, r, s);
+        h = sha3(cmd, non, ass, rec, trn, olo, ops); //need the optionalLocksroot
+    }
+    function ddtran(bytes message, bytes sig) private returns (address sndr) {
+        bytes32 hash = sha3(message);
+        var(r, s, v) = dcdr.sigSplit(sig);
+        return ecrecover(hash, v, r, s);
     }
     function dltran(bytes message) private returns (address sndr) {
         bytes32 lock;
@@ -88,5 +100,15 @@ contract Getters {
         var(loc, bal, , , r, s, v) = dcdr.decodeCancelTransfer2(message);
         bytes32 h = sha3(non, ass, bal, rec, loc, lock); //need the lock
         sndr = ecrecover(h, v, r, s);
+    }
+
+    function slice(bytes a, uint start, uint end) private returns (bytes n) {
+        if (a.length < end) throw;
+        if (start < 0) throw;
+        if (start > end) throw;
+        n = new bytes(end-start);
+        for ( uint i = start; i < end; i ++) { //python style slice
+            n[i-start] = a[i];
+        }
     }
 }

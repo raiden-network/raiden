@@ -30,7 +30,7 @@ def test_cmc():
         # c.key(sha3('address1')[:20], sha3('address1')[:20])
 
     # test newChannel()
-    assert c.assetAddress() == sha3('asset')[:20].encode('hex')
+    assert c.assetToken() == sha3('asset')[:20].encode('hex')
     nc1 = c.newChannel(sha3('address1')[:20], 30)
     nc2 = c.newChannel(sha3('address3')[:20], 30)
     with pytest.raises(TransactionFailed):
