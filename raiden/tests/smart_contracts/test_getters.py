@@ -7,6 +7,7 @@ from ethereum.tester import TransactionFailed
 from raiden.mtree import merkleroot
 from raiden.utils import privtoaddr, sha3
 from raiden.messages import Lock, CancelTransfer, DirectTransfer, MediatedTransfer, Secret
+from raiden.encoding.signing import recover_publickey, address_from_key
 from raiden.network.rpc.client import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -30,7 +31,7 @@ LOCK = Lock(LOCK_AMOUNT, LOCK_EXPIRATION, HASHLOCK)
 LOCKSROOT = merkleroot([
     sha3(LOCK.as_bytes), ])   # print direct_transfer.encode('hex')
 
-
+@pytest.mark.xfail
 def test_ncc():
     decode_lib = get_contract_path('Decoder.sol')
     getter_path = get_contract_path('Getters.sol')
@@ -59,5 +60,12 @@ def test_ncc():
     packed = msg.packed()
     direct_transfer = str(packed.data)
 
+    # pure python recover
+    sen = recover_publickey(direct_transfer[:148], direct_transfer[-65:])
+    assert address_from_key(sen) == INITIATOR_ADDRESS
+
+    print direct_transfer.encode('hex')
+    addr = getter.ecTest(direct_transfer[:148], direct_transfer[-65:])
+    assert addr == INITIATOR_ADDRESS
     sender = getter.getSender(direct_transfer)
-    assert sender == INITIATOR_ADDRESS
+    assert sender == INITIATOR_ADDRESS.encode('hex')

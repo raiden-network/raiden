@@ -11,8 +11,8 @@ from raiden.network.rpc.client import get_contract_path
 
 decoder_path = get_contract_path('Decoder.sol')
 
-with open(decoder_path) as decoder_file:
-    decode_code = decoder_file.read()
+# with open(decoder_path) as decoder_file:
+    # decode_code = decoder_file.read()
 
 INITIATOR_PRIVKEY = 'x' * 32
 INITIATOR_ADDRESS = privtoaddr(INITIATOR_PRIVKEY)
@@ -43,7 +43,7 @@ def test_decode_secret():
     bad_data = bad_encoded_data.decode('hex')
 
     s = tester.state()
-    c = s.abi_contract(decode_code, language="solidity")
+    c = s.abi_contract(None, path=decoder_path, language="solidity")
     assert data[0] == '\x04'  # make sure data has right cmdid
     o1 = c.decodeSecret(data)
     assert o1[0][26:32] == 'secret'
@@ -81,7 +81,7 @@ def test_decode_transfer():
     data = str(packed.data)
 
     s = tester.state()
-    c = s.abi_contract(decode_code, language="solidity")
+    c = s.abi_contract(None, path=decoder_path, language="solidity")
     o1 = c.decodeTransfer1(data)
     o2 = c.decodeTransfer2(data)
     assert data[0] == '\x05'  # make sure data has right cmdid
@@ -117,7 +117,7 @@ def test_decode_mediated_transfer():
 
     data = encoded_data.decode('hex')
     s = tester.state()
-    c = s.abi_contract(decode_code, language="solidity")
+    c = s.abi_contract(None, path=decoder_path, language="solidity")
 
     assert data[0] == '\x07'  # make sure data has right cmdid
     assert len(data) == 325
@@ -163,7 +163,7 @@ def test_decode_cancel_transfer():
 
     data = encoded_data.decode('hex')
     s = tester.state()
-    c = s.abi_contract(decode_code, language="solidity")
+    c = s.abi_contract(None, path=decoder_path, language="solidity")
 
     assert data[0] == '\x08'  # make sure data has right cmdid
     assert len(data) == 253
