@@ -25,6 +25,7 @@ contract Decoder {
             // 'byte' is not working due to the Solidity parser, so lets
             // use the second best option, 'and'
             v := and(mload(add(message, 65)), 1)
+
         }
         // old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]
         if(v < 27) v += 27;

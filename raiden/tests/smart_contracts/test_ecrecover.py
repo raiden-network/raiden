@@ -7,6 +7,7 @@ from raiden.encoding.signing import recover_publickey, address_from_key, sign
 from raiden.network.rpc.client import get_contract_path
 
 ec_path = get_contract_path('EcTest.sol')
+getter_path = get_contract_path('Getters.sol')
 
 
 def test_ec():
@@ -15,6 +16,7 @@ def test_ec():
     state.block.number = 1158001
     assert state.block.number > 1150000
     ec = state.abi_contract(None, path=ec_path, language='solidity')
+    getter = state.abi_contract(None, path=getter_path, language="solidity")
 
     INITIATOR_PRIVKEY = 'x' * 32
     INITIATOR_ADDRESS = privtoaddr(INITIATOR_PRIVKEY)
@@ -55,7 +57,12 @@ def test_ec():
     assert address_from_key(sen) == INITIATOR_ADDRESS
 
     # solidity ecrecover
-    sender = ec.ecst(direct_transfer[:148], str(packed.signature))
-    assert sender == INITIATOR_ADDRESS.encode('hex')
-    sender = ec.ecst(direct_transfer[:148], sig)
+    sender, r, s, v = ec.ecst(direct_transfer[:148], str(packed.signature))
+    assert r == str(packed.signature[:32])
+    assert s == str(packed.signature[32:64])
+    assert v == packed.signature[64] + 27
+    r, s, v = ec.sigSplit(sig)
+    assert r == str(packed.signature[:32])
+    assert s == str(packed.signature[32:64])
+    assert v == packed.signature[64] + 27
     assert sender == INITIATOR_ADDRESS.encode('hex')

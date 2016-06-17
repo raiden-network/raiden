@@ -4,10 +4,10 @@ import pytest
 from ethereum import tester
 from ethereum import slogging
 from ethereum.tester import TransactionFailed
-
+from raiden.messages import Lock, DirectTransfer
+from raiden.encoding.signing import recover_publickey, address_from_key, sign
 from raiden.mtree import merkleroot
 from raiden.utils import privtoaddr, sha3
-from raiden.messages import Lock, CancelTransfer, DirectTransfer, MediatedTransfer, Secret
 from raiden.network.rpc.client import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -92,11 +92,39 @@ def test_ncc():
 
     # test close(message)
 
-    lock = Lock(30, 31, sha3(tester.a0))
-    locksroot = merkleroot([sha3(lock.as_bytes)],)
-    msg = DirectTransfer(1, token.address, 15, tester.a1, locksroot).sign(tester.k0)
+    INITIATOR_PRIVKEY = tester.k0
+    INITIATOR_ADDRESS = privtoaddr(INITIATOR_PRIVKEY)
+
+    RECIPIENT_PRIVKEY = tester.k1
+    RECIPIENT_ADDRESS = privtoaddr(RECIPIENT_PRIVKEY)
+
+    ASSET_ADDRESS = token.address
+
+    HASHLOCK = sha3(INITIATOR_PRIVKEY)
+    LOCK_AMOUNT = 29
+    LOCK_EXPIRATION = 31
+    LOCK = Lock(LOCK_AMOUNT, LOCK_EXPIRATION, HASHLOCK)
+    LOCKSROOT = merkleroot([
+        sha3(LOCK.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    nonce = 1
+    asset = ASSET_ADDRESS
+    balance = 1
+    recipient = RECIPIENT_ADDRESS
+    locksroot = LOCKSROOT
+
+    msg = DirectTransfer(
+        nonce,
+        asset,
+        balance,
+        recipient,
+        locksroot,
+    ).sign(INITIATOR_PRIVKEY)
     packed = msg.packed()
     direct_transfer = str(packed.data)
-    print direct_transfer.encode('hex')
+    sig, pub = sign(direct_transfer[:148], INITIATOR_PRIVKEY)
 
-    # c.closeOneWay(direct_transfer)
+    assert sig == str(packed.signature)
+
+    c.closeOneWay(direct_transfer)
+

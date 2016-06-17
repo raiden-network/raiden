@@ -6,17 +6,18 @@ from ethereum.tester import TransactionFailed
 
 from raiden.mtree import merkleroot
 from raiden.utils import privtoaddr, sha3
-from raiden.messages import Lock, CancelTransfer, DirectTransfer, MediatedTransfer, Secret
+from raiden.messages import Lock, DirectTransfer
 from raiden.encoding.signing import recover_publickey, address_from_key, sign
 from raiden.network.rpc.client import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
+decode_lib = get_contract_path('Decoder.sol')
+getter_path = get_contract_path('Getters.sol')
 
-@pytest.mark.xfail
+
+# @pytest.mark.xfail
 def test_ncc():
-    decode_lib = get_contract_path('Decoder.sol')
-    getter_path = get_contract_path('Getters.sol')
 
     s = tester.state()
     assert s.block.number < 1150000
@@ -58,11 +59,22 @@ def test_ncc():
     direct_transfer = str(packed.data)
     sig, pub = sign(direct_transfer[:148], INITIATOR_PRIVKEY)
 
+    assert sig == str(packed.signature)
+
     # pure python recover
     sen = recover_publickey(direct_transfer[:148], str(packed.signature))
     assert address_from_key(sen) == INITIATOR_ADDRESS
 
-    addr = getter.ecTest(direct_transfer[:148], sig)
-    assert addr == INITIATOR_ADDRESS.encode('hex')
+    # addr = getter.ecTest(direct_transfer[:148], sig)
+    # assert addr == INITIATOR_ADDRESS.encode('hex')
+    sender = getter.getSender(direct_transfer)
+    assert sender == INITIATOR_ADDRESS.encode('hex')
+
+    # with sigSplit directly in Getters.sol
+    r, s, v = getter.sigSplit(sig)
+    assert r == str(packed.signature[:32])
+    assert s == str(packed.signature[32:64])
+    assert v == packed.signature[64] + 27
+
     sender = getter.getSender(direct_transfer)
     assert sender == INITIATOR_ADDRESS.encode('hex')

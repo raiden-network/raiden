@@ -1,8 +1,8 @@
 contract EcTest {
-    function ecst(bytes message, bytes sig) returns (address) {
+    function ecst(bytes message, bytes sig) returns (address a, bytes32 r, bytes32 s, uint8 v) {
         bytes32 hash = sha3(message);
-        var(r, s, v) = sigSplit(sig);
-        return ecrecover(hash, v, r, s);
+        (r, s, v) = sigSplit(sig);
+        a = ecrecover(hash, v, r, s);
     }
     function sigSplit(bytes message)  returns (bytes32 r, bytes32 s, uint8 v) {
         if (message.length != 65) throw;
