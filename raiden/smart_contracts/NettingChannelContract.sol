@@ -61,7 +61,7 @@ contract NettingChannelContract {
     /// must deposit before the channel is opened.
     /// @param amount (uint) the amount to be deposited to the address
     function deposit(uint256 amount) inParticipants {
-        if (assetToken.balanceOf(msg.sender) <= amount) throw;
+        if (assetToken.balanceOf(msg.sender) < amount) throw;
         bool s = assetToken.transferFrom(msg.sender, address(this), amount);
         if (s == true) participants[atIndex(msg.sender)].deposit += amount;
         if(isOpen() && opened == 0) open();

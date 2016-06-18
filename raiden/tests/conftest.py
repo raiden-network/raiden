@@ -14,11 +14,13 @@ from raiden.network.rpc.client import (
     BlockChainService,
     BlockChainServiceMock,
     MOCK_REGISTRY_ADDRESS,
+    GAS_LIMIT,
 )
 from raiden.tests.utils.network import (
     create_network,
     create_sequential_network,
     create_hydrachain_network,
+    DEFAULT_DEPOSIT,
 )
 
 # we need to use fixture for the default values otherwise
@@ -109,7 +111,7 @@ def asset():
 @pytest.fixture
 def deposit():
     """ Raiden chain default deposit. """
-    return 100
+    return DEFAULT_DEPOSIT
 
 
 @pytest.fixture
@@ -169,9 +171,9 @@ def raiden_chain(request, private_keys, asset, deposit, registry_address,
 
     raiden_apps = create_sequential_network(
         private_keys,
-        deposit,
         asset,
         registry_address,
+        deposit,
         transport_class,
         blockchain_service_class,
     )
@@ -249,7 +251,8 @@ def deployed_network(request, private_keys, hydrachain_network,
     )
     registry_address = registry_proxy.address
 
-    total_asset = 2 * deposit * len(private_keys)
+    total_per_node = channels_per_node * deposit
+    total_asset = total_per_node * len(private_keys)
     asset_addresses = []
     for _ in range(number_of_assets):
         token_proxy = jsonrpc_client.deploy_solidity_contract(
@@ -270,13 +273,20 @@ def deployed_network(request, private_keys, hydrachain_network,
         # the creator to the other nodes
         for transfer_to in private_keys:
             if transfer_to != jsonrpc_client.privkey:
-                token_proxy.transfer(privtoaddr(transfer_to), 2 * deposit)  # pylint: disable=no-member
+                transaction_hash = token_proxy.transfer(  # pylint: disable=no-member
+                    privtoaddr(transfer_to),
+                    total_per_node,
+                    startgas=GAS_LIMIT,
+                )
+                jsonrpc_client.poll(transaction_hash.decode('hex'))
 
-    raiden_apps = create_network(
+        for key in private_keys:
+            assert token_proxy.balanceOf(privtoaddr(key)) == total_per_node  # pylint: disable=no-member
+
+    raiden_apps = create_sequential_network(
         private_keys,
-        asset_addresses,
+        asset_addresses[0],
         registry_address,
-        channels_per_node,
         deposit,
         transport_class,
         blockchain_service_class,

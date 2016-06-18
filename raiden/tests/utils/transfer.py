@@ -60,7 +60,7 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
 
     The secret will be revealed and the apps will be synchronized.
     """
-    has_channel = target_app.raiden.address in initiator_app.raiden.assetmanagers[asset].channel
+    has_channel = target_app.raiden.address in initiator_app.raiden.assetmanagers[asset].channels
 
     # api.transfer() would do a DirectTransfer
     if has_channel:
@@ -70,12 +70,12 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
             str(initiator_channel.our_state.nonce),
         ))
         hashlock = sha3(secret)
-        transfermanager = target_app.raiden.assetmanagers[asset].transfermanager
+        transfermanager = initiator_app.raiden.assetmanagers[asset].transfermanager
 
         task = MediatedTransferTask(
             transfermanager,
             amount,
-            target_app.address,
+            target_app.raiden.address,
             hashlock,
             lock_expiration=None,
             originating_transfer=None,

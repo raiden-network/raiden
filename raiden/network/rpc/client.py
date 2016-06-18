@@ -6,7 +6,7 @@ import random
 from ethereum import slogging
 
 from ethereum import _solidity
-from ethereum.utils import sha3, privtoaddr
+from ethereum.utils import sha3, privtoaddr, int_to_big_endian
 
 import raiden
 from raiden.utils import isaddress
@@ -15,6 +15,8 @@ from raiden.blockchain.net_contract import NettingChannelContract
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 LETTERS = string.printable
 MOCK_REGISTRY_ADDRESS = '7265676973747279726567697374727972656769'
+GAS_LIMIT = 3141592  # Morden's gasLimit.
+GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
 
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
@@ -142,8 +144,12 @@ class BlockChainService(object):
     def asset_addresses(self):
         return [
             address.decode('hex')
-            for address in self.registry_proxy.assetAddresses.call()
+            for address in self.registry_proxy.assetAddresses.call(startgas=GAS_LIMIT)
         ]
+
+    @property
+    def block_number(self):
+        return self.client.blocknumber()
 
     def netting_addresses(self, asset_address):
         raise NotImplementedError()
@@ -153,7 +159,7 @@ class BlockChainService(object):
 
         # for simplicity the smart contract return a shallow list where every
         # second item forms a tuple
-        channel_flat_encoded = manager_proxy.getAllChannels.call()
+        channel_flat_encoded = manager_proxy.getAllChannels.call(startgas=GAS_LIMIT)
 
         channel_flat = [
             channel.decode('hex')
@@ -167,14 +173,19 @@ class BlockChainService(object):
     def nettingaddresses_by_asset_participant(self, asset_address, participant_address):  # pylint: disable=invalid-name
         manager_proxy = self._get_manager(asset_address)
 
+        address_list = manager_proxy.nettingContractsByAddress.call(
+            participant_address,
+            startgas=GAS_LIMIT,
+        )
+
         return [
             address.decode('hex')
-            for address in manager_proxy.nettingContractsByAddress.call(participant_address)
+            for address in address_list
         ]
 
     def netting_contract_detail(self, asset_address, netting_contract_address, our_address):
         contract_proxy = self._get_contract(netting_contract_address)
-        data = contract_proxy.addrAndDep.call()
+        data = contract_proxy.addrAndDep.call(startgas=GAS_LIMIT)
 
         if data[0].decode('hex') == our_address:
             return {
@@ -194,14 +205,14 @@ class BlockChainService(object):
     def isopen(self, asset_address, netting_contract_address):
         contract_proxy = self._get_contract(netting_contract_address)
 
-        if contract_proxy.closed() != 0:
+        if contract_proxy.closed(startgas=GAS_LIMIT) != 0:
             return False
 
-        return contract_proxy.opened() != 0
+        return contract_proxy.opened(startgas=GAS_LIMIT) != 0
 
     def partner(self, asset_address, netting_contract_address, our_address):
         contract_proxy = self._get_contract(netting_contract_address)
-        data = contract_proxy.addrAndDep.call()
+        data = contract_proxy.addrAndDep.call(startgas=GAS_LIMIT)
 
         if data[0].decode('hex') == our_address:
             return data[2].decode('hex')
@@ -210,10 +221,16 @@ class BlockChainService(object):
     # TRANSACTIONS
 
     def new_channel_manager_contract(self, asset_address):
-        transaction_hash = self.registry_proxy.addAsset(asset_address)
+        transaction_hash = self.registry_proxy.addAsset(
+            asset_address,
+            startgas=GAS_LIMIT,
+        )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
 
-        return self.registry_proxy.channelManagerByAsset.call(asset_address).decode('hex')
+        return self.registry_proxy.channelManagerByAsset.call(
+            asset_address,
+            startgas=GAS_LIMIT,
+        ).decode('hex')
 
     def new_netting_contract(self, asset_address, peer1, peer2):
         channel_manager_proxy = self._get_manager(asset_address)
@@ -223,15 +240,26 @@ class BlockChainService(object):
         else:
             other = peer1
 
-        transaction_hash = channel_manager_proxy.newChannel(other, 10)
+        transaction_hash = channel_manager_proxy.newChannel.transact(
+            other,
+            10,
+            startgas=GAS_LIMIT,
+        )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
 
-        address_encoded = channel_manager_proxy.get.call(peer1, peer2)
+        address_encoded = channel_manager_proxy.get.call(
+            other,
+            startgas=GAS_LIMIT,
+        )
         return address_encoded.decode('hex')
 
     def asset_approve(self, asset_address, netcontract_address, deposit):
         asset_proxy = self._get_asset(asset_address)
-        transaction_hash = asset_proxy.approve(netcontract_address, deposit)
+        transaction_hash = asset_proxy.approve.transact(
+            netcontract_address,
+            deposit,
+            startgas=GAS_LIMIT,
+        )
         self.client.poll(transaction_hash.decode('hex'))
 
     def deposit(self, asset_address, netting_contract_address, our_address, amount):
@@ -239,7 +267,10 @@ class BlockChainService(object):
             raise ValueError('amount needs to be an integral number.')
 
         contract_proxy = self._get_contract(netting_contract_address)
-        transaction_hash = contract_proxy.deposit.transact(value=amount)
+        transaction_hash = contract_proxy.deposit.transact(
+            amount,
+            startgas=GAS_LIMIT,
+        )
         self.client.poll(transaction_hash.decode('hex'))
 
     def close(self, asset_address, netting_contract_address, our_address,  # pylint: disable=too-many-arguments

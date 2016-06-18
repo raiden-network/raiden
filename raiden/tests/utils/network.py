@@ -18,12 +18,32 @@ from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.app import App, INITIAL_PORT
 from raiden.network.discovery import Discovery
-from raiden.network.rpc.client import BlockChainServiceMock
+from raiden.network.rpc.client import BlockChainServiceMock, GAS_LIMIT_HEX
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_DEPOSIT = 2 ** 240
 """ An arbitrary initial balance for each channel in the test network. """
+
+
+def check_channel(app1, app2, asset_address, netcontract_address, deposit):
+    assert app1.raiden.chain.isopen(asset_address, netcontract_address)
+    assert app2.raiden.chain.isopen(asset_address, netcontract_address)
+
+    app1_details = app1.raiden.chain.netting_contract_detail(
+        asset_address,
+        netcontract_address,
+        app1.raiden.address,
+    )
+
+    app2_details = app1.raiden.chain.netting_contract_detail(
+        asset_address,
+        netcontract_address,
+        app2.raiden.address,
+    )
+
+    assert app1_details['our_balance'] == app2_details['partner_balance'] == deposit
+    assert app1_details['partner_balance'] == app2_details['our_balance'] == deposit
 
 
 def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0.0.1'):  # pylint: disable=too-many-arguments
@@ -115,20 +135,28 @@ def create_network_channels(assets_list, apps, channels_per_node, deposit):
             contracts_addreses.append(netcontract_address)
 
             for app in [curr_app, app]:
-                address = app.raiden.address
-
-                blockchain_service.asset_approve(
+                # use each app's own chain because of the private key / local
+                # signing
+                app.raiden.chain.asset_approve(
                     asset_address,
                     netcontract_address,
                     deposit,
                 )
 
-                blockchain_service.deposit(
+                app.raiden.chain.deposit(
                     asset_address,
                     netcontract_address,
-                    address,
+                    app.raiden.address,
                     deposit,
                 )
+
+            check_channel(
+                curr_app,
+                app,
+                asset_address,
+                netcontract_address,
+                deposit,
+            )
 
 
 def create_network(private_keys, assets_addresses, registry_address,  # pylint: disable=too-many-arguments
@@ -213,8 +241,9 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
     return apps
 
 
-def create_sequential_network(private_keys, deposit, asset, registry_address,  # pylint: disable=too-many-arguments
-                              transport_class, blockchain_service_class):
+def create_sequential_network(private_keys, asset_address, registry_address,  # pylint: disable=too-many-arguments
+                              deposit, transport_class,
+                              blockchain_service_class):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
@@ -264,21 +293,37 @@ def create_sequential_network(private_keys, deposit, asset, registry_address,  #
 
     for first, second in zip(apps[:-1], apps[1:]):
         netcontract_address = first.raiden.chain.new_netting_contract(
-            asset,
+            asset_address,
             first.raiden.address,
             second.raiden.address,
         )
 
-        for address in [first.raiden.address, second.raiden.address]:
-            first.raiden.chain.deposit(
-                asset,
+        for app in [first, second]:
+            # use each app's own chain because of the private key / local
+            # signing
+            app.raiden.chain.asset_approve(
+                asset_address,
                 netcontract_address,
-                address,
                 deposit,
             )
 
+            app.raiden.chain.deposit(
+                asset_address,
+                netcontract_address,
+                app.raiden.address,
+                deposit,
+            )
+
+        check_channel(
+            first,
+            second,
+            asset_address,
+            netcontract_address,
+            deposit,
+        )
+
     for app in apps:
-        app.raiden.setup_asset(asset, app.config['reveal_timeout'])
+        app.raiden.setup_asset(asset_address, app.config['reveal_timeout'])
 
     return apps
 
@@ -314,7 +359,7 @@ def create_hydrachain_network(private_keys, hydrachain_private_keys, p2p_base_po
         'timestamp': '0x00',
         'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
         'extraData': '0x',
-        'gasLimit': '0x2FEFD8', # Morden's gasLimit.
+        'gasLimit': GAS_LIMIT_HEX,
         'alloc': alloc,
     }
 
