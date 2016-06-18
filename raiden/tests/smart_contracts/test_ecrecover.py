@@ -1,30 +1,20 @@
-import pytest
-
 from ethereum import tester
-from ethereum import slogging
-from ethereum.tester import TransactionFailed
 
-from raiden.mtree import merkleroot
 from raiden.utils import privtoaddr, sha3
-from raiden.messages import Lock, CancelTransfer, DirectTransfer, MediatedTransfer, Secret
+from raiden.mtree import merkleroot
+from raiden.messages import Lock, DirectTransfer
 from raiden.encoding.signing import recover_publickey, address_from_key, sign
 from raiden.network.rpc.client import get_contract_path
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+ec_path = get_contract_path('EcTest.sol')
 
 
-@pytest.mark.xfail
-def test_ncc():
-    decode_lib = get_contract_path('Decoder.sol')
-    getter_path = get_contract_path('Getters.sol')
-
-    s = tester.state()
-    assert s.block.number < 1150000
-    s.block.number = 1158001
-    assert s.block.number > 1150000
-    # Token creation
-    lib_getter = s.abi_contract(None, path=decode_lib, language="solidity")
-    getter = s.abi_contract(None, path=getter_path, language="solidity", libraries={'Decoder': lib_getter.address.encode('hex')})
+def test_ec():
+    state = tester.state()
+    assert state.block.number < 1150000
+    state.block.number = 1158001
+    assert state.block.number > 1150000
+    ec = state.abi_contract(None, path=ec_path, language='solidity')
 
     INITIATOR_PRIVKEY = 'x' * 32
     INITIATOR_ADDRESS = privtoaddr(INITIATOR_PRIVKEY)
@@ -58,11 +48,14 @@ def test_ncc():
     direct_transfer = str(packed.data)
     sig, pub = sign(direct_transfer[:148], INITIATOR_PRIVKEY)
 
+    assert sig == str(packed.signature)
+
     # pure python recover
     sen = recover_publickey(direct_transfer[:148], str(packed.signature))
     assert address_from_key(sen) == INITIATOR_ADDRESS
 
-    addr = getter.ecTest(direct_transfer[:148], sig)
-    assert addr == INITIATOR_ADDRESS.encode('hex')
-    sender = getter.getSender(direct_transfer)
+    # solidity ecrecover
+    sender = ec.ecst(direct_transfer[:148], str(packed.signature))
+    assert sender == INITIATOR_ADDRESS.encode('hex')
+    sender = ec.ecst(direct_transfer[:148], sig)
     assert sender == INITIATOR_ADDRESS.encode('hex')
