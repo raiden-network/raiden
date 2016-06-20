@@ -93,7 +93,6 @@ def test_ncc():
     # test close(message)
 
     INITIATOR_PRIVKEY = tester.k0
-    INITIATOR_ADDRESS = privtoaddr(INITIATOR_PRIVKEY)
 
     RECIPIENT_PRIVKEY = tester.k1
     RECIPIENT_ADDRESS = privtoaddr(RECIPIENT_PRIVKEY)
@@ -109,22 +108,28 @@ def test_ncc():
 
     nonce = 1
     asset = ASSET_ADDRESS
-    balance = 1
+    transfered_amount = 1
     recipient = RECIPIENT_ADDRESS
     locksroot = LOCKSROOT
 
     msg = DirectTransfer(
         nonce,
         asset,
-        balance,
+        transfered_amount,
         recipient,
         locksroot,
     ).sign(INITIATOR_PRIVKEY)
     packed = msg.packed()
     direct_transfer = str(packed.data)
-    sig, pub = sign(direct_transfer[:148], INITIATOR_PRIVKEY)
-
-    assert sig == str(packed.signature)
 
     c.closeOneWay(direct_transfer)
 
+    assert c.closed() == s.block.number
+    assert c.closingAddress() == tester.a0.encode('hex')
+    assert c.participants(0)[10] == 1
+    assert c.participants(0)[11] == token.address.encode('hex')
+    assert c.participants(0)[9] == tester.a0.encode('hex')
+    assert c.participants(0)[12] == tester.a1.encode('hex')
+    assert c.participants(0)[3] == 1
+    assert c.participants(0)[6] == LOCKSROOT
+    assert c.participants(0)[7] == '\x00' * 32

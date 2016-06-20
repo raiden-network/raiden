@@ -1,6 +1,5 @@
 import "StandardToken.sol";
 import "Decoder.sol";
-import "Getters.sol";
 
 contract NettingChannelContract {
     uint public lockedTime;
@@ -11,24 +10,23 @@ contract NettingChannelContract {
     address public closingAddress;
     StandardToken public assetToken;
     Decoder public dcdr;
-    Getters public getter;
 
     struct Participant
     {
-        address addr;
-        uint deposit;
-        uint netted;
-        uint transferedAmount;
-        uint amount;
-        bytes merkleProof;
-        bytes32 hashlock;
-        bytes32 secret;
-        uint expiration;
-        address sender;
-        uint nonce;
-        address asset;
-        address recipient;
-        bytes32 locksroot;
+        address addr; // 0
+        uint deposit; // 1
+        uint netted; // 2
+        uint transferedAmount; // 3
+        uint amount; // 4
+        bytes merkleProof; // 5
+        bytes32 hashlock; // 6
+        bytes32 secret; // 7
+        uint expiration; // 8
+        address sender; // 9
+        uint nonce; // 10
+        address asset; // 11
+        address recipient; // 12
+        bytes32 locksroot; // 13
     }
     Participant[2] public participants; // We only have two participants at all times
 
@@ -57,7 +55,8 @@ contract NettingChannelContract {
     /// @param addr (address) the address you want the index of
     function atIndex(address addr) private returns (uint index) {
         if (addr == participants[0].addr) return 0;
-        else return 1;
+        if (addr == participants[1].addr) return 1;
+        else throw;
     }
 
     /// @notice deposit(uint) to deposit amount to channel.
@@ -120,13 +119,13 @@ contract NettingChannelContract {
         if (closed > 0) throw; // channel is closing
 
         // check if sender of message is a participant
-        if (getter.getSender(firstEncoded) != participants[0].addr &&
-            getter.getSender(firstEncoded) != participants[1].addr) throw;
+        if (getSender(firstEncoded) != participants[0].addr &&
+            getSender(firstEncoded) != participants[1].addr) throw;
 
         uint partnerId = atIndex(partner(msg.sender));
         uint senderId = atIndex(msg.sender);
 
-        /*decode(firstEncoded);*/
+        decode(firstEncoded);
 
         // mark closed
         closed = block.number;
@@ -161,13 +160,13 @@ contract NettingChannelContract {
         if (closed > 0) throw; // channel is closing
 
         // check if the sender of either of the messages is a participant
-        if (getter.getSender(firstEncoded) != participants[0].addr &&
-            getter.getSender(firstEncoded) != participants[1].addr) throw;
-        if (getter.getSender(secondEncoded) != participants[0].addr &&
-            getter.getSender(secondEncoded) != participants[1].addr) throw;
+        if (getSender(firstEncoded) != participants[0].addr &&
+            getSender(firstEncoded) != participants[1].addr) throw;
+        if (getSender(secondEncoded) != participants[0].addr &&
+            getSender(secondEncoded) != participants[1].addr) throw;
 
         // Don't allow both transfers to be from the same sender
-        if (getter.getSender(firstEncoded) == getter.getSender(secondEncoded)) throw;
+        if (getSender(firstEncoded) == getSender(secondEncoded)) throw;
 
         uint partnerId = atIndex(partner(msg.sender));
         uint senderId = atIndex(msg.sender);
@@ -206,7 +205,7 @@ contract NettingChannelContract {
         if (settled > 0) throw; // channel already settled
         if (closed == 0) throw; // channel is open
         if (msg.sender == closingAddress) throw; // don't allow closer to update
-        if (closingAddress == getter.getSender(message)) throw;
+        if (closingAddress == getSender(message)) throw;
 
         decode(message);
 
@@ -285,8 +284,7 @@ contract NettingChannelContract {
         }
         // Direct Transfer
         if (decideCMD(message) == 5) {
-            hash = assignDirect1(message);
-            assignDirect2(message, hash);
+            assignDirect(message);
         }
         // Locked Transfer
         if (decideCMD(message) == 6) {
@@ -303,7 +301,7 @@ contract NettingChannelContract {
             hash = assignCancel1(message);
             assignCancel2(message, hash);
         }
-        else throw;
+        /*else throw;*/
     }
 
     function decideCMD(bytes message) private returns (uint number) {
@@ -311,30 +309,26 @@ contract NettingChannelContract {
     }
 
     function assignSecret(bytes message) private {
-        uint i = atIndex(getter.getSender(message));
+        uint i = atIndex(getSender(message));
         var(sec, r, s, v) = dcdr.decodeSecret(message);
         participants[atIndex(msg.sender)].secret = sec;
         bytes32 h = sha3(sec);
         participants[i].sender = ecrecover(h, v, r, s);
     }
-    function assignDirect1(bytes message) private returns (bytes32 hh) {
-        uint i = atIndex(getter.getSender(message));
-        var(cmd, non, ass, rec, trn) = dcdr.decodeTransfer1(message);
+    function assignDirect(bytes message) returns (uint8 nonce) {
+        address sender = getSender(message);
+        uint i = atIndex(sender);
+        var(cmd, non, ass, rec, trn, loc, sec) = decodeTransfer1(message);
         participants[i].nonce = non;
         participants[i].asset = ass;
         participants[i].recipient = rec;
         participants[i].transferedAmount = trn;
-        hh = sha3(cmd, non, ass, trn);
-    }
-    function assignDirect2(bytes message, bytes32 hh) private {
-        bytes32 lock;
-        uint i = atIndex(getter.getSender(message));
-        var(loc, sec, r, s, v) = dcdr.decodeTransfer2(message);
-        bytes32 h = sha3(hh, loc, sec);
-        participants[i].sender = ecrecover(h, v, r, s);
+        participants[i].hashlock = loc;
+        participants[i].secret = sec;
+        participants[i].sender = sender;
     }
     function assignLocked1(bytes message) private returns (bytes32 hh) {
-        uint i = atIndex(getter.getSender(message));
+        uint i = atIndex(getSender(message));
         var(non, exp, ass, rec) = dcdr.decodeLockedTransfer1(message);
         participants[i].nonce = non;
         lockedTime = exp;
@@ -344,7 +338,7 @@ contract NettingChannelContract {
     }
     function assignLocked2(bytes message, bytes32 hh) private {
         bytes32 lock;
-        uint i = atIndex(getter.getSender(message));
+        uint i = atIndex(getSender(message));
         var(loc, trn, amo, has, r, s, v) = dcdr.decodeLockedTransfer2(message);
         participants[i].locksroot = loc;
         participants[i].transferedAmount = trn;
@@ -354,7 +348,7 @@ contract NettingChannelContract {
         participants[i].sender = ecrecover(h, v, r, s);
     }
     function assignMediated1(bytes message) private returns (bytes32 hh) {
-        uint i = atIndex(getter.getSender(message));
+        uint i = atIndex(getSender(message));
         var(non, exp, ass, rec, tar, ini, loc) = dcdr.decodeMediatedTransfer1(message); 
         participants[i].nonce = non;
         lockedTime = exp;
@@ -365,7 +359,7 @@ contract NettingChannelContract {
     }
     function assignMediated2(bytes message, bytes32 hh) private {
         bytes32 lock;
-        uint i = atIndex(getter.getSender(message));
+        uint i = atIndex(getSender(message));
         var(has, trn, amo, fee, r, s, v) = dcdr.decodeMediatedTransfer2(message);
         participants[i].hashlock = has;
         participants[i].transferedAmount = trn;
@@ -374,7 +368,7 @@ contract NettingChannelContract {
         participants[i].sender = ecrecover(h, v, r, s);
     }
     function assignCancel1(bytes message) private returns (bytes32 hh) {
-        uint i = atIndex(getter.getSender(message));
+        uint i = atIndex(getSender(message));
         var(non, exp, ass, rec) = dcdr.decodeCancelTransfer1(message);
         participants[i].nonce = non;
         lockedTime = exp;
@@ -384,7 +378,7 @@ contract NettingChannelContract {
     }
     function assignCancel2(bytes message, bytes32 hh) private {
         bytes32 lock;
-        uint i = atIndex(getter.getSender(message));
+        uint i = atIndex(getSender(message));
         var(loc, trn, amo, has, r, s, v) = dcdr.decodeCancelTransfer2(message);
         participants[i].locksroot = loc;
         participants[i].transferedAmount = trn;
@@ -392,6 +386,28 @@ contract NettingChannelContract {
         participants[i].hashlock = has;
         bytes32 h = sha3(hh, trn, loc, lock); //need the lock
         participants[i].sender = ecrecover(h, v, r, s);
+    }
+
+    function decodeTransfer1(bytes m)
+        returns
+        (bytes4 cmdIdPad,
+        uint8 nonce,
+        address asset,
+        address recipient,
+        uint transferedAmount,
+        bytes32 optionalLocksroot,
+        bytes32 optionalSecret)
+    {
+        if (m.length != 213) throw;
+        cmdIdPad = bytesToBytes4(slice(m, 0, 4), cmdIdPad);
+        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
+        uint160 ia;
+        asset = bytesToAddress(slice(m, 12, 32), ia);
+        uint160 ir;
+        recipient = bytesToAddress(slice(m, 32, 52), ir);
+        transferedAmount = bytesToInt(slice(m, 52, 84), transferedAmount);
+        optionalLocksroot = bytesToBytes32(slice(m, 84, 116), optionalLocksroot);
+        optionalSecret = bytesToBytes32(slice(m, 116, 148), optionalSecret);
     }
 
     function slice(bytes a, uint start, uint end) private returns (bytes n) {
@@ -404,12 +420,98 @@ contract NettingChannelContract {
         }
     }
 
-    /*[> HELPER FUNCTIONS <]*/
-    function bytesToBytes32(bytes b, bytes32 i) private returns (bytes32 bts) {
+    // Gets the sender of a last sent transfer
+    function getSender(bytes message) returns (address sndr) {
+        bytes memory mes;
+        bytes memory sig;
+        // Secret
+        if (decideCMD(message) == 4) {
+            mes = slice(message, 0, 36);
+            sig = slice(message, 36, 101);
+            sndr = ecRec(mes, sig);
+        }
+        // Direct Transfer
+        if (decideCMD(message) == 5) {
+            mes = slice(message, 0, 148);
+            sig = slice(message, 148, 213);
+            sndr = ecRec(mes, sig);
+        }
+        // Locked Transfer
+        if (decideCMD(message) == 6) {
+            mes = slice(message, 0, 188);
+            sig = slice(message, 188, 253);
+            sndr = ecRec(mes, sig);
+        }
+        // Mediated Transfer
+        if (decideCMD(message) == 7) {
+            mes = slice(message, 0, 260);
+            sig = slice(message, 260, 325);
+            sndr = ecRec(mes, sig);
+        }
+        // Cancel Transfer
+        if (decideCMD(message) == 8) {
+            mes = slice(message, 0, 188);
+            sig = slice(message, 188, 253);
+            sndr = ecRec(mes, sig);
+        }
+        /*else throw;*/
+    }
+
+    function sigSplit(bytes message) private returns (bytes32 r, bytes32 s, uint8 v) {
+        if (message.length != 65) throw;
+
+        // The signature format is a compact form of:
+        //   {bytes32 r}{bytes32 s}{uint8 v}
+        // Compact means, uint8 is not padded to 32 bytes.
+        assembly {
+            r := mload(add(message, 32))
+            s := mload(add(message, 64))
+            // Here we are loading the last 32 bytes, including 31 bytes
+            // of 's'. There is no 'mload8' to do this.
+            //
+            // 'byte' is not working due to the Solidity parser, so lets
+            // use the second best option, 'and'
+            v := and(mload(add(message, 65)), 1)
+
+        }
+        // old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]
+        if(v < 27) v += 27;
+    }
+
+    // Function for ECRecovery
+    function ecRec(bytes message, bytes sig) private returns (address sndr) {
+        bytes32 hash = sha3(message);
+        var(r, s, v) = sigSplit(sig);
+        sndr = ecrecover(hash, v, r, s);
+    }
+
+    /* HELPER FUNCTIONS */
+
+    function bytesToIntEight(bytes b, uint8 i) private returns (uint8 res) {
+        assembly { i := mload(add(b, 0x8)) }
+        res = i;
+    }
+
+    function bytesToInt(bytes b, uint i) private returns (uint res) {
+        assembly { i := mload(add(b, 0x20)) }
+        res = i;
+    }
+
+    function bytesToAddress(bytes b, uint160 i) private returns (address add) {
+        assembly { i := mload(add(b, 0x14)) }
+        uint160 a = uint160(i);
+        add = address(i);
+    }
+
+    function bytesToBytes4(bytes b, bytes4 i) private returns (bytes4 bts) {
         assembly { i := mload(add(b, 0x20)) }
         bts = i;
     }
 
+    function bytesToBytes32(bytes b, bytes32 i) private returns (bytes32 bts) {
+        assembly { i := mload(add(b, 0x20)) }
+        bts = i;
+    }
     // empty function to handle wrong calls
     function () { throw; }
 }

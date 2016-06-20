@@ -19,21 +19,27 @@ getter_path = get_contract_path('Getters.sol')
 # @pytest.mark.xfail
 def test_ncc():
 
+    token_library_path = get_contract_path('StandardToken.sol')
+    token_path = get_contract_path('HumanStandardToken.sol')
+
     s = tester.state()
     assert s.block.number < 1150000
     s.block.number = 1158001
     assert s.block.number > 1150000
     # Token creation
+    lib_token = s.abi_contract(None, path=token_library_path, language="solidity")
+    token = s.abi_contract(None, path=token_path, language="solidity", libraries={'StandardToken': lib_token.address.encode('hex')}, constructor_parameters=[10000, "raiden", 0, "rd"])
+    # Getter creation
     lib_getter = s.abi_contract(None, path=decode_lib, language="solidity")
     getter = s.abi_contract(None, path=getter_path, language="solidity", libraries={'Decoder': lib_getter.address.encode('hex')})
 
-    INITIATOR_PRIVKEY = 'x' * 32
+    INITIATOR_PRIVKEY = tester.k0
     INITIATOR_ADDRESS = privtoaddr(INITIATOR_PRIVKEY)
 
-    RECIPIENT_PRIVKEY = 'y' * 32
+    RECIPIENT_PRIVKEY = tester.k1
     RECIPIENT_ADDRESS = privtoaddr(RECIPIENT_PRIVKEY)
 
-    ASSET_ADDRESS = sha3('asset')[:20]
+    ASSET_ADDRESS = token.address
 
     HASHLOCK = sha3(INITIATOR_PRIVKEY)
     LOCK_AMOUNT = 29
@@ -57,24 +63,21 @@ def test_ncc():
     ).sign(INITIATOR_PRIVKEY)
     packed = msg.packed()
     direct_transfer = str(packed.data)
-    sig, pub = sign(direct_transfer[:148], INITIATOR_PRIVKEY)
-
-    assert sig == str(packed.signature)
 
     # pure python recover
     sen = recover_publickey(direct_transfer[:148], str(packed.signature))
-    assert address_from_key(sen) == INITIATOR_ADDRESS
+    assert address_from_key(sen) == tester.a0
 
     # addr = getter.ecTest(direct_transfer[:148], sig)
     # assert addr == INITIATOR_ADDRESS.encode('hex')
     sender = getter.getSender(direct_transfer)
-    assert sender == INITIATOR_ADDRESS.encode('hex')
+    assert sender == tester.a0.encode('hex')
 
     # with sigSplit directly in Getters.sol
-    r, s, v = getter.sigSplit(sig)
+    r, s, v = getter.sigSplit(str(packed.signature))
     assert r == str(packed.signature[:32])
     assert s == str(packed.signature[32:64])
     assert v == packed.signature[64] + 27
 
     sender = getter.getSender(direct_transfer)
-    assert sender == INITIATOR_ADDRESS.encode('hex')
+    assert sender == tester.a0.encode('hex')
