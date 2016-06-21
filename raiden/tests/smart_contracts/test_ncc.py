@@ -19,7 +19,7 @@ def test_ncc():
     token_library_path = get_contract_path('StandardToken.sol')
     token_path = get_contract_path('HumanStandardToken.sol')
 
-    ncc_path = get_contract_path('NettingChannelContract.sol.old')
+    ncc_path = get_contract_path('NettingChannelContract.sol')
 
     s = tester.state()
     assert s.block.number < 1150000
