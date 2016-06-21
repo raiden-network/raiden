@@ -10,7 +10,7 @@ contract Decoder {
         }
     }
 
-    function sigSplit(bytes message)  returns (bytes32 r, bytes32 s, uint8 v) {
+    function sigSplit(bytes message) returns (bytes32 r, bytes32 s, uint8 v) {
         if (message.length != 65) throw;
 
         // The signature format is a compact form of:

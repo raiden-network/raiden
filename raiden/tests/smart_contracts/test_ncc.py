@@ -4,10 +4,10 @@ import pytest
 from ethereum import tester
 from ethereum import slogging
 from ethereum.tester import TransactionFailed
-
+from raiden.messages import Lock, DirectTransfer
+from raiden.encoding.signing import recover_publickey, address_from_key, sign
 from raiden.mtree import merkleroot
 from raiden.utils import privtoaddr, sha3
-from raiden.messages import Lock, CancelTransfer, DirectTransfer, MediatedTransfer, Secret
 from raiden.network.rpc.client import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -19,8 +19,7 @@ def test_ncc():
     token_library_path = get_contract_path('StandardToken.sol')
     token_path = get_contract_path('HumanStandardToken.sol')
 
-    library_path = get_contract_path('Decoder.sol')
-    ncc_path = get_contract_path('NettingChannelContract.sol.old')
+    ncc_path = get_contract_path('NettingChannelContract.sol')
 
     s = tester.state()
     assert s.block.number < 1150000
@@ -32,9 +31,7 @@ def test_ncc():
 
     s.mine()
 
-    lib_c = s.abi_contract(None, path=library_path, language="solidity")
-    s.mine()
-    c = s.abi_contract(None, path=ncc_path, language="solidity", libraries={'Decoder': lib_c.address.encode('hex')}, constructor_parameters=[token.address, tester.a0, tester.a1, 30])
+    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[token.address, tester.a0, tester.a1, 30])
 
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
@@ -92,11 +89,44 @@ def test_ncc():
 
     # test close(message)
 
-    lock = Lock(30, 31, sha3(tester.a0))
-    locksroot = merkleroot([sha3(lock.as_bytes)],)
-    msg = DirectTransfer(1, token.address, 15, tester.a1, locksroot).sign(tester.k0)
+    INITIATOR_PRIVKEY = tester.k0
+
+    RECIPIENT_PRIVKEY = tester.k1
+    RECIPIENT_ADDRESS = privtoaddr(RECIPIENT_PRIVKEY)
+
+    ASSET_ADDRESS = token.address
+
+    HASHLOCK = sha3(INITIATOR_PRIVKEY)
+    LOCK_AMOUNT = 29
+    LOCK_EXPIRATION = 31
+    LOCK = Lock(LOCK_AMOUNT, LOCK_EXPIRATION, HASHLOCK)
+    LOCKSROOT = merkleroot([
+        sha3(LOCK.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    nonce = 1
+    asset = ASSET_ADDRESS
+    transfered_amount = 1
+    recipient = RECIPIENT_ADDRESS
+    locksroot = LOCKSROOT
+
+    msg = DirectTransfer(
+        nonce,
+        asset,
+        transfered_amount,
+        recipient,
+        locksroot,
+    ).sign(INITIATOR_PRIVKEY)
     packed = msg.packed()
     direct_transfer = str(packed.data)
-    print direct_transfer.encode('hex')
 
-    # c.closeOneWay(direct_transfer)
+    c.closeOneWay(direct_transfer)
+
+    assert c.closed() == s.block.number
+    assert c.closingAddress() == tester.a0.encode('hex')
+    assert c.participants(0)[10] == 1
+    assert c.participants(0)[11] == token.address.encode('hex')
+    assert c.participants(0)[9] == tester.a0.encode('hex')
+    assert c.participants(0)[12] == tester.a1.encode('hex')
+    assert c.participants(0)[3] == 1
+    assert c.participants(0)[6] == LOCKSROOT
+    assert c.participants(0)[7] == '\x00' * 32
