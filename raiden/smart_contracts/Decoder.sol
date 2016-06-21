@@ -10,7 +10,7 @@ contract Decoder {
         }
     }
 
-    function sigSplit(bytes message)  returns (bytes32 r, bytes32 s, uint8 v) {
+    function sigSplit(bytes message) returns (bytes32 r, bytes32 s, uint8 v) {
         if (message.length != 65) throw;
 
         // The signature format is a compact form of:
@@ -25,7 +25,6 @@ contract Decoder {
             // 'byte' is not working due to the Solidity parser, so lets
             // use the second best option, 'and'
             v := and(mload(add(message, 65)), 1)
-
         }
         // old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]
         if(v < 27) v += 27;

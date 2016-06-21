@@ -19,7 +19,6 @@ def test_ncc():
     token_library_path = get_contract_path('StandardToken.sol')
     token_path = get_contract_path('HumanStandardToken.sol')
 
-    library_path = get_contract_path('Decoder.sol')
     ncc_path = get_contract_path('NettingChannelContract.sol.old')
 
     s = tester.state()
@@ -32,9 +31,7 @@ def test_ncc():
 
     s.mine()
 
-    lib_c = s.abi_contract(None, path=library_path, language="solidity")
-    s.mine()
-    c = s.abi_contract(None, path=ncc_path, language="solidity", libraries={'Decoder': lib_c.address.encode('hex')}, constructor_parameters=[token.address, tester.a0, tester.a1, 30])
+    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[token.address, tester.a0, tester.a1, 30])
 
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
