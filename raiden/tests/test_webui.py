@@ -1,28 +1,47 @@
+# -*- coding: utf8 -*-
 import pytest
+from ethereum.utils import sha3
 
-from raiden.tests.utils.network import create_network
+from raiden.app import DEFAULT_SETTLE_TIMEOUT
+from raiden.network.rpc.client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
+from raiden.network.transport import UDPTransport
 from raiden.tests.utils.messages import setup_messages_cb
+from raiden.tests.utils.network import create_network
 from raiden.web_ui import WebUI, UIHandler
 
-""" Start:
-1) `python test_webui.py`
-2) interact in browser on 'localhost:8080'
-3) copy availabe addresses from terminal to browser for interaction
-4) it is not guaranteed that a channel to a specific address exists
-"""
+# Start:
+# 1) `python test_webui.py`
+# 2) interact in browser on 'localhost:8080'
+# 3) copy availabe addresses from terminal to browser for interaction
+# 4) it is not guaranteed that a channel to a specific address exists
+
 
 @pytest.mark.skipif(True, reason='UI has to be tested manually')
-def test_webui():
+def test_webui():  # pylint: disable=too-many-locals
+    num_assets = 3
     num_nodes = 10
+
+    assets_addresses = [
+        sha3('webui:asset:{}'.format(number))[:20]
+        for number in range(num_assets)
+    ]
+
     private_keys = [
-        sha3('mediated_transfer:{}'.format(position))
+        sha3('webui:{}'.format(position))
         for position in range(num_nodes)
     ]
 
+    channels_per_node = 2
+    deposit = 100
     app_list = create_network(
         private_keys,
-        num_assets=3,
-        channels_per_node=2,
+        assets_addresses,
+        MOCK_REGISTRY_ADDRESS,
+        channels_per_node,
+        deposit,
+        DEFAULT_SETTLE_TIMEOUT,
+        UDPTransport,
+        BlockChainServiceMock
     )
     app0 = app_list[0]
 
@@ -56,17 +75,6 @@ def test_webui():
     assert path in am0.channelgraph.get_shortest_paths(source, target)
     assert min(len(p) for p in am0.channelgraph.get_shortest_paths(source, target)) == num_hops + 1
 
-    ams_by_address = dict(
-        (app.raiden.address, app.raiden.assetmanagers)
-        for app in app_list
-    )
-
-    # addresses
-    hop1, hop2, hop3 = path
-
-    # asset
-    asset_address = am0.asset_address
-
     app0_assets = getattr(app0.raiden.api, 'assets')
     print '\nAvailable assets:'
     for asset in app0_assets:
@@ -74,8 +82,7 @@ def test_webui():
     print '\n'
 
     handler = UIHandler(app0.raiden)
-    ui = WebUI(handler)
-    ui.run()
+    WebUI(handler).run()
 
 
 if __name__ == '__main__':

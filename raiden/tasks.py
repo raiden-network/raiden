@@ -216,11 +216,12 @@ class MediatedTransferTask(Task):
                 lock_expiration = self.lock_expiration
 
             reveal_expiration = self.raiden.chain.block_number + channel.reveal_timeout
-            if not reveal_expiration <= lock_expiration < channel.settle_timeout:
+            settle_expiration = self.raiden.chain.block_number + channel.settle_timeout
+            if not reveal_expiration <= lock_expiration < settle_expiration:
                 log.debug(
                     'lock_expiration is too large, channel/path cannot be used',
                     lock_expiration=lock_expiration,
-                    channel_locktime=channel.settle_timeout,
+                    channel_locktime=settle_expiration,
                     nodeid=pex(path[0]),
                     partner=pex(path[1]),
                 )

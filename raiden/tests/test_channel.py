@@ -53,12 +53,12 @@ def test_transfer(raiden_network):
     # check balances of channel and contract are equal
     details0 = app0.raiden.chain.netting_contract_detail(
         channel0.asset_address,
-        channel0.nettingcontract_address,
+        channel0.netting_contract_address,
         address0,
     )
     details1 = app0.raiden.chain.netting_contract_detail(
         channel1.asset_address,
-        channel1.nettingcontract_address,
+        channel1.netting_contract_address,
         address1,
     )
     assert initial_balance0 == details0['our_balance']
@@ -79,12 +79,12 @@ def test_transfer(raiden_network):
     # check the contract is intact
     assert details0 == app0.raiden.chain.netting_contract_detail(
         channel0.asset_address,
-        channel0.nettingcontract_address,
+        channel0.netting_contract_address,
         address0,
     )
     assert details1 == app0.raiden.chain.netting_contract_detail(
         channel1.asset_address,
-        channel1.nettingcontract_address,
+        channel1.netting_contract_address,
         address1,
     )
     assert channel0.initial_balance == initial_balance0

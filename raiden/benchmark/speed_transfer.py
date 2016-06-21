@@ -3,11 +3,16 @@ from __future__ import print_function
 
 import time
 
+from raiden.app import DEFAULT_SETTLE_TIMEOUT
+from raiden.network.rpc.client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
+from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import create_network
 from raiden.utils import sha3
 
 
 def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-many-locals
+    channels_per_node = 1
+    deposit = 100
     num_nodes = 2
     num_assets = 1
 
@@ -24,7 +29,12 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
     apps = create_network(
         private_keys,
         assets,
-        channels_per_node=1,
+        MOCK_REGISTRY_ADDRESS,
+        channels_per_node,
+        deposit,
+        DEFAULT_SETTLE_TIMEOUT,
+        UDPTransport,
+        BlockChainServiceMock
     )
 
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking

@@ -19,6 +19,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 INITIAL_PORT = 40001
+DEFAULT_SETTLE_TIMEOUT = 20
 
 
 class App(object):  # pylint: disable=too-few-public-methods

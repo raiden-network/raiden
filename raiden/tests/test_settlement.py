@@ -19,7 +19,7 @@ from raiden.utils import sha3
 
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_settlement(raiden_network):
+def test_settlement(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     setup_messages_cb()
@@ -43,7 +43,7 @@ def test_settlement(raiden_network):
 
     assert app1.raiden.address in asset_manager0.channels
     assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert channel0.nettingcontract_address == channel1.nettingcontract_address
+    assert channel0.netting_contract_address == channel1.netting_contract_address
 
     transfermessage = channel0.create_lockedtransfer(amount, expiration, hashlock)
     app0.raiden.sign(transfermessage)
@@ -58,7 +58,7 @@ def test_settlement(raiden_network):
     # Bob learns the secret, but Alice did not send a signed updated balance to
     # reflect this Bob wants to settle
 
-    nettingcontract_address = channel0.nettingcontract_address
+    netting_contract_address = channel0.netting_contract_address
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
     merkle_proof = channel1.our_state.locked.get_proof(transfermessage)
@@ -67,7 +67,7 @@ def test_settlement(raiden_network):
 
     chain0.close(
         asset_address,
-        nettingcontract_address,
+        netting_contract_address,
         app0.raiden.address,
         transfermessage,
         None,
@@ -77,15 +77,15 @@ def test_settlement(raiden_network):
 
     chain0.unlock(
         asset_address,
-        nettingcontract_address,
+        netting_contract_address,
         app0.raiden.address,
         unlocked,
     )
 
-    for _ in range(NettingChannelContract.settle_timeout):
+    for _ in range(settle_timeout):
         chain0.next_block()
 
-    chain0.settle(asset_address, nettingcontract_address)
+    chain0.settle(asset_address, netting_contract_address)
 
 
 @pytest.mark.xfail()
@@ -110,7 +110,7 @@ def test_settled_lock(asset_address, raiden_network):
     attack_channel = channel(app2, app1, asset)
     secret_transfer = get_received_transfer(attack_channel, 0)
     last_transfer = get_received_transfer(attack_channel, 1)
-    nettingcontract_address = attack_channel.nettingcontract_address
+    netting_contract_address = attack_channel.netting_contract_address
 
     # create a fake proof
     merkle_proof = attack_channel.our_state.locked.get_proof(secret_transfer)
@@ -118,7 +118,7 @@ def test_settled_lock(asset_address, raiden_network):
     # call close giving the secret for a transfer that has being revealed
     app1.raiden.chain.close(
         asset,
-        nettingcontract_address,
+        netting_contract_address,
         app1.raiden.address,
         [last_transfer],
         [(merkle_proof, secret_transfer.lock, secret)],
@@ -128,10 +128,10 @@ def test_settled_lock(asset_address, raiden_network):
     for _ in range(NettingChannelContract.settle_timeout):
         app2.raiden.chain.next_block()
 
-    app1.raiden.chain.settle(asset, nettingcontract_address)
+    app1.raiden.chain.settle(asset, netting_contract_address)
 
     # check that the attack FAILED
-    # contract = app1.raiden.chain.asset_hashchannel[asset][nettingcontract_address]
+    # contract = app1.raiden.chain.asset_hashchannel[asset][netting_contract_address]
 
 
 @pytest.mark.xfail()
@@ -161,8 +161,8 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
 
     attack_channel = channel(app2, app1, asset)
     attack_transfer = get_received_transfer(attack_channel, 0)
-    attack_contract = attack_channel.nettingcontract_address
-    hub_contract = channel(app1, app0, asset).nettingcontract_address
+    attack_contract = attack_channel.netting_contract_address
+    hub_contract = channel(app1, app0, asset).netting_contract_address
 
     # the attacker can create a merkle proof of the locked transfer
     merkle_proof = attack_channel.our_state.locked.get_proof(attack_transfer)

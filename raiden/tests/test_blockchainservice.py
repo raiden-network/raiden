@@ -36,7 +36,7 @@ xADDR = '0x' + ADDR.encode('hex')  # pylint: disable=invalid-name
 PRIVKEY = privkey('0')
 
 
-def test_new_netting_contract(blockchain_service):
+def test_new_netting_contract(blockchain_service, settle_timeout):
     # pylint: disable=line-too-long,too-many-statements
     asset_address = make_address()
     peer1_address = make_address()
@@ -62,7 +62,12 @@ def test_new_netting_contract(blockchain_service):
     ) == []
 
     # create one channel
-    netting1_address = blockchain_service.new_netting_contract(asset_address, peer1_address, peer2_address)
+    netting1_address = blockchain_service.new_netting_contract(
+        asset_address,
+        peer1_address,
+        peer2_address,
+        settle_timeout,
+    )
 
     # check contract state
     assert isaddress(netting1_address)
@@ -85,10 +90,20 @@ def test_new_netting_contract(blockchain_service):
 
     # cant recreate the existing channel
     with pytest.raises(Exception):
-        blockchain_service.new_netting_contract(asset_address, peer1_address, peer2_address)
+        blockchain_service.new_netting_contract(
+            asset_address,
+            peer1_address,
+            peer2_address,
+            settle_timeout,
+        )
 
     # create other chanel
-    netting2_address = blockchain_service.new_netting_contract(asset_address, peer1_address, peer3_address)
+    netting2_address = blockchain_service.new_netting_contract(
+        asset_address,
+        peer1_address,
+        peer3_address,
+        settle_timeout,
+    )
 
     assert isaddress(netting2_address)
     assert blockchain_service.isopen(asset_address, netting2_address) is False

@@ -202,6 +202,10 @@ class BlockChainService(object):
             'partner_balance': data[1],
         }
 
+    def netting_contract_settle_timeout(self, asset_address, netting_contract_address):
+        contract_proxy = self._get_contract(netting_contract_address)
+        return contract_proxy.lockedTime.call()
+
     def isopen(self, asset_address, netting_contract_address):
         contract_proxy = self._get_contract(netting_contract_address)
 
@@ -232,7 +236,7 @@ class BlockChainService(object):
             startgas=GAS_LIMIT,
         ).decode('hex')
 
-    def new_netting_contract(self, asset_address, peer1, peer2):
+    def new_netting_contract(self, asset_address, peer1, peer2, settle_timeout):
         channel_manager_proxy = self._get_manager(asset_address)
 
         if privtoaddr(self.client.privkey) == peer1:
@@ -242,7 +246,7 @@ class BlockChainService(object):
 
         transaction_hash = channel_manager_proxy.newChannel.transact(
             other,
-            10,
+            settle_timeout,
             startgas=GAS_LIMIT,
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
@@ -360,7 +364,7 @@ class BlockChainServiceMock(object):
         self.asset_address[asset_address] = manager_address
         return manager_address
 
-    def new_netting_contract(self, asset_address, peer1, peer2):
+    def new_netting_contract(self, asset_address, peer1, peer2, settle_timeout):
         """ Creates a new netting contract between peer1 and peer2.
 
         Raises:
@@ -378,7 +382,13 @@ class BlockChainServiceMock(object):
         if netcontract_address in hash_channel:
             raise ValueError('netting contract already exists')
 
-        channel = NettingChannelContract(asset_address, netcontract_address, peer1, peer2)
+        channel = NettingChannelContract(
+            asset_address,
+            netcontract_address,
+            peer1,
+            peer2,
+            settle_timeout,
+        )
         hash_channel[netcontract_address] = channel
         return netcontract_address
 
@@ -392,6 +402,11 @@ class BlockChainServiceMock(object):
     def netting_addresses(self, asset_address):
         """ Return all netting contract addreses for the given `asset_address`. """
         return self.asset_hashchannel[asset_address].keys()
+
+    def netting_contract_settle_timeout(self, asset_address, netting_contract_address):
+        hash_channel = self.asset_hashchannel[asset_address]
+        contract = hash_channel[netting_contract_address]
+        return contract.settle_timeout
 
     # this information is required for building the network graph used for
     # routing

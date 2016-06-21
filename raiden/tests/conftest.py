@@ -58,6 +58,11 @@ def number_of_nodes():
 
 
 @pytest.fixture
+def settle_timeout():
+    return 50
+
+
+@pytest.fixture
 def privatekey_seed():
     """ Raiden private key template. """
     return 'key:{}'
@@ -164,7 +169,7 @@ def blockchain_service(request, registry_address):
 
 
 @pytest.fixture
-def raiden_chain(request, private_keys, asset, deposit, registry_address,
+def raiden_chain(request, private_keys, asset, deposit, settle_timeout, registry_address,
                  blockchain_service, transport_class):
     blockchain_service_class = BlockChainServiceMock
     blockchain_service.new_channel_manager_contract(asset)
@@ -174,6 +179,7 @@ def raiden_chain(request, private_keys, asset, deposit, registry_address,
         asset,
         registry_address,
         deposit,
+        settle_timeout,
         transport_class,
         blockchain_service_class,
     )
@@ -193,7 +199,7 @@ def raiden_chain(request, private_keys, asset, deposit, registry_address,
 
 @pytest.fixture
 def raiden_network(request, private_keys, assets_addresses, channels_per_node,
-                   deposit, registry_address, blockchain_service,
+                   deposit, settle_timeout, registry_address, blockchain_service,
                    transport_class):
     blockchain_service_class = BlockChainServiceMock
 
@@ -206,6 +212,7 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
         registry_address,
         channels_per_node,
         deposit,
+        settle_timeout,
         transport_class,
         blockchain_service_class,
     )
@@ -224,8 +231,8 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
 
 @pytest.fixture
 def deployed_network(request, private_keys, hydrachain_network,
-                     channels_per_node, deposit, number_of_assets, timeout,
-                     transport_class):
+                     channels_per_node, deposit, number_of_assets,
+                     settle_timeout, timeout, transport_class):
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
     blockchain_service_class = BlockChainService
@@ -288,6 +295,7 @@ def deployed_network(request, private_keys, hydrachain_network,
         asset_addresses[0],
         registry_address,
         deposit,
+        settle_timeout,
         transport_class,
         blockchain_service_class,
     )

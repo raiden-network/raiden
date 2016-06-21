@@ -62,7 +62,7 @@ def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0
     )
 
 
-def create_network_channels(assets_list, apps, channels_per_node, deposit):
+def create_network_channels(assets_list, apps, channels_per_node, deposit, settle_timeout):
     """ For each asset create `channel_per_node` channels for each app in `apps`.
 
     This function will instantiate the requested number of mock contracts
@@ -131,6 +131,7 @@ def create_network_channels(assets_list, apps, channels_per_node, deposit):
                 asset_address,
                 curr_app.raiden.address,
                 app.raiden.address,
+                settle_timeout,
             )
             contracts_addreses.append(netcontract_address)
 
@@ -160,7 +161,7 @@ def create_network_channels(assets_list, apps, channels_per_node, deposit):
 
 
 def create_network(private_keys, assets_addresses, registry_address,  # pylint: disable=too-many-arguments
-                   channels_per_node, deposit, transport_class,
+                   channels_per_node, deposit, settle_timeout, transport_class,
                    blockchain_service_class):
     """ Initialize a local test network using the UDP protocol.
 
@@ -232,6 +233,7 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
         apps,
         channels_per_node,
         deposit,
+        settle_timeout,
     )
 
     for app in apps:
@@ -242,7 +244,7 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
 
 
 def create_sequential_network(private_keys, asset_address, registry_address,  # pylint: disable=too-many-arguments
-                              deposit, transport_class,
+                              deposit, settle_timeout, transport_class,
                               blockchain_service_class):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
@@ -296,6 +298,7 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
             asset_address,
             first.raiden.address,
             second.raiden.address,
+            settle_timeout,
         )
 
         for app in [first, second]:

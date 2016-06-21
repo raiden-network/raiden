@@ -14,7 +14,7 @@ import yaml
 import gevent
 import networkx
 
-from raiden.app import App
+from raiden.app import App, DEFAULT_SETTLE_TIMEOUT
 from raiden.network.discovery import Discovery
 from raiden.network.rpc.client import BlockChainService
 from raiden.utils import privtoaddr, sha3
@@ -33,7 +33,8 @@ def hostport_to_privkeyaddr(host, port):
     return privkey, addr
 
 
-def random_raiden_network(asset_address, blockchain_service, node_addresses, deposit):
+def random_raiden_network(asset_address, blockchain_service, node_addresses,
+                          deposit, settle_timeout):
     """ Creates random channels among the test nodes until we have a connected graph. """
     graph = networkx.Graph()
     graph.add_nodes_from(node_addresses)
@@ -49,6 +50,7 @@ def random_raiden_network(asset_address, blockchain_service, node_addresses, dep
             asset_address,
             from_address,
             to_address,
+            settle_timeout,
         )
 
         blockchain_service.deposit(
@@ -68,7 +70,8 @@ def random_raiden_network(asset_address, blockchain_service, node_addresses, dep
         graph.add_edge(from_address, to_address)
 
 
-def setup_tps(rpc_server, config_path, channelmanager_address, asset_address, deposit):
+def setup_tps(rpc_server, config_path, channelmanager_address, asset_address,
+              deposit, settle_timeout):
     """ Creates the required contract and the fully connected Raiden network
     prior to running the test.
 
@@ -97,7 +100,13 @@ def setup_tps(rpc_server, config_path, channelmanager_address, asset_address, de
         privkey = sha3('{}:{}'.format(node['host'], node['port']))
         node_addresses.append(privtoaddr(privkey))
 
-    random_raiden_network(asset_address, blockchain_service, node_addresses, deposit)
+    random_raiden_network(
+        asset_address,
+        blockchain_service,
+        node_addresses,
+        deposit,
+        settle_timeout,
+    )
 
 
 def random_transfer(app, asset, transfer_amount):
@@ -217,6 +226,7 @@ def main():
             args.channelmanager_address,
             ASSET_ADDRESS,
             DEFAULT_DEPOSIT,
+            DEFAULT_SETTLE_TIMEOUT,
         )
 
 

@@ -245,16 +245,17 @@ class ChannelEndState(object):
 class Channel(object):
     # pylint: disable=too-many-instance-attributes,too-many-arguments
 
-    def __init__(self, chain, asset_address, nettingcontract_address,
+    def __init__(self, chain, asset_address, netting_contract_address,
                  our_state, partner_state, reveal_timeout):
         self.chain = chain
         self.asset_address = asset_address
-        self.nettingcontract_address = nettingcontract_address
+        self.netting_contract_address = netting_contract_address
         self.our_state = our_state
         self.partner_state = partner_state
         self.reveal_timeout = reveal_timeout
 
-        self.settle_timeout = NettingChannelContract.settle_timeout
+        settle_timeout = chain.netting_contract_settle_timeout(asset_address, netting_contract_address)
+        self.settle_timeout = settle_timeout
         ''' the contract's `settle_timeout`, all locks need to expire with less than this value '''
 
         self.wasclosed = False
@@ -271,7 +272,7 @@ class Channel(object):
         # - cache this result and listen for logs (assume it starts open and
         #   set it close once the log happen)
         # - lift the chain dependency
-        return self.chain.isopen(self.asset_address, self.nettingcontract_address)
+        return self.chain.isopen(self.asset_address, self.netting_contract_address)
 
     @property
     def initial_balance(self):

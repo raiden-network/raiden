@@ -116,11 +116,11 @@ class RaidenService(object):
 
         asset_manager = self.get_or_create_asset_manager(asset_address)
 
-        for nettingcontract_address in netting_address:
+        for netting_contract_address in netting_address:
             self.setup_channel(
                 asset_manager,
                 asset_address,
-                nettingcontract_address,
+                netting_contract_address,
                 reveal_timeout,
             )
 
@@ -135,12 +135,12 @@ class RaidenService(object):
 
         return self.assetmanagers[asset_address]
 
-    def setup_channel(self, asset_manager, asset_address, nettingcontract_address, reveal_timeout):
+    def setup_channel(self, asset_manager, asset_address, netting_contract_address, reveal_timeout):
         """ Initialize the Channel for the given netting contract. """
 
         channel_details = self.chain.netting_contract_detail(
             asset_address,
-            nettingcontract_address,
+            netting_contract_address,
             self.address,
         )
 
@@ -157,7 +157,7 @@ class RaidenService(object):
         channel = Channel(
             self.chain,
             asset_address,
-            nettingcontract_address,
+            netting_contract_address,
             our_state,
             partner_state,
             reveal_timeout,
