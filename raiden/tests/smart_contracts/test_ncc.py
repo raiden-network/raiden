@@ -116,7 +116,7 @@ def test_ncc():
     packed = msg.packed()
     direct_transfer = str(packed.data)
 
-    c.closeOneWay(direct_transfer)
+    c.closeSingleFunded(direct_transfer)
 
     assert c.closed() == s.block.number
     assert c.closingAddress() == tester.a0.encode('hex')
@@ -199,7 +199,7 @@ def test_two_messages():
     packed = msg2.packed()
     direct_transfer2 = str(packed.data)
 
-    c.closeTwoWay(direct_transfer1, direct_transfer2)
+    c.closeBiFunded(direct_transfer1, direct_transfer2)
 
     # Test with message sender tester.a0
     assert c.closed() == s.block.number
