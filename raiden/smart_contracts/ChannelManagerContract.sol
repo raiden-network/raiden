@@ -8,7 +8,7 @@ contract ChannelManagerContract {
     // Events
     // Event that triggers when a new channel is created
     // Gives the created channel
-    event ChannelNew(address partner);// update to use both addresses
+    event ChannelNew(address participant1, address participant2);// update to use both addresses
 
     // Initialize the Contract
     /// @notice ChannelManagerContract(address) to contruct the contract
@@ -124,7 +124,7 @@ contract ChannelManagerContract {
         c = new NettingChannelContract(assetToken, msg.sender, partner, lckdTime);
         add(k, c);
         sender = msg.sender; // Only for testing purpose, should not be added to live net
-        ChannelNew(partner); //Triggers event
+        ChannelNew(msg.sender, partner); //Triggers event
     }
 
     // empty function to handle wrong calls
