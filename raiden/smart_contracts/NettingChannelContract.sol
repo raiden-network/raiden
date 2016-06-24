@@ -31,34 +31,37 @@ contract NettingChannelContract {
         address asset; // 11
         address recipient; // 12
         bytes32 locksroot; // 13
+        Lock[] unlocked; //14
     }
     Participant[2] public participants; // We only have two participants at all times
-    Lock[] public unlocked;
 
-    event ChannelOpened(address assetAdr, address participant1, address participant2); // TODO
-    event ChannelClosed(); // TODO
-    event ChannelSettled(); // TODO
-    event ChannelSecretRevealed(); //TODO
+    event ChannelOpened(address assetAdr, address participant1,
+                        address participant2, uint deposit1, uint deposit2);
+    event ChannelClosed(address closingAddress, uint blockNumber);
+    event ChannelSettled(uint blockNumber);
+    event ChannelSecretRevealed(bytes32 secret); //TODO
 
-    /// @dev modifier ensuring that on a participant of the channel can call a function
+    /// @dev modifier ensuring that only a participant of the channel can call a function
     modifier inParticipants {
         if (msg.sender != participants[0].addr &&
             msg.sender != participants[1].addr) throw;
         _
     }
 
+    /// @dev modifier ensuring that function can only be called if a channel
+    /// is closed, but not yet settled.
     modifier notSettled {
         // if channel is already settled or hasn't been closed yet
         if (settled > 0 || closed == 0) throw;
         _
     }
 
-    function NettingChannelContract(address assetAdr, address participant1, address participant2, uint lckdTime) {
+    function NettingChannelContract(address assetAdr, address participant1, address participant2, uint timeout) {
         assetToken = StandardToken(assetAdr);
         assetAddress = assetAdr;
         participants[0].addr = participant1;
         participants[1].addr = participant2;
-        settleTimeout = lckdTime;
+        if (settleTimeout < 30) settleTimeout = 30; else settleTimeout = timeout;
     }
 
     /// @notice atIndex(address) to get the index of an address (0 or 1)
@@ -98,7 +101,8 @@ contract NettingChannelContract {
     function open() private {
         opened = block.number;
         // trigger event
-        ChannelOpened(assetAddress, participants[0].addr, participants[1].addr);
+        ChannelOpened(assetAddress, participants[0].addr, 
+                      participants[1].addr, participants[0].deposit, participants[1].deposit);
     }
 
     /// @notice partner() to get the partner or other participant of the channel
@@ -127,7 +131,7 @@ contract NettingChannelContract {
     /// @param firstEncoded (bytes) the last sent transfer of the msg.sender
     function closeSingleFunded(bytes firstEncoded) inParticipants { 
         if (settled > 0) throw; // channel already settled
-        if (closed > 0) throw; // channel is closing
+        if (closed > 0) throw; // close has already been called
 
         // check if sender of message is a participant
         if (getSender(firstEncoded) != participants[0].addr &&
@@ -157,8 +161,7 @@ contract NettingChannelContract {
         // if (difference > allowance) penalize();
 
         // trigger event
-        //TODO
-        ChannelClosed();
+        ChannelClosed(closingAddress, closed);
     }
 
 
@@ -168,16 +171,18 @@ contract NettingChannelContract {
     /// @param secondEncoded (bytes) the last sent transfer of the msg.sender
     function closeBiFunded(bytes firstEncoded, bytes secondEncoded) inParticipants { 
         if (settled > 0) throw; // channel already settled
-        if (closed > 0) throw; // channel is closing
-
-        // check if the sender of either of the messages is a participant
-        if (getSender(firstEncoded) != participants[0].addr &&
-            getSender(firstEncoded) != participants[1].addr) throw;
-        if (getSender(secondEncoded) != participants[0].addr &&
-            getSender(secondEncoded) != participants[1].addr) throw;
+        if (closed > 0) throw; // close has already been called
+        address firstSender = getSender(firstEncoded);
+        address secondSender = getSender(secondEncoded);
 
         // Don't allow both transfers to be from the same sender
-        if (getSender(firstEncoded) == getSender(secondEncoded)) throw;
+        if (firstSender == secondSender) throw;
+
+        // check if the sender of either of the messages is a participant
+        if (firstSender != participants[0].addr &&
+            firstSender != participants[1].addr) throw;
+        if (secondSender != participants[0].addr &&
+            secondSender!= participants[1].addr) throw;
 
         uint partnerId = atIndex(partner(msg.sender));
         uint senderId = atIndex(msg.sender);
@@ -204,14 +209,14 @@ contract NettingChannelContract {
         // if (difference > allowance) penalize();
 
         // trigger event
-        //TODO
-        ChannelClosed();
+        ChannelClosed(closingAddress, closed);
     }
 
     /// @notice updateTransfer(bytes) to update last known transfer
     /// @dev Allow the partner to update the last known transfer
     /// @param message (bytes) the encoded transfer message
     function updateTransfer(bytes message) inParticipants notSettled {
+        if (closed + settleTimeout > block.number) throw; //if locked time has expired throw
         if (msg.sender == closingAddress) throw; // don't allow closer to update
         if (closingAddress == getSender(message)) throw;
 
@@ -236,9 +241,8 @@ contract NettingChannelContract {
 
         if (participants[partnerId].nonce == 0) throw;
 
-        bytes32 h = sha3(lockedEncoded);
-
         // merkle proof
+        bytes32 h = sha3(lockedEncoded);
         for (uint i = 0; i < merkleProof.length; i += 64) {
             bytes32 left;
             left = bytesToBytes32(slice(merkleProof, i, i + 32), left);
@@ -250,36 +254,50 @@ contract NettingChannelContract {
 
         if (participants[partnerId].locksroot != h) throw;
 
-        unlocked.push(Lock(expiration, amount, hashlock));
+        ChannelSecretRevealed(secret);
+        participants[partnerId].unlocked.push(Lock(expiration, amount, hashlock));
     }
 
     /// @notice settle() to settle the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
     /// @return participants (Participant[]) the participants with netted balances
     function settle() inParticipants notSettled {
-        if (closed + settleTimeout > block.number) throw; //if locked time has expired throw
+        if (closed + settleTimeout < block.number) throw; //timeout is not yet over
 
-        for (uint i = 0; i < participants.length; i++) {
+        // update the netted balance of both participants
+        for (uint i = 0; i < 2; i++) { // Always exactly two participants
             participants[i].netted = getNetted(i);
         }
 
-        for (uint j = 0; j < participants.length; j++) {
-            uint otherIdx = atIndex(partner(participants[j].addr)); 
-            participants[j].netted += participants[otherIdx].amount; // TODO
-            participants[otherIdx].netted -= participants[otherIdx].amount; // TODO
+        // Update the netted balance from the locks
+        for (uint j = 0; j < 2; j++) { // Always exactly two participants
+            uint otherIdx;
+            if (j == 0) otherIdx = 1; else otherIdx = 0;
+            for (uint k = 0; k < participants[j].unlocked.length; k++) {
+                participants[j].netted += participants[j].unlocked[k].amount;
+                participants[otherIdx].netted -= participants[j].unlocked[k].amount;
+            }
         }
+        settled = block.number;
+        payOut();
         // trigger event
-        //ChannelSettled();
+        ChannelSettled(settled);
+    }
+
+    function payOut() private {
+        uint totalNetted = participants[0].netted + participants[1].netted;
+        uint totalDeposit = participants[0].deposit + participants[1].deposit;
+        if (totalNetted > totalDeposit) throw;
+        assetToken.transfer(participants[0].addr, participants[0].netted);
+        assetToken.transfer(participants[1].addr, participants[1].netted);
     }
 
     function getNetted(uint i) private returns (uint netted) {
         uint other;
         if (i == 0) other = 1; else other = 0;
-
         uint ownDeposit = participants[i].deposit;
         uint otherTransferedAmount = participants[other].transferedAmount;
         uint ownTransferedAmount = participants[i].transferedAmount;
-
         netted = ownDeposit + otherTransferedAmount - ownTransferedAmount;
     }
 
@@ -576,7 +594,6 @@ contract NettingChannelContract {
     function slice(bytes a, uint start, uint end) private returns (bytes n) {
         if (a.length < end) throw;
         if (start < 0) throw;
-        if (start > end) throw;
         n = new bytes(end-start);
         for ( uint i = start; i < end; i ++) { //python style slice
             n[i-start] = a[i];
@@ -608,6 +625,7 @@ contract NettingChannelContract {
         assembly { i := mload(add(b, 0x20)) }
         bts = i;
     }
+
     // empty function to handle wrong calls
     function () { throw; }
 }

@@ -38,7 +38,7 @@ def test_ncc():
     assert token.balanceOf(tester.a1) == 5000
 
     # test global variables
-    assert c.lockedTime() == 30
+    assert c.settleTimeout() == 30
     assert c.assetAddress() == token.address.encode('hex')
     assert c.opened() == 0
     assert c.closed() == 0
@@ -151,7 +151,7 @@ def test_two_messages():
     assert token.balanceOf(tester.a1) == 5000
 
     # test global variables
-    assert c.lockedTime() == 30
+    assert c.settleTimeout() == 30
     assert c.assetAddress() == token.address.encode('hex')
     assert c.opened() == 0
     assert c.closed() == 0
