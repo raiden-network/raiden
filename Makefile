@@ -95,12 +95,19 @@ stop:
 	killall hydrachain
 	docker stop -t 0 truffleserver && docker rm truffleserver
 
+stop-geth:
+	killall -15 geth
+
 build-truffle-container:
 	cd truffle && docker build -t truffle .
 
 blockchain:
 	rm -f blockchain.log
 	-(hydrachain -d $(shell mktemp -d) -l $(logging_settings) -c p2p.listen_host="127.0.0.1" -c discovery.listen_host="127.0.0.1" -c jsonrpc.corsdomain='http://localhost:8080' --log-file=blockchain.log runmultiple > /dev/null 2>&1 &)
+
+blockchain-geth:
+	rm -f blockchain.log
+	./truffle/startcluster.py
 
 serve: deploy
 	@$(MAKE) run-truffle cmd=serve dockerargs="-d --name truffleserver"
