@@ -238,7 +238,17 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
 
     for app in apps:
         for asset in assets_addresses:
-            app.raiden.setup_asset(asset, app.config['reveal_timeout'])
+            asset_manager = app.raiden.get_or_create_asset_manager(asset)
+
+            all_netting_contracts = blockchain_service.nettingaddresses_by_asset_participant(
+                asset,
+                app.raiden.address,
+            )
+            for netting_contract_address in all_netting_contracts:
+                asset_manager.register_channel_by_address(
+                    netting_contract_address,
+                    app.config['reveal_timeout'],
+                )
 
     return apps
 
@@ -326,7 +336,17 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
         )
 
     for app in apps:
-        app.raiden.setup_asset(asset_address, app.config['reveal_timeout'])
+        all_netting_contracts = app.raiden.chain.nettingaddresses_by_asset_participant(
+            asset_address,
+            app.raiden.address,
+        )
+
+        for netting_contract_address in all_netting_contracts:
+            app.raiden.setup_channel(
+                asset_address,
+                netting_contract_address,
+                app.config['reveal_timeout'],
+            )
 
     return apps
 

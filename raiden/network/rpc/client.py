@@ -9,7 +9,7 @@ from ethereum import _solidity
 from ethereum.utils import sha3, privtoaddr, int_to_big_endian
 
 import raiden
-from raiden.utils import isaddress
+from raiden.utils import isaddress, pex
 from raiden.blockchain.net_contract import NettingChannelContract
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -195,12 +195,19 @@ class BlockChainService(object):
                 'partner_balance': data[3],
             }
 
-        return {
-            'our_address': data[2].decode('hex'),
-            'our_balance': data[3],
-            'partner_address': data[0].decode('hex'),
-            'partner_balance': data[1],
-        }
+        if data[2].decode('hex') == our_address:
+            return {
+                'our_address': data[2].decode('hex'),
+                'our_balance': data[3],
+                'partner_address': data[0].decode('hex'),
+                'partner_balance': data[1],
+            }
+
+        raise ValueError('We [{}] are not a participant of the given channel ({}, {})'.format(
+            pex(our_address),
+            data[0],
+            data[2],
+        ))
 
     def netting_contract_settle_timeout(self, asset_address, netting_contract_address):
         contract_proxy = self._get_contract(netting_contract_address)

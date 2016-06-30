@@ -60,7 +60,8 @@ def test_ncc():
         balance,
         recipient,
         locksroot,
-    ).sign(INITIATOR_PRIVKEY)
+    )
+    msg.sign(INITIATOR_PRIVKEY)
     packed = msg.packed()
     direct_transfer = str(packed.data)
 

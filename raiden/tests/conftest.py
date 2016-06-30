@@ -16,6 +16,7 @@ from raiden.network.rpc.client import (
     MOCK_REGISTRY_ADDRESS,
     GAS_LIMIT,
 )
+from raiden.app import DEFAULT_SETTLE_TIMEOUT
 from raiden.tests.utils.network import (
     create_network,
     create_sequential_network,
@@ -59,7 +60,7 @@ def number_of_nodes():
 
 @pytest.fixture
 def settle_timeout():
-    return 50
+    return DEFAULT_SETTLE_TIMEOUT
 
 
 @pytest.fixture

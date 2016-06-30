@@ -7,7 +7,7 @@ import timeit
 from raiden.utils import privtoaddr, sha3
 from raiden.messages import (
     Ack, Ping, SecretRequest, Secret, DirectTransfer, Lock, LockedTransfer,
-    MediatedTransfer, CancelTransfer, TransferTimeout, ConfirmTransfer, decode,
+    MediatedTransfer, RefundTransfer, TransferTimeout, ConfirmTransfer, decode,
 )
 
 
@@ -38,12 +38,14 @@ def test_ack(iterations=ITERATIONS):
 
 
 def test_ping(iterations=ITERATIONS):
-    msg = Ping(nonce=0).sign(PRIVKEY)
+    msg = Ping(nonce=0)
+    msg.sign(PRIVKEY)
     run_timeit('Ping', msg, iterations=iterations)
 
 
 # def test_rejected(iterations=ITERATIONS):
-#     msg = Rejected(HASH, 1, []).sign(PRIVKEY)
+#     msg = Rejected(HASH, 1, [])
+#     msg.sign(PRIVKEY)
 #     run_timeit('Rejected', msg, iterations=iterations)
 # def test_rejected_with_args(iterations=ITERATIONS):
 #     msg = Rejected(HASH, 1, [1, 2, 3])
@@ -52,13 +54,15 @@ def test_ping(iterations=ITERATIONS):
 
 def test_secret_request(iterations=ITERATIONS):
     hashlock = HASH
-    msg = SecretRequest(hashlock).sign(PRIVKEY)
+    msg = SecretRequest(hashlock)
+    msg.sign(PRIVKEY)
     run_timeit('SecretRequest', msg, iterations=iterations)
 
 
 def test_secret(iterations=ITERATIONS):
     secret = HASH
-    msg = Secret(secret).sign(PRIVKEY)
+    msg = Secret(secret)
+    msg.sign(PRIVKEY)
     run_timeit('Secret', msg, iterations=iterations)
 
 
@@ -69,7 +73,8 @@ def test_direct_transfer(iterations=ITERATIONS):
     recipient = ADDRESS
     locksroot = HASH
 
-    msg = DirectTransfer(nonce, asset, balance, recipient, locksroot).sign(PRIVKEY)
+    msg = DirectTransfer(nonce, asset, balance, recipient, locksroot)
+    msg.sign(PRIVKEY)
     run_timeit('DirectTransfer', msg, iterations=iterations)
 
 
@@ -84,7 +89,8 @@ def test_locked_transfer(iterations=ITERATIONS):
     balance = 1
     recipient = ADDRESS
     locksroot = sha3(ADDRESS)
-    msg = LockedTransfer(nonce, asset, balance, recipient, locksroot, lock).sign(PRIVKEY)
+    msg = LockedTransfer(nonce, asset, balance, recipient, locksroot, lock)
+    msg.sign(PRIVKEY)
     run_timeit('LockedTransfer', msg, iterations=iterations)
 
 
@@ -119,20 +125,23 @@ def test_cancel_transfer(iterations=ITERATIONS):
     balance = 1
     recipient = ADDRESS
     locksroot = sha3(ADDRESS)
-    msg = CancelTransfer(nonce, asset, balance, recipient, locksroot, lock).sign(PRIVKEY)
-    run_timeit('CancelTransfer', msg, iterations=iterations)
+    msg = RefundTransfer(nonce, asset, balance, recipient, locksroot, lock)
+    msg.sign(PRIVKEY)
+    run_timeit('RefundTransfer', msg, iterations=iterations)
 
 
 def test_transfer_timeout(iterations=ITERATIONS):
     echo = HASH
     hashlock = HASH
-    msg = TransferTimeout(echo, hashlock).sign(PRIVKEY)
+    msg = TransferTimeout(echo, hashlock)
+    msg.sign(PRIVKEY)
     run_timeit('TransferTimeout', msg, iterations=iterations)
 
 
 def test_confirm_transfer(iterations=ITERATIONS):
     hashlock = HASH
-    msg = ConfirmTransfer(hashlock).sign(PRIVKEY)
+    msg = ConfirmTransfer(hashlock)
+    msg.sign(PRIVKEY)
     run_timeit('ConfirmTransfer', msg, iterations=iterations)
 
 

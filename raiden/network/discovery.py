@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-from raiden.utils import isaddress, privtoaddr, sha3, pex
+from raiden.utils import isaddress, pex
 
 
 class Discovery(object):

@@ -5,8 +5,7 @@ import gevent
 import pytest
 from ethereum import slogging
 
-from raiden.messages import decode, Ack, DirectTransfer, CancelTransfer
-from raiden.tasks import MediatedTransferTask
+from raiden.messages import decode, Ack, DirectTransfer, RefundTransfer
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
 from raiden.utils import pex, sha3
@@ -14,8 +13,8 @@ from raiden.utils import pex, sha3
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
 
-# set shorter timeout for testing
-MediatedTransferTask.timeout_per_hop = 0.3
+from pyethapp.utils import enable_greenlet_debugger
+enable_greenlet_debugger()
 
 
 @pytest.mark.parametrize('privatekey_seed', ['transfer:{}'])
@@ -187,7 +186,7 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
     )
 
     # app1 -> app2 is the only available path and doens't have resource, app1
-    # needs to send CancelTransfer to app0
+    # needs to send RefundTransfer to app0
     transfer(app0, app2, asset, 50)
 
     assert_synched_channels(
@@ -200,8 +199,8 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
         channel(app2, app1, asset), deposit + amount, []
     )
 
-    assert len(messages) == 6  # DirectTransfer + MediatedTransfer + CancelTransfer + a Ack for each
+    assert len(messages) == 6  # DirectTransfer + MediatedTransfer + RefundTransfer + a Ack for each
 
     app1_messages = mlogger.get_node_messages(pex(app1.raiden.address), only='sent')
 
-    assert isinstance(app1_messages[-1], CancelTransfer)
+    assert isinstance(app1_messages[-1], RefundTransfer)

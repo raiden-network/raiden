@@ -3,11 +3,10 @@ from ethereum import slogging
 
 from raiden.assetmanager import AssetManager
 from raiden.channelgraph import ChannelGraph
-from raiden.channel import Channel, ChannelEndState
-from raiden import messages
+from raiden.messages import Ack, SignedMessage
+from raiden.encoding import messages
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.utils import privtoaddr, isaddress, pex
-
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -37,8 +36,100 @@ class InvalidAmount(RaidenError):
     pass
 
 
+class RaidenService(object):  # pylint: disable=too-many-instance-attributes
+    """ A Raiden node. """
+
+    def __init__(self, chain, privkey, transport, discovery, config):  # pylint: disable=too-many-arguments
+        self.assetmanagers = dict()
+
+        self.chain = chain
+        self.config = config
+        self.privkey = privkey
+        self.address = privtoaddr(privkey)
+        self.protocol = RaidenProtocol(transport, discovery, self)
+        transport.protocol = self.protocol
+
+        message_handler = RaidenMessageHandler(self)
+        event_handler = RaidenEventHandler(self)
+
+        self.api = RaidenAPI(self)
+        self.event_handler = event_handler
+        self.message_handler = message_handler
+
+        self.on_message = message_handler.on_message
+
+    def __repr__(self):
+        return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+
+    def get_or_create_asset_manager(self, asset_address):
+        """ Return the AssetManager for the given `asset_address`. """
+        if asset_address not in self.assetmanagers:
+            edges = self.chain.addresses_by_asset(asset_address)
+            channel_graph = ChannelGraph(edges)
+
+            asset_manager = AssetManager(self, asset_address, channel_graph)
+            self.assetmanagers[asset_address] = asset_manager
+
+        return self.assetmanagers[asset_address]
+
+    def get_asset_manager(self, asset_address):
+        return self.assetmanagers[asset_address]
+
+    def sign(self, message):
+        """ Sign message inplace. """
+        if not isinstance(message, SignedMessage):
+            raise ValueError('{} is not signable.'.format(repr(message)))
+
+        message.sign(self.privkey)
+
+    def send(self, recipient, message):
+        """ Send `message` to `recipient` using the raiden protocol.
+
+        The protocol will take care of resending the message on a given
+        interval until an Acknowledgment is received or a given number of
+        tries.
+        """
+
+        if not isaddress(recipient):
+            raise ValueError('recipient is not a valid address.')
+
+        self.protocol.send(recipient, message)
+
+    def send_and_wait(self, recipient, message, timeout, event):
+        """ Send `message` to `recipient` and wait for the response or `timeout`.
+
+        Args:
+            recipient (address): The address of the node that will receive the
+                message.
+            transfer: The transfer message.
+            timeout (float): How long should we wait for a response from `recipient`.
+            event (gevent.event.AsyncResult): Event that will receive the result.
+
+        Returns:
+            None: If the wait timed out
+            object: The result from the event
+        """
+        self.send(recipient, message)
+        return event.wait(timeout)
+
+    def message_for_task(self, message, hashlock):
+        for asset_manager in self.assetmanagers.values():
+            task = asset_manager.transfermanager.transfertasks.get(hashlock)
+
+            if task is not None:
+                task.on_event(message)
+                return True
+
+        return False
+
+    def stop(self):
+        # TODO:
+        # - uninstall all the filters
+        pass
+
+
 class RaidenAPI(object):
-    """ The external interface to the service. """
+    """ CLI interface. """
 
     def __init__(self, raiden):
         self.raiden = raiden
@@ -57,195 +148,142 @@ class RaidenAPI(object):
         asset_address = safe_address_decode(asset_address)
         target = safe_address_decode(target)
 
+        asset_manager = self.raiden.get_asset_manager(asset_address)
+
         if not isaddress(asset_address) or asset_address not in self.assets:
             raise InvalidAddress('asset address is not valid.')
 
         if not isaddress(target):
             raise InvalidAddress('target address is not valid.')
 
-        if not self.raiden.has_path(asset_address, target):
+        if not asset_manager.has_path(self.raiden.address, target):
             raise NoPathError('No path to address found')
 
         transfer_manager = self.raiden.assetmanagers[asset_address].transfermanager
         transfer_manager.transfer(amount, target, callback=callback)
 
-    def request_transfer(self, asset_address, amount, target):
-        if not isaddress(asset_address) or asset_address not in self.assets:
-            raise InvalidAddress('asset address is not valid.')
 
-        if not isaddress(target):
-            raise InvalidAddress('target address is not valid.')
+class RaidenMessageHandler(object):
+    """ Class responsable to handle the protocol messages.
 
-        transfer_manager = self.raiden.assetmanagers[asset_address].transfermanager
-        transfer_manager.request_transfer(amount, target)
+    Note:
+        This class is not intented to be used standalone, use RaidenService
+        instead.
+    """
+    def __init__(self, raiden):
+        self.raiden = raiden
 
-    def exchange(self, asset_a, asset_b, amount_a=None, amount_b=None, callback=None):  # pylint: disable=too-many-arguments
-        pass
+    def on_message(self, message, msghash):
+        """ Handles `message` and sends a ACK on success. """
+        cmdid = message.cmdid
 
+        # using explicity dispatch to make the code grepable
+        if cmdid == messages.ACK:
+            pass
 
-class RaidenService(object):
-    """ Runs a service on a node """
+        elif cmdid == messages.PING:
+            self.message_ping(message)
 
-    def __init__(self, chain, privkey, transport, discovery, config):  # pylint: disable=too-many-arguments
-        self.chain = chain
-        self.config = config
-        self.privkey = privkey
-        self.address = privtoaddr(privkey)
-        self.protocol = RaidenProtocol(transport, discovery, self)
-        transport.protocol = self.protocol
-        self.assetmanagers = dict()
-        self.api = RaidenAPI(self)
+        elif cmdid == messages.SECRETREQUEST:
+            self.message_secretrequest(message)
 
-    def __repr__(self):
-        return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+        elif cmdid == messages.SECRET:
+            self.message_secret(message)
 
-    def setup_asset(self, asset_address, reveal_timeout):
-        """ Initialize a `AssetManager`, and for each open channel that this
-        node has create a corresponding `Channel`.
+        elif cmdid == messages.DIRECTTRANSFER:
+            self.message_directtransfer(message)
 
-        Args:
-            asset_address (address): A list of asset addresses that need to
-                be considered.
-            reveal_timeout (int): Minimum number of blocks required for the
-                settling of a netting contract.
-        """
-        netting_address = self.chain.nettingaddresses_by_asset_participant(
-            asset_address,
-            self.address,
-        )
+        elif cmdid == messages.MEDIATEDTRANSFER:
+            self.message_mediatedtransfer(message)
 
-        asset_manager = self.get_or_create_asset_manager(asset_address)
+        elif cmdid == messages.REFUNDTRANSFER:
+            self.message_refundtransfer(message)
 
-        for netting_contract_address in netting_address:
-            self.setup_channel(
-                asset_manager,
-                asset_address,
-                netting_contract_address,
-                reveal_timeout,
-            )
+        elif cmdid == messages.TRANSFERTIMEOUT:
+            self.message_transfertimeout(message)
 
-    def get_or_create_asset_manager(self, asset_address):
-        """ Return the AssetManager for the given `asset_address`. """
-        if asset_address not in self.assetmanagers:
-            edges = self.chain.addresses_by_asset(asset_address)
-            channel_graph = ChannelGraph(edges)
+        elif cmdid == messages.CONFIRMTRANSFER:
+            self.message_confirmtransfer(message)
 
-            asset_manager = AssetManager(self, asset_address, channel_graph)
-            self.assetmanagers[asset_address] = asset_manager
-
-        return self.assetmanagers[asset_address]
-
-    def setup_channel(self, asset_manager, asset_address, netting_contract_address, reveal_timeout):
-        """ Initialize the Channel for the given netting contract. """
-
-        channel_details = self.chain.netting_contract_detail(
-            asset_address,
-            netting_contract_address,
-            self.address,
-        )
-
-        our_state = ChannelEndState(
-            self.address,
-            channel_details['our_balance'],
-        )
-
-        partner_state = ChannelEndState(
-            channel_details['partner_address'],
-            channel_details['partner_balance'],
-        )
-
-        channel = Channel(
-            self.chain,
-            asset_address,
-            netting_contract_address,
-            our_state,
-            partner_state,
-            reveal_timeout,
-        )
-
-        asset_manager.add_channel(channel_details['partner_address'], channel)
-
-    def has_path(self, asset, target):
-        if asset not in self.assetmanagers:
-            return False
-
-        graph = self.assetmanagers[asset].channelgraph
-        return graph.has_path(self.address, target)
-
-    def sign(self, msg):
-        assert isinstance(msg, messages.SignedMessage)
-        return msg.sign(self.privkey)
-
-    def on_message(self, msg, msghash):
-        log.debug('ON MESSAGE {} {}'.format(pex(self.address), msg))
-        method = 'on_%s' % msg.__class__.__name__.lower()
-        # update activity monitor (which also does pings to all addresses in channels)
-        getattr(self, method)(msg)
-        self.protocol.send_ack(msg.sender, messages.Ack(self.address, msghash))
-
-    def on_message_failsafe(self, msg, msghash):
-        method = 'on_%s' % msg.__class__.__name__.lower()
-        # update activity monitor (which also does pings to all addresses in channels)
-        try:
-            getattr(self, method)(msg)
-        except messages.BaseError as error:
-            self.protocol.send_ack(msg.sender, error)
         else:
-            self.protocol.send_ack(msg.sender, messages.Ack(self.address, msghash))
+            raise Exception("Unknow cmdid '{}'.".format(cmdid))
 
-    def send(self, recipient, msg):
-        # assert msg.sender
-        assert isaddress(recipient)
-        self.protocol.send(recipient, msg)
+        ack = Ack(
+            self.raiden.address,
+            msghash,
+        )
 
-    def on_baseerror(self, msg):
+        self.raiden.protocol.send_ack(
+            message.sender,
+            ack,
+        )
+
+    def message_ping(self, message):
         pass
 
-    def on_ping(self, msg):
-        pass  # ack already sent, activity monitor should have been notified in on_message
+    def message_confirmtransfer(self, message):
+        pass
 
-    def on_transfer(self, msg):
-        asset_manager = self.assetmanagers[msg.asset]
-        asset_manager.transfermanager.on_transfer(msg)
+    def message_secretrequest(self, message):
+        self.raiden.message_for_task(message, message.hashlock)
 
-    on_lockedtransfer = on_directtransfer = on_transfer
+    def message_secret(self, message):
+        self.raiden.message_for_task(message, message.hashlock)
 
-    def on_mediatedtransfer(self, msg):
-        asset_manager = self.assetmanagers[msg.asset]
-        asset_manager.transfermanager.on_mediatedtransfer(msg)
+    def message_refundtransfer(self, message):
+        self.raiden.message_for_task(message, message.lock.hashlock)
 
-    # events, that need to find a TransferTask
+    def message_transfertimeout(self, message):
+        self.raiden.message_for_task(message, message.hashlock)
 
-    def on_event_for_transfertask(self, msg):
-        if isinstance(msg, messages.LockedTransfer):
-            hashlock = msg.lock.hashlock
+    def message_directtransfer(self, message):
+        asset_manager = self.raiden.assetmanagers[message.asset]
+        asset_manager.transfermanager.on_directtransfer_message(message)
+
+    def message_mediatedtransfer(self, message):
+        asset_manager = self.raiden.assetmanagers[message.asset]
+        asset_manager.transfermanager.on_mediatedtransfer_message(message)
+
+
+class RaidenEventHandler(object):
+    """ Class responsable to handle all the blockchain events.
+
+    Note:
+        This class is not intented to be used standalone, use RaidenService
+        instead.
+    """
+
+    def __init__(self, raiden):
+        self.raiden = raiden
+
+    def event_open_channel(self, netting_contract_address_bin, event):
+        asset_address_bin = event['assetAddress'].decode('hex')
+        asset_manager = self.raiden.get_asset_manager(asset_address_bin)
+
+        if event['participant1'].decode('hex') == self.raiden.address:
+            channel_details = {
+                'our_address': event['participant1'].decode('hex'),
+                'our_deposit': event['deposit1'],
+                'partner_address': event['participant2'].decode('hex'),
+                'partner_deposit': event['deposit2'],
+                'settle_timeout':  event['settleTimeout'],
+            }
         else:
-            # TransferTimeout, Secret, SecretRequest, ConfirmTransfer
-            hashlock = msg.hashlock
+            channel_details = {
+                'our_address': event['participant2'].decode('hex'),
+                'our_deposit': event['deposit2'],
+                'partner_address': event['participant1'].decode('hex'),
+                'partner_deposit': event['deposit1'],
+                'settle_timeout':  event['settleTimeout'],
+            }
 
-        for asset_manager in self.assetmanagers.values():
-            if hashlock in asset_manager.transfermanager.transfertasks:
-                asset_manager.transfermanager.transfertasks[hashlock].on_event(msg)
-                return True
+        asset_manager.register_channel(
+            netting_contract_address_bin,
+            channel_details,
+            self.raiden.app.config['reveal_timeout'],
+        )
 
-    on_secretrequest = on_transfertimeout = on_canceltransfer = on_event_for_transfertask
-
-    def on_secret(self, msg):
-        self.on_event_for_transfertask(msg)
-        for asset_manager in self.assetmanagers.values():
-            asset_manager.on_secret(msg)
-
-    def on_transferrequest(self, msg):
-        asset_manager = self.assetmanagers[msg.asset]
-        asset_manager.transfermanager.on_tranferrequest(msg)
-
-    # other
-
-    def on_rejected(self, msg):
-        pass
-
-    def on_hashlockrequest(self, msg):
-        pass
-
-    def on_exchangerequest(self, msg):
+    def event_secret_revealed(self, netting_contract_address_bin, event):
+        # TODO:
+        # - find the corresponding channel for the hashlock and claim it
         pass

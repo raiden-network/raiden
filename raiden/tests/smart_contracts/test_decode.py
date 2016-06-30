@@ -5,7 +5,7 @@ from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
 from raiden.mtree import merkleroot
-from raiden.messages import Lock, CancelTransfer, DirectTransfer, MediatedTransfer, Secret
+from raiden.messages import Lock, DirectTransfer
 
 from raiden.network.rpc.client import get_contract_path
 
@@ -76,7 +76,8 @@ def test_decode_transfer():
         balance,
         recipient,
         locksroot,
-    ).sign(INITIATOR_PRIVKEY)
+    )
+    msg.sign(INITIATOR_PRIVKEY)
     packed = msg.packed()
     data = str(packed.data)
 

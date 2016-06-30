@@ -5,7 +5,7 @@ import gevent
 
 from raiden.utils import sha3
 from raiden.mtree import merkleroot
-from raiden.tasks import MediatedTransferTask
+from raiden.tasks import StartMediatedTransferTask
 
 
 def channel(app0, app1, asset):
@@ -65,21 +65,12 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
     # api.transfer() would do a DirectTransfer
     if has_channel:
         initiator_channel = channel(initiator_app, target_app, asset)
-        secret = sha3('{}{}'.format(
-            initiator_channel.netting_contract_address,
-            str(initiator_channel.our_state.nonce),
-        ))
-        hashlock = sha3(secret)
         transfermanager = initiator_app.raiden.assetmanagers[asset].transfermanager
 
-        task = MediatedTransferTask(
+        task = StartMediatedTransferTask(
             transfermanager,
             amount,
             target_app.raiden.address,
-            hashlock,
-            lock_expiration=None,
-            originating_transfer=None,
-            secret=secret,
         )
         task.start()
         task.join()

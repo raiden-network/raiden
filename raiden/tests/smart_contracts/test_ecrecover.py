@@ -45,7 +45,8 @@ def test_ec():
         balance,
         recipient,
         locksroot,
-    ).sign(INITIATOR_PRIVKEY)
+    )
+    msg.sign(INITIATOR_PRIVKEY)
     packed = msg.packed()
     direct_transfer = str(packed.data)
     sig, pub = sign(direct_transfer[:148], INITIATOR_PRIVKEY)

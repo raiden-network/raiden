@@ -115,7 +115,8 @@ def test_ncc():
         transfered_amount,
         recipient,
         locksroot,
-    ).sign(INITIATOR_PRIVKEY)
+    )
+    msg.sign(INITIATOR_PRIVKEY)
     packed = msg.packed()
     direct_transfer = str(packed.data)
 

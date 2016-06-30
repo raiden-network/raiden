@@ -154,7 +154,17 @@ def tps_run(host, port, config, rpc_server, channelmanager_address,
     app = App(config, blockchain_service, discovery)
 
     for asset_address in blockchain_service.asset_addresses:
-        app.raiden.setup_asset(asset_address, app.config['reveal_timeout'])
+        all_netting_contracts = blockchain_service.nettingaddresses_by_asset_participant(
+            asset,
+            app.raiden.address,
+        )
+
+        for netting_contract_address in all_netting_contracts:
+            app.raiden.setup_channel(
+                asset,
+                netting_contract_address,
+                app.config['reveal_timeout'],
+            )
 
     for _ in range(parallel):
         gevent.spawn(random_transfer, app, asset_address, transfer_amount)

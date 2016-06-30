@@ -1,10 +1,15 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
 
-from raiden.messages import DirectTransfer, LockedTransfer, BaseError, Lock
+from raiden.messages import (
+    BaseError,
+    DirectTransfer,
+    Lock,
+    LockedTransfer,
+    TransferTimeout,
+)
 from raiden.mtree import merkleroot, get_proof
-from raiden.utils import sha3
-from raiden.blockchain.net_contract import NettingChannelContract
+from raiden.utils import sha3, pex
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -242,6 +247,7 @@ class ChannelEndState(object):
         self.locked.remove(hashlock)
         # end of the critical write section
 
+
 class Channel(object):
     # pylint: disable=too-many-instance-attributes,too-many-arguments
 
@@ -254,7 +260,10 @@ class Channel(object):
         self.partner_state = partner_state
         self.reveal_timeout = reveal_timeout
 
-        settle_timeout = chain.netting_contract_settle_timeout(asset_address, netting_contract_address)
+        settle_timeout = chain.netting_contract_settle_timeout(
+            asset_address,
+            netting_contract_address,
+        )
         self.settle_timeout = settle_timeout
         ''' the contract's `settle_timeout`, all locks need to expire with less than this value '''
 
@@ -319,13 +328,10 @@ class Channel(object):
 
     def handle_callbacks(self, transfer):
         # TODO: dict mapping transfer -> callback + cleanup
-        # TODO: handle the callbacks somewhere!
-        cb_indices = [index for index, transfer_cb in enumerate(self.transfer_callbacks)
-                      if transfer_cb[0] is transfer]
-        for i in cb_indices:
-            cb = self.transfer_callbacks[i][1]
-            cb(None, True)
-            del self.transfer_callbacks[i]
+        for pos, (callback_transfer, callback) in enumerate(self.transfer_callbacks):
+            if callback_transfer is transfer:
+                callback(None, True)
+                del self.transfer_callbacks[pos]
 
     def claim_locked(self, secret, locksroot=None):
         """ Claim locked transfer from any of the ends of the channel.
@@ -337,11 +343,25 @@ class Channel(object):
 
         # receiving a secret (releasing our funds)
         if hashlock in self.our_state.locked:
+            log.debug('ASSET UNLOCKED node:{} asset:{} hashlock:{} amount:{}'.format(
+                pex(self.our_state.address),
+                pex(self.asset_address),
+                pex(hashlock),
+                self.our_state.locked[hashlock].lock.amount,
+            ))
             self.our_state.claim_locked(self.partner_state, secret, locksroot)
 
         # sending a secret (updating the mirror)
-        if hashlock in self.partner_state.locked:
+        elif hashlock in self.partner_state.locked:
+            log.debug('ASSET UNLOCKED node:{} asset:{} hashlock:{} amount:{}'.format(
+                pex(self.our_state.address),
+                pex(self.asset_address),
+                pex(hashlock),
+                self.partner_state.locked[hashlock].lock.amount,
+            ))
             self.partner_state.claim_locked(self.our_state, secret, locksroot)
+        else:
+            raise ValueError('The secret doesnt unlock any hashlock')
 
     def register_transfer(self, transfer, callback=None):
         """ Register a signed transfer, updating the channel's state accordingly. """
@@ -426,9 +446,9 @@ class Channel(object):
             if not transfer.lock.expiration - self.chain.block_number < self.settle_timeout:
                 log.error(
                     "Transfer expiration doesn't allow for corret settlement.",
-                    transfer_expiration_block=transfer.lock.expiration,
+                    lock_expiration=transfer.lock.expiration,
                     current_block=self.chain.block_number,
-                    required_locked_time=self.locked_time,
+                    settle_timeout=self.settle_timeout,
                 )
 
                 raise ValueError("Transfer expiration doesn't allow for corret settlement.")
@@ -436,9 +456,9 @@ class Channel(object):
             if not transfer.lock.expiration - self.chain.block_number > self.reveal_timeout:
                 log.error(
                     'Expiration smaller than the minimum requried.',
-                    transfer_expiration_block=transfer.lock.expiration,
+                    lock_expiration=transfer.lock.expiration,
                     current_block=self.chain.block_number,
-                    minimum_required_locked_time=self.min_locktime,
+                    reveal_timeout=self.reveal_timeout,
                 )
 
                 raise ValueError('Expiration smaller than the minimum requried.')
@@ -448,9 +468,30 @@ class Channel(object):
         # channel will be left trashed
 
         if isinstance(transfer, LockedTransfer):
+            log.debug(
+                'REGISTERED LOCK node:{} from:{} to:{}'.format(
+                    pex(self.our_state.address),
+                    pex(from_state.address),
+                    pex(to_state.address),
+                ),
+                lock_amount=transfer.lock.amount,
+                lock_expiration=transfer.lock.expiration,
+                lock_hashlock=pex(transfer.lock.hashlock),
+            )
+
             to_state.locked.add(transfer)
 
         if isinstance(transfer, DirectTransfer) and transfer.secret:
+            log.debug(
+                'REGISTERED SECRET node:{} from:{} to:{}'.format(
+                    pex(self.our_state.address),
+                    pex(from_state.address),
+                    pex(to_state.address),
+                ),
+                lock_hashlock=pex(sha3(transfer.secret)),
+                lock_secret=pex(transfer.secret),
+            )
+
             to_state.claim_locked(
                 from_state,
                 transfer.secret,
@@ -459,6 +500,15 @@ class Channel(object):
 
         from_state.transfered_amount = transfer.transfered_amount
         from_state.nonce += 1
+
+        log.debug('REGISTERED TRANSFER node:{} from:{} to:{} transfer:{} transfered_amount:{} nonce:{}'.format(
+            pex(self.our_state.address),
+            pex(from_state.address),
+            pex(to_state.address),
+            repr(transfer),
+            from_state.transfered_amount,
+            from_state.nonce,
+        ))
 
     def create_directtransfer(self, amount, secret=None):
         """ Return a DirectTransfer message.
@@ -582,8 +632,8 @@ class Channel(object):
         )
         return mediated_transfer
 
-    def create_canceltransfer_for(self, transfer):
-        """ Return a message CancelTransfer for `transfer`. """
+    def create_refundtransfer_for(self, transfer):
+        """ Return RefundTransfer for `transfer`. """
         lock = transfer.lock
 
         if lock.hashlock not in self.our_state.locked:
@@ -595,6 +645,18 @@ class Channel(object):
             lock.hashlock,
         )
 
-        cancel_transfer = locked_transfer.to_canceltransfer()
+        cancel_transfer = locked_transfer.to_refundtransfer()
 
         return cancel_transfer
+
+    def create_timeouttransfer_for(self, transfer):
+        """ Return a TransferTimeout for `transfer`. """
+        lock = transfer.lock
+
+        if lock.hashlock not in self.our_state.locked:
+            raise ValueError('Unknow hashlock')
+
+        return TransferTimeout(
+            transfer.hash,
+            lock.hashlock,
+        )

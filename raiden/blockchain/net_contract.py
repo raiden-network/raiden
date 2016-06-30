@@ -6,9 +6,9 @@ from ethereum import slogging
 
 from raiden.utils import sha3, pex
 from raiden.mtree import check_proof
-from raiden.messages import MediatedTransfer, CancelTransfer, DirectTransfer, Lock, LockedTransfer
+from raiden.messages import MediatedTransfer, RefundTransfer, DirectTransfer, Lock, LockedTransfer
 from raiden.encoding.messages import (
-    DIRECTTRANSFER, LOCKEDTRANSFER, MEDIATEDTRANSFER, CANCELTRANSFER,
+    DIRECTTRANSFER, LOCKEDTRANSFER, MEDIATEDTRANSFER, REFUNDTRANSFER,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -51,8 +51,8 @@ def decode_transfer(transfer_encoded):
         return DirectTransfer.decode(transfer_encoded)
     elif transfer_encoded[0] == MEDIATEDTRANSFER:
         return MediatedTransfer.decode(transfer_encoded)
-    elif transfer_encoded[0] == CANCELTRANSFER:
-        return CancelTransfer.decode(transfer_encoded)
+    elif transfer_encoded[0] == REFUNDTRANSFER:
+        return RefundTransfer.decode(transfer_encoded)
     # convinience for testing only (LockedTransfer are not exchanged between nodes)
     elif transfer_encoded[0] == LOCKEDTRANSFER:
         return LockedTransfer.decode(transfer_encoded)

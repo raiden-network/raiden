@@ -8,7 +8,7 @@ import signal
 import yaml
 import gevent
 from ethereum import slogging
-from ethereum.utils import privtoaddr
+from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
@@ -20,6 +20,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 INITIAL_PORT = 40001
 DEFAULT_SETTLE_TIMEOUT = 20
+DEFAULT_REVEAL_TIMEOUT = 3
 
 
 class App(object):  # pylint: disable=too-few-public-methods
@@ -28,8 +29,9 @@ class App(object):  # pylint: disable=too-few-public-methods
         port=INITIAL_PORT,
         privkey='',
         # number of blocks that a node requires to learn the secret before the lock expires
-        reveal_timeout=3,
-        # how long to wait for a transfer until CancelTransfer is sent (time in milliseconds)
+        reveal_timeout=DEFAULT_REVEAL_TIMEOUT,
+        settle_timeout=DEFAULT_SETTLE_TIMEOUT,
+        # how long to wait for a transfer until TimeoutTransfer is sent (time in milliseconds)
         msg_timeout=100.00
     )
 
@@ -43,9 +45,11 @@ class App(object):  # pylint: disable=too-few-public-methods
 
     def stop(self):
         self.transport.stop()
+        self.raiden.stop()
 
 
 def main():
+    # pylint: disable=too-many-locals
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('rpc_server', help='The host:port of the json-rpc server')
@@ -83,10 +87,10 @@ def main():
         print('Missing "privkey" in the configuration file, cannot proceed')
         sys.exit(1)
 
-    blockchain_server = BlockChainService(
-        rpc_connection,
-        config['privkey'],
-        privtoaddr(config['privkey']),
+    jsonrpc_client = JSONRPCClient(privkey=config['privkey'])
+
+    blockchain_service = BlockChainService(
+        jsonrpc_client,
         args.registry_address,
     )
     discovery = Discovery()
@@ -94,10 +98,20 @@ def main():
     for node in config['nodes']:
         discovery.register(node['nodeid'], node['host'], node['port'])
 
-    app = App(config, blockchain_server, discovery)
+    app = App(config, blockchain_service, discovery)
 
-    for asset_address in blockchain_server.asset_addresses:
-        app.raiden.setup_asset(asset_address, app.config['reveal_timeout'])
+    for asset_address in blockchain_service.asset_addresses:
+        all_netting_contracts = blockchain_service.nettingaddresses_by_asset_participant(
+            asset_address,
+            app.raiden.address,
+        )
+
+        for netting_contract_address in all_netting_contracts:
+            app.raiden.setup_channel(
+                asset_address,
+                netting_contract_address,
+                app.config['reveal_timeout'],
+            )
 
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
