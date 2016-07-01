@@ -91,7 +91,7 @@ ifeq ($(UNAME), Darwin)
 	process_user := root
 endif
 
-call_truffle := docker run -it --user=$(process_user) -v $(mkfile_root)truffle:/code -v $(mkfile_root)raiden/smart_contracts:/code/contracts --net=host $(dockerargs) truffle $(cmd) $(opts)
+call_truffle := docker run -it --user=$(process_user) -v $(mkfile_root)truffle:/code $(shell python -c "import os;print ' '.join('-v $(mkfile_root)raiden/smart_contracts/{}:/code/contracts/{}'.format(f, f) for f in os.listdir('$(mkfile_root)raiden/smart_contracts/') if f.endswith('.sol'))") --net=host $(dockerargs) truffle $(cmd) $(opts)
 
 clean-truffle:
 	rm -rf truffle/app
