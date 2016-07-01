@@ -82,7 +82,16 @@ mkfile_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 dockerargs := --rm 
 cmd := version
 opts := 
-call_truffle := docker run -it --user=$(process_user) -v $(mkfile_root)truffle:/code -v $(mkfile_root)raiden/smart_contracts:/code/contracts --net=host $(dockerargs) truffle $(cmd) $(opts)
+# We need to determine the OS-specific user-id, so build-dir-mounts stay writable for the user
+UNAME := $(shell uname)
+ifeq ($(UNAME), Linux)
+	process_user := $(shell id -u):$(shell id -g)
+endif
+ifeq ($(UNAME), Darwin)
+	process_user := root
+endif
+
+call_truffle := docker run -it --user=$(process_user) -v $(mkfile_root)truffle:/code $(shell python -c "import os;print ' '.join('-v $(mkfile_root)raiden/smart_contracts/{}:/code/contracts/{}'.format(f, f) for f in os.listdir('$(mkfile_root)raiden/smart_contracts/') if f.endswith('.sol'))") --net=host $(dockerargs) truffle $(cmd) $(opts)
 
 clean-truffle:
 	rm -rf truffle/app
@@ -95,12 +104,19 @@ stop:
 	killall hydrachain
 	docker stop -t 0 truffleserver && docker rm truffleserver
 
+stop-geth:
+	killall -15 geth
+
 build-truffle-container:
 	cd truffle && docker build -t truffle .
 
 blockchain:
 	rm -f blockchain.log
 	-(hydrachain -d $(shell mktemp -d) -l $(logging_settings) -c p2p.listen_host="127.0.0.1" -c discovery.listen_host="127.0.0.1" -c jsonrpc.corsdomain='http://localhost:8080' --log-file=blockchain.log runmultiple > /dev/null 2>&1 &)
+
+blockchain-geth:
+	rm -f blockchain.log
+	./truffle/startcluster.py
 
 serve: deploy
 	@$(MAKE) run-truffle cmd=serve dockerargs="-d --name truffleserver"
