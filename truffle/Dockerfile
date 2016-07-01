@@ -1,4 +1,4 @@
-FROM iojs
+FROM node
 
 RUN npm install -g truffle
 
