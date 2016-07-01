@@ -82,6 +82,15 @@ mkfile_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 dockerargs := --rm 
 cmd := version
 opts := 
+# We need to determine the OS-specific user-id, so build-dir-mounts stay writable for the user
+UNAME := $(shell uname)
+ifeq ($(UNAME), Linux)
+	process_user := $(shell id -u):$(shell id -g)
+endif
+ifeq ($(UNAME), Darwin)
+	process_user := root
+endif
+
 call_truffle := docker run -it --user=$(process_user) -v $(mkfile_root)truffle:/code -v $(mkfile_root)raiden/smart_contracts:/code/contracts --net=host $(dockerargs) truffle $(cmd) $(opts)
 
 clean-truffle:
