@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 import random
 import string
+import time
 
 import pytest
 import gevent
@@ -10,11 +11,17 @@ from ethereum.keys import privtoaddr
 from ethereum._solidity import compile_file
 from pyethapp.accounts import mk_privkey
 from pyethapp.rpc_client import JSONRPCClient
+from pyethapp.jsonrpc import quantity_decoder
 
 from raiden.blockchain.abi import get_contract_path
 from raiden.utils import isaddress
 
-slogging.configure(':DEBUG')
+slogging.configure(
+    ':ERROR'
+    ',eth.chain.tx:DEBUG'
+    ',jsonrpc:DEBUG'
+    ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
+)
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
 LETTERS = string.printable
@@ -30,6 +37,18 @@ def privkey(seed):
 
 def make_address():
     return ''.join(random.choice(LETTERS) for _ in range(20))
+
+
+def wait_for_hydrachain(jsonrpc_client, number_of_nodes, timeout):
+    start = time.time()
+    quantity = jsonrpc_client.call('net_peerCount')
+
+    while quantity != number_of_nodes:
+        gevent.sleep(0.1)
+        quantity = quantity_decoder(jsonrpc_client.call('net_peerCount'))
+
+        if time.time() - start > timeout:
+            raise Exception('timeout')
 
 
 ADDR = addr('0')
@@ -176,7 +195,9 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('timeout', [3])
-def test_blockchain(private_keys, hydrachain_network, timeout):
+def test_blockchain(private_keys, number_of_nodes, hydrachain_network, timeout):
+    slogging.configure(':ERROR')
+
     # pylint: disable=too-many-locals
     addresses = [
         privtoaddr(priv)
@@ -193,7 +214,11 @@ def test_blockchain(private_keys, hydrachain_network, timeout):
         print_communication=False,
     )
 
-    gevent.sleep(1)  # wait for the hydrachain nodes to sync
+    wait_for_hydrachain(
+        jsonrpc_client,
+        number_of_nodes - 1,
+        timeout,
+    )
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())
@@ -232,6 +257,8 @@ def test_blockchain(private_keys, hydrachain_network, timeout):
     assert token_proxy.balanceOf(address) == total_asset
     transaction_hash = registry_proxy.addAsset.transact(token_proxy.address)
     jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
+
+    assert len(registry_proxy.assetAddresses.call()) == 1
 
     log_list = jsonrpc_client.call(
         'eth_getLogs',

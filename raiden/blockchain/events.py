@@ -4,18 +4,6 @@ from ethereum import slogging
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def new_filter(jsonrpc_client, contract_address_bin, topics):
-    filter_ = {
-        'fromBlock': 'latest',
-        'toBlock': 'latest',
-        'address': contract_address_bin.encode('hex'),
-        'topics': topics,
-    }
-
-    filter_id = jsonrpc_client.call('eth_newFilter', filter_)
-    return filter_id
-
-
 def channelnew_filter(channel_manager_address_bin, node_address_bin, event_id, jsonrpc_client):
     """ Create a filter for new channels.
 
@@ -28,14 +16,18 @@ def channelnew_filter(channel_manager_address_bin, node_address_bin, event_id, j
     Return:
         int: The new filter id.
     """
+    # node_address_hex = node_address_bin.encode('hex')
+    # topics = [
+    #     event_id, [node_address_hex, None], [None, node_address_hex],
+    # ]
+    topics = [event_id]
 
-    node_address_hex = node_address_bin.encode('hex')
-    topics = [
-        [event_id, node_address_hex, None],
-        [event_id, None, node_address_hex],
-    ]
-
-    filter_id = new_filter(jsonrpc_client, channel_manager_address_bin, topics)
+    filter_id = jsonrpc_client.new_filter(
+        fromBlock='latest',
+        toBlock='latest',
+        address=channel_manager_address_bin,
+        topics=topics,
+    )
     return filter_id
 
 
@@ -51,7 +43,13 @@ def channel_events_filter(netting_contract_address_bin, event_id, jsonrpc_client
         int: The new filter id.
     """
     topics = []
-    filter_id = new_filter(jsonrpc_client, netting_contract_address_bin, topics)
+
+    filter_id = jsonrpc_client.new_filter(
+        fromBlock='latest',
+        toBlock='latest',
+        address=netting_contract_address_bin,
+        topics=topics,
+    )
     return filter_id
 
 
@@ -68,9 +66,6 @@ class EventListener(object):  # pylint: disable=too-few-public-methods
                 will the parsed event.
             filter_id (int): The installed filter id.
         """
-        if filter_id not in contract_translator.event_data:
-            raise ValueError('`contract_translator` cannot decode the given `event_id`')
-
         self.callback = callback
         self.filter_id = filter_id
         self.contract_translator = contract_translator
