@@ -79,8 +79,8 @@ contract NettingChannelContract {
     /// @param amount (uint) the amount to be deposited to the address
     function deposit(uint256 amount) inParticipants {
         if (assetToken.balanceOf(msg.sender) <= amount) throw;
-        bool s = assetToken.transferFrom(msg.sender, address(this), amount);
-        if (s == true) participants[atIndex(msg.sender)].deposit += amount;
+        bool success = assetToken.transferFrom(msg.sender, address(this), amount);
+        if (success == true) participants[atIndex(msg.sender)].deposit += amount;
         if(isOpen() && opened == 0) open();
     }
 
@@ -107,9 +107,10 @@ contract NettingChannelContract {
 
     /// @notice partner() to get the partner or other participant of the channel
     /// @dev Get the other participating party of the channel
-    /// @return p (address) the partner of the calling party
-    function partner(address a) private returns (address p) {
-        if (a == participants[0].addr) return participants[1].addr;
+    /// @param ownAddress (address) address of the calling party
+    /// @return partnerAddress (address) the partner of the calling party
+    function partner(address ownAddress) private returns (address partnerAddress) {
+        if (ownAddress == participants[0].addr) return participants[1].addr;
         else return participants[0].addr;
     }
 
@@ -355,7 +356,7 @@ contract NettingChannelContract {
         uint i = atIndex(sender);
         var(non, exp, ass, rec, loc, trn, amo, has) = decodeLockedTransfer(message);
         participants[i].nonce = non;
-        settleTimeout = exp;
+        participants[i].expiration = exp;
         participants[i].asset = ass;
         participants[i].recipient = rec;
         participants[i].locksroot = loc;
@@ -369,7 +370,7 @@ contract NettingChannelContract {
         uint i = atIndex(sender);
         var(non, exp, ass, rec, tar, ini, loc) = decodeMediatedTransfer1(message); 
         participants[i].nonce = non;
-        settleTimeout = exp;
+        participants[i].expiration = exp;
         participants[i].asset = ass;
         participants[i].recipient = rec;
         participants[i].locksroot = loc;
@@ -388,12 +389,12 @@ contract NettingChannelContract {
         uint i = atIndex(sender);
         var(non, exp, ass, rec, loc, trn, amo, has) = decodeCancelTransfer(message);
         participants[i].nonce = non;
-        settleTimeout = exp;
+        participants[i].expiration = exp;
         participants[i].asset = ass;
         participants[i].recipient = rec;
         participants[i].locksroot = loc;
         participants[i].transferedAmount = trn;
-        participants[i].transferedAmount = amo;
+        participants[i].amount = amo;
         participants[i].hashlock = has;
         participants[i].sender = sender;
     }
