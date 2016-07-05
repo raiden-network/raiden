@@ -54,6 +54,8 @@ def test_ncc():
     # assert c.atIndex(sha3('address2')[:20]) == 1
 
     # test deposit(uint)
+    with pytest.raises(TransactionFailed):
+        c.deposit(30, sender=tester.k2) # not participant
     assert token.balanceOf(c.address) == 0
     assert token.approve(c.address, 30) == True # allow the contract do deposit
     assert c.participants(0)[1] == 0
@@ -117,6 +119,8 @@ def test_ncc():
     direct_transfer = str(packed.data)
 
     c.closeSingleFunded(direct_transfer)
+    with pytest.raises(TransactionFailed):
+        c.closeSingleFunded(direct_transfer, sender=tester.k2) # not participant
 
     assert c.closed() == s.block.number
     assert c.closingAddress() == tester.a0.encode('hex')
@@ -200,6 +204,8 @@ def test_two_messages():
     direct_transfer2 = str(packed.data)
 
     c.closeBiFunded(direct_transfer1, direct_transfer2)
+    with pytest.raises(TransactionFailed):
+        c.closeBiFunded(direct_transfer1, direct_transfer2, sender=tester.k2) # not participant
 
     # Test with message sender tester.a0
     assert c.closed() == s.block.number
@@ -222,3 +228,160 @@ def test_two_messages():
     assert c.participants(1)[3] == 3
     assert c.participants(1)[6] == LOCKSROOT2
     assert c.participants(1)[7] == '\x00' * 32
+
+def test_update_transfer():
+    s = tester.state()
+    assert s.block.number < 1150000
+    s.block.number = 1158001
+    assert s.block.number > 1150000
+
+    # Token creation
+    lib_token = s.abi_contract(None, path=token_library_path, language="solidity")
+    token = s.abi_contract(None, path=token_path, language="solidity", libraries={'StandardToken': lib_token.address.encode('hex')}, constructor_parameters=[10000, "raiden", 0, "rd"])
+
+    s.mine()
+
+    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[token.address, tester.a0, tester.a1, 30])
+
+    # test tokens and distribute tokens
+    assert token.balanceOf(tester.a0) == 10000
+    assert token.balanceOf(tester.a1) == 0
+    assert token.transfer(tester.a1, 5000) == True
+    assert token.balanceOf(tester.a0) == 5000
+    assert token.balanceOf(tester.a1) == 5000
+
+    # test global variables
+    assert c.settleTimeout() == 30
+    assert c.assetAddress() == token.address.encode('hex')
+    assert c.opened() == 0
+    assert c.closed() == 0
+    assert c.settled() == 0
+
+    HASHLOCK1 = sha3(tester.k0)
+    LOCK_AMOUNT1 = 29
+    LOCK_EXPIRATION1 = 31
+    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
+    LOCKSROOT1 = merkleroot([
+        sha3(LOCK1.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    nonce = 1
+    asset = token.address
+    transfered_amount = 1
+    recipient = tester.a1
+    locksroot = LOCKSROOT1
+
+    msg1 = DirectTransfer(
+        nonce,
+        asset,
+        transfered_amount,
+        recipient,
+        locksroot,
+    ).sign(tester.k0)
+    packed = msg1.packed()
+    direct_transfer1 = str(packed.data)
+
+    HASHLOCK2 = sha3(tester.k1)
+    LOCK_AMOUNT2 = 29
+    LOCK_EXPIRATION2 = 31
+    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
+    LOCKSROOT2 = merkleroot([
+        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    locksroot = LOCKSROOT2
+
+    msg2 = DirectTransfer(
+        2,  # nonce
+        token.address,  # asset
+        3,  # transfered_amount
+        tester.a0,  # recipient
+        locksroot,
+    ).sign(tester.k1)
+    packed = msg2.packed()
+    direct_transfer2 = str(packed.data)
+
+    # not yet closed
+    with pytest.raises(TransactionFailed):
+        c.updateTransfer(direct_transfer1, sender=tester.k1)
+
+    c.closeBiFunded(direct_transfer1, direct_transfer2)
+
+    # Test with message sender tester.a0
+    assert c.closed() == s.block.number
+    assert c.closingAddress() == tester.a0.encode('hex')
+    assert c.participants(0)[10] == 1
+    assert c.participants(0)[11] == token.address.encode('hex')
+    assert c.participants(0)[9] == tester.a0.encode('hex')
+    assert c.participants(0)[12] == tester.a1.encode('hex')
+    assert c.participants(0)[3] == 1
+    assert c.participants(0)[6] == LOCKSROOT1
+    assert c.participants(0)[7] == '\x00' * 32
+
+    # Test with message sender tester.a1
+    assert c.closed() == s.block.number
+    assert c.closingAddress() == tester.a0.encode('hex')
+    assert c.participants(1)[10] == 2
+    assert c.participants(1)[11] == token.address.encode('hex')
+    assert c.participants(1)[9] == tester.a1.encode('hex')
+    assert c.participants(1)[12] == tester.a0.encode('hex')
+    assert c.participants(1)[3] == 3
+    assert c.participants(1)[6] == LOCKSROOT2
+    assert c.participants(1)[7] == '\x00' * 32
+
+    HASHLOCK3 = sha3(tester.k1)
+    LOCK_AMOUNT3 = 29
+    LOCK_EXPIRATION3 = 31
+    LOCK3 = Lock(LOCK_AMOUNT3, LOCK_EXPIRATION3, HASHLOCK3)
+    LOCKSROOT3 = merkleroot([
+        sha3(LOCK3.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    locksroot = LOCKSROOT3
+
+    msg3 = DirectTransfer(
+        3,  # nonce
+        token.address,  # asset
+        5,  # transfered_amount
+        tester.a0,  # recipient
+        locksroot,
+    ).sign(tester.k1)
+    packed = msg3.packed()
+    direct_transfer3 = str(packed.data)
+
+    assert tester.DEFAULT_ACCOUNT == tester.a0
+    tester.DEFAULT_ACCOUNT = tester.a1
+    assert tester.DEFAULT_ACCOUNT == tester.a1
+    # assert s.block.coinbase == tester.a1
+
+    # closingAddress == getSender(message)
+    with pytest.raises(TransactionFailed):
+        c.updateTransfer(direct_transfer1)
+
+    c.updateTransfer(direct_transfer3, sender=tester.k1)
+
+    # Test with message sender tester.a1
+    assert c.participants(1)[10] == 3
+    assert c.participants(1)[11] == token.address.encode('hex')
+    assert c.participants(1)[9] == tester.a1.encode('hex')
+    assert c.participants(1)[12] == tester.a0.encode('hex')
+    assert c.participants(1)[3] == 5
+    assert c.participants(1)[6] == LOCKSROOT3
+    assert c.participants(1)[7] == '\x00' * 32
+
+    msg4 = DirectTransfer(
+        1,  # nonce
+        token.address,  # asset
+        5,  # transfered_amount
+        tester.a0,  # recipient
+        locksroot,
+    ).sign(tester.k1)
+    packed = msg4.packed()
+    direct_transfer4 = str(packed.data)
+
+    # nonce too low
+    with pytest.raises(TransactionFailed):
+        c.updateTransfer(direct_transfer4, sender=tester.k1)
+
+    # settleTimeout overdue
+    s.block.number = 1158041
+
+    with pytest.raises(TransactionFailed):
+        c.updateTransfer(direct_transfer3, sender=tester.k1)

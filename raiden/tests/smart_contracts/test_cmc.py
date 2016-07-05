@@ -10,7 +10,8 @@ from raiden.network.rpc.client import get_contract_path
 
 def test_cmc():
     library_path = get_contract_path('IterableMappingNCC.sol')
-    cmc_path = get_contract_path('ChannelManagerContract.sol')
+    ncc_path = get_contract_path('NettingChannelContract.sol')
+    channel_manager_path = get_contract_path('ChannelManagerContract.sol')
 
     state = tester.state()
     assert state.block.number < 1150000
@@ -18,7 +19,12 @@ def test_cmc():
     assert state.block.number > 1150000
     lib_c = state.abi_contract(None, path=library_path, language="solidity")
     state.mine()
-    c = state.abi_contract(None, path=cmc_path, language="solidity", libraries={'IterableMappingNCC': lib_c.address.encode('hex')}, constructor_parameters=['0x0bd4060688a1800ae986e4840aebc924bb40b5bf'])
+    lib_ncc = state.abi_contract(None, path=ncc_path, language="solidity")
+    state.mine()
+    c = state.abi_contract(None, path=channel_manager_path, language="solidity",
+            libraries={'IterableMappingNCC': lib_c.address.encode('hex'),
+            'NettingChannelContract': lib_ncc.address.encode('hex')},
+            constructor_parameters=['0x0bd4060688a1800ae986e4840aebc924bb40b5bf'])
 
     # test key()
     # uncomment private in function to run test

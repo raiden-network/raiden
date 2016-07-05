@@ -217,10 +217,13 @@ contract NettingChannelContract {
     /// @dev Allow the partner to update the last known transfer
     /// @param message (bytes) the encoded transfer message
     function updateTransfer(bytes message) inParticipants notSettled {
-        if (closed + settleTimeout > block.number) throw; //if locked time has expired throw
+        if (closed + settleTimeout < block.number) throw; //if locked time has expired throw
         if (msg.sender == closingAddress) throw; // don't allow closer to update
         if (closingAddress == getSender(message)) throw;
 
+        uint8 nonce = bytesToIntEight(slice(message, 4, 12), nonce);
+        uint sender = atIndex(msg.sender);
+        if (nonce < participants[sender].nonce) throw;
         decode(message);
 
         // TODO check if tampered and penalize
@@ -232,13 +235,12 @@ contract NettingChannelContract {
     /// @param lockedEncoded (bytes) the lock
     /// @param merkleProof (bytes) the merkle proof
     /// @param secret (bytes32) the secret
-    function unlock(bytes lockedEncoded, bytes merkleProof, bytes32 secret) inParticipants notSettled{
+    function unlock(bytes lockedEncoded, bytes merkleProof, bytes32 secret) inParticipants notSettled {
         var(expiration, amount, hashlock) = decodeLock(lockedEncoded);
         if (expiration > closed) throw;
         if (hashlock != sha3(secret)) throw;
 
         uint partnerId = atIndex(partner(msg.sender));
-        uint senderId = atIndex(msg.sender);
 
         if (participants[partnerId].nonce == 0) throw;
 
