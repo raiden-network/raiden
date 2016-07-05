@@ -10,17 +10,18 @@ from raiden.utils import sha3
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import (
-    get_contract_path,
     BlockChainService,
     BlockChainServiceMock,
     MOCK_REGISTRY_ADDRESS,
     GAS_LIMIT,
 )
+from raiden.blockchain.abi import get_contract_path
 from raiden.app import DEFAULT_SETTLE_TIMEOUT
 from raiden.tests.utils.network import (
     create_network,
     create_sequential_network,
     create_hydrachain_network,
+    CHAIN,
     DEFAULT_DEPOSIT,
 )
 
@@ -170,8 +171,9 @@ def blockchain_service(request, registry_address):
 
 
 @pytest.fixture
-def raiden_chain(request, private_keys, asset, deposit, settle_timeout, registry_address,
-                 blockchain_service, transport_class):
+def raiden_chain(request, private_keys, asset, channels_per_node, deposit,
+                 settle_timeout, registry_address, blockchain_service,
+                 transport_class):
     blockchain_service_class = BlockChainServiceMock
     blockchain_service.new_channel_manager_contract(asset)
 
@@ -179,6 +181,7 @@ def raiden_chain(request, private_keys, asset, deposit, settle_timeout, registry
         private_keys,
         asset,
         registry_address,
+        channels_per_node,
         deposit,
         settle_timeout,
         transport_class,
@@ -234,6 +237,12 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
 def deployed_network(request, private_keys, hydrachain_network,
                      channels_per_node, deposit, number_of_assets,
                      settle_timeout, timeout, transport_class):
+
+    assert channels_per_node in (0, 1, 2, CHAIN), (
+        'deployed_network uses create_sequential_network that can only work '
+        'with 0, 1 or 2 channels'
+    )
+
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
     blockchain_service_class = BlockChainService
@@ -259,7 +268,10 @@ def deployed_network(request, private_keys, hydrachain_network,
     )
     registry_address = registry_proxy.address
 
-    total_per_node = channels_per_node * deposit
+    # Using 3 * deposit because we assume that is the maximum number of
+    # channels that will be created.
+    # `total_per_node = channels_per_node * deposit`
+    total_per_node = 3 * deposit
     total_asset = total_per_node * len(private_keys)
     asset_addresses = []
     for _ in range(number_of_assets):
@@ -295,6 +307,7 @@ def deployed_network(request, private_keys, hydrachain_network,
         private_keys,
         asset_addresses[0],
         registry_address,
+        channels_per_node,
         deposit,
         settle_timeout,
         transport_class,

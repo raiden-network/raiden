@@ -14,12 +14,13 @@ from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import BlockChainService
+from raiden.utils import pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 INITIAL_PORT = 40001
-DEFAULT_SETTLE_TIMEOUT = 20
+DEFAULT_SETTLE_TIMEOUT = 50
 DEFAULT_REVEAL_TIMEOUT = 3
 
 
@@ -42,6 +43,12 @@ class App(object):  # pylint: disable=too-few-public-methods
         self.raiden = RaidenService(chain, config['privkey'], self.transport, discovery, config)
 
         discovery.register(self.raiden.address, self.transport.host, self.transport.port)
+
+    def __repr__(self):
+        return '<{} {}>'.format(
+            self.__class__.__name__,
+            pex(self.raiden.address),
+        )
 
     def stop(self):
         self.transport.stop()

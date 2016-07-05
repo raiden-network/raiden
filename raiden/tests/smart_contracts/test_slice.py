@@ -4,7 +4,7 @@ import pytest
 from ethereum import tester
 from ethereum.tester import TransactionFailed
 
-from raiden.network.rpc.client import get_contract_path
+from raiden.blockchain.abi import get_contract_path
 
 
 def test_slice():

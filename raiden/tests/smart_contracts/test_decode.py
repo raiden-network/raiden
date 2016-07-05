@@ -7,7 +7,7 @@ from ethereum.tester import TransactionFailed
 from raiden.mtree import merkleroot
 from raiden.messages import Lock, DirectTransfer
 
-from raiden.network.rpc.client import get_contract_path
+from raiden.blockchain.abi import get_contract_path
 
 decoder_path = get_contract_path('Decoder.sol')
 

@@ -8,7 +8,7 @@ contract ChannelManagerContract {
     // Events
     // Event that triggers when a new channel is created
     // Gives the created channel
-    event ChannelNew(address participant1, address participant2);// update to use both addresses
+    event ChannelNew(address participant1, address participant2, uint settleTimeout);// update to use both addresses
 
     // Initialize the Contract
     /// @notice ChannelManagerContract(address) to contruct the contract
@@ -118,13 +118,19 @@ contract ChannelManagerContract {
     /// @notice newChannel(address, address) to create a new payment channel between two parties
     /// @dev Create a new channel between two parties
     /// @param partner (address) address of one partner
-    /// @return channel (NettingChannelContract) the NettingChannelContract of the two parties.
-    function newChannel(address partner, uint lckdTime) returns (NettingChannelContract c, address sender){
-        bytes32 k = key(msg.sender, partner);
-        c = new NettingChannelContract(assetToken, msg.sender, partner, lckdTime);
-        add(k, c);
-        sender = msg.sender; // Only for testing purpose, should not be added to live net
-        ChannelNew(msg.sender, partner); //Triggers event
+    /// @return channel (address) the address of the newly created NettingChannelContract among the two parties.
+    function newChannel(address partner, uint settleTimeout) returns (NettingChannelContract netting_channel){
+        bytes32 channel_identifier = key(msg.sender, partner);
+
+        netting_channel = new NettingChannelContract(
+            assetToken,
+            msg.sender,
+            partner,
+            settleTimeout
+        );
+        add(channel_identifier, netting_channel);
+
+        ChannelNew(msg.sender, partner, settleTimeout);
     }
 
     // empty function to handle wrong calls

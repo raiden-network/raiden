@@ -4,7 +4,6 @@ from __future__ import print_function
 import copy
 import os
 import random
-from itertools import product
 from math import floor
 
 from devp2p.crypto import privtopub
@@ -25,8 +24,13 @@ log = getLogger(__name__)  # pylint: disable=invalid-name
 DEFAULT_DEPOSIT = 2 ** 240
 """ An arbitrary initial balance for each channel in the test network. """
 
+CHAIN = object()
+""" Flag used by create_sequential_network to create a network that does make a
+loop.
+"""
 
-def check_channel(app1, app2, asset_address, netcontract_address, deposit):
+
+def check_channel(app1, app2, asset_address, netcontract_address):
     assert app1.raiden.chain.isopen(asset_address, netcontract_address)
     assert app2.raiden.chain.isopen(asset_address, netcontract_address)
 
@@ -42,8 +46,11 @@ def check_channel(app1, app2, asset_address, netcontract_address, deposit):
         app2.raiden.address,
     )
 
-    assert app1_details['our_balance'] == app2_details['partner_balance'] == deposit
-    assert app1_details['partner_balance'] == app2_details['our_balance'] == deposit
+    assert app1_details['our_address'] == app2_details['partner_address']
+    assert app1_details['partner_address'] == app2_details['our_address']
+
+    assert app1_details['our_balance'] == app2_details['partner_balance']
+    assert app1_details['partner_balance'] == app2_details['our_balance']
 
 
 def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0.0.1'):  # pylint: disable=too-many-arguments
@@ -62,12 +69,78 @@ def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0
     )
 
 
-def create_network_channels(assets_list, apps, channels_per_node, deposit, settle_timeout):
-    """ For each asset create `channel_per_node` channels for each app in `apps`.
+def setup_channels(asset_address, app_pairs, deposit, settle_timeout):
+    for first, second in app_pairs:
+        netcontract_address = first.raiden.chain.new_netting_contract(
+            asset_address,
+            first.raiden.address,
+            second.raiden.address,
+            settle_timeout,
+        )
 
-    This function will instantiate the requested number of mock contracts
-    between the nodes in the network, setting all the channels with `balance`,
-    the apps are choosen at random.
+        for app in [first, second]:
+            previous_balance = app.raiden.chain.asset_balance(asset_address, app.raiden.address)
+
+            assert previous_balance >= deposit
+
+            # use each app's own chain because of the private key / local
+            # signing
+            app.raiden.chain.asset_approve(
+                asset_address,
+                netcontract_address,
+                deposit,
+            )
+
+            app.raiden.chain.deposit(
+                asset_address,
+                netcontract_address,
+                app.raiden.address,
+                deposit,
+            )
+
+            new_balance = app.raiden.chain.asset_balance(asset_address, app.raiden.address)
+
+            assert previous_balance - deposit == new_balance
+
+        contract_settle_timeout = first.raiden.chain.netting_contract_settle_timeout(
+            asset_address,
+            netcontract_address,
+        )
+
+        # netting contract does allow settle time lower than 30
+        assert contract_settle_timeout == max(30, settle_timeout)
+
+        check_channel(
+            first,
+            second,
+            asset_address,
+            netcontract_address,
+        )
+
+        details = first.raiden.chain.netting_contract_detail(
+            asset_address,
+            netcontract_address,
+            first.raiden.address,
+        )
+        assert details['our_balance'] == deposit
+        assert details['partner_balance'] == deposit
+
+        details = second.raiden.chain.netting_contract_detail(
+            asset_address,
+            netcontract_address,
+            second.raiden.address,
+        )
+        assert details['our_balance'] == deposit
+        assert details['partner_balance'] == deposit
+
+
+def network_with_minimum_channels(apps, channels_per_node):
+    """ Return the channels that should be created so that each app has at
+    least `channels_per_node` with the other apps.
+
+    Yields a two-tuple (app1, app2) that must be connected to respect
+    `channels_per_node`. Any preexisting channels will be ignored, so the nodes
+    might end up with more channels open than `channels_per_node`.
     """
     # pylint: disable=too-many-locals
     if channels_per_node > len(apps):
@@ -87,77 +160,35 @@ def create_network_channels(assets_list, apps, channels_per_node, deposit, settl
     # one and random choose the other to connect, A will be left
     # with no channels. In this scenario we need to force the use
     # of the node with the least number of channels.
-    #
-    # instead of using complicated logic to handle this cases just sort
-    # the apps and use the next n apps to make a channel.
-    def sort_by_address(app):
-        return app.raiden.address
 
-    def sort_by_channelcount(asset, app):
-        addresses = app.raiden.chain.nettingaddresses_by_asset_participant(
-            asset,
-            app.raiden.address,
-        )
+    unconnected_apps = dict()
+    channel_count = dict()
 
-        return len(addresses)
+    # assume that the apps don't have any connection among them
+    for curr_app in apps:
+        all_apps = list(apps)
+        all_apps.remove(curr_app)
+        unconnected_apps[curr_app.raiden.address] = all_apps
+        channel_count[curr_app.raiden.address] = 0
 
     # Create `channels_per_node` channels for each asset in each app
-    for asset_address, curr_app in product(assets_list, sorted(apps, key=sort_by_address)):
-        blockchain_service = curr_app.raiden.chain
-        curr_address = curr_app.raiden.address
+    # for asset_address, curr_app in product(assets_list, sorted(apps, key=sort_by_address)):
 
-        contracts_addreses = blockchain_service.nettingaddresses_by_asset_participant(
-            asset_address,
-            curr_address,
-        )
+    # sorting the apps and use the next n apps to make a channel to avoid edge
+    # cases
+    for curr_app in sorted(apps, key=lambda app: app.raiden.addres):
+        available_apps = unconnected_apps[curr_app.raiden.address]
 
-        # get a list of apps that the current node doesn't have a channel with
-        other_apps = list(apps)
-        other_apps.remove(curr_app)
+        while channel_count[curr_app.raiden.address] < channels_per_node:
+            least_connect = sorted(available_apps, key=lambda app: channel_count[app.address])[0]  # pylint: disable=cell-var-from-loop
 
-        for address in contracts_addreses:
-            peer_address = blockchain_service.partner(asset_address, address, curr_address)
+            channel_count[curr_app.address] += 1
+            available_apps.remove(least_connect)
 
-            for app in other_apps:
-                if app.raiden.address == peer_address:
-                    other_apps.remove(app)
+            channel_count[least_connect.address] += 1
+            unconnected_apps[least_connect.raiden.address].remove(curr_app)
 
-        # create and initialize the missing channels
-        while len(contracts_addreses) < channels_per_node:
-            app = sorted(other_apps, key=lambda app: sort_by_channelcount(asset_address, app))[0]  # pylint: disable=cell-var-from-loop
-            other_apps.remove(app)
-
-            netcontract_address = blockchain_service.new_netting_contract(
-                asset_address,
-                curr_app.raiden.address,
-                app.raiden.address,
-                settle_timeout,
-            )
-            contracts_addreses.append(netcontract_address)
-
-            for app in [curr_app, app]:
-                # use each app's own chain because of the private key / local
-                # signing
-                app.raiden.chain.asset_approve(
-                    asset_address,
-                    netcontract_address,
-                    deposit,
-                )
-
-                app.raiden.chain.deposit(
-                    asset_address,
-                    netcontract_address,
-                    app.raiden.address,
-                    deposit,
-                )
-
-            check_channel(
-                curr_app,
-                app,
-                asset_address,
-                netcontract_address,
-                deposit,
-            )
+            yield curr_app, least_connect
 
 
 def create_network(private_keys, assets_addresses, registry_address,  # pylint: disable=too-many-arguments
@@ -228,34 +259,27 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
 
         apps.append(app)
 
-    create_network_channels(
-        assets_addresses,
-        apps,
-        channels_per_node,
-        deposit,
-        settle_timeout,
-    )
+    for asset in assets_addresses:
+        app_channels = network_with_minimum_channels(apps, channels_per_node)
+
+        setup_channels(
+            asset,
+            app_channels,
+            deposit,
+            settle_timeout,
+        )
 
     for app in apps:
-        for asset in assets_addresses:
-            asset_manager = app.raiden.get_or_create_asset_manager(asset)
-
-            all_netting_contracts = blockchain_service.nettingaddresses_by_asset_participant(
-                asset,
-                app.raiden.address,
-            )
-            for netting_contract_address in all_netting_contracts:
-                asset_manager.register_channel_by_address(
-                    netting_contract_address,
-                    app.config['reveal_timeout'],
-                )
+        for asset_address in app.raiden.chain.asset_addresses:
+            manager_address = app.raiden.chain.get_manager_address(asset_address)
+            app.raiden.register_asset(asset_address, manager_address)
 
     return apps
 
 
 def create_sequential_network(private_keys, asset_address, registry_address,  # pylint: disable=too-many-arguments
-                              deposit, settle_timeout, transport_class,
-                              blockchain_service_class):
+                              channels_per_node, deposit, settle_timeout,
+                              transport_class, blockchain_service_class):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
@@ -273,6 +297,9 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
 
     if num_nodes < 2:
         raise ValueError('cannot create a network with less than two nodes')
+
+    if channels_per_node not in (0, 1, 2, CHAIN):
+        raise ValueError('can only create networks with 0, 1, 2 or CHAIN channels')
 
     discovery = Discovery()
     blockchain_service_class = blockchain_service_class or BlockChainServiceMock
@@ -303,50 +330,30 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
         )
         apps.append(app)
 
-    for first, second in zip(apps[:-1], apps[1:]):
-        netcontract_address = first.raiden.chain.new_netting_contract(
-            asset_address,
-            first.raiden.address,
-            second.raiden.address,
-            settle_timeout,
-        )
+    if channels_per_node == 0:
+        app_channels = list()
 
-        for app in [first, second]:
-            # use each app's own chain because of the private key / local
-            # signing
-            app.raiden.chain.asset_approve(
-                asset_address,
-                netcontract_address,
-                deposit,
-            )
+    if channels_per_node == 1:
+        every_two = iter(apps)
+        app_channels = list(zip(every_two, every_two))
 
-            app.raiden.chain.deposit(
-                asset_address,
-                netcontract_address,
-                app.raiden.address,
-                deposit,
-            )
+    if channels_per_node == 2:
+        app_channels = list(zip(apps, apps[1:] + apps[0]))
 
-        check_channel(
-            first,
-            second,
-            asset_address,
-            netcontract_address,
-            deposit,
-        )
+    if channels_per_node == CHAIN:
+        app_channels = list(zip(apps[:-1], apps[1:]))
+
+    setup_channels(
+        asset_address,
+        app_channels,
+        deposit,
+        settle_timeout,
+    )
 
     for app in apps:
-        all_netting_contracts = app.raiden.chain.nettingaddresses_by_asset_participant(
-            asset_address,
-            app.raiden.address,
-        )
-
-        for netting_contract_address in all_netting_contracts:
-            app.raiden.setup_channel(
-                asset_address,
-                netting_contract_address,
-                app.config['reveal_timeout'],
-            )
+        for asset_address in app.raiden.chain.asset_addresses:
+            manager_address = app.raiden.chain.get_manager_address(asset_address)
+            app.raiden.register_asset(asset_address, manager_address)
 
     return apps
 

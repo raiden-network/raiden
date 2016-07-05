@@ -1,9 +1,13 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
+from ethereum.abi import ContractTranslator
 
 from raiden.channel import Channel, ChannelEndState
 from raiden.transfermanager import TransferManager
 from raiden.utils import isaddress, pex
+from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, CHANNELNEW_EVENTID
+from raiden.blockchain.events import channelnew_filter, EventListener
+from raiden.tasks import LogListenerTask
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -11,7 +15,7 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 class AssetManager(object):
     """ Manages netting contracts for a given asset. """
 
-    def __init__(self, raiden, asset_address, channel_graph):
+    def __init__(self, raiden, asset_address, channel_manager_address, channel_graph):
         """
         Args:
             raiden (RaidenService): a node's service
@@ -21,6 +25,27 @@ class AssetManager(object):
         if not isaddress(asset_address):
             raise ValueError('asset_address must be a valid address')
 
+        translator = ContractTranslator(CHANNEL_MANAGER_ABI)
+
+        filter_id = channelnew_filter(
+            channel_manager_address,
+            raiden.address,
+            CHANNELNEW_EVENTID,
+            raiden.chain.client,
+        )
+
+        event_listener = EventListener(
+            translator,
+            self.on_event,
+            filter_id,
+        )
+
+        channel_listener = LogListenerTask(
+            raiden.chain.client,
+            filter_id,
+            event_listener,
+        )
+
         self.asset_address = asset_address
         self.channelgraph = channel_graph
         self.raiden = raiden
@@ -28,6 +53,23 @@ class AssetManager(object):
         transfermanager = TransferManager(self)
         self.channels = dict()  #: Dict[(partner_address, channel object)]
         self.transfermanager = transfermanager  #: handle's raiden transfers
+        self.listeners = [channel_listener]
+
+    def has_path(self, source, target):
+        """ True if there is a path from `source` to `target`. """
+        return self.channelgraph.has_path(source, target)
+
+    def on_event(self, contract_address, event):
+        if event['_name'] == 'ChannelNew':
+            # event['participant1'].decode('hex')
+            # event['participant2'].decode('hex')
+
+            self.register_channel_by_address(
+                contract_address,
+                self.raiden.config['reveal_timeout'],
+            )
+        else:
+            log.error('Unknow event {}'.format(repr(event)))
 
     def register_channel_by_address(self, netting_contract_address_bin, reveal_timeout):
         """ Register a deployed channel.
@@ -139,7 +181,3 @@ class AssetManager(object):
                 continue
 
             yield (path, channel)
-
-    def has_path(self, source, target):
-        """ True if there is a path from `source` to `target`. """
-        return self.channelgraph.has_path(source, target)

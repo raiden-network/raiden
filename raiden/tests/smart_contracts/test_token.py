@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
 from ethereum import tester
 
-from raiden.network.rpc.client import get_contract_path
+from raiden.blockchain.abi import get_contract_path
 
 
 def test_ncc():

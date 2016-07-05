@@ -5,11 +5,13 @@ from ethereum import slogging
 from raiden.tests.utils.transfer import direct_transfer, mediated_transfer
 
 # Monkey patch subprocess.Popen used by solidity wrapper
-gevent.monkey.patch_socket()  # patch_subprocess()
-slogging.configure(':ERROR,eth.chain.tx:DEBUG,jsonrpc:DEBUG,eth.vm:TRACE')
-
-from pyethapp.utils import enable_greenlet_debugger
-enable_greenlet_debugger()
+gevent.monkey.patch_socket()
+slogging.configure(
+    ':ERROR'
+    ',eth.chain.tx:DEBUG'
+    ',jsonrpc:DEBUG'
+    ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
+)
 
 
 @pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed

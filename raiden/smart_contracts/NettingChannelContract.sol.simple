@@ -1,7 +1,7 @@
 import "StandardToken.sol";
 
 contract NettingChannelContract {
-    uint public lockedTime;
+    uint public settleTimeout;
     address public assetAddress;
     uint public opened;
     uint public closed;
@@ -40,12 +40,17 @@ contract NettingChannelContract {
         _
     }
 
-    function NettingChannelContract(address assetAdr, address participant1, address participant2, uint lckdTime) {
+    function NettingChannelContract(address assetAdr, address participant1, address participant2, uint timeout) {
         assetToken = StandardToken(assetAdr);
         assetAddress = assetAdr;
         participants[0].addr = participant1;
         participants[1].addr = participant2;
-        lockedTime = lckdTime;
+
+        if (timeout < 30) {
+            settleTimeout = 30;
+        } else {
+            settleTimeout = timeout;
+        }
     }
 
     /// @notice atIndex(address) to get the index of an address (0 or 1)
@@ -61,7 +66,7 @@ contract NettingChannelContract {
     /// must deposit before the channel is opened.
     /// @param amount (uint) the amount to be deposited to the address
     function deposit(uint256 amount) inParticipants {
-        if (assetToken.balanceOf(msg.sender) <= amount) throw;
+        if (assetToken.balanceOf(msg.sender) < amount) throw;
         bool s = assetToken.transferFrom(msg.sender, address(this), amount);
         if (s == true) participants[atIndex(msg.sender)].deposit += amount;
         if(isOpen() && opened == 0) open();

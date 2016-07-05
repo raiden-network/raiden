@@ -1,5 +1,4 @@
 # -*- coding: utf8 -*-
-import os
 import string
 import random
 
@@ -8,9 +7,14 @@ from ethereum import slogging
 from ethereum import _solidity
 from ethereum.utils import sha3, privtoaddr, int_to_big_endian
 
-import raiden
 from raiden.utils import isaddress, pex
 from raiden.blockchain.net_contract import NettingChannelContract
+from raiden.blockchain.abi import (
+    HUMAN_TOKEN_ABI,
+    CHANNEL_MANAGER_ABI,
+    NETTING_CHANNEL_ABI,
+    REGISTRY_ABI,
+)
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 LETTERS = string.printable
@@ -25,52 +29,13 @@ def make_address():
     return bytes(''.join(random.choice(LETTERS) for _ in range(20)))
 
 
-def get_contract_path(contract_name):
-    project_directory = os.path.dirname(raiden.__file__)
-    contract_path = os.path.join(project_directory, 'smart_contracts', contract_name)
-    return os.path.realpath(contract_path)
-
-
 class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes,unused-argument
 
     def __init__(self, jsonrpc_client, registry_address, timeout=None):
-        asset_compiled = _solidity.compile_contract(
-            get_contract_path('HumanStandardToken.sol'),
-            'HumanStandardToken',
-            combined='abi',
-        )
-
-        channel_manager_compiled = _solidity.compile_contract(
-            get_contract_path('ChannelManagerContract.sol'),
-            'ChannelManagerContract',
-            combined='abi',
-        )
-
-        netting_channel_compiled = _solidity.compile_contract(
-            get_contract_path('NettingChannelContract.sol'),
-            'NettingChannelContract',
-            combined='abi',
-        )
-
-        registry_compiled = _solidity.compile_contract(
-            get_contract_path('Registry.sol'),
-            'Registry',
-            combined='abi',
-        )
-
-        asset_abi = asset_compiled['abi']
-        """ The HumanStandardToken abi definition. """
-        channel_manager_abi = channel_manager_compiled['abi']
-        """ The ChannelManagerContract abi definition. """
-        netting_contract_abi = netting_channel_compiled['abi']
-        """ The NettingContract abi definition. """
-        registry_abi = registry_compiled['abi']
-        """ The Registry abi definition. """
-
         registry_proxy = jsonrpc_client.new_contract_proxy(
-            registry_abi,
+            REGISTRY_ABI,
             registry_address.encode('hex'),
         )
 
@@ -84,23 +49,17 @@ class BlockChainService(object):
         self.registry_proxy = registry_proxy
         self.timeout = timeout
 
-        self.asset_abi = asset_abi
-        self.channel_manager_abi = channel_manager_abi
-        self.netting_contract_abi = netting_contract_abi
-        self.registry_abi = registry_abi
+        self.asset_abi = HUMAN_TOKEN_ABI
+        self.channel_manager_abi = CHANNEL_MANAGER_ABI
+        self.netting_channel_abi = NETTING_CHANNEL_ABI
+        self.registry_abi = REGISTRY_ABI
 
-        if not self._code_exists(registry_address.encode('hex')):
+        if not self.code_exists(registry_address.encode('hex')):
             raise ValueError('Registry {} does not exists'.format(registry_address))
-
-    def _code_exists(self, address):
-        """ Return True if the address contains code, False otherwise. """
-        result = self.client.call('eth_getCode', address, 'latest')
-
-        return result != '0x'
 
     def _get_asset(self, asset_address):
         if asset_address not in self.assets:
-            if not self._code_exists(asset_address.encode('hex')):
+            if not self.code_exists(asset_address.encode('hex')):
                 raise ValueError('The asset {} does not exists'.format(asset_address))
 
             asset_proxy = self.client.new_abi_contract(self.asset_abi, asset_address.encode('hex'))
@@ -110,14 +69,14 @@ class BlockChainService(object):
 
     def _get_manager(self, asset_address):
         if asset_address not in self.asset_managerproxy:
-            if not self._code_exists(asset_address.encode('hex')):
+            if not self.code_exists(asset_address.encode('hex')):
                 raise ValueError('The asset {} does not exists'.format(asset_address))
 
             manager_address = self.registry_proxy.channelManagerByAsset.call(asset_address)
 
-            if not self._code_exists(manager_address):
+            if not self.code_exists(manager_address):
                 # The registry returned an address that has no code!
-                raise ValueError('Got unexpected address from the contract.')
+                raise ValueError('Got a non contract address from the registry.')
 
             manager_proxy = self.client.new_abi_contract(self.channel_manager_abi, manager_address)
             self.asset_managerproxy[asset_address] = manager_proxy
@@ -126,17 +85,27 @@ class BlockChainService(object):
 
     def _get_contract(self, netting_contract_address):
         if netting_contract_address not in self.contract_by_address:
-            if not self._code_exists(netting_contract_address.encode('hex')):
+            if not self.code_exists(netting_contract_address.encode('hex')):
                 msg = 'The contract {} does not exists.'.format(netting_contract_address)
                 raise ValueError(msg)
 
             contract_proxy = self.client.new_abi_contract(
-                self.netting_contract_abi,
+                self.netting_channel_abi,
                 netting_contract_address,
             )
             self.contract_by_address[netting_contract_address] = contract_proxy
 
         return self.contract_by_address[netting_contract_address]
+
+    def code_exists(self, address):
+        """ Return True if the address contains code, False otherwise. """
+        result = self.client.call('eth_getCode', address, 'latest')
+
+        return result != '0x'
+
+    def get_manager_address(self, asset_address):
+        manager = self._get_manager(asset_address)
+        return manager.address
 
     # CALLS
 
@@ -211,7 +180,8 @@ class BlockChainService(object):
 
     def netting_contract_settle_timeout(self, asset_address, netting_contract_address):
         contract_proxy = self._get_contract(netting_contract_address)
-        return contract_proxy.lockedTime.call()
+        settle_timeout = contract_proxy.settleTimeout.call()
+        return settle_timeout
 
     def isopen(self, asset_address, netting_contract_address):
         contract_proxy = self._get_contract(netting_contract_address)
@@ -263,6 +233,12 @@ class BlockChainService(object):
             startgas=GAS_LIMIT,
         )
         return address_encoded.decode('hex')
+
+    def asset_balance(self, asset_address, address):
+        asset_proxy = self._get_asset(asset_address)
+        return asset_proxy.balanceOf.call(
+            address,
+        )
 
     def asset_approve(self, asset_address, netcontract_address, deposit):
         asset_proxy = self._get_asset(asset_address)
@@ -469,6 +445,9 @@ class BlockChainServiceMock(object):
 
     def asset_approve(self, asset_address, netcontract_address, deposit):
         pass
+
+    def asset_balance(self, asset_address, address):  # pylint: disable=unused-argument,no-self-use
+        return float('inf')
 
     def deposit(self, asset_address, netting_contract_address, our_address, amount):
         hash_channel = self.asset_hashchannel[asset_address]

@@ -61,7 +61,12 @@ contract NettingChannelContract {
         assetAddress = assetAdr;
         participants[0].addr = participant1;
         participants[1].addr = participant2;
-        if (settleTimeout < 30) settleTimeout = 30; else settleTimeout = timeout;
+
+        if (timeout < 30) {
+            settleTimeout = 30;
+        } else {
+            settleTimeout = timeout;
+        }
     }
 
     /// @notice atIndex(address) to get the index of an address (0 or 1)

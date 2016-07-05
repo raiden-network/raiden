@@ -1,25 +1,7 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
-from ethereum.abi import event_id, normalize_name
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-
-
-def get_event(full_abi, event_name):
-    for description in full_abi:
-        normalized_name = normalize_name(description['name'])
-
-        if normalized_name == event_name:
-            return description
-
-
-def get_eventname_types(event_description):
-    name = normalize_name(event_description['name'])
-    encode_types = [
-        element['type']
-        for element in event_description['inputs']
-    ]
-    return name, encode_types
 
 
 def new_filter(jsonrpc_client, contract_address_bin, topics):
@@ -49,8 +31,8 @@ def channelnew_filter(channel_manager_address_bin, node_address_bin, event_id, j
 
     node_address_hex = node_address_bin.encode('hex')
     topics = [
-        [eventid, node_address_hex, None],
-        [eventid, None, node_address_hex],
+        [event_id, node_address_hex, None],
+        [event_id, None, node_address_hex],
     ]
 
     filter_id = new_filter(jsonrpc_client, channel_manager_address_bin, topics)
@@ -105,7 +87,7 @@ class EventListener(object):  # pylint: disable=too-few-public-methods
             self.callback(originating_contract, event)
 
 
-class ContractEventListen(EventListener):  # pylint: disable=too-few-public-methods
+class ContractEventListener(EventListener):  # pylint: disable=too-few-public-methods
     def listen(self, event_raw):
         topics = event_raw['topics']
         data = event_raw['data'].decode('hex')

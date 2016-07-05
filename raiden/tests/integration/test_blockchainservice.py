@@ -3,6 +3,7 @@ import random
 import string
 
 import pytest
+import gevent
 from ethereum import slogging
 from ethereum import _solidity
 from ethereum.keys import privtoaddr
@@ -10,7 +11,7 @@ from ethereum._solidity import compile_file
 from pyethapp.accounts import mk_privkey
 from pyethapp.rpc_client import JSONRPCClient
 
-from raiden.network.rpc.client import get_contract_path
+from raiden.blockchain.abi import get_contract_path
 from raiden.utils import isaddress
 
 slogging.configure(':DEBUG')
@@ -185,11 +186,14 @@ def test_blockchain(private_keys, hydrachain_network, timeout):
     privatekey_hex = hydrachain_network[0].config['node']['privkey_hex']
     privatekey = privatekey_hex.decode('hex')
     address = privtoaddr(privatekey)
+    total_asset = 100
 
     jsonrpc_client = JSONRPCClient(
         privkey=privatekey,
         print_communication=False,
     )
+
+    gevent.sleep(1)  # wait for the hydrachain nodes to sync
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())
@@ -198,12 +202,12 @@ def test_blockchain(private_keys, hydrachain_network, timeout):
         'HumanStandardToken',
         humantoken_contracts,
         dict(),
-        (9999, 'raiden', 2, 'Rd'),
+        (total_asset, 'raiden', 2, 'Rd'),
         timeout=timeout,
     )
 
     registry_path = get_contract_path('Registry.sol')
-    registry_contracts = compile_file(registry_path, libraries=dict())
+    registry_contracts = compile_file(registry_path)
     registry_proxy = jsonrpc_client.deploy_solidity_contract(
         address,
         'Registry',
@@ -225,8 +229,8 @@ def test_blockchain(private_keys, hydrachain_network, timeout):
 
     # pylint: disable=no-member
 
-    assert token_proxy.balanceOf(address) == 9999
-    transaction_hash = registry_proxy.addAsset(token_proxy.address)
+    assert token_proxy.balanceOf(address) == total_asset
+    transaction_hash = registry_proxy.addAsset.transact(token_proxy.address)
     jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
 
     log_list = jsonrpc_client.call(
@@ -242,18 +246,15 @@ def test_blockchain(private_keys, hydrachain_network, timeout):
     channel_manager_address_encoded = registry_proxy.channelManagerByAsset.call(token_proxy.address)
     channel_manager_address = channel_manager_address_encoded.decode('hex')
 
-    # pylint: disable=invalid-name
-    log_channel_manager_address_encoded = log_list[0]['data']
-    # remove 0x at the start
-    log_channel_manager_address_encoded = log_channel_manager_address_encoded[2:]
-    # remove the padding
-    log_channel_manager_address_encoded = log_channel_manager_address_encoded.lstrip('0')
-    # pad it back to the correct size
-    log_channel_manager_address_encoded = log_channel_manager_address_encoded.rjust(40, '0')
-    log_channel_manager_address = log_channel_manager_address_encoded.decode('hex')
-    # pylint: enable=invalid-name
+    log = log_list[0]
+    log_topics = log['topics']
+    log_data = log['data']
+    event = registry_proxy.contract.decode_event(
+        log_topics,
+        log_data[2:].decode('hex'),
+    )
 
-    assert channel_manager_address == log_channel_manager_address
+    assert channel_manager_address == event['assetAddress']
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         registry_contracts['ChannelManagerContract']['abi'],
@@ -272,8 +273,3 @@ def test_blockchain(private_keys, hydrachain_network, timeout):
         },
     )
     assert len(log_list) == 2
-
-    channel_manager_proxy.get.call(
-        address.encode('hex'),
-        addresses[1].encode('hex'),
-    )

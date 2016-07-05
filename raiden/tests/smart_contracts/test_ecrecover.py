@@ -4,13 +4,13 @@ from raiden.utils import privtoaddr, sha3
 from raiden.mtree import merkleroot
 from raiden.messages import Lock, DirectTransfer
 from raiden.encoding.signing import recover_publickey, address_from_key, sign
-from raiden.network.rpc.client import get_contract_path
-
-ec_path = get_contract_path('EcTest.sol')
-getter_path = get_contract_path('Getters.sol')
+from raiden.blockchain.abi import get_contract_path
 
 
 def test_ec():
+    ec_path = get_contract_path('EcTest.sol')
+    getter_path = get_contract_path('Getters.sol')
+
     state = tester.state()
     assert state.block.number < 1150000
     state.block.number = 1158001

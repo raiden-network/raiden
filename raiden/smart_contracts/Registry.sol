@@ -3,7 +3,7 @@ import "IterableMappingCMC.sol";
 contract Registry {
     IterableMappingCMC.itmap data;
 
-    event AssetAdded(address contractAddress); // useful for testing
+    event AssetAdded(address assetAddress); // useful for testing
 
     /// @notice addAsset(address) to add a new ChannelManagerContract to channelManagerContracts
     /// with the assetAddress as key.

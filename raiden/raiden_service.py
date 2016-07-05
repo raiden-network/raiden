@@ -61,13 +61,18 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
-    def get_or_create_asset_manager(self, asset_address):
+    def get_or_create_asset_manager(self, asset_address, channel_manager_address):
         """ Return the AssetManager for the given `asset_address`. """
         if asset_address not in self.assetmanagers:
             edges = self.chain.addresses_by_asset(asset_address)
             channel_graph = ChannelGraph(edges)
 
-            asset_manager = AssetManager(self, asset_address, channel_graph)
+            asset_manager = AssetManager(
+                self,
+                asset_address,
+                channel_manager_address,
+                channel_graph,
+            )
             self.assetmanagers[asset_address] = asset_manager
 
         return self.assetmanagers[asset_address]
@@ -121,6 +126,28 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
                 return True
 
         return False
+
+    def register_asset(self, asset_address_bin, channel_manager_address):
+        """ Discover and register the channels for the given asset. """
+
+        if not self.chain.code_exists(asset_address_bin.encode('hex')):
+            raise ValueError('Invalid address, does not contain code')
+
+        asset_manager = self.get_or_create_asset_manager(
+            asset_address_bin,
+            channel_manager_address,
+        )
+
+        all_netting_contracts = self.chain.nettingaddresses_by_asset_participant(
+            asset_address_bin,
+            self.address,
+        )
+
+        for netting_contract_address in all_netting_contracts:
+            asset_manager.register_channel_by_address(
+                netting_contract_address,
+                self.config['reveal_timeout'],
+            )
 
     def stop(self):
         # TODO:
