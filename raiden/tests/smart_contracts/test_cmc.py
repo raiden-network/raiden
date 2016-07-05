@@ -12,12 +12,13 @@ def test_cmc():
     library_path = get_contract_path('IterableMappingNCC.sol')
     cmc_path = get_contract_path('ChannelManagerContract.sol')
 
-    s = tester.state()
-    assert s.block.number < 1150000
-    s.block.number = 1158001
-    assert s.block.number > 1150000
-    lib_c = s.abi_contract(None, path=library_path, language="solidity")
-    c = s.abi_contract(None, path=cmc_path, language="solidity", libraries={'IterableMappingNCC': lib_c.address.encode('hex')}, constructor_parameters=['0x0bd4060688a1800ae986e4840aebc924bb40b5bf'])
+    state = tester.state()
+    assert state.block.number < 1150000
+    state.block.number = 1158001
+    assert state.block.number > 1150000
+    lib_c = state.abi_contract(None, path=library_path, language="solidity")
+    state.mine()
+    c = state.abi_contract(None, path=cmc_path, language="solidity", libraries={'IterableMappingNCC': lib_c.address.encode('hex')}, constructor_parameters=['0x0bd4060688a1800ae986e4840aebc924bb40b5bf'])
 
     # test key()
     # uncomment private in function to run test

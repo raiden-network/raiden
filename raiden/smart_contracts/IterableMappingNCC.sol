@@ -1,4 +1,4 @@
-import "NettingChannelContract.sol.simple";
+import "NettingChannelContract.sol";
 library IterableMappingNCC {
     struct itmap {
         mapping(bytes32 => IndexValue) data;
