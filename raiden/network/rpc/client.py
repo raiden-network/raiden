@@ -3,9 +3,8 @@ import string
 import random
 
 from ethereum import slogging
-
 from ethereum import _solidity
-from ethereum.utils import sha3, privtoaddr, int_to_big_endian
+from ethereum.utils import denoms, sha3, privtoaddr, int_to_big_endian
 
 from raiden.utils import isaddress, pex
 from raiden.blockchain.net_contract import NettingChannelContract
@@ -225,6 +224,7 @@ class BlockChainService(object):
             other,
             settle_timeout,
             startgas=GAS_LIMIT,
+            gasprice=denoms.wei,
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
 
@@ -246,6 +246,7 @@ class BlockChainService(object):
             netcontract_address,
             deposit,
             startgas=GAS_LIMIT,
+            gasprice=denoms.wei,
         )
         self.client.poll(transaction_hash.decode('hex'))
 
@@ -257,6 +258,7 @@ class BlockChainService(object):
         transaction_hash = contract_proxy.deposit.transact(
             amount,
             startgas=GAS_LIMIT,
+            gasprice=denoms.wei,
         )
         self.client.poll(transaction_hash.decode('hex'))
 

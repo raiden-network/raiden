@@ -1,6 +1,8 @@
 # -*- coding: utf8 -*-
-import pytest
+import gevent
 import gevent.monkey
+import pytest
+
 from ethereum import slogging
 
 # Monkey patch subprocess.Popen used by solidity wrapper
@@ -52,6 +54,8 @@ def test_event_new_channel(deployed_network, deposit, settle_timeout):
         app1.raiden.address,
         deposit,
     )
+
+    gevent.sleep(0.1)  # let the task run
 
     assert len(app0.raiden.assetmanagers[asset_address].channels) == 1
     assert len(app1.raiden.assetmanagers[asset_address].channels) == 1

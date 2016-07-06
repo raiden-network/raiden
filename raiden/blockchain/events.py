@@ -1,7 +1,12 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
+from pyethapp.jsonrpc import address_decoder, data_decoder
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+def decode_topic(topic):
+    return int(topic[2:], 16)
 
 
 def channelnew_filter(channel_manager_address_bin, node_address_bin, event_id, jsonrpc_client):
@@ -23,8 +28,6 @@ def channelnew_filter(channel_manager_address_bin, node_address_bin, event_id, j
     topics = [event_id]
 
     filter_id = jsonrpc_client.new_filter(
-        fromBlock='latest',
-        toBlock='latest',
         address=channel_manager_address_bin,
         topics=topics,
     )
@@ -45,8 +48,6 @@ def channel_events_filter(netting_contract_address_bin, event_id, jsonrpc_client
     topics = []
 
     filter_id = jsonrpc_client.new_filter(
-        fromBlock='latest',
-        toBlock='latest',
         address=netting_contract_address_bin,
         topics=topics,
     )
@@ -71,11 +72,13 @@ class EventListener(object):  # pylint: disable=too-few-public-methods
         self.contract_translator = contract_translator
 
     def listen(self, event_raw):
+        topics = [
+            decode_topic(topic)
+            for topic in event_raw['topics']
+        ]
+        data = data_decoder(event_raw['data'])
 
-        topics = event_raw['topics']
-        data = event_raw['data'].decode('hex')
-
-        originating_contract = event_raw['address'].decode('hex')
+        originating_contract = address_decoder(event_raw['address'])
         event = self.contract_translator.decode_event(topics, data)
 
         if event is not None:
@@ -84,22 +87,25 @@ class EventListener(object):  # pylint: disable=too-few-public-methods
 
 class ContractEventListener(EventListener):  # pylint: disable=too-few-public-methods
     def listen(self, event_raw):
-        topics = event_raw['topics']
-        data = event_raw['data'].decode('hex')
+        topics = [
+            decode_topic(topic)
+            for topic in event_raw['topics']
+        ]
+        data = data_decoder(event_raw['data'])
 
         event = self.contract_translator.decode_event(topics, data)
 
         if event is not None:
-            if event['_event_name'] == 'ChannelOpened':
+            if event['_event_type'] == 'ChannelOpened':
                 pass
 
-            if event['_event_name'] == 'ChannelClosed':
+            if event['_event_type'] == 'ChannelClosed':
                 pass
 
-            if event['_event_name'] == 'ChannelSettled':
+            if event['_event_type'] == 'ChannelSettled':
                 pass
 
-            if event['_event_name'] == 'ChannelSecretRevealed':
+            if event['_event_type'] == 'ChannelSecretRevealed':
                 pass
 
             self.callback(

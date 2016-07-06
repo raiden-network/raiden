@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
 from ethereum.abi import ContractTranslator
+from pyethapp.jsonrpc import address_decoder
 
 from raiden.channel import Channel, ChannelEndState
 from raiden.transfermanager import TransferManager
@@ -43,8 +44,9 @@ class AssetManager(object):
         channel_listener = LogListenerTask(
             raiden.chain.client,
             filter_id,
-            event_listener,
+            event_listener.listen,
         )
+        channel_listener.start()
 
         self.asset_address = asset_address
         self.channelgraph = channel_graph
@@ -59,13 +61,10 @@ class AssetManager(object):
         """ True if there is a path from `source` to `target`. """
         return self.channelgraph.has_path(source, target)
 
-    def on_event(self, contract_address, event):
-        if event['_name'] == 'ChannelNew':
-            # event['participant1'].decode('hex')
-            # event['participant2'].decode('hex')
-
+    def on_event(self, manager_address, event):  # pylint: disable=unused-argument
+        if event['_event_type'] == 'ChannelNew':
             self.register_channel_by_address(
-                contract_address,
+                address_decoder(event['nettingChannel']),
                 self.raiden.config['reveal_timeout'],
             )
         else:

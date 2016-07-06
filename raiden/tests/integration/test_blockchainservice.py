@@ -9,15 +9,17 @@ from ethereum import slogging
 from ethereum import _solidity
 from ethereum.keys import privtoaddr
 from ethereum._solidity import compile_file
+from ethereum.utils import denoms
 from pyethapp.accounts import mk_privkey
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import quantity_decoder
 
 from raiden.blockchain.abi import get_contract_path
 from raiden.utils import isaddress
+from raiden.blockchain.events import decode_topic
 
 slogging.configure(
-    ':ERROR'
+    ':DEBUG'
     ',eth.chain.tx:DEBUG'
     ',jsonrpc:DEBUG'
     ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
@@ -37,6 +39,8 @@ def privkey(seed):
 
 def make_address():
     return ''.join(random.choice(LETTERS) for _ in range(20))
+
+
 
 
 def wait_for_hydrachain(jsonrpc_client, number_of_nodes, timeout):
@@ -255,7 +259,10 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_network, timeout):
     # pylint: disable=no-member
 
     assert token_proxy.balanceOf(address) == total_asset
-    transaction_hash = registry_proxy.addAsset.transact(token_proxy.address)
+    transaction_hash = registry_proxy.addAsset.transact(
+        token_proxy.address,
+        gasprice=denoms.wei,
+    )
     jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
 
     assert len(registry_proxy.assetAddresses.call()) == 1
@@ -274,21 +281,34 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_network, timeout):
     channel_manager_address = channel_manager_address_encoded.decode('hex')
 
     log = log_list[0]
-    log_topics = log['topics']
+    log_topics = [
+        decode_topic(topic)
+        for topic in log['topics']  # pylint: disable=invalid-sequence-index
+    ]
     log_data = log['data']
-    event = registry_proxy.contract.decode_event(
+    event = registry_proxy.translator.decode_event(
         log_topics,
         log_data[2:].decode('hex'),
     )
 
-    assert channel_manager_address == event['assetAddress']
+    assert channel_manager_address == event['assetAddress'].decode('hex')
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         registry_contracts['ChannelManagerContract']['abi'],
         channel_manager_address,
     )
 
-    transaction_hash = channel_manager_proxy.newChannel(addresses[1], 10)
+    slogging.configure(
+        ':DEBUG'
+        ',eth.chain.tx:DEBUG'
+        ',jsonrpc:DEBUG'
+        ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
+    )
+    transaction_hash = channel_manager_proxy.newChannel.transact(
+        addresses[1],
+        10,
+        gasprice=denoms.wei,
+    )
     jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
 
     log_list = jsonrpc_client.call(

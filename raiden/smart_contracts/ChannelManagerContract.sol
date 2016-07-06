@@ -8,7 +8,12 @@ contract ChannelManagerContract {
     // Events
     // Event that triggers when a new channel is created
     // Gives the created channel
-    event ChannelNew(address participant1, address participant2, uint settleTimeout);// update to use both addresses
+    event ChannelNew(
+        address nettingChannel,
+        address participant1,
+        address participant2,
+        uint settleTimeout
+    );
 
     // Initialize the Contract
     /// @notice ChannelManagerContract(address) to contruct the contract
@@ -130,7 +135,12 @@ contract ChannelManagerContract {
         );
         add(channel_identifier, netting_channel);
 
-        ChannelNew(msg.sender, partner, settleTimeout);
+        ChannelNew(
+            netting_channel,
+            msg.sender,
+            partner,
+            settleTimeout
+        );
     }
 
     // empty function to handle wrong calls

@@ -4,6 +4,7 @@ import time
 
 import gevent
 from gevent.event import AsyncResult
+from pyethapp.jsonrpc import quantity_encoder
 
 from ethereum import slogging
 from ethereum.utils import sha3
@@ -69,13 +70,13 @@ class LogListenerTask(Task):
         while not stop:
             filter_changes = self.client.call(
                 'eth_getFilterChanges',
-                self.filter_id,
+                quantity_encoder(self.filter_id),
             )
 
             for log_event in filter_changes:
                 self.callback(log_event)
 
-            stop = self.event.wait(self.sleep_time)
+            stop = self.stop_event.wait(self.sleep_time)
 
     def stop(self):
         self.stop_event.set(True)

@@ -1,7 +1,9 @@
 # -*- coding: utf8 -*-
 import pytest
 import gevent.monkey
+
 from ethereum import slogging
+
 from raiden.tests.utils.transfer import direct_transfer, mediated_transfer
 
 # Monkey patch subprocess.Popen used by solidity wrapper
