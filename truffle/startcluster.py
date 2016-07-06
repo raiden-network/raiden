@@ -14,6 +14,7 @@ NUM_GETH_NODES = 3
 NUM_RAIDEN_ACCOUNTS = 10
 CLUSTER_NAME = 'raiden'
 RAIDEN_PORT = sum(ord(c) for c in CLUSTER_NAME)
+DEFAULT_PW = 'notsosecret'
 
 # a list of `num_raiden_accounts` account addresses with a predictable privkey:
 # privkey = sha3('localhost:`raiden_port + i`')
@@ -37,6 +38,7 @@ NODE_CONFIG = [
     'rpcport',
     'bootnodes',
     'minerthreads',
+    'unlock'
 ]
 
 GENESIS_STUB = {
@@ -129,9 +131,9 @@ def create_account(datadir):
         shlex.split('geth --datadir {} account new'.format(datadir)),
         stdin=PIPE, universal_newlines=True
     )
-    create.stdin.write('notsosecret' + os.linesep)
+    create.stdin.write(DEFAULT_PW + os.linesep)
     time.sleep(.1)
-    create.stdin.write('notsosecret' + os.linesep)
+    create.stdin.write(DEFAULT_PW + os.linesep)
     create.communicate()
     assert create.returncode == 0
 
@@ -151,6 +153,7 @@ def create_node_configurations(num_nodes, miner=True, start_port=30301, start_rp
         node = dict()
         if miner and i == 0:
             node['minerthreads'] = 1  # conservative
+            node['unlock'] = 0
         node['nodekey'] = sha3('node:{}'.format(i))
         node['nodekeyhex'] = encode_hex(node['nodekey'])
         node['pub'] = encode_hex(privtopub_enode(node['nodekey']))
@@ -171,9 +174,16 @@ def boot(cmds):
     processes = []
     try:
         for cmd in cmds:
-            print(' '.join(cmd))
-            processes.append(Popen(cmd))
-            print('spawned process')
+            if '--unlock' in cmd:
+                proc = Popen(cmd,
+                    universal_newlines=True, stdin=PIPE
+                )
+                # write password to unlock
+                proc.stdin.write(DEFAULT_PW + os.linesep)
+                processes.append(proc)
+            else:
+                processes.append(Popen(cmd))
+                print('spawned process')
     except SystemExit:
         for process in processes:
             process.terminate()
