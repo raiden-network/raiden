@@ -9,12 +9,15 @@ import raiden
 __all__ = (
     'get_contract_path',
 
+    'CHANNEL_MANAGER_ABI',
     'CHANNELNEW_EVENT',
     'CHANNELNEW_EVENTID',
 
-    'HUMAN_TOKEN_ABI',
-    'CHANNEL_MANAGER_ABI',
     'NETTING_CHANNEL_ABI',
+    'CHANNELNEWBALANCE_EVENT',
+    'CHANNELNEWBALANCE_EVENTID',
+
+    'HUMAN_TOKEN_ABI',
     'REGISTRY_ABI',
 )
 
@@ -65,7 +68,7 @@ channel_manager_compiled = _solidity.compile_contract(
 )
 
 netting_channel_compiled = _solidity.compile_contract(
-    get_contract_path('NettingChannelContract.sol'),
+    get_contract_path('NettingChannelContract.sol.simple'),
     'NettingChannelContract',
     combined='abi',
 )
@@ -84,3 +87,6 @@ REGISTRY_ABI = registry_compiled['abi']
 
 CHANNELNEW_EVENT = get_event(CHANNEL_MANAGER_ABI, 'ChannelNew')
 CHANNELNEW_EVENTID = event_id(*get_eventname_types(CHANNELNEW_EVENT))
+
+CHANNELNEWBALANCE_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelNewBalance')
+CHANNELNEWBALANCE_EVENTID = event_id(*get_eventname_types(CHANNELNEWBALANCE_EVENT))

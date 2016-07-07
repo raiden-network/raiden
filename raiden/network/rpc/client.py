@@ -153,7 +153,7 @@ class BlockChainService(object):
 
     def netting_contract_detail(self, asset_address, netting_contract_address, our_address):
         contract_proxy = self._get_contract(netting_contract_address)
-        data = contract_proxy.addrAndDep.call(startgas=GAS_LIMIT)
+        data = contract_proxy.addressAndBalance.call(startgas=GAS_LIMIT)
 
         if data[0].decode('hex') == our_address:
             return {
@@ -192,7 +192,7 @@ class BlockChainService(object):
 
     def partner(self, asset_address, netting_contract_address, our_address):
         contract_proxy = self._get_contract(netting_contract_address)
-        data = contract_proxy.addrAndDep.call(startgas=GAS_LIMIT)
+        data = contract_proxy.addressAndBalance.call(startgas=GAS_LIMIT)
 
         if data[0].decode('hex') == our_address:
             return data[2].decode('hex')
@@ -383,6 +383,12 @@ class BlockChainServiceMock(object):
         associated with it.
         """
         return self.asset_hashchannel.keys()
+
+    def code_exists(self, address):
+        return True
+
+    def get_manager_address(self, asset_address):
+        return self.asset_address[asset_address]
 
     def netting_addresses(self, asset_address):
         """ Return all netting contract addreses for the given `asset_address`. """

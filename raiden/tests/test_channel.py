@@ -39,8 +39,8 @@ def test_transfer(raiden_network):
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
 
-    initial_balance0 = channel0.initial_balance
-    initial_balance1 = channel1.initial_balance
+    contract_balance0 = channel0.contract_balance
+    contract_balance1 = channel1.contract_balance
 
     # check agreement on addresses
     address0 = channel0.our_state.address
@@ -61,12 +61,12 @@ def test_transfer(raiden_network):
         channel1.netting_contract_address,
         address1,
     )
-    assert initial_balance0 == details0['our_balance']
-    assert initial_balance1 == details1['our_balance']
+    assert contract_balance0 == details0['our_balance']
+    assert contract_balance1 == details1['our_balance']
 
     assert_synched_channels(
-        channel0, initial_balance0, [],
-        channel1, initial_balance1, [],
+        channel0, contract_balance0, [],
+        channel1, contract_balance1, [],
     )
 
     amount = 10
@@ -87,12 +87,12 @@ def test_transfer(raiden_network):
         channel1.netting_contract_address,
         address1,
     )
-    assert channel0.initial_balance == initial_balance0
-    assert channel1.initial_balance == initial_balance1
+    assert channel0.contract_balance == contract_balance0
+    assert channel1.contract_balance == contract_balance1
 
     assert_synched_channels(
-        channel0, initial_balance0 - amount, [],
-        channel1, initial_balance1 + amount, [],
+        channel0, contract_balance0 - amount, [],
+        channel1, contract_balance1 + amount, [],
     )
 
 
@@ -172,8 +172,8 @@ def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: d
     channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
     channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
 
-    initial_balance0 = channel0.initial_balance
-    initial_balance1 = channel1.initial_balance
+    contract_balance0 = channel0.contract_balance
+    contract_balance1 = channel1.contract_balance
 
     expiration = app0.raiden.chain.block_number + 15
 
@@ -210,10 +210,10 @@ def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: d
 
         # test the synchronization and values
         assert_synched_channels(
-            channel0, initial_balance0 - claimed_amount, unclaimed_locks,
-            channel1, initial_balance1 + claimed_amount, [],
+            channel0, contract_balance0 - claimed_amount, unclaimed_locks,
+            channel1, contract_balance1 + claimed_amount, [],
         )
-        assert channel0.distributable == initial_balance0 - distributed_amount
+        assert channel0.distributable == contract_balance0 - distributed_amount
 
         # claim a transaction at every other iteration, leaving the current one
         # in place
@@ -238,10 +238,10 @@ def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: d
 
             # test the state of the channels after the claim
             assert_synched_channels(
-                channel0, initial_balance0 - claimed_amount, unclaimed_locks,
-                channel1, initial_balance1 + claimed_amount, [],
+                channel0, contract_balance0 - claimed_amount, unclaimed_locks,
+                channel1, contract_balance1 + claimed_amount, [],
             )
-            assert channel0.distributable == initial_balance0 - distributed_amount
+            assert channel0.distributable == contract_balance0 - distributed_amount
 
 
 @pytest.mark.parametrize('privatekey_seed', ['register_invalid_transfer:{}'])

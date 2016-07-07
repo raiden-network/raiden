@@ -4,7 +4,7 @@ import time
 
 import gevent
 from gevent.event import AsyncResult
-from pyethapp.jsonrpc import quantity_encoder
+from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_encoder
 
 from ethereum import slogging
 from ethereum.utils import sha3
@@ -15,6 +15,7 @@ from raiden.messages import (
     SecretRequest,
     TransferTimeout,
 )
+from raiden.blockchain.events import decode_topic
 from raiden.utils import lpex, pex
 
 __all__ = (
@@ -55,26 +56,37 @@ class Task(gevent.Greenlet):
 
 
 class LogListenerTask(Task):
-    def __init__(self, jsonrpc_client, filter_id, callback):
+    def __init__(self, jsonrpc_client, filter_id, callback, contract_translator):
         super(LogListenerTask, self).__init__()
 
         self.client = jsonrpc_client
         self.filter_id = filter_id
         self.callback = callback
+        self.contract_translator = contract_translator
 
         self.stop_event = AsyncResult()
         self.sleep_time = 0.5
 
     def _run(self):  # pylint: disable=method-hidden
-        stop = False
-        while not stop:
+        stop = None
+
+        while stop is None:
             filter_changes = self.client.call(
                 'eth_getFilterChanges',
                 quantity_encoder(self.filter_id),
             )
 
             for log_event in filter_changes:
-                self.callback(log_event)
+                topics = [
+                    decode_topic(topic)
+                    for topic in log_event['topics']
+                ]
+                data = data_decoder(log_event['data'])
+
+                event = self.contract_translator.decode_event(topics, data)
+                if event is not None:
+                    originating_contract = address_decoder(log_event['address'])
+                    self.callback(originating_contract, event)
 
             stop = self.stop_event.wait(self.sleep_time)
 

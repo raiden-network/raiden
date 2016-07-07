@@ -132,8 +132,8 @@ def test_ncc(state, channel, token):  # pylint: disable=too-many-locals,too-many
     # assert channel.partner(sha3('address1')[:20]) == sha3('address2')[:20].encode('hex')
     # assert channel.partner(sha3('address2')[:20]) == sha3('address1')[:20].encode('hex')
 
-    # test addrAndDep()
-    a1, d1, a2, d2 = channel.addrAndDep()
+    # test addressAndBalance()
+    a1, d1, a2, d2 = channel.addressAndBalance()
     assert a1 == tester.a0.encode('hex')
     assert a2 == tester.a1.encode('hex')
     assert d1 == 30
@@ -298,7 +298,7 @@ def test_all_asset(asset_amount, state, channel, token):
     channel.deposit(half_amount)
     channel1.deposit(half_amount)
 
-    _, deposit1, _, deposit2 = channel.addrAndDep()
+    _, deposit1, _, deposit2 = channel.addressAndBalance()
 
     assert deposit1 == half_amount
     assert deposit2 == half_amount

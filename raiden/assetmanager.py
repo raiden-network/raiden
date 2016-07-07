@@ -1,14 +1,9 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
-from ethereum.abi import ContractTranslator
-from pyethapp.jsonrpc import address_decoder
 
 from raiden.channel import Channel, ChannelEndState
 from raiden.transfermanager import TransferManager
 from raiden.utils import isaddress, pex
-from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, CHANNELNEW_EVENTID
-from raiden.blockchain.events import channelnew_filter, EventListener
-from raiden.tasks import LogListenerTask
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -26,55 +21,32 @@ class AssetManager(object):
         if not isaddress(asset_address):
             raise ValueError('asset_address must be a valid address')
 
-        translator = ContractTranslator(CHANNEL_MANAGER_ABI)
-
-        filter_id = channelnew_filter(
-            channel_manager_address,
-            raiden.address,
-            CHANNELNEW_EVENTID,
-            raiden.chain.client,
-        )
-
-        event_listener = EventListener(
-            translator,
-            self.on_event,
-            filter_id,
-        )
-
-        channel_listener = LogListenerTask(
-            raiden.chain.client,
-            filter_id,
-            event_listener.listen,
-        )
-        channel_listener.start()
+        self.channels_by_partner = dict()  #: Dict[(address, Channel)]
+        self.channels_by_contract = dict()  #: Dict[(address, Channel)]
 
         self.asset_address = asset_address
+        self.channel_manager_address = channel_manager_address
         self.channelgraph = channel_graph
         self.raiden = raiden
 
         transfermanager = TransferManager(self)
-        self.channels = dict()  #: Dict[(partner_address, channel object)]
         self.transfermanager = transfermanager  #: handle's raiden transfers
-        self.listeners = [channel_listener]
 
     def has_path(self, source, target):
         """ True if there is a path from `source` to `target`. """
         return self.channelgraph.has_path(source, target)
 
-    def on_event(self, manager_address, event):  # pylint: disable=unused-argument
-        if event['_event_type'] == 'ChannelNew':
-            self.register_channel_by_address(
-                address_decoder(event['nettingChannel']),
-                self.raiden.config['reveal_timeout'],
-            )
-        else:
-            log.error('Unknow event {}'.format(repr(event)))
+    def get_channel_by_partner_address(self, partner_address_bin):
+        return self.channels_by_partner[partner_address_bin]
 
-    def register_channel_by_address(self, netting_contract_address_bin, reveal_timeout):
+    def get_channel_by_contract_address(self, netting_channel_address_bin):
+        return self.channels_by_contract[netting_channel_address_bin]
+
+    def register_channel_by_address(self, netting_channel_address_bin, reveal_timeout):
         """ Register a deployed channel.
 
         Args:
-            netting_contract_address_bin (bin): The netting contract address.
+            netting_channel_address_bin (bin): The netting contract address.
             reveal_timeout (int): Minimum number of blocks required by this
                 node to see a secret.
 
@@ -86,17 +58,17 @@ class AssetManager(object):
 
         channel_details = self.raiden.chain.netting_contract_detail(
             self.asset_address,
-            netting_contract_address_bin,
+            netting_channel_address_bin,
             our_address,
         )
 
-        self.register_channel(netting_contract_address_bin, channel_details, reveal_timeout)
+        self.register_channel(netting_channel_address_bin, channel_details, reveal_timeout)
 
-    def register_channel(self, netting_contract_address_bin, channel_details, reveal_timeout):
+    def register_channel(self, netting_channel_address_bin, channel_details, reveal_timeout):
         """ Register a new channel.
 
         Args:
-            netting_contract_address_bin (bin): The netting contract address.
+            netting_channel_address_bin (bin): The netting contract address.
             channel_details (dict): A dictionary containing the addresses of
                 the channel participants and their balances.
             reveal_timeout (int): Minimum number of blocks required by this
@@ -120,7 +92,7 @@ class AssetManager(object):
             self.raiden.chain,
 
             self.asset_address,
-            netting_contract_address_bin,
+            netting_channel_address_bin,
 
             our_state,
             partner_state,
@@ -128,11 +100,12 @@ class AssetManager(object):
             reveal_timeout,
         )
 
-        self.channels[partner_state.address] = channel
+        self.channels_by_partner[partner_state.address] = channel
+        self.channels_by_contract[netting_channel_address_bin] = channel
 
     def channel_isactive(self, partner_address):
         network_activity = True  # FIXME
-        return network_activity and self.channels[partner_address].isopen
+        return network_activity and self.get_channel_by_partner_address(partner_address).isopen
 
     def get_best_routes(self, amount, target, lock_timeout=None):
         """ Yield a two-tuple (path, channel) that can be used to mediate the
@@ -145,11 +118,11 @@ class AssetManager(object):
 
         for path in available_paths:
             assert path[0] == self.raiden.address
-            assert path[1] in self.channels
+            assert path[1] in self.channels_by_partner
             assert path[-1] == target
 
             partner = path[1]
-            channel = self.channels[partner]
+            channel = self.channels_by_partner[partner]
 
             if not channel.isopen:
                 log.info('channel {} - {} is close, ignoring'.format(pex(path[0]), pex(path[1])))

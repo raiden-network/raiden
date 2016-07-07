@@ -118,13 +118,13 @@ contract NettingChannelContract {
         else return participants[0].addr;
     }
 
-    /// @notice addrAndDep() to get the addresses and deposits of the participants
+    /// @notice addressAndBalance() to get the addresses and deposits of the participants
     /// @dev get the addresses and deposits of the participants
     /// @return par1 (address) address of one of the participants
     /// @return par2 (address) address of the the other participant
     /// @return dep1 (uint) the deposit of the first participant
     /// @return dep2 (uint) the deposit of the second participant
-    function addrAndDep() returns (address par1, uint dep1, address par2, uint dep2) {
+    function addressAndBalance() returns (address par1, uint dep1, address par2, uint dep2) {
         par1 = participants[0].addr;
         dep1 = participants[0].deposit;
         par2 = participants[1].addr;

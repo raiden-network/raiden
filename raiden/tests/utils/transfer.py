@@ -129,7 +129,7 @@ def assert_synched_channels(channel0, balance0, lock_list0, channel1, balance1, 
         This assert does not work if for a intermediate state, were one message
         hasn't being delivered yet or has been completely lost.
     """
-    total_asset = channel0.initial_balance + channel1.initial_balance
+    total_asset = channel0.contract_balance + channel1.contract_balance
     assert total_asset == channel0.balance + channel1.balance
 
     locked_amount0 = sum(lock.amount for lock in lock_list0)

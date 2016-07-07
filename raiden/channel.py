@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
+from ethereum.utils import encode_hex
 
 from raiden.messages import (
     BaseError,
@@ -180,7 +181,7 @@ class ChannelEndState(object):
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
 
-        self.initial_balance = participant_balance  #: initial balance
+        self.contract_balance = participant_balance  #: total asset locked in the contract
         self.transfered_amount = 0  #: total amount of transfered asset
         self.address = participant_address  #: node's address
 
@@ -190,8 +191,11 @@ class ChannelEndState(object):
         self.locked = LockedTransfers()  #: locked received
 
     def balance(self, other):
-        """ Return the current balance of the participant. """
-        return self.initial_balance - self.transfered_amount + other.transfered_amount
+        """ Return the current available balance of the participant. """
+        return self.contract_balance - self.transfered_amount + other.transfered_amount
+
+    def update_contract_balance(self, contract_balance):
+        self.contract_balance = contract_balance
 
     def distributable(self, other):
         """ Return the available amount of the asset that can be transfered in
@@ -284,9 +288,9 @@ class Channel(object):
         return self.chain.isopen(self.asset_address, self.netting_contract_address)
 
     @property
-    def initial_balance(self):
+    def contract_balance(self):
         """ Return the amount of asset used to open the channel. """
-        return self.our_state.initial_balance
+        return self.our_state.contract_balance
 
     @property
     def transfered_amount(self):
@@ -332,6 +336,15 @@ class Channel(object):
             if callback_transfer is transfer:
                 callback(None, True)
                 del self.transfer_callbacks[pos]
+
+    def get_state_for(self, node_address_bin):
+        if self.our_state.address == node_address_bin:
+            return self.our_state
+
+        if self.partner_state.address == node_address_bin:
+            return self.partner_state
+
+        raise Exception('Unknow address {}'.format(encode_hex(node_address_bin)))
 
     def claim_locked(self, secret, locksroot=None):
         """ Claim locked transfer from any of the ends of the channel.

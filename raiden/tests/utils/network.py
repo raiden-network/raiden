@@ -2,13 +2,18 @@
 from __future__ import print_function
 
 import copy
+import json
 import os
 import random
+import shlex
+import time
 from math import floor
+from subprocess import Popen, PIPE
 
 from devp2p.crypto import privtopub
 from devp2p.utils import host_port_pubkey_to_uri
 from ethereum.keys import privtoaddr
+from ethereum.utils import denoms, privtoaddr, encode_hex
 from ethereum.slogging import getLogger
 from pyethapp.accounts import Account
 from pyethapp.config import update_config_from_genesis_json
@@ -23,6 +28,11 @@ log = getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_DEPOSIT = 2 ** 240
 """ An arbitrary initial balance for each channel in the test network. """
+
+DEFAULT_PASSPHRASE = 'notsosecret'
+""" Geth account default passphrase used for the testing account. """
+
+DEFAULT_BALANCE = str(denoms.turing * 1)
 
 CHAIN = object()
 """ Flag used by create_sequential_network to create a network that does make a
@@ -176,16 +186,16 @@ def network_with_minimum_channels(apps, channels_per_node):
 
     # sorting the apps and use the next n apps to make a channel to avoid edge
     # cases
-    for curr_app in sorted(apps, key=lambda app: app.raiden.addres):
+    for curr_app in sorted(apps, key=lambda app: app.raiden.address):
         available_apps = unconnected_apps[curr_app.raiden.address]
 
         while channel_count[curr_app.raiden.address] < channels_per_node:
-            least_connect = sorted(available_apps, key=lambda app: channel_count[app.address])[0]  # pylint: disable=cell-var-from-loop
+            least_connect = sorted(available_apps, key=lambda app: channel_count[app.raiden.address])[0]  # pylint: disable=cell-var-from-loop
 
-            channel_count[curr_app.address] += 1
+            channel_count[curr_app.raiden.address] += 1
             available_apps.remove(least_connect)
 
-            channel_count[least_connect.address] += 1
+            channel_count[least_connect.raiden.address] += 1
             unconnected_apps[least_connect.raiden.address].remove(curr_app)
 
             yield curr_app, least_connect
@@ -358,7 +368,7 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
     return apps
 
 
-def create_hydrachain_network(private_keys, hydrachain_private_keys, p2p_base_port, base_datadir):
+def create_hydrachain_cluster(private_keys, hydrachain_private_keys, p2p_base_port, base_datadir):
     """ Initializes a hydrachain network used for testing. """
     # pylint: disable=too-many-locals
     from hydrachain.app import services, start_app, HPCApp
@@ -375,8 +385,8 @@ def create_hydrachain_network(private_keys, hydrachain_private_keys, p2p_base_po
     ]
 
     alloc = {
-        address.encode('hex'): {
-            'balance': '1606938044258990275541962092341162602522202993782792835301376',
+        encode_hex(address): {
+            'balance': DEFAULT_BALANCE,
         }
         for address in account_addresses
     }
@@ -417,7 +427,7 @@ def create_hydrachain_network(private_keys, hydrachain_private_keys, p2p_base_po
 
         config['data_dir'] = datadir
         config['hdc']['validators'] = validators_addresses
-        config['node']['privkey_hex'] = private_key.encode('hex')
+        config['node']['privkey_hex'] = encode_hex(private_key)
         config['jsonrpc']['listen_port'] += number
         config['client_version_string'] = 'NODE{}'.format(number)
 
@@ -440,3 +450,147 @@ def create_hydrachain_network(private_keys, hydrachain_private_keys, p2p_base_po
         all_apps.append(hydrachain_app)
 
     return all_apps
+
+
+def geth_to_cmd(node, datadir=None):
+    """
+    Transform a node configuration into a cmd-args list for `subprocess.Popen`.
+
+    Args:
+        node (dict): a node configuration
+        datadir (str): the node's datadir
+
+    Return:
+        List[str]: cmd-args list
+    """
+    node_config = [
+        'nodekeyhex',
+        'port',
+        'rpcport',
+        'bootnodes',
+        'minerthreads',
+        'unlock'
+    ]
+
+    cmd = ['geth']
+
+    for config in node_config:
+        if config in node:
+            value = node[config]
+            cmd.extend(['--{}'.format(config), str(value)])
+
+    if 'minerthreads' in node:
+        cmd.extend(['--mine', '--etherbase', '0'])
+
+    if datadir:
+        cmd.extend(['--datadir', datadir])
+        cmd.extend(['--genesis', os.path.join(datadir, 'genesis.json')])
+
+    cmd.extend([
+        '--nodiscover',
+        '--dev',
+        '--ipcdisable',
+        '--rpc',
+        '--jitvm=false',
+        '--networkid', '627',
+    ])
+
+    return cmd
+
+
+def geth_create_account(datadir):
+    """
+    Create an account in `datadir` -- since we're not interested
+    in the rewards, we don't care about the created address.
+
+    Args:
+        datadir (str): the datadir in which the account is created
+    """
+
+    create = Popen(
+        shlex.split('geth --datadir {} account new'.format(datadir)),
+        stdin=PIPE,
+        universal_newlines=True,
+    )
+    create.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
+    time.sleep(.1)
+    create.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
+    create.communicate()
+    assert create.returncode == 0
+
+
+def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_datadir):  # pylint: disable=too-many-locals,too-many-statements
+    start_rpcport = 4000
+
+    account_addresses = [
+        privtoaddr(key)
+        for key in private_keys
+    ]
+
+    alloc = {
+        encode_hex(address): {
+            'balance': DEFAULT_BALANCE,
+        }
+        for address in account_addresses
+    }
+
+    genesis = {
+        'nonce': '0x0000000000000042',
+        'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
+        'difficulty': '0x4000',
+        'coinbase': '0x0000000000000000000000000000000000000000',
+        'timestamp': '0x00',
+        'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
+        'extraData': 'raiden',
+        'gasLimit': '0xffffffff',
+        'alloc': alloc,
+    }
+
+    nodes_configuration = []
+    for pos, key in enumerate(geth_private_keys):
+        config = dict()
+
+        # make the first node miner
+        if pos == 0:
+            config['minerthreads'] = 1  # conservative
+            config['unlock'] = 0
+
+        config['nodekey'] = key
+        config['nodekeyhex'] = encode_hex(key)
+        config['pub'] = encode_hex(privtopub(key))
+        config['address'] = privtoaddr(key)
+        config['port'] = p2p_base_port + pos
+        config['rpcport'] = start_rpcport + pos
+        config['enode'] = 'enode://{pub}@127.0.0.1:{port}'.format(
+            pub=config['pub'],
+            port=config['port'],
+        )
+        config['bootnodes'] = ','.join(node['enode'] for node in nodes_configuration)
+
+        nodes_configuration.append(config)
+
+    cmds = []
+    for config in nodes_configuration:
+        nodedir = os.path.join(base_datadir, config['nodekeyhex'])
+        os.makedirs(nodedir)
+        with open(os.path.join(nodedir, 'genesis.json'), 'w') as handler:
+            json.dump(genesis, handler)
+
+            if 'minerthreads' in config:
+                geth_create_account(nodedir)
+
+            cmds.append(geth_to_cmd(config, datadir=nodedir))
+
+    processes = []
+    for cmd in cmds:
+        if '--unlock' in cmd:
+            proc = Popen(cmd, universal_newlines=True, stdin=PIPE)
+            # --password wont work, write password to unlock
+            proc.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
+            processes.append(proc)
+        else:
+            processes.append(Popen(cmd))
+            print('spawned process')
+
+
+    return processes

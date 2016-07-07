@@ -20,7 +20,8 @@ from raiden.app import DEFAULT_SETTLE_TIMEOUT
 from raiden.tests.utils.network import (
     create_network,
     create_sequential_network,
-    create_hydrachain_network,
+    create_hydrachain_cluster,
+    create_geth_cluster,
     CHAIN,
     DEFAULT_DEPOSIT,
 )
@@ -47,7 +48,7 @@ def hydrachain_number_of_nodes():
 
 
 @pytest.fixture
-def hydrachain_p2p_base_port():
+def p2p_base_port():
     # TODO: return a base port that is not random and guaranteed to be used
     # only once (avoid that a badly cleaned test interfere with the next).
     return 29870
@@ -79,7 +80,7 @@ def private_keys(number_of_nodes, privatekey_seed):
 
 
 @pytest.fixture
-def hydrachain_private_keys(hydrachain_number_of_nodes, hydrachainkey_seed):
+def cluster_private_keys(hydrachain_number_of_nodes, hydrachainkey_seed):
     return [
         sha3(hydrachainkey_seed.format(position))
         for position in range(hydrachain_number_of_nodes)
@@ -87,12 +88,11 @@ def hydrachain_private_keys(hydrachain_number_of_nodes, hydrachainkey_seed):
 
 
 @pytest.fixture
-def hydrachain_network(request, private_keys, hydrachain_private_keys,
-                       hydrachain_p2p_base_port, tmpdir):
-    hydrachain_apps = create_hydrachain_network(
+def hydrachain_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):
+    hydrachain_apps = create_hydrachain_cluster(
         private_keys,
-        hydrachain_private_keys,
-        hydrachain_p2p_base_port,
+        cluster_private_keys,
+        p2p_base_port,
         str(tmpdir),
     )
 
@@ -106,7 +106,24 @@ def hydrachain_network(request, private_keys, hydrachain_private_keys,
 
     request.addfinalizer(_cleanup)
 
-    return hydrachain_apps
+
+@pytest.fixture
+def geth_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):
+    geth_processes = create_geth_cluster(
+        private_keys,
+        cluster_private_keys,
+        p2p_base_port,
+        str(tmpdir),
+    )
+
+    def _cleanup():
+        for process in geth_processes:
+            process.terminate()
+
+        # Then kill any remaining tasklet
+        cleanup_tasks()
+
+    request.addfinalizer(_cleanup)
 
 
 @pytest.fixture
@@ -234,9 +251,9 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
 
 
 @pytest.fixture
-def deployed_network(request, private_keys, hydrachain_network,
-                     channels_per_node, deposit, number_of_assets,
-                     settle_timeout, timeout, transport_class):
+def deployed_network(request, private_keys, channels_per_node, deposit,
+                     number_of_assets, settle_timeout, timeout,
+                     transport_class, hydrachain_cluster):
 
     assert channels_per_node in (0, 1, 2, CHAIN), (
         'deployed_network uses create_sequential_network that can only work '
