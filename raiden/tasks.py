@@ -4,7 +4,6 @@ import time
 
 import gevent
 from gevent.event import AsyncResult
-from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_encoder
 
 from ethereum import slogging
 from ethereum.utils import sha3
@@ -15,7 +14,6 @@ from raiden.messages import (
     SecretRequest,
     TransferTimeout,
 )
-from raiden.blockchain.events import decode_topic
 from raiden.utils import lpex, pex
 
 __all__ = (
@@ -56,11 +54,11 @@ class Task(gevent.Greenlet):
 
 
 class LogListenerTask(Task):
-    def __init__(self, jsonrpc_client, filter_id, callback, contract_translator):
+    def __init__(self, filter_, callback, contract_translator):
         super(LogListenerTask, self).__init__()
 
-        self.client = jsonrpc_client
-        self.filter_id = filter_id
+        self.filter_ = filter_
+        self.filter_id = filter_.filter_id
         self.callback = callback
         self.contract_translator = contract_translator
 
@@ -71,21 +69,16 @@ class LogListenerTask(Task):
         stop = None
 
         while stop is None:
-            filter_changes = self.client.call(
-                'eth_getFilterChanges',
-                quantity_encoder(self.filter_id),
-            )
+            filter_changes = self.filter_.changes()
 
             for log_event in filter_changes:
-                topics = [
-                    decode_topic(topic)
-                    for topic in log_event['topics']
-                ]
-                data = data_decoder(log_event['data'])
+                event = self.contract_translator.decode_event(
+                    log_event['topics'],
+                    log_event['data'],
+                )
 
-                event = self.contract_translator.decode_event(topics, data)
                 if event is not None:
-                    originating_contract = address_decoder(log_event['address'])
+                    originating_contract = log_event['address']
                     self.callback(originating_contract, event)
 
             stop = self.stop_event.wait(self.sleep_time)
@@ -128,7 +121,7 @@ class StartMediatedTransferTask(Task):
             self.transfermanager.register_task_for_hashlock(self, hashlock)
 
             lock_expiration = (
-                raiden.chain.block_number + channel.settle_timeout - raiden.config['reveal_timeout']
+                raiden.chain.block_number() + channel.settle_timeout - raiden.config['reveal_timeout']
             )
 
             mediated_transfer = channel.create_mediatedtransfer(
@@ -247,12 +240,12 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         fee = self.fee
         transfer = self.originating_transfer
 
-        originating_channel = self.transfermanager.assetmanager.channels[transfer.sender]
+        originating_channel = self.transfermanager.assetmanager.partneraddress_channel[transfer.sender]
         channels_reveal = [originating_channel]
 
         raiden = self.transfermanager.assetmanager.raiden
         lock_expiration = transfer.lock.expiration - raiden.config['reveal_timeout']
-        lock_timeout = lock_expiration - raiden.chain.block_number
+        lock_timeout = lock_expiration - raiden.chain.block_number()
 
         # there are no guarantees that the next_hop will follow the same route
         routes = self.transfermanager.assetmanager.get_best_routes(
@@ -316,7 +309,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         # Send RefundTransfer to the originating node, this has the effect of
         # backtracking in the graph search of the raiden network.
         from_address = transfer.sender
-        from_channel = self.assetmanager.channels[from_address]
+        from_channel = self.assetmanager.partneraddress_channel[from_address]
 
         refund_transfer = from_channel.create_refundtransfer_for(transfer)
         from_channel.register_transfer(refund_transfer)
@@ -406,7 +399,7 @@ class EndMediatedTransferTask(Task):
     def _run(self):  # pylint: disable=method-hidden
         transfer = self.originating_transfer
         raiden = self.transfermanager.assetmanager.raiden
-        channel = self.transfermanager.assetmanager.channels[transfer.sender]
+        channel = self.transfermanager.assetmanager.partneraddress_channel[transfer.sender]
 
         transfer_details = '{} -> {} hash:{}'.format(
             pex(transfer.initiator),

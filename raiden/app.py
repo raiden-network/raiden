@@ -107,18 +107,9 @@ def main():
 
     app = App(config, blockchain_service, discovery)
 
-    for asset_address in blockchain_service.asset_addresses:
-        all_netting_contracts = blockchain_service.nettingaddresses_by_asset_participant(
-            asset_address,
-            app.raiden.address,
-        )
-
-        for netting_contract_address in all_netting_contracts:
-            app.raiden.setup_channel(
-                asset_address,
-                netting_contract_address,
-                app.config['reveal_timeout'],
-            )
+    for asset_address in blockchain_service.registry.asset_addresses():
+        manager = blockchain_service.manager_by_asset(asset_address)
+        app.raiden.register_asset(asset_address, manager.address)
 
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did

@@ -255,37 +255,26 @@ class ChannelEndState(object):
 class Channel(object):
     # pylint: disable=too-many-instance-attributes,too-many-arguments
 
-    def __init__(self, chain, asset_address, netting_contract_address,
-                 our_state, partner_state, reveal_timeout):
-        self.chain = chain
-        self.asset_address = asset_address
-        self.netting_contract_address = netting_contract_address
+    def __init__(self, netting_contract, our_state, partner_state,
+                 reveal_timeout, settle_timeout, get_block_number):
+        self.netting_contract = netting_contract
         self.our_state = our_state
         self.partner_state = partner_state
+
         self.reveal_timeout = reveal_timeout
-
-        settle_timeout = chain.netting_contract_settle_timeout(
-            asset_address,
-            netting_contract_address,
-        )
         self.settle_timeout = settle_timeout
-        ''' the contract's `settle_timeout`, all locks need to expire with less than this value '''
+        self.get_block_number = get_block_number
 
-        self.wasclosed = False
+        # cache this value
+        self.asset_address = netting_contract.asset_address()
+
         self.received_transfers = []
         self.sent_transfers = []  #: transfers that were sent, required for settling
         self.transfer_callbacks = []  # list of (Transfer, callback) tuples
 
     @property
     def isopen(self):
-        if self.wasclosed:
-            return False
-
-        # TODO:
-        # - cache this result and listen for logs (assume it starts open and
-        #   set it close once the log happen)
-        # - lift the chain dependency
-        return self.chain.isopen(self.asset_address, self.netting_contract_address)
+        return self.netting_contract.isopen()
 
     @property
     def contract_balance(self):
@@ -401,7 +390,7 @@ class Channel(object):
         else:
             raise ValueError('Invalid address')
 
-    def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa
+    def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa pylint: disable=too-many-branches
         """ Validates and register a signed transfer, updating the channel's state accordingly.
 
         Note:
@@ -444,6 +433,8 @@ class Channel(object):
             raise InsufficientBalance(transfer)
 
         if isinstance(transfer, LockedTransfer):
+            block_number = self.get_block_number()
+
             if amount + transfer.lock.amount > distributable:
                 raise InsufficientBalance(transfer)
 
@@ -456,21 +447,21 @@ class Channel(object):
             # As a receiver: If the lock expiration is larger than the settling
             # time a secret could be revealed after the channel is settled and
             # we won't be able to claim the asset
-            if not transfer.lock.expiration - self.chain.block_number < self.settle_timeout:
+            if not transfer.lock.expiration - block_number < self.settle_timeout:
                 log.error(
                     "Transfer expiration doesn't allow for corret settlement.",
                     lock_expiration=transfer.lock.expiration,
-                    current_block=self.chain.block_number,
+                    current_block=block_number,
                     settle_timeout=self.settle_timeout,
                 )
 
                 raise ValueError("Transfer expiration doesn't allow for corret settlement.")
 
-            if not transfer.lock.expiration - self.chain.block_number > self.reveal_timeout:
+            if not transfer.lock.expiration - block_number > self.reveal_timeout:
                 log.error(
                     'Expiration smaller than the minimum requried.',
                     lock_expiration=transfer.lock.expiration,
-                    current_block=self.chain.block_number,
+                    current_block=block_number,
                     reveal_timeout=self.reveal_timeout,
                 )
 
@@ -514,14 +505,17 @@ class Channel(object):
         from_state.transfered_amount = transfer.transfered_amount
         from_state.nonce += 1
 
-        log.debug('REGISTERED TRANSFER node:{} from:{} to:{} transfer:{} transfered_amount:{} nonce:{}'.format(
-            pex(self.our_state.address),
-            pex(from_state.address),
-            pex(to_state.address),
-            repr(transfer),
-            from_state.transfered_amount,
-            from_state.nonce,
-        ))
+        log.debug(
+            'REGISTERED TRANSFER node:{} from:{} to:{} '
+            'transfer:{} transfered_amount:{} nonce:{}'.format(
+                pex(self.our_state.address),
+                pex(from_state.address),
+                pex(to_state.address),
+                repr(transfer),
+                from_state.transfered_amount,
+                from_state.nonce,
+            )
+        )
 
     def create_directtransfer(self, amount, secret=None):
         """ Return a DirectTransfer message.
@@ -567,22 +561,24 @@ class Channel(object):
         if not self.isopen:
             raise ValueError('The channel is closed')
 
+        block_number = self.get_block_number()
+
         # expiration is not sufficient for guarantee settling
-        if expiration - self.chain.block_number >= self.settle_timeout:
+        if expiration - block_number >= self.settle_timeout:
             log.debug(
                 "Transfer expiration doesn't allow for corret settlement.",
                 expiration=expiration,
-                block_number=self.chain.block_number,
+                block_number=block_number,
                 settle_timeout=self.settle_timeout,
             )
 
             raise ValueError('Invalid expiration')
 
-        if expiration - self.reveal_timeout < self.chain.block_number:
+        if expiration - self.reveal_timeout < block_number:
             log.debug(
                 'Expiration smaller than the minimum requried.',
                 expiration=expiration,
-                block_number=self.chain.block_number,
+                block_number=block_number,
                 reveal_timeout=self.reveal_timeout,
             )
 

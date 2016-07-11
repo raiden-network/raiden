@@ -67,74 +67,58 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
     peer2_address = make_address()
     peer3_address = make_address()
 
-    contract_address = blockchain_service.new_channel_manager_contract(asset_address)
-    assert isaddress(contract_address)
+    contract_address = blockchain_service.default_registry.add_asset(asset_address)
+    manager = blockchain_service.manager_by_asset(asset_address)
 
     # sanity
-    assert blockchain_service.addresses_by_asset(asset_address) == []
-    assert blockchain_service.nettingaddresses_by_asset_participant(
-        asset_address,
-        peer1_address,
-    ) == []
-    assert blockchain_service.nettingaddresses_by_asset_participant(
-        asset_address,
-        peer2_address
-    ) == []
-    assert blockchain_service.nettingaddresses_by_asset_participant(
-        asset_address,
-        peer3_address
-    ) == []
+    assert manager.channels_addresses() == []
+    assert manager.channels_by_participant(peer1_address) == []
+    assert manager.channels_by_participant(peer2_address) == []
+    assert manager.channels_by_participant(peer3_address) == []
 
     # create one channel
-    netting1_address = blockchain_service.new_netting_contract(
-        asset_address,
+    netting1_address = manager.new_netting_channel(
         peer1_address,
         peer2_address,
         settle_timeout,
     )
 
     # check contract state
-    assert isaddress(netting1_address)
-    assert blockchain_service.isopen(asset_address, netting1_address) is False
-    assert blockchain_service.partner(asset_address, netting1_address, peer1_address) == peer2_address
-    assert blockchain_service.partner(asset_address, netting1_address, peer2_address) == peer1_address
+    netting_channel1 = blockchain_service.netting_channel(netting1_address)
+    assert netting_channel1.isopen() is False
+    assert netting_channel1.partner(peer1_address) == peer2_address
+    assert netting_channel1.partner(peer2_address) == peer1_address
 
     # check channels
-    assert sorted(blockchain_service.addresses_by_asset(asset_address)[0]) == sorted([peer1_address, peer2_address])
+    channel_list = manager.channels_addresses()
+    assert sorted(channel_list[0]) == sorted([peer1_address, peer2_address])
 
-    assert blockchain_service.nettingaddresses_by_asset_participant(
-        asset_address,
-        peer1_address
-    ) == [netting1_address]
-    assert blockchain_service.nettingaddresses_by_asset_participant(
-        asset_address,
-        peer2_address
-    ) == [netting1_address]
-    assert blockchain_service.nettingaddresses_by_asset_participant(asset_address, peer3_address) == []
+    assert manager.channels_by_participant(peer1_address) == [netting1_address]
+    assert manager.channels_by_participant(peer2_address) == [netting1_address]
+    assert manager.channels_by_participant(peer3_address) == []
 
     # cant recreate the existing channel
     with pytest.raises(Exception):
-        blockchain_service.new_netting_contract(
-            asset_address,
+        netting1_address = manager.new_netting_channel(
             peer1_address,
             peer2_address,
             settle_timeout,
         )
 
     # create other chanel
-    netting2_address = blockchain_service.new_netting_contract(
-        asset_address,
+    netting2_address = manager.new_netting_channel(
         peer1_address,
         peer3_address,
         settle_timeout,
     )
 
-    assert isaddress(netting2_address)
-    assert blockchain_service.isopen(asset_address, netting2_address) is False
-    assert blockchain_service.partner(asset_address, netting2_address, peer1_address) == peer3_address
-    assert blockchain_service.partner(asset_address, netting2_address, peer3_address) == peer1_address
+    netting_channel2 = blockchain_service.netting_channel(netting2_address)
 
-    channel_list = blockchain_service.addresses_by_asset(asset_address)
+    assert netting_channel2.isopen() is False
+    assert netting_channel2.partner(peer1_address) == peer3_address
+    assert netting_channel2.partner(peer3_address) == peer1_address
+
+    channel_list = manager.channels_addresses()
     expected_channels = [
         sorted([peer1_address, peer2_address]),
         sorted([peer1_address, peer3_address]),
@@ -143,36 +127,31 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
     for channel in channel_list:
         assert sorted(channel) in expected_channels
 
-    assert sorted(blockchain_service.nettingaddresses_by_asset_participant(asset_address, peer1_address)) == sorted([
-        netting1_address,
-        netting2_address,
-    ])
-    assert blockchain_service.nettingaddresses_by_asset_participant(asset_address, peer2_address) == [netting1_address]
-    assert blockchain_service.nettingaddresses_by_asset_participant(asset_address, peer3_address) == [netting2_address]
+    assert manager.channels_by_participant(peer1_address) == [netting1_address, netting2_address]
+    assert manager.channels_by_participant(peer2_address) == [netting1_address]
+    assert manager.channels_by_participant(peer3_address) == [netting2_address]
 
-    blockchain_service.deposit(asset_address, netting1_address, peer1_address, 100)
-    assert blockchain_service.isopen(asset_address, netting1_address) is False
-    assert blockchain_service.isopen(asset_address, netting2_address) is False
+    netting_channel1.deposit(peer1_address, 100)
+    assert netting_channel1.isopen() is False
+    assert netting_channel2.isopen() is False
 
     # with pytest.raises(Exception):
     #    blockchain_service.deposit(asset_address, netting1_address, peer1_address, 100)
 
-    blockchain_service.deposit(asset_address, netting2_address, peer1_address, 70)
-    assert blockchain_service.isopen(asset_address, netting1_address) is False
-    assert blockchain_service.isopen(asset_address, netting2_address) is False
+    netting_channel2.deposit(peer1_address, 70)
+    assert netting_channel1.isopen() is False
+    assert netting_channel2.isopen() is False
 
-    blockchain_service.deposit(asset_address, netting1_address, peer2_address, 130)
-    assert blockchain_service.isopen(asset_address, netting1_address) is True
-    assert blockchain_service.isopen(asset_address, netting2_address) is False
+    netting_channel1.deposit(peer2_address, 130)
+    assert netting_channel1.isopen() is True
+    assert netting_channel2.isopen() is False
 
     # we need to allow the settlement of the channel even if no transfers were
     # made
     peer1_last_sent_transfer = None
     peer2_last_sent_transfer = None
 
-    blockchain_service.close(
-        asset_address,
-        netting1_address,
+    netting_channel1.close(
         peer1_address,
         peer1_last_sent_transfer,
         peer2_last_sent_transfer,
@@ -181,18 +160,18 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
     # with pytest.raises(Exception):
     #     blockchain_service.close(asset_address, netting2_address, peer1_address, peer1_last_sent_transfers)
 
-    assert blockchain_service.isopen(asset_address, netting1_address) is False
-    assert blockchain_service.isopen(asset_address, netting2_address) is False
+    assert netting_channel1.isopen() is False
+    assert netting_channel2.isopen() is False
 
-    blockchain_service.deposit(asset_address, netting2_address, peer3_address, 21)
+    netting_channel2.deposit(peer3_address, 21)
 
-    assert blockchain_service.isopen(asset_address, netting1_address) is False
-    assert blockchain_service.isopen(asset_address, netting2_address) is True
+    assert netting_channel1.isopen() is False
+    assert netting_channel2.isopen() is True
 
-    blockchain_service.update_transfer(asset_address, netting1_address, peer2_address, peer2_last_sent_transfer)
+    netting_channel1.update_transfer(peer2_address, peer2_last_sent_transfer)
 
-    assert blockchain_service.isopen(asset_address, netting1_address) is False
-    assert blockchain_service.isopen(asset_address, netting2_address) is True
+    assert netting_channel1.isopen() is False
+    assert netting_channel2.isopen() is True
 
 
 @pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed

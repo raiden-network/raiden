@@ -4,7 +4,7 @@ import pytest
 from ethereum import slogging
 
 from raiden.messages import DirectTransfer
-from raiden.tests.utils.transfer import assert_synched_channels
+from raiden.tests.utils.transfer import assert_synched_channels, channel
 from raiden.utils import sha3
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -13,31 +13,36 @@ slogging.configure(':debug')
 
 @pytest.mark.parametrize('privatekey_seed', ['setup:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_setup(raiden_network):
+def test_setup(raiden_network, deposit, assets_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.chain.nettingaddresses_by_asset_participant(
-        app0.raiden.chain.asset_addresses[0],
-        app0.raiden.address,
-    )
+    assets0 = app0.raiden.managers_by_asset_address.keys()
+    assets1 = app1.raiden.managers_by_asset_address.keys()
 
-    channel1 = app0.raiden.chain.nettingaddresses_by_asset_participant(
-        app0.raiden.chain.asset_addresses[0],
-        app1.raiden.address,
-    )
+    assert len(assets0) == 1
+    assert len(assets1) == 1
+    assert assets0 == assets1
+    assert assets0[0] == assets_addresses[0]
+
+    asset_address = assets0[0]
+    channel0 = channel(app0, app1, asset_address)
+    channel1 = channel(app1, app0, asset_address)
 
     assert channel0 and channel1
-    assert app0.raiden.assetmanagers.keys() == app1.raiden.assetmanagers.keys()
-    assert len(app0.raiden.assetmanagers) == 1
+
+    assert_synched_channels(
+        channel0, deposit, [],
+        channel1, deposit, [],
+    )
 
 
 @pytest.mark.parametrize('privatekey_seed', ['transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_transfer(raiden_network):
+def test_transfer(raiden_network, assets_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
-    channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
+    channel0 = channel(app0, app1, assets_addresses[0])
+    channel1 = channel(app1, app0, assets_addresses[0])
 
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
@@ -46,21 +51,16 @@ def test_transfer(raiden_network):
     address0 = channel0.our_state.address
     address1 = channel1.our_state.address
     assert channel0.asset_address == channel1.asset_address
-    assert app0.raiden.assetmanagers.keys()[0] == app1.raiden.assetmanagers.keys()[0]
-    assert app0.raiden.assetmanagers.values()[0].channels.keys()[0] == app1.raiden.address
-    assert app1.raiden.assetmanagers.values()[0].channels.keys()[0] == app0.raiden.address
+    assert app0.raiden.managers_by_asset_address.keys()[0] == app1.raiden.managers_by_asset_address.keys()[0]
+    assert app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()[0] == app1.raiden.address
+    assert app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()[0] == app0.raiden.address
+
+    netting_channel = app0.raiden.chain.netting_channel(channel0.netting_contract.address)
 
     # check balances of channel and contract are equal
-    details0 = app0.raiden.chain.netting_contract_detail(
-        channel0.asset_address,
-        channel0.netting_contract_address,
-        address0,
-    )
-    details1 = app0.raiden.chain.netting_contract_detail(
-        channel1.asset_address,
-        channel1.netting_contract_address,
-        address1,
-    )
+    details0 = netting_channel.detail(address0)
+    details1 = netting_channel.detail(address1)
+
     assert contract_balance0 == details0['our_balance']
     assert contract_balance1 == details1['our_balance']
 
@@ -77,16 +77,9 @@ def test_transfer(raiden_network):
     channel1.register_transfer(direct_transfer)
 
     # check the contract is intact
-    assert details0 == app0.raiden.chain.netting_contract_detail(
-        channel0.asset_address,
-        channel0.netting_contract_address,
-        address0,
-    )
-    assert details1 == app0.raiden.chain.netting_contract_detail(
-        channel1.asset_address,
-        channel1.netting_contract_address,
-        address1,
-    )
+    assert details0 == netting_channel.detail(address0)
+    assert details1 == netting_channel.detail(address1)
+
     assert channel0.contract_balance == contract_balance0
     assert channel1.contract_balance == contract_balance1
 
@@ -101,8 +94,8 @@ def test_transfer(raiden_network):
 def test_locked_transfer(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
-    channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
+    channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
@@ -110,7 +103,7 @@ def test_locked_transfer(raiden_network):
     amount = 10
 
     # reveal_timeout <= expiration < contract.lock_time
-    expiration = app0.raiden.chain.block_number + 15
+    expiration = app0.raiden.chain.block_number() + 15
 
     secret = 'secret'
     hashlock = sha3(secret)
@@ -169,13 +162,13 @@ def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: d
 
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
-    channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
+    channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
 
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
 
-    expiration = app0.raiden.chain.block_number + 15
+    expiration = app0.raiden.chain.block_number() + 15
 
     unclaimed_locks = []
     transfers_list = []
@@ -256,14 +249,14 @@ def test_register_invalid_transfer(raiden_network):
     """
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.assetmanagers.values()[0].channels.values()[0]
-    channel1 = app1.raiden.assetmanagers.values()[0].channels.values()[0]
+    channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
     amount = 10
-    expiration = app0.raiden.chain.block_number + 15
+    expiration = app0.raiden.chain.block_number() + 15
 
     secret = 'secret'
     hashlock = sha3(secret)

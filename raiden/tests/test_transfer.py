@@ -28,17 +28,17 @@ def test_transfer(raiden_network):
     a0_address = pex(app0.raiden.address)
     a1_address = pex(app1.raiden.address)
 
-    asset_manager0 = app0.raiden.assetmanagers.values()[0]
-    asset_manager1 = app1.raiden.assetmanagers.values()[0]
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
 
-    channel0 = asset_manager0.channels[app1.raiden.address]
-    channel1 = asset_manager1.channels[app0.raiden.address]
+    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
     assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.channels
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
 
     amount = 10
     app0.raiden.api.transfer(
@@ -96,7 +96,7 @@ def test_mediated_transfer(raiden_network):
     app0 = raiden_network[0]
     setup_messages_cb()
 
-    am0 = app0.raiden.assetmanagers.values()[0]
+    am0 = app0.raiden.managers_by_asset_address.values()[0]
 
     # search for a path of length=2 A > B > C
     num_hops = 2
@@ -115,7 +115,7 @@ def test_mediated_transfer(raiden_network):
     assert min(len(p) for p in am0.channelgraph.get_shortest_paths(source, target)) == num_hops + 1
 
     ams_by_address = dict(
-        (app.raiden.address, app.raiden.assetmanagers)
+        (app.raiden.address, app.raiden.managers_by_asset_address)
         for app in raiden_network
     )
 
@@ -126,10 +126,10 @@ def test_mediated_transfer(raiden_network):
     asset_address = am0.asset_address
 
     # channels
-    c_ab = ams_by_address[hop1][asset_address].channels[hop2]
-    c_ba = ams_by_address[hop2][asset_address].channels[hop1]
-    c_bc = ams_by_address[hop2][asset_address].channels[hop3]
-    c_cb = ams_by_address[hop3][asset_address].channels[hop2]
+    c_ab = ams_by_address[hop1][asset_address].partneraddress_channel[hop2]
+    c_ba = ams_by_address[hop2][asset_address].partneraddress_channel[hop1]
+    c_bc = ams_by_address[hop2][asset_address].partneraddress_channel[hop3]
+    c_cb = ams_by_address[hop3][asset_address].partneraddress_channel[hop2]
 
     # initial channel balances
     b_ab = c_ab.balance

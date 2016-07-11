@@ -62,7 +62,7 @@ contract NettingChannelContract {
     }
 
     /// @notice deposit(uint) to deposit amount to channel.
-    /// @dev Deposit an amount to the channel. At least one of the participants 
+    /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
     /// @param amount (uint) the amount to be deposited to the address
     function deposit(uint256 amount) inParticipants {

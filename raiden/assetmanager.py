@@ -21,8 +21,8 @@ class AssetManager(object):
         if not isaddress(asset_address):
             raise ValueError('asset_address must be a valid address')
 
-        self.channels_by_partner = dict()  #: Dict[(address, Channel)]
-        self.channels_by_contract = dict()  #: Dict[(address, Channel)]
+        self.partneraddress_channel = dict()  #: maps the partner address to the channel instance
+        self.address_channel = dict()  #: maps the channel address to the channel instance
 
         self.asset_address = asset_address
         self.channel_manager_address = channel_manager_address
@@ -30,17 +30,17 @@ class AssetManager(object):
         self.raiden = raiden
 
         transfermanager = TransferManager(self)
-        self.transfermanager = transfermanager  #: handle's raiden transfers
+        self.transfermanager = transfermanager
 
     def has_path(self, source, target):
         """ True if there is a path from `source` to `target`. """
         return self.channelgraph.has_path(source, target)
 
     def get_channel_by_partner_address(self, partner_address_bin):
-        return self.channels_by_partner[partner_address_bin]
+        return self.partneraddress_channel[partner_address_bin]
 
     def get_channel_by_contract_address(self, netting_channel_address_bin):
-        return self.channels_by_contract[netting_channel_address_bin]
+        return self.address_channel[netting_channel_address_bin]
 
     def register_channel_by_address(self, netting_channel_address_bin, reveal_timeout):
         """ Register a deployed channel.
@@ -54,23 +54,14 @@ class AssetManager(object):
             ValueError: If raiden.address is not one of the participants in the
                 netting channel.
         """
-        our_address = self.raiden.address
+        netting_channel = self.raiden.chain.netting_channel(netting_channel_address_bin)
+        self.register_channel(netting_channel, reveal_timeout)
 
-        channel_details = self.raiden.chain.netting_contract_detail(
-            self.asset_address,
-            netting_channel_address_bin,
-            our_address,
-        )
-
-        self.register_channel(netting_channel_address_bin, channel_details, reveal_timeout)
-
-    def register_channel(self, netting_channel_address_bin, channel_details, reveal_timeout):
+    def register_channel(self, netting_channel, reveal_timeout):
         """ Register a new channel.
 
         Args:
-            netting_channel_address_bin (bin): The netting contract address.
-            channel_details (dict): A dictionary containing the addresses of
-                the channel participants and their balances.
+            netting_channel (network.rpc.client.NettingChannel): The netting channel proxy.
             reveal_timeout (int): Minimum number of blocks required by this
                 node to see a secret.
 
@@ -78,6 +69,8 @@ class AssetManager(object):
             ValueError: If raiden.address is not one of the participants in the
                 netting channel.
         """
+        channel_details = netting_channel.detail(self.raiden.address)
+
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
@@ -89,23 +82,23 @@ class AssetManager(object):
         )
 
         channel = Channel(
-            self.raiden.chain,
-
-            self.asset_address,
-            netting_channel_address_bin,
+            netting_channel,
 
             our_state,
             partner_state,
 
             reveal_timeout,
+            channel_details['settle_timeout'],
+
+            self.raiden.chain.block_number,
         )
 
-        self.channels_by_partner[partner_state.address] = channel
-        self.channels_by_contract[netting_channel_address_bin] = channel
+        self.partneraddress_channel[partner_state.address] = channel
+        self.address_channel[netting_channel.address] = channel
 
     def channel_isactive(self, partner_address):
-        network_activity = True  # FIXME
-        return network_activity and self.get_channel_by_partner_address(partner_address).isopen
+        # TODO: check if the partner's network is alive
+        return self.get_channel_by_partner_address(partner_address).isopen()
 
     def get_best_routes(self, amount, target, lock_timeout=None):
         """ Yield a two-tuple (path, channel) that can be used to mediate the
@@ -118,11 +111,11 @@ class AssetManager(object):
 
         for path in available_paths:
             assert path[0] == self.raiden.address
-            assert path[1] in self.channels_by_partner
+            assert path[1] in self.partneraddress_channel
             assert path[-1] == target
 
             partner = path[1]
-            channel = self.channels_by_partner[partner]
+            channel = self.partneraddress_channel[partner]
 
             if not channel.isopen:
                 log.info('channel {} - {} is close, ignoring'.format(pex(path[0]), pex(path[1])))

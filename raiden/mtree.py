@@ -1,78 +1,96 @@
-from utils import keccak
+# -*- coding: utf8 -*-
+from ethereum.utils import encode_hex
+
+from raiden.utils import keccak
 
 
-def hash_pair(s1, s2):
-    if s1 > s2:
-        s2, s1 = s1, s2
-    return keccak(s1 + s2)
+def hash_pair(first, second):
+    if first > second:
+        return keccak(second + first)
+    return keccak(first + second)
 
 
 class NoHash32Error(Exception):
     pass
 
 
-def merkleroot(lst, proof=[], first=True):
+def merkleroot(elements, proof=None, first=True):
     """
-    lst: list of hashes
-    proof: empty or with the element for which a proof shall be built, proof will be in proof
+    Args:
+        elements (List[str]): List of hashes that make the merkletree.
+        proof (list): Empty or with the element for which a proof shall be
+            built, proof will be in proof.
 
-    the proof contains all elements between `element` and `root`.
-    if on all of [element] + proof is recursively hash_pair applied one gets the root.
+            The proof contains all elements between `element` and `root`.
+            If on all of [element] + proof is recursively hash_pair applied one
+            gets the root.
 
-    returns: merkleroot
+    Returns:
+        str: The root element of the merkle tree.
     """
     if first:
-        lst = build_lst(lst)
-    if not lst:
+        elements = build_lst(elements)
+
+    if not elements:
         return ''
+
     proof = proof or [None]
     searching = proof.pop()
-    assert searching is None or searching in lst
+    assert searching is None or searching in elements
     out = []
-    for i in range(len(lst) / 2):
-        # a, b = lst.pop(0), lst.pop(0)
-        a, b = lst[i * 2], lst[i * 2 + 1]
-        h = hash_pair(a, b)
-        if a == searching:
-            proof.extend((b, h))
-        elif b == searching:
-            proof.extend((a, h))
-        out.append(h)
-    if len(lst) % 2:
-        h = lst[-1]
-        out.append(h)
-        if h == searching:
-            proof.append(h)
+    for i in range(len(elements) / 2):
+        first = elements[i * 2]
+        second = elements[i * 2 + 1]
+
+        hash_ = hash_pair(first, second)
+        if first == searching:
+            proof.extend((second, hash_))
+        elif second == searching:
+            proof.extend((first, hash_))
+        out.append(hash_)
+
+    if len(elements) % 2:
+        hash_ = elements[-1]
+        out.append(hash_)
+        if hash_ == searching:
+            proof.append(hash_)
+
     if len(out) > 1:
         return merkleroot(out, proof, False)
-    else:
-        if searching:
-            proof.pop()  # pop root
-        return out[0]
+
+    if searching:
+        proof.pop()  # pop root
+    return out[0]
 
 
-def build_lst(lst):
-    _lst = set()
-    for e in lst:
-        if e and len(e) != 32:
-            raise NoHash32Error()
-        elif e:
-            _lst.add(e)
-    lst = list(_lst)
-    lst.sort()
-    return lst
+def build_lst(elements):
+    result = list()
+
+    for item in set(elements):
+        if item:
+            if len(item) != 32:
+                raise NoHash32Error()
+
+            result.append(item)
+
+    result.sort()
+    return result
 
 
-def check_proof(proof, root, h):
+def check_proof(proof, root, hash_):
     while len(proof):
-        e = proof.pop(0)
-        h = hash_pair(h, e)
-    return h == root
+        hash_ = hash_pair(hash_, proof.pop(0))
+    return hash_ == root
 
 
 def get_proof(lst, proof_for, root=None):
     proof = [proof_for]
-    r = merkleroot(lst, proof)
-    if root:
-        assert root == r
+    root_hash = merkleroot(lst, proof)
+
+    if root and root != root_hash:
+        raise ValueError('root hashes did not match {} {}'.format(
+            encode_hex(root_hash),
+            encode_hex(root)
+        ))
+
     return proof

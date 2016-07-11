@@ -10,7 +10,8 @@ from raiden.tasks import StartMediatedTransferTask
 
 def channel(app0, app1, asset):
     """ Nice to read shortcut to get the channel. """
-    return app0.raiden.assetmanagers[asset].channels[app1.raiden.address]
+    asset_manager = app0.raiden.managers_by_asset_address[asset]
+    return asset_manager.partneraddress_channel[app1.raiden.address]
 
 
 def sleep(initiator_app, target_app, asset, multiplier=1):
@@ -94,7 +95,7 @@ def hidden_mediated_transfer(app_chain, asset, amount):
     fee = 0
     secret = None
     hashlock = None
-    expiration = app_chain[0].raiden.chain.block_number + 10  # XXX:
+    expiration = app_chain[0].raiden.chain.block_number() + 10  # XXX:
     initiator_app = app_chain[0]
     target_app = app_chain[0]
 

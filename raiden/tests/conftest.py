@@ -224,8 +224,10 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
                    transport_class):
     blockchain_service_class = BlockChainServiceMock
 
+    registry = blockchain_service.registry(registry_address)
+
     for asset in assets_addresses:
-        blockchain_service.new_channel_manager_contract(asset)
+        registry.add_asset(asset)
 
     raiden_apps = create_network(
         private_keys,

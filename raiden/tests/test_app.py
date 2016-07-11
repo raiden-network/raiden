@@ -14,8 +14,11 @@ def test_create_network(raiden_network):
 
     # All apps must have 2 asset managers (one per each asset)
     for app in raiden_network:
-        assert len(set(app.raiden.assetmanagers.keys())) == 2
+        assert len(app.raiden.managers_by_asset_address) == 2
 
     # All apps must have uniq private keys
-    private_keys = set(app.raiden.privkey for app in raiden_network)
+    private_keys = set(
+        app.raiden.privkey
+        for app in raiden_network
+    )
     assert len(private_keys) == 10

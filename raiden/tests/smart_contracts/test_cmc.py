@@ -5,10 +5,12 @@ from ethereum._solidity import compile_file
 from ethereum import tester
 from ethereum.utils import sha3
 from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
+from ethereum.slogging import configure
 
 from raiden.blockchain.abi import get_contract_path
 
 # pylint: disable=no-member
+configure(':DEBUG')
 
 
 # TODO: test events
@@ -28,6 +30,7 @@ def test_cmc():  # pylint: disable=too-many-locals,too-many-statements
     netting_channel_abi = netting_channel_compiled['abi']
     netting_channel_translator = ContractTranslator(netting_channel_abi)
 
+    tester.gas_limit = 9575081L
     state = tester.state()
     state.block.number = 1158001
 

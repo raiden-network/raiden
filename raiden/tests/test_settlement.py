@@ -24,14 +24,14 @@ def test_settlement(raiden_network, settle_timeout):
 
     setup_messages_cb()
 
-    asset_manager0 = app0.raiden.assetmanagers.values()[0]
-    asset_manager1 = app1.raiden.assetmanagers.values()[0]
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
 
     chain0 = app0.raiden.chain
     asset_address = asset_manager0.asset_address
 
-    channel0 = asset_manager0.channels[app1.raiden.address]
-    channel1 = asset_manager1.channels[app0.raiden.address]
+    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
@@ -41,9 +41,9 @@ def test_settlement(raiden_network, settle_timeout):
     secret = 'secret'
     hashlock = sha3(secret)
 
-    assert app1.raiden.address in asset_manager0.channels
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
     assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert channel0.netting_contract_address == channel1.netting_contract_address
+    assert channel0.netting_contract.address == channel1.netting_contract.address
 
     transfermessage = channel0.create_lockedtransfer(amount, expiration, hashlock)
     app0.raiden.sign(transfermessage)
@@ -58,16 +58,14 @@ def test_settlement(raiden_network, settle_timeout):
     # Bob learns the secret, but Alice did not send a signed updated balance to
     # reflect this Bob wants to settle
 
-    netting_contract_address = channel0.netting_contract_address
+    netting_contract_address = channel0.netting_contract.address
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
     merkle_proof = channel1.our_state.locked.get_proof(transfermessage)
     root = channel1.our_state.locked.root
     assert check_proof(merkle_proof, root, sha3(transfermessage.lock.as_bytes))
 
-    chain0.close(
-        asset_address,
-        netting_contract_address,
+    channel0.netting_contract.close(
         app0.raiden.address,
         transfermessage,
         None,
@@ -75,9 +73,7 @@ def test_settlement(raiden_network, settle_timeout):
 
     unlocked = [(merkle_proof, transfermessage.lock, secret)]
 
-    chain0.unlock(
-        asset_address,
-        netting_contract_address,
+    channel0.netting_contract.unlock(
         app0.raiden.address,
         unlocked,
     )
@@ -85,13 +81,13 @@ def test_settlement(raiden_network, settle_timeout):
     for _ in range(settle_timeout):
         chain0.next_block()
 
-    chain0.settle(asset_address, netting_contract_address)
+    channel0.netting_contract.settle()
 
 
 @pytest.mark.xfail()
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
-def test_settled_lock(asset_address, raiden_network):
+def test_settled_lock(asset_address, raiden_network, settle_timeout):
     """ After a lock has it's secret revealed and a transfer happened, the lock
     cannot be used to net any value with the contract.
     """
@@ -110,22 +106,25 @@ def test_settled_lock(asset_address, raiden_network):
     attack_channel = channel(app2, app1, asset)
     secret_transfer = get_received_transfer(attack_channel, 0)
     last_transfer = get_received_transfer(attack_channel, 1)
-    netting_contract_address = attack_channel.netting_contract_address
+    netting_contract_address = attack_channel.netting_contract.address
 
     # create a fake proof
     merkle_proof = attack_channel.our_state.locked.get_proof(secret_transfer)
 
     # call close giving the secret for a transfer that has being revealed
-    app1.raiden.chain.close(
-        asset,
-        netting_contract_address,
+    attack_channel.netting_contract.close(
         app1.raiden.address,
-        [last_transfer],
+        last_transfer,
+        None
+    )
+
+    attack_channel.netting_contract.unlock(
+        app1.raiden.address,
         [(merkle_proof, secret_transfer.lock, secret)],
     )
 
     # forward the block number to allow settle
-    for _ in range(NettingChannelContract.settle_timeout):
+    for _ in range(settle_timeout):
         app2.raiden.chain.next_block()
 
     app1.raiden.chain.settle(asset, netting_contract_address)
@@ -161,19 +160,17 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
 
     attack_channel = channel(app2, app1, asset)
     attack_transfer = get_received_transfer(attack_channel, 0)
-    attack_contract = attack_channel.netting_contract_address
-    hub_contract = channel(app1, app0, asset).netting_contract_address
+    attack_contract = attack_channel.netting_contract.address
+    hub_contract = channel(app1, app0, asset).netting_contract.address
 
     # the attacker can create a merkle proof of the locked transfer
     merkle_proof = attack_channel.our_state.locked.get_proof(attack_transfer)
 
     # start the settle counter
-    app2.raiden.chain.close(
-        asset,
-        attack_contract,
+    attack_channel.netting_channel.close(
         app2.raiden.address,
-        [attack_transfer],
-        [],
+        attack_transfer,
+        None
     )
 
     # wait until the last block to reveal the secret
@@ -181,11 +178,7 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
         app2.raiden.chain.next_block()
 
     # since the attacker knows the secret he can net the lock
-    app2.raiden.chain.close(
-        asset,
-        attack_contract,
-        app2.raiden.address,
-        [attack_transfer],
+    attack_channel.netting_channel.unlock(
         [(merkle_proof, attack_transfer.lock, secret)],
     )
     # XXX: verify that the secret was publicized
@@ -195,7 +188,8 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
 
     # the attacker settle the contract
     app2.raiden.chain.next_block()
-    app2.raiden.chain.settle(asset, attack_contract)
+
+    attack_channel.netting_channel.settle(asset, attack_contract)
 
     # at this point the attack has the "stolen" funds
     attack_contract = app2.raiden.chain.asset_hashchannel[asset][attack_contract]

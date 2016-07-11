@@ -40,21 +40,18 @@ loop.
 """
 
 
-def check_channel(app1, app2, asset_address, netcontract_address):
-    assert app1.raiden.chain.isopen(asset_address, netcontract_address)
-    assert app2.raiden.chain.isopen(asset_address, netcontract_address)
+def check_channel(app1, app2, netting_channel_address):
+    netcontract1 = app1.raiden.chain.netting_channel(netting_channel_address)
+    netcontract2 = app2.raiden.chain.netting_channel(netting_channel_address)
 
-    app1_details = app1.raiden.chain.netting_contract_detail(
-        asset_address,
-        netcontract_address,
-        app1.raiden.address,
-    )
+    assert netcontract1.isopen()
+    assert netcontract2.isopen()
 
-    app2_details = app1.raiden.chain.netting_contract_detail(
-        asset_address,
-        netcontract_address,
-        app2.raiden.address,
-    )
+    assert netcontract1.detail(app1.raiden.address) == netcontract2.detail(app1.raiden.address)
+    assert netcontract2.detail(app2.raiden.address) == netcontract1.detail(app2.raiden.address)
+
+    app1_details = netcontract1.detail(app1.raiden.address)
+    app2_details = netcontract2.detail(app2.raiden.address)
 
     assert app1_details['our_address'] == app2_details['partner_address']
     assert app1_details['partner_address'] == app2_details['our_address']
@@ -79,69 +76,51 @@ def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0
     )
 
 
-def setup_channels(asset_address, app_pairs, deposit, settle_timeout):
+def setup_channels(asset_address, app_pairs, deposit, settle_timeout):  # pylint: disable=too-many-locals
     for first, second in app_pairs:
-        netcontract_address = first.raiden.chain.new_netting_contract(
-            asset_address,
+        manager = first.raiden.chain.manager_by_asset(asset_address)
+
+        netcontract_address = manager.new_netting_channel(
             first.raiden.address,
             second.raiden.address,
             settle_timeout,
         )
 
+        # use each app's own chain because of the private key / local signing
         for app in [first, second]:
-            previous_balance = app.raiden.chain.asset_balance(asset_address, app.raiden.address)
+            asset = app.raiden.chain.asset(asset_address)
+            netting_channel = app.raiden.chain.netting_channel(netcontract_address)
+            previous_balance = asset.balance_of(app.raiden.address)
 
             assert previous_balance >= deposit
 
-            # use each app's own chain because of the private key / local
-            # signing
-            app.raiden.chain.asset_approve(
-                asset_address,
-                netcontract_address,
-                deposit,
-            )
+            asset.approve(netcontract_address, deposit)
+            netting_channel.deposit(app.raiden.address, deposit)
 
-            app.raiden.chain.deposit(
-                asset_address,
-                netcontract_address,
-                app.raiden.address,
-                deposit,
-            )
-
-            new_balance = app.raiden.chain.asset_balance(asset_address, app.raiden.address)
+            new_balance = asset.balance_of(app.raiden.address)
 
             assert previous_balance - deposit == new_balance
 
-        contract_settle_timeout = first.raiden.chain.netting_contract_settle_timeout(
-            asset_address,
-            netcontract_address,
-        )
-
-        # netting contract does allow settle time lower than 30
-        assert contract_settle_timeout == max(30, settle_timeout)
+            # netting contract does allow settle time lower than 30
+            contract_settle_timeout = netting_channel.settle_timeout()
+            assert contract_settle_timeout == max(30, settle_timeout)
 
         check_channel(
             first,
             second,
-            asset_address,
             netcontract_address,
         )
 
-        details = first.raiden.chain.netting_contract_detail(
-            asset_address,
-            netcontract_address,
-            first.raiden.address,
-        )
-        assert details['our_balance'] == deposit
-        assert details['partner_balance'] == deposit
+        first_netting_channel = first.raiden.chain.netting_channel(netcontract_address)
+        second_netting_channel = second.raiden.chain.netting_channel(netcontract_address)
 
-        details = second.raiden.chain.netting_contract_detail(
-            asset_address,
-            netcontract_address,
-            second.raiden.address,
-        )
-        assert details['our_balance'] == deposit
-        assert details['partner_balance'] == deposit
+        details1 = first_netting_channel.detail(first.raiden.address)
+        details2 = second_netting_channel.detail(second.raiden.address)
+
+        assert details1['our_balance'] == deposit
+        assert details1['partner_balance'] == deposit
+        assert details2['our_balance'] == deposit
+        assert details2['partner_balance'] == deposit
 
 
 def network_with_minimum_channels(apps, channels_per_node):
@@ -190,7 +169,10 @@ def network_with_minimum_channels(apps, channels_per_node):
         available_apps = unconnected_apps[curr_app.raiden.address]
 
         while channel_count[curr_app.raiden.address] < channels_per_node:
-            least_connect = sorted(available_apps, key=lambda app: channel_count[app.raiden.address])[0]  # pylint: disable=cell-var-from-loop
+            least_connect = sorted(
+                available_apps,
+                key=lambda app: channel_count[app.raiden.address]  # pylint: disable=cell-var-from-loop
+            )[0]
 
             channel_count[curr_app.raiden.address] += 1
             available_apps.remove(least_connect)
@@ -280,9 +262,9 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
         )
 
     for app in apps:
-        for asset_address in app.raiden.chain.asset_addresses:
-            manager_address = app.raiden.chain.get_manager_address(asset_address)
-            app.raiden.register_asset(asset_address, manager_address)
+        for asset_address in app.raiden.chain.default_registry.asset_addresses():
+            manager = app.raiden.chain.manager_by_asset(asset_address)
+            app.raiden.register_channel_manager(manager)
 
     return apps
 
@@ -362,8 +344,8 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
 
     for app in apps:
         for asset_address in app.raiden.chain.asset_addresses:
-            manager_address = app.raiden.chain.get_manager_address(asset_address)
-            app.raiden.register_asset(asset_address, manager_address)
+            manager = app.raiden.chain.manager_by_asset(asset_address)
+            app.raiden.register_channel_manager(manager)
 
     return apps
 

@@ -2,11 +2,10 @@
 from ethereum import slogging
 from ethereum.abi import ContractTranslator
 from ethereum.utils import encode_hex
-from pyethapp.jsonrpc import address_decoder, quantity_encoder
+from pyethapp.jsonrpc import address_decoder
 
 from raiden.assetmanager import AssetManager
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, NETTING_CHANNEL_ABI
-from raiden.blockchain.events import channelnew_filter, channelnewbalance_filter
 from raiden.channelgraph import ChannelGraph
 from raiden.tasks import LogListenerTask
 from raiden.encoding import messages
@@ -46,8 +45,8 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     """ A Raiden node. """
 
     def __init__(self, chain, privkey, transport, discovery, config):  # pylint: disable=too-many-arguments
-        self.managers_by_asset_address = dict()  # Dict[(address, AssetManager)]: maps the _asset_ address to the corresponding manager
-        self.managers_by_address = dict()  # Dict[(address, AssetManager)]: maps the _manager_ address to the corresponding manager
+        self.managers_by_asset_address = dict()
+        self.managers_by_address = dict()
         self.event_listeners = list()
 
         self.chain = chain
@@ -69,23 +68,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
-
-    def get_or_create_asset_manager(self, asset_address_bin, channel_manager_address_bin):
-        """ Return the AssetManager for the given `asset_address_bin`. """
-        if asset_address_bin not in self.managers_by_asset_address:
-            edges = self.chain.addresses_by_asset(asset_address_bin)
-            channel_graph = ChannelGraph(edges)
-
-            asset_manager = AssetManager(
-                self,
-                asset_address_bin,
-                channel_manager_address_bin,
-                channel_graph,
-            )
-            self.managers_by_asset_address[asset_address_bin] = asset_manager
-            self.managers_by_address[channel_manager_address_bin] = asset_manager
-
-        return self.managers_by_asset_address[asset_address_bin]
 
     def get_manager_by_asset_address(self, asset_address_bin):
         return self.managers_by_asset_address[asset_address_bin]
@@ -131,6 +113,13 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         return event.wait(timeout)
 
     def message_for_task(self, message, hashlock):
+        """ Sends the message to the corresponding task.
+
+        The corresponding task is found by matching the hashlock.
+
+        Return:
+            bool: True if a correspoding task is found, False otherwise.
+        """
         for asset_manager in self.managers_by_asset_address.values():
             task = asset_manager.transfermanager.transfertasks.get(hashlock)
 
@@ -140,40 +129,38 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         return False
 
-    def register_asset(self, asset_address_bin, channel_manager_address_bin):
+    def register_channel_manager(self, channel_manager):
         """ Discover and register the channels for the given asset. """
-
-        if not self.chain.code_exists(asset_address_bin.encode('hex')):
-            raise ValueError('Invalid address, does not contain code')
-
         translator = ContractTranslator(CHANNEL_MANAGER_ABI)
 
-        # first create the filter then call the contract, this could result in
-        # duplicated netting contracts
-        filter_id = channelnew_filter(
-            channel_manager_address_bin,
-            self.address,
-            self.chain.client,
-        )
+        # To avoid missing changes, first create the filter, call the
+        # contract and then start polling.
+        channelnew = channel_manager.channelnew_filter(self.address)
 
-        all_netting_contracts = self.chain.nettingaddresses_by_asset_participant(
-            asset_address_bin,
-            self.address,
-        )
+        all_netting_contracts = channel_manager.channels_by_participant(self.address)
 
         channel_listener = LogListenerTask(
-            self.chain.client,
-            filter_id,
+            channelnew,
             self.on_event,
             translator,
         )
         channel_listener.start()
         self.event_listeners.append(channel_listener)
 
-        asset_manager = self.get_or_create_asset_manager(
+        asset_address_bin = channel_manager.asset_address()
+        channel_manager_address_bin = channel_manager.address
+        edges = channel_manager.channels_addresses()
+        channel_graph = ChannelGraph(edges)
+
+        asset_manager = AssetManager(
+            self,
             asset_address_bin,
             channel_manager_address_bin,
+            channel_graph,
         )
+        self.managers_by_asset_address[asset_address_bin] = asset_manager
+        self.managers_by_address[channel_manager_address_bin] = asset_manager
+
         for netting_contract_address in all_netting_contracts:
             asset_manager.register_channel_by_address(
                 netting_contract_address,
@@ -183,11 +170,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     def stop(self):
         for listener in self.event_listeners:
             listener.stop_event.set(True)
-
-            self.chain.client.call(
-                'eth_uninstallFilter',
-                quantity_encoder(listener.filter_id),
-            )
+            self.chain.uninstall_filter(listener.filter_id)
 
 
 class RaidenAPI(object):
@@ -335,20 +318,13 @@ class RaidenEventHandler(object):
             manager_address=encode_hex(manager_address),
         )
 
-        address = self.raiden.address
-        client = self.raiden.chain.client
-        translator = ContractTranslator(NETTING_CHANNEL_ABI)
         netting_channel_address_bin = address_decoder(event['nettingChannel'])
+        netting_channel = self.raiden.chain.netting_channel(netting_channel_address_bin)
+        newbalance = netting_channel.channelnewbalance_filter()
 
-        newbalance_filter_id = channelnewbalance_filter(
-            netting_channel_address_bin,
-            address,
-            client,
-        )
-
+        translator = ContractTranslator(NETTING_CHANNEL_ABI)
         newbalance_listener = LogListenerTask(
-            client,
-            newbalance_filter_id,
+            newbalance,
             self.on_event,
             translator,
         )
@@ -372,12 +348,12 @@ class RaidenEventHandler(object):
 
     def event_channelnewbalance(self, netting_contract_address_bin, event):
         asset_address_bin = address_decoder(event['assetAddress'])
-
         participant_address_bin = address_decoder(event['participant'])
 
         manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
         channel = manager.get_channel_by_contract_address(netting_contract_address_bin)
 
+        # throws if the address is wrong
         channel_state = channel.get_state_for(participant_address_bin)
 
         if channel_state.contract_balance != event['balance']:
@@ -386,4 +362,6 @@ class RaidenEventHandler(object):
     def event_secret_revealed(self, netting_contract_address_bin, event):
         # TODO:
         # - find the corresponding channel for the hashlock and claim it
+        # secret = event['secret']
+        # hashlock = sha3(secret)
         pass

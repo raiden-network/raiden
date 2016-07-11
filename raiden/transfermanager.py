@@ -38,8 +38,8 @@ class TransferManager(object):
             timeout.
         """
 
-        if target in self.assetmanager.channels:
-            channel = self.assetmanager.channels[target]
+        if target in self.assetmanager.partneraddress_channel:
+            channel = self.assetmanager.partneraddress_channel[target]
             direct_transfer = channel.create_directtransfer(amount)
             self.assetmanager.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer, callback=callback)
@@ -62,10 +62,10 @@ class TransferManager(object):
         return task
 
     def on_mediatedtransfer_message(self, transfer):
-        if transfer.sender not in self.assetmanager.channels:
+        if transfer.sender not in self.assetmanager.partneraddress_channel:
             raise RuntimeError('Received message for inexisting channel.')
 
-        channel = self.assetmanager.channels[transfer.sender]
+        channel = self.assetmanager.partneraddress_channel[transfer.sender]
         channel.register_transfer(transfer)  # raises if the transfer is invalid
 
         if transfer.target == self.assetmanager.raiden.address:
@@ -84,10 +84,10 @@ class TransferManager(object):
             transfer_task.start()
 
     def on_directtransfer_message(self, transfer):
-        if transfer.sender not in self.assetmanager.channels:
+        if transfer.sender not in self.assetmanager.partneraddress_channel:
             raise RuntimeError('Received message for inexisting channel.')
 
-        channel = self.assetmanager.channels[transfer.sender]
+        channel = self.assetmanager.partneraddress_channel[transfer.sender]
         channel.register_transfer(transfer)
 
     def on_exchangerequest_message(self, message):
