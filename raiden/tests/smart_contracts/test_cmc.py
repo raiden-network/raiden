@@ -10,14 +10,21 @@ from raiden.network.rpc.client import get_contract_path
 
 def test_cmc():
     library_path = get_contract_path('IterableMappingNCC.sol')
-    cmc_path = get_contract_path('ChannelManagerContract.sol')
+    ncc_path = get_contract_path('NettingChannelContract.sol')
+    channel_manager_path = get_contract_path('ChannelManagerContract.sol')
 
-    s = tester.state()
-    assert s.block.number < 1150000
-    s.block.number = 1158001
-    assert s.block.number > 1150000
-    lib_c = s.abi_contract(None, path=library_path, language="solidity")
-    c = s.abi_contract(None, path=cmc_path, language="solidity", libraries={'IterableMappingNCC': lib_c.address.encode('hex')}, constructor_parameters=['0x0bd4060688a1800ae986e4840aebc924bb40b5bf'])
+    state = tester.state()
+    assert state.block.number < 1150000
+    state.block.number = 1158001
+    assert state.block.number > 1150000
+    lib_c = state.abi_contract(None, path=library_path, language="solidity")
+    state.mine()
+    lib_ncc = state.abi_contract(None, path=ncc_path, language="solidity")
+    state.mine()
+    c = state.abi_contract(None, path=channel_manager_path, language="solidity",
+            libraries={'IterableMappingNCC': lib_c.address.encode('hex'),
+            'NettingChannelContract': lib_ncc.address.encode('hex')},
+            constructor_parameters=['0x0bd4060688a1800ae986e4840aebc924bb40b5bf'])
 
     # test key()
     # uncomment private in function to run test
@@ -30,7 +37,7 @@ def test_cmc():
         # c.key(sha3('address1')[:20], sha3('address1')[:20])
 
     # test newChannel()
-    assert c.assetAddress() == sha3('asset')[:20].encode('hex')
+    assert c.assetToken() == sha3('asset')[:20].encode('hex')
     nc1 = c.newChannel(sha3('address1')[:20], 30)
     nc2 = c.newChannel(sha3('address3')[:20], 30)
     with pytest.raises(TransactionFailed):
@@ -42,12 +49,12 @@ def test_cmc():
 
     # test get()
     print nc1[0]
-    chn1 = c.get(nc1[1], sha3('address1')[:20]) # nc1[1] is msg.sender of newChannel
+    chn1 = c.get(sha3('address1')[:20]) # nc1[1] is msg.sender of newChannel
     assert chn1 == nc1[0] # nc1[0] is address of new NettingChannelContract
-    chn2 = c.get(nc2[1], sha3('address3')[:20]) # nc2[1] is msg.sender of newChannel
+    chn2 = c.get(sha3('address3')[:20]) # nc2[1] is msg.sender of newChannel
     assert chn2 == nc2[0] # nc2[0] is msg.sender of newChannel
     with pytest.raises(TransactionFailed):  # should throw if key doesn't exist
-        c.get(nc1[1], sha3('iDontExist')[:20])
+        c.get(sha3('iDontExist')[:20])
 
     # test nettingContractsByAddress()
     msg_sender_channels = c.nettingContractsByAddress(nc1[1])

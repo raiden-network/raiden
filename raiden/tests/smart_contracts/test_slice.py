@@ -10,11 +10,8 @@ from raiden.network.rpc.client import get_contract_path
 def test_slice():
     slicer_path = get_contract_path('Slicer.sol')
 
-    with open(slicer_path) as slicer_file:
-        slicer_code = slicer_file.read()
-
     state = tester.state()
-    slicer = state.abi_contract(slicer_code, language='solidity')
+    slicer = state.abi_contract(None, path=slicer_path, language='solidity')
 
     # pylint: disable=no-member
     assert slicer.slice('hello', 0, 2).decode('utf-8') == 'he'

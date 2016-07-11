@@ -27,6 +27,6 @@ module.exports = {
         ],
     rpc: {
         host: "localhost",
-        port: 4000
+        port: 8101
     }
 };
