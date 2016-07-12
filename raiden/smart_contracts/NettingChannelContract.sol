@@ -81,7 +81,7 @@ contract NettingChannelContract {
         if (assetToken.balanceOf(msg.sender) < amount) throw;
         bool success = assetToken.transferFrom(msg.sender, address(this), amount);
         if (success == true) participants[atIndex(msg.sender)].deposit += amount;
-        if(isOpen() && opened == 0) open();
+        if (isOpen() && opened == 0) open();
     }
 
     /// @notice isOpen() to check if a channel is open
@@ -131,6 +131,7 @@ contract NettingChannelContract {
     /// @dev Close the channel between two parties
     /// @param firstEncoded (bytes) the last sent transfer of the msg.sender
     function closeSingleFunded(bytes firstEncoded) inParticipants { 
+        // TODO modifier
         if (settled > 0) throw; // channel already settled
         if (closed > 0) throw; // close has already been called
 

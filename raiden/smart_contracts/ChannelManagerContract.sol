@@ -8,7 +8,7 @@ contract ChannelManagerContract {
     // Events
     // Event that triggers when a new channel is created
     // Gives the created channel
-    event ChannelNew(address participant1, address participant2);// update to use both addresses
+    event ChannelNew(address participant1, address participant2);
 
     // Initialize the Contract
     /// @notice ChannelManagerContract(address) to contruct the contract
