@@ -35,8 +35,7 @@ contract NettingChannelContract {
     }
     Participant[2] public participants; // We only have two participants at all times
 
-    event ChannelOpened(address assetAdr, address participant1,
-                        address participant2, uint deposit1, uint deposit2);
+    event ChannelNewBalance(address assetAddress, address participant, uint balance);
     event ChannelClosed(address closingAddress, uint blockNumber);
     event ChannelSettled(uint blockNumber);
     event ChannelSecretRevealed(bytes32 secret); //TODO
@@ -61,7 +60,12 @@ contract NettingChannelContract {
         assetAddress = assetAdr;
         participants[0].addr = participant1;
         participants[1].addr = participant2;
-        if (settleTimeout < 30) settleTimeout = 30; else settleTimeout = timeout;
+
+        if (timeout < 30) {
+            settleTimeout = 30;
+        } else {
+            settleTimeout = timeout;
+        }
     }
 
     /// @notice atIndex(address) to get the index of an address (0 or 1)
@@ -74,14 +78,38 @@ contract NettingChannelContract {
     }
 
     /// @notice deposit(uint) to deposit amount to channel.
-    /// @dev Deposit an amount to the channel. At least one of the participants 
+    /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
     /// @param amount (uint) the amount to be deposited to the address
     function deposit(uint256 amount) inParticipants {
-        if (assetToken.balanceOf(msg.sender) < amount) throw;
-        bool success = assetToken.transferFrom(msg.sender, address(this), amount);
-        if (success == true) participants[atIndex(msg.sender)].deposit += amount;
-        if(isOpen() && opened == 0) open();
+        if (closed != 0) {
+            throw;
+        }
+
+        if (assetToken.balanceOf(msg.sender) < amount) {
+            throw;
+        }
+
+        bool success = assetToken.transferFrom(
+            msg.sender,
+            address(this),
+            amount
+        );
+
+        if (success == true) {
+            uint index = atIndex(msg.sender);
+            Participant participant = participants[index];
+            uint deposit = participant.deposit;
+
+            deposit += amount;
+            participant.deposit = deposit;
+
+            if (opened == 0) {
+                opened = block.number;
+            }
+
+            ChannelNewBalance(assetAddress, msg.sender, deposit);
+        }
     }
 
     /// @notice isOpen() to check if a channel is open
@@ -93,18 +121,6 @@ contract NettingChannelContract {
         else return false;
     }
 
-    /// @notice open() to set the opened to be the current block and triggers 
-    /// the event ChannelOpened()
-    /// @dev Sets the value of `opened` to be the value of the current block.
-    /// param none
-    /// returns none, but changes the value of `opened` and triggers the event ChannelOpened.
-    function open() private {
-        opened = block.number;
-        // trigger event
-        ChannelOpened(assetAddress, participants[0].addr,
-                participants[1].addr, participants[0].deposit, participants[1].deposit);
-    }
-
     /// @notice partner() to get the partner or other participant of the channel
     /// @dev Get the other participating party of the channel
     /// @param ownAddress (address) address of the calling party
@@ -114,13 +130,13 @@ contract NettingChannelContract {
         else return participants[0].addr;
     }
 
-    /// @notice addrAndDep() to get the addresses and deposits of the participants
+    /// @notice addressAndBalance() to get the addresses and deposits of the participants
     /// @dev get the addresses and deposits of the participants
     /// @return par1 (address) address of one of the participants
     /// @return par2 (address) address of the the other participant
     /// @return dep1 (uint) the deposit of the first participant
     /// @return dep2 (uint) the deposit of the second participant
-    function addrAndDep() constant returns (address par1, uint dep1, address par2, uint dep2) {
+    function addressAndBalance() constant returns (address par1, uint dep1, address par2, uint dep2) {
         par1 = participants[0].addr;
         dep1 = participants[0].deposit;
         par2 = participants[1].addr;

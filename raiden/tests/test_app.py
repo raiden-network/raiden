@@ -1,18 +1,24 @@
 # -*- coding: utf8 -*-
-from raiden.tests.utils.network import create_network
+import pytest
 
 
-def test_create_network():
-    apps = create_network(num_nodes=10, num_assets=2, channels_per_node=4)
-    assert len(apps) == 10
+@pytest.mark.parametrize('privatekey_seed', ['create_network:{}'])
+@pytest.mark.parametrize('number_of_assets', [2])
+@pytest.mark.parametrize('number_of_nodes', [10])
+def test_create_network(raiden_network):
+    assert len(raiden_network) == 10
 
     # All apps must reference the same chain
-    for app in apps:
-        assert app.raiden.chain == apps[0].raiden.chain
+    for app in raiden_network:
+        assert app.raiden.chain == raiden_network[0].raiden.chain
 
     # All apps must have 2 asset managers (one per each asset)
-    for app in apps:
-        assert len(set(app.raiden.assetmanagers.keys())) == 2
+    for app in raiden_network:
+        assert len(app.raiden.managers_by_asset_address) == 2
 
     # All apps must have uniq private keys
-    assert len(set([app.raiden.privkey for app in apps])) == 10
+    private_keys = set(
+        app.raiden.privkey
+        for app in raiden_network
+    )
+    assert len(private_keys) == 10

@@ -18,7 +18,7 @@ __all__ = (
     'Lock',
     'LockedTransfer',
     'MediatedTransfer',
-    'CancelTransfer',
+    'RefundTransfer',
     'TransferTimeout',
     'ConfirmTransfer',
 )
@@ -111,6 +111,7 @@ class SignedMessage(Message):
         self.sender = b''
 
     def sign(self, private_key):
+        """ Sign message using `private_key`. """
         packed = self.packed()
 
         field = packed.fields_spec[-1]
@@ -123,8 +124,6 @@ class SignedMessage(Message):
 
         self.sender = signing.address_from_key(public_key)
         self.signature = packed.signature
-
-        return self
 
     @classmethod
     def decode(cls, data):
@@ -409,8 +408,8 @@ class LockedTransfer(SignedMessage):
             fee,
         )
 
-    def to_canceltransfer(self):
-        return CancelTransfer(
+    def to_refundtransfer(self):
+        return RefundTransfer(
             self.nonce,
             self.asset,
             self.transfered_amount,
@@ -541,12 +540,12 @@ class MediatedTransfer(LockedTransfer):
         packed.signature = self.signature
 
 
-class CancelTransfer(LockedTransfer):
+class RefundTransfer(LockedTransfer):
     """ Indicates that no route is available and transfer the amount back to
     the previous node, allowing she to try another path to complete the
     transfer.
     """
-    cmdid = messages.CANCELTRANSFER
+    cmdid = messages.REFUNDTRANSFER
 
     @staticmethod
     def unpack(packed):
@@ -556,7 +555,7 @@ class CancelTransfer(LockedTransfer):
             packed.hashlock,
         )
 
-        locked_transfer = CancelTransfer(
+        locked_transfer = RefundTransfer(
             packed.nonce,
             packed.asset,
             packed.transfered_amount,
@@ -645,7 +644,7 @@ CMDID_TO_CLASS = {
     # "marker" for messages with locks
     # messages.LOCKEDTRANSFER: LockedTransfer,
     messages.MEDIATEDTRANSFER: MediatedTransfer,
-    messages.CANCELTRANSFER: CancelTransfer,
+    messages.REFUNDTRANSFER: RefundTransfer,
     messages.TRANSFERTIMEOUT: TransferTimeout,
     messages.CONFIRMTRANSFER: ConfirmTransfer,
 }

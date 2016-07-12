@@ -25,7 +25,8 @@ def test_encoding():
 
 
 def test_hash():
-    ping = Ping(nonce=0).sign(PRIVKEY)
+    ping = Ping(nonce=0)
+    ping.sign(PRIVKEY)
     data = ping.encode()
     msghash = sha3(data)
     decoded_ping = decode(data)

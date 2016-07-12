@@ -6,9 +6,9 @@ from ethereum import slogging
 
 from raiden.utils import sha3, pex
 from raiden.mtree import check_proof
-from raiden.messages import MediatedTransfer, CancelTransfer, DirectTransfer, Lock, LockedTransfer
+from raiden.messages import MediatedTransfer, RefundTransfer, DirectTransfer, Lock, LockedTransfer
 from raiden.encoding.messages import (
-    DIRECTTRANSFER, LOCKEDTRANSFER, MEDIATEDTRANSFER, CANCELTRANSFER,
+    DIRECTTRANSFER, LOCKEDTRANSFER, MEDIATEDTRANSFER, REFUNDTRANSFER,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -51,8 +51,8 @@ def decode_transfer(transfer_encoded):
         return DirectTransfer.decode(transfer_encoded)
     elif transfer_encoded[0] == MEDIATEDTRANSFER:
         return MediatedTransfer.decode(transfer_encoded)
-    elif transfer_encoded[0] == CANCELTRANSFER:
-        return CancelTransfer.decode(transfer_encoded)
+    elif transfer_encoded[0] == REFUNDTRANSFER:
+        return RefundTransfer.decode(transfer_encoded)
     # convinience for testing only (LockedTransfer are not exchanged between nodes)
     elif transfer_encoded[0] == LOCKEDTRANSFER:
         return LockedTransfer.decode(transfer_encoded)
@@ -189,24 +189,8 @@ class NettingChannelContract(object):
         testing.
     """
 
-    settle_timeout = 20
-    """ Number of blocks that we are required to wait before allowing settlement. """
-    # The settle_timeout could be either fixed or variable:
-    # - Fixed/Absolute block number. A maximum life time is choosen for the
-    # contract, the contract can be settled before but not after. The
-    # application must not accept any locked transfers that could expire after
-    # `settle_timeout` blocks, at the cost of being susceptible to timming
-    # attacks.
-    # - Relative block number:
-    #   - With a fixed waiting time. The application must not accept
-    #   any locked transfers that could expire more than `settle_timeout` blocks,
-    #   at the cost of being susceptible to timming attacks.
-    #   - With a variable waiting time. The `settle_timeout` depends on the locked
-    #   transfer and a list of all the lock's timeouts need to be sent to the
-    #   contract.
-    # This implementation's settle_timeout is a "fixed waiting time"
-
-    def __init__(self, asset_address, netcontract_address, address_A, address_B):
+    def __init__(self, asset_address, netcontract_address, address_A,
+                 address_B, settle_timeout):
         log.debug(
             'creating nettingchannelcontract',
             a=pex(address_A),
@@ -231,6 +215,23 @@ class NettingChannelContract(object):
 
         self.closer = None
         """ The participant that called the close method. """
+
+        self.settle_timeout = settle_timeout
+        """ Number of blocks that we are required to wait before allowing settlement. """
+        # The settle_timeout could be either fixed or variable:
+        # - Fixed/Absolute block number. A maximum life time is choosen for the
+        # contract, the contract can be settled before but not after. The
+        # application must not accept any locked transfers that could expire after
+        # `settle_timeout` blocks, at the cost of being susceptible to timming
+        # attacks.
+        # - Relative block number:
+        #   - With a fixed waiting time. The application must not accept
+        #   any locked transfers that could expire more than `settle_timeout` blocks,
+        #   at the cost of being susceptible to timming attacks.
+        #   - With a variable waiting time. The `settle_timeout` depends on the locked
+        #   transfer and a list of all the lock's timeouts need to be sent to the
+        #   contract.
+        # This implementation's settle_timeout is a "fixed waiting time"
 
     @property
     def isopen(self):

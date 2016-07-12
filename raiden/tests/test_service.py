@@ -1,25 +1,21 @@
 # -*- coding: utf8 -*-
+import pytest
 import gevent
-
 from ethereum import slogging
 
 from raiden.messages import Ping, Ack, decode
 from raiden.network.transport import UnreliableTransport, UDPTransport
 from raiden.raiden_protocol import RaidenProtocol
-from raiden.tests.utils.network import create_network
 from raiden.tests.utils.messages import setup_messages_cb
 
-slogging.configure(':debug')
+slogging.configure(':DEBUG')
 
 
-def teardown_module(module):  # pylint: disable=unused-argument
-    from raiden.tests.utils.tests import cleanup_tasks
-    cleanup_tasks()
+@pytest.mark.parametrize('privatekey_seed', ['ping:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_ping(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-
-def test_ping():
-    apps = create_network(num_nodes=2, num_assets=0, channels_per_node=0)
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
     messages = setup_messages_cb()
     ping = Ping(nonce=0)
     app0.raiden.sign(ping)
@@ -32,14 +28,11 @@ def test_ping():
     assert decoded.echo == ping.hash
 
 
-def test_ping_dropped_message():
-    apps = create_network(
-        num_nodes=2,
-        num_assets=0,
-        channels_per_node=0,
-        transport_class=UnreliableTransport,
-    )
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+@pytest.mark.parametrize('privatekey_seed', ['ping_dropped_message:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('transport_class', [UnreliableTransport])
+def test_ping_dropped_message(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     # mock transport with packet loss, every 3nd is lost, starting with first message
     UnreliableTransport.droprate = 3
@@ -89,14 +82,11 @@ def test_ping_dropped_message():
     RaidenProtocol.repeat_messages = False
 
 
-def test_ping_udp():
-    apps = create_network(
-        num_nodes=2,
-        num_assets=0,
-        channels_per_node=0,
-        transport_class=UDPTransport,
-    )
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+@pytest.mark.parametrize('privatekey_seed', ['ping_udp:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('transport_class', [UDPTransport])
+def test_ping_udp(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
     messages = setup_messages_cb()
     ping = Ping(nonce=0)
     app0.raiden.sign(ping)

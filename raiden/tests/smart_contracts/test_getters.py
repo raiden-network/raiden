@@ -8,7 +8,7 @@ from raiden.mtree import merkleroot
 from raiden.utils import privtoaddr, sha3
 from raiden.messages import Lock, DirectTransfer
 from raiden.encoding.signing import recover_publickey, address_from_key, sign
-from raiden.network.rpc.client import get_contract_path
+from raiden.blockchain.abi import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -60,7 +60,8 @@ def test_ncc():
         balance,
         recipient,
         locksroot,
-    ).sign(INITIATOR_PRIVKEY)
+    )
+    msg.sign(INITIATOR_PRIVKEY)
     packed = msg.packed()
     direct_transfer = str(packed.data)
 

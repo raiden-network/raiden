@@ -39,7 +39,7 @@ SECRET_CMDID = 4
 DIRECTTRANSFER_CMDID = 5
 LOCKEDTRANSFER_CMDID = 6
 MEDIATEDTRANSFER_CMDID = 7
-CANCELTRANSFER_CMDID = 8
+REFUNDTRANSFER_CMDID = 8
 TRANSFERTIMEOUT_CMDID = 9
 CONFIRMTRANSFER_CMDID = 10
 
@@ -51,7 +51,7 @@ SECRET = to_bigendian(SECRET_CMDID)
 DIRECTTRANSFER = to_bigendian(DIRECTTRANSFER_CMDID)
 LOCKEDTRANSFER = to_bigendian(LOCKEDTRANSFER_CMDID)
 MEDIATEDTRANSFER = to_bigendian(MEDIATEDTRANSFER_CMDID)
-CANCELTRANSFER = to_bigendian(CANCELTRANSFER_CMDID)
+REFUNDTRANSFER = to_bigendian(REFUNDTRANSFER_CMDID)
 TRANSFERTIMEOUT = to_bigendian(TRANSFERTIMEOUT_CMDID)
 CONFIRMTRANSFER = to_bigendian(CONFIRMTRANSFER_CMDID)
 
@@ -177,10 +177,10 @@ MediatedTransfer = namedbuffer(
     ]
 )
 
-CancelTransfer = namedbuffer(
-    'cancel_transfer',
+RefundTransfer = namedbuffer(
+    'refund_transfer',
     [
-        cmdid(CANCELTRANSFER),  # [0:1]
+        cmdid(REFUNDTRANSFER),  # [0:1]
         pad(3),                 # [1:4]
         nonce,                  # [4:12]
         expiration,             # [12:20]
@@ -234,7 +234,7 @@ CMDID_MESSAGE = {
     DIRECTTRANSFER: DirectTransfer,
     LOCKEDTRANSFER: LockedTransfer,
     MEDIATEDTRANSFER: MediatedTransfer,
-    CANCELTRANSFER: CancelTransfer,
+    REFUNDTRANSFER: RefundTransfer,
     TRANSFERTIMEOUT: TransferTimeout,
     CONFIRMTRANSFER: ConfirmTransfer,
 }
