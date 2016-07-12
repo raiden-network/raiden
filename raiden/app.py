@@ -8,7 +8,7 @@ import signal
 import yaml
 import gevent
 from ethereum import slogging
-from ethereum.utils import privtoaddr
+from ethereum.utils import privtoaddr, decode_hex
 
 from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
@@ -52,7 +52,7 @@ def main():
     parser.add_argument('config_file', help='Configuration file for the raiden note')
 
     parser.add_argument(
-        '-h',
+        '-H',
         '--host',
         default='0.0.0.0',
         help='Local address that the raiden app will bind to',
@@ -70,7 +70,7 @@ def main():
     rpc_connection = (rpc_connection[0], int(rpc_connection[1]))
     config_file = args.config_file
     host = args.host
-    port = args.port
+    port = int(args.port)
 
     with codecs.open(config_file, encoding='utf8') as handler:
         config = yaml.load(handler)
@@ -91,7 +91,7 @@ def main():
     discovery = Discovery()
 
     for node in config['nodes']:
-        discovery.register(node['nodeid'], node['host'], node['port'])
+        discovery.register(decode_hex(node['nodeid']), node['host'], node['port'])
 
     app = App(config, blockchain_server, discovery)
 

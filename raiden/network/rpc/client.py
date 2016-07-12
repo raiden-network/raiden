@@ -29,10 +29,8 @@ def get_contract_path(contract_name):
     return os.path.realpath(contract_path)
 
 
-def get_abi_from_file(filename):
-    with open(filename) as handler:
-        code = handler.read()
-        return solidity.mk_full_signature(code)
+def get_abi_from_file(contract_path):
+    return solidity.mk_full_signature(None, path=contract_path)
 
 
 def get_code_signature(filename, libraries=None):
@@ -55,14 +53,16 @@ class BlockChainService(object):
             host_port (Tuple[(str, int)]): two-tuple with the (address, host)
                 of the JSON-RPC server.
         """
-        channel_manager_abi = get_abi_from_file(get_contract_path('channelManagerContract.sol'))
-        netting_contract_abi = get_abi_from_file(get_contract_path('nettingChannelContract.sol'))
-        registry_abi = get_abi_from_file(get_contract_path('registry.sol'))
+        channel_manager_abi = get_abi_from_file(get_contract_path('ChannelManagerContract.sol'))
+        netting_contract_abi = get_abi_from_file(get_contract_path('NettingChannelContract.sol'))
+        registry_abi = get_abi_from_file(get_contract_path('Registry.sol'))
 
         jsonrpc_client = JSONRPCClient(
-            sender=address,
-            privkey=privkey,
-        )
+                host=host_port[0],
+                port=host_port[1],
+                sender=address,
+                privkey=privkey,
+                )
 
         registry_proxy = jsonrpc_client.new_abi_contract(registry_abi, registry_address)
 
@@ -85,7 +85,7 @@ class BlockChainService(object):
 
     def _code_exists(self, address):
         """ Return True if the address contains code, False otherwise. """
-        result = client.call('eth_getCode', address, 'latest')
+        result = self.client.call('eth_getCode', address, 'latest')
 
         return result != '0x'
 
