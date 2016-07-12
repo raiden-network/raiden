@@ -15,8 +15,7 @@ from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import quantity_decoder
 
 from raiden.blockchain.abi import get_contract_path
-from raiden.utils import isaddress
-from raiden.blockchain.events import decode_topic
+from raiden.network.rpc.client import decode_topic
 
 slogging.configure(
     ':DEBUG'
@@ -61,13 +60,13 @@ PRIVKEY = privkey('0')
 
 
 def test_new_netting_contract(blockchain_service, settle_timeout):
-    # pylint: disable=line-too-long,too-many-statements
+    # pylint: disable=line-too-long,too-many-statements,too-many-locals
     asset_address = make_address()
     peer1_address = make_address()
     peer2_address = make_address()
     peer3_address = make_address()
 
-    contract_address = blockchain_service.default_registry.add_asset(asset_address)
+    blockchain_service.default_registry.add_asset(asset_address)
     manager = blockchain_service.manager_by_asset(asset_address)
 
     # sanity
@@ -179,9 +178,9 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('timeout', [3])
 def test_blockchain(private_keys, number_of_nodes, hydrachain_network, timeout):
+    # pylint: disable=too-many-locals
     slogging.configure(':ERROR')
 
-    # pylint: disable=too-many-locals
     addresses = [
         privtoaddr(priv)
         for priv in private_keys
