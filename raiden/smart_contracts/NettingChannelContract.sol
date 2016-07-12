@@ -49,7 +49,7 @@ contract NettingChannelContract {
 
     /// @dev modifier ensuring that function can only be called if a channel
     /// is closed, but not yet settled.
-    modifier notSettled {
+    modifier notSettledOrClosed {
         // if channel is already settled or hasn't been closed yet
         if (settled > 0 || closed == 0) throw;
         _
@@ -115,7 +115,7 @@ contract NettingChannelContract {
     /// @notice isOpen() to check if a channel is open
     /// @dev Check if a channel is open and both parties have deposited to the channel
     /// @return open (bool) the status of the channel
-    function isOpen() private returns (bool) {
+    function isOpen() private constant returns (bool) {
         if (closed > 0) throw;
         if (participants[0].deposit > 0 || participants[1].deposit > 0) return true;
         else return false;
@@ -123,9 +123,10 @@ contract NettingChannelContract {
 
     /// @notice partner() to get the partner or other participant of the channel
     /// @dev Get the other participating party of the channel
-    /// @return p (address) the partner of the calling party
-    function partner(address a) private returns (address p) {
-        if (a == participants[0].addr) return participants[1].addr;
+    /// @param ownAddress (address) address of the calling party
+    /// @return partnerAddress (address) the partner of the calling party
+    function partner(address ownAddress) private returns (address partnerAddress) {
+        if (ownAddress == participants[0].addr) return participants[1].addr;
         else return participants[0].addr;
     }
 
@@ -135,7 +136,7 @@ contract NettingChannelContract {
     /// @return par2 (address) address of the the other participant
     /// @return dep1 (uint) the deposit of the first participant
     /// @return dep2 (uint) the deposit of the second participant
-    function addressAndBalance() returns (address par1, uint dep1, address par2, uint dep2) {
+    function addressAndBalance() constant returns (address par1, uint dep1, address par2, uint dep2) {
         par1 = participants[0].addr;
         dep1 = participants[0].deposit;
         par2 = participants[1].addr;
@@ -179,7 +180,6 @@ contract NettingChannelContract {
         // trigger event
         ChannelClosed(closingAddress, closed);
     }
-
 
     /// @notice close(bytes, bytes) to close a channel between to parties
     /// @dev Close the channel between two parties
@@ -231,11 +231,14 @@ contract NettingChannelContract {
     /// @notice updateTransfer(bytes) to update last known transfer
     /// @dev Allow the partner to update the last known transfer
     /// @param message (bytes) the encoded transfer message
-    function updateTransfer(bytes message) inParticipants notSettled {
-        if (closed + settleTimeout > block.number) throw; //if locked time has expired throw
+    function updateTransfer(bytes message) inParticipants notSettledOrClosed {
+        if (closed + settleTimeout < block.number) throw; //if locked time has expired throw
         if (msg.sender == closingAddress) throw; // don't allow closer to update
         if (closingAddress == getSender(message)) throw;
 
+        uint8 nonce = bytesToIntEight(slice(message, 4, 12), nonce);
+        uint sender = atIndex(msg.sender);
+        if (nonce < participants[sender].nonce) throw;
         decode(message);
 
         // TODO check if tampered and penalize
@@ -247,18 +250,21 @@ contract NettingChannelContract {
     /// @param lockedEncoded (bytes) the lock
     /// @param merkleProof (bytes) the merkle proof
     /// @param secret (bytes32) the secret
-    function unlock(bytes lockedEncoded, bytes merkleProof, bytes32 secret) inParticipants notSettled{
+    /*
+    function unlock(bytes lockedEncoded, bytes merkleProof, bytes32 secret) inParticipants notSettledOrClosed {
         var(expiration, amount, hashlock) = decodeLock(lockedEncoded);
         if (expiration > closed) throw;
         if (hashlock != sha3(secret)) throw;
 
         uint partnerId = atIndex(partner(msg.sender));
-        uint senderId = atIndex(msg.sender);
 
         if (participants[partnerId].nonce == 0) throw;
 
         // merkle proof
         bytes32 h = sha3(lockedEncoded);
+        bytes32 single;
+        single = bytesToBytes32(merkleProof, single);
+        if (merkleProof.length == 32 && h != single) throw; 
         for (uint i = 0; i < merkleProof.length; i += 64) {
             bytes32 left;
             left = bytesToBytes32(slice(merkleProof, i, i + 32), left);
@@ -273,11 +279,51 @@ contract NettingChannelContract {
         ChannelSecretRevealed(secret);
         participants[partnerId].unlocked.push(Lock(expiration, amount, hashlock));
     }
+    */
+    function unlock(bytes lockedEncoded, bytes merkleProof, bytes32 secret) inParticipants notSettledOrClosed {
+        uint partnerId;
+        bytes32 h;
+        bytes32 el;
 
+        var (expiration, amount, hashlock) = decodeLock(lockedEncoded);
+
+        if (expiration > closed) {
+            throw;
+        }
+
+        if (hashlock != sha3(secret)) {
+            throw;
+        }
+
+        partnerId = atIndex(partner(msg.sender));
+
+        if (participants[partnerId].nonce == 0) {
+            throw;
+        }
+
+        h = sha3(lockedEncoded);
+        for (uint i = 0; i < merkleProof.length; i += 32) {
+            el = bytesToBytes32(slice(merkleProof, i, i + 32), el);
+
+            if (h < el) {
+                h = sha3(h, el);
+            } else {
+                h = sha3(el, h);
+            }
+        }
+
+        // TODO 
+        /*if (participants[partnerId].locksroot != h) {*/
+            /*throw;*/
+        /*}*/
+
+        ChannelSecretRevealed(secret);
+        participants[partnerId].unlocked.push(Lock(expiration, amount, hashlock));
+    }
     /// @notice settle() to settle the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
     /// @return participants (Participant[]) the participants with netted balances
-    function settle() inParticipants notSettled {
+    function settle() inParticipants notSettledOrClosed {
         if (closed + settleTimeout < block.number) throw; //timeout is not yet over
 
         // update the netted balance of both participants
@@ -362,7 +408,7 @@ contract NettingChannelContract {
         participants[i].asset = ass;
         participants[i].recipient = rec;
         participants[i].transferedAmount = trn;
-        participants[i].hashlock = loc;
+        participants[i].locksroot = loc;
         participants[i].secret = sec;
         participants[i].sender = sender;
     }
@@ -371,7 +417,7 @@ contract NettingChannelContract {
         uint i = atIndex(sender);
         var(non, exp, ass, rec, loc, trn, amo, has) = decodeLockedTransfer(message);
         participants[i].nonce = non;
-        settleTimeout = exp;
+        participants[i].expiration = exp;
         participants[i].asset = ass;
         participants[i].recipient = rec;
         participants[i].locksroot = loc;
@@ -385,7 +431,7 @@ contract NettingChannelContract {
         uint i = atIndex(sender);
         var(non, exp, ass, rec, tar, ini, loc) = decodeMediatedTransfer1(message); 
         participants[i].nonce = non;
-        settleTimeout = exp;
+        participants[i].expiration = exp;
         participants[i].asset = ass;
         participants[i].recipient = rec;
         participants[i].locksroot = loc;
@@ -404,12 +450,12 @@ contract NettingChannelContract {
         uint i = atIndex(sender);
         var(non, exp, ass, rec, loc, trn, amo, has) = decodeCancelTransfer(message);
         participants[i].nonce = non;
-        settleTimeout = exp;
+        participants[i].expiration = exp;
         participants[i].asset = ass;
         participants[i].recipient = rec;
         participants[i].locksroot = loc;
         participants[i].transferedAmount = trn;
-        participants[i].transferedAmount = amo;
+        participants[i].amount = amo;
         participants[i].hashlock = has;
         participants[i].sender = sender;
     }
@@ -535,10 +581,10 @@ contract NettingChannelContract {
         uint amount,
         bytes32 hashlock)
     {
-        if (m.length != 62) throw;
+        if (m.length != 72) throw;
         expiration = bytesToIntEight(slice(m, 0, 8), expiration);
         amount = bytesToInt(slice(m, 8, 40), amount);
-        hashlock = bytesToBytes32(slice(m, 40, 62), hashlock);
+        hashlock = bytesToBytes32(slice(m, 40, 72), hashlock);
     }
 
     // Gets the sender of a last sent transfer
