@@ -2,7 +2,7 @@
 import os
 
 from ethereum import _solidity
-from ethereum.abi import event_id, normalize_name
+from ethereum.abi import event_id, _normalize_name
 
 import raiden
 
@@ -38,7 +38,7 @@ def get_event(full_abi, event_name):
         if name is None:
             continue
 
-        normalized_name = normalize_name(name)
+        normalized_name = _normalize_name(name)
 
         if normalized_name == event_name:
             return description
@@ -48,7 +48,7 @@ def get_eventname_types(event_description):
     if 'name' not in event_description:
         raise ValueError('Not an event description, missing the name.')
 
-    name = normalize_name(event_description['name'])
+    name = _normalize_name(event_description['name'])
     encode_types = [
         element['type']
         for element in event_description['inputs']
