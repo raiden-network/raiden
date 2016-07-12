@@ -28,7 +28,6 @@ def test_settlement(raiden_network, settle_timeout):
     asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
 
     chain0 = app0.raiden.chain
-    asset_address = asset_manager0.asset_address
 
     channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
     channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
@@ -57,8 +56,6 @@ def test_settlement(raiden_network, settle_timeout):
 
     # Bob learns the secret, but Alice did not send a signed updated balance to
     # reflect this Bob wants to settle
-
-    netting_contract_address = channel0.netting_contract.address
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
     merkle_proof = channel1.our_state.locked.get_proof(transfermessage)

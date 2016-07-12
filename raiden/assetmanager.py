@@ -1,8 +1,11 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
+from ethereum.abi import ContractTranslator
 
 from raiden.channel import Channel, ChannelEndState
+from raiden.blockchain.abi import NETTING_CHANNEL_ABI
 from raiden.transfermanager import TransferManager
+from raiden.tasks import LogListenerTask
 from raiden.utils import isaddress, pex
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -69,18 +72,39 @@ class AssetManager(object):
             ValueError: If raiden.address is not one of the participants in the
                 netting channel.
         """
-        channel_details = netting_channel.detail(self.raiden.address)
+        translator = ContractTranslator(NETTING_CHANNEL_ABI)
 
+        # race condition:
+        # - if the filter is installed after a deposit is made it could be
+        # missed, to avoid that we first install the filter, then request the
+        # state from the node and then poll the filter.
+        # - with the above strategy the same deposit could be handled twice,
+        # once from the status received from the netting contract and once from
+        # the event, to avoid problems the we use the balance instead of the
+        # deposit is used.
+        newbalance = netting_channel.channelnewbalance_filter()
+        newbalance_listener = LogListenerTask(
+            newbalance,
+            self.raiden.on_event,
+            translator,
+        )
+
+        secretrevealed = netting_channel.channelsecretrevealed_filter()
+        secretrevealed_listener = LogListenerTask(
+            secretrevealed,
+            self.raiden.on_event,
+            translator,
+        )
+
+        channel_details = netting_channel.detail(self.raiden.address)
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
         )
-
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
         )
-
         channel = Channel(
             netting_channel,
 
@@ -95,6 +119,11 @@ class AssetManager(object):
 
         self.partneraddress_channel[partner_state.address] = channel
         self.address_channel[netting_channel.address] = channel
+
+        newbalance_listener.start()
+        secretrevealed_listener.start()
+        self.raiden.event_listeners.append(newbalance_listener)
+        self.raiden.event_listeners.append(secretrevealed_listener)
 
     def channel_isactive(self, partner_address):
         # TODO: check if the partner's network is alive

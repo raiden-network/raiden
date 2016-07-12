@@ -105,7 +105,7 @@ def hidden_mediated_transfer(app_chain, asset, amount):
 
         # use the initiator channel to generate a secret
         if secret is None:
-            secret = sha3(from_channel.netting_contract_address + str(from_channel.our_state.nonce))
+            secret = sha3(from_channel.netting_contract.address + str(from_channel.our_state.nonce))
             hashlock = sha3(secret)
 
         transfer_ = from_channel.create_mediatedtransfer(

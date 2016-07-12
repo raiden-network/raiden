@@ -5,7 +5,13 @@ import pytest
 
 from ethereum import slogging
 
-from raiden.tests.utils.transfer import assert_synched_channels
+from raiden.tests.utils.transfer import (
+    assert_synched_channels,
+    channel,
+    get_received_transfer,
+    hidden_mediated_transfer,
+)
+from raiden.tests.utils.network import CHAIN
 
 # Monkey patch subprocess.Popen used by solidity wrapper
 gevent.monkey.patch_socket()  # patch_subprocess()
@@ -15,6 +21,9 @@ slogging.configure(
     ',jsonrpc:DEBUG'
     ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
 )
+
+from pyethapp.utils import enable_greenlet_debugger
+enable_greenlet_debugger()
 
 
 @pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
@@ -101,4 +110,41 @@ def test_event_new_channel(deployed_network, deposit, settle_timeout):
     assert_synched_channels(
         channel0, deposit, [],
         channel1, deposit, [],
+    )
+
+
+@pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
+@pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
+@pytest.mark.parametrize('timeout', [3])
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+def test_secret_revealed(deployed_network, deposit):
+    app0, app1, app2 = deployed_network
+
+    asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
+    amount = 10
+
+    secret = hidden_mediated_transfer(deployed_network, asset_address, amount)
+
+    mediated_transfer = get_received_transfer(
+        channel(app2, app1, asset_address),
+        0,
+    )
+
+    merkle_proof = channel(app2, app1, asset_address).our_state.locked.get_proof(mediated_transfer)
+
+    channel(app2, app1, asset_address).netting_contract.unlock(
+        [(merkle_proof, mediated_transfer.lock, secret)],
+    )
+
+    gevent.sleep(0.1)  # let the task run
+
+    assert_synched_channels(
+        channel(app1, app2, asset_address), deposit - amount, [],
+        channel(app2, app1, asset_address), deposit + amount, [],
+    )
+
+    assert_synched_channels(
+        channel(app0, app1, asset_address), deposit - amount, [],
+        channel(app1, app2, asset_address), deposit + amount, [],
     )

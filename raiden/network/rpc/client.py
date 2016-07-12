@@ -11,13 +11,15 @@ from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_encoder
 
 from raiden.utils import isaddress, pex
 from raiden.blockchain.net_contract import NettingChannelContract
-from raiden.blockchain.events import channelnew_filter, channelnewbalance_filter
-from raiden.blockchain.events import decode_topic
 from raiden.blockchain.abi import (
     HUMAN_TOKEN_ABI,
     CHANNEL_MANAGER_ABI,
     NETTING_CHANNEL_ABI,
     REGISTRY_ABI,
+
+    CHANNELNEWBALANCE_EVENTID,
+    CHANNELNEW_EVENTID,
+    CHANNELSECRETREVEALED_EVENTID,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -37,6 +39,10 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 def make_address():
     return bytes(''.join(random.choice(LETTERS) for _ in range(20)))
+
+
+def decode_topic(topic):
+    return int(topic[2:], 16)
 
 
 class BlockChainService(object):
@@ -87,7 +93,7 @@ class BlockChainService(object):
         if asset_address not in self.asset_manager:
             asset = self.asset(asset_address)  # check that the asset exists
             manager_address = self.default_registry.manager_address_by_asset(asset.address)
-            manager = ChannelManager(self.client, manager_address)
+            manager = ChannelManager(self.client, address_decoder(manager_address))
 
             self.asset_manager[asset_address] = manager
             self.address_manager[manager_address] = manager
@@ -116,7 +122,7 @@ class Filter(object):
         self.client = jsonrpc_client
 
     def changes(self):
-        filter_changes = self.client.get_filterchanges(
+        filter_changes = self.client.call(
             'eth_getFilterChanges',
             quantity_encoder(self.filter_id),
         )
@@ -230,7 +236,7 @@ class Registry(object):
 
     def asset_addresses(self):
         return [
-            address.decode('hex')
+            address_decoder(address)
             for address in self.proxy.assetAddresses.call(startgas=self.startgas)
         ]
 
@@ -263,9 +269,9 @@ class ChannelManager(object):
 
     def asset_address(self):
         """ Return the asset of this manager. """
-        return self.proxy.assetToken.call()
+        return address_decoder(self.proxy.assetToken.call())
 
-    def new_channel(self, peer1, peer2, settle_timeout):
+    def new_netting_channel(self, peer1, peer2, settle_timeout):
         if privtoaddr(self.client.privkey) == peer1:
             other = peer2
         else:
@@ -283,7 +289,7 @@ class ChannelManager(object):
             other,
             startgas=GAS_LIMIT,
         )
-        return address_encoded.decode('hex')
+        return address_decoder(address_encoded)
 
     def channels_addresses(self):
         # for simplicity the smart contract return a shallow list where every
@@ -307,22 +313,32 @@ class ChannelManager(object):
         )
 
         return [
-            address.decode('hex')
+            address_decoder(address)
             for address in address_list
         ]
 
-    def channelnew_filter(self, participant_address):
+    def channelnew_filter(self, participant_address):  # pylint: disable=unused-argument
         """ Install a new filter for ChannelNew events.
 
         Return:
             Filter: The filter instance.
         """
-        filter_id = channelnew_filter(
-            self.proxy.address,
-            participant_address,
-            self.client,
+        # participant_address_hex = participant_address.encode('hex')
+        # topics = [
+        #     CHANNELNEW_EVENTID, [node_address_hex, None], [None, node_address_hex],
+        # ]
+        topics = [CHANNELNEW_EVENTID]
+
+        channel_manager_address_bin = self.proxy.address
+        filter_id = self.client.new_filter(
+            address=channel_manager_address_bin,
+            topics=topics,
         )
-        return Filter(self.client, filter_id)
+
+        return Filter(
+            self.client,
+            filter_id,
+        )
 
 
 class NettingChannel(object):
@@ -352,25 +368,28 @@ class NettingChannel(object):
         self.timeout = timeout
 
     def asset_address(self):
-        return self.proxy.assetAddress.call()
+        return address_decoder(self.proxy.assetAddress.call())
 
     def detail(self, our_address):
         data = self.proxy.addressAndBalance.call(startgas=self.startgas)
+        settle_timeout = self.proxy.settleTimeout.call(startgas=self.startgas)
 
         if data[0].decode('hex') == our_address:
             return {
-                'our_address': data[0].decode('hex'),
+                'our_address': address_decoder(data[0]),
                 'our_balance': data[1],
-                'partner_address': data[2].decode('hex'),
+                'partner_address': address_decoder(data[2]),
                 'partner_balance': data[3],
+                'settle_timeout': settle_timeout,
             }
 
         if data[2].decode('hex') == our_address:
             return {
-                'our_address': data[2].decode('hex'),
+                'our_address': address_decoder(data[2]),
                 'our_balance': data[3],
-                'partner_address': data[0].decode('hex'),
+                'partner_address': address_decoder(data[0]),
                 'partner_balance': data[1],
+                'settle_timeout': settle_timeout,
             }
 
         raise ValueError('We [{}] are not a participant of the given channel ({}, {})'.format(
@@ -393,10 +412,10 @@ class NettingChannel(object):
         data = self.proxy.addressAndBalance.call(startgas=GAS_LIMIT)
 
         if data[0].decode('hex') == our_address:
-            return data[2].decode('hex')
+            return address_decoder(data[2].decode('hex'))
 
         if data[2].decode('hex') == our_address:
-            return data[0].decode('hex')
+            return address_decoder(data[0].decode('hex'))
 
         raise ValueError('We [{}] are not a participant of the given channel ({}, {})'.format(
             pex(our_address),
@@ -404,7 +423,7 @@ class NettingChannel(object):
             data[2],
         ))
 
-    def deposit(self, amount):
+    def deposit(self, our_address, amount):  # pylint: disable=unused-argument
         if not isinstance(amount, (int, long)):
             raise ValueError('amount needs to be an integral number.')
 
@@ -422,12 +441,42 @@ class NettingChannel(object):
         raise NotImplementedError()
 
     def channelnewbalance_filter(self):
-        filter_id = channelnewbalance_filter(
-            self.proxy.address,
-            self.client.address,
-            self.client,
+        """ Install a new filter for ChannelNewBalance events.
+
+        Return:
+            Filter: The filter instance.
+        """
+        netting_channel_address_bin = self.proxy.address
+        topics = [CHANNELNEWBALANCE_EVENTID]
+
+        filter_id = self.client.new_filter(
+            address=netting_channel_address_bin,
+            topics=topics,
         )
-        return Filter(self.client, filter_id)
+
+        return Filter(
+            self.client,
+            filter_id,
+        )
+
+    def channelsecretrevealed_filter(self):
+        """ Install a new filter for ChannelSecret events.
+
+        Return:
+            Filter: The filter instance.
+        """
+        netting_channel_address_bin = self.proxy.address
+        topics = [CHANNELSECRETREVEALED_EVENTID]
+
+        filter_id = self.client.new_filter(
+            address=netting_channel_address_bin,
+            topics=topics,
+        )
+
+        return Filter(
+            self.client,
+            filter_id,
+        )
 
 
 class BlockChainServiceMock(object):
@@ -674,6 +723,9 @@ class NettingChannelMock(object):
             settle_timeout,
         )
 
+        self.newbalance_filters = list()
+        self.secretrevealed_filters = list()
+
     def asset_address(self):
         return self.contract.asset_address
 
@@ -759,4 +811,11 @@ class NettingChannelMock(object):
         self.contract.settle(ctx)
 
     def channelnewbalance_filter(self):
-        raise NotImplementedError()
+        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
+        self.newbalance_filters.append(filter_)
+        return filter_
+
+    def channelsecretrevealed_filter(self):
+        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
+        self.secretrevealed_filters.append(filter_)
+        return filter_

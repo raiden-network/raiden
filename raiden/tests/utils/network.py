@@ -343,7 +343,7 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
     )
 
     for app in apps:
-        for asset_address in app.raiden.chain.asset_addresses:
+        for asset_address in app.raiden.chain.default_registry.asset_addresses():
             manager = app.raiden.chain.manager_by_asset(asset_address)
             app.raiden.register_channel_manager(manager)
 

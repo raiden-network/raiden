@@ -5,7 +5,7 @@ from ethereum.utils import encode_hex
 from pyethapp.jsonrpc import address_decoder
 
 from raiden.assetmanager import AssetManager
-from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, NETTING_CHANNEL_ABI
+from raiden.blockchain.abi import CHANNEL_MANAGER_ABI
 from raiden.channelgraph import ChannelGraph
 from raiden.tasks import LogListenerTask
 from raiden.encoding import messages
@@ -319,32 +319,12 @@ class RaidenEventHandler(object):
         )
 
         netting_channel_address_bin = address_decoder(event['nettingChannel'])
-        netting_channel = self.raiden.chain.netting_channel(netting_channel_address_bin)
-        newbalance = netting_channel.channelnewbalance_filter()
 
-        translator = ContractTranslator(NETTING_CHANNEL_ABI)
-        newbalance_listener = LogListenerTask(
-            newbalance,
-            self.on_event,
-            translator,
-        )
-
-        # race condition:
-        # - if the filter is installed after a deposit is made it could be
-        # missed, to avoid that we first install the filter, then request the
-        # state from the node and then poll the filter.
-        # - with the above strategy the same deposit could be handled twice,
-        # once from the status received from the netting contract and once from
-        # the event, to avoid problems the we use the balance instead of the
-        # deposit is used.
         asset_manager = self.raiden.get_manager_by_address(manager_address)
         asset_manager.register_channel_by_address(
             netting_channel_address_bin,
             self.raiden.config['reveal_timeout'],
         )
-
-        newbalance_listener.start()
-        self.raiden.event_listeners.append(newbalance_listener)
 
     def event_channelnewbalance(self, netting_contract_address_bin, event):
         asset_address_bin = address_decoder(event['assetAddress'])
