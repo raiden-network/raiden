@@ -75,6 +75,15 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     def get_manager_by_address(self, manager_address_bin):
         return self.managers_by_address[manager_address_bin]
 
+    def find_channel_by_address(self, netting_channel_address_bin):
+        for manager in self.managers_by_address.itervalues():
+            channel = manager.address_channel.get(netting_channel_address_bin)
+
+            if channel is not None:
+                return channel
+
+        raise ValueError('unknow channel {}'.format(encode_hex(netting_channel_address_bin)))
+
     def sign(self, message):
         """ Sign message inplace. """
         if not isinstance(message, SignedMessage):
@@ -308,6 +317,12 @@ class RaidenEventHandler(object):
         elif event['_event_type'] == 'ChannelNewBalance':
             self.event_channelnewbalance(emmiting_contract_address, event)
 
+        elif event['_event_type'] == 'ChannelClosed':
+            self.event_channelclosed(emmiting_contract_address, event)
+
+        elif event['_event_type'] == 'ChannelSecretRevealed':
+            self.event_channelsecretrevealed(emmiting_contract_address, event)
+
         else:
             log.error('Unknow event {}'.format(repr(event)))
 
@@ -339,9 +354,14 @@ class RaidenEventHandler(object):
         if channel_state.contract_balance != event['balance']:
             channel_state.update_contract_balance(event['balance'])
 
-    def event_secret_revealed(self, netting_contract_address_bin, event):
+    def event_channelclosed(self, netting_contract_address_bin, event):  # pylint: disable=unused-argument
+        # Channel.isopen does a fresh rpc call each time, just ignore this event
+        # channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
+        pass
+
+    def event_channelsecretrevealed(self, netting_contract_address_bin, event):
         # TODO:
         # - find the corresponding channel for the hashlock and claim it
         # secret = event['secret']
         # hashlock = sha3(secret)
-        pass
+        raise NotImplementedError()

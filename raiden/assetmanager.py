@@ -96,6 +96,13 @@ class AssetManager(object):
             translator,
         )
 
+        close = netting_channel.channelclosed_filter()
+        close_listener = LogListenerTask(
+            close,
+            self.raiden.on_event,
+            translator,
+        )
+
         channel_details = netting_channel.detail(self.raiden.address)
         our_state = ChannelEndState(
             channel_details['our_address'],
@@ -122,8 +129,11 @@ class AssetManager(object):
 
         newbalance_listener.start()
         secretrevealed_listener.start()
+        close_listener.start()
+
         self.raiden.event_listeners.append(newbalance_listener)
         self.raiden.event_listeners.append(secretrevealed_listener)
+        self.raiden.event_listeners.append(close_listener)
 
     def channel_isactive(self, partner_address):
         # TODO: check if the partner's network is alive

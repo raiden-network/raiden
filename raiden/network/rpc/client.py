@@ -18,6 +18,7 @@ from raiden.blockchain.abi import (
     REGISTRY_ABI,
 
     CHANNELNEWBALANCE_EVENTID,
+    CHANNELCLOSED_EVENTID,
     CHANNELNEW_EVENTID,
     CHANNELSECRETREVEALED_EVENTID,
 )
@@ -478,6 +479,25 @@ class NettingChannel(object):
             filter_id,
         )
 
+    def channelclosed_filter(self):
+        """ Install a new filter for ChannelClose events.
+
+        Return:
+            Filter: The filter instance.
+        """
+        topics = [CHANNELCLOSED_EVENTID]
+
+        channel_manager_address_bin = self.proxy.address
+        filter_id = self.client.new_filter(
+            address=channel_manager_address_bin,
+            topics=topics,
+        )
+
+        return Filter(
+            self.client,
+            filter_id,
+        )
+
 
 class BlockChainServiceMock(object):
     """ Mock implementation of BlockChainService that doesn't do JSON-RPC and
@@ -725,6 +745,7 @@ class NettingChannelMock(object):
 
         self.newbalance_filters = list()
         self.secretrevealed_filters = list()
+        self.channelclose_filters = list()
 
     def asset_address(self):
         return self.contract.asset_address
@@ -818,4 +839,9 @@ class NettingChannelMock(object):
     def channelsecretrevealed_filter(self):
         filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
         self.secretrevealed_filters.append(filter_)
+        return filter_
+
+    def channelclosed_filter(self):
+        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
+        self.channelclose_filters.append(filter_)
         return filter_
