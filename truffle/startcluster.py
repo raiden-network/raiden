@@ -49,11 +49,11 @@ GENESIS_STUB = {
     'timestamp': '0x00',
     'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
     'extraData': CLUSTER_NAME,
-    'gasLimit': '0xffffffff'
+    'gasLimit': '0xfffffffff'
 }
 
 
-def mk_genesis(accounts, initial_alloc=denoms.ether * 10000):
+def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
     """
     Create a genesis-block dict with allocation for all `accounts`.
 
@@ -118,7 +118,7 @@ def to_cmd(node, datadir=None):
     return shlex.split(' '.join(cmd))
 
 
-def create_account(datadir):
+def create_account(datadir, privkey=encode_hex(sha3('localhost:627'))):
     """
     Create an account in `datadir` -- since we're not interested
     in the rewards, we don't care about the created address.
@@ -126,9 +126,12 @@ def create_account(datadir):
     :param datadir: the datadir in which the account is created
     :return: None
     """
+    with open(os.path.join(datadir, 'keyfile'), 'w') as f:
+        f.write(privkey)
 
     create = Popen(
-        shlex.split('geth --datadir {} account new'.format(datadir)),
+        shlex.split('geth --datadir {} account import {}'.format(
+            datadir, os.path.join(datadir, 'keyfile'))),
         stdin=PIPE, universal_newlines=True
     )
     create.stdin.write(DEFAULT_PW + os.linesep)
