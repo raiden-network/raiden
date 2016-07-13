@@ -74,12 +74,24 @@ def token(state, token_address, token_abi):
 
 @pytest.fixture
 def channel(state, token):
+    decoder_lib = get_contract_path('Dcdr.sol')
     netting_path = get_contract_path('NettingChannelContract.sol')
+
+    decoder_address = state.contract(
+        None,
+        path=decoder_lib,
+        language='solidity',
+    )
+
+    decoder_libraries = {
+        'Dcdr': decoder_address.encode('hex'),
+    }
 
     return state.abi_contract(
         None,
         path=netting_path,
         language='solidity',
+        libraries=decoder_libraries,
         constructor_parameters=[token.address, tester.a0, tester.a1, 30],
     )
 
@@ -197,7 +209,7 @@ def test_two_messages(state, token, channel):
 
     state.mine()
 
-    channel = state.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[token.address, tester.a0, tester.a1, 30])
+    # channel = state.abi_contract(None, path=ncc_path, language="solidity", libraries=decoder_libraries, constructor_parameters=[token.address, tester.a0, tester.a1, 30])
 
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000

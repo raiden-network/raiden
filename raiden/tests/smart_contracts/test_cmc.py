@@ -18,6 +18,7 @@ def test_cmc():  # pylint: disable=too-many-locals,too-many-statements
     iterable_mapping_path = get_contract_path('IterableMappingNCC.sol')
     channel_manager_path = get_contract_path('ChannelManagerContract.sol')
     netting_channel_path = get_contract_path('NettingChannelContract.sol')
+    decoder_lib_path = get_contract_path('Dcdr.sol')
 
     settle_timeout = 30
 
@@ -40,9 +41,17 @@ def test_cmc():  # pylint: disable=too-many-locals,too-many-statements
         language='solidity',
     )
 
+    decoder_address = state.contract(
+        None,
+        path=decoder_lib_path,
+        language='solidity',
+    )
+
     channel_manager_libraries = {
         'IterableMappingNCC': iterrable_mapping_proxy.address.encode('hex'),
+        'Dcdr': decoder_address.encode('hex'),
     }
+
     channel_manager_proxy = state.abi_contract(
         None,
         path=channel_manager_path,
