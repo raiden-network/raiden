@@ -5,28 +5,22 @@ import gevent
 import pytest
 from ethereum import slogging
 
-from raiden.messages import decode, Ack, DirectTransfer, CancelTransfer
-from raiden.tasks import MediatedTransferTask
+from raiden.messages import decode, Ack, DirectTransfer, RefundTransfer
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
-from raiden.tests.utils.network import create_network, create_sequential_network
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
 from raiden.utils import pex, sha3
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
-slogging.configure(':debug')
+slogging.configure(':DEBUG')
 
-# set shorter timeout for testing
-MediatedTransferTask.timeout_per_hop = 0.3
-
-
-def teardown_module(module):  # pylint: disable=unused-argument
-    from raiden.tests.utils.tests import cleanup_tasks
-    cleanup_tasks()
+from pyethapp.utils import enable_greenlet_debugger
+enable_greenlet_debugger()
 
 
-def test_transfer():
-    apps = create_network(num_nodes=2, num_assets=1, channels_per_node=1)
-    app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
+@pytest.mark.parametrize('privatekey_seed', ['transfer:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_transfer(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     messages = setup_messages_cb()
     mlogger = MessageLogger()
@@ -34,17 +28,17 @@ def test_transfer():
     a0_address = pex(app0.raiden.address)
     a1_address = pex(app1.raiden.address)
 
-    asset_manager0 = app0.raiden.assetmanagers.values()[0]
-    asset_manager1 = app1.raiden.assetmanagers.values()[0]
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
 
-    channel0 = asset_manager0.channels[app1.raiden.address]
-    channel1 = asset_manager1.channels[app0.raiden.address]
+    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
     assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.channels
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
 
     amount = 10
     app0.raiden.api.transfer(
@@ -95,12 +89,14 @@ def test_transfer():
     assert isinstance(a1_recv_messages[0], DirectTransfer)
 
 
-def test_mediated_transfer():
-    app_list = create_network(num_nodes=10, num_assets=1, channels_per_node=2)
-    app0 = app_list[0]
+@pytest.mark.parametrize('privatekey_seed', ['mediated_transfer:{}'])
+@pytest.mark.parametrize('channels_per_node', [2])
+@pytest.mark.parametrize('number_of_nodes', [10])
+def test_mediated_transfer(raiden_network):
+    app0 = raiden_network[0]
     setup_messages_cb()
 
-    am0 = app0.raiden.assetmanagers.values()[0]
+    am0 = app0.raiden.managers_by_asset_address.values()[0]
 
     # search for a path of length=2 A > B > C
     num_hops = 2
@@ -119,8 +115,8 @@ def test_mediated_transfer():
     assert min(len(p) for p in am0.channelgraph.get_shortest_paths(source, target)) == num_hops + 1
 
     ams_by_address = dict(
-        (app.raiden.address, app.raiden.assetmanagers)
-        for app in app_list
+        (app.raiden.address, app.raiden.managers_by_asset_address)
+        for app in raiden_network
     )
 
     # addresses
@@ -130,10 +126,10 @@ def test_mediated_transfer():
     asset_address = am0.asset_address
 
     # channels
-    c_ab = ams_by_address[hop1][asset_address].channels[hop2]
-    c_ba = ams_by_address[hop2][asset_address].channels[hop1]
-    c_bc = ams_by_address[hop2][asset_address].channels[hop3]
-    c_cb = ams_by_address[hop3][asset_address].channels[hop2]
+    c_ab = ams_by_address[hop1][asset_address].partneraddress_channel[hop2]
+    c_ba = ams_by_address[hop2][asset_address].partneraddress_channel[hop1]
+    c_bc = ams_by_address[hop2][asset_address].partneraddress_channel[hop3]
+    c_cb = ams_by_address[hop3][asset_address].partneraddress_channel[hop2]
 
     # initial channel balances
     b_ab = c_ab.balance
@@ -155,12 +151,12 @@ def test_mediated_transfer():
 
 
 @pytest.mark.xfail(reason='not implemented')
-def test_cancel_transfer():
-    deposit = 100
-    asset = sha3('test_cancel_transfer')[:20]
-
-    # pylint: disable=unbalanced-tuple-unpacking
-    app0, app1, app2 = create_sequential_network(num_nodes=3, deposit=deposit, asset=asset)
+@pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('asset', [sha3('cancel_transfer')[:20]])
+@pytest.mark.parametrize('deposit', [100])
+def test_cancel_transfer(raiden_chain, asset, deposit):
+    app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     messages = setup_messages_cb()
     mlogger = MessageLogger()
@@ -190,7 +186,7 @@ def test_cancel_transfer():
     )
 
     # app1 -> app2 is the only available path and doens't have resource, app1
-    # needs to send CancelTransfer to app0
+    # needs to send RefundTransfer to app0
     transfer(app0, app2, asset, 50)
 
     assert_synched_channels(
@@ -203,8 +199,8 @@ def test_cancel_transfer():
         channel(app2, app1, asset), deposit + amount, []
     )
 
-    assert len(messages) == 6  # DirectTransfer + MediatedTransfer + CancelTransfer + a Ack for each
+    assert len(messages) == 6  # DirectTransfer + MediatedTransfer + RefundTransfer + a Ack for each
 
     app1_messages = mlogger.get_node_messages(pex(app1.raiden.address), only='sent')
 
-    assert isinstance(app1_messages[-1], CancelTransfer)
+    assert isinstance(app1_messages[-1], RefundTransfer)

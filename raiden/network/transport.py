@@ -46,6 +46,9 @@ class UDPTransport(object):
         assert isinstance(proto, RaidenProtocol)
         self.protocol = proto
 
+    def stop(self):
+        self.server.stop()
+
 
 class DummyNetwork(object):
     """ Store global state for an in process network, this won't use a real
@@ -100,6 +103,9 @@ class DummyTransport(object):
     def receive(self, data, host_port=None):
         self.track_recv(self.protocol.raiden, host_port, data)
         self.protocol.receive(data)
+
+    def stop(self):
+        pass
 
 
 class UnreliableTransport(DummyTransport):

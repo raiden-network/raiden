@@ -1,78 +1,108 @@
 # -*- coding: utf8 -*-
 import pytest
 
+from ethereum._solidity import compile_file
 from ethereum import tester
 from ethereum.utils import sha3
-from ethereum.tester import TransactionFailed
+from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
+from ethereum.slogging import configure
 
-from raiden.network.rpc.client import get_contract_path
+from raiden.blockchain.abi import get_contract_path
+
+# pylint: disable=no-member
+configure(':DEBUG')
 
 
-def test_cmc():
-    library_path = get_contract_path('IterableMappingNCC.sol')
-    ncc_path = get_contract_path('NettingChannelContract.sol')
+# TODO: test events
+def test_cmc():  # pylint: disable=too-many-locals,too-many-statements
+    iterable_mapping_path = get_contract_path('IterableMappingNCC.sol')
     channel_manager_path = get_contract_path('ChannelManagerContract.sol')
+    netting_channel_path = get_contract_path('NettingChannelContract.sol')
 
+    settle_timeout = 30
+
+    address1 = sha3('address1')[:20]
+    address3 = sha3('address3')[:20]
+    inexisting_address = sha3('this_does_not_exist')[:20]
+    asset_address_hex = sha3('asset')[:20].encode('hex')
+
+    netting_channel_compiled = compile_file(netting_channel_path)['NettingChannelContract']
+    netting_channel_abi = netting_channel_compiled['abi']
+    netting_channel_translator = ContractTranslator(netting_channel_abi)
+
+    tester.gas_limit = 9575081L
     state = tester.state()
-    assert state.block.number < 1150000
     state.block.number = 1158001
-    assert state.block.number > 1150000
-    lib_c = state.abi_contract(None, path=library_path, language="solidity")
-    state.mine()
-    lib_ncc = state.abi_contract(None, path=ncc_path, language="solidity")
-    state.mine()
-    c = state.abi_contract(None, path=channel_manager_path, language="solidity",
-            libraries={'IterableMappingNCC': lib_c.address.encode('hex'),
-            'NettingChannelContract': lib_ncc.address.encode('hex')},
-            constructor_parameters=['0x0bd4060688a1800ae986e4840aebc924bb40b5bf'])
 
-    # test key()
+    iterrable_mapping_proxy = state.abi_contract(
+        None,
+        path=iterable_mapping_path,
+        language='solidity',
+    )
+
+    channel_manager_libraries = {
+        'IterableMappingNCC': iterrable_mapping_proxy.address.encode('hex'),
+    }
+    channel_manager_proxy = state.abi_contract(
+        None,
+        path=channel_manager_path,
+        language='solidity',
+        libraries=channel_manager_libraries,
+        constructor_parameters=['0x' +  asset_address_hex],
+    )
+
+    assert channel_manager_proxy.assetToken() == asset_address_hex
+    assert len(channel_manager_proxy.getAllChannels()) == 0
+
+    netting_channel_address1 = channel_manager_proxy.newChannel(
+        address1,
+        settle_timeout,
+    )
+
+    # cannot have two channels at the same time
+    with pytest.raises(TransactionFailed):
+        channel_manager_proxy.newChannel(address1, settle_timeout)
+
+    # should trow if there is no channel for the given address
+    with pytest.raises(TransactionFailed):
+        channel_manager_proxy.get(inexisting_address)
+
+    assert len(channel_manager_proxy.getAllChannels()) == 2
+
+    netting_contract_proxy1 = ABIContract(
+        state,
+        netting_channel_translator,
+        netting_channel_address1,
+    )
+
+    assert netting_contract_proxy1.settleTimeout() == settle_timeout
+
+    netting_channel_address2 = channel_manager_proxy.newChannel(
+        address3,
+        settle_timeout,
+    )
+
+    assert channel_manager_proxy.get(address1) == netting_channel_address1
+    assert channel_manager_proxy.get(address3) == netting_channel_address2
+
+    msg_sender_channels = channel_manager_proxy.nettingContractsByAddress(tester.DEFAULT_ACCOUNT)
+    address1_channels = channel_manager_proxy.nettingContractsByAddress(address1)
+    inexisting_channels = channel_manager_proxy.nettingContractsByAddress(inexisting_address)
+
+    assert len(msg_sender_channels) == 2
+    assert len(address1_channels) == 1
+    assert len(inexisting_channels) == 0
+
+    assert len(channel_manager_proxy.getAllChannels()) == 4
+
     # uncomment private in function to run test
+    # assert channel_manager_proxy.numberOfItems(netting_channel_creator1) == 2
+    # assert channel_manager_proxy.numberOfItems(sha3('address1')[:20]) == 1
+    # assert channel_manager_proxy.numberOfItems(sha3('iDontExist')[:20]) == 0
     # vs = sorted((sha3('address1')[:20], sha3('address2')[:20]))
-    # k0 = c.key(sha3('address1')[:20], sha3('address2')[:20])
+    # k0 = channel_manager_proxy.key(sha3('address1')[:20], sha3('address2')[:20])
     # assert k0 == sha3(vs[0] + vs[1])
-    # k1 = c.key(sha3('address2')[:20], sha3('address1')[:20])
+    # k1 = channel_manager_proxy.key(sha3('address2')[:20], sha3('address1')[:20])
     # assert k1 == sha3(vs[0] + vs[1])
     # with pytest.raises(TransactionFailed):
-        # c.key(sha3('address1')[:20], sha3('address1')[:20])
-
-    # test newChannel()
-    assert c.assetToken() == sha3('asset')[:20].encode('hex')
-    nc1 = c.newChannel(sha3('address1')[:20], 30)
-    nc2 = c.newChannel(sha3('address3')[:20], 30)
-    with pytest.raises(TransactionFailed):
-        c.newChannel(sha3('address1')[:20], 30)
-    with pytest.raises(TransactionFailed):
-        c.newChannel(sha3('address3')[:20], 30)
-
-    # TODO test event
-
-    # test get()
-    print nc1[0]
-    chn1 = c.get(sha3('address1')[:20]) # nc1[1] is msg.sender of newChannel
-    assert chn1 == nc1[0] # nc1[0] is address of new NettingChannelContract
-    chn2 = c.get(sha3('address3')[:20]) # nc2[1] is msg.sender of newChannel
-    assert chn2 == nc2[0] # nc2[0] is msg.sender of newChannel
-    with pytest.raises(TransactionFailed):  # should throw if key doesn't exist
-        c.get(sha3('iDontExist')[:20])
-
-    # test nettingContractsByAddress()
-    msg_sender_channels = c.nettingContractsByAddress(nc1[1])
-    assert len(msg_sender_channels) == 2
-    # assert c.numberOfItems(nc1[1]) == 2  # uncomment private in function to run test
-    address1_channels = c.nettingContractsByAddress(sha3('address1')[:20])
-    assert len(address1_channels) == 1
-    # assert c.numberOfItems(sha3('address1')[:20]) == 1 # uncomment private in function to run test
-    address1_channels = c.nettingContractsByAddress(sha3('iDontExist')[:20])
-    assert len(address1_channels) == 0
-    # assert c.numberOfItems(sha3('iDontExist')[:20]) == 0  # uncomment private in function to run test
-
-    # test getAllChannels()
-    arr_of_items = c.getAllChannels()
-    assert len(arr_of_items) == 4
-    c.newChannel(sha3('address4')[:20])
-    assert len(c.getAllChannels()) == 6
-    # example usage to convert into list of tuples of participants
-    # it = iter(arr_of_items)
-    # zip(it, it)
-
+    #    channel_manager_proxy.key(sha3('address1')[:20], sha3('address1')[:20])

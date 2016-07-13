@@ -5,12 +5,13 @@ import gevent
 
 from raiden.utils import sha3
 from raiden.mtree import merkleroot
-from raiden.tasks import MediatedTransferTask
+from raiden.tasks import StartMediatedTransferTask
 
 
 def channel(app0, app1, asset):
     """ Nice to read shortcut to get the channel. """
-    return app0.raiden.assetmanagers[asset].channels[app1.raiden.address]
+    asset_manager = app0.raiden.managers_by_asset_address[asset]
+    return asset_manager.partneraddress_channel[app1.raiden.address]
 
 
 def sleep(initiator_app, target_app, asset, multiplier=1):
@@ -60,26 +61,17 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
 
     The secret will be revealed and the apps will be synchronized.
     """
-    has_channel = target_app.raiden.address in initiator_app.raiden.assetmanagers[asset].channel
+    has_channel = target_app.raiden.address in initiator_app.raiden.assetmanagers[asset].channels
 
     # api.transfer() would do a DirectTransfer
     if has_channel:
         initiator_channel = channel(initiator_app, target_app, asset)
-        secret = sha3('{}{}'.format(
-            initiator_channel.nettingcontract_address,
-            str(initiator_channel.our_state.nonce),
-        ))
-        hashlock = sha3(secret)
-        transfermanager = target_app.raiden.assetmanagers[asset].transfermanager
+        transfermanager = initiator_app.raiden.assetmanagers[asset].transfermanager
 
-        task = MediatedTransferTask(
+        task = StartMediatedTransferTask(
             transfermanager,
             amount,
-            target_app.address,
-            hashlock,
-            expiration=None,
-            originating_transfer=None,
-            secret=secret,
+            target_app.raiden.address,
         )
         task.start()
         task.join()
@@ -103,7 +95,7 @@ def hidden_mediated_transfer(app_chain, asset, amount):
     fee = 0
     secret = None
     hashlock = None
-    expiration = app_chain[0].raiden.chain.block_number + 10  # XXX:
+    expiration = app_chain[0].raiden.chain.block_number() + 10  # XXX:
     initiator_app = app_chain[0]
     target_app = app_chain[0]
 
@@ -113,7 +105,7 @@ def hidden_mediated_transfer(app_chain, asset, amount):
 
         # use the initiator channel to generate a secret
         if secret is None:
-            secret = sha3(from_channel.nettingcontract_address + str(from_channel.our_state.nonce))
+            secret = sha3(from_channel.netting_contract.address + str(from_channel.our_state.nonce))
             hashlock = sha3(secret)
 
         transfer_ = from_channel.create_mediatedtransfer(
@@ -138,7 +130,7 @@ def assert_synched_channels(channel0, balance0, lock_list0, channel1, balance1, 
         This assert does not work if for a intermediate state, were one message
         hasn't being delivered yet or has been completely lost.
     """
-    total_asset = channel0.initial_balance + channel1.initial_balance
+    total_asset = channel0.contract_balance + channel1.contract_balance
     assert total_asset == channel0.balance + channel1.balance
 
     locked_amount0 = sum(lock.amount for lock in lock_list0)
