@@ -13,7 +13,7 @@ from raiden.network.rpc.client import get_contract_path
 def test_registry():
     library_path = get_contract_path('IterableMappingCMC.sol')
     ncc_path = get_contract_path('IterableMappingNCC.sol')
-    decoder_path = get_contract_path('Decoder.sol')
+    decoder_path = get_contract_path('Dcdr.sol')
     registry_path = get_contract_path('Registry.sol')
 
     s = tester.state()
@@ -26,7 +26,7 @@ def test_registry():
     s.mine()
     lib_dec = s.abi_contract(None, path=decoder_path, language="solidity")
     s.mine()
-    c = s.abi_contract(None, path=registry_path, language="solidity", libraries={'IterableMappingCMC': lib_c.address.encode('hex'), 'IterableMappingNCC': lib_ncc.address.encode('hex'), 'Decoder': lib_dec.address.encode('hex')})
+    c = s.abi_contract(None, path=registry_path, language="solidity", libraries={'IterableMappingCMC': lib_c.address.encode('hex'), 'IterableMappingNCC': lib_ncc.address.encode('hex'), 'Dcdr': lib_dec.address.encode('hex')})
 
     contract_address = c.addAsset(sha3('asset')[:20])
     c.addAsset(sha3('address')[:20])

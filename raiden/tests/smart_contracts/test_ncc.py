@@ -12,6 +12,7 @@ from raiden.network.rpc.client import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
+decoder_library_path = get_contract_path('Dcdr.sol')
 token_library_path = get_contract_path('StandardToken.sol')
 token_path = get_contract_path('HumanStandardToken.sol')
 ncc_path = get_contract_path('NettingChannelContract.sol')
@@ -28,7 +29,9 @@ def test_ncc():
 
     s.mine()
 
-    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[token.address, tester.a0, tester.a1, 30])
+    lib_decoder = s.abi_contract(None, path=decoder_library_path, language="solidity")
+    s.mine()
+    c = s.abi_contract(None, path=ncc_path, language="solidity", libraries={'Dcdr': lib_decoder.address.encode('hex')}, constructor_parameters=[token.address, tester.a0, tester.a1, 30])
 
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
@@ -145,7 +148,9 @@ def test_two_messages():
 
     s.mine()
 
-    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[token.address, tester.a0, tester.a1, 30])
+    lib_decoder = s.abi_contract(None, path=decoder_library_path, language="solidity")
+    s.mine()
+    c = s.abi_contract(None, path=ncc_path, language="solidity", libraries={'Dcdr': lib_decoder.address.encode('hex')}, constructor_parameters=[token.address, tester.a0, tester.a1, 30])
 
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
@@ -241,7 +246,9 @@ def test_update_transfer():
 
     s.mine()
 
-    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[token.address, tester.a0, tester.a1, 30])
+    lib_decoder = s.abi_contract(None, path=decoder_library_path, language="solidity")
+    s.mine()
+    c = s.abi_contract(None, path=ncc_path, language="solidity", libraries={'Dcdr': lib_decoder.address.encode('hex')}, constructor_parameters=[token.address, tester.a0, tester.a1, 30])
 
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
@@ -399,7 +406,9 @@ def test_unlock():
 
     s.mine()
 
-    c = s.abi_contract(None, path=ncc_path, language="solidity", constructor_parameters=[token.address, tester.a0, tester.a1, 30])
+    lib_decoder = s.abi_contract(None, path=decoder_library_path, language="solidity")
+    s.mine()
+    c = s.abi_contract(None, path=ncc_path, language="solidity", libraries={'Dcdr': lib_decoder.address.encode('hex')}, constructor_parameters=[token.address, tester.a0, tester.a1, 30])
 
     HASHLOCK1 = sha3('x'*32)
     LOCK_AMOUNT1 = 29

@@ -1,48 +1,18 @@
-library Decoder {
-
-    function slice(bytes a, uint start, uint end) returns (bytes n) {
-        if (a.length < end) throw;
-        if (start < 0) throw;
-        if (start > end) throw;
-        n = new bytes(end-start);
-        for ( uint i = start; i < end; i ++) { //python style slice
-            n[i-start] = a[i];
-        }
-    }
-
-    function sigSplit(bytes message) returns (bytes32 r, bytes32 s, uint8 v) {
-        if (message.length != 65) throw;
-
-        // The signature format is a compact form of:
-        //   {bytes32 r}{bytes32 s}{uint8 v}
-        // Compact means, uint8 is not padded to 32 bytes.
-        assembly {
-            r := mload(add(message, 32))
-            s := mload(add(message, 64))
-            // Here we are loading the last 32 bytes, including 31 bytes
-            // of 's'. There is no 'mload8' to do this.
-            //
-            // 'byte' is not working due to the Solidity parser, so lets
-            // use the second best option, 'and'
-            v := and(mload(add(message, 65)), 1)
-        }
-        // old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]
-        if(v < 27) v += 27;
-    }
-
-    function decodeSecret(bytes m) returns (bytes32 secret, bytes32 r, bytes32 s, uint8 v) {
+library Dcdr {
+    function decodeSecret(bytes m) returns (bytes32 secret) {
         if (m.length != 101) throw;
         secret = bytesToBytes32(slice(m, 4, 36), secret);
-        (r, s, v) = sigSplit(slice(m, 36, 101));
     }
 
-    function decodeTransfer1(bytes m)
+    function decodeTransfer(bytes m)
         returns
         (bytes4 cmdIdPad,
         uint8 nonce,
         address asset,
         address recipient,
-        uint transferedAmount)
+        uint transferedAmount,
+        bytes32 optionalLocksroot,
+        bytes32 optionalSecret)
     {
         if (m.length != 213) throw;
         cmdIdPad = bytesToBytes4(slice(m, 0, 4), cmdIdPad);
@@ -52,28 +22,20 @@ library Decoder {
         uint160 ir;
         recipient = bytesToAddress(slice(m, 32, 52), ir);
         transferedAmount = bytesToInt(slice(m, 52, 84), transferedAmount);
-    }
-
-    function decodeTransfer2(bytes m)
-        returns
-        (bytes32 optionalLocksroot,
-        bytes32 optionalSecret,
-        bytes32 r,
-        bytes32 s,
-        uint8 v)
-    {
-        if (m.length != 213) throw;
         optionalLocksroot = bytesToBytes32(slice(m, 84, 116), optionalLocksroot);
         optionalSecret = bytesToBytes32(slice(m, 116, 148), optionalSecret);
-        (r, s, v) = sigSplit(slice(m, 148, 213));
     }
 
-    function decodeLockedTransfer1(bytes m)
+    function decodeLockedTransfer(bytes m)
         returns
         (uint8 nonce,
-        uint8 expiration, 
+        uint8 expiration,
         address asset,
-        address recipient) 
+        address recipient,
+        bytes32 locksroot,
+        uint transferedAmount,
+        uint amount,
+        bytes32 hashlock)
     {
         if (m.length != 253) throw;
         nonce = bytesToIntEight(slice(m, 4, 12), nonce);
@@ -82,24 +44,10 @@ library Decoder {
         asset = bytesToAddress(slice(m, 20, 40), ia);
         uint160 ir;
         recipient = bytesToAddress(slice(m, 40, 60), ir);
-    }
-
-    function decodeLockedTransfer2(bytes m) 
-        returns
-        (bytes32 locksroot,
-        uint transferedAmount,
-        uint amount,
-        bytes32 hashlock,
-        bytes32 r,
-        bytes32 s,
-        uint8 v)
-    {
-
         locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
         transferedAmount = bytesToInt(slice(m, 92, 124), transferedAmount);
         amount = bytesToInt(slice(m, 124, 156), amount);
         hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
-        (r, s, v) = sigSplit(slice(m, 188, 253));
     }
 
     function decodeMediatedTransfer1(bytes m) 
@@ -131,40 +79,25 @@ library Decoder {
         (bytes32 hashlock,
         uint transferedAmount,
         uint amount,
-        uint fee,
-        bytes32 r,
-        bytes32 s,
-        uint8 v)
+        uint fee)
     {
+        if (m.length != 325) throw;
         hashlock = bytesToBytes32(slice(m, 132, 164), hashlock);
         transferedAmount = bytesToInt(slice(m, 164, 196), transferedAmount);
         amount = bytesToInt(slice(m, 196, 228), amount);
         fee = bytesToInt(slice(m, 228, 260), fee);
-        (r, s, v) = sigSplit(slice(m, 260, 325));
     }
-    function decodeMediatedTransfer2Stripped(bytes m) 
-        returns
-        (address initiator,
-        bytes32 locksroot,
-        uint transferedAmount,
-        uint fee,
-        bytes32 r,
-        bytes32 s,
-        uint8 v)
-    {
-        uint160 ii;
-        initiator = bytesToAddress(slice(m, 80, 100), ii);
-        locksroot = bytesToBytes32(slice(m, 100, 132), locksroot);
-        transferedAmount = bytesToInt(slice(m, 164, 196), transferedAmount);
-        fee = bytesToInt(slice(m, 228, 260), fee);
-        (r, s, v) = sigSplit(slice(m, 260, 325));
-    }
-    function decodeCancelTransfer1(bytes m) 
+
+    function decodeCancelTransfer(bytes m) 
         returns
         (uint8 nonce,
         uint8 expiration,
         address asset,
-        address recipient)
+        address recipient,
+        bytes32 locksroot,
+        uint transferedAmount,
+        uint amount,
+        bytes32 hashlock)
     {
         if (m.length != 253) throw;
         nonce = bytesToIntEight(slice(m, 4, 12), nonce);
@@ -173,23 +106,10 @@ library Decoder {
         asset = bytesToAddress(slice(m, 20, 40), ia);
         uint160 ir;
         recipient = bytesToAddress(slice(m, 40, 60), ir);
-    }
-
-    function decodeCancelTransfer2(bytes m) 
-        returns
-        (bytes32 locksroot,
-        uint transferedAmount,
-        uint amount,
-        bytes32 hashlock,
-        bytes32 r,
-        bytes32 s,
-        uint8 v)
-    {
         locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
         transferedAmount = bytesToInt(slice(m, 92, 124), transferedAmount);
         amount = bytesToInt(slice(m, 124, 156), amount);
         hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
-        (r, s, v) = sigSplit(slice(m, 188, 253));
     }
 
     function decodeLock(bytes m)
@@ -204,7 +124,80 @@ library Decoder {
         hashlock = bytesToBytes32(slice(m, 40, 72), hashlock);
     }
 
-    /* HELPER FUNCTIONS */
+    /*// Gets the sender of a last sent transfer*/
+    /*function getSender(bytes message) returns (address sndr) {*/
+        /*bytes memory mes;*/
+        /*bytes memory sig;*/
+        /*// Secret*/
+        /*if (decideCMD(message) == 4) {*/
+            /*mes = slice(message, 0, 36);*/
+            /*sig = slice(message, 36, 101);*/
+            /*sndr = ecRec(mes, sig);*/
+        /*}*/
+        /*// Direct Transfer*/
+        /*if (decideCMD(message) == 5) {*/
+            /*mes = slice(message, 0, 148);*/
+            /*sig = slice(message, 148, 213);*/
+            /*sndr = ecRec(mes, sig);*/
+        /*}*/
+        /*// Locked Transfer*/
+        /*if (decideCMD(message) == 6) {*/
+            /*mes = slice(message, 0, 188);*/
+            /*sig = slice(message, 188, 253);*/
+            /*sndr = ecRec(mes, sig);*/
+        /*}*/
+        /*// Mediated Transfer*/
+        /*if (decideCMD(message) == 7) {*/
+            /*mes = slice(message, 0, 260);*/
+            /*sig = slice(message, 260, 325);*/
+            /*sndr = ecRec(mes, sig);*/
+        /*}*/
+        /*// Cancel Transfer*/
+        /*if (decideCMD(message) == 8) {*/
+            /*mes = slice(message, 0, 188);*/
+            /*sig = slice(message, 188, 253);*/
+            /*sndr = ecRec(mes, sig);*/
+        /*}*/
+        /*[>else throw;<]*/
+    /*}*/
+
+    /*// Function for ECRecovery*/
+    /*function ecRec(bytes message, bytes sig) private returns (address sndr) {*/
+        /*bytes32 hash = sha3(message);*/
+        /*var(r, s, v) = sigSplit(sig);*/
+        /*sndr = ecrecover(hash, v, r, s);*/
+    /*}*/
+
+     /*[>HELPER FUNCTIONS <]*/
+    /*function sigSplit(bytes message) private returns (bytes32 r, bytes32 s, uint8 v) {*/
+        /*if (message.length != 65) throw;*/
+
+        /*// The signature format is a compact form of:*/
+        /*//   {bytes32 r}{bytes32 s}{uint8 v}*/
+        /*// Compact means, uint8 is not padded to 32 bytes.*/
+        /*assembly {*/
+            /*r := mload(add(message, 32))*/
+            /*s := mload(add(message, 64))*/
+            /*// Here we are loading the last 32 bytes, including 31 bytes*/
+            /*// of 's'. There is no 'mload8' to do this.*/
+            /*//*/
+            /*// 'byte' is not working due to the Solidity parser, so lets*/
+            /*// use the second best option, 'and'*/
+            /*v := and(mload(add(message, 65)), 1)*/
+
+        /*}*/
+        /*// old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]*/
+        /*if(v < 27) v += 27;*/
+    /*}*/
+
+    function slice(bytes a, uint start, uint end) private returns (bytes n) {
+        if (a.length < end) throw;
+        if (start < 0) throw;
+        n = new bytes(end-start);
+        for ( uint i = start; i < end; i ++) { //python style slice
+            n[i-start] = a[i];
+        }
+    }
 
     function bytesToIntEight(bytes b, uint8 i) private returns (uint8 res) {
         assembly { i := mload(add(b, 0x8)) }
@@ -231,4 +224,10 @@ library Decoder {
         assembly { i := mload(add(b, 0x20)) }
         bts = i;
     }
+
+    function decideCMD(bytes message) private returns (uint number) {
+        number = uint(message[0]);
+    }
+    // empty function to handle wrong calls
+    function () { throw; }
 }

@@ -1,4 +1,5 @@
 import "StandardToken.sol";
+import "Dcdr.sol";
 
 contract NettingChannelContract {
     uint public settleTimeout;
@@ -270,7 +271,7 @@ contract NettingChannelContract {
         bytes32 h;
         bytes32 el;
 
-        var (expiration, amount, hashlock) = decodeLock(lockedEncoded);
+        var (expiration, amount, hashlock) = Dcdr.decodeLock(lockedEncoded);
 
         if (expiration > closed) {
             throw;
@@ -381,14 +382,14 @@ contract NettingChannelContract {
     function assignSecret(bytes message) private {
         address sender = getSender(message);
         uint i = atIndex(sender);
-        var(sec) = decodeSecret(message);
+        var(sec) = Dcdr.decodeSecret(message);
         participants[atIndex(msg.sender)].secret = sec;
         participants[i].sender = sender;
     }
     function assignDirect(bytes message) private {
         address sender = getSender(message);
         uint i = atIndex(sender);
-        var(cmd, non, ass, rec, trn, loc, sec) = decodeTransfer(message);
+        var(cmd, non, ass, rec, trn, loc, sec) = Dcdr.decodeTransfer(message);
         participants[i].nonce = non;
         participants[i].asset = ass;
         participants[i].recipient = rec;
@@ -400,7 +401,7 @@ contract NettingChannelContract {
     function assignLocked(bytes message) private {
         address sender = getSender(message);
         uint i = atIndex(sender);
-        var(non, exp, ass, rec, loc, trn, amo, has) = decodeLockedTransfer(message);
+        var(non, exp, ass, rec, loc, trn, amo, has) = Dcdr.decodeLockedTransfer(message);
         participants[i].nonce = non;
         participants[i].expiration = exp;
         participants[i].asset = ass;
@@ -414,7 +415,7 @@ contract NettingChannelContract {
     function assignMediated1(bytes message) private returns (address sender) {
         sender = getSender(message);
         uint i = atIndex(sender);
-        var(non, exp, ass, rec, tar, ini, loc) = decodeMediatedTransfer1(message); 
+        var(non, exp, ass, rec, tar, ini, loc) = Dcdr.decodeMediatedTransfer1(message); 
         participants[i].nonce = non;
         participants[i].expiration = exp;
         participants[i].asset = ass;
@@ -424,7 +425,7 @@ contract NettingChannelContract {
     function assignMediated2(bytes message, address sender) private {
         bytes32 lock;
         uint i = atIndex(sender);
-        var(has, trn, amo, fee) = decodeMediatedTransfer2(message);
+        var(has, trn, amo, fee) = Dcdr.decodeMediatedTransfer2(message);
         participants[i].hashlock = has;
         participants[i].transferedAmount = trn;
         participants[i].amount = amo;
@@ -433,7 +434,7 @@ contract NettingChannelContract {
     function assignCancel(bytes message) private {
         address sender = getSender(message);
         uint i = atIndex(sender);
-        var(non, exp, ass, rec, loc, trn, amo, has) = decodeCancelTransfer(message);
+        var(non, exp, ass, rec, loc, trn, amo, has) = Dcdr.decodeCancelTransfer(message);
         participants[i].nonce = non;
         participants[i].expiration = exp;
         participants[i].asset = ass;
@@ -443,133 +444,6 @@ contract NettingChannelContract {
         participants[i].amount = amo;
         participants[i].hashlock = has;
         participants[i].sender = sender;
-    }
-
-    /* DECODERS */
-
-    function decodeSecret(bytes m) returns (bytes32 secret) {
-        if (m.length != 101) throw;
-        secret = bytesToBytes32(slice(m, 4, 36), secret);
-    }
-
-    function decodeTransfer(bytes m)
-        returns
-        (bytes4 cmdIdPad,
-        uint8 nonce,
-        address asset,
-        address recipient,
-        uint transferedAmount,
-        bytes32 optionalLocksroot,
-        bytes32 optionalSecret)
-    {
-        if (m.length != 213) throw;
-        cmdIdPad = bytesToBytes4(slice(m, 0, 4), cmdIdPad);
-        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
-        uint160 ia;
-        asset = bytesToAddress(slice(m, 12, 32), ia);
-        uint160 ir;
-        recipient = bytesToAddress(slice(m, 32, 52), ir);
-        transferedAmount = bytesToInt(slice(m, 52, 84), transferedAmount);
-        optionalLocksroot = bytesToBytes32(slice(m, 84, 116), optionalLocksroot);
-        optionalSecret = bytesToBytes32(slice(m, 116, 148), optionalSecret);
-    }
-
-    function decodeLockedTransfer(bytes m)
-        returns
-        (uint8 nonce,
-        uint8 expiration,
-        address asset,
-        address recipient,
-        bytes32 locksroot,
-        uint transferedAmount,
-        uint amount,
-        bytes32 hashlock)
-    {
-        if (m.length != 253) throw;
-        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
-        expiration = bytesToIntEight(slice(m, 12, 20), expiration);
-        uint160 ia;
-        asset = bytesToAddress(slice(m, 20, 40), ia);
-        uint160 ir;
-        recipient = bytesToAddress(slice(m, 40, 60), ir);
-        locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
-        transferedAmount = bytesToInt(slice(m, 92, 124), transferedAmount);
-        amount = bytesToInt(slice(m, 124, 156), amount);
-        hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
-    }
-
-    function decodeMediatedTransfer1(bytes m) 
-        returns
-        (uint8 nonce,
-        uint8 expiration,
-        address asset,
-        address recipient,
-        address target,
-        address initiator,
-        bytes32 locksroot)
-    {
-        if (m.length != 325) throw;
-        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
-        expiration = bytesToIntEight(slice(m, 12, 20), expiration);
-        uint160 ia;
-        asset = bytesToAddress(slice(m, 20, 40), ia);
-        uint160 ir;
-        recipient = bytesToAddress(slice(m, 40, 60), ir);
-        uint160 it;
-        target = bytesToAddress(slice(m, 60, 80), it);
-        uint160 ii;
-        initiator = bytesToAddress(slice(m, 80, 100), ii);
-        locksroot = bytesToBytes32(slice(m, 100, 132), locksroot);
-    }
-
-    function decodeMediatedTransfer2(bytes m) 
-        returns
-        (bytes32 hashlock,
-        uint transferedAmount,
-        uint amount,
-        uint fee)
-    {
-        if (m.length != 325) throw;
-        hashlock = bytesToBytes32(slice(m, 132, 164), hashlock);
-        transferedAmount = bytesToInt(slice(m, 164, 196), transferedAmount);
-        amount = bytesToInt(slice(m, 196, 228), amount);
-        fee = bytesToInt(slice(m, 228, 260), fee);
-    }
-
-    function decodeCancelTransfer(bytes m) 
-        returns
-        (uint8 nonce,
-        uint8 expiration,
-        address asset,
-        address recipient,
-        bytes32 locksroot,
-        uint transferedAmount,
-        uint amount,
-        bytes32 hashlock)
-    {
-        if (m.length != 253) throw;
-        nonce = bytesToIntEight(slice(m, 4, 12), nonce);
-        expiration = bytesToIntEight(slice(m, 12, 20), expiration);
-        uint160 ia;
-        asset = bytesToAddress(slice(m, 20, 40), ia);
-        uint160 ir;
-        recipient = bytesToAddress(slice(m, 40, 60), ir);
-        locksroot = bytesToBytes32(slice(m, 60, 92), locksroot);
-        transferedAmount = bytesToInt(slice(m, 92, 124), transferedAmount);
-        amount = bytesToInt(slice(m, 124, 156), amount);
-        hashlock = bytesToBytes32(slice(m, 156, 188), hashlock);
-    }
-
-    function decodeLock(bytes m)
-        returns
-        (uint8 expiration,
-        uint amount,
-        bytes32 hashlock)
-    {
-        if (m.length != 72) throw;
-        expiration = bytesToIntEight(slice(m, 0, 8), expiration);
-        amount = bytesToInt(slice(m, 8, 40), amount);
-        hashlock = bytesToBytes32(slice(m, 40, 72), hashlock);
     }
 
     // Gets the sender of a last sent transfer
@@ -650,22 +524,6 @@ contract NettingChannelContract {
     function bytesToIntEight(bytes b, uint8 i) private returns (uint8 res) {
         assembly { i := mload(add(b, 0x8)) }
         res = i;
-    }
-
-    function bytesToInt(bytes b, uint i) private returns (uint res) {
-        assembly { i := mload(add(b, 0x20)) }
-        res = i;
-    }
-
-    function bytesToAddress(bytes b, uint160 i) private returns (address add) {
-        assembly { i := mload(add(b, 0x14)) }
-        uint160 a = uint160(i);
-        add = address(i);
-    }
-
-    function bytesToBytes4(bytes b, bytes4 i) private returns (bytes4 bts) {
-        assembly { i := mload(add(b, 0x20)) }
-        bts = i;
     }
 
     function bytesToBytes32(bytes b, bytes32 i) private returns (bytes32 bts) {

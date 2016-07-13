@@ -4,6 +4,8 @@ contract ChannelManagerContract {
     IterableMappingNCC.itmap data;
 
     StandardToken public assetToken;
+    
+    NettingChannelContract[] channels;
 
     // Events
     // Event that triggers when a new channel is created
