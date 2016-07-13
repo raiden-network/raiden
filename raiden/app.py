@@ -2,13 +2,12 @@
 from __future__ import print_function
 
 import codecs
-import sys
 import signal
 
 import yaml
 import gevent
+import click
 from ethereum import slogging
-from ethereum.utils import decode_hex
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.raiden_service import RaidenService
@@ -23,6 +22,12 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 INITIAL_PORT = 40001
 DEFAULT_SETTLE_TIMEOUT = 50
 DEFAULT_REVEAL_TIMEOUT = 3
+
+
+def split_endpoint(endpoint):
+    host, port = endpoint.split(':')
+    port = int(port)
+    return (host, port)
 
 
 class App(object):  # pylint: disable=too-few-public-methods
@@ -56,55 +61,60 @@ class App(object):  # pylint: disable=too-few-public-methods
         self.raiden.stop()
 
 
-def main():
-    # pylint: disable=too-many-locals
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('rpc_server', help='The host:port of the json-rpc server')
-    parser.add_argument('registry_address', help='The asset registry contract address')
-    parser.add_argument('config_file', help='Configuration file for the raiden note')
+# @click.group(help='Welcome to {} {}'.format('raiden', 'PoC-0'))
+@click.option('--privkey', help='asks for the hex encoded ethereum private key.'
+        'WARNING: do not give the privatekey on the commandline, instead wait for the prompt!',
+        type=str,
+        prompt=True, hide_input=True)
+@click.option('--eth_rpc_endpoint', help='"host:port" address of ethereum JSON-RPC server.',
+        default='127.0.0.1:8101',
+        type=str
+        )
+@click.option('--registry_contract_address', help='hex encoded address of the registry contract.',
+        default='',
+        type=str
+        )
+@click.option('--discovery_contract_address', help='hex encoded address of the discovery contract.',
+        default='',
+        type=str,
+        )
+@click.option('--listen_address', help='"host:port" for the raiden service to listen on.',
+        default="0.0.0.0:{}".format(INITIAL_PORT),
+        type=str
+        )
+@click.option('--external_listen_address', help='external "host:port" where the raiden service'
+        ' can be contacted on (through NAT).',
+        default="0.0.0.0:40001",
+        type=str
+        )  # FIXME: implement NAT-punching
+@click.command()
+# @click.pass_context
+def app(privkey, eth_rpc_endpoint, registry_contract_address, discovery_contract_address,
+         listen_address, external_listen_address):
 
-    parser.add_argument(
-        '-H',
-        '--host',
-        default='0.0.0.0',
-        help='Local address that the raiden app will bind to',
-    )
-    parser.add_argument(
-        '-p',
-        '--port',
-        default=INITIAL_PORT,
-        help='Local port that the raiden app will bind to',
-    )
+    # config_file = args.config_file
+    rpc_connection = split_endpoint(eth_rpc_endpoint)
+    (listen_host, listen_port) = split_endpoint(listen_address)
 
-    args = parser.parse_args()
-
-    rpc_connection = args.rpc_server.split(':')
-    rpc_connection = (rpc_connection[0], int(rpc_connection[1]))
-    config_file = args.config_file
-    host = args.host
-    port = int(args.port)
-
-    with codecs.open(config_file, encoding='utf8') as handler:
+    with codecs.open('config.yaml', encoding='utf8') as handler:
         config = yaml.load(handler)
 
-    config['host'] = host
-    config['port'] = port
+    config = dict()
+    config['host'] = listen_host
+    config['port'] = listen_port
+    config['privkey'] = privkey
 
-    if 'privkey' not in config:
-        print('Missing "privkey" in the configuration file, cannot proceed')
-        sys.exit(1)
+    jsonrpc_client = JSONRPCClient(privkey=privkey, host=rpc_connection[0], port=rpc_connection[1])
 
-    jsonrpc_client = JSONRPCClient(privkey=config['privkey'])
-
+    print(registry_contract_address)
     blockchain_service = BlockChainService(
         jsonrpc_client,
-        args.registry_address,
+        registry_contract_address.decode('hex'),
     )
     discovery = Discovery()
 
-    for node in config['nodes']:
-        discovery.register(decode_hex(node['nodeid']), node['host'], node['port'])
+    # for node in config['nodes']:
+    #     discovery.register(decode_hex(node['nodeid']), node['host'], node['port'])
 
     app = App(config, blockchain_service, discovery)
 
@@ -127,4 +137,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    app()
