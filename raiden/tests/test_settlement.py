@@ -1,7 +1,6 @@
 # -*- coding: utf8 -*-
 import pytest
 
-from raiden.blockchain.net_contract import NettingChannelContract
 from raiden.mtree import check_proof
 from raiden.tests.utils.messages import setup_messages_cb
 from raiden.tests.utils.transfer import (
@@ -84,11 +83,10 @@ def test_settlement(raiden_network, settle_timeout):
 @pytest.mark.xfail()
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
-def test_settled_lock(asset_address, raiden_network, settle_timeout):
-    """ After a lock has it's secret revealed and a transfer happened, the lock
-    cannot be used to net any value with the contract.
-    """
-    asset = asset_address[0]
+@pytest.mark.parametrize('channels_per_node', [2])
+def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
+    """ An attacker cannot reuse a secret to double claim a lock. """
+    asset = assets_addresses[0]
     amount = 30
 
     app0, app1, app2, app3 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -96,10 +94,11 @@ def test_settled_lock(asset_address, raiden_network, settle_timeout):
     # mediated transfer with the secret revealed
     transfer(app0, app3, asset, amount)
 
-    # create the latest transfer
+    # any new transfer
     direct_transfer(app0, app1, asset, amount)
 
-    secret = ''  # need to get the secret
+    import pdb; pdb.set_trace()
+    secret = ''
     attack_channel = channel(app2, app1, asset)
     secret_transfer = get_received_transfer(attack_channel, 0)
     last_transfer = get_received_transfer(attack_channel, 1)

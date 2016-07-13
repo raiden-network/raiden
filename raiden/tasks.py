@@ -121,7 +121,9 @@ class StartMediatedTransferTask(Task):
             self.transfermanager.register_task_for_hashlock(self, hashlock)
 
             lock_expiration = (
-                raiden.chain.block_number() + channel.settle_timeout - raiden.config['reveal_timeout']
+                raiden.chain.block_number() +
+                channel.settle_timeout -
+                raiden.config['reveal_timeout']
             )
 
             mediated_transfer = channel.create_mediatedtransfer(
@@ -240,8 +242,14 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         fee = self.fee
         transfer = self.originating_transfer
 
-        originating_channel = self.transfermanager.assetmanager.partneraddress_channel[transfer.sender]
-        channels_reveal = [originating_channel]
+        assetmanager = self.transfermanager.assetmanager
+        originating_channel = assetmanager.partneraddress_channel[transfer.sender]
+
+        # make sure originating_channel was register for the given hashlock
+        assetmanager.register_channel_for_hashlock(
+            originating_channel,
+            transfer.lock.hashlock,
+        )
 
         raiden = self.transfermanager.assetmanager.raiden
         lock_expiration = transfer.lock.expiration - raiden.config['reveal_timeout']
@@ -267,7 +275,10 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             )
             raiden.sign(mediated_transfer)
 
-            channels_reveal.append(channel)
+            assetmanager.register_channel_for_hashlock(
+                channel,
+                transfer.lock.hashlock,
+            )
             channel.register_transfer(mediated_transfer)
 
             response = self.send_and_wait_valid(raiden, path, mediated_transfer)
@@ -291,17 +302,8 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                     channel.register_transfer(response)
 
             elif isinstance(response, Secret):
-                secret_message = Secret(response.secret)
-                raiden.sign(secret_message)
-
-                # send the secret to all nodes, including the ones that sent a RefundTransfer
-                for reveal_to in channels_reveal:
-                    # do not send the secret to the initiator
-                    if reveal_to.partner_state.address != transfer.initiator:
-                        raiden.send(reveal_to.partner_state.address, secret_message)
-
-                    reveal_to.claim_locked(response.secret)
-
+                # update all channels and propagate the secret
+                assetmanager.register_secret(response.secret)
                 self.transfermanager.on_hashlock_result(transfer.lock.hashlock, True)
                 return
 
@@ -398,12 +400,12 @@ class EndMediatedTransferTask(Task):
 
     def _run(self):  # pylint: disable=method-hidden
         transfer = self.originating_transfer
-        raiden = self.transfermanager.assetmanager.raiden
-        channel = self.transfermanager.assetmanager.partneraddress_channel[transfer.sender]
+        assetmanager = self.transfermanager.assetmanager
+        raiden = assetmanager.raiden
 
         transfer_details = '{} -> {} hash:{}'.format(
-            pex(transfer.initiator),
             pex(transfer.target),
+            pex(transfer.initiator),
             pex(transfer.hash),
         )
         log.debug('END MEDIATED TRANSFER {}'.format(transfer_details))
@@ -426,12 +428,6 @@ class EndMediatedTransferTask(Task):
         if sha3(response.secret) != transfer.lock.hashlock:
             raise Exception('Invalid secret received.')
 
-        channel.claim_locked(response.secret)  # raises if the secret is invalid
-
-        # propagate the secret backwards
-        secret = Secret(response.secret)
-        raiden.sign(secret)
-        raiden.send(transfer.sender, secret)
-
+        # update all channels and propagate the secret
+        assetmanager.register_secret(response.secret)
         self.transfermanager.on_hashlock_result(transfer.lock.hashlock, True)
-        return
