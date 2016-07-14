@@ -109,17 +109,15 @@ def app(privkey, eth_rpc_endpoint, registry_contract_address, discovery_contract
 
     jsonrpc_client = JSONRPCClient(privkey=privkey, host=rpc_connection[0], port=rpc_connection[1])
 
-    print(registry_contract_address)
     blockchain_service = BlockChainService(
         jsonrpc_client,
         registry_contract_address.decode('hex'),
     )
     discovery = Discovery()
 
-    # for node in config['nodes']:
-    #     discovery.register(decode_hex(node['nodeid']), node['host'], node['port'])
-
     app = App(config, blockchain_service, discovery)
+
+    discovery.register(app.raiden.address, *split_endpoint(external_listen_address))
 
     for asset_address in blockchain_service.default_registry.asset_addresses():
         manager = blockchain_service.manager_by_asset(asset_address)

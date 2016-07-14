@@ -50,8 +50,14 @@ class Console(BaseService):
             def __init__(self, app):
                 self.app = app
 
-        self.console_locals = dict(raiden=Raiden(self.app),
-                                   denoms=denoms, true=True, false=False, Raiden=Raiden)
+        self.console_locals = dict(_raiden=Raiden(self.app),
+                                   raiden=self.app.raiden,
+                                   chain=self.app.raiden.chain,
+                                   discovery=self.app.discovery,
+                                   denoms=denoms,
+                                   true=True,
+                                   false=False,
+                                   )
 
         # for k, v in self.app.script_globals.items():
         #     self.console_locals[k] = v
@@ -61,11 +67,15 @@ class Console(BaseService):
         print('\n' * 2)
         print("Entering Console" + bc.OKGREEN)
         print("Tip:" + bc.OKBLUE)
-        print("\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(
-            bc.HEADER, bc.OKBLUE))
-        print("\tuse `{}lasterr(n){}` to see n lines of stderr.".format(bc.HEADER, bc.OKBLUE))
+        # TODO: log help disabled for now
+        # print("\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(
+        #     bc.HEADER, bc.OKBLUE))
+        # print("\tuse `{}lasterr(n){}` to see n lines of stderr.".format(bc.HEADER, bc.OKBLUE))
         print("\tuse `{}help(raiden){}` for help on interacting with the raiden network.".format(
             bc.HEADER, bc.OKBLUE))
+        print("\tuse `{}raiden{}` to interact with the raiden service.".format(bc.HEADER, bc.OKBLUE))
+        print("\tuse `{}chain{}` to interact with the blockchain.".format(bc.HEADER, bc.OKBLUE))
+        print("\tuse `{}discovery{}` to find raiden nodes.".format(bc.HEADER, bc.OKBLUE))
         print("\n" + bc.ENDC)
 
         # Remove handlers that log to stderr
