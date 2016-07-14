@@ -14,6 +14,7 @@ from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import BlockChainService
+from raiden.console import Console
 from raiden.utils import pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -47,6 +48,8 @@ class App(object):  # pylint: disable=too-few-public-methods
         self.discovery = discovery
         self.transport = transport_class(config['host'], config['port'])
         self.raiden = RaidenService(chain, config['privkey'], self.transport, discovery, config)
+        self.services = {'raiden': self.raiden}
+        self.start_console = True
 
         discovery.register(self.raiden.address, self.transport.host, self.transport.port)
 
@@ -125,6 +128,9 @@ def app(privkey, eth_rpc_endpoint, registry_contract_address, discovery_contract
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
+
+    console = Console(app)
+    console.start()
 
     # wait for interrupt
     event = gevent.event.Event()

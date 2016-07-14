@@ -1,6 +1,7 @@
 pytest
 pysha3
 pyethapp
+ipython<5.0.0
 gevent>=1.1b3
 rlp>=0.4.3
 secp256k1==0.12.1
