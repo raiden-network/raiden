@@ -478,7 +478,7 @@ library NettingChannelLibrary {
     // TODO: use sstore instead of these temporaries
 
     function assignDirectTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 213) {
+        if (message.length != 148) {  // raw message size (without signature)
             throw;
         }
 
@@ -495,9 +495,9 @@ library NettingChannelLibrary {
             nonce := mload(add(message, 12))            // nonce [4:12]
             asset := mload(add(message, 32))            // asset [12:32]
             recipient := mload(add(message, 52))        // recipient [32:52]
-            transferedAmount := mload(add(message, 64)) // recipient [32:64]
-            locksroot := mload(add(message, 96))        // optional_locksroot [64:96]
-            secret := mload(add(message, 128))          // optional_secret [96:128]
+            transferedAmount := mload(add(message, 84)) // recipient [52:84]
+            locksroot := mload(add(message, 116))       // optional_locksroot [84:116]
+            secret := mload(add(message, 148))          // optional_secret [116:158]
         }
 
         participant.nonce = nonce;
