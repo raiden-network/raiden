@@ -13,13 +13,13 @@ from devp2p.crypto import privtopub as privtopub_enode
 NUM_GETH_NODES = 3
 NUM_RAIDEN_ACCOUNTS = 10
 CLUSTER_NAME = 'raiden'
-RAIDEN_PORT = sum(ord(c) for c in CLUSTER_NAME)
+RAIDEN_PORT = 40001
 DEFAULT_PW = 'notsosecret'
 
 # a list of `num_raiden_accounts` account addresses with a predictable privkey:
-# privkey = sha3('localhost:`raiden_port + i`')
+# privkey = sha3('127.0.0.1:`raiden_port + i`')
 DEFAULTACCOUNTS = [
-    encode_hex(privtoaddr(sha3('localhost:{}'.format(RAIDEN_PORT + i))))
+    encode_hex(privtoaddr(sha3('127.0.0.1:{}'.format(RAIDEN_PORT + i))))
     for i in range(NUM_RAIDEN_ACCOUNTS)
 ]
 
