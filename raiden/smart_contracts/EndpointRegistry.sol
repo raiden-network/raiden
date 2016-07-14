@@ -3,12 +3,13 @@ This contract is a registry which maps the Ethereum Address to their endpoint i.
 The Ethereum address registers his address in this registry.
 */
 
+<<<<<<< HEAD
 contract EndpointRegistry{
 
 //Events
 
-	event AddressRegistered(address indexed eth_address,string socket);
-    event AddressUpdated(address indexed eth_address,string old_socket,string newSocket);
+	event AddressRegistered(address indexed eth_address,string indexed socket);
+    event AddressUpdated(address indexed eth_address,string indexed old_socket,string indexed newSocket);
 
 //Storage Variables
 
@@ -95,4 +96,8 @@ contract EndpointRegistry{
     else return false;
     }
 
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> Added the EndpointRegistry Contract and test_endpointregistry.py for issue 80
