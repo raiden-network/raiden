@@ -56,6 +56,9 @@ contract NettingChannelContract {
     function settled() constant returns (uint) {
         return data.settled;
     }
+    function closingAddress() constant returns (address) {
+        return data.closingAddress;
+    }
 
     function () { throw; }
 }
