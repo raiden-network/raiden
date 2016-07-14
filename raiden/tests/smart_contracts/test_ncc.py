@@ -12,7 +12,7 @@ from raiden.utils import privtoaddr, sha3
 from raiden.blockchain.abi import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-slogging.configure(':TRACE')
+# slogging.configure(':TRACE')
 # pylint: disable=redefined-outer-name,no-member
 
 
