@@ -26,7 +26,7 @@ contract ChannelManagerContract {
     }
 
     function getChannelsForNode(address nodeAddress) constant returns (address[]) {
-        return manager.node_channels[nodeAddress];
+        return manager.nodeChannels[nodeAddress];
     }
 
     function getChannelWith(address partner) constant returns (address) {

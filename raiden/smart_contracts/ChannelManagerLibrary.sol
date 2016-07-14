@@ -10,8 +10,8 @@ contract NettingChannelContract {
             timeout = 30;
         }
 
-        data.participants[0].node_address = participant1;
-        data.participants[1].node_address = participant2;
+        data.participants[0].nodeAddress = participant1;
+        data.participants[1].nodeAddress = participant2;
 
         data.token = Token(assetAddress);
         data.settleTimeout = timeout;
@@ -63,7 +63,7 @@ contract NettingChannelContract {
 library ChannelManagerLibrary {
     // TODO: experiment with a sorted data structure
     struct Data {
-        mapping(address => address[]) node_channels;
+        mapping(address => address[]) nodeChannels;
         address[] all_channels;
     }
 
@@ -83,7 +83,7 @@ library ChannelManagerLibrary {
     /// @dev Get channels where the given address participates.
     /// @return Array of the channel's addresses that nodeAddress participates.
     function getChannelsForNode(Data storage self, address nodeAddress) constant returns (address[]) {
-        return self.node_channels[nodeAddress];
+        return self.nodeChannels[nodeAddress];
     }
 
     /// @notice get(address, address) to get the unique channel of two parties.
@@ -91,7 +91,7 @@ library ChannelManagerLibrary {
     /// @return channel (NettingChannelContract) the value of the NettingChannelContract of the two parties.
     function getChannelWith(Data storage self, address partner) constant returns (address) {
         uint i;
-        address[] our_channels = self.node_channels[msg.sender];
+        address[] our_channels = self.nodeChannels[msg.sender];
         address channel;
 
         for (i=0; i < our_channels.length; ++i) {
@@ -122,8 +122,8 @@ library ChannelManagerLibrary {
             settleTimeout
         );
 
-        self.node_channels[msg.sender].push(channelAddress);
-        self.node_channels[partner].push(channelAddress);
+        self.nodeChannels[msg.sender].push(channelAddress);
+        self.nodeChannels[partner].push(channelAddress);
         self.all_channels.push(channelAddress);
 
     }
