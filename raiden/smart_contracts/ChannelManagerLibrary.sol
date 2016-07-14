@@ -68,6 +68,7 @@ library ChannelManagerLibrary {
     struct Data {
         mapping(address => address[]) nodeChannels;
         address[] all_channels;
+        Token token;
     }
 
     event ChannelNew(
@@ -77,7 +78,7 @@ library ChannelManagerLibrary {
         uint settleTimeout
     );
 
-    function getAllChannels(Data storage self) returns (address[] channels) {
+    function getChannelsAddresses(Data storage self) returns (address[] channels) {
         channels = self.all_channels;
     }
 
@@ -104,16 +105,27 @@ library ChannelManagerLibrary {
                 return channel;
             }
         }
+
+        throw;
     }
 
     /// @notice newChannel(address, address) to create a new payment channel between two parties
     /// @dev Create a new channel between two parties
     /// @return NettingChannelContract's address.
-    function newChannel(Data storage self, address assetToken, address partner, uint settleTimeout) returns (address) {
+    function newChannel(Data storage self, address partner, uint settleTimeout) returns (address) {
+        address[] storage existingChannels;
         address channelAddress;
+        uint i;
+
+        existingChannels = self.nodeChannels[msg.sender];
+        for (i=0; i<existingChannels.length; i++) {
+            if (NettingChannelContract(existingChannels[i]).partner(msg.sender) == partner) {
+                throw;
+            }
+        }
 
         channelAddress = new NettingChannelContract(
-            assetToken,
+            self.token,
             msg.sender,
             partner,
             settleTimeout
@@ -129,5 +141,6 @@ library ChannelManagerLibrary {
         self.nodeChannels[partner].push(channelAddress);
         self.all_channels.push(channelAddress);
 
+        return channelAddress;
     }
 }

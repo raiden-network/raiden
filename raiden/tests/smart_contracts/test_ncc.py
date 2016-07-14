@@ -1,99 +1,15 @@
 # -*- coding: utf8 -*-
 import pytest
 
-from ethereum._solidity import compile_file
 from ethereum import tester
 from ethereum import slogging
-from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
+from ethereum.tester import ABIContract, TransactionFailed
 
 from raiden.messages import Lock, DirectTransfer
 from raiden.mtree import merkleroot
 from raiden.utils import privtoaddr, sha3
-from raiden.blockchain.abi import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-# slogging.configure(':TRACE')
-# pylint: disable=redefined-outer-name,no-member
-
-
-@pytest.fixture
-def asset_amount():
-    return 10000
-
-
-@pytest.fixture
-def token_abi():
-    human_token_path = get_contract_path('HumanStandardToken.sol')
-    human_compiled = compile_file(human_token_path, combined='abi')
-    return human_compiled['HumanStandardToken']['abi']
-
-
-@pytest.fixture
-def state():
-    state = tester.state()
-    state.block.number = 1158001
-    return state
-
-
-@pytest.fixture
-def token_address(asset_amount, state):
-    standard_token_path = get_contract_path('StandardToken.sol')
-    human_token_path = get_contract_path('HumanStandardToken.sol')
-
-    standard_token_address = state.contract(
-        None,
-        path=standard_token_path,
-        language='solidity',
-    )
-
-    human_libraries = {
-        'StandardToken': standard_token_address.encode('hex'),
-    }
-    human_token_proxy = state.abi_contract(
-        None,
-        path=human_token_path,
-        language='solidity',
-        libraries=human_libraries,
-        constructor_parameters=[asset_amount, 'raiden', 0, 'rd'],
-    )
-
-    state.mine()
-
-    return human_token_proxy.address
-
-
-@pytest.fixture
-def token(state, token_address, token_abi):
-    translator = ContractTranslator(token_abi)
-
-    return ABIContract(
-        state,
-        translator,
-        token_address,
-    )
-
-
-@pytest.fixture
-def channel(state, token):
-    netting_library_path = get_contract_path('NettingChannelLibrary.sol')
-    netting_contract_path = get_contract_path('ChannelManagerLibrary.sol')
-
-    library_address = state.contract(
-        None,
-        path=netting_library_path,
-        language='solidity',
-    )
-
-    return state.abi_contract(
-        None,
-        path=netting_contract_path,
-        language='solidity',
-        constructor_parameters=[token.address, tester.a0, tester.a1, 30],
-        contract_name='NettingChannelContract',
-        libraries={
-            'NettingChannelLibrary': library_address.encode('hex'),
-        }
-    )
 
 
 def test_ncc(state, channel, token):  # pylint: disable=too-many-locals,too-many-statements
