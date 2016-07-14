@@ -16,7 +16,6 @@ def test_cmc(state, settle_timeout, netting_channel_abi, manager):  # pylint: di
     address3 = sha3('address3')[:20]
     inexisting_address = sha3('this_does_not_exist')[:20]
 
-    tester.gas_limit = 9575081L
     netting_channel_translator = ContractTranslator(netting_channel_abi)
 
     assert len(manager.getChannelsParticipants()) == 0
