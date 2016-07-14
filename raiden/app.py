@@ -1,10 +1,7 @@
 # -*- coding: utf8 -*-
 from __future__ import print_function
 
-import codecs
 import signal
-
-import yaml
 import gevent
 import click
 from ethereum import slogging
@@ -98,9 +95,6 @@ def app(privkey, eth_rpc_endpoint, registry_contract_address, discovery_contract
     # config_file = args.config_file
     rpc_connection = split_endpoint(eth_rpc_endpoint)
     (listen_host, listen_port) = split_endpoint(listen_address)
-
-    with codecs.open('config.yaml', encoding='utf8') as handler:
-        config = yaml.load(handler)
 
     config = dict()
     config['host'] = listen_host
