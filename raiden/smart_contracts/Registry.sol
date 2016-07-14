@@ -120,15 +120,16 @@ contract Registry {
         _
     }
 
-    function addAsset(address assetAddress) returns (address) {
+    modifier doesNotExist(address _address) {
+        if (registry[_address] != 0x0)
+            throw;
+        _
+    }
+
+    function addAsset(address assetAddress) doesNotExist(assetAddress) returns (address) {
         address existingAddress;
         address newAddress;
         ChannelManagerContract manager;
-
-        existingAddress = registry[assetAddress];
-        if (existingAddress != 0x0) {
-            throw;
-        }
 
         newAddress = new ChannelManagerContract(assetAddress);
         AssetAdded(newAddress);
