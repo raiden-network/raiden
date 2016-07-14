@@ -114,6 +114,12 @@ contract Registry {
 
     event AssetAdded(address assetAddress);
 
+    modifier addressExists(address _address) {
+        if (registry[_address] == 0x0)
+            throw;
+        _
+    }
+
     function addAsset(address assetAddress) returns (address) {
         address existingAddress;
         address newAddress;
@@ -133,7 +139,11 @@ contract Registry {
         return newAddress;
     }
 
-    function channelManagerByAsset(address assetAddress) constant returns (address) {
+    function channelManagerByAsset(address assetAddress)
+        addressExists(assetAddress) 
+        constant
+        returns (address)
+    {
         return registry[assetAddress];
     }
 

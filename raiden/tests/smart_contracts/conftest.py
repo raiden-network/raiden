@@ -137,3 +137,18 @@ def manager(state, token, channel_manager_library):
             'ChannelManagerLibrary': channel_manager_library.encode('hex'),
         }
     )
+
+
+@pytest.fixture
+def registry(state, token, channel_manager_library):
+    registry_path = get_contract_path('Registry.sol')
+
+    return state.abi_contract(
+        None,
+        path=registry_path,
+        language='solidity',
+        contract_name='Registry',
+        libraries={
+            'ChannelManagerLibrary': channel_manager_library.encode('hex')
+        }
+    )
