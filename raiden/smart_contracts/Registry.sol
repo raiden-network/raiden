@@ -1,49 +1,77 @@
-import "IterableMappingCMC.sol";
+import "Token.sol";
+import "ChannelManagerLibrary.sol";
+
+// for each asset a manager will be deployed, to reduce gas usage for manager
+// deployment the logic is moved into a library and this contract will work
+// only as a proxy/state container.
+contract ChannelManagerContract {
+    using ChannelManagerLibrary for ChannelManagerLibrary.Data;
+
+    Token public token;
+    ChannelManagerLibrary.Data manager;
+
+    function ChannelManagerContract(address tokenAddress) {
+        token = Token(tokenAddress);
+    }
+
+    // variable length arrays from inside the evm is not supported
+    // function getAllChannels() constant returns (address[]) {
+    //     return manager.getAllChannels();
+    // }
+    // function getChannelsForNode(address nodeAddress) constant returns (address[]) {
+    //     return manager.getChannelsForNode(nodeAddress);
+    // }
+    function getAllChannels() constant returns (address[]) {
+        return manager.all_channels;
+    }
+
+    function getChannelsForNode(address nodeAddress) constant returns (address[]) {
+        return manager.node_channels[nodeAddress];
+    }
+
+    function getChannelWith(address partner) constant returns (address) {
+        return manager.getChannelWith(partner);
+    }
+
+    function newChannel(address partner, uint settleTimeout) returns (address) {
+        return manager.newChannel(token, partner, settleTimeout);
+    }
+
+    function () { throw; }
+}
 
 contract Registry {
-    IterableMappingCMC.itmap data;
+    mapping(address => address) public registry;
+    address[] public assets;
 
-    event AssetAdded(address assetAddress); // useful for testing
+    event AssetAdded(address assetAddress);
 
-    /// @notice addAsset(address) to add a new ChannelManagerContract to channelManagerContracts
-    /// with the assetAddress as key.
-    /// @dev Add a new ChannelManagerContract to channelManagerContracts if assetAddress
-    /// does not already exist.
-    /// @param assetAddress (address) the address of the asset
-    /// @return nothing, but updates the collection of ChannelManagerContracts.
-    function addAsset(address assetAddress) returns (address contractAddress) {
-        // only allow unique addresses
-        if (IterableMappingCMC.contains(data, assetAddress)) throw;
-        ChannelManagerContract c = new ChannelManagerContract(assetAddress);
-        IterableMappingCMC.insert(data, assetAddress, c);
-        contractAddress = address(c);
-        AssetAdded(address(c)); // useful for testing
-    }
+    function addAsset(address assetAddress) returns (address) {
+        address existingAddress;
+        address newAddress;
+        ChannelManagerContract manager;
 
-    /// @notice channelManagerByAsset(address) to get the ChannelManagerContract
-    /// of the given assetAddress.
-    /// @dev Get the ChannelManagerContract of a given assetAddress.
-    /// @param assetAddress (address) the asset address.
-    /// @return asAdr (address) the address belonging of an assetAddress.
-    function channelManagerByAsset(address assetAddress) returns (address conAdr) {
-        // if assetAddress does not exist, throw
-        if (IterableMappingCMC.contains(data, assetAddress) == false) throw;
-        uint index = IterableMappingCMC.atIndex(data, assetAddress);
-        var(key, value) = IterableMappingCMC.iterate_get(data, index - 1);
-        conAdr = address(value);
-    }
-
-    /// @notice assetAddresses() to get all assetAddresses in the collection.
-    /// @dev Get all assetAddresses in the collection.
-    /// @return assetAddress (address[]) an array of all assetAddresses
-    function assetAddresses() returns (address[] assetAddresses) {
-        assetAddresses = new address[](data.size);
-        for (var i = IterableMappingCMC.iterate_start(data); IterableMappingCMC.iterate_valid(data, i); i = IterableMappingCMC.iterate_next(data, i)) {
-            var (key, value) = IterableMappingCMC.iterate_get(data, i);
-            assetAddresses[i] = key;
+        existingAddress = registry[assetAddress];
+        if (existingAddress != 0x0) {
+            throw;
         }
+
+        newAddress = new ChannelManagerContract(assetAddress);
+        AssetAdded(newAddress);
+
+        registry[assetAddress] = newAddress;
+        assets.push(assetAddress);
+
+        return newAddress;
     }
 
-    // empty function to handle wrong calls
+    function channelManagerByAsset(address assetAddress) constant returns (address) {
+        return registry[assetAddress];
+    }
+
+    function assetAddresses() constant returns (address[] assetAddresses) {
+        return assets;
+    }
+
     function () { throw; }
 }
