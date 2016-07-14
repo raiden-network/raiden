@@ -12,6 +12,7 @@ from raiden.utils import privtoaddr, sha3
 from raiden.blockchain.abi import get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+slogging.configure(':TRACE')
 # pylint: disable=redefined-outer-name,no-member
 
 
@@ -74,13 +75,24 @@ def token(state, token_address, token_abi):
 
 @pytest.fixture
 def channel(state, token):
-    netting_path = get_contract_path('NettingChannelContract.sol')
+    netting_library_path = get_contract_path('NettingChannelLibrary.sol')
+    netting_contract_path = get_contract_path('ChannelManagerLibrary.sol')
+
+    library_address = state.contract(
+        None,
+        path=netting_library_path,
+        language='solidity',
+    )
 
     return state.abi_contract(
         None,
-        path=netting_path,
+        path=netting_contract_path,
         language='solidity',
         constructor_parameters=[token.address, tester.a0, tester.a1, 30],
+        contract_name='NettingChannelContract',
+        libraries={
+            'NettingChannelLibrary': library_address.encode('hex'),
+        }
     )
 
 
@@ -100,8 +112,8 @@ def test_ncc(state, channel, token):  # pylint: disable=too-many-locals,too-many
     assert channel.settled() == 0
 
     # test participants variables changed when constructing
-    assert channel.participants(0)[0] == tester.a0.encode('hex')
-    assert channel.participants(1)[0] == tester.a1.encode('hex')
+    assert channel.addressAndBalance()[0] == tester.a0.encode('hex')
+    assert channel.addressAndBalance()[2] == tester.a1.encode('hex')
 
     # test atIndex()
     # private must be removed from the function in order to work
@@ -114,11 +126,11 @@ def test_ncc(state, channel, token):  # pylint: disable=too-many-locals,too-many
 
     assert token.balanceOf(channel.address) == 0
     assert token.approve(channel.address, 30) is True # allow the contract do deposit
-    assert channel.participants(0)[1] == 0
+    assert channel.addressAndBalance()[1] == 0
     with pytest.raises(TransactionFailed):
         channel.deposit(5001)
     channel.deposit(30)
-    assert channel.participants(0)[1] == 30
+    assert channel.addressAndBalance()[1] == 30
     assert token.balanceOf(channel.address) == 30
     assert token.balanceOf(tester.a0) == 4970
     assert channel.opened() == state.block.number
@@ -176,10 +188,10 @@ def test_ncc(state, channel, token):  # pylint: disable=too-many-locals,too-many
     packed = msg.packed()
     direct_transfer = str(packed.data)
 
-    channel.closeSingleFunded(direct_transfer)
+    channel.closeSingleTransfer(direct_transfer)
 
     with pytest.raises(TransactionFailed):
-        channel.closeSingleFunded(direct_transfer, sender=tester.k2) # not participant
+        channel.closeSingleTransfer(direct_transfer, sender=tester.k2) # not participant
 
     assert channel.closed() == state.block.number
     assert channel.closingAddress() == tester.a0.encode('hex')
@@ -257,11 +269,11 @@ def test_two_messages(state, token, channel):
     packed = msg2.packed()
     direct_transfer2 = str(packed.data)
 
-    channel.closeBiFunded(direct_transfer1, direct_transfer2)
+    channel.close(direct_transfer1, direct_transfer2)
 
     with pytest.raises(TransactionFailed):
         # not participant
-        channel.closeBiFunded(
+        channel.close(
             direct_transfer1,
             direct_transfer2,
             sender=tester.k2
@@ -387,7 +399,7 @@ def test_update_transfer(state, token, channel):
     with pytest.raises(TransactionFailed):
         channel.updateTransfer(direct_transfer1, sender=tester.k1)
 
-    channel.closeBiFunded(direct_transfer1, direct_transfer2)
+    channel.close(direct_transfer1, direct_transfer2)
 
     # Test with message sender tester.a0
     assert channel.closed() == state.block.number
@@ -519,7 +531,7 @@ def test_unlock(token, channel):
     packed = msg2.packed()
     direct_transfer2 = str(packed.data)
 
-    channel.closeBiFunded(direct_transfer1, direct_transfer2)
+    channel.close(direct_transfer1, direct_transfer2)
 
     HASHLOCK = sha3('x' * 32)
     LOCK_AMOUNT = 20

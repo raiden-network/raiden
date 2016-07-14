@@ -18,7 +18,7 @@ contract NettingChannelContract {
     }
 
     function deposit(uint256 amount) {
-        data.deposit(msg.sender, channelAddress, this, amount);
+        data.deposit(msg.sender, this, amount);
     }
     function partner(address one_address) constant returns (address) {
         return data.partner(one_address);
@@ -36,10 +36,25 @@ contract NettingChannelContract {
         data.updateTransfer(msg.sender, signed_transfer);
     }
     function unlock(bytes lockedEncoded, bytes merkleProof, bytes32 secret) {
-        data.updateTransfer(msg.sender, lockedEncoded, merkleProof, secret);
+        data.unlock(msg.sender, lockedEncoded, merkleProof, secret);
     }
     function settle() {
-        data.updateTransfer(msg.sender, lockedEncoded);
+        data.settle(msg.sender);
+    }
+    function settleTimeout() constant returns (uint) {
+        return data.settleTimeout;
+    }
+    function assetAddress() constant returns (address) {
+        return data.token;
+    }
+    function opened() constant returns (uint) {
+        return data.opened;
+    }
+    function closed() constant returns (uint) {
+        return data.closed;
+    }
+    function settled() constant returns (uint) {
+        return data.settled;
     }
 
     function () { throw; }
