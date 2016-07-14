@@ -18,7 +18,8 @@ def sleep(initiator_app, target_app, asset, multiplier=1):
     """ Sleep long enough to conclude a transfer from `initiator_app` to
     `target_app`.
     """
-    path = list(initiator_app.raiden.assetmanagers[asset].channelgraph.get_shortest_paths(
+    assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
+    path = list(assetmanager.channelgraph.get_shortest_paths(
         initiator_app.raiden.address,
         target_app.raiden.address,
     ))
@@ -50,7 +51,8 @@ def transfer(initiator_app, target_app, asset, amount):
 
 def direct_transfer(initiator_app, target_app, asset, amount):
     """ Nice to read shortcut to make a DirectTransfer. """
-    has_channel = initiator_app.raiden.address in target_app.raiden.assetmanagers[asset].channels
+    assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
+    has_channel = initiator_app.raiden.address in assetmanager.partneraddress_channel
     assert has_channel, 'there is not a direct channel'
 
     initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
@@ -61,12 +63,12 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
 
     The secret will be revealed and the apps will be synchronized.
     """
-    has_channel = target_app.raiden.address in initiator_app.raiden.assetmanagers[asset].channels
+    assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
+    has_channel = initiator_app.raiden.address in assetmanager.partneraddress_channel
 
     # api.transfer() would do a DirectTransfer
     if has_channel:
-        initiator_channel = channel(initiator_app, target_app, asset)
-        transfermanager = initiator_app.raiden.assetmanagers[asset].transfermanager
+        transfermanager = assetmanager.transfermanager
 
         task = StartMediatedTransferTask(
             transfermanager,

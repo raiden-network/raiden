@@ -11,7 +11,8 @@ class TransferManager(object):
 
     def __init__(self, assetmanager):
         self.assetmanager = assetmanager
-        self.transfertasks = dict()  #: Dict[(hashlock, Task)]
+
+        self.transfertasks = dict()
         self.on_task_completed_callbacks = []
 
     def register_task_for_hashlock(self, task, hashlock):
@@ -67,6 +68,9 @@ class TransferManager(object):
 
         channel = self.assetmanager.partneraddress_channel[transfer.sender]
         channel.register_transfer(transfer)  # raises if the transfer is invalid
+
+        # register channel because we need to forward the secret to it
+        self.assetmanager.register_channel_for_hashlock(channel, transfer.lock.hashlock)
 
         if transfer.target == self.assetmanager.raiden.address:
             secret_request_task = EndMediatedTransferTask(

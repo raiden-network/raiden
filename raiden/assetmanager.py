@@ -1,10 +1,14 @@
 # -*- coding: utf8 -*-
+from collections import defaultdict
+
 from ethereum import slogging
 from ethereum.abi import ContractTranslator
+from ethereum.utils import sha3
 
-from raiden.channel import Channel, ChannelEndState
+from raiden.channel import Channel, ChannelEndState, InvalidSecret
 from raiden.blockchain.abi import NETTING_CHANNEL_ABI
 from raiden.transfermanager import TransferManager
+from raiden.messages import Secret
 from raiden.tasks import LogListenerTask
 from raiden.utils import isaddress, pex
 
@@ -26,6 +30,8 @@ class AssetManager(object):
 
         self.partneraddress_channel = dict()  #: maps the partner address to the channel instance
         self.address_channel = dict()  #: maps the channel address to the channel instance
+        self.hashlock_channel = defaultdict(list)
+        ''' A list of channels that are waiting on the conditional lock. '''
 
         self.asset_address = asset_address
         self.channel_manager_address = channel_manager_address
@@ -134,6 +140,38 @@ class AssetManager(object):
         self.raiden.event_listeners.append(newbalance_listener)
         self.raiden.event_listeners.append(secretrevealed_listener)
         self.raiden.event_listeners.append(close_listener)
+
+    def register_channel_for_hashlock(self, channel, hashlock):
+        channels_registered = self.hashlock_channel[hashlock]
+
+        if channel not in channels_registered:
+            channels_registered.append(channel)
+
+    def register_secret(self, secret):
+        """ Handle a secret that could be received from a Secret message or a
+        ChannelSecretRevealed event.
+        """
+        hashlock = sha3(secret)
+        channels_reveal = self.hashlock_channel[hashlock]
+
+        secret_message = Secret(secret)
+        self.raiden.sign(secret_message)
+
+        while channels_reveal:
+            reveal_to = channels_reveal.pop()
+
+            # send the secret to all channels registered, including the next
+            # hop that might be the node that informed us about the secret
+            self.raiden.send(reveal_to.partner_state.address, secret_message)
+
+            # update the channel by claiming the locked transfers
+            try:
+                reveal_to.claim_locked(secret)
+            except InvalidSecret:
+                log.error('claiming lock failed')
+
+        assert len(self.hashlock_channel[hashlock]) == 0
+        del self.hashlock_channel[hashlock]
 
     def channel_isactive(self, partner_address):
         # TODO: check if the partner's network is alive

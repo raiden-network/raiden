@@ -252,7 +252,10 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
         apps.append(app)
 
     for asset in assets_addresses:
-        app_channels = network_with_minimum_channels(apps, channels_per_node)
+        if channels_per_node == CHAIN:
+            app_channels = list(zip(apps[:-1], apps[1:]))
+        else:
+            app_channels = list(network_with_minimum_channels(apps, channels_per_node))
 
         setup_channels(
             asset,

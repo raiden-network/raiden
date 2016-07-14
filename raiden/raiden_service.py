@@ -360,8 +360,10 @@ class RaidenEventHandler(object):
         pass
 
     def event_channelsecretrevealed(self, netting_contract_address_bin, event):
-        # TODO:
-        # - find the corresponding channel for the hashlock and claim it
-        # secret = event['secret']
-        # hashlock = sha3(secret)
-        raise NotImplementedError()
+        channel = self.raiden.chain.netting_channel(netting_contract_address_bin)
+        asset_address_bin = channel.asset_address()
+        manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
+
+        # XXX: should reveal the secret to other asset managers?
+        # update all channels and propagate the secret
+        manager.register_secret(event['secret'])
