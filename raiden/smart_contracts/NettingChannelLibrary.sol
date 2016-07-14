@@ -127,44 +127,7 @@ library NettingChannelLibrary {
         balance2 = node2.balance;
     }
 
-    function get_transfer_raw_address(bytes memory signed_transfer) private returns (bytes memory, address) {
-        uint signature_start;
-        uint length;
-        bytes memory signature;
-        bytes memory transfer_raw;
-        bytes32 transfer_hash;
-        address transfer_address;
-
-        length = signed_transfer.length;
-        signature_start = length - 65;
-        signature = slice(signed_transfer, signature_start, length);
-        transfer_raw = slice(signed_transfer, 0, signature_start);
-
-        transfer_hash = sha3(transfer_raw);
-        var (r, s, v) = signature_split(signature);
-        transfer_address = ecrecover(transfer_hash, v, r, s);
-
-        return (transfer_raw, transfer_address);
-    }
-
-    function decode_and_assign(Participant storage sender, bytes transfer_raw) private {
-        // all checks must be done by now
-        uint cmdid;
-
-        cmdid = uint(transfer_raw[0]);
-
-        if (cmdid == 5) {
-            assignDirectTransfer(sender, transfer_raw);
-        } else if (cmdid == 7) {
-            assignMediatedTransfer(sender, transfer_raw);
-        } else if (cmdid == 8) {
-            assignRefundTransfer(sender, transfer_raw);
-        } else {
-            throw;
-        }
-    }
-
-    function closeSingleTransfer(Data storage self, address caller_address, bytes signed_transfer) { 
+    function closeSingleTransfer(Data storage self, address caller_address, bytes signed_transfer) {
         bytes memory transfer_raw;
         address transfer_address;
         Participant[2] storage participants;
@@ -222,7 +185,7 @@ library NettingChannelLibrary {
     /// @dev Close the channel between two parties
     /// @param firstEncoded (bytes) the last sent transfer of the msg.sender
     /// @param secondEncoded (bytes) the last sent transfer of the msg.sender
-    function close(Data storage self, address caller_address, bytes firstEncoded, bytes secondEncoded) { 
+    function close(Data storage self, address caller_address, bytes firstEncoded, bytes secondEncoded) {
         bytes memory first_raw;
         bytes memory second_raw;
         address first_address;
@@ -403,7 +366,7 @@ library NettingChannelLibrary {
             }
         }
 
-        // TODO 
+        // TODO
         // if (participant.locksroot != h) {
         //   throw;
         // }
@@ -460,6 +423,43 @@ library NettingChannelLibrary {
 
         self.token.transfer(node1.node_address, node1.netted);
         self.token.transfer(node2.node_address, node2.netted);
+    }
+
+    function get_transfer_raw_address(bytes memory signed_transfer) private returns (bytes memory, address) {
+        uint signature_start;
+        uint length;
+        bytes memory signature;
+        bytes memory transfer_raw;
+        bytes32 transfer_hash;
+        address transfer_address;
+
+        length = signed_transfer.length;
+        signature_start = length - 65;
+        signature = slice(signed_transfer, signature_start, length);
+        transfer_raw = slice(signed_transfer, 0, signature_start);
+
+        transfer_hash = sha3(transfer_raw);
+        var (r, s, v) = signature_split(signature);
+        transfer_address = ecrecover(transfer_hash, v, r, s);
+
+        return (transfer_raw, transfer_address);
+    }
+
+    function decode_and_assign(Participant storage sender, bytes transfer_raw) private {
+        // all checks must be done by now
+        uint cmdid;
+
+        cmdid = uint(transfer_raw[0]);
+
+        if (cmdid == 5) {
+            assignDirectTransfer(sender, transfer_raw);
+        } else if (cmdid == 7) {
+            assignMediatedTransfer(sender, transfer_raw);
+        } else if (cmdid == 8) {
+            assignRefundTransfer(sender, transfer_raw);
+        } else {
+            throw;
+        }
     }
 
     // notes:
@@ -523,19 +523,19 @@ library NettingChannelLibrary {
         uint256 lockAmount;
 
         assembly {
-			// cmdid [0:1]
-			// pad [1:4]
-			nonce := mload(add(message, 12))        // nonce [4:12]
-			expiration := mload(add(message, 20))   // expiration [12:20]
-			asset := mload(add(message, 40))        // asset [20:40]
-			recipient := mload(add(message, 60))    // recipient [40:60]
-			// target [60:80]
-			// initiator [80:100]
-			locksroot := mload(add(message, 132))   // locksroot [100:132]
-			hashlock := mload(add(message, 164))    // hashlock [100:164]
-			transferedAmount := mload(add(message, 196)) // transfered_amount[164:196]
-			lockAmount := mload(add(message, 228))  // amount [196:228]
-			// fee := mload(add(message, 260))      // fee [228:260]
+            // cmdid [0:1]
+            // pad [1:4]
+            nonce := mload(add(message, 12))        // nonce [4:12]
+            expiration := mload(add(message, 20))   // expiration [12:20]
+            asset := mload(add(message, 40))        // asset [20:40]
+            recipient := mload(add(message, 60))    // recipient [40:60]
+            // target [60:80]
+            // initiator [80:100]
+            locksroot := mload(add(message, 132))   // locksroot [100:132]
+            hashlock := mload(add(message, 164))    // hashlock [100:164]
+            transferedAmount := mload(add(message, 196)) // transfered_amount[164:196]
+            lockAmount := mload(add(message, 228))  // amount [196:228]
+            // fee := mload(add(message, 260))      // fee [228:260]
         }
 
         participant.nonce = nonce;
@@ -565,10 +565,10 @@ library NettingChannelLibrary {
         assembly {
             // cmdid [0:1]
             // pad [1:4]
-			nonce := mload(add(message, 12))        // nonce [4:12]
-			expiration := mload(add(message, 20))   // expiration [12:20]
-			asset := mload(add(message, 40))        // asset [20:40]
-			recipient := mload(add(message, 60))    // recipient [40:60]
+            nonce := mload(add(message, 12))        // nonce [4:12]
+            expiration := mload(add(message, 20))   // expiration [12:20]
+            asset := mload(add(message, 40))        // asset [20:40]
+            recipient := mload(add(message, 60))    // recipient [40:60]
             locksroot := mload(add(message, 92))    // locksroot [60:92]
             transferedAmount := mload(add(message, 124)) // transfered_amount [92:124]
             lockAmount := mload(add(message, 156))  // amount [124:156]
@@ -585,7 +585,7 @@ library NettingChannelLibrary {
         participant.hashlock = hashlock;
     }
 
-    function decodeLock(bytes lock) returns (uint64 expiration, uint amount, bytes32 hashlock) {
+    function decodeLock(bytes lock) private returns (uint64 expiration, uint amount, bytes32 hashlock) {
         if (lock.length != 72) {
             throw;
         }

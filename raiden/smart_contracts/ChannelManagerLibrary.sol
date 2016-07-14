@@ -2,6 +2,7 @@ import "Token.sol";
 import "NettingChannelLibrary.sol";
 
 contract NettingChannelContract {
+    using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
 
     function NettingChannelContract(address assetAddress, address participant1, address participant2, uint timeout) {
@@ -16,8 +17,32 @@ contract NettingChannelContract {
         data.settleTimeout = timeout;
     }
 
-    function partner(address ownAddress) constant returns (address) {
+    function deposit(uint256 amount) {
+        data.deposit(msg.sender, channel_address, this, amount);
     }
+    function partner(address one_address) constant returns (address) {
+        return data.partner(one_address);
+    }
+    function addressAndBalance() constant returns (address participant1, uint balance1, address participant2, uint balance2) {
+        return data.addressAndBalance();
+    }
+    function closeSingleTransfer(bytes signed_transfer) {
+        data.closeSingleTransfer(msg.sender, signed_transfer)
+    }
+    function close(bytes firstEncoded, bytes secondEncoded) {
+        data.close(msg.sender, firstEncoded, secondEncoded)
+    }
+    function updateTransfer(bytes signed_transfer) {
+        data.updateTransfer(msg.sender, signed_transfer)
+    }
+    function unlock(bytes lockedEncoded, bytes merkleProof, bytes32 secret) {
+        data.updateTransfer(msg.sender, lockedEncoded, merkleProof, secret)
+    }
+    function settle() {
+        data.updateTransfer(msg.sender, lockedEncoded)
+    }
+
+    function () { throw; }
 }
 
 library ChannelManagerLibrary {
