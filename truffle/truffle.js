@@ -10,20 +10,14 @@ module.exports = {
         "images/": "images/"
     },
     deploy: [
-        "Token",
-        "Decoder",
-        "ChannelManagerContract",
-        "HumanStandardTokenFactory",
-        "HumanStandardToken",
-        "IterableMappingCMC",
-        "IterableMappingNCC",
-        "NettingChannelContract",
-        "Registry",
-        "SampleRecipient",
-        "Slicer",
-        "Standard_Token",
-        "StandardToken",
-        "TokenTester"
+    "ChannelManagerLibrary",
+    "Dcdr",
+    "HumanStandardToken",
+    "NettingChannelLibrary",
+    "Registry",
+    "Standard_Token",
+    "StandardToken",
+    "Token"
         ],
     rpc: {
         host: "localhost",
