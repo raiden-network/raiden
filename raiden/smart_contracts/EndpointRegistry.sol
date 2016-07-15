@@ -7,8 +7,8 @@ contract EndpointRegistry{
 
 //Events
 
-	event AddressRegistered(address indexed eth_address,string indexed socket);
-    event AddressUpdated(address indexed eth_address,string indexed old_socket,string indexed newSocket);
+	event AddressRegistered(address indexed eth_address,string socket);
+    event AddressUpdated(address indexed eth_address,string old_socket,string newSocket);
 
 //Storage Variables
 
