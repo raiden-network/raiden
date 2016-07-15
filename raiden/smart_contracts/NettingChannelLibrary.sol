@@ -36,6 +36,18 @@ library NettingChannelLibrary {
         Participant[2] participants;
     }
 
+    modifier notSettledButClosed(Data storage self) {
+        if (self.settled > 0 || self.closed == 0)
+            throw;
+        _
+    }
+
+    modifier stillTimout(Data storage self) {
+        if (self.closed + self.settleTimeout < block.number)
+            throw;
+        _
+    }
+
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
@@ -344,18 +356,13 @@ library NettingChannelLibrary {
     /// @notice settle() to settle the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
     /// @return participants (Participant[2]) the participants with netted balances
-    function settle(Data storage self, address callerAddress) {
+    function settle(Data storage self, address callerAddress)
+        notSettledButClosed(self)
+        stillTimout(self)
+    {
         uint totalNetted;
         uint totalDeposit;
         uint k;
-
-        if (self.settled > 0 || self.closed == 0) {
-            throw;
-        }
-
-        if (self.closed + self.settleTimeout < block.number) {
-            throw;
-        }
 
         Participant[2] storage participants = self.participants;
         Participant storage node1 = participants[0];

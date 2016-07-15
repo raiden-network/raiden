@@ -524,6 +524,10 @@ def test_settle(state, channel, token, asset_amount):
     packed = msg2.packed()
     direct_transfer2 = str(packed.data)
 
+    # not yet closed. should fail
+    with pytest.raises(TransactionFailed):
+        channel.settle()
+
     channel.close(direct_transfer1, direct_transfer2)
 
     channel.settle()
