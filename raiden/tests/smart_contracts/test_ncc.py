@@ -353,11 +353,6 @@ def test_update_transfer(state, token, channel):
     packed = msg3.packed()
     direct_transfer3 = str(packed.data)
 
-    assert tester.DEFAULT_ACCOUNT == tester.a0
-    tester.DEFAULT_ACCOUNT = tester.a1
-    assert tester.DEFAULT_ACCOUNT == tester.a1
-    # assert state.block.coinbase == tester.a1
-
     # closingAddress == getSender(message)
     with pytest.raises(TransactionFailed):
         channel.updateTransfer(direct_transfer1)
@@ -533,3 +528,7 @@ def test_settle(state, channel, token, asset_amount):
     channel.settle()
     assert token.balanceOf(tester.a0) == half_amount + 2
     assert token.balanceOf(tester.a1) == half_amount - 2
+
+    # already settled. should fail
+    with pytest.raises(TransactionFailed):
+        channel.settle()
