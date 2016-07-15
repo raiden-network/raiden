@@ -42,7 +42,7 @@ library NettingChannelLibrary {
         _
     }
 
-    modifier stillTimout(Data storage self) {
+    modifier stillTimeout(Data storage self) {
         if (self.closed + self.settleTimeout < block.number)
             throw;
         _
@@ -358,7 +358,7 @@ library NettingChannelLibrary {
     /// @return participants (Participant[2]) the participants with netted balances
     function settle(Data storage self, address callerAddress)
         notSettledButClosed(self)
-        stillTimout(self)
+        stillTimeout(self)
     {
         uint totalNetted;
         uint totalDeposit;
