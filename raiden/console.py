@@ -9,6 +9,7 @@ from IPython.lib.inputhook import inputhook_manager
 from devp2p.service import BaseService
 from ethereum.utils import denoms
 from ethereum.slogging import getLogger
+from ethereum._solidity import compile_file
 
 from pyethapp.utils import bcolors as bc
 from pyethapp.console_service import GeventInputHook, SigINTHandler
@@ -54,6 +55,7 @@ class Console(BaseService):
                                    raiden=self.app.raiden,
                                    chain=self.app.raiden.chain,
                                    discovery=self.app.discovery,
+                                   tools=ConsoleTools(self.app.raiden),
                                    denoms=denoms,
                                    true=True,
                                    false=False,
@@ -76,6 +78,7 @@ class Console(BaseService):
         print("\tuse `{}raiden{}` to interact with the raiden service.".format(bc.HEADER, bc.OKBLUE))
         print("\tuse `{}chain{}` to interact with the blockchain.".format(bc.HEADER, bc.OKBLUE))
         print("\tuse `{}discovery{}` to find raiden nodes.".format(bc.HEADER, bc.OKBLUE))
+        print("\tuse `{}tools{}` for creating tokens, registering assets etc...".format(bc.HEADER, bc.OKBLUE))
         print("\n" + bc.ENDC)
 
         # Remove handlers that log to stderr
@@ -120,3 +123,41 @@ class Console(BaseService):
         self.interrupt.clear()
 
         sys.exit(0)
+
+
+class ConsoleTools(object):
+    def __init__(self, raiden_service):
+        self.__chain = raiden_service.chain
+        self.__raiden = raiden_service
+        self.assets = []
+
+    def create_token(self,
+            initial_alloc=10 ** 6,
+            name='raidentester',
+            symbol='RDT',
+            decimals=2):
+        """Create a proxy for a new HumanStandardToken, that is initialized with
+        :initial_alloc: int amount
+        :name: str name
+        :symbol: str symbol
+        :decimals: int decimal places
+        """
+        token_proxy = self.__chain.client.deploy_solidity_contract(
+            self.__raiden.address, 'HumanStandardToken',
+            compile_file('raiden/smart_contracts/HumanStandardToken.sol'),
+            dict(),
+            (10 ** 6, 'raiden', 2, 'RD'),
+            gasprice=denoms.shannon * 20,
+            timeout=5000)
+        self.assets.append(token_proxy)
+        return token_proxy
+
+    def register_asset(self, token_proxy):
+        """Register a token with the asset manager.
+        :return: the channel_manager_proxy
+        """
+        asset_address = token_proxy.address.encode('hex')
+        self.__chain.default_registry.add_asset(asset_address)
+        manager = self.__chain.manager_by_asset(asset_address)
+        self.__raiden.register_channel_manager(manager)
+        return manager

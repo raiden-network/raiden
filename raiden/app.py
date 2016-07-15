@@ -5,7 +5,6 @@ import signal
 import gevent
 import click
 from ethereum import slogging
-from ethereum.utils import denoms
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.raiden_service import RaidenService
@@ -27,17 +26,6 @@ def split_endpoint(endpoint):
     host, port = endpoint.split(':')
     port = int(port)
     return (host, port)
-
-
-def create_token(chain, raiden, compile_file):
-    token = chain.client.deploy_solidity_contract(
-        raiden.address, 'HumanStandardToken',
-        compile_file('raiden/smart_contracts/HumanStandardToken.sol'),
-        dict(),
-        (10 ** 6, 'raiden', 2, 'RD'),
-        gasprice=denoms.shannon * 20,
-        timeout=5000)
-    return token
 
 
 class App(object):  # pylint: disable=too-few-public-methods
