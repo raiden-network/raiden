@@ -455,3 +455,77 @@ def test_unlock(token, channel):
 
     # TODO create correct test data
     channel.unlock(lock, LOCKSROOT, 'x' * 32)
+
+
+@pytest.mark.parametrize('asset_amount', [100])
+def test_settle(state, channel, token, asset_amount):
+    half_amount = asset_amount / 2
+    assert token.transfer(tester.a1, half_amount) is True
+
+    token1 = ABIContract(
+        state,
+        token.translator,
+        token.address,
+        default_key=tester.k1,
+    )
+    assert token.approve(channel.address, half_amount) is True
+    assert token1.approve(channel.address, half_amount) is True
+
+    channel1 = ABIContract(
+        state,
+        channel.translator,
+        channel.address,
+        default_key=tester.k1,
+    )
+    channel.deposit(half_amount)
+    channel1.deposit(half_amount)
+
+    HASHLOCK1 = sha3(tester.k0)
+    LOCK_AMOUNT1 = 29
+    LOCK_EXPIRATION1 = 31
+    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
+    LOCKSROOT1 = merkleroot([
+        sha3(LOCK1.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    nonce = 1
+    asset = token.address
+    transfered_amount = 1
+    recipient = tester.a1
+    locksroot = LOCKSROOT1
+
+    msg1 = DirectTransfer(
+        nonce,
+        asset,
+        transfered_amount,
+        recipient,
+        locksroot,
+    )
+    msg1.sign(tester.k0)
+    packed = msg1.packed()
+    direct_transfer1 = str(packed.data)
+
+    HASHLOCK2 = sha3(tester.k1)
+    LOCK_AMOUNT2 = 29
+    LOCK_EXPIRATION2 = 31
+    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
+    LOCKSROOT2 = merkleroot([
+        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    locksroot = LOCKSROOT2
+
+    msg2 = DirectTransfer(
+        2,  # nonce
+        token.address,  # asset
+        3,  # transfered_amount
+        tester.a0,  # recipient
+        locksroot,
+    )
+    msg2.sign(tester.k1)
+    packed = msg2.packed()
+    direct_transfer2 = str(packed.data)
+
+    channel.close(direct_transfer1, direct_transfer2)
+
+    channel.settle()
+    assert token.balanceOf(tester.a0) == half_amount + 2
+    assert token.balanceOf(tester.a1) == half_amount - 2

@@ -376,7 +376,7 @@ library NettingChannelLibrary {
 
         self.settled = block.number;
 
-        totalNetted = node1.netted + node1.netted;
+        totalNetted = node1.netted + node2.netted;
         totalDeposit = node1.balance + node2.balance;
 
         if (totalNetted != totalDeposit) {
@@ -457,7 +457,7 @@ library NettingChannelLibrary {
             nonce := mload(add(message, 12))            // nonce [4:12]
             asset := mload(add(message, 32))            // asset [12:32]
             recipient := mload(add(message, 52))        // recipient [32:52]
-            transferedAmount := mload(add(message, 84)) // recipient [52:84]
+            transferedAmount := mload(add(message, 84)) // transfered_amount [52:84]
             locksroot := mload(add(message, 116))       // optional_locksroot [84:116]
             secret := mload(add(message, 148))          // optional_secret [116:158]
         }
