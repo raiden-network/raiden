@@ -3,7 +3,7 @@ This contract is a registry which maps the Ethereum Address to their endpoint i.
 The Ethereum address registers his address in this registry.
 */
 
-contract EndPointRegistry{
+contract EndpointRegistry{
 
 //Events
 

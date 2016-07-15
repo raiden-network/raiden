@@ -10,14 +10,15 @@ module.exports = {
         "images/": "images/"
     },
     deploy: [
-    "ChannelManagerLibrary",
-    "Dcdr",
-    "HumanStandardToken",
-    "NettingChannelLibrary",
-    "Registry",
-    "Standard_Token",
-    "StandardToken",
-    "Token"
+        "ChannelManagerLibrary",
+        "Dcdr",
+        "EndpointRegistry",
+        "HumanStandardToken",
+        "NettingChannelLibrary",
+        "Registry",
+        "Standard_Token",
+        "StandardToken",
+        "Token"
         ],
     rpc: {
         host: "localhost",
