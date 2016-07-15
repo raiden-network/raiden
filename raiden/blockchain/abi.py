@@ -2,7 +2,7 @@
 import os
 
 from ethereum import _solidity
-from ethereum.abi import event_id, _normalize_name
+from ethereum.abi import _normalize_name
 
 import raiden
 
