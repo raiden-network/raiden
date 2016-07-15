@@ -769,12 +769,13 @@ def test_settle(state, channel, token, asset_amount, events):
     channel.deposit(half_amount)
     channel1.deposit(half_amount)
 
-    HASHLOCK1 = sha3(tester.k0)
+    HASHLOCK1 = sha3('x' * 32)
     LOCK_AMOUNT1 = 29
     LOCK_EXPIRATION1 = 31
     LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
     LOCKSROOT1 = merkleroot([
-        sha3(LOCK1.as_bytes), ])   # print direct_transfer.encode('hex')
+        sha3(LOCK1.as_bytes),
+    ])
 
     nonce = 1
     asset = token.address
@@ -793,8 +794,8 @@ def test_settle(state, channel, token, asset_amount, events):
     packed = msg1.packed()
     direct_transfer1 = str(packed.data)
 
-    HASHLOCK2 = sha3(tester.k1)
-    LOCK_AMOUNT2 = 29
+    HASHLOCK2 = sha3('x' * 32)
+    LOCK_AMOUNT2 = 20
     LOCK_EXPIRATION2 = 31
     LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
     LOCKSROOT2 = merkleroot([
@@ -819,15 +820,41 @@ def test_settle(state, channel, token, asset_amount, events):
 
     channel.close(direct_transfer1, direct_transfer2)
 
+    HASHLOCK = sha3('x' * 32)
+    LOCK_AMOUNT = 20
+    LOCK_EXPIRATION = 31
+    LOCK = Lock(LOCK_AMOUNT, LOCK_EXPIRATION, HASHLOCK)
+    LOCKSROOT = merkleroot([
+        sha3(LOCK.as_bytes),
+    ])
+
+    lock1 = str(LOCK.as_bytes)
+
+    # TODO create correct test data
+    channel.unlock(lock1, LOCKSROOT, 'x' * 32)
+
+    HASHLOCK4 = sha3('y' * 32)
+    LOCK_AMOUNT4 = 23
+    LOCK_EXPIRATION4 = 31
+    LOCK4 = Lock(LOCK_AMOUNT4, LOCK_EXPIRATION4, HASHLOCK4)
+    LOCKSROOT4 = merkleroot([
+        sha3(LOCK4.as_bytes),
+    ])
+
+    lock4 = str(LOCK4.as_bytes)
+
+    # TODO create correct test data
+    channel.unlock(lock4, LOCKSROOT4, 'y' * 32, sender=tester.k1)
+
     channel.settle()
-    assert token.balanceOf(tester.a0) == half_amount + 2
-    assert token.balanceOf(tester.a1) == half_amount - 2
+    assert token.balanceOf(tester.a0) == half_amount + 2 + LOCK_AMOUNT - LOCK_AMOUNT4
+    assert token.balanceOf(tester.a1) == half_amount - 2 - LOCK_AMOUNT + LOCK_AMOUNT4
 
     # already settled. should fail
     with pytest.raises(TransactionFailed):
         channel.settle()
 
-    assert len(events) == 4
+    assert len(events) == 6
     assert events[0]['_event_type'] == 'ChannelNewBalance'
     assert events[0]['assetAddress'] == token.address.encode('hex')
     assert events[0]['participant'] == tester.a0.encode('hex')
@@ -839,5 +866,9 @@ def test_settle(state, channel, token, asset_amount, events):
     assert events[2]['_event_type'] == 'ChannelClosed'
     assert events[2]['closingAddress'] == tester.a0.encode('hex')
     assert events[2]['blockNumber'] == state.block.number
-    assert events[3]['_event_type'] == 'ChannelSettled'
-    assert events[3]['blockNumber'] == state.block.number
+    assert events[3]['_event_type'] == 'ChannelSecretRevealed'
+    assert events[3]['secret'] == 'x' * 32
+    assert events[4]['_event_type'] == 'ChannelSecretRevealed'
+    assert events[4]['secret'] == 'y' * 32
+    assert events[5]['_event_type'] == 'ChannelSettled'
+    assert events[5]['blockNumber'] == state.block.number
