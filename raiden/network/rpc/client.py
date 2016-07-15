@@ -4,8 +4,11 @@ import random
 from collections import defaultdict
 from itertools import count
 
+import rlp
 from ethereum import slogging
 from ethereum import _solidity
+from ethereum import config as ethereum_config
+from ethereum.transactions import Transaction
 from ethereum.utils import denoms, privtoaddr, int_to_big_endian, encode_hex
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_encoder
 
@@ -38,6 +41,38 @@ FILTER_ID_GENERATOR = count()
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 
+def patch_send_transaction(client, nonce_offset=0):
+    """Check if the remote supports pyethapp's extended jsonrpc spec for local tx signing.
+    If not, replace the `send_transaction` method with a more generic one.
+    """
+    patch_necessary = False
+    try:
+        client.call('eth_nonce', encode_hex(client.sender), 'pending')
+    except:
+        patch_necessary = True
+
+    def send_transaction(sender, to, value=0, data='', startgas=3141592,
+                            gasprice=GAS_PRICE, nonce=None):
+        """Custom implementation for `pyethapp.rpc_client.JSONRPCClient.send_transaction`.
+        This is necessary to support other remotes that don't support pyethapp's extended specs.
+        @see https://github.com/ethereum/pyethapp/blob/develop/pyethapp/rpc_client.py#L359
+        """
+        nonce = int(client.call('eth_getTransactionCount', encode_hex(sender), 'pending'), 16) + nonce_offset
+        # FIXME: debug
+        if gasprice < GAS_PRICE:
+            import ipdb
+            ipdb.set_trace()
+
+        tx = Transaction(nonce, gasprice, startgas, to, value, data)
+        assert hasattr(client, 'privkey') and client.privkey
+        tx.sign(client.privkey)
+        result = client.call('eth_sendRawTransaction', rlp.encode(tx).encode('hex'))
+        return result[2 if result.startswith('0x') else 0:]
+
+    if patch_necessary:
+        client.send_transaction = send_transaction
+
+
 def make_address():
     return bytes(''.join(random.choice(LETTERS) for _ in range(20)))
 
@@ -50,7 +85,7 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes,unused-argument
 
-    def __init__(self, jsonrpc_client, registry_address):
+    def __init__(self, jsonrpc_client, registry_address, testnet=False):
         self.address_asset = dict()
         self.address_manager = dict()
         self.address_contract = dict()
@@ -58,6 +93,8 @@ class BlockChainService(object):
         self.asset_manager = dict()
 
         self.client = jsonrpc_client
+        patch_send_transaction(self.client,
+                               nonce_offset=ethereum_config['MORDEN_INITIAL_NONCE_OFFSET'] if testnet else 0)
         self.default_registry = self.registry(registry_address)
 
     def asset(self, asset_address):
