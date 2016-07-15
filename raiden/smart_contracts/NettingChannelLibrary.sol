@@ -49,8 +49,6 @@ library NettingChannelLibrary {
         bool success;
         uint index;
         uint balance;
-        Participant[2] storage participants;
-        Participant storage participant;
 
         if (self.closed != 0) {
             throw;
@@ -60,8 +58,8 @@ library NettingChannelLibrary {
             throw;
         }
 
-        participants = self.participants;
-        participant = participants[0];
+        Participant[2] storage participants = self.participants;
+        Participant storage participant = participants[0];
         if (participant.nodeAddress != callerAddress) {
             participant = participants[1];
             if (participant.nodeAddress != callerAddress) {
@@ -92,13 +90,9 @@ library NettingChannelLibrary {
     /// @dev Get the other participating party of the channel
     /// @return partnerAddress (address) the partner of the calling party
     function partner(Data storage self, address one_address) constant returns (address) {
-        Participant[2] storage participants;
-        Participant storage node1;
-        Participant storage node2;
-
-        participants = self.participants;
-        node1 = participants[0];
-        node2 = participants[1];
+        Participant[2] storage participants = self.participants;
+        Participant storage node1 = participants[0];
+        Participant storage node2 = participants[1];
 
         if (one_address == node1.nodeAddress) {
             return node2.nodeAddress;
@@ -112,13 +106,9 @@ library NettingChannelLibrary {
     }
 
     function addressAndBalance(Data storage self) constant returns (address participant1, uint balance1, address participant2, uint balance2) {
-        Participant[2] participants;
-        Participant node1;
-        Participant node2;
-
-        participants = self.participants;
-        node1 = participants[0];
-        node2 = participants[1];
+        Participant[2] participants = self.participants;
+        Participant node1 = participants[0];
+        Participant node2 = participants[1];
 
         // return by name
         participant1 = node1.nodeAddress;
@@ -130,10 +120,6 @@ library NettingChannelLibrary {
     function closeSingleTransfer(Data storage self, address callerAddress, bytes signed_transfer) {
         bytes memory transfer_raw;
         address transfer_address;
-        Participant[2] storage participants;
-        Participant storage node1;
-        Participant storage node2;
-        Participant storage sender;
 
         if (self.settled > 0 || self.closed > 0) {
             throw;
@@ -145,16 +131,16 @@ library NettingChannelLibrary {
 
         (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
 
-        participants = self.participants;
-        node1 = participants[0];
-        node2 = participants[1];
+        Participant[2] storage participants = self.participants;
+        Participant storage node1 = participants[0];
+        Participant storage node2 = participants[1];
 
         if (callerAddress != node1.nodeAddress && callerAddress != node2.nodeAddress) {
             throw;
         }
 
         if (node1.nodeAddress == transfer_address) {
-            sender = node1;
+            Participant storage sender = node1;
         } else if (node2.nodeAddress == transfer_address) {
             sender = node2;
         } else {
@@ -191,11 +177,6 @@ library NettingChannelLibrary {
         address first_address;
         address second_address;
         bytes32 transfer_sender;
-        Participant[2] storage participants;
-        Participant storage node1;
-        Participant storage node2;
-        Participant storage first_sender;
-        Participant storage second_sender;
 
         if (self.settled > 0 || self.closed > 0) {
             throw;
@@ -212,16 +193,16 @@ library NettingChannelLibrary {
             throw;
         }
 
-        participants = self.participants;
-        node1 = participants[0];
-        node2 = participants[1];
+        Participant[2] storage participants = self.participants;
+        Participant storage node1 = participants[0];
+        Participant storage node2 = participants[1];
 
         if (callerAddress != node1.nodeAddress && callerAddress != node2.nodeAddress) {
             throw;
         }
 
         if (node1.nodeAddress == first_address) {
-            first_sender = node1;
+            Participant storage first_sender = node1;
         } else if (node2.nodeAddress == first_address) {
             first_sender = node2;
         } else {
@@ -229,7 +210,7 @@ library NettingChannelLibrary {
         }
 
         if (node1.nodeAddress == second_address) {
-            second_sender = node1;
+            Participant storage second_sender = node1;
         } else if (node2.nodeAddress == second_address) {
             second_sender = node2;
         } else {
@@ -264,10 +245,6 @@ library NettingChannelLibrary {
         uint64 nonce;
         bytes memory transfer_raw;
         address transfer_address;
-        Participant[2] storage participants;
-        Participant storage node1;
-        Participant storage node2;
-        Participant storage sender;
 
         if (self.settled > 0 || self.closed == 0) {
             throw;
@@ -284,12 +261,12 @@ library NettingChannelLibrary {
             throw;
         }
 
-        participants = self.participants;
-        node1 = participants[0];
-        node2 = participants[1];
+        Participant[2] storage participants = self.participants;
+        Participant storage node1 = participants[0];
+        Participant storage node2 = participants[1];
 
         if (node1.nodeAddress == transfer_address) {
-            sender = node1;
+            Participant storage sender = node1;
         } else if (node2.nodeAddress == transfer_address) {
             sender = node2;
         } else {
@@ -297,8 +274,7 @@ library NettingChannelLibrary {
         }
 
         assembly {
-            // skip cmdid and padding
-            nonce := mload(add(transfer_raw, 12))
+            nonce := mload(add(transfer_raw, 12))  // skip cmdid and padding
         }
 
         if (nonce < sender.nonce) {
@@ -323,8 +299,6 @@ library NettingChannelLibrary {
         bytes32 hashlock;
         bytes32 h;
         bytes32 el;
-        Participant[2] storage participants;
-        Participant storage participant;
 
         if (self.settled > 0 || self.closed == 0) {
             throw;
@@ -340,8 +314,8 @@ library NettingChannelLibrary {
             throw;
         }
 
-        participants = self.participants;
-        participant = participants[0];
+        Participant[2] storage participants = self.participants;
+        Participant storage participant = participants[0];
         if (participant.nodeAddress != callerAddress) {
             participant = participants[1];
             if (participant.nodeAddress != callerAddress) {
@@ -382,9 +356,6 @@ library NettingChannelLibrary {
         uint totalNetted;
         uint totalDeposit;
         uint k;
-        Participant[2] storage participants;
-        Participant storage node1;
-        Participant storage node2;
 
         if (self.settled > 0 || self.closed == 0) {
             throw;
@@ -394,9 +365,9 @@ library NettingChannelLibrary {
             throw;
         }
 
-        participants = self.participants;
-        node1 = participants[0];
-        node2 = participants[1];
+        Participant[2] storage participants = self.participants;
+        Participant storage node1 = participants[0];
+        Participant storage node2 = participants[1];
 
         node1.netted = node1.balance + node2.transferedAmount - node1.transferedAmount;
         node2.netted = node2.balance + node1.transferedAmount - node2.transferedAmount;
