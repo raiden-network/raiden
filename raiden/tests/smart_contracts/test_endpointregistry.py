@@ -5,10 +5,8 @@ from ethereum import utils
 from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
-<<<<<<< HEAD
-#from raiden.tests.conftest import discovery_blockchain
-from raiden.network.discovery import ContractDiscovery
-from raiden.blockchain.abi import get_contract_path
+
+from raiden.blockchain.abi import import get_contract_path
 
 def test_endpointregistry():
 	registry_contract_path = get_contract_path('EndpointRegistry.sol')
