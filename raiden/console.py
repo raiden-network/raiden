@@ -156,8 +156,7 @@ class ConsoleTools(object):
         """Register a token with the asset manager.
         :return: the channel_manager_proxy
         """
-        asset_address = token_proxy.address.encode('hex')
-        self.__chain.default_registry.add_asset(asset_address)
-        manager = self.__chain.manager_by_asset(asset_address)
+        self.__chain.default_registry.add_asset(token_proxy.address.encode('hex'))
+        manager = self.__chain.manager_by_asset(token_proxy.address)
         self.__raiden.register_channel_manager(manager)
         return manager
