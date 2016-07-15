@@ -5,14 +5,14 @@ from ethereum import tester
 from ethereum import slogging
 from ethereum.tester import ABIContract, TransactionFailed
 
-from raiden.messages import Lock, DirectTransfer
+from raiden.messages import Lock, DirectTransfer, MediatedTransfer
 from raiden.mtree import merkleroot
 from raiden.utils import privtoaddr, sha3
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def test_ncc(state, channel, token, events):  # pylint: disable=too-many-locals,too-many-statements
+def test_close_single_direct_transfer(state, channel, token, events):  # pylint: disable=too-many-locals,too-many-statements
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
     assert token.balanceOf(tester.a1) == 0
@@ -129,7 +129,7 @@ def test_ncc(state, channel, token, events):  # pylint: disable=too-many-locals,
     assert events[1]['blockNumber'] == state.block.number
 
 
-def test_two_messages(state, token, channel, events):
+def test_two_messages_direct_transfer(state, token, channel, events):
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
     assert token.balanceOf(tester.a1) == 0
@@ -202,6 +202,106 @@ def test_two_messages(state, token, channel, events):
             direct_transfer2,
             sender=tester.k2
         )
+
+    # Test with message sender tester.a0
+    assert channel.closed() == state.block.number
+    assert channel.closingAddress() == tester.a0.encode('hex')
+    # assert channel.participants(0)[10] == 1
+    # assert channel.participants(0)[11] == token.address.encode('hex')
+    # assert channel.participants(0)[9] == tester.a0.encode('hex')
+    # assert channel.participants(0)[12] == tester.a1.encode('hex')
+    # assert channel.participants(0)[3] == 1
+    # assert channel.participants(0)[13] == LOCKSROOT1
+    # assert channel.participants(0)[7] == '\x00' * 32
+
+    # Test with message sender tester.a1
+    assert channel.closed() == state.block.number
+    assert channel.closingAddress() == tester.a0.encode('hex')
+    # assert channel.participants(1)[10] == 2
+    # assert channel.participants(1)[11] == token.address.encode('hex')
+    # assert channel.participants(1)[9] == tester.a1.encode('hex')
+    # assert channel.participants(1)[12] == tester.a0.encode('hex')
+    # assert channel.participants(1)[3] == 3
+    # assert channel.participants(1)[13] == LOCKSROOT2
+    # assert channel.participants(1)[7] == '\x00' * 32
+
+
+def test_two_messages_mediated_transfer(state, token, channel, events):
+    # test tokens and distribute tokens
+    assert token.balanceOf(tester.a0) == 10000
+    assert token.balanceOf(tester.a1) == 0
+    assert token.transfer(tester.a1, 5000) is True
+    assert token.balanceOf(tester.a0) == 5000
+    assert token.balanceOf(tester.a1) == 5000
+
+    # test global variables
+    assert channel.settleTimeout() == 30
+    assert channel.assetAddress() == token.address.encode('hex')
+    assert channel.opened() == 0
+    assert channel.closed() == 0
+    assert channel.settled() == 0
+
+    HASHLOCK1 = sha3(tester.k0)
+    LOCK_AMOUNT1 = 29
+    LOCK_EXPIRATION1 = 31
+    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
+    LOCKSROOT1 = merkleroot([
+        sha3(LOCK1.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    HASHLOCK2 = sha3(tester.k1)
+    LOCK_AMOUNT2 = 29
+    LOCK_EXPIRATION2 = 31
+    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
+    LOCKSROOT2 = merkleroot([
+        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    nonce = 1
+    asset = token.address
+    transfered_amount = 3
+    recipient = tester.a2
+    locksroot = LOCKSROOT1
+    target = tester.a1
+    initiator = tester.a0
+
+    msg1 = MediatedTransfer(
+        nonce,
+        asset,
+        transfered_amount,
+        recipient,
+        locksroot,
+        LOCK1,
+        target,
+        initiator,
+        fee=0,
+    )
+    msg1.sign(tester.k0)
+    packed = msg1.packed()
+    mediated_transfer1 = str(packed.data)
+
+    nonce = 2
+    asset = token.address
+    transfered_amount = 4
+    recipient = tester.a2
+    locksroot = LOCKSROOT2
+    target = tester.a0
+    initiator = tester.a1
+
+    msg2 = MediatedTransfer(
+        nonce,
+        asset,
+        transfered_amount,
+        recipient,
+        locksroot,
+        LOCK2,
+        target,
+        initiator,
+        fee=0,
+    )
+    msg2.sign(tester.k1)
+    packed = msg2.packed()
+    mediated_transfer2 = str(packed.data)
+
+    channel.close(mediated_transfer1, mediated_transfer2)
 
     # Test with message sender tester.a0
     assert channel.closed() == state.block.number

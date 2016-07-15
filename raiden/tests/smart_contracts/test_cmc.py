@@ -10,7 +10,6 @@ from ethereum.slogging import configure
 configure(':DEBUG')
 
 
-# TODO: test events
 def test_cmc(state, settle_timeout, netting_channel_abi, manager, events):  # pylint: disable=too-many-locals,too-many-statements
     address1 = sha3('address1')[:20]
     address3 = sha3('address3')[:20]

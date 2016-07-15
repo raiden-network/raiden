@@ -466,7 +466,7 @@ library NettingChannelLibrary {
             recipient := mload(add(message, 52))        // recipient [32:52]
             transferedAmount := mload(add(message, 84)) // transfered_amount [52:84]
             locksroot := mload(add(message, 116))       // optional_locksroot [84:116]
-            secret := mload(add(message, 148))          // optional_secret [116:158]
+            secret := mload(add(message, 148))          // optional_secret [116:148]
         }
 
         participant.nonce = nonce;
