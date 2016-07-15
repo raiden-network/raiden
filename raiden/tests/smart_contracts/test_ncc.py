@@ -359,7 +359,7 @@ def test_all_asset(asset_amount, state, channel, token, events):
     assert token.balanceOf(tester.a1) == 0
 
 
-def test_update_transfer(state, token, channel, events):
+def test_update_direct_transfer(state, token, channel, events):
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
     assert token.balanceOf(tester.a1) == 0
@@ -502,6 +502,180 @@ def test_update_transfer(state, token, channel, events):
 
     with pytest.raises(TransactionFailed):
         channel.updateTransfer(direct_transfer3, sender=tester.k1)
+
+    assert len(events) == 1
+    assert events[0]['_event_type'] == 'ChannelClosed'
+    assert events[0]['blockNumber'] == 1158002
+    assert events[0]['closingAddress'] == tester.a0.encode('hex')
+
+
+def test_update_mediated_transfer(state, token, channel, events):
+    # test tokens and distribute tokens
+    assert token.balanceOf(tester.a0) == 10000
+    assert token.balanceOf(tester.a1) == 0
+    assert token.transfer(tester.a1, 5000) is True
+    assert token.balanceOf(tester.a0) == 5000
+    assert token.balanceOf(tester.a1) == 5000
+
+    # test global variables
+    assert channel.settleTimeout() == 30
+    assert channel.assetAddress() == token.address.encode('hex')
+    assert channel.opened() == 0
+    assert channel.closed() == 0
+    assert channel.settled() == 0
+
+    HASHLOCK1 = sha3(tester.k0)
+    LOCK_AMOUNT1 = 29
+    LOCK_EXPIRATION1 = 31
+    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
+    LOCKSROOT1 = merkleroot([
+        sha3(LOCK1.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    HASHLOCK2 = sha3(tester.k1)
+    LOCK_AMOUNT2 = 29
+    LOCK_EXPIRATION2 = 31
+    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
+    LOCKSROOT2 = merkleroot([
+        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    nonce = 1
+    asset = token.address
+    transfered_amount = 3
+    recipient = tester.a2
+    locksroot = LOCKSROOT1
+    target = tester.a1
+    initiator = tester.a0
+
+    msg1 = MediatedTransfer(
+        nonce,
+        asset,
+        transfered_amount,
+        recipient,
+        locksroot,
+        LOCK1,
+        target,
+        initiator,
+        fee=0,
+    )
+    msg1.sign(tester.k0)
+    packed = msg1.packed()
+    mediated_transfer1 = str(packed.data)
+
+    nonce = 2
+    asset = token.address
+    transfered_amount = 4
+    recipient = tester.a2
+    locksroot = LOCKSROOT2
+    target = tester.a0
+    initiator = tester.a1
+
+    msg2 = MediatedTransfer(
+        nonce,
+        asset,
+        transfered_amount,
+        recipient,
+        locksroot,
+        LOCK2,
+        target,
+        initiator,
+        fee=0,
+    )
+    msg2.sign(tester.k1)
+    packed = msg2.packed()
+    mediated_transfer2 = str(packed.data)
+
+    # not yet closed
+    with pytest.raises(TransactionFailed):
+        channel.updateTransfer(mediated_transfer1, sender=tester.k1)
+
+    channel.close(mediated_transfer1, mediated_transfer2)
+
+    # Test with message sender tester.a0
+    assert channel.closed() == state.block.number
+    assert channel.closingAddress() == tester.a0.encode('hex')
+    # assert channel.participants(0)[10] == 1
+    # assert channel.participants(0)[11] == token.address.encode('hex')
+    # assert channel.participants(0)[9] == tester.a0.encode('hex')
+    # assert channel.participants(0)[12] == tester.a1.encode('hex')
+    # assert channel.participants(0)[3] == 1
+    # assert channel.participants(0)[13] == LOCKSROOT1
+    # assert channel.participants(0)[7] == '\x00' * 32
+
+    # Test with message sender tester.a1
+    assert channel.closed() == state.block.number
+    assert channel.closingAddress() == tester.a0.encode('hex')
+    # assert channel.participants(1)[10] == 2
+    # assert channel.participants(1)[11] == token.address.encode('hex')
+    # assert channel.participants(1)[9] == tester.a1.encode('hex')
+    # assert channel.participants(1)[12] == tester.a0.encode('hex')
+    # assert channel.participants(1)[3] == 3
+    # assert channel.participants(1)[13] == LOCKSROOT2
+    # assert channel.participants(1)[7] == '\x00' * 32
+
+    HASHLOCK3 = sha3(tester.k1)
+    LOCK_AMOUNT3 = 29
+    LOCK_EXPIRATION3 = 31
+    LOCK3 = Lock(LOCK_AMOUNT3, LOCK_EXPIRATION3, HASHLOCK3)
+    LOCKSROOT3 = merkleroot([
+        sha3(LOCK3.as_bytes), ])   # print direct_transfer.encode('hex')
+
+    nonce = 3
+    asset = token.address
+    transfered_amount = 4
+    recipient = tester.a2
+    locksroot = LOCKSROOT3
+    target = tester.a0
+    initiator = tester.a1
+
+    msg3 = MediatedTransfer(
+        nonce,
+        asset,
+        transfered_amount,
+        recipient,
+        locksroot,
+        LOCK3,
+        target,
+        initiator,
+        fee=0,
+    )
+    msg3.sign(tester.k1)
+    packed = msg3.packed()
+    mediated_transfer3 = str(packed.data)
+    # closingAddress == getSender(message)
+    with pytest.raises(TransactionFailed):
+        channel.updateTransfer(mediated_transfer1)
+
+    channel.updateTransfer(mediated_transfer3, sender=tester.k1)
+
+    # Test with message sender tester.a1
+    # assert channel.participants(1)[10] == 3
+    # assert channel.participants(1)[11] == token.address.encode('hex')
+    # assert channel.participants(1)[9] == tester.a1.encode('hex')
+    # assert channel.participants(1)[12] == tester.a0.encode('hex')
+    # assert channel.participants(1)[3] == 5
+    # assert channel.participants(1)[13] == LOCKSROOT3
+    # assert channel.participants(1)[7] == '\x00' * 32
+
+    msg4 = DirectTransfer(
+        1,  # nonce
+        token.address,  # asset
+        5,  # transfered_amount
+        tester.a0,  # recipient
+        locksroot,
+    )
+    msg4.sign(tester.k1)
+    packed = msg4.packed()
+    direct_transfer4 = str(packed.data)
+
+    # nonce too low
+    with pytest.raises(TransactionFailed):
+        channel.updateTransfer(direct_transfer4, sender=tester.k1)
+
+    # settleTimeout overdue
+    state.block.number = 1158041
+
+    with pytest.raises(TransactionFailed):
+        channel.updateTransfer(mediated_transfer3, sender=tester.k1)
 
     assert len(events) == 1
     assert events[0]['_event_type'] == 'ChannelClosed'

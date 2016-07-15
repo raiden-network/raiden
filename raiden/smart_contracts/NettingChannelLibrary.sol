@@ -478,7 +478,7 @@ library NettingChannelLibrary {
     }
 
     function assignMediatedTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 325) {
+        if (message.length != 260) {
             throw;
         }
 
