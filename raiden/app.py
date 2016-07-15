@@ -73,7 +73,6 @@ class App(object):  # pylint: disable=too-few-public-methods
         self.raiden.stop()
 
 
-# @click.group(help='Welcome to {} {}'.format('raiden', 'PoC-0'))
 @click.option('--privkey', help='asks for the hex encoded ethereum private key.'
         'WARNING: do not give the privatekey on the commandline, instead wait for the prompt!',
         type=str,
@@ -96,13 +95,19 @@ class App(object):  # pylint: disable=too-few-public-methods
         )
 @click.option('--external_listen_address', help='external "host:port" where the raiden service'
         ' can be contacted on (through NAT).',
-        default="0.0.0.0:40001",
+        default="",
         type=str
         )  # FIXME: implement NAT-punching
+@click.option('--testnet', help='are you using the morden testnet?',
+              default=False, type=bool)
 @click.command()
-# @click.pass_context
 def app(privkey, eth_rpc_endpoint, registry_contract_address, discovery_contract_address,
-         listen_address, external_listen_address):
+         listen_address, external_listen_address, testnet):
+
+    if not external_listen_address:
+        # notify('if you are behind a NAT, you should set
+        # `external_listen_address` and configure port forwarding on your router')
+        external_listen_address = listen_address
 
     # config_file = args.config_file
     rpc_connection = split_endpoint(eth_rpc_endpoint)
@@ -118,6 +123,7 @@ def app(privkey, eth_rpc_endpoint, registry_contract_address, discovery_contract
     blockchain_service = BlockChainService(
         jsonrpc_client,
         registry_contract_address.decode('hex'),
+        testnet=testnet
     )
     discovery = Discovery()
 
