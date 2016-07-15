@@ -12,7 +12,7 @@ from raiden.utils import privtoaddr, sha3
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def test_ncc(state, channel, token):  # pylint: disable=too-many-locals,too-many-statements
+def test_ncc(state, channel, token, events):  # pylint: disable=too-many-locals,too-many-statements
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
     assert token.balanceOf(tester.a1) == 0
@@ -119,8 +119,17 @@ def test_ncc(state, channel, token):  # pylint: disable=too-many-locals,too-many
     # assert channel.participants(0)[13] == LOCKSROOT
     # assert channel.participants(0)[7] == '\x00' * 32
 
+    assert len(events) == 2
+    assert events[0]['_event_type'] == 'ChannelNewBalance'
+    assert events[0]['assetAddress'] == token.address.encode('hex')
+    assert events[0]['balance'] == 30
+    assert events[0]['participant'] == tester.a0.encode('hex')
+    assert events[1]['_event_type'] == 'ChannelClosed'
+    assert events[1]['closingAddress'] == tester.a0.encode('hex')
+    assert events[1]['blockNumber'] == state.block.number
 
-def test_two_messages(state, token, channel):
+
+def test_two_messages(state, token, channel, events):
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
     assert token.balanceOf(tester.a1) == 0
@@ -181,6 +190,11 @@ def test_two_messages(state, token, channel):
 
     channel.close(direct_transfer1, direct_transfer2)
 
+    assert len(events) == 1
+    assert events[0]['_event_type'] == 'ChannelClosed'
+    assert events[0]['closingAddress'] == tester.a0.encode('hex')
+    assert events[0]['blockNumber'] == state.block.number
+
     with pytest.raises(TransactionFailed):
         # not participant
         channel.close(
@@ -213,7 +227,7 @@ def test_two_messages(state, token, channel):
 
 
 @pytest.mark.parametrize('asset_amount', [100])
-def test_all_asset(asset_amount, state, channel, token):
+def test_all_asset(asset_amount, state, channel, token, events):
     half_amount = asset_amount / 2
     assert token.transfer(tester.a1, half_amount) is True
 
@@ -245,7 +259,7 @@ def test_all_asset(asset_amount, state, channel, token):
     assert token.balanceOf(tester.a1) == 0
 
 
-def test_update_transfer(state, token, channel):
+def test_update_transfer(state, token, channel, events):
     # test tokens and distribute tokens
     assert token.balanceOf(tester.a0) == 10000
     assert token.balanceOf(tester.a1) == 0
@@ -389,8 +403,14 @@ def test_update_transfer(state, token, channel):
     with pytest.raises(TransactionFailed):
         channel.updateTransfer(direct_transfer3, sender=tester.k1)
 
+    assert len(events) == 1
+    assert events[0]['_event_type'] == 'ChannelClosed'
+    assert events[0]['blockNumber'] == 1158002
+    assert events[0]['closingAddress'] == tester.a0.encode('hex')
 
-def test_unlock(token, channel):
+
+# TODO
+def test_unlock(token, channel, events):
     HASHLOCK1 = sha3('x'*32)
     LOCK_AMOUNT1 = 29
     LOCK_EXPIRATION1 = 31
@@ -453,7 +473,7 @@ def test_unlock(token, channel):
 
 
 @pytest.mark.parametrize('asset_amount', [100])
-def test_settle(state, channel, token, asset_amount):
+def test_settle(state, channel, token, asset_amount, events):
     half_amount = asset_amount / 2
     assert token.transfer(tester.a1, half_amount) is True
 
@@ -532,3 +552,18 @@ def test_settle(state, channel, token, asset_amount):
     # already settled. should fail
     with pytest.raises(TransactionFailed):
         channel.settle()
+
+    assert len(events) == 4
+    assert events[0]['_event_type'] == 'ChannelNewBalance'
+    assert events[0]['assetAddress'] == token.address.encode('hex')
+    assert events[0]['participant'] == tester.a0.encode('hex')
+    assert events[0]['balance'] == 50
+    assert events[1]['_event_type'] == 'ChannelNewBalance'
+    assert events[1]['assetAddress'] == token.address.encode('hex')
+    assert events[1]['participant'] == tester.a1.encode('hex')
+    assert events[1]['balance'] == 50
+    assert events[2]['_event_type'] == 'ChannelClosed'
+    assert events[2]['closingAddress'] == tester.a0.encode('hex')
+    assert events[2]['blockNumber'] == state.block.number
+    assert events[3]['_event_type'] == 'ChannelSettled'
+    assert events[3]['blockNumber'] == state.block.number

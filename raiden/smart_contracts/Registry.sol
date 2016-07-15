@@ -18,18 +18,16 @@ contract Registry {
         _
     }
 
-    function addAsset(address assetAddress) doesNotExist(assetAddress) returns (address) {
+    function addAsset(address assetAddress) doesNotExist(assetAddress) returns (address newAddress) {
         address existingAddress;
-        address newAddress;
         ChannelManagerContract manager;
 
         newAddress = new ChannelManagerContract(assetAddress);
-        AssetAdded(newAddress);
 
         registry[assetAddress] = newAddress;
         assets.push(assetAddress);
 
-        return newAddress;
+        AssetAdded(newAddress);
     }
 
     function channelManagerByAsset(address assetAddress)

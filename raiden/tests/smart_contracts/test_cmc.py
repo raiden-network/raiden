@@ -11,7 +11,7 @@ configure(':DEBUG')
 
 
 # TODO: test events
-def test_cmc(state, settle_timeout, netting_channel_abi, manager):  # pylint: disable=too-many-locals,too-many-statements
+def test_cmc(state, settle_timeout, netting_channel_abi, manager, events):  # pylint: disable=too-many-locals,too-many-statements
     address1 = sha3('address1')[:20]
     address3 = sha3('address3')[:20]
     inexisting_address = sha3('this_does_not_exist')[:20]
@@ -60,6 +60,18 @@ def test_cmc(state, settle_timeout, netting_channel_abi, manager):  # pylint: di
     assert len(inexisting_channels) == 0
 
     assert len(manager.getChannelsParticipants()) == 4
+
+    assert len(events) == 2
+    assert events[0]['_event_type'] == 'ChannelNew'
+    assert events[0]['participant1'] == tester.a0.encode('hex')
+    assert events[0]['participant2'] == address1.encode('hex')
+    assert events[0]['nettingChannel'] == manager.address.encode('hex')
+    assert events[0]['settleTimeout'] == 30
+    assert events[1]['_event_type'] == 'ChannelNew'
+    assert events[1]['participant1'] == tester.a0.encode('hex')
+    assert events[1]['participant2'] == address3.encode('hex')
+    assert events[1]['nettingChannel'] == manager.address.encode('hex')
+    assert events[1]['settleTimeout'] == 30
 
     # uncomment private in function to run test
     # assert manager.numberOfItems(netting_channel_creator1) == 2

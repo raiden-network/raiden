@@ -107,9 +107,9 @@ contract ChannelManagerContract {
         return data.getChannelWith(partner);
     }
 
-    function newChannel(address partner, uint settleTimeout) returns (address) {
+    function newChannel(address partner, uint settleTimeout) returns (address channel) {
+        channel = data.newChannel(partner, settleTimeout);
         ChannelNew(this, msg.sender, partner, settleTimeout);
-        return data.newChannel(partner, settleTimeout);
     }
 
     function () { throw; }
