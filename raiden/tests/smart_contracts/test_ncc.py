@@ -685,7 +685,7 @@ def test_update_mediated_transfer(state, token, channel, events):
 
 # TODO
 def test_unlock(token, channel, events):
-    HASHLOCK1 = sha3('x'*32)
+    HASHLOCK1 = sha3('x' * 32)
     LOCK_AMOUNT1 = 29
     LOCK_EXPIRATION1 = 31
     LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)

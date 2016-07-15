@@ -514,7 +514,7 @@ library NettingChannelLibrary {
     }
 
     function assignRefundTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 253) {
+        if (message.length != 188) {
             throw;
         }
 
