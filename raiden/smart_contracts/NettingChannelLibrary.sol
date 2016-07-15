@@ -246,18 +246,13 @@ library NettingChannelLibrary {
 
     /// @notice updateTransfer(bytes) to update last known transfer
     /// @dev Allow the partner to update the last known transfer
-    function updateTransfer(Data storage self, address callerAddress, bytes signed_transfer) {
+    function updateTransfer(Data storage self, address callerAddress, bytes signed_transfer) 
+        notSettledButClosed(self)
+        stillTimeout(self)
+    {
         uint64 nonce;
         bytes memory transfer_raw;
         address transfer_address;
-
-        if (self.settled > 0 || self.closed == 0) {
-            throw;
-        }
-
-        if (self.closed + self.settleTimeout < block.number) {
-            throw;
-        }
 
         (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
 
@@ -297,7 +292,14 @@ library NettingChannelLibrary {
     /// @param lockedEncoded (bytes) the lock
     /// @param merkleProof (bytes) the merkle proof
     /// @param secret (bytes32) the secret
-    function unlock(Data storage self, address callerAddress, bytes lockedEncoded, bytes merkleProof, bytes32 secret) {
+    function unlock(
+        Data storage self,
+        address callerAddress,
+        bytes lockedEncoded,
+        bytes merkleProof,
+        bytes32 secret)
+        notSettledButClosed(self)
+    {
         uint partnerId;
         uint64 expiration;
         uint amount;
@@ -305,19 +307,13 @@ library NettingChannelLibrary {
         bytes32 h;
         bytes32 el;
 
-        if (self.settled > 0 || self.closed == 0) {
-            throw;
-        }
-
         (expiration, amount, hashlock) = decodeLock(lockedEncoded);
 
-        if (expiration > self.closed) {
+        if (expiration > self.closed)
             throw;
-        }
 
-        if (hashlock != sha3(secret)) {
+        if (hashlock != sha3(secret))
             throw;
-        }
 
         Participant[2] storage participants = self.participants;
         Participant storage participant = participants[0];
@@ -346,9 +342,9 @@ library NettingChannelLibrary {
         }
 
         // TODO
-        // if (participant.locksroot != h) {
-        //   throw;
-        // }
+        if (participant.locksroot != h) {
+            throw;
+        }
 
         participant.unlocked.push(Lock(expiration, amount, hashlock));
     }
