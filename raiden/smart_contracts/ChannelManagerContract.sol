@@ -6,8 +6,14 @@ import "ChannelManagerLibrary.sol";
 // only as a proxy/state container.
 contract ChannelManagerContract {
     using ChannelManagerLibrary for ChannelManagerLibrary.Data;
-
     ChannelManagerLibrary.Data data;
+
+    event ChannelNew(
+        address nettingChannel,
+        address participant1,
+        address participant2,
+        uint settleTimeout
+    );
 
     function ChannelManagerContract(address tokenAddress) {
         data.token = Token(tokenAddress);
@@ -102,6 +108,7 @@ contract ChannelManagerContract {
     }
 
     function newChannel(address partner, uint settleTimeout) returns (address) {
+        ChannelNew(this, msg.sender, partner, settleTimeout);
         return data.newChannel(partner, settleTimeout);
     }
 

@@ -66,13 +66,13 @@ human_token_compiled = _solidity.compile_contract(
 )
 
 channel_manager_compiled = _solidity.compile_contract(
-    get_contract_path('Registry.sol'),
+    get_contract_path('ChannelManagerContract.sol'),
     'ChannelManagerContract',
     combined='abi',
 )
 
 netting_channel_compiled = _solidity.compile_contract(
-    get_contract_path('ChannelManagerLibrary.sol'),
+    get_contract_path('NettingChannelContract.sol'),
     'NettingChannelContract',
     combined='abi',
 )
@@ -89,26 +89,14 @@ CHANNEL_MANAGER_ABI = channel_manager_compiled['abi']
 NETTING_CHANNEL_ABI = netting_channel_compiled['abi']
 REGISTRY_ABI = registry_compiled['abi']
 
-# CHANNELNEW_EVENT = get_event(CHANNEL_MANAGER_ABI, 'ChannelNew')
-# CHANNELNEW_EVENTID = event_id(*get_eventname_types(CHANNELNEW_EVENT))
-#
-# CHANNELNEWBALANCE_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelNewBalance')
-# CHANNELNEWBALANCE_EVENTID = event_id(*get_eventname_types(CHANNELNEWBALANCE_EVENT))
-#
-# CHANNELCLOSED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelClosed')
-# CHANNELCLOSED_EVENTID = event_id(*get_eventname_types(CHANNELCLOSED_EVENT))
-#
-# CHANNELSECRETREVEALED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelSecretRevealed')
-# CHANNELSECRETREVEALED_EVENTID = event_id(*get_eventname_types(CHANNELSECRETREVEALED_EVENT))
+CHANNELNEW_EVENT = get_event(CHANNEL_MANAGER_ABI, 'ChannelNew')
+CHANNELNEW_EVENTID = event_id(*get_eventname_types(CHANNELNEW_EVENT))
 
-CHANNELNEW_EVENT = None
-CHANNELNEW_EVENTID = None
+CHANNELNEWBALANCE_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelNewBalance')
+CHANNELNEWBALANCE_EVENTID = event_id(*get_eventname_types(CHANNELNEWBALANCE_EVENT))
 
-CHANNELNEWBALANCE_EVENT = None
-CHANNELNEWBALANCE_EVENTID = None
+CHANNELCLOSED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelClosed')
+CHANNELCLOSED_EVENTID = event_id(*get_eventname_types(CHANNELCLOSED_EVENT))
 
-CHANNELCLOSED_EVENT = None
-CHANNELCLOSED_EVENTID = None
-
-CHANNELSECRETREVEALED_EVENT = None
-CHANNELSECRETREVEALED_EVENTID = None
+CHANNELSECRETREVEALED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelSecretRevealed')
+CHANNELSECRETREVEALED_EVENTID = event_id(*get_eventname_types(CHANNELSECRETREVEALED_EVENT))

@@ -9,13 +9,6 @@ library ChannelManagerLibrary {
         Token token;
     }
 
-    event ChannelNew(
-        address nettingChannel,
-        address participant1,
-        address participant2,
-        uint settleTimeout
-    );
-
     function getChannelsAddresses(Data storage self) returns (address[] channels) {
         channels = self.all_channels;
     }
@@ -63,12 +56,6 @@ library ChannelManagerLibrary {
 
         channelAddress = new NettingChannelContract(
             self.token,
-            msg.sender,
-            partner,
-            settleTimeout
-        );
-        ChannelNew(
-            channelAddress,
             msg.sender,
             partner,
             settleTimeout

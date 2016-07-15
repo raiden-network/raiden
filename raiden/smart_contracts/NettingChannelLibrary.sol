@@ -36,19 +36,12 @@ library NettingChannelLibrary {
         Participant[2] participants;
     }
 
-    event ChannelNewBalance(address assetAddress, address participant, uint balance);
-    event ChannelClosed(address closingAddress, uint blockNumber);
-    event ChannelSettled(uint blockNumber);
-    event ChannelSecretRevealed(bytes32 secret);
-
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
     /// @param amount (uint) the amount to be deposited to the address
-    function deposit(Data storage self, address callerAddress, address channelAddress, uint256 amount) {
-        bool success;
+    function deposit(Data storage self, address callerAddress, address channelAddress, uint256 amount) returns (bool success, uint256 balance) {
         uint index;
-        uint balance;
 
         if (self.closed != 0) {
             throw;
@@ -76,14 +69,16 @@ library NettingChannelLibrary {
         if (success == true) {
             balance = participant.balance;
             balance += amount;
-
             participant.balance = balance;
-            ChannelNewBalance(self.token, callerAddress, balance);
 
             if (self.opened == 0) {
                 self.opened = block.number;
             }
+
+            return (true, balance);
         }
+
+        return (false, 0);
     }
 
     /// @notice partner() to get the partner or other participant of the channel
@@ -151,7 +146,6 @@ library NettingChannelLibrary {
 
         self.closingAddress = callerAddress;
         self.closed = block.number;
-        ChannelClosed(callerAddress, self.closed);
 
         // TODO: penalize
         // uint allowance, difference, transfered_amount;
@@ -222,7 +216,6 @@ library NettingChannelLibrary {
 
         self.closingAddress = callerAddress;
         self.closed = block.number;
-        ChannelClosed(callerAddress, self.closed);
 
         // TODO: penalize
         // uint allowance, difference, amount1, amount2;
@@ -345,7 +338,6 @@ library NettingChannelLibrary {
         //   throw;
         // }
 
-        ChannelSecretRevealed(secret);
         participant.unlocked.push(Lock(expiration, amount, hashlock));
     }
 
@@ -383,7 +375,6 @@ library NettingChannelLibrary {
         }
 
         self.settled = block.number;
-        ChannelSettled(self.settled);
 
         totalNetted = node1.netted + node1.netted;
         totalDeposit = node1.balance + node2.balance;
