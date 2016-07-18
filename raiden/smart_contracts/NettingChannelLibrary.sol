@@ -309,7 +309,7 @@ library NettingChannelLibrary {
 
         (expiration, amount, hashlock) = decodeLock(lockedEncoded);
 
-        if (expiration > self.closed)
+        if (expiration < block.number)
             throw;
 
         if (hashlock != sha3(secret))

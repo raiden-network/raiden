@@ -692,11 +692,11 @@ def test_update_mediated_transfer(state, token, channel, events):
     assert events[0]['closingAddress'] == tester.a0.encode('hex')
 
 
-def test_unlock(token, channel, events):
+def test_unlock(token, channel, events, state):
     secret1 = 'x' * 32
     hashlock1 = sha3(secret1)
     lock_amount1 = 29
-    lock_expiration1 = 31
+    lock_expiration1 = 1158003
     lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
     lockhash1 = sha3(lock1.as_bytes)
     merkleproof1 = [lockhash1]
@@ -718,6 +718,15 @@ def test_unlock(token, channel, events):
     packed = msg1.packed()
     direct_transfer1 = str(packed.data)
 
+    secret2 = 'y' * 32
+    hashlock2 = sha3(secret2)
+    lock_amount2 = 20
+    lock_expiration2 = 1158030
+    lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
+    lockhash2 = sha3(lock2.as_bytes)
+    merkleproof2 = [lockhash2]
+    locksroot2 = merkleroot([lockhash2,], merkleproof2)
+
     msg2 = DirectTransfer(
         2,              # nonce
         asset,
@@ -736,6 +745,23 @@ def test_unlock(token, channel, events):
         ''.join(merkleproof1),
         secret1,
     )
+
+    # TODO: it must not be possible to unlock the same lock twive
+    # with pytest.raises(TransactionFailed):
+        # channel.unlock(
+            # str(lock1.as_bytes),
+            # ''.join(merkleproof1),
+            # secret1,
+        # )
+
+    # expiration has passed, should fail
+    state.block.number = 1158031
+    with pytest.raises(TransactionFailed):
+        channel.unlock(
+            str(lock2.as_bytes),
+            ''.join(merkleproof2),
+            secret2,
+        )
 
 
 @pytest.mark.parametrize('asset_amount', [100])
