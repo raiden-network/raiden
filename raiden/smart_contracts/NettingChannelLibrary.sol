@@ -341,9 +341,8 @@ library NettingChannelLibrary {
             }
         }
 
-        if (participant.locksroot != h) {
+        if (participant.locksroot != h)
             throw;
-        }
 
         participant.unlocked.push(Lock(expiration, amount, hashlock));
     }

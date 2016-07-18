@@ -692,7 +692,6 @@ def test_update_mediated_transfer(state, token, channel, events):
     assert events[0]['closingAddress'] == tester.a0.encode('hex')
 
 
-# TODO
 def test_unlock(token, channel, events):
     secret1 = 'x' * 32
     hashlock1 = sha3(secret1)
@@ -700,8 +699,8 @@ def test_unlock(token, channel, events):
     lock_expiration1 = 31
     lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
     lockhash1 = sha3(lock1.as_bytes)
-    merkleproof = [lockhash1]
-    locksroot1 = merkleroot([lockhash1,], merkleproof)
+    merkleproof1 = [lockhash1]
+    locksroot1 = merkleroot([lockhash1,], merkleproof1)
 
     nonce = 10
     asset = token.address
@@ -734,12 +733,11 @@ def test_unlock(token, channel, events):
 
     channel.unlock(
         str(lock1.as_bytes),
-        ''.join(merkleproof),
+        ''.join(merkleproof1),
         secret1,
     )
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize('asset_amount', [100])
 def test_settle(state, channel, token, asset_amount, events):
     half_amount = asset_amount / 2
@@ -772,16 +770,16 @@ def test_settle(state, channel, token, asset_amount, events):
     merkleproof1 = [lockhash1]
     locksroot1 = merkleroot([lockhash1], merkleproof1)
 
-    nonce = 1
+    nonce1 = 1
     asset = token.address
-    transfered_amount = 1
+    transfered_amount1 = 1
     recipient = tester.a1
     locksroot = locksroot1
 
     msg1 = DirectTransfer(
-        nonce,
+        nonce1,
         asset,
-        transfered_amount,
+        transfered_amount1,
         recipient,
         locksroot,
     )
@@ -794,14 +792,18 @@ def test_settle(state, channel, token, asset_amount, events):
     lock_amount2 = 20
     lock_expiration2 = 31
     lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
-    locksroot2 = merkleroot([sha3(lock2.as_bytes)])
+    lockhash2 = sha3(lock2.as_bytes)
+    merkleproof2 = [lockhash2]
+    locksroot2 = merkleroot([lockhash2], merkleproof2)
 
     locksroot = locksroot2
+    nonce2 = 2
+    transfered_amount2 = 3
 
     msg2 = DirectTransfer(
-        2,  # nonce
+        nonce2,
         token.address,  # asset
-        3,  # transfered_amount
+        transfered_amount2,
         tester.a0,  # recipient
         locksroot,
     )
@@ -815,19 +817,16 @@ def test_settle(state, channel, token, asset_amount, events):
 
     channel.close(direct_transfer1, direct_transfer2)
 
-    hashlock = sha3('z' * 32)
-    lock_amount = 20
-    lock_expiration = 31
-    lock = Lock(lock_amount, lock_expiration, hashlock)
-    locksroot = merkleroot([
-        sha3(lock.as_bytes),
-    ])
-
-    # TODO create correct test data
     channel.unlock(
         str(lock1.as_bytes),
         ''.join(merkleproof1),
         secret1,
+    )
+    channel.unlock(
+        str(lock2.as_bytes),
+        ''.join(merkleproof2),
+        secret2,
+        sender=tester.k1
     )
 
     secret4 = 'k' * 32
@@ -837,18 +836,22 @@ def test_settle(state, channel, token, asset_amount, events):
     lock4 = Lock(lock_amount4, lock_expiration4, hashlock4)
     hashlock4 = sha3(lock4.as_bytes)
     merkleproof4 = [hashlock4]
-    locksroot4 = merkleroot([hashlock4], merkleproof4)
 
-    channel.unlock(
-        str(lock4.as_bytes),
-        ''.join(merkleproof4),
-        secret4,
-        sender=tester.k1,
-    )
+    # has now message, should fail
+    with pytest.raises(TransactionFailed):
+        channel.unlock(
+            str(lock4.as_bytes),
+            ''.join(merkleproof4),
+            secret4,
+            sender=tester.k1,
+        )
 
     channel.settle()
-    assert token.balanceOf(tester.a0) == half_amount + 2 + lock_amount - lock_amount4
-    assert token.balanceOf(tester.a1) == half_amount - 2 - lock_amount + lock_amount4
+
+    balance1 = half_amount + (transfered_amount2 - transfered_amount1) + lock_amount1 - lock_amount2
+    balance2 = half_amount + (transfered_amount1 - transfered_amount2) - lock_amount1 + lock_amount2
+    assert token.balanceOf(tester.a0) == balance1
+    assert token.balanceOf(tester.a1) == balance2
 
     # can settle only once
     with pytest.raises(TransactionFailed):
