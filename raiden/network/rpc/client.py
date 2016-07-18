@@ -30,8 +30,7 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 LETTERS = string.printable
 MOCK_REGISTRY_ADDRESS = '7265676973747279726567697374727972656769'
 
-# GAS_LIMIT = 3141592  # Morden's gasLimit.
-GAS_LIMIT = 9 * 10 ** 10  # hack: temporarily fix for high gas usage in the registry contract
+GAS_LIMIT = 3141592  # Morden's gasLimit.
 GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
 GAS_PRICE = denoms.shannon * 20
 DEFAULT_TIMEOUT = 3

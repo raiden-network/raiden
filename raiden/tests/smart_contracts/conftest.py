@@ -21,6 +21,12 @@ def settle_timeout():
 
 
 @pytest.fixture
+def events():
+    events = []
+    return events
+
+
+@pytest.fixture
 def token_abi():
     human_token_path = get_contract_path('HumanStandardToken.sol')
     human_compiled = compile_file(human_token_path, combined='abi')
@@ -108,7 +114,7 @@ def channel_manager_library(state, netting_channel_library, settle_timeout, toke
 
 
 @pytest.fixture
-def channel(state, token, netting_channel_library, settle_timeout):
+def channel(state, token, netting_channel_library, settle_timeout, events):
     netting_contract_path = get_contract_path('ChannelManagerLibrary.sol')
     abi = state.abi_contract(
         None,
@@ -116,6 +122,7 @@ def channel(state, token, netting_channel_library, settle_timeout):
         language='solidity',
         constructor_parameters=[token.address, tester.a0, tester.a1, settle_timeout],
         contract_name='NettingChannelContract',
+        log_listener=events.append,
         libraries={
             'NettingChannelLibrary': netting_channel_library.encode('hex'),
         }
@@ -124,7 +131,7 @@ def channel(state, token, netting_channel_library, settle_timeout):
 
 
 @pytest.fixture
-def manager(state, token, channel_manager_library):
+def manager(state, token, channel_manager_library, events):
     registry_path = get_contract_path('Registry.sol')
 
     return state.abi_contract(
@@ -133,7 +140,24 @@ def manager(state, token, channel_manager_library):
         language='solidity',
         constructor_parameters=[token.address],
         contract_name='ChannelManagerContract',
+        log_listener=events.append,
         libraries={
             'ChannelManagerLibrary': channel_manager_library.encode('hex'),
+        }
+    )
+
+
+@pytest.fixture
+def registry(state, token, channel_manager_library, events):
+    registry_path = get_contract_path('Registry.sol')
+
+    return state.abi_contract(
+        None,
+        path=registry_path,
+        language='solidity',
+        contract_name='Registry',
+        log_listener=events.append,
+        libraries={
+            'ChannelManagerLibrary': channel_manager_library.encode('hex')
         }
     )
