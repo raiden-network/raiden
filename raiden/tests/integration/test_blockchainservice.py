@@ -177,16 +177,14 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('timeout', [3])
-def test_blockchain(private_keys, number_of_nodes, hydrachain_network, timeout):
+def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
     # pylint: disable=too-many-locals
-    slogging.configure(':ERROR')
-
     addresses = [
         privtoaddr(priv)
         for priv in private_keys
     ]
 
-    privatekey_hex = hydrachain_network[0].config['node']['privkey_hex']
+    privatekey_hex = hydrachain_cluster[0].config['node']['privkey_hex']
     privatekey = privatekey_hex.decode('hex')
     address = privtoaddr(privatekey)
     total_asset = 100
@@ -276,12 +274,6 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_network, timeout):
         channel_manager_address,
     )
 
-    slogging.configure(
-        ':DEBUG'
-        ',eth.chain.tx:DEBUG'
-        ',jsonrpc:DEBUG'
-        ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
-    )
     transaction_hash = channel_manager_proxy.newChannel.transact(
         addresses[1],
         10,

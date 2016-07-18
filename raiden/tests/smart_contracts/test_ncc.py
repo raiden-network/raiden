@@ -72,26 +72,26 @@ def test_close_single_direct_transfer(state, channel, token, events):  # pylint:
 
     # test close(message)
 
-    INITIATOR_PRIVKEY = tester.k0
+    initiator_privkey = tester.k0
 
-    RECIPIENT_PRIVKEY = tester.k1
-    RECIPIENT_ADDRESS = privtoaddr(RECIPIENT_PRIVKEY)
+    recipient_privkey = tester.k1
+    recipient_address = privtoaddr(recipient_privkey)
 
-    ASSET_ADDRESS = token.address
+    asset_address = token.address
 
-    HASHLOCK = sha3(INITIATOR_PRIVKEY)
-    LOCK_AMOUNT = 29
-    LOCK_EXPIRATION = 31
-    LOCK = Lock(LOCK_AMOUNT, LOCK_EXPIRATION, HASHLOCK)
-    LOCKSROOT = merkleroot([
-        sha3(LOCK.as_bytes),
+    hashlock = sha3(initiator_privkey)
+    lock_amount = 29
+    lock_expiration = 31
+    lock = Lock(lock_amount, lock_expiration, hashlock)
+    locksroot = merkleroot([
+        sha3(lock.as_bytes),
     ])
 
     nonce = 1
-    asset = ASSET_ADDRESS
+    asset = asset_address
     transfered_amount = 1
-    recipient = RECIPIENT_ADDRESS
-    locksroot = LOCKSROOT
+    recipient = recipient_address
+    locksroot = locksroot
 
     msg = DirectTransfer(
         nonce,
@@ -100,7 +100,7 @@ def test_close_single_direct_transfer(state, channel, token, events):  # pylint:
         recipient,
         locksroot,
     )
-    msg.sign(INITIATOR_PRIVKEY)
+    msg.sign(initiator_privkey)
     packed = msg.packed()
     direct_transfer = str(packed.data)
 
@@ -116,7 +116,7 @@ def test_close_single_direct_transfer(state, channel, token, events):  # pylint:
     # assert channel.participants(0)[9] == tester.a0.encode('hex')
     # assert channel.participants(0)[12] == tester.a1.encode('hex')
     # assert channel.participants(0)[3] == 1
-    # assert channel.participants(0)[13] == LOCKSROOT
+    # assert channel.participants(0)[13] == locksroot
     # assert channel.participants(0)[7] == '\x00' * 32
 
     assert len(events) == 2
@@ -144,18 +144,19 @@ def test_two_messages_direct_transfer(state, token, channel, events):
     assert channel.closed() == 0
     assert channel.settled() == 0
 
-    HASHLOCK1 = sha3(tester.k0)
-    LOCK_AMOUNT1 = 29
-    LOCK_EXPIRATION1 = 31
-    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
-    LOCKSROOT1 = merkleroot([
-        sha3(LOCK1.as_bytes), ])   # print direct_transfer.encode('hex')
+    hashlock1 = sha3(tester.k0)
+    lock_amount1 = 29
+    lock_expiration1 = 31
+    lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
+    locksroot1 = merkleroot([
+        sha3(lock1.as_bytes),
+    ])
 
     nonce = 1
     asset = token.address
     transfered_amount = 1
     recipient = tester.a1
-    locksroot = LOCKSROOT1
+    locksroot = locksroot1
 
     msg1 = DirectTransfer(
         nonce,
@@ -168,14 +169,15 @@ def test_two_messages_direct_transfer(state, token, channel, events):
     packed = msg1.packed()
     direct_transfer1 = str(packed.data)
 
-    HASHLOCK2 = sha3(tester.k1)
-    LOCK_AMOUNT2 = 29
-    LOCK_EXPIRATION2 = 31
-    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
-    LOCKSROOT2 = merkleroot([
-        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
+    hashlock2 = sha3(tester.k1)
+    lock_amount2 = 29
+    lock_expiration2 = 31
+    lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
+    locksroot2 = merkleroot([
+        sha3(lock2.as_bytes),
+    ])
 
-    locksroot = LOCKSROOT2
+    locksroot = locksroot2
 
     msg2 = DirectTransfer(
         2,  # nonce
@@ -211,7 +213,7 @@ def test_two_messages_direct_transfer(state, token, channel, events):
     # assert channel.participants(0)[9] == tester.a0.encode('hex')
     # assert channel.participants(0)[12] == tester.a1.encode('hex')
     # assert channel.participants(0)[3] == 1
-    # assert channel.participants(0)[13] == LOCKSROOT1
+    # assert channel.participants(0)[13] == locksroot1
     # assert channel.participants(0)[7] == '\x00' * 32
 
     # Test with message sender tester.a1
@@ -222,7 +224,7 @@ def test_two_messages_direct_transfer(state, token, channel, events):
     # assert channel.participants(1)[9] == tester.a1.encode('hex')
     # assert channel.participants(1)[12] == tester.a0.encode('hex')
     # assert channel.participants(1)[3] == 3
-    # assert channel.participants(1)[13] == LOCKSROOT2
+    # assert channel.participants(1)[13] == locksroot2
     # assert channel.participants(1)[7] == '\x00' * 32
 
 
@@ -241,25 +243,27 @@ def test_two_messages_mediated_transfer(state, token, channel, events):
     assert channel.closed() == 0
     assert channel.settled() == 0
 
-    HASHLOCK1 = sha3(tester.k0)
-    LOCK_AMOUNT1 = 29
-    LOCK_EXPIRATION1 = 31
-    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
-    LOCKSROOT1 = merkleroot([
-        sha3(LOCK1.as_bytes), ])   # print direct_transfer.encode('hex')
+    hashlock1 = sha3(tester.k0)
+    lock_amount1 = 29
+    lock_expiration1 = 31
+    lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
+    locksroot1 = merkleroot([
+        sha3(lock1.as_bytes),
+    ])
 
-    HASHLOCK2 = sha3(tester.k1)
-    LOCK_AMOUNT2 = 29
-    LOCK_EXPIRATION2 = 31
-    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
-    LOCKSROOT2 = merkleroot([
-        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
+    hashlock2 = sha3(tester.k1)
+    lock_amount2 = 29
+    lock_expiration2 = 31
+    lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
+    locksroot2 = merkleroot([
+        sha3(lock2.as_bytes),
+    ])
 
     nonce = 1
     asset = token.address
     transfered_amount = 3
     recipient = tester.a2
-    locksroot = LOCKSROOT1
+    locksroot = locksroot1
     target = tester.a1
     initiator = tester.a0
 
@@ -269,7 +273,7 @@ def test_two_messages_mediated_transfer(state, token, channel, events):
         transfered_amount,
         recipient,
         locksroot,
-        LOCK1,
+        lock1,
         target,
         initiator,
         fee=0,
@@ -282,7 +286,7 @@ def test_two_messages_mediated_transfer(state, token, channel, events):
     asset = token.address
     transfered_amount = 4
     recipient = tester.a2
-    locksroot = LOCKSROOT2
+    locksroot = locksroot2
     target = tester.a0
     initiator = tester.a1
 
@@ -292,7 +296,7 @@ def test_two_messages_mediated_transfer(state, token, channel, events):
         transfered_amount,
         recipient,
         locksroot,
-        LOCK2,
+        lock2,
         target,
         initiator,
         fee=0,
@@ -311,7 +315,7 @@ def test_two_messages_mediated_transfer(state, token, channel, events):
     # assert channel.participants(0)[9] == tester.a0.encode('hex')
     # assert channel.participants(0)[12] == tester.a1.encode('hex')
     # assert channel.participants(0)[3] == 1
-    # assert channel.participants(0)[13] == LOCKSROOT1
+    # assert channel.participants(0)[13] == locksroot1
     # assert channel.participants(0)[7] == '\x00' * 32
 
     # Test with message sender tester.a1
@@ -322,7 +326,7 @@ def test_two_messages_mediated_transfer(state, token, channel, events):
     # assert channel.participants(1)[9] == tester.a1.encode('hex')
     # assert channel.participants(1)[12] == tester.a0.encode('hex')
     # assert channel.participants(1)[3] == 3
-    # assert channel.participants(1)[13] == LOCKSROOT2
+    # assert channel.participants(1)[13] == locksroot2
     # assert channel.participants(1)[7] == '\x00' * 32
 
 
@@ -374,19 +378,19 @@ def test_update_direct_transfer(state, token, channel, events):
     assert channel.closed() == 0
     assert channel.settled() == 0
 
-    HASHLOCK1 = sha3(tester.k0)
-    LOCK_AMOUNT1 = 29
-    LOCK_EXPIRATION1 = 31
-    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
-    LOCKSROOT1 = merkleroot([
-        sha3(LOCK1.as_bytes),
+    hashlock1 = sha3(tester.k0)
+    lock_amount1 = 29
+    lock_expiration1 = 31
+    lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
+    locksroot1 = merkleroot([
+        sha3(lock1.as_bytes),
     ])
 
     nonce = 1
     asset = token.address
     transfered_amount = 1
     recipient = tester.a1
-    locksroot = LOCKSROOT1
+    locksroot = locksroot1
 
     msg1 = DirectTransfer(
         nonce,
@@ -399,14 +403,15 @@ def test_update_direct_transfer(state, token, channel, events):
     packed = msg1.packed()
     direct_transfer1 = str(packed.data)
 
-    HASHLOCK2 = sha3(tester.k1)
-    LOCK_AMOUNT2 = 29
-    LOCK_EXPIRATION2 = 31
-    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
-    LOCKSROOT2 = merkleroot([
-        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
+    hashlock2 = sha3(tester.k1)
+    lock_amount2 = 29
+    lock_expiration2 = 31
+    lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
+    locksroot2 = merkleroot([
+        sha3(lock2.as_bytes),
+    ])
 
-    locksroot = LOCKSROOT2
+    locksroot = locksroot2
 
     msg2 = DirectTransfer(
         2,  # nonce
@@ -433,7 +438,7 @@ def test_update_direct_transfer(state, token, channel, events):
     # assert channel.participants(0)[9] == tester.a0.encode('hex')
     # assert channel.participants(0)[12] == tester.a1.encode('hex')
     # assert channel.participants(0)[3] == 1
-    # assert channel.participants(0)[13] == LOCKSROOT1
+    # assert channel.participants(0)[13] == locksroot1
     # assert channel.participants(0)[7] == '\x00' * 32
 
     # Test with message sender tester.a1
@@ -444,17 +449,18 @@ def test_update_direct_transfer(state, token, channel, events):
     # assert channel.participants(1)[9] == tester.a1.encode('hex')
     # assert channel.participants(1)[12] == tester.a0.encode('hex')
     # assert channel.participants(1)[3] == 3
-    # assert channel.participants(1)[13] == LOCKSROOT2
+    # assert channel.participants(1)[13] == locksroot2
     # assert channel.participants(1)[7] == '\x00' * 32
 
-    HASHLOCK3 = sha3(tester.k1)
-    LOCK_AMOUNT3 = 29
-    LOCK_EXPIRATION3 = 31
-    LOCK3 = Lock(LOCK_AMOUNT3, LOCK_EXPIRATION3, HASHLOCK3)
-    LOCKSROOT3 = merkleroot([
-        sha3(LOCK3.as_bytes), ])   # print direct_transfer.encode('hex')
+    hashlock3 = sha3(tester.k1)
+    lock_amount3 = 29
+    lock_expiration3 = 31
+    lock3 = Lock(lock_amount3, lock_expiration3, hashlock3)
+    locksroot3 = merkleroot([
+        sha3(lock3.as_bytes),
+    ])
 
-    locksroot = LOCKSROOT3
+    locksroot = locksroot3
 
     msg3 = DirectTransfer(
         3,  # nonce
@@ -479,7 +485,7 @@ def test_update_direct_transfer(state, token, channel, events):
     # assert channel.participants(1)[9] == tester.a1.encode('hex')
     # assert channel.participants(1)[12] == tester.a0.encode('hex')
     # assert channel.participants(1)[3] == 5
-    # assert channel.participants(1)[13] == LOCKSROOT3
+    # assert channel.participants(1)[13] == locksroot3
     # assert channel.participants(1)[7] == '\x00' * 32
 
     msg4 = DirectTransfer(
@@ -524,25 +530,27 @@ def test_update_mediated_transfer(state, token, channel, events):
     assert channel.closed() == 0
     assert channel.settled() == 0
 
-    HASHLOCK1 = sha3(tester.k0)
-    LOCK_AMOUNT1 = 29
-    LOCK_EXPIRATION1 = 31
-    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
-    LOCKSROOT1 = merkleroot([
-        sha3(LOCK1.as_bytes), ])   # print direct_transfer.encode('hex')
+    hashlock1 = sha3(tester.k0)
+    lock_amount1 = 29
+    lock_expiration1 = 31
+    lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
+    locksroot1 = merkleroot([
+        sha3(lock1.as_bytes),
+    ])
 
-    HASHLOCK2 = sha3(tester.k1)
-    LOCK_AMOUNT2 = 29
-    LOCK_EXPIRATION2 = 31
-    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
-    LOCKSROOT2 = merkleroot([
-        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
+    hashlock2 = sha3(tester.k1)
+    lock_amount2 = 29
+    lock_expiration2 = 31
+    lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
+    locksroot2 = merkleroot([
+        sha3(lock2.as_bytes),
+    ])
 
     nonce = 1
     asset = token.address
     transfered_amount = 3
     recipient = tester.a2
-    locksroot = LOCKSROOT1
+    locksroot = locksroot1
     target = tester.a1
     initiator = tester.a0
 
@@ -552,7 +560,7 @@ def test_update_mediated_transfer(state, token, channel, events):
         transfered_amount,
         recipient,
         locksroot,
-        LOCK1,
+        lock1,
         target,
         initiator,
         fee=0,
@@ -565,7 +573,7 @@ def test_update_mediated_transfer(state, token, channel, events):
     asset = token.address
     transfered_amount = 4
     recipient = tester.a2
-    locksroot = LOCKSROOT2
+    locksroot = locksroot2
     target = tester.a0
     initiator = tester.a1
 
@@ -575,7 +583,7 @@ def test_update_mediated_transfer(state, token, channel, events):
         transfered_amount,
         recipient,
         locksroot,
-        LOCK2,
+        lock2,
         target,
         initiator,
         fee=0,
@@ -598,7 +606,7 @@ def test_update_mediated_transfer(state, token, channel, events):
     # assert channel.participants(0)[9] == tester.a0.encode('hex')
     # assert channel.participants(0)[12] == tester.a1.encode('hex')
     # assert channel.participants(0)[3] == 1
-    # assert channel.participants(0)[13] == LOCKSROOT1
+    # assert channel.participants(0)[13] == locksroot1
     # assert channel.participants(0)[7] == '\x00' * 32
 
     # Test with message sender tester.a1
@@ -609,21 +617,22 @@ def test_update_mediated_transfer(state, token, channel, events):
     # assert channel.participants(1)[9] == tester.a1.encode('hex')
     # assert channel.participants(1)[12] == tester.a0.encode('hex')
     # assert channel.participants(1)[3] == 3
-    # assert channel.participants(1)[13] == LOCKSROOT2
+    # assert channel.participants(1)[13] == locksroot2
     # assert channel.participants(1)[7] == '\x00' * 32
 
-    HASHLOCK3 = sha3(tester.k1)
-    LOCK_AMOUNT3 = 29
-    LOCK_EXPIRATION3 = 31
-    LOCK3 = Lock(LOCK_AMOUNT3, LOCK_EXPIRATION3, HASHLOCK3)
-    LOCKSROOT3 = merkleroot([
-        sha3(LOCK3.as_bytes), ])   # print direct_transfer.encode('hex')
+    hashlock3 = sha3(tester.k1)
+    lock_amount3 = 29
+    lock_expiration3 = 31
+    lock3 = Lock(lock_amount3, lock_expiration3, hashlock3)
+    locksroot3 = merkleroot([
+        sha3(lock3.as_bytes),
+    ])
 
     nonce = 3
     asset = token.address
     transfered_amount = 4
     recipient = tester.a2
-    locksroot = LOCKSROOT3
+    locksroot = locksroot3
     target = tester.a0
     initiator = tester.a1
 
@@ -633,7 +642,7 @@ def test_update_mediated_transfer(state, token, channel, events):
         transfered_amount,
         recipient,
         locksroot,
-        LOCK3,
+        lock3,
         target,
         initiator,
         fee=0,
@@ -653,7 +662,7 @@ def test_update_mediated_transfer(state, token, channel, events):
     # assert channel.participants(1)[9] == tester.a1.encode('hex')
     # assert channel.participants(1)[12] == tester.a0.encode('hex')
     # assert channel.participants(1)[3] == 5
-    # assert channel.participants(1)[13] == LOCKSROOT3
+    # assert channel.participants(1)[13] == locksroot3
     # assert channel.participants(1)[7] == '\x00' * 32
 
     msg4 = DirectTransfer(
@@ -685,46 +694,37 @@ def test_update_mediated_transfer(state, token, channel, events):
 
 # TODO
 def test_unlock(token, channel, events):
-    HASHLOCK1 = sha3('x' * 32)
-    LOCK_AMOUNT1 = 29
-    LOCK_EXPIRATION1 = 31
-    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
-    LOCKSROOT1 = merkleroot([
-        sha3(LOCK1.as_bytes),
-    ])
+    secret1 = 'x' * 32
+    hashlock1 = sha3(secret1)
+    lock_amount1 = 29
+    lock_expiration1 = 31
+    lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
+    lockhash1 = sha3(lock1.as_bytes)
+    merkleproof = [lockhash1]
+    locksroot1 = merkleroot([lockhash1,], merkleproof)
 
-    nonce = 1
+    nonce = 10
     asset = token.address
     transfered_amount = 1
     recipient = tester.a1
-    locksroot = LOCKSROOT1
 
     msg1 = DirectTransfer(
         nonce,
         asset,
         transfered_amount,
         recipient,
-        locksroot,
+        locksroot1,
     )
     msg1.sign(tester.k0)
     packed = msg1.packed()
     direct_transfer1 = str(packed.data)
 
-    HASHLOCK2 = sha3('x' * 32)
-    LOCK_AMOUNT2 = 20
-    LOCK_EXPIRATION2 = 31
-    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
-    LOCKSROOT2 = merkleroot([
-        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
-
-    locksroot = LOCKSROOT2
-
     msg2 = DirectTransfer(
-        2,  # nonce
-        token.address,  # asset
-        3,  # transfered_amount
-        tester.a0,  # recipient
-        locksroot,
+        2,              # nonce
+        asset,
+        3,              # transfered_amount
+        tester.a0,      # recipient
+        '',
     )
     msg2.sign(tester.k1)
     packed = msg2.packed()
@@ -732,20 +732,14 @@ def test_unlock(token, channel, events):
 
     channel.close(direct_transfer1, direct_transfer2)
 
-    HASHLOCK = sha3('x' * 32)
-    LOCK_AMOUNT = 20
-    LOCK_EXPIRATION = 31
-    LOCK = Lock(LOCK_AMOUNT, LOCK_EXPIRATION, HASHLOCK)
-    LOCKSROOT = merkleroot([
-        sha3(LOCK.as_bytes),
-    ])
-
-    lock = str(LOCK.as_bytes)
-
-    # TODO create correct test data
-    channel.unlock(lock, LOCKSROOT, 'x' * 32)
+    channel.unlock(
+        str(lock1.as_bytes),
+        ''.join(merkleproof),
+        secret1,
+    )
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize('asset_amount', [100])
 def test_settle(state, channel, token, asset_amount, events):
     half_amount = asset_amount / 2
@@ -769,19 +763,20 @@ def test_settle(state, channel, token, asset_amount, events):
     channel.deposit(half_amount)
     channel1.deposit(half_amount)
 
-    HASHLOCK1 = sha3('x' * 32)
-    LOCK_AMOUNT1 = 29
-    LOCK_EXPIRATION1 = 31
-    LOCK1 = Lock(LOCK_AMOUNT1, LOCK_EXPIRATION1, HASHLOCK1)
-    LOCKSROOT1 = merkleroot([
-        sha3(LOCK1.as_bytes),
-    ])
+    secret1 = 'x' * 32
+    hashlock1 = sha3(secret1)
+    lock_amount1 = 29
+    lock_expiration1 = 31
+    lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
+    lockhash1 = sha3(lock1.as_bytes)
+    merkleproof1 = [lockhash1]
+    locksroot1 = merkleroot([lockhash1], merkleproof1)
 
     nonce = 1
     asset = token.address
     transfered_amount = 1
     recipient = tester.a1
-    locksroot = LOCKSROOT1
+    locksroot = locksroot1
 
     msg1 = DirectTransfer(
         nonce,
@@ -794,14 +789,14 @@ def test_settle(state, channel, token, asset_amount, events):
     packed = msg1.packed()
     direct_transfer1 = str(packed.data)
 
-    HASHLOCK2 = sha3('x' * 32)
-    LOCK_AMOUNT2 = 20
-    LOCK_EXPIRATION2 = 31
-    LOCK2 = Lock(LOCK_AMOUNT2, LOCK_EXPIRATION2, HASHLOCK2)
-    LOCKSROOT2 = merkleroot([
-        sha3(LOCK2.as_bytes), ])   # print direct_transfer.encode('hex')
+    secret2 = 'y' * 32
+    hashlock2 = sha3(secret2)
+    lock_amount2 = 20
+    lock_expiration2 = 31
+    lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
+    locksroot2 = merkleroot([sha3(lock2.as_bytes)])
 
-    locksroot = LOCKSROOT2
+    locksroot = locksroot2
 
     msg2 = DirectTransfer(
         2,  # nonce
@@ -820,37 +815,42 @@ def test_settle(state, channel, token, asset_amount, events):
 
     channel.close(direct_transfer1, direct_transfer2)
 
-    HASHLOCK = sha3('x' * 32)
-    LOCK_AMOUNT = 20
-    LOCK_EXPIRATION = 31
-    LOCK = Lock(LOCK_AMOUNT, LOCK_EXPIRATION, HASHLOCK)
-    LOCKSROOT = merkleroot([
-        sha3(LOCK.as_bytes),
+    hashlock = sha3('z' * 32)
+    lock_amount = 20
+    lock_expiration = 31
+    lock = Lock(lock_amount, lock_expiration, hashlock)
+    locksroot = merkleroot([
+        sha3(lock.as_bytes),
     ])
 
-    lock1 = str(LOCK.as_bytes)
-
     # TODO create correct test data
-    channel.unlock(lock1, LOCKSROOT, 'x' * 32)
+    channel.unlock(
+        str(lock1.as_bytes),
+        ''.join(merkleproof1),
+        secret1,
+    )
 
-    HASHLOCK4 = sha3('y' * 32)
-    LOCK_AMOUNT4 = 23
-    LOCK_EXPIRATION4 = 31
-    LOCK4 = Lock(LOCK_AMOUNT4, LOCK_EXPIRATION4, HASHLOCK4)
-    LOCKSROOT4 = merkleroot([
-        sha3(LOCK4.as_bytes),
-    ])
+    secret4 = 'k' * 32
+    hashlock4 = sha3(secret4)
+    lock_amount4 = 23
+    lock_expiration4 = 31
+    lock4 = Lock(lock_amount4, lock_expiration4, hashlock4)
+    hashlock4 = sha3(lock4.as_bytes)
+    merkleproof4 = [hashlock4]
+    locksroot4 = merkleroot([hashlock4], merkleproof4)
 
-    lock4 = str(LOCK4.as_bytes)
-
-    # TODO create correct test data
-    channel.unlock(lock4, LOCKSROOT4, 'y' * 32, sender=tester.k1)
+    channel.unlock(
+        str(lock4.as_bytes),
+        ''.join(merkleproof4),
+        secret4,
+        sender=tester.k1,
+    )
 
     channel.settle()
-    assert token.balanceOf(tester.a0) == half_amount + 2 + LOCK_AMOUNT - LOCK_AMOUNT4
-    assert token.balanceOf(tester.a1) == half_amount - 2 - LOCK_AMOUNT + LOCK_AMOUNT4
+    assert token.balanceOf(tester.a0) == half_amount + 2 + lock_amount - lock_amount4
+    assert token.balanceOf(tester.a1) == half_amount - 2 - lock_amount + lock_amount4
 
-    # already settled. should fail
+    # can settle only once
     with pytest.raises(TransactionFailed):
         channel.settle()
 

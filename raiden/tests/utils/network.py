@@ -333,7 +333,7 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
         app_channels = list(zip(every_two, every_two))
 
     if channels_per_node == 2:
-        app_channels = list(zip(apps, apps[1:] + apps[0]))
+        app_channels = list(zip(apps, apps[1:] + [apps[0]]))
 
     if channels_per_node == CHAIN:
         app_channels = list(zip(apps[:-1], apps[1:]))

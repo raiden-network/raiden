@@ -306,7 +306,7 @@ class ChannelManager(object):
 
     def asset_address(self):
         """ Return the asset of this manager. """
-        return address_decoder(self.proxy.assetToken.call())
+        return address_decoder(self.proxy.tokenAddress.call())
 
     def new_netting_channel(self, peer1, peer2, settle_timeout):
         if privtoaddr(self.client.privkey) == peer1:
@@ -322,7 +322,7 @@ class ChannelManager(object):
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
 
-        address_encoded = self.proxy.get.call(
+        address_encoded = self.proxy.getChannelWith.call(
             other,
             startgas=GAS_LIMIT,
         )
@@ -331,7 +331,7 @@ class ChannelManager(object):
     def channels_addresses(self):
         # for simplicity the smart contract return a shallow list where every
         # second item forms a tuple
-        channel_flat_encoded = self.proxy.getAllChannels.call(startgas=self.startgas)
+        channel_flat_encoded = self.proxy.getChannelsParticipants.call(startgas=self.startgas)
 
         channel_flat = [
             channel.decode('hex')

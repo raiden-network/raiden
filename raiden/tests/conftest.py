@@ -105,6 +105,7 @@ def hydrachain_cluster(request, private_keys, cluster_private_keys, p2p_base_por
         cleanup_tasks()
 
     request.addfinalizer(_cleanup)
+    return hydrachain_apps
 
 
 @pytest.fixture
@@ -124,6 +125,7 @@ def geth_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmp
         cleanup_tasks()
 
     request.addfinalizer(_cleanup)
+    return geth_processes
 
 
 @pytest.fixture

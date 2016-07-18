@@ -99,6 +99,10 @@ contract ChannelManagerContract {
         return result;
     }
 
+    function tokenAddress () constant returns (address) {
+        return data.token;
+    }
+
     function getChannelsForNode(address nodeAddress) constant returns (address[]) {
         return data.nodeChannels[nodeAddress];
     }
