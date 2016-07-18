@@ -790,7 +790,7 @@ def test_settle(state, channel, token, asset_amount, events):
     secret1 = 'x' * 32
     hashlock1 = sha3(secret1)
     lock_amount1 = 29
-    lock_expiration1 = 31
+    lock_expiration1 = 1158003
     lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
     lockhash1 = sha3(lock1.as_bytes)
     merkleproof1 = [lockhash1]
@@ -816,7 +816,7 @@ def test_settle(state, channel, token, asset_amount, events):
     secret2 = 'y' * 32
     hashlock2 = sha3(secret2)
     lock_amount2 = 20
-    lock_expiration2 = 31
+    lock_expiration2 = 1158005
     lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
     lockhash2 = sha3(lock2.as_bytes)
     merkleproof2 = [lockhash2]
