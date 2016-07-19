@@ -369,4 +369,4 @@ def discovery_blockchain(request, private_keys, hydrachain_cluster):
     discovery_contract_address = discovery_contract_proxy.address
     # initialize and return ContractDiscovery object
     from raiden.network.discovery import ContractDiscovery
-    return ContractDiscovery(jsonrpc_client,discovery_contract_address)
+    return ContractDiscovery(jsonrpc_client,discovery_contract_address),address

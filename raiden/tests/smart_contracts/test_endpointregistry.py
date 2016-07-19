@@ -32,7 +32,7 @@ def test_endpointregistry():
 	assert events[1]['_event_type'] == 'AddressUpdated'
 
 def test_discovery_contract(discovery_blockchain):
-    assert isinstance(discovery_blockchain, ContractDiscovery)
-    discovery_blockchain.register_endpoint('127.0.0.1','4001')
-    assert discovery_blockchain.find_address('127.0.0.1','4001') == tester.a0.encode('hex')
-    
+	contract_discovery_instance,address = discovery_blockchain
+	assert isinstance(contract_discovery_instance, ContractDiscovery)
+	contract_discovery_instance.register_endpoint('127.0.0.1','4001')
+	assert contract_discovery_instance.find_address('127.0.0.1','4001') == address.encode('hex')
