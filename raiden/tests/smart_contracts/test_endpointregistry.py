@@ -5,7 +5,8 @@ from ethereum import utils
 from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
-
+#from raiden.tests.conftest import discovery_blockchain
+from raiden.network.discovery import ContractDiscovery
 from raiden.blockchain.abi import get_contract_path
 
 def test_endpointregistry():
@@ -27,3 +28,6 @@ def test_endpointregistry():
 	assert len(events) == 2
 	assert events[0]['_event_type'] == 'AddressRegistered'
 	assert events[1]['_event_type'] == 'AddressUpdated'
+
+def test_discovery_contract(discovery_blockchain):
+    assert isinstance(discovery_blockchain, ContractDiscovery)

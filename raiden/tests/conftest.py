@@ -345,3 +345,29 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
     request.addfinalizer(_cleanup)
 
     return raiden_apps
+
+@pytest.mark.fixture
+def discovery_blockchain(request, private_keys,  timeout, hydrachain_cluster):
+    # create jsonrpc client
+    privatekey = private_keys[0]
+    address = privtoaddr(privatekey)
+    blockchain_service_class = BlockChainService
+    jsonrpc_client = JSONRPCClient(
+        privkey=privatekey,
+        print_communication=False,
+    )
+    # deploy discovery contract
+    discovery_contract_path = get_contract_path('EndpointRegistry.sol')
+    discovery_contracts = compile_file(discovery_contract_path, libraries=dict())
+    discovery_contract_proxy = jsonrpc_client.deploy_solidity_contract(
+        address,
+        'EndpointRegistry',
+        discovery_contracts,
+        dict(),
+        tuple(),
+        timeout=timeout,
+    )
+    discovery_contract_address = discovery_contract_proxy.address
+    # initialize and return ContractDiscovery object
+    from raiden.network.discovery import ContractDiscovery
+    return ContractDiscovery(jsonrpc_client,discovery_contract_address)
