@@ -491,7 +491,7 @@ def geth_create_account(datadir, privkey):
         datadir (str): the datadir in which the account is created
     """
     with open(os.path.join(datadir, 'keyfile'), 'w') as f:
-        f.write(privkey)
+        f.write(privkey.encode('hex'))
 
     create = Popen(
         shlex.split('geth --datadir {} account import {}'.format(
