@@ -354,6 +354,7 @@ def discovery_blockchain(request, private_keys, geth_cluster):
     address = privtoaddr(privatekey)
     blockchain_service_class = BlockChainService
     jsonrpc_client = JSONRPCClient(
+        host='0.0.0.0',
         privkey=privatekey,
         print_communication=False,
     )
