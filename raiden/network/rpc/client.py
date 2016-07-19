@@ -33,7 +33,7 @@ MOCK_REGISTRY_ADDRESS = '7265676973747279726567697374727972656769'
 GAS_LIMIT = 3141592  # Morden's gasLimit.
 GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
 GAS_PRICE = denoms.shannon * 20
-DEFAULT_TIMEOUT = 3
+DEFAULT_TIMEOUT = 60
 
 FILTER_ID_GENERATOR = count()
 
@@ -309,19 +309,23 @@ class ChannelManager(object):
         else:
             other = peer1
 
-        transaction_hash = self.proxy.newChannel.transact(
+        transaction_hash = self.proxy.newChannel(
             other,
             settle_timeout,
             startgas=self.startgas,
-            gasprice=self.gasprice,
+            gasprice=self.gasprice * 2,
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
 
+        assert len(self.proxy.address)
+
         address_encoded = self.proxy.getChannelWith.call(
             other,
-            startgas=GAS_LIMIT,
+            startgas=self.startgas,
         )
-        return address_decoder(address_encoded)
+        address_decoded = address_decoder(address_encoded)
+        assert len(address_decoded)
+        return address_decoded
 
     def channels_addresses(self):
         # for simplicity the smart contract return a shallow list where every

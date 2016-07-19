@@ -258,8 +258,9 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
 @pytest.fixture
 def deployed_network(request, private_keys, channels_per_node, deposit,
                      number_of_assets, settle_timeout, timeout,
-                     transport_class, hydrachain_cluster):
+                     transport_class, geth_cluster):
 
+    gevent.sleep(2)
     assert channels_per_node in (0, 1, 2, CHAIN), (
         'deployed_network uses create_sequential_network that can only work '
         'with 0, 1 or 2 channels'
@@ -270,9 +271,21 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
     blockchain_service_class = BlockChainService
 
     jsonrpc_client = JSONRPCClient(
+        host='0.0.0.0',
         privkey=privatekey,
         print_communication=False,
     )
+    patch_send_transaction(jsonrpc_client)
+
+    for process in geth_cluster:
+        assert process.returncode is None
+
+    sleeps = 0
+    while jsonrpc_client.call('eth_getBalance', address.encode('hex'), 'latest') == '0x0':
+        gevent.sleep(1)
+        sleeps += 1
+        if sleeps > 50:
+            assert False, 'blockchain is not ready'
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     registry_path = get_contract_path('Registry.sol')
@@ -306,6 +319,7 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
             timeout=timeout,
         )
         asset_address = token_proxy.address
+        assert len(asset_address)
         asset_addresses.append(asset_address)
 
         transaction_hash = registry_proxy.addAsset(asset_address)  # pylint: disable=no-member

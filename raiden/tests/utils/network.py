@@ -78,6 +78,7 @@ def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0
 
 def setup_channels(asset_address, app_pairs, deposit, settle_timeout):  # pylint: disable=too-many-locals
     for first, second in app_pairs:
+        assert len(asset_address)
         manager = first.raiden.chain.manager_by_asset(asset_address)
 
         netcontract_address = manager.new_netting_channel(
@@ -85,6 +86,7 @@ def setup_channels(asset_address, app_pairs, deposit, settle_timeout):  # pylint
             second.raiden.address,
             settle_timeout,
         )
+        assert len(netcontract_address)
 
         # use each app's own chain because of the private key / local signing
         for app in [first, second]:
@@ -287,7 +289,7 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
 
     random.seed(42)
 
-    host = '127.0.0.10'
+    host = '127.0.0.1'
     num_nodes = len(private_keys)
 
     if num_nodes < 2:
@@ -347,7 +349,9 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
 
     for app in apps:
         for asset_address in app.raiden.chain.default_registry.asset_addresses():
+            assert len(asset_address)
             manager = app.raiden.chain.manager_by_asset(asset_address)
+            assert len(manager.address)
             app.raiden.register_channel_manager(manager)
 
     return apps
@@ -524,7 +528,7 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
 
     account_addresses = [
         privtoaddr(key)
-        for key in private_keys + geth_private_keys
+        for key in list(set(private_keys + geth_private_keys))
     ]
 
     alloc = {
@@ -536,11 +540,11 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
 
     genesis = {
         'config': {
-            "homesteadBlock": "0"
+            "homesteadBlock": "1"
         },
         'nonce': '0x0000000000000042',
         'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-        'difficulty': '0x4000',
+        'difficulty': '0x40',
         'coinbase': '0x0000000000000000000000000000000000000000',
         'timestamp': '0x00',
         'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
@@ -550,7 +554,7 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
     }
 
     nodes_configuration = []
-    for pos, key in enumerate(private_keys):
+    for pos, key in enumerate(geth_private_keys):
         config = dict()
 
         # make the first node miner
