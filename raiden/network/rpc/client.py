@@ -57,11 +57,6 @@ def patch_send_transaction(client, nonce_offset=0):
         @see https://github.com/ethereum/pyethapp/blob/develop/pyethapp/rpc_client.py#L359
         """
         nonce = int(client.call('eth_getTransactionCount', encode_hex(sender), 'pending'), 16) + nonce_offset
-        # FIXME: debug
-        if gasprice < GAS_PRICE:
-            import ipdb
-            ipdb.set_trace()
-
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
         assert hasattr(client, 'privkey') and client.privkey
         tx.sign(client.privkey)
