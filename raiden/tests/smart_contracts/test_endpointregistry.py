@@ -5,9 +5,11 @@ from ethereum import utils
 from ethereum import tester
 from ethereum.utils import sha3, privtoaddr
 from ethereum.tester import TransactionFailed
-#from raiden.tests.conftest import discovery_blockchain
+from raiden.tests.conftest import discovery_blockchain
 from raiden.network.discovery import ContractDiscovery
 from raiden.blockchain.abi import get_contract_path
+from ethereum.slogging import configure
+configure(':DEBUG')
 
 def test_endpointregistry():
 	registry_contract_path = get_contract_path('EndpointRegistry.sol')
@@ -31,3 +33,6 @@ def test_endpointregistry():
 
 def test_discovery_contract(discovery_blockchain):
     assert isinstance(discovery_blockchain, ContractDiscovery)
+    discovery_blockchain.register_endpoint('127.0.0.1','4001')
+    assert discovery_blockchain.find_address('127.0.0.1','4001') == tester.a0.encode('hex')
+    

@@ -346,8 +346,8 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
 
     return raiden_apps
 
-@pytest.mark.fixture
-def discovery_blockchain(request, private_keys,  timeout, hydrachain_cluster):
+@pytest.fixture
+def discovery_blockchain(request, private_keys, hydrachain_cluster):
     # create jsonrpc client
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
@@ -365,7 +365,6 @@ def discovery_blockchain(request, private_keys,  timeout, hydrachain_cluster):
         discovery_contracts,
         dict(),
         tuple(),
-        timeout=timeout,
     )
     discovery_contract_address = discovery_contract_proxy.address
     # initialize and return ContractDiscovery object
