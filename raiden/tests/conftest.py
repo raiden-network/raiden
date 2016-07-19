@@ -360,12 +360,15 @@ def discovery_blockchain(request, private_keys, geth_cluster):
     )
     patch_send_transaction(jsonrpc_client)
 
+    for process in geth_cluster:
+        assert process.returncode is None
+
     sleeps = 0
     while jsonrpc_client.call('eth_getBalance', address.encode('hex'), 'latest') == 0:
         gevent.sleep(1)
         sleeps += 1
-        if sleeps > 5:
-            break
+        if sleeps > 30:
+            assert False, 'blockchain is not ready'
 
     # deploy discovery contract
     discovery_contract_path = get_contract_path('EndpointRegistry.sol')
