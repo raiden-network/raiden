@@ -513,7 +513,7 @@ def geth_init_datadir(genesis, datadir):
     genesis_path = os.path.join(datadir, 'custom_genesis.json')
     with open(genesis_path, 'w') as f:
         json.dump(genesis, f)
-    init = Popen(shlex.split(
+    Popen(shlex.split(
         'geth --datadir {} init {}'.format(datadir, genesis_path)
         ))
 
@@ -523,7 +523,7 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
 
     account_addresses = [
         privtoaddr(key)
-        for key in private_keys
+        for key in private_keys + geth_private_keys
     ]
 
     alloc = {
@@ -549,7 +549,7 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
     }
 
     nodes_configuration = []
-    for pos, key in enumerate(geth_private_keys):
+    for pos, key in enumerate(private_keys):
         config = dict()
 
         # make the first node miner
@@ -577,7 +577,7 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
         os.makedirs(nodedir)
         geth_init_datadir(genesis, nodedir)
         if 'minerthreads' in config:
-            geth_create_account(nodedir, geth_private_keys[i])
+            geth_create_account(nodedir, private_keys[i])
 
         cmds.append(geth_to_cmd(config, datadir=nodedir))
 

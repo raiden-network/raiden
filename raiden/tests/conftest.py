@@ -358,6 +358,14 @@ def discovery_blockchain(request, private_keys, geth_cluster):
         print_communication=False,
     )
     patch_send_transaction(jsonrpc_client)
+
+    sleeps = 0
+    while jsonrpc_client.call('eth_getBalance', address.encode('hex'), 'latest') == 0:
+        gevent.sleep(1)
+        sleeps += 1
+        if sleeps > 5:
+            break
+
     # deploy discovery contract
     discovery_contract_path = get_contract_path('EndpointRegistry.sol')
     discovery_contracts = compile_file(discovery_contract_path, libraries=dict())
@@ -367,6 +375,7 @@ def discovery_blockchain(request, private_keys, geth_cluster):
         discovery_contracts,
         dict(),
         tuple(),
+        timeout=30,
     )
     discovery_contract_address = discovery_contract_proxy.address
     # initialize and return ContractDiscovery object
