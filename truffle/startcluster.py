@@ -42,6 +42,9 @@ NODE_CONFIG = [
 ]
 
 GENESIS_STUB = {
+    'config': {
+        'homesteadBlock': 1
+    },
     'nonce': '0x0000000000000042',
     'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
     'difficulty': '0x4000',
