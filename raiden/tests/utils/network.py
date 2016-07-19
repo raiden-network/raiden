@@ -377,9 +377,6 @@ def create_hydrachain_cluster(private_keys, hydrachain_private_keys, p2p_base_po
     }
 
     genesis = {
-        'config': {
-            "homesteadBlock": "0"
-        },
         'nonce': '0x00006d6f7264656e',
         'difficulty': '0x20000',
         'mixhash': '0x00000000000000000000000000000000000000647572616c65787365646c6578',
@@ -485,7 +482,7 @@ def geth_to_cmd(node, datadir=None):
     return cmd
 
 
-def geth_create_account(datadir):
+def geth_create_account(datadir, privkey):
     """
     Create an account in `datadir` -- since we're not interested
     in the rewards, we don't care about the created address.
@@ -493,11 +490,13 @@ def geth_create_account(datadir):
     Args:
         datadir (str): the datadir in which the account is created
     """
+    with open(os.path.join(datadir, 'keyfile'), 'w') as f:
+        f.write(privkey)
 
     create = Popen(
-        shlex.split('geth --datadir {} account new'.format(datadir)),
-        stdin=PIPE,
-        universal_newlines=True,
+        shlex.split('geth --datadir {} account import {}'.format(
+            datadir, os.path.join(datadir, 'keyfile'))),
+        stdin=PIPE, universal_newlines=True
     )
     create.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
     time.sleep(.1)
@@ -506,19 +505,17 @@ def geth_create_account(datadir):
     assert create.returncode == 0
 
 
-
-def init_datadir(datadir):
+def geth_init_datadir(genesis, datadir):
     """Initialize a clients datadir with our custom genesis block.
     Args:
         datadir (str): the datadir in which the blockchain is initialized.
     """
     genesis_path = os.path.join(datadir, 'custom_genesis.json')
     with open(genesis_path, 'w') as f:
-        json.dump(mk_genesis(DEFAULTACCOUNTS), f)
+        json.dump(genesis, f)
     init = Popen(shlex.split(
         'geth --datadir {} init {}'.format(datadir, genesis_path)
         ))
-    assert init.returncode == 0
 
 
 def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_datadir):  # pylint: disable=too-many-locals,too-many-statements
@@ -537,6 +534,9 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
     }
 
     genesis = {
+        'config': {
+            "homesteadBlock": "0"
+        },
         'nonce': '0x0000000000000042',
         'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
         'difficulty': '0x4000',
@@ -572,16 +572,14 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
         nodes_configuration.append(config)
 
     cmds = []
-    for config in nodes_configuration:
+    for i, config in enumerate(nodes_configuration):
         nodedir = os.path.join(base_datadir, config['nodekeyhex'])
         os.makedirs(nodedir)
-        with open(os.path.join(nodedir, 'genesis.json'), 'w') as handler:
-            json.dump(genesis, handler)
+        geth_init_datadir(genesis, nodedir)
+        if 'minerthreads' in config:
+            geth_create_account(nodedir, geth_private_keys[i])
 
-            if 'minerthreads' in config:
-                geth_create_account(nodedir)
-
-            cmds.append(geth_to_cmd(config, datadir=nodedir))
+        cmds.append(geth_to_cmd(config, datadir=nodedir))
 
     processes = []
     for cmd in cmds:
@@ -593,6 +591,5 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
         else:
             processes.append(Popen(cmd))
             print('spawned process')
-
 
     return processes
