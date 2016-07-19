@@ -377,6 +377,9 @@ def create_hydrachain_cluster(private_keys, hydrachain_private_keys, p2p_base_po
     }
 
     genesis = {
+        'config': {
+            "homesteadBlock": "0"
+        },
         'nonce': '0x00006d6f7264656e',
         'difficulty': '0x20000',
         'mixhash': '0x00000000000000000000000000000000000000647572616c65787365646c6578',

@@ -14,6 +14,7 @@ from raiden.network.rpc.client import (
     BlockChainServiceMock,
     MOCK_REGISTRY_ADDRESS,
     GAS_LIMIT,
+    patch_send_transaction,
 )
 from raiden.blockchain.abi import get_contract_path
 from raiden.app import DEFAULT_SETTLE_TIMEOUT
@@ -347,7 +348,7 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
     return raiden_apps
 
 @pytest.fixture
-def discovery_blockchain(request, private_keys, hydrachain_cluster):
+def discovery_blockchain(request, private_keys, geth_cluster):
     # create jsonrpc client
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
@@ -356,6 +357,7 @@ def discovery_blockchain(request, private_keys, hydrachain_cluster):
         privkey=privatekey,
         print_communication=False,
     )
+    patch_send_transaction(jsonrpc_client)
     # deploy discovery contract
     discovery_contract_path = get_contract_path('EndpointRegistry.sol')
     discovery_contracts = compile_file(discovery_contract_path, libraries=dict())
