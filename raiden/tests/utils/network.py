@@ -472,7 +472,6 @@ def geth_to_cmd(node, datadir=None):
 
     if datadir:
         cmd.extend(['--datadir', datadir])
-        cmd.extend(['--genesis', os.path.join(datadir, 'genesis.json')])
 
     cmd.extend([
         '--nodiscover',
@@ -505,6 +504,21 @@ def geth_create_account(datadir):
     create.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
     create.communicate()
     assert create.returncode == 0
+
+
+
+def init_datadir(datadir):
+    """Initialize a clients datadir with our custom genesis block.
+    Args:
+        datadir (str): the datadir in which the blockchain is initialized.
+    """
+    genesis_path = os.path.join(datadir, 'custom_genesis.json')
+    with open(genesis_path, 'w') as f:
+        json.dump(mk_genesis(DEFAULTACCOUNTS), f)
+    init = Popen(shlex.split(
+        'geth --datadir {} init {}'.format(datadir, genesis_path)
+        ))
+    assert init.returncode == 0
 
 
 def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_datadir):  # pylint: disable=too-many-locals,too-many-statements
