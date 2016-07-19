@@ -347,24 +347,28 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
 
     return raiden_apps
 
+
 @pytest.fixture
 def discovery_blockchain(request, private_keys, geth_cluster):
     # create jsonrpc client
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
-    blockchain_service_class = BlockChainService
+
     jsonrpc_client = JSONRPCClient(
         host='0.0.0.0',
         privkey=privatekey,
         print_communication=False,
     )
+    # prepare for x-client communication
     patch_send_transaction(jsonrpc_client)
 
+    # make sure, the cluster is up
+    assert len(geth_cluster)
     for process in geth_cluster:
         assert process.returncode is None
 
     sleeps = 0
-    while jsonrpc_client.call('eth_getBalance', address.encode('hex'), 'latest') == 0:
+    while jsonrpc_client.call('eth_getBalance', address.encode('hex'), 'latest') == 0x0:
         gevent.sleep(1)
         sleeps += 1
         if sleeps > 30:
@@ -384,4 +388,4 @@ def discovery_blockchain(request, private_keys, geth_cluster):
     discovery_contract_address = discovery_contract_proxy.address
     # initialize and return ContractDiscovery object
     from raiden.network.discovery import ContractDiscovery
-    return ContractDiscovery(jsonrpc_client,discovery_contract_address),address
+    return ContractDiscovery(jsonrpc_client, discovery_contract_address), address
