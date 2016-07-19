@@ -477,6 +477,7 @@ def geth_to_cmd(node, datadir=None):
         '--rpc',
         '--jitvm=false',
         '--networkid', '627',
+        '--rpcaddr', '0.0.0.0',
     ])
 
     return cmd
