@@ -16,7 +16,6 @@ slogging.configure(
 )
 
 
-@pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['fullnetwork:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [2])

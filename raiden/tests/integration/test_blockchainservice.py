@@ -12,7 +12,7 @@ from pyethapp.accounts import mk_privkey
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.blockchain.abi import get_contract_path
-from raiden.network.rpc.client import decode_topic
+from raiden.network.rpc.client import decode_topic, patch_send_transaction
 
 slogging.configure(
     ':DEBUG'
@@ -156,11 +156,9 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
     assert netting_channel2.isopen() is True
 
 
-@pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('timeout', [3])
-def test_blockchain(private_keys, number_of_nodes, cluster, timeout):
+def test_blockchain(private_keys, number_of_nodes, cluster, poll_timeout):
     # pylint: disable=too-many-locals
     addresses = [
         privtoaddr(priv)
@@ -175,6 +173,7 @@ def test_blockchain(private_keys, number_of_nodes, cluster, timeout):
         privkey=privatekey,
         print_communication=False,
     )
+    patch_send_transaction(jsonrpc_client)
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())
@@ -184,7 +183,7 @@ def test_blockchain(private_keys, number_of_nodes, cluster, timeout):
         humantoken_contracts,
         dict(),
         (total_asset, 'raiden', 2, 'Rd'),
-        timeout=timeout,
+        timeout=poll_timeout,
     )
 
     registry_path = get_contract_path('Registry.sol')
@@ -195,7 +194,7 @@ def test_blockchain(private_keys, number_of_nodes, cluster, timeout):
         registry_contracts,
         dict(),
         tuple(),
-        timeout=timeout,
+        timeout=poll_timeout,
     )
 
     log_list = jsonrpc_client.call(
@@ -215,7 +214,7 @@ def test_blockchain(private_keys, number_of_nodes, cluster, timeout):
         token_proxy.address,
         gasprice=denoms.wei,
     )
-    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
+    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=poll_timeout)
 
     assert len(registry_proxy.assetAddresses.call()) == 1
 
@@ -255,7 +254,7 @@ def test_blockchain(private_keys, number_of_nodes, cluster, timeout):
         10,
         gasprice=denoms.wei,
     )
-    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
+    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=poll_timeout)
 
     log_list = jsonrpc_client.call(
         'eth_getLogs',
