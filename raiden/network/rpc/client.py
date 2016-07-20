@@ -7,7 +7,6 @@ from itertools import count
 import rlp
 from ethereum import slogging
 from ethereum import _solidity
-from ethereum import config as ethereum_config
 from ethereum.transactions import Transaction
 from ethereum.utils import denoms, privtoaddr, int_to_big_endian, encode_hex
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_encoder
@@ -56,11 +55,7 @@ def patch_send_transaction(client, nonce_offset=0):
         This is necessary to support other remotes that don't support pyethapp's extended specs.
         @see https://github.com/ethereum/pyethapp/blob/develop/pyethapp/rpc_client.py#L359
         """
-        nonce = int(client.call('eth_getTransactionCount', encode_hex(sender), 'pending'), 16) + nonce_offset
-        # FIXME: debug
-        if gasprice < GAS_PRICE:
-            import ipdb
-            ipdb.set_trace()
+        nonce = int(client.call('eth_getTransactionCount', encode_hex(sender), 'pending'), 16)
 
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
         assert hasattr(client, 'privkey') and client.privkey
@@ -92,8 +87,7 @@ class BlockChainService(object):
         self.asset_manager = dict()
 
         self.client = jsonrpc_client
-        patch_send_transaction(self.client,
-                               nonce_offset=ethereum_config['MORDEN_INITIAL_NONCE_OFFSET'] if testnet else 0)
+        patch_send_transaction(self.client)
         self.default_registry = self.registry(registry_address)
 
     def asset(self, asset_address):

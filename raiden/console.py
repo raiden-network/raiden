@@ -135,20 +135,23 @@ class ConsoleTools(object):
             initial_alloc=10 ** 6,
             name='raidentester',
             symbol='RDT',
-            decimals=2):
+            decimals=2,
+            timeout=30,
+            gasprice=denoms.shannon * 20):
         """Create a proxy for a new HumanStandardToken, that is initialized with
         :initial_alloc: int amount
         :name: str name
         :symbol: str symbol
         :decimals: int decimal places
+        :kwargs: will be passed to contract creation
         """
         token_proxy = self.__chain.client.deploy_solidity_contract(
             self.__raiden.address, 'HumanStandardToken',
             compile_file('raiden/smart_contracts/HumanStandardToken.sol'),
             dict(),
             (10 ** 6, 'raiden', 2, 'RD'),
-            gasprice=denoms.shannon * 20,
-            timeout=5000)
+            gasprice=gasprice,
+            timeout=timeout)
         self.assets.append(token_proxy)
         return token_proxy
 
