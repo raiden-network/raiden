@@ -26,7 +26,7 @@ slogging.configure(
 def test_fullnetwork(deployed_network):
     app0, app1, app2 = deployed_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_address = app0.raiden.chain.asset_addresses[0]
+    asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
 
     amount = 80
     direct_transfer(app0, app1, asset_address, amount)

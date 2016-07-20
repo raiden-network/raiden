@@ -52,7 +52,7 @@ def transfer(initiator_app, target_app, asset, amount):
 def direct_transfer(initiator_app, target_app, asset, amount):
     """ Nice to read shortcut to make a DirectTransfer. """
     assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
-    has_channel = initiator_app.raiden.address in assetmanager.partneraddress_channel
+    has_channel = target_app.raiden.address in assetmanager.partneraddress_channel
     assert has_channel, 'there is not a direct channel'
 
     initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)

@@ -179,7 +179,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     def stop(self):
         for listener in self.event_listeners:
             listener.stop_event.set(True)
-            self.chain.uninstall_filter(listener.filter_id)
+            self.chain.uninstall_filter(listener.filter_.filter_id_raw)
 
 
 class RaidenAPI(object):

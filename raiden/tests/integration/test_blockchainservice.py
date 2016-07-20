@@ -1,10 +1,8 @@
 # -*- coding: utf8 -*-
 import random
 import string
-import time
 
 import pytest
-import gevent
 from ethereum import slogging
 from ethereum import _solidity
 from ethereum.keys import privtoaddr
@@ -12,7 +10,6 @@ from ethereum._solidity import compile_file
 from ethereum.utils import denoms
 from pyethapp.accounts import mk_privkey
 from pyethapp.rpc_client import JSONRPCClient
-from pyethapp.jsonrpc import quantity_decoder
 
 from raiden.blockchain.abi import get_contract_path
 from raiden.network.rpc.client import decode_topic
@@ -38,20 +35,6 @@ def privkey(seed):
 
 def make_address():
     return ''.join(random.choice(LETTERS) for _ in range(20))
-
-
-
-
-def wait_for_hydrachain(jsonrpc_client, number_of_nodes, timeout):
-    start = time.time()
-    quantity = jsonrpc_client.call('net_peerCount')
-
-    while quantity != number_of_nodes:
-        gevent.sleep(0.1)
-        quantity = quantity_decoder(jsonrpc_client.call('net_peerCount'))
-
-        if time.time() - start > timeout:
-            raise Exception('timeout')
 
 
 ADDR = addr('0')
@@ -192,12 +175,6 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
     jsonrpc_client = JSONRPCClient(
         privkey=privatekey,
         print_communication=False,
-    )
-
-    wait_for_hydrachain(
-        jsonrpc_client,
-        number_of_nodes - 1,
-        timeout,
     )
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')

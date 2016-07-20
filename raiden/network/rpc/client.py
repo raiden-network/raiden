@@ -9,8 +9,9 @@ from ethereum import slogging
 from ethereum import _solidity
 from ethereum import config as ethereum_config
 from ethereum.transactions import Transaction
-from ethereum.utils import denoms, privtoaddr, int_to_big_endian, encode_hex
-from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_encoder
+from ethereum.utils import denoms, privtoaddr, int_to_big_endian, encode_hex, normalize_address
+from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
+from pyethapp.rpc_client import topic_encoder
 
 from raiden.utils import isaddress, pex
 from raiden.blockchain.net_contract import NettingChannelContract
@@ -33,9 +34,9 @@ MOCK_REGISTRY_ADDRESS = '7265676973747279726567697374727972656769'
 GAS_LIMIT = 3141592  # Morden's gasLimit.
 GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
 GAS_PRICE = denoms.shannon * 20
-DEFAULT_TIMEOUT = 60
 
 FILTER_ID_GENERATOR = count()
+DEFAULT_POLL_TIMEOUT = 60
 
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
@@ -51,7 +52,7 @@ def patch_send_transaction(client, nonce_offset=0):
         patch_necessary = True
 
     def send_transaction(sender, to, value=0, data='', startgas=3141592,
-                            gasprice=GAS_PRICE, nonce=None):
+                         gasprice=GAS_PRICE, nonce=None):
         """Custom implementation for `pyethapp.rpc_client.JSONRPCClient.send_transaction`.
         This is necessary to support other remotes that don't support pyethapp's extended specs.
         @see https://github.com/ethereum/pyethapp/blob/develop/pyethapp/rpc_client.py#L359
@@ -67,6 +68,18 @@ def patch_send_transaction(client, nonce_offset=0):
         client.send_transaction = send_transaction
 
 
+def new_filter(jsonrpc_client, contract_address, topics):
+    """ Custom new filter implementation to handle bad encoding from geth rpc. """
+    json_data = {
+        'fromBlock': '',
+        'toBlock': '',
+        'address': address_encoder(normalize_address(contract_address)),
+        'topics': [topic_encoder(topic) for topic in topics],
+    }
+
+    return jsonrpc_client.call('eth_newFilter', json_data)
+
+
 def make_address():
     return bytes(''.join(random.choice(LETTERS) for _ in range(20)))
 
@@ -79,7 +92,8 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes,unused-argument
 
-    def __init__(self, jsonrpc_client, registry_address, testnet=False):
+    def __init__(self, jsonrpc_client, registry_address, testnet=False,
+                 poll_timeout=DEFAULT_POLL_TIMEOUT):
         self.address_asset = dict()
         self.address_manager = dict()
         self.address_contract = dict()
@@ -87,8 +101,11 @@ class BlockChainService(object):
         self.asset_manager = dict()
 
         self.client = jsonrpc_client
-        patch_send_transaction(self.client,
-                               nonce_offset=ethereum_config['MORDEN_INITIAL_NONCE_OFFSET'] if testnet else 0)
+        self.poll_timeout = poll_timeout
+        patch_send_transaction(
+            self.client,
+            nonce_offset=ethereum_config['MORDEN_INITIAL_NONCE_OFFSET'] if testnet else 0
+        )
         self.default_registry = self.registry(registry_address)
 
     def asset(self, asset_address):
@@ -97,6 +114,7 @@ class BlockChainService(object):
             self.address_asset[asset_address] = Asset(
                 self.client,
                 asset_address,
+                poll_timeout=self.poll_timeout,
             )
 
         return self.address_asset[asset_address]
@@ -104,7 +122,11 @@ class BlockChainService(object):
     def netting_channel(self, netting_channel_address):
         """ Return a proxy to interact with a NettingChannelContract. """
         if netting_channel_address not in self.address_contract:
-            channel = NettingChannel(self.client, netting_channel_address)
+            channel = NettingChannel(
+                self.client,
+                netting_channel_address,
+                poll_timeout=self.poll_timeout,
+            )
             self.address_contract[netting_channel_address] = channel
 
         return self.address_contract[netting_channel_address]
@@ -112,7 +134,12 @@ class BlockChainService(object):
     def manager(self, manager_address):
         """ Return a proxy to interact with a ChannelManagerContract. """
         if manager_address not in self.address_manager:
-            manager = ChannelManager(self.client, manager_address)
+            manager = ChannelManager(
+                self.client,
+                manager_address,
+                poll_timeout=self.poll_timeout,
+            )
+
             asset_address = manager.asset_address()
 
             self.asset_manager[asset_address] = manager
@@ -121,11 +148,17 @@ class BlockChainService(object):
         return self.address_manager[manager_address]
 
     def manager_by_asset(self, asset_address):
-        """ Find the channel manager for `asset_address` and return a proxy to interact with it. """
+        """ Find the channel manager for `asset_address` and return a proxy to
+        interact with it.
+        """
         if asset_address not in self.asset_manager:
             asset = self.asset(asset_address)  # check that the asset exists
             manager_address = self.default_registry.manager_address_by_asset(asset.address)
-            manager = ChannelManager(self.client, address_decoder(manager_address))
+            manager = ChannelManager(
+                self.client,
+                address_decoder(manager_address),
+                poll_timeout=self.poll_timeout,
+            )
 
             self.asset_manager[asset_address] = manager
             self.address_manager[manager_address] = manager
@@ -137,6 +170,7 @@ class BlockChainService(object):
             self.address_registry[registry_address] = Registry(
                 self.client,
                 registry_address,
+                poll_timeout=self.poll_timeout,
             )
 
         return self.address_registry[registry_address]
@@ -144,20 +178,24 @@ class BlockChainService(object):
     def block_number(self):
         return self.client.blocknumber()
 
-    def uninstall_filter(self, filter_id):
-        self.client.call('eth_uninstallFilter', quantity_encoder(filter_id))
+    def uninstall_filter(self, filter_id_raw):
+        self.client.call('eth_uninstallFilter', filter_id_raw)
 
 
 class Filter(object):
-    def __init__(self, jsonrpc_client, filter_id):
-        self.filter_id = filter_id
+    def __init__(self, jsonrpc_client, filter_id_raw):
+        self.filter_id_raw = filter_id_raw
         self.client = jsonrpc_client
 
     def changes(self):
         filter_changes = self.client.call(
             'eth_getFilterChanges',
-            quantity_encoder(self.filter_id),
+            self.filter_id_raw,
         )
+
+        # geth could return None
+        if filter_changes is None:
+            return []
 
         result = list()
         for log_event in filter_changes:
@@ -179,13 +217,13 @@ class Filter(object):
     def uninstall(self):
         self.client.call(
             'eth_uninstallFilter',
-            quantity_encoder(self.filter_id),
+            self.filter_id_raw,
         )
 
 
 class Asset(object):
     def __init__(self, jsonrpc_client, asset_address, startgas=GAS_LIMIT,  # pylint: disable=too-many-arguments
-                 gasprice=GAS_PRICE, timeout=DEFAULT_TIMEOUT):
+                 gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
         result = jsonrpc_client.call(
             'eth_getCode',
             asset_address.encode('hex'),
@@ -207,7 +245,7 @@ class Asset(object):
         self.client = jsonrpc_client
         self.startgas = startgas
         self.gasprice = gasprice
-        self.timeout = timeout
+        self.poll_timeout = poll_timeout
 
     def approve(self, contract_address, allowance):
         """ Aprove `contract_address` to transfer up to `deposit` amount of token. """
@@ -217,7 +255,7 @@ class Asset(object):
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
     def balance_of(self, address):
         """ Return the balance of `address`. """
@@ -226,7 +264,7 @@ class Asset(object):
 
 class Registry(object):
     def __init__(self, jsonrpc_client, registry_address, startgas=GAS_LIMIT,  # pylint: disable=too-many-arguments
-                 gasprice=GAS_PRICE, timeout=DEFAULT_TIMEOUT):
+                 gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
         result = jsonrpc_client.call(
             'eth_getCode',
             registry_address.encode('hex'),
@@ -248,7 +286,7 @@ class Registry(object):
         self.client = jsonrpc_client
         self.startgas = startgas
         self.gasprice = gasprice
-        self.timeout = timeout
+        self.poll_timeout = poll_timeout
 
     def manager_address_by_asset(self, asset_address):
         """ Return the channel manager address for the given asset. """
@@ -259,7 +297,7 @@ class Registry(object):
             asset_address,
             startgas=self.startgas,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
         return self.proxy.channelManagerByAsset.call(
             asset_address,
@@ -275,7 +313,7 @@ class Registry(object):
 
 class ChannelManager(object):
     def __init__(self, jsonrpc_client, manager_address, startgas=GAS_LIMIT,  # pylint: disable=too-many-arguments
-                 gasprice=GAS_PRICE, timeout=DEFAULT_TIMEOUT):
+                 gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
         result = jsonrpc_client.call(
             'eth_getCode',
             manager_address.encode('hex'),
@@ -297,7 +335,7 @@ class ChannelManager(object):
         self.client = jsonrpc_client
         self.startgas = startgas
         self.gasprice = gasprice
-        self.timeout = timeout
+        self.poll_timeout = poll_timeout
 
     def asset_address(self):
         """ Return the asset of this manager. """
@@ -315,7 +353,7 @@ class ChannelManager(object):
             startgas=self.startgas,
             gasprice=self.gasprice * 2,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
         assert len(self.proxy.address)
 
@@ -366,20 +404,17 @@ class ChannelManager(object):
         topics = [CHANNELNEW_EVENTID]
 
         channel_manager_address_bin = self.proxy.address
-        filter_id = self.client.new_filter(
-            address=channel_manager_address_bin,
-            topics=topics,
-        )
+        filter_id_raw = new_filter(self.client, channel_manager_address_bin, topics)
 
         return Filter(
             self.client,
-            filter_id,
+            filter_id_raw,
         )
 
 
 class NettingChannel(object):
     def __init__(self, jsonrpc_client, channel_address, startgas=GAS_LIMIT,  # pylint: disable=too-many-arguments
-                 gasprice=GAS_PRICE, timeout=DEFAULT_TIMEOUT):
+                 gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
         result = jsonrpc_client.call(
             'eth_getCode',
             channel_address.encode('hex'),
@@ -401,7 +436,7 @@ class NettingChannel(object):
         self.client = jsonrpc_client
         self.startgas = startgas
         self.gasprice = gasprice
-        self.timeout = timeout
+        self.poll_timeout = poll_timeout
 
     def asset_address(self):
         return address_decoder(self.proxy.assetAddress.call())
@@ -468,7 +503,7 @@ class NettingChannel(object):
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.timeout)
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
     def close(self, our_address, first_transfer, second_transfer):
         raise NotImplementedError()
@@ -485,14 +520,11 @@ class NettingChannel(object):
         netting_channel_address_bin = self.proxy.address
         topics = [CHANNELNEWBALANCE_EVENTID]
 
-        filter_id = self.client.new_filter(
-            address=netting_channel_address_bin,
-            topics=topics,
-        )
+        filter_id_raw = new_filter(self.client, netting_channel_address_bin, topics)
 
         return Filter(
             self.client,
-            filter_id,
+            filter_id_raw,
         )
 
     def channelsecretrevealed_filter(self):
@@ -504,14 +536,11 @@ class NettingChannel(object):
         netting_channel_address_bin = self.proxy.address
         topics = [CHANNELSECRETREVEALED_EVENTID]
 
-        filter_id = self.client.new_filter(
-            address=netting_channel_address_bin,
-            topics=topics,
-        )
+        filter_id_raw = new_filter(self.client, netting_channel_address_bin, topics)
 
         return Filter(
             self.client,
-            filter_id,
+            filter_id_raw,
         )
 
     def channelclosed_filter(self):
@@ -523,14 +552,11 @@ class NettingChannel(object):
         topics = [CHANNELCLOSED_EVENTID]
 
         channel_manager_address_bin = self.proxy.address
-        filter_id = self.client.new_filter(
-            address=channel_manager_address_bin,
-            topics=topics,
-        )
+        filter_id_raw = new_filter(self.client, channel_manager_address_bin, topics)
 
         return Filter(
             self.client,
-            filter_id,
+            filter_id_raw,
         )
 
 
@@ -591,7 +617,8 @@ class BlockChainServiceMock(object):
     # Note: all these methods need to be "atomic" because the mock is going to
     # be used by multiple clients. Not using blocking functions should be
     # sufficient
-    def __init__(self, jsonrpc_client, registry_address, timeout=None):
+    def __init__(self, jsonrpc_client, registry_address, testnet=False,
+                 poll_timeout=None):
         pass
 
     def next_block(self):
@@ -623,13 +650,13 @@ class BlockChainServiceMock(object):
     def registry(self, registry_address):
         return self.address_registry[registry_address]
 
-    def uninstall_filter(self, filter_id):
+    def uninstall_filter(self, filter_id_raw):
         pass
 
 
 class FilterMock(object):
-    def __init__(self, jsonrpc_client, filter_id):
-        self.filter_id = filter_id
+    def __init__(self, jsonrpc_client, filter_id_raw):
+        self.filter_id_raw = filter_id_raw
         self.client = jsonrpc_client
         self.events = list()
 
