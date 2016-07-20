@@ -130,7 +130,7 @@ class NettingChannelContract(object):
     ---------
 
     There are two kinds of transfers that are recognized by the contract, a
-    transfer initiate by a channel participant to the other participant, called
+    transfer initiated by a channel participant to the other participant, called
     a direct transfer, or a mediated transfer involving multiple channels, used
     for cooperatively transfer assets for nodes without a direct channel.
 
@@ -401,10 +401,10 @@ class NettingChannelContract(object):
         if self.closed is None:
             raise RuntimeError('Contract is open.')
 
-        # third-parties need to call a separte method that receives:
+        # third-parties need to call a separate method that receives:
         # - a fee amount
         # - a signature of the transfer and fee amount, proving that the
-        #   participant requried the third-party services
+        #   participant required the third-party services
         if ctx['msg.sender'] not in self.participants:
             raise ValueError('Caller is not participant.')
 

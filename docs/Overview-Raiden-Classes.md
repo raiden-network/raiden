@@ -22,7 +22,7 @@ Welcome to the raiden wiki!
 
 ##	AssetManager
 	a.	Is running off-chain
-	b.	Is owned by exactly on instance of RaidenService
+	b.	Is owned by exactly one instance of RaidenService
 	c.	Is associated with one single Asset
 	d.	Is associated with the ChannelManagerContract on the chain which is responsible for the same single Asset
 	e.	Maintains a set of direct channels to other nodes for the single asset it is associated with
@@ -30,12 +30,12 @@ Welcome to the raiden wiki!
 	
 ##	ChannelManagerContract
 	a.	Is running on-chain
-	b.	Is associated with exactly on Asset
+	b.	Is associated with exactly one Asset
 	c.	Maintains a list of on-chain NettingChannelContracts
 	
 ##	NettingChannelContract
 	a.	Is running on-chain
-	b.	Is associated with exactly on Asset
+	b.	Is associated with exactly one Asset
 	c.	Knows both parties of the channel (on-chain addresses)
 	d.	Holds deposits of both parties
 	e.	Performs on-chain settlement of a channel
@@ -117,7 +117,7 @@ Note: see "core processes" below for sequence description
 	B: MediatedTransfer > C2
 	C2: MediatedTransfer > D
 
-### TimoutTransfer:
+### TimeoutTransfer:
 	A: Initiator Creates Secret
 	A: MediatedTransfer > B
 	B: MediatedTransfer > C

@@ -35,10 +35,10 @@ class RaidenProtocol(object):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
         if isinstance(message, (Ack, BaseError)):
-            raise ValueError('Do not use send for Ack messages or Erorrs')
+            raise ValueError('Do not use send for Ack messages or Errors')
 
         if len(message.encode()) > self.max_message_size:
-            raise ValueError('message size excedes the maximum {}'.format(self.max_message_size))
+            raise ValueError('message size exceeds the maximum {}'.format(self.max_message_size))
 
         return gevent.spawn(self._repeat_until_ack, receiver_address, message)
 
