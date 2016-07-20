@@ -662,7 +662,8 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
         cmds.append(geth_to_cmd(config, nodedir))
 
     # save current term settings before running geth
-    term_settings = termios.tcgetattr(sys.stdin)
+    if isinstance(sys.stdin, file):  # check that the test is running on non-capture mode
+        term_settings = termios.tcgetattr(sys.stdin)
 
     processes_list = []
     for cmd in cmds:
@@ -681,6 +682,7 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
     geth_wait_and_check(private_keys)
 
     # reenter echo mode (disabled by geth pasphrase prompt)
-    termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
+    if isinstance(sys.stdin, file):
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
 
     return processes_list

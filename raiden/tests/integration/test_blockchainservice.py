@@ -160,15 +160,14 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('timeout', [3])
-def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
+def test_blockchain(private_keys, number_of_nodes, cluster, timeout):
     # pylint: disable=too-many-locals
     addresses = [
         privtoaddr(priv)
         for priv in private_keys
     ]
 
-    privatekey_hex = hydrachain_cluster[0].config['node']['privkey_hex']
-    privatekey = privatekey_hex.decode('hex')
+    privatekey = private_keys[0]
     address = privtoaddr(privatekey)
     total_asset = 100
 

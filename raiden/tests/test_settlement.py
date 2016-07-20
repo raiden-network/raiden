@@ -97,7 +97,6 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
     # any new transfer
     direct_transfer(app0, app1, asset, amount)
 
-    import pdb; pdb.set_trace()
     secret = ''
     attack_channel = channel(app2, app1, asset)
     secret_transfer = get_received_transfer(attack_channel, 0)
