@@ -86,11 +86,9 @@ class App(object):  # pylint: disable=too-few-public-methods
         default="",
         type=str
         )  # FIXME: implement NAT-punching
-@click.option('--testnet', help='are you using the morden testnet?',
-              default=False, type=bool)
 @click.command()
 def app(privkey, eth_rpc_endpoint, registry_contract_address, discovery_contract_address,
-         listen_address, external_listen_address, testnet):
+         listen_address, external_listen_address):
 
     if not external_listen_address:
         # notify('if you are behind a NAT, you should set
@@ -111,7 +109,6 @@ def app(privkey, eth_rpc_endpoint, registry_contract_address, discovery_contract
     blockchain_service = BlockChainService(
         jsonrpc_client,
         registry_contract_address.decode('hex'),
-        testnet=testnet
     )
     discovery = Discovery()
 
