@@ -37,7 +37,7 @@ class App(object):  # pylint: disable=too-few-public-methods
         reveal_timeout=DEFAULT_REVEAL_TIMEOUT,
         settle_timeout=DEFAULT_SETTLE_TIMEOUT,
         # how long to wait for a transfer until TimeoutTransfer is sent (time in milliseconds)
-        msg_timeout=100.00
+        msg_timeout=100.00,
     )
 
     def __init__(self, config, chain, discovery, transport_class=UDPTransport):

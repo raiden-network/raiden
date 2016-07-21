@@ -5,20 +5,24 @@ import copy
 import json
 import os
 import random
-import shlex
+import sys
 import time
+import termios
+import subprocess
 from math import floor
-from subprocess import Popen, PIPE
 
+import gevent
 from devp2p.crypto import privtopub
 from devp2p.utils import host_port_pubkey_to_uri
 from ethereum.keys import privtoaddr
-from ethereum.utils import denoms, privtoaddr, encode_hex
 from ethereum.slogging import getLogger
+from ethereum.utils import denoms, encode_hex
 from pyethapp.accounts import Account
 from pyethapp.config import update_config_from_genesis_json
 from pyethapp.console_service import Console
+from pyethapp.jsonrpc import address_encoder, quantity_decoder
 from pyethapp.rpc_client import JSONRPCClient
+from requests import ConnectionError
 
 from raiden.app import App, INITIAL_PORT
 from raiden.network.discovery import Discovery
@@ -78,6 +82,7 @@ def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0
 
 def setup_channels(asset_address, app_pairs, deposit, settle_timeout):  # pylint: disable=too-many-locals
     for first, second in app_pairs:
+        assert len(asset_address)
         manager = first.raiden.chain.manager_by_asset(asset_address)
 
         netcontract_address = manager.new_netting_channel(
@@ -85,6 +90,7 @@ def setup_channels(asset_address, app_pairs, deposit, settle_timeout):  # pylint
             second.raiden.address,
             settle_timeout,
         )
+        assert len(netcontract_address)
 
         # use each app's own chain because of the private key / local signing
         for app in [first, second]:
@@ -184,8 +190,8 @@ def network_with_minimum_channels(apps, channels_per_node):
 
 
 def create_network(private_keys, assets_addresses, registry_address,  # pylint: disable=too-many-arguments
-                   channels_per_node, deposit, settle_timeout, transport_class,
-                   blockchain_service_class):
+                   channels_per_node, deposit, settle_timeout, poll_timeout,
+                   transport_class, blockchain_service_class):
     """ Initialize a local test network using the UDP protocol.
 
     Note:
@@ -238,6 +244,7 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
         blockchain_service = blockchain_service_class(
             jsonrpc_client,
             registry_address,
+            poll_timeout=poll_timeout,
         )
 
         app = create_app(
@@ -274,7 +281,8 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
 
 def create_sequential_network(private_keys, asset_address, registry_address,  # pylint: disable=too-many-arguments
                               channels_per_node, deposit, settle_timeout,
-                              transport_class, blockchain_service_class):
+                              poll_timeout, transport_class,
+                              blockchain_service_class):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
@@ -287,7 +295,7 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
 
     random.seed(42)
 
-    host = '127.0.0.10'
+    host = '127.0.0.1'
     num_nodes = len(private_keys)
 
     if num_nodes < 2:
@@ -313,6 +321,7 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
         blockchain_service = blockchain_service_class(
             jsonrpc_client,
             registry_address,
+            poll_timeout=poll_timeout,
         )
 
         app = create_app(
@@ -347,10 +356,31 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
 
     for app in apps:
         for asset_address in app.raiden.chain.default_registry.asset_addresses():
+            assert len(asset_address)
             manager = app.raiden.chain.manager_by_asset(asset_address)
+            assert len(manager.address)
             app.raiden.register_channel_manager(manager)
 
     return apps
+
+
+def hydrachain_wait(privatekeys, number_of_nodes):
+    """ Wait until the hydrchain cluster is ready. """
+    jsonrpc_client = JSONRPCClient(
+        host='0.0.0.0',
+        privkey=privatekeys[0],
+        print_communication=False,
+    )
+
+    quantity = jsonrpc_client.call('net_peerCount')
+    tries = 5
+
+    while quantity != number_of_nodes and tries > 0:
+        gevent.sleep(0.5)
+        quantity = quantity_decoder(jsonrpc_client.call('net_peerCount'))
+
+    if quantity != number_of_nodes:
+        raise Exception('hydrachain is taking to long to initialize')
 
 
 def create_hydrachain_cluster(private_keys, hydrachain_private_keys, p2p_base_port, base_datadir):
@@ -434,10 +464,12 @@ def create_hydrachain_cluster(private_keys, hydrachain_private_keys, p2p_base_po
         hydrachain_app = start_app(config, accounts=[account])
         all_apps.append(hydrachain_app)
 
+    hydrachain_wait(private_keys, len(hydrachain_private_keys) - 1)
+
     return all_apps
 
 
-def geth_to_cmd(node, datadir=None):
+def geth_to_cmd(node, datadir):
     """
     Transform a node configuration into a cmd-args list for `subprocess.Popen`.
 
@@ -467,23 +499,23 @@ def geth_to_cmd(node, datadir=None):
     if 'minerthreads' in node:
         cmd.extend(['--mine', '--etherbase', '0'])
 
-    if datadir:
-        cmd.extend(['--datadir', datadir])
-        cmd.extend(['--genesis', os.path.join(datadir, 'genesis.json')])
-
+    # dont use the '--dev' flag
     cmd.extend([
         '--nodiscover',
-        '--dev',
         '--ipcdisable',
         '--rpc',
+        '--rpcaddr', '0.0.0.0',
         '--jitvm=false',
         '--networkid', '627',
+        '--verbosity', '6',
+        '--fakepow',
+        '--datadir', datadir,
     ])
 
     return cmd
 
 
-def geth_create_account(datadir):
+def geth_create_account(datadir, privkey):
     """
     Create an account in `datadir` -- since we're not interested
     in the rewards, we don't care about the created address.
@@ -491,12 +523,16 @@ def geth_create_account(datadir):
     Args:
         datadir (str): the datadir in which the account is created
     """
+    keyfile_path = os.path.join(datadir, 'keyfile')
+    with open(keyfile_path, 'w') as handler:
+        handler.write(privkey.encode('hex'))
 
-    create = Popen(
-        shlex.split('geth --datadir {} account new'.format(datadir)),
-        stdin=PIPE,
-        universal_newlines=True,
+    create = subprocess.Popen(
+        ['geth', '--datadir', datadir, 'account', 'import', keyfile_path],
+        stdin=subprocess.PIPE,
+        universal_newlines=True
     )
+
     create.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
     time.sleep(.1)
     create.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
@@ -504,30 +540,89 @@ def geth_create_account(datadir):
     assert create.returncode == 0
 
 
+def geth_init_datadir(genesis, datadir):
+    """Initialize a clients datadir with our custom genesis block.
+    Args:
+        datadir (str): the datadir in which the blockchain is initialized.
+    """
+    genesis_path = os.path.join(datadir, 'custom_genesis.json')
+
+    with open(genesis_path, 'w') as handler:
+        json.dump(genesis, handler)
+
+    subprocess.call(['geth', '--datadir', datadir, 'init', genesis_path])
+
+
+def geth_wait_and_check(privatekeys):
+    """ Wait until the geth cluster is ready. """
+    address = address_encoder(privtoaddr(privatekeys[0]))
+    jsonrpc_running = False
+    tries = 5
+    jsonrpc_client = JSONRPCClient(
+        host='0.0.0.0',
+        privkey=privatekeys[0],
+        print_communication=False,
+    )
+
+    while not jsonrpc_running and tries > 0:
+        try:
+            jsonrpc_client.call('eth_getBalance', address, 'latest')
+            jsonrpc_running = True
+        except ConnectionError:
+            gevent.sleep(0.5)
+            tries -= 1
+
+    if jsonrpc_running is False:
+        raise ValueError('geth didnt start the jsonrpc interface')
+
+    for key in set(privatekeys):
+        address = address_encoder(privtoaddr(key))
+        jsonrpc_client = JSONRPCClient(
+            host='0.0.0.0',
+            privkey=key,
+            print_communication=False,
+        )
+
+        tries = 10
+        balance = '0x0'
+        while balance == '0x0' and tries > 0:
+            balance = jsonrpc_client.call('eth_getBalance', address, 'latest')
+            gevent.sleep(1)
+            tries -= 1
+
+        if balance == '0x0':
+            raise ValueError('account is with a balance of 0')
+
+
 def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_datadir):  # pylint: disable=too-many-locals,too-many-statements
+    # TODO: handle better the errors cases:
+    # - cant bind, port in use
     start_rpcport = 4000
 
     account_addresses = [
         privtoaddr(key)
-        for key in private_keys
+        for key in set(private_keys)
     ]
 
     alloc = {
-        encode_hex(address): {
+        address_encoder(address): {
             'balance': DEFAULT_BALANCE,
         }
         for address in account_addresses
     }
 
     genesis = {
+        'config': {
+            'homesteadBlock': 0,
+        },
         'nonce': '0x0000000000000042',
         'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-        'difficulty': '0x4000',
+        'difficulty': '0x40',
         'coinbase': '0x0000000000000000000000000000000000000000',
         'timestamp': '0x00',
         'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
         'extraData': 'raiden',
-        'gasLimit': '0xffffffff',
+        'gasLimit': GAS_LIMIT_HEX,
         'alloc': alloc,
     }
 
@@ -555,27 +650,39 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
         nodes_configuration.append(config)
 
     cmds = []
-    for config in nodes_configuration:
+    for i, config in enumerate(nodes_configuration):
         nodedir = os.path.join(base_datadir, config['nodekeyhex'])
+
         os.makedirs(nodedir)
-        with open(os.path.join(nodedir, 'genesis.json'), 'w') as handler:
-            json.dump(genesis, handler)
+        geth_init_datadir(genesis, nodedir)
 
-            if 'minerthreads' in config:
-                geth_create_account(nodedir)
+        if 'minerthreads' in config:
+            geth_create_account(nodedir, private_keys[i])
 
-            cmds.append(geth_to_cmd(config, datadir=nodedir))
+        cmds.append(geth_to_cmd(config, nodedir))
 
-    processes = []
+    # save current term settings before running geth
+    if isinstance(sys.stdin, file):  # check that the test is running on non-capture mode
+        term_settings = termios.tcgetattr(sys.stdin)
+
+    processes_list = []
     for cmd in cmds:
         if '--unlock' in cmd:
-            proc = Popen(cmd, universal_newlines=True, stdin=PIPE)
+            process = subprocess.Popen(cmd, universal_newlines=True, stdin=subprocess.PIPE)
+
             # --password wont work, write password to unlock
-            proc.stdin.write(DEFAULT_PASSPHRASE + os.linesep)
-            processes.append(proc)
+            process.stdin.write(DEFAULT_PASSPHRASE + os.linesep)  # Passphrase:
+            process.stdin.write(DEFAULT_PASSPHRASE + os.linesep)  # Repeat passphrase:
         else:
-            processes.append(Popen(cmd))
-            print('spawned process')
+            process = subprocess.Popen(cmd)
 
+        processes_list.append(process)
+        assert process.returncode is None
 
-    return processes
+    geth_wait_and_check(private_keys)
+
+    # reenter echo mode (disabled by geth pasphrase prompt)
+    if isinstance(sys.stdin, file):
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
+
+    return processes_list

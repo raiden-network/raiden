@@ -58,7 +58,6 @@ class LogListenerTask(Task):
         super(LogListenerTask, self).__init__()
 
         self.filter_ = filter_
-        self.filter_id = filter_.filter_id
         self.callback = callback
         self.contract_translator = contract_translator
 

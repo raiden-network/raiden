@@ -16,16 +16,14 @@ slogging.configure(
 )
 
 
-@pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['fullnetwork:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [2])
-@pytest.mark.parametrize('timeout', [3])
 @pytest.mark.parametrize('deposit', [2 ** 20])
 def test_fullnetwork(deployed_network):
     app0, app1, app2 = deployed_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_address = app0.raiden.chain.asset_addresses[0]
+    asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
 
     amount = 80
     direct_transfer(app0, app1, asset_address, amount)

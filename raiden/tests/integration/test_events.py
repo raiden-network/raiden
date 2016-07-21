@@ -22,13 +22,9 @@ slogging.configure(
     ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
 )
 
-from pyethapp.utils import enable_greenlet_debugger
-enable_greenlet_debugger()
-
 
 @pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
-@pytest.mark.parametrize('timeout', [3])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_event_new_channel(deployed_network, deposit, settle_timeout):
@@ -115,7 +111,6 @@ def test_event_new_channel(deployed_network, deposit, settle_timeout):
 
 @pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
-@pytest.mark.parametrize('timeout', [3])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_secret_revealed(deployed_network, deposit):
