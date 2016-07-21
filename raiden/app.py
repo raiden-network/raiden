@@ -104,7 +104,7 @@ def app(privkey, eth_rpc_endpoint, registry_contract_address, discovery_contract
     config['port'] = listen_port
     config['privkey'] = privkey
 
-    jsonrpc_client = JSONRPCClient(privkey=privkey, host=rpc_connection[0], port=rpc_connection[1])
+    jsonrpc_client = JSONRPCClient(privkey=privkey, host=rpc_connection[0], port=rpc_connection[1], print_communication=False)
 
     blockchain_service = BlockChainService(
         jsonrpc_client,
