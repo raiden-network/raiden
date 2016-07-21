@@ -214,7 +214,8 @@ class RaidenAPI(object):
             raise NoPathError('No path to address found')
 
         transfer_manager = self.raiden.managers_by_asset_address[asset_address_bin].transfermanager
-        transfer_manager.transfer(amount, target, callback=callback)
+        task = transfer_manager.transfer(amount, target, callback=callback)
+        task.join()
 
 
 class RaidenMessageHandler(object):
@@ -320,6 +321,9 @@ class RaidenEventHandler(object):
         elif event['_event_type'] == 'ChannelClosed':
             self.event_channelclosed(emmiting_contract_address, event)
 
+        elif event['_event_type'] == 'ChannelSettled':
+            self.event_channelclosed(emmiting_contract_address, event)
+
         elif event['_event_type'] == 'ChannelSecretRevealed':
             self.event_channelsecretrevealed(emmiting_contract_address, event)
 
@@ -354,10 +358,13 @@ class RaidenEventHandler(object):
         if channel_state.contract_balance != event['balance']:
             channel_state.update_contract_balance(event['balance'])
 
-    def event_channelclosed(self, netting_contract_address_bin, event):  # pylint: disable=unused-argument
-        # Channel.isopen does a fresh rpc call each time, just ignore this event
-        # channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        pass
+    def event_channelclosed(self, netting_contract_address_bin, event):
+        channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
+        channel.external_state.closed = event['blockNumber']
+
+    def event_channelsettled(self, netting_contract_address_bin, event):
+        channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
+        channel.external_state.settled = event['blockNumber']
 
     def event_channelsecretrevealed(self, netting_contract_address_bin, event):
         channel = self.raiden.chain.netting_channel(netting_contract_address_bin)

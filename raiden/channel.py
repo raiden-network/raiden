@@ -252,21 +252,39 @@ class ChannelEndState(object):
         # end of the critical write section
 
 
+class ChannelExternalState(object):
+    def __init__(self, register_channel_for_hashlock, get_block_number, netting_channel):
+        self.register_channel_for_hashlock = register_channel_for_hashlock
+        self.get_block_number = get_block_number
+
+        self.netting_channel = netting_channel
+        self.opened_block = netting_channel.opened()
+        self.closed_block = netting_channel.closed()
+        self.settled_block = netting_channel.settled()
+
+    def isopen(self):
+        if self.closed_block != 0:
+            return False
+
+        if self.opened_block != 0:
+            return True
+
+        return False
+
+
 class Channel(object):
     # pylint: disable=too-many-instance-attributes,too-many-arguments
 
-    def __init__(self, netting_contract, our_state, partner_state,
-                 reveal_timeout, settle_timeout, get_block_number):
-        self.netting_contract = netting_contract
+    def __init__(self, our_state, partner_state, external_state,
+                 asset_address, reveal_timeout, settle_timeout):
+
         self.our_state = our_state
         self.partner_state = partner_state
 
+        self.asset_address = asset_address
         self.reveal_timeout = reveal_timeout
         self.settle_timeout = settle_timeout
-        self.get_block_number = get_block_number
-
-        # cache this value
-        self.asset_address = netting_contract.asset_address()
+        self.external_state = external_state
 
         self.received_transfers = []
         self.sent_transfers = []  #: transfers that were sent, required for settling
@@ -274,7 +292,7 @@ class Channel(object):
 
     @property
     def isopen(self):
-        return self.netting_contract.isopen()
+        return self.external_state.isopen()
 
     @property
     def contract_balance(self):
@@ -374,6 +392,7 @@ class Channel(object):
                 from_state=self.our_state,
                 to_state=self.partner_state,
             )
+
             self.sent_transfers.append(transfer)
 
             if callback:
@@ -433,7 +452,7 @@ class Channel(object):
             raise InsufficientBalance(transfer)
 
         if isinstance(transfer, LockedTransfer):
-            block_number = self.get_block_number()
+            block_number = self.external_state.get_block_number()
 
             if amount + transfer.lock.amount > distributable:
                 raise InsufficientBalance(transfer)
@@ -484,6 +503,13 @@ class Channel(object):
             )
 
             to_state.locked.add(transfer)
+
+            # register this channel as waiting for the secret (the secret can
+            # be revealed through a message or an blockchain log)
+            self.external_state.register_channel_for_hashlock(
+                self,
+                transfer.lock.hashlock,
+            )
 
         if isinstance(transfer, DirectTransfer) and transfer.secret:
             log.debug(
@@ -561,7 +587,7 @@ class Channel(object):
         if not self.isopen:
             raise ValueError('The channel is closed')
 
-        block_number = self.get_block_number()
+        block_number = self.external_state.get_block_number()
 
         # expiration is not sufficient for guarantee settling
         if expiration - block_number >= self.settle_timeout:

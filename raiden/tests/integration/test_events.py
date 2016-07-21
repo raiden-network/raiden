@@ -9,7 +9,7 @@ from raiden.tests.utils.transfer import (
     assert_synched_channels,
     channel,
     get_received_transfer,
-    hidden_mediated_transfer,
+    pending_mediated_transfer,
 )
 from raiden.tests.utils.network import CHAIN
 
@@ -119,7 +119,7 @@ def test_secret_revealed(deployed_network, deposit):
     asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
     amount = 10
 
-    secret = hidden_mediated_transfer(deployed_network, asset_address, amount)
+    secret = pending_mediated_transfer(deployed_network, asset_address, amount)
 
     mediated_transfer = get_received_transfer(
         channel(app2, app1, asset_address),

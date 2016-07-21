@@ -81,7 +81,7 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
         initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
 
 
-def hidden_mediated_transfer(app_chain, asset, amount):
+def pending_mediated_transfer(app_chain, asset, amount):
     """ Nice to read shortcut to make a MediatedTransfer were the secret is
     _not_ revealed.
 
@@ -107,7 +107,7 @@ def hidden_mediated_transfer(app_chain, asset, amount):
 
         # use the initiator channel to generate a secret
         if secret is None:
-            secret = sha3(from_channel.netting_contract.address + str(from_channel.our_state.nonce))
+            secret = sha3(from_channel.external_state.netting_channel.address + str(from_channel.our_state.nonce))
             hashlock = sha3(secret)
 
         transfer_ = from_channel.create_mediatedtransfer(
@@ -123,6 +123,13 @@ def hidden_mediated_transfer(app_chain, asset, amount):
         to_channel.register_transfer(transfer_)
 
     return secret
+
+
+def register_secret(app_chain, asset, secret):
+    """ Unlock a pending transfer. """
+    for app in app_chain:
+        manager = app.raiden.get_manager_by_asset_address(asset)
+        manager.register_secret(secret)
 
 
 def assert_synched_channels(channel0, balance0, lock_list0, channel1, balance1, lock_list1):  # pylint: disable=too-many-arguments

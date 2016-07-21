@@ -55,7 +55,8 @@ def test_transfer(raiden_network, assets_addresses):
     assert app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()[0] == app1.raiden.address
     assert app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()[0] == app0.raiden.address
 
-    netting_channel = app0.raiden.chain.netting_channel(channel0.netting_contract.address)
+    netting_address = channel0.external_state.netting_channel.address
+    netting_channel = app0.raiden.chain.netting_channel(netting_address)
 
     # check balances of channel and contract are equal
     details0 = netting_channel.detail(address0)

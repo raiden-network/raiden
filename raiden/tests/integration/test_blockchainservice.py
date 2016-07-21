@@ -113,20 +113,21 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
     assert manager.channels_by_participant(peer2_address) == [netting1_address]
     assert manager.channels_by_participant(peer3_address) == [netting2_address]
 
+    # single-funded channel
     netting_channel1.deposit(peer1_address, 100)
-    assert netting_channel1.isopen() is False
+    assert netting_channel1.isopen() is True
     assert netting_channel2.isopen() is False
 
     # with pytest.raises(Exception):
     #    blockchain_service.deposit(asset_address, netting1_address, peer1_address, 100)
 
     netting_channel2.deposit(peer1_address, 70)
-    assert netting_channel1.isopen() is False
-    assert netting_channel2.isopen() is False
+    assert netting_channel1.isopen() is True
+    assert netting_channel2.isopen() is True
 
     netting_channel1.deposit(peer2_address, 130)
     assert netting_channel1.isopen() is True
-    assert netting_channel2.isopen() is False
+    assert netting_channel2.isopen() is True
 
     # we need to allow the settlement of the channel even if no transfers were
     # made
@@ -143,7 +144,7 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
     #     blockchain_service.close(asset_address, netting2_address, peer1_address, peer1_last_sent_transfers)
 
     assert netting_channel1.isopen() is False
-    assert netting_channel2.isopen() is False
+    assert netting_channel2.isopen() is True
 
     netting_channel2.deposit(peer3_address, 21)
 
