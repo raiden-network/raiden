@@ -58,8 +58,8 @@ class TransferManager(object):
             )
             if callback:
                 self.on_task_completed_callbacks.append(callback)
-            task.start()
 
+        task.start()
         return task
 
     def on_mediatedtransfer_message(self, transfer):
@@ -68,9 +68,6 @@ class TransferManager(object):
 
         channel = self.assetmanager.partneraddress_channel[transfer.sender]
         channel.register_transfer(transfer)  # raises if the transfer is invalid
-
-        # register channel because we need to forward the secret to it
-        self.assetmanager.register_channel_for_hashlock(channel, transfer.lock.hashlock)
 
         if transfer.target == self.assetmanager.raiden.address:
             secret_request_task = EndMediatedTransferTask(

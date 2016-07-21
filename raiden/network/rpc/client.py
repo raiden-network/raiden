@@ -12,6 +12,7 @@ from ethereum.utils import denoms, privtoaddr, int_to_big_endian, encode_hex, no
 from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
 from pyethapp.rpc_client import topic_encoder
 
+from raiden import messages
 from raiden.utils import isaddress, pex
 from raiden.blockchain.net_contract import NettingChannelContract
 from raiden.blockchain.abi import (
@@ -501,11 +502,31 @@ class NettingChannel(object):
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
+    def opened(self):
+        return self.proxy.opened.call()
+
+    def closed(self):
+        return self.proxy.closed.call()
+
+    def settled(self):
+        return self.proxy.settled.call()
+
     def close(self, our_address, first_transfer, second_transfer):
-        raise NotImplementedError()
+        if first_transfer and second_transfer:
+            self.proxy.close(first_transfer, second_transfer)
+
+        elif first_transfer:
+            self.proxy.closeSingleTransfer(first_transfer)
+
+        elif second_transfer:
+            self.proxy.closeSingleTransfer(second_transfer)
+
+        else:
+            # TODO: allow to close nevertheless
+            raise ValueError('channel wasnt used')
 
     def settle(self):
-        raise NotImplementedError()
+        self.proxy.settle()
 
     def channelnewbalance_filter(self):
         """ Install a new filter for ChannelNewBalance events.
@@ -591,7 +612,10 @@ class BlockChainServiceMock(object):
 
             # __init__ is executed multiple times, so we need to do the
             # initializatoin here (otherwise the values would be overwritten)
-            blockchain_service.block_number_ = 0
+
+            # do not start at 0, since that is taken as the default None value
+            # for uint in the smart contract
+            blockchain_service.block_number_ = 1
             blockchain_service.address_asset = dict()
             blockchain_service.address_manager = dict()
             blockchain_service.address_contract = dict()
@@ -808,6 +832,27 @@ class NettingChannelMock(object):
     def asset_address(self):
         return self.contract.asset_address
 
+    def settle_timeout(self):
+        return self.contract.settle_timeout
+
+    def isopen(self):
+        return self.contract.isopen
+
+    def partner(self, our_address):
+        return self.contract.partner(our_address)
+
+    def deposit(self, our_address, amount):
+        self.contract.deposit(our_address, amount, self.blockchain.block_number())
+
+    def opened(self):
+        return self.contract.opened
+
+    def closed(self):
+        return self.contract.closed
+
+    def settled(self):
+        return self.contract.settled
+
     def detail(self, our_address):
         partner_address = self.contract.partner(our_address)
 
@@ -821,18 +866,6 @@ class NettingChannelMock(object):
             'partner_balance': partner_balance,
             'settle_timeout': self.contract.settle_timeout,
         }
-
-    def settle_timeout(self):
-        return self.contract.settle_timeout
-
-    def isopen(self):
-        return self.contract.isopen
-
-    def partner(self, our_address):
-        return self.contract.partner(our_address)
-
-    def deposit(self, our_address, amount):
-        self.contract.deposit(our_address, amount, self.blockchain.block_number())
 
     def close(self, our_address, first_transfer, second_transfer):
         ctx = {
@@ -874,6 +907,9 @@ class NettingChannelMock(object):
         }
 
         for merkle_proof, locked_encoded, secret in unlocked_transfers:
+            if isinstance(locked_encoded, messages.Lock):
+                raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
+
             merkleproof_encoded = ''.join(merkle_proof)
 
             self.contract.unlock(

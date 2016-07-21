@@ -250,7 +250,7 @@ library NettingChannelLibrary {
 
     /// @notice updateTransfer(bytes) to update last known transfer
     /// @dev Allow the partner to update the last known transfer
-    function updateTransfer(Data storage self, address callerAddress, bytes signed_transfer) 
+    function updateTransfer(Data storage self, address callerAddress, bytes signed_transfer)
         notSettledButClosed(self)
         stillTimeout(self)
     {

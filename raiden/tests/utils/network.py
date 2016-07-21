@@ -207,7 +207,7 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
     random.seed(1337)
     num_nodes = len(private_keys)
 
-    if channels_per_node > num_nodes:
+    if channels_per_node is not CHAIN and channels_per_node > num_nodes:
         raise ValueError("Can't create more channels than nodes")
 
     # if num_nodes it is not even
@@ -507,7 +507,7 @@ def geth_to_cmd(node, datadir):
         '--rpcaddr', '0.0.0.0',
         '--jitvm=false',
         '--networkid', '627',
-        '--verbosity', '6',
+        '--verbosity', '0',
         '--fakepow',
         '--datadir', datadir,
     ])

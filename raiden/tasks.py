@@ -242,20 +242,19 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         transfer = self.originating_transfer
 
         assetmanager = self.transfermanager.assetmanager
+        raiden = assetmanager.raiden
         originating_channel = assetmanager.partneraddress_channel[transfer.sender]
 
-        # make sure originating_channel was register for the given hashlock
         assetmanager.register_channel_for_hashlock(
             originating_channel,
             transfer.lock.hashlock,
         )
 
-        raiden = self.transfermanager.assetmanager.raiden
         lock_expiration = transfer.lock.expiration - raiden.config['reveal_timeout']
         lock_timeout = lock_expiration - raiden.chain.block_number()
 
         # there are no guarantees that the next_hop will follow the same route
-        routes = self.transfermanager.assetmanager.get_best_routes(
+        routes = assetmanager.get_best_routes(
             transfer.lock.amount,
             transfer.target,
             lock_timeout,
@@ -310,7 +309,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         # Send RefundTransfer to the originating node, this has the effect of
         # backtracking in the graph search of the raiden network.
         from_address = transfer.sender
-        from_channel = self.assetmanager.partneraddress_channel[from_address]
+        from_channel = assetmanager.partneraddress_channel[from_address]
 
         refund_transfer = from_channel.create_refundtransfer_for(transfer)
         from_channel.register_transfer(refund_transfer)

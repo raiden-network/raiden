@@ -2,9 +2,11 @@
 import pytest
 
 from ethereum import tester
+from ethereum.slogging import configure
+
 from raiden.network.discovery import ContractDiscovery
 from raiden.blockchain.abi import get_contract_path
-from ethereum.slogging import configure
+
 configure(':DEBUG')
 
 
@@ -19,7 +21,7 @@ def test_endpointregistry():
     registry_contract = state.abi_contract(
         None,
         path=registry_contract_path,
-        language="solidity",
+        language='solidity',
         log_listener=events.append,
     )
     sender = tester.a0.encode('hex')

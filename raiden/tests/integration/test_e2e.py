@@ -15,6 +15,9 @@ slogging.configure(
     ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
 )
 
+from pyethapp.utils import enable_greenlet_debugger
+enable_greenlet_debugger()
+
 
 @pytest.mark.parametrize('privatekey_seed', ['fullnetwork:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
