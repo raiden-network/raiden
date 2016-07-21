@@ -200,22 +200,42 @@ class RaidenAPI(object):
             raise InvalidAmount('Amount negative')
 
         asset_address_bin = safe_address_decode(asset_address)
-        target = safe_address_decode(target)
+        target_bin = safe_address_decode(target)
 
         asset_manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
 
         if not isaddress(asset_address_bin) or asset_address_bin not in self.assets:
             raise InvalidAddress('asset address is not valid.')
 
-        if not isaddress(target):
+        if not isaddress(target_bin):
             raise InvalidAddress('target address is not valid.')
 
-        if not asset_manager.has_path(self.raiden.address, target):
+        if not asset_manager.has_path(self.raiden.address, target_bin):
             raise NoPathError('No path to address found')
 
         transfer_manager = self.raiden.managers_by_asset_address[asset_address_bin].transfermanager
-        task = transfer_manager.transfer(amount, target, callback=callback)
+        task = transfer_manager.transfer(amount, target_bin, callback=callback)
         task.join()
+
+    def close(self, asset_address, partner_address):
+        asset_address_bin = safe_address_decode(asset_address)
+        partner_address_bin = safe_address_decode(partner_address)
+
+        if not isaddress(asset_address_bin) or asset_address_bin not in self.assets:
+            raise InvalidAddress('asset address is not valid.')
+
+        if not isaddress(partner_address_bin):
+            raise InvalidAddress('partner_address is not valid.')
+
+        manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
+        channel = manager.get_channel_by_partner_address(partner_address_bin)
+
+        netting_channel = channel.external_state.netting_channel
+        netting_channel.close(
+            self.raiden.address,
+            channel.received_transfers[-1],
+            channel.sent_transfers[-1],
+        )
 
 
 class RaidenMessageHandler(object):
@@ -361,6 +381,12 @@ class RaidenEventHandler(object):
     def event_channelclosed(self, netting_contract_address_bin, event):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
         channel.external_state.closed = event['blockNumber']
+
+        channel.external_state.netting_channel.updateTransfer(
+            channel.received_transfers[-1],
+        )
+
+        # TODO: unlock
 
     def event_channelsettled(self, netting_contract_address_bin, event):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)

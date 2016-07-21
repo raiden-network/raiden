@@ -512,10 +512,21 @@ class NettingChannel(object):
         return self.proxy.settled.call()
 
     def close(self, our_address, first_transfer, second_transfer):
-        raise NotImplementedError()
+        if first_transfer and second_transfer:
+            self.proxy.close(first_transfer, second_transfer)
+
+        elif first_transfer:
+            self.proxy.closeSingleTransfer(first_transfer)
+
+        elif second_transfer:
+            self.proxy.closeSingleTransfer(second_transfer)
+
+        else:
+            # TODO: allow to close nevertheless
+            raise ValueError('channel wasnt used')
 
     def settle(self):
-        raise NotImplementedError()
+        self.proxy.settle()
 
     def channelnewbalance_filter(self):
         """ Install a new filter for ChannelNewBalance events.
