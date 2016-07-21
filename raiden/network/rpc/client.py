@@ -7,7 +7,6 @@ from itertools import count
 import rlp
 from ethereum import slogging
 from ethereum import _solidity
-from ethereum import config as ethereum_config
 from ethereum.transactions import Transaction
 from ethereum.utils import denoms, privtoaddr, int_to_big_endian, encode_hex, normalize_address
 from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
@@ -58,6 +57,7 @@ def patch_send_transaction(client, nonce_offset=0):
         @see https://github.com/ethereum/pyethapp/blob/develop/pyethapp/rpc_client.py#L359
         """
         nonce = int(client.call('eth_getTransactionCount', encode_hex(sender), 'pending'), 16) + nonce_offset
+
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
         assert hasattr(client, 'privkey') and client.privkey
         tx.sign(client.privkey)
@@ -92,8 +92,7 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes,unused-argument
 
-    def __init__(self, jsonrpc_client, registry_address, testnet=False,
-                 poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def __init__(self, jsonrpc_client, registry_address, poll_timeout=DEFAULT_POLL_TIMEOUT):
         self.address_asset = dict()
         self.address_manager = dict()
         self.address_contract = dict()
@@ -102,10 +101,7 @@ class BlockChainService(object):
 
         self.client = jsonrpc_client
         self.poll_timeout = poll_timeout
-        patch_send_transaction(
-            self.client,
-            nonce_offset=ethereum_config['MORDEN_INITIAL_NONCE_OFFSET'] if testnet else 0
-        )
+        patch_send_transaction(self.client)
         self.default_registry = self.registry(registry_address)
 
     def asset(self, asset_address):

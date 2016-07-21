@@ -273,7 +273,7 @@ class RaidenMessageHandler(object):
         )
 
     def message_ping(self, message):
-        pass
+        log.info("ping received")
 
     def message_confirmtransfer(self, message):
         pass

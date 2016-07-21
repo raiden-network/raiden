@@ -90,11 +90,10 @@ def prepare_for_exec(nodes, parentdir):
     for node in nodes:
         nodedir = os.path.join(parentdir, node['nodekeyhex'])
         os.makedirs(nodedir)
-        with open(os.path.join(nodedir, 'genesis.json'), 'w') as f:
-            json.dump(mk_genesis(DEFAULTACCOUNTS), f)
-            if 'minerthreads' in node:
-                create_account(nodedir)
-            cmds.append(to_cmd(node, datadir=nodedir))
+        init_datadir(nodedir)
+        if 'minerthreads' in node:
+            create_account(nodedir)
+        cmds.append(to_cmd(node, datadir=nodedir))
     return cmds
 
 
@@ -116,7 +115,6 @@ def to_cmd(node, datadir=None):
     if datadir:
         assert isinstance(datadir, str)
         cmd.append('--datadir {}'.format(datadir))
-        cmd.append('--genesis {}'.format(os.path.join(datadir, 'genesis.json')))
     cmd.extend(DEFAULT_ARGS)
     return shlex.split(' '.join(cmd))
 
@@ -142,6 +140,15 @@ def create_account(datadir, privkey=encode_hex(sha3('localhost:627'))):
     create.stdin.write(DEFAULT_PW + os.linesep)
     create.communicate()
     assert create.returncode == 0
+
+
+def init_datadir(datadir):
+    genesis_path = os.path.join(datadir, 'custom_genesis.json')
+    with open(genesis_path, 'w') as f:
+        json.dump(mk_genesis(DEFAULTACCOUNTS), f)
+    Popen(shlex.split(
+        'geth --datadir {} init {}'.format(datadir, genesis_path)
+        ))
 
 
 def create_node_configurations(num_nodes, miner=True, start_port=30301, start_rpcport=8101):
