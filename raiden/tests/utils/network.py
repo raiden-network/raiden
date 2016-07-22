@@ -64,13 +64,13 @@ def check_channel(app1, app2, netting_channel_address):
     assert app1_details['partner_balance'] == app2_details['our_balance']
 
 
-def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0.0.1'):  # pylint: disable=too-many-arguments
+def create_app(privatekey_bin, chain, discovery, transport_class, port, host='127.0.0.1'):  # pylint: disable=too-many-arguments
     ''' Instantiates an Raiden app with the given configuration. '''
     config = copy.deepcopy(App.default_config)
 
     config['port'] = port
     config['host'] = host
-    config['privatekey_hex'] = privkey_bin.encode('hex')
+    config['privatekey_hex'] = privatekey_bin.encode('hex')
 
     return App(
         config,

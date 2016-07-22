@@ -194,9 +194,11 @@ class RaidenAPI(object):
 
     @property
     def assets(self):
-        return self.raiden.managers_by_asset_address.keys()
+        """ Return a list of the assets registered with the default registry. """
+        return self.raiden.chain.default_registry.asset_addresses()
 
     def transfer(self, asset_address, amount, target, callback=None):
+        """ Do a transfer with `target` with the given `amount` of `asset_address`. """
         if not isinstance(amount, (int, long)):
             raise InvalidAmount('Amount not a number')
 
@@ -222,6 +224,7 @@ class RaidenAPI(object):
         task.join()
 
     def close(self, asset_address, partner_address):
+        """ Close a channel opened with `partner_address` for the given `asset_address`. """
         asset_address_bin = safe_address_decode(asset_address)
         partner_address_bin = safe_address_decode(partner_address)
 
