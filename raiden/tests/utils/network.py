@@ -70,7 +70,7 @@ def create_app(privkey_bin, chain, discovery, transport_class, port, host='127.0
 
     config['port'] = port
     config['host'] = host
-    config['privkey'] = privkey_bin
+    config['privatekey_hex'] = privkey_bin.encode('hex')
 
     return App(
         config,
