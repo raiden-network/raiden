@@ -44,7 +44,7 @@ class App(object):  # pylint: disable=too-few-public-methods
         self.config = config
         self.discovery = discovery
         self.transport = transport_class(config['host'], config['port'])
-        self.raiden = RaidenService(chain, config['privkey'], self.transport, discovery, config)
+        self.raiden = RaidenService(chain, config['privkey'].decode('hex'), self.transport, discovery, config)
         self.services = {'raiden': self.raiden}
         self.start_console = True
 
