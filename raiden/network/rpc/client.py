@@ -529,6 +529,11 @@ class NettingChannel(object):
             # TODO: allow to close nevertheless
             raise ValueError('channel wasnt used')
 
+    def update_transfer(self, our_address, transfer):
+        if transfer is not None:
+            transfer_encoded = transfer.encode()
+            self.proxy.updateTransfer(transfer_encoded)
+
     def settle(self):
         self.proxy.settle()
 
