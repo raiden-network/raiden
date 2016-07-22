@@ -10,10 +10,12 @@ module.exports = {
         "images/": "images/"
     },
     deploy: [
+        "ChannelManagerContract",
         "ChannelManagerLibrary",
         "Dcdr",
         "EndpointRegistry",
         "HumanStandardToken",
+        "NettingChannelContract",
         "NettingChannelLibrary",
         "Registry",
         "Standard_Token",
