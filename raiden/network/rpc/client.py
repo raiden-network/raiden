@@ -513,13 +513,17 @@ class NettingChannel(object):
 
     def close(self, our_address, first_transfer, second_transfer):
         if first_transfer and second_transfer:
-            self.proxy.close(first_transfer, second_transfer)
+            first_encoded = first_transfer.encode()
+            second_encoded = second_transfer.encode()
+            self.proxy.close(first_encoded, second_encoded)
 
         elif first_transfer:
-            self.proxy.closeSingleTransfer(first_transfer)
+            first_encoded = first_transfer.encode()
+            self.proxy.closeSingleTransfer(first_encoded)
 
         elif second_transfer:
-            self.proxy.closeSingleTransfer(second_transfer)
+            second_encoded = second_transfer.encode()
+            self.proxy.closeSingleTransfer(second_encoded)
 
         else:
             # TODO: allow to close nevertheless
