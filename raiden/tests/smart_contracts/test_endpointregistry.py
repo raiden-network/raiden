@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 import pytest
 
+import gevent
 from ethereum import tester
 from ethereum.slogging import configure
 
@@ -36,9 +37,19 @@ def test_endpointregistry():
     assert events[1]['_event_type'] == 'AddressUpdated'
 
 
-@pytest.mark.xfail()
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('poll_timeout', [50])
 def test_discovery_contract(discovery_blockchain):
     contract_discovery_instance, address = discovery_blockchain
     assert isinstance(contract_discovery_instance, ContractDiscovery)
     contract_discovery_instance.register_endpoint('127.0.0.1', '4001')
+    gevent.sleep(30)  # FIXME: this should not be necessary!
     assert contract_discovery_instance.find_address('127.0.0.1', '4001') == address.encode('hex')
+    gevent.sleep(30)
+    assert contract_discovery_instance.find_endpoint(address) == '127.0.0.1:4001'
+    gevent.sleep(30)
+    contract_discovery_instance.update_endpoint('192.168.0.1','4002')
+    gevent.sleep(30)
+    assert contract_discovery_instance.find_address('192.168.0.1','4002') == address.encode('hex')
+    gevent.sleep(30)
+    assert contract_discovery_instance.find_endpoint(address) == '192.168.0.1:4002'

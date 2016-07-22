@@ -354,6 +354,7 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
 
 @pytest.fixture
 def discovery_blockchain(request, private_keys, geth_cluster, poll_timeout):
+    gevent.sleep(2)
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
 
