@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-from raiden.utils import isaddress, pex
+from raiden.utils import isaddress, pex, host_port_to_endpoint
 from raiden.blockchain.abi import get_contract_path
 from ethereum import _solidity
 
@@ -45,14 +45,18 @@ class ContractDiscovery(Discovery):
             discovery_contract_address.encode('hex'),
         )
 
+    def register(self, nodeid, host, port):
+        if self.find_endpoint(nodeid) != self.discovery_proxy.client.address:
+            self.update_endpoint(host, port)
+
     def register_endpoint(self, host, port):
-        self.discovery_proxy.registerEndpoint(''.join([host, ':', port]))
+        self.discovery_proxy.registerEndpoint(host_port_to_endpoint(host, port))
 
     def update_endpoint(self, host, port):
-        self.discovery_proxy.updateEndpoint(''.join([host, ':', port]))
+        self.discovery_proxy.updateEndpoint(host_port_to_endpoint(host, port))
 
     def find_endpoint(self, nodeid):
         return self.discovery_proxy.findEndpointByAddress(nodeid.encode('hex'))
 
     def find_address(self, host, port):
-        return self.discovery_proxy.findAddressByEndpoint(''.join([host, ':', port]))
+        return self.discovery_proxy.findAddressByEndpoint(host_port_to_endpoint(host, port))

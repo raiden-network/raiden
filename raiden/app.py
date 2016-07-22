@@ -8,11 +8,11 @@ from ethereum import slogging
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.raiden_service import RaidenService
-from raiden.network.discovery import Discovery
+from raiden.network.discovery import ContractDiscovery
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import BlockChainService
 from raiden.console import Console
-from raiden.utils import pex
+from raiden.utils import pex, split_endpoint
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -20,12 +20,6 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 INITIAL_PORT = 40001
 DEFAULT_SETTLE_TIMEOUT = 50
 DEFAULT_REVEAL_TIMEOUT = 3
-
-
-def split_endpoint(endpoint):
-    host, port = endpoint.split(':')
-    port = int(port)
-    return (host, port)
 
 
 class App(object):  # pylint: disable=too-few-public-methods
@@ -131,7 +125,7 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         jsonrpc_client,
         registry_contract_address.decode('hex'),
     )
-    discovery = Discovery()
+    discovery = ContractDiscovery(discovery_contract_address)
 
     app = App(config, blockchain_service, discovery)
 
