@@ -69,7 +69,7 @@ class App(object):  # pylint: disable=too-few-public-methods
 @click.option(
     '--eth_rpc_endpoint',
     help='"host:port" address of ethereum JSON-RPC server.',
-    default='127.0.0.1:8454',  # geth default jsonrpc port
+    default='127.0.0.1:8545',  # geth default jsonrpc port
     type=str,
 )
 @click.option(
