@@ -45,3 +45,4 @@ def test_discovery_contract(discovery_blockchain):
     contract_discovery_instance.register_endpoint('127.0.0.1', '4001')
     gevent.sleep(30)  # FIXME: this should not be necessary!
     assert contract_discovery_instance.find_address('127.0.0.1', '4001') == address.encode('hex')
+    assert contract_discovery_instance.find_endpoint(address) == '127.0.0.1:4001'
