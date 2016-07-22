@@ -48,8 +48,6 @@ class App(object):  # pylint: disable=too-few-public-methods
         self.services = {'raiden': self.raiden}
         self.start_console = True
 
-        discovery.register(self.raiden.address, self.transport.host, self.transport.port)
-
     def __repr__(self):
         return '<{} {}>'.format(
             self.__class__.__name__,
