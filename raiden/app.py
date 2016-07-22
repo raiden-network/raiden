@@ -69,19 +69,19 @@ class App(object):  # pylint: disable=too-few-public-methods
 @click.option(
     '--eth_rpc_endpoint',
     help='"host:port" address of ethereum JSON-RPC server.',
-    default='127.0.0.1:8101',
+    default='127.0.0.1:8454',  # geth default jsonrpc port
     type=str,
 )
 @click.option(
     '--registry_contract_address',
     help='hex encoded address of the registry contract.',
-    default='',
+    default='11d37a0d5e08ddc8d095291d1aa3b95b503811d6',  # testnet default
     type=str,
 )
 @click.option(
     '--discovery_contract_address',
     help='hex encoded address of the discovery contract.',
-    default='',
+    default='e0fa57c301f3b23d3bd6d1685cab71ead4e9fbb3',  # testnet default
     type=str,
 )
 @click.option(
