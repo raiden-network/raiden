@@ -230,11 +230,19 @@ class RaidenAPI(object):
         manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
         channel = manager.get_channel_by_partner_address(partner_address_bin)
 
+        first_transfer = None
+        if channel.received_transfers:
+            first_transfer = channel.received_transfers[-1]
+
+        second_transfer = None
+        if channel.sent_transfers:
+            second_transfer = channel.sent_transfers[-1]
+
         netting_channel = channel.external_state.netting_channel
         netting_channel.close(
             self.raiden.address,
-            channel.received_transfers[-1],
-            channel.sent_transfers[-1],
+            first_transfer,
+            second_transfer,
         )
 
 
