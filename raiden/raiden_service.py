@@ -189,6 +189,10 @@ class RaidenAPI(object):
         self.raiden = raiden
 
     @property
+    def address(self):
+        return self.raiden.address
+
+    @property
     def assets(self):
         return self.raiden.managers_by_asset_address.keys()
 
