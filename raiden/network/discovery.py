@@ -10,6 +10,7 @@ discovery_contract_compiled = _solidity.compile_contract(
 )
 DISCOVERY_CONTRACT_ABI = discovery_contract_compiled['abi']
 
+
 class Discovery(object):
     """ Mock mapping address: host, port """
 
@@ -33,24 +34,25 @@ class Discovery(object):
 
         assert False
 
+
 class ContractDiscovery(Discovery):
     """
     This is the place where ethereum addresses are registered to their network sockets
     """
-    def __init__(self,rpc_client,discovery_contract_address):
+    def __init__(self, rpc_client, discovery_contract_address):
         self.discovery_proxy = rpc_client.new_abi_contract(
             DISCOVERY_CONTRACT_ABI,
             discovery_contract_address.encode('hex'),
         )
 
-    def register_endpoint(self,host,port):
-        self.discovery_proxy.registerEndpoint(''.join([host,':',port]))
+    def register_endpoint(self, host, port):
+        self.discovery_proxy.registerEndpoint(''.join([host, ':', port]))
 
-    def update_endpoint(self,host,port):
-        self.discovery_proxy.updateEndpoint(''.join([host,':',port]))
+    def update_endpoint(self, host, port):
+        self.discovery_proxy.updateEndpoint(''.join([host, ':', port]))
 
-    def find_endpoint(self,nodeid):
+    def find_endpoint(self, nodeid):
         return self.discovery_proxy.findEndpointByAddress(nodeid.encode('hex'))
 
-    def find_address(self,host,port):
-        return self.discovery_proxy.findAddressByEndpoint(''.join([host,':',port]))
+    def find_address(self, host, port):
+        return self.discovery_proxy.findAddressByEndpoint(''.join([host, ':', port]))

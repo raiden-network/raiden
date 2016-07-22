@@ -36,7 +36,8 @@ def test_endpointregistry():
     assert events[1]['_event_type'] == 'AddressUpdated'
 
 
-@pytest.mark.xfail()
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('poll_timeout', [50])
 def test_discovery_contract(discovery_blockchain):
     contract_discovery_instance, address = discovery_blockchain
     assert isinstance(contract_discovery_instance, ContractDiscovery)
