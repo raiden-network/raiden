@@ -125,7 +125,7 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         jsonrpc_client,
         registry_contract_address.decode('hex'),
     )
-    discovery = ContractDiscovery(discovery_contract_address)
+    discovery = ContractDiscovery(jsonrpc_client, discovery_contract_address.decode('hex'))  # FIXME: double encoding
 
     app = App(config, blockchain_service, discovery)
 
