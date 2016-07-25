@@ -1,15 +1,17 @@
 import cStringIO
 import sys
 from logging import StreamHandler, Formatter
+from collections import defaultdict
 
 import gevent
 from gevent.event import Event
 import IPython
 from IPython.lib.inputhook import inputhook_manager
 from devp2p.service import BaseService
-from ethereum.utils import denoms
+from ethereum.utils import denoms, decode_hex
 from ethereum.slogging import getLogger
 from ethereum._solidity import compile_file
+from raiden.messages import Ping
 
 from pyethapp.utils import bcolors as bc
 from pyethapp.console_service import GeventInputHook, SigINTHandler
@@ -127,9 +129,10 @@ class Console(BaseService):
 
 class ConsoleTools(object):
     def __init__(self, raiden_service):
-        self.__chain = raiden_service.chain
-        self.__raiden = raiden_service
+        self._chain = raiden_service.chain
+        self._raiden = raiden_service
         self.assets = []
+        self._ping_nonces = defaultdict(int)
 
     def create_token(self,
             initial_alloc=10 ** 6,
@@ -148,8 +151,8 @@ class ConsoleTools(object):
         Returns:
             token_proxy (pyethapp.rpc_client.ContractProxy) for the new token.
         """
-        token_proxy = self.__chain.client.deploy_solidity_contract(
-            self.__raiden.address, 'HumanStandardToken',
+        token_proxy = self._chain.client.deploy_solidity_contract(
+            self._raiden.address, 'HumanStandardToken',
             compile_file('raiden/smart_contracts/HumanStandardToken.sol'),
             dict(),
             (10 ** 6, 'raiden', 2, 'RD'),
@@ -165,7 +168,21 @@ class ConsoleTools(object):
         Returns:
             manager (pyethapp.rpc_client.ContractProxy): the channel_manager contract_proxy.
         """
-        self.__chain.default_registry.add_asset(token_proxy.address.encode('hex'))
-        manager = self.__chain.manager_by_asset(token_proxy.address)
-        self.__raiden.register_channel_manager(manager)
+        self._chain.default_registry.add_asset(token_proxy.address.encode('hex'))
+        manager = self._chain.manager_by_asset(token_proxy.address)
+        self._raiden.register_channel_manager(manager)
         return manager
+
+    def ping(self, peer, timeout=5.):
+        """See, if a peer is discoverable and up.
+        Args:
+            peer (string): the hex-encoded (ethereum) address of the peer.
+            timeout (float): how long to wait for the response.
+        """
+        address = decode_hex(peer)
+        nonce = self._ping_nonces[peer]
+        self._ping_nonces[peer] += 1
+        msg = Ping(nonce)
+        event = gevent.event.AsyncResult()
+        self._raiden.send_and_wait(address, msg, timeout, event)
+        return event
