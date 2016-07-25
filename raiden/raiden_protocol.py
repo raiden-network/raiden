@@ -46,8 +46,6 @@ class RaidenProtocol(object):
             # blocks waiting for data in queue
             receiver_address, message = self.queued_messages.get()
 
-            print(receiver_address, repr(message))
-
             data = message.encode()
             host_port = self.discovery.get(receiver_address)
 
