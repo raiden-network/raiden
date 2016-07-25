@@ -139,11 +139,14 @@ class ConsoleTools(object):
             timeout=30,
             gasprice=denoms.shannon * 20):
         """Create a proxy for a new HumanStandardToken, that is initialized with
-        :initial_alloc: int amount
-        :name: str name
-        :symbol: str symbol
-        :decimals: int decimal places
-        :kwargs: will be passed to contract creation
+        Args:
+            initial_alloc (int): amount of initial tokens.
+            name (str): human readable token name.
+            symbol (str): token shorthand symbol.
+            decimals (int): decimal places
+            kwargs (dict): will be passed to contract creation
+        Returns:
+            token_proxy (pyethapp.rpc_client.ContractProxy) for the new token.
         """
         token_proxy = self.__chain.client.deploy_solidity_contract(
             self.__raiden.address, 'HumanStandardToken',
@@ -157,7 +160,10 @@ class ConsoleTools(object):
 
     def register_asset(self, token_proxy):
         """Register a token with the asset manager.
-        :return: the channel_manager_proxy
+        Args:
+            token_proxy (pyethapp.rpc_client.ContractProxy): a token contract proxy.
+        Returns:
+            manager (pyethapp.rpc_client.ContractProxy): the channel_manager contract_proxy.
         """
         self.__chain.default_registry.add_asset(token_proxy.address.encode('hex'))
         manager = self.__chain.manager_by_asset(token_proxy.address)

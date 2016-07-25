@@ -110,7 +110,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         Args:
             recipient (address): The address of the node that will receive the
                 message.
-            transfer: The transfer message.
+            message: The transfer message.
             timeout (float): How long should we wait for a response from `recipient`.
             event (gevent.event.AsyncResult): Event that will receive the result.
 
