@@ -138,6 +138,11 @@ class AssetManager(object):
         self.partneraddress_channel[partner_state.address] = channel
         self.address_channel[netting_channel.address] = channel
 
+        self.channelgraph.add_path(
+            channel_details['our_address'],
+            channel_details['partner_address'],
+        )
+
         newbalance_listener.start()
         secretrevealed_listener.start()
         close_listener.start()

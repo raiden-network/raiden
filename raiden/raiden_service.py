@@ -70,6 +70,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
     def get_manager_by_asset_address(self, asset_address_bin):
+        """ Return the manager for the given `asset_address_bin`.  """
         return self.managers_by_asset_address[asset_address_bin]
 
     def get_manager_by_address(self, manager_address_bin):
@@ -309,7 +310,7 @@ class RaidenMessageHandler(object):
         )
 
     def message_ping(self, message):
-        log.info("ping received")
+        log.info('ping received')
 
     def message_confirmtransfer(self, message):
         pass
@@ -327,11 +328,11 @@ class RaidenMessageHandler(object):
         self.raiden.message_for_task(message, message.hashlock)
 
     def message_directtransfer(self, message):
-        asset_manager = self.raiden.managers_by_asset_address[message.asset]
+        asset_manager = self.raiden.get_manager_by_asset_address(message.asset)
         asset_manager.transfermanager.on_directtransfer_message(message)
 
     def message_mediatedtransfer(self, message):
-        asset_manager = self.raiden.managers_by_asset_address[message.asset]
+        asset_manager = self.raiden.get_manager_by_asset_address(message.asset)
         asset_manager.transfermanager.on_mediatedtransfer_message(message)
 
 
@@ -366,11 +367,9 @@ class RaidenEventHandler(object):
             log.error('Unknow event {}'.format(repr(event)))
 
     def event_channelnew(self, manager_address, event):  # pylint: disable=unused-argument
-        log.info(
-            'New channel created',
-            channel_address=event['nettingChannel'],
-            manager_address=encode_hex(manager_address),
-        )
+        if address_decoder(event['participant1']) != self.raiden.address and address_decoder(event['participant2']) != self.raiden.address:
+            log.info('ignoring new channel, this is node is not a participant.')
+            return
 
         netting_channel_address_bin = address_decoder(event['nettingChannel'])
 
@@ -378,6 +377,12 @@ class RaidenEventHandler(object):
         asset_manager.register_channel_by_address(
             netting_channel_address_bin,
             self.raiden.config['reveal_timeout'],
+        )
+
+        log.info(
+            'New channel created',
+            channel_address=event['nettingChannel'],
+            manager_address=encode_hex(manager_address),
         )
 
     def event_channelnewbalance(self, netting_contract_address_bin, event):

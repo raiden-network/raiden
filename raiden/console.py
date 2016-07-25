@@ -46,7 +46,7 @@ class Console(BaseService):
             pass
 
     def start(self):
-        #start console service
+        # start console service
         super(Console, self).start()
 
         class Raiden(object):
