@@ -180,7 +180,7 @@ class AssetManager(object):
 
     def channel_isactive(self, partner_address):
         # TODO: check if the partner's network is alive
-        return self.get_channel_by_partner_address(partner_address).isopen()
+        return self.get_channel_by_partner_address(partner_address).isopen
 
     def get_best_routes(self, amount, target, lock_timeout=None):
         """ Yield a two-tuple (path, channel) that can be used to mediate the
