@@ -189,6 +189,10 @@ class RaidenAPI(object):
         self.raiden = raiden
 
     @property
+    def address(self):
+        return self.raiden.address
+
+    @property
     def assets(self):
         return self.raiden.managers_by_asset_address.keys()
 
@@ -350,7 +354,7 @@ class RaidenEventHandler(object):
             self.event_channelclosed(emmiting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelSettled':
-            self.event_channelclosed(emmiting_contract_address, event)
+            self.event_channelsettled(emmiting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelSecretRevealed':
             self.event_channelsecretrevealed(emmiting_contract_address, event)
