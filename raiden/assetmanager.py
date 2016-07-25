@@ -138,6 +138,11 @@ class AssetManager(object):
         self.partneraddress_channel[partner_state.address] = channel
         self.address_channel[netting_channel.address] = channel
 
+        self.channelgraph.add_path(
+            channel_details['our_address'],
+            channel_details['partner_address'],
+        )
+
         newbalance_listener.start()
         secretrevealed_listener.start()
         close_listener.start()
@@ -180,7 +185,7 @@ class AssetManager(object):
 
     def channel_isactive(self, partner_address):
         # TODO: check if the partner's network is alive
-        return self.get_channel_by_partner_address(partner_address).isopen()
+        return self.get_channel_by_partner_address(partner_address).isopen
 
     def get_best_routes(self, amount, target, lock_timeout=None):
         """ Yield a two-tuple (path, channel) that can be used to mediate the

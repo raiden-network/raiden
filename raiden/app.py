@@ -8,11 +8,11 @@ from ethereum import slogging
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.raiden_service import RaidenService
-from raiden.network.discovery import Discovery
+from raiden.network.discovery import ContractDiscovery
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import BlockChainService
 from raiden.console import Console
-from raiden.utils import pex
+from raiden.utils import pex, split_endpoint
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -20,12 +20,6 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 INITIAL_PORT = 40001
 DEFAULT_SETTLE_TIMEOUT = 50
 DEFAULT_REVEAL_TIMEOUT = 3
-
-
-def split_endpoint(endpoint):
-    host, port = endpoint.split(':')
-    port = int(port)
-    return (host, port)
 
 
 class App(object):  # pylint: disable=too-few-public-methods
@@ -75,19 +69,19 @@ class App(object):  # pylint: disable=too-few-public-methods
 @click.option(
     '--eth_rpc_endpoint',
     help='"host:port" address of ethereum JSON-RPC server.',
-    default='127.0.0.1:8101',
+    default='127.0.0.1:8545',  # geth default jsonrpc port
     type=str,
 )
 @click.option(
     '--registry_contract_address',
     help='hex encoded address of the registry contract.',
-    default='',
+    default='11d37a0d5e08ddc8d095291d1aa3b95b503811d6',  # testnet default
     type=str,
 )
 @click.option(
     '--discovery_contract_address',
     help='hex encoded address of the discovery contract.',
-    default='',
+    default='e0fa57c301f3b23d3bd6d1685cab71ead4e9fbb3',  # testnet default
     type=str,
 )
 @click.option(
@@ -131,7 +125,7 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         jsonrpc_client,
         registry_contract_address.decode('hex'),
     )
-    discovery = Discovery()
+    discovery = ContractDiscovery(jsonrpc_client, discovery_contract_address.decode('hex'))  # FIXME: double encoding
 
     app = App(config, blockchain_service, discovery)
 

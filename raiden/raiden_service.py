@@ -70,6 +70,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
     def get_manager_by_asset_address(self, asset_address_bin):
+        """ Return the manager for the given `asset_address_bin`.  """
         return self.managers_by_asset_address[asset_address_bin]
 
     def get_manager_by_address(self, manager_address_bin):
@@ -110,7 +111,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         Args:
             recipient (address): The address of the node that will receive the
                 message.
-            transfer: The transfer message.
+            message: The transfer message.
             timeout (float): How long should we wait for a response from `recipient`.
             event (gevent.event.AsyncResult): Event that will receive the result.
 
@@ -195,9 +196,11 @@ class RaidenAPI(object):
 
     @property
     def assets(self):
-        return self.raiden.managers_by_asset_address.keys()
+        """ Return a list of the assets registered with the default registry. """
+        return self.raiden.chain.default_registry.asset_addresses()
 
     def transfer(self, asset_address, amount, target, callback=None):
+        """ Do a transfer with `target` with the given `amount` of `asset_address`. """
         if not isinstance(amount, (int, long)):
             raise InvalidAmount('Amount not a number')
 
@@ -223,6 +226,7 @@ class RaidenAPI(object):
         task.join()
 
     def close(self, asset_address, partner_address):
+        """ Close a channel opened with `partner_address` for the given `asset_address`. """
         asset_address_bin = safe_address_decode(asset_address)
         partner_address_bin = safe_address_decode(partner_address)
 
@@ -307,7 +311,7 @@ class RaidenMessageHandler(object):
         )
 
     def message_ping(self, message):
-        log.info("ping received")
+        log.info('ping received')
 
     def message_confirmtransfer(self, message):
         pass
@@ -325,11 +329,11 @@ class RaidenMessageHandler(object):
         self.raiden.message_for_task(message, message.hashlock)
 
     def message_directtransfer(self, message):
-        asset_manager = self.raiden.managers_by_asset_address[message.asset]
+        asset_manager = self.raiden.get_manager_by_asset_address(message.asset)
         asset_manager.transfermanager.on_directtransfer_message(message)
 
     def message_mediatedtransfer(self, message):
-        asset_manager = self.raiden.managers_by_asset_address[message.asset]
+        asset_manager = self.raiden.get_manager_by_asset_address(message.asset)
         asset_manager.transfermanager.on_mediatedtransfer_message(message)
 
 
@@ -344,31 +348,30 @@ class RaidenEventHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
 
-    def on_event(self, emmiting_contract_address, event):  # pylint: disable=unused-argument
+    def on_event(self, emitting_contract_address, event):  # pylint: disable=unused-argument
+        log.debug('event received', type=event['_event_type'], contract=emitting_contract_address)
         if event['_event_type'] == 'ChannelNew':
-            self.event_channelnew(emmiting_contract_address, event)
+            self.event_channelnew(emitting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelNewBalance':
-            self.event_channelnewbalance(emmiting_contract_address, event)
+            self.event_channelnewbalance(emitting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelClosed':
-            self.event_channelclosed(emmiting_contract_address, event)
+            self.event_channelclosed(emitting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelSettled':
-            self.event_channelsettled(emmiting_contract_address, event)
+            self.event_channelsettled(emitting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelSecretRevealed':
-            self.event_channelsecretrevealed(emmiting_contract_address, event)
+            self.event_channelsecretrevealed(emitting_contract_address, event)
 
         else:
             log.error('Unknow event {}'.format(repr(event)))
 
     def event_channelnew(self, manager_address, event):  # pylint: disable=unused-argument
-        log.info(
-            'New channel created',
-            channel_address=event['nettingChannel'],
-            manager_address=encode_hex(manager_address),
-        )
+        if address_decoder(event['participant1']) != self.raiden.address and address_decoder(event['participant2']) != self.raiden.address:
+            log.info('ignoring new channel, this is node is not a participant.')
+            return
 
         netting_channel_address_bin = address_decoder(event['nettingChannel'])
 
@@ -376,6 +379,12 @@ class RaidenEventHandler(object):
         asset_manager.register_channel_by_address(
             netting_channel_address_bin,
             self.raiden.config['reveal_timeout'],
+        )
+
+        log.info(
+            'New channel created',
+            channel_address=event['nettingChannel'],
+            manager_address=encode_hex(manager_address),
         )
 
     def event_channelnewbalance(self, netting_contract_address_bin, event):

@@ -80,3 +80,10 @@ class ChannelGraph(object):
         otherwise.
         """
         return networkx.has_path(self.graph, source, target)
+
+    def add_path(self, from_, to_):
+        """ Add a new edge into the network. """
+        self.graph.add_edge(from_, to_)
+
+    def remove_path(self, from_, to_):
+        raise NotImplementedError()
