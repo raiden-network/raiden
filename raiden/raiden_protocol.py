@@ -38,7 +38,7 @@ class RaidenProtocol(object):
 
     def _send_queued_messages(self):
         timeout = 0.1
-        countdown_to_send = 1.0 / timeout  # try resend after 1s
+        countdown_to_send = self.try_interval / timeout  # try resend after 1s
         countdown = 0
 
         stop = None
