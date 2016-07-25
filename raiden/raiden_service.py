@@ -347,21 +347,22 @@ class RaidenEventHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
 
-    def on_event(self, emmiting_contract_address, event):  # pylint: disable=unused-argument
+    def on_event(self, emitting_contract_address, event):  # pylint: disable=unused-argument
+        log.debug('event received', type=event['_event_type'], contract=emitting_contract_address)
         if event['_event_type'] == 'ChannelNew':
-            self.event_channelnew(emmiting_contract_address, event)
+            self.event_channelnew(emitting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelNewBalance':
-            self.event_channelnewbalance(emmiting_contract_address, event)
+            self.event_channelnewbalance(emitting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelClosed':
-            self.event_channelclosed(emmiting_contract_address, event)
+            self.event_channelclosed(emitting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelSettled':
-            self.event_channelsettled(emmiting_contract_address, event)
+            self.event_channelsettled(emitting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelSecretRevealed':
-            self.event_channelsecretrevealed(emmiting_contract_address, event)
+            self.event_channelsecretrevealed(emitting_contract_address, event)
 
         else:
             log.error('Unknow event {}'.format(repr(event)))
