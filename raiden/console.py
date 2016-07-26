@@ -2,6 +2,7 @@ import cStringIO
 import sys
 from logging import StreamHandler, Formatter
 from collections import defaultdict
+import json
 
 import gevent
 from gevent.event import Event
@@ -274,3 +275,55 @@ class ConsoleTools(object):
         netting_channel = self._chain.netting_channel(netcontract_address)
         netting_channel.deposit(self._raiden.address, amount)
         return netting_channel
+
+    def channel_stats_for(self, token_address, peer, pretty=False):
+        """Collect information about sent and received transfers
+        between yourself and your peer for the given asset.
+        Args:
+            token_address (string): hex encoded address of the token
+            peer (string): hex encoded address of the peer
+            pretty (boolean): if True, print a json representation instead of returning a dict
+        Returns:
+            stats (dict): collected stats for the channel
+
+        """
+        # Get the asset
+        asset = self._chain.asset(token_address.decode('hex'))
+
+        # Obtain the asset manager
+        asset_manager = self._raiden.managers_by_asset_address[token_address.decode('hex')]
+        assert asset_manager
+
+        # Get the channel
+        channel = asset_manager.get_channel_by_partner_address(peer.decode('hex'))
+        assert channel
+
+        # Collect numbers
+        stats = dict(
+            transfers=dict(
+                received=[t.transfered_amount for t in channel.received_transfers],
+                sent=[t.transfered_amount for t in channel.sent_transfers],
+            ),
+            channel=(channel
+                     if not pretty
+                     else channel.external_state.netting_channel.address.encode('hex')),
+            lifecycle=dict(
+                opened_at=channel.external_state.opened_block or 'not yet',
+                open=channel.isopen,
+                closed_at=channel.external_state.closed_block or 'not yet',
+                settled_at=channel.external_state.settled_block or 'not yet',
+            ),
+            funding=channel.external_state.netting_channel.detail(self._raiden.address),
+            asset=dict(
+                our_balance=asset.balance_of(self._raiden.address),
+                partner_balance=asset.balance_of(peer.decode('hex')),
+                name=asset.proxy.name(),
+                symbol=asset.proxy.symbol(),
+            ),
+        )
+        stats['funding']['our_address'] = stats['funding']['our_address'].encode('hex')
+        stats['funding']['partner_address'] = stats['funding']['partner_address'].encode('hex')
+        if not pretty:
+            return stats
+        else:
+            print(json.dumps(stats, indent=2, sort_keys=True))
