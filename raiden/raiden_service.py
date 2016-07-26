@@ -222,8 +222,7 @@ class RaidenAPI(object):
             raise NoPathError('No path to address found')
 
         transfer_manager = self.raiden.managers_by_asset_address[asset_address_bin].transfermanager
-        task = transfer_manager.transfer(amount, target_bin, callback=callback)
-        task.join()
+        transfer_manager.transfer(amount, target_bin, callback=callback)
 
     def close(self, asset_address, partner_address):
         """ Close a channel opened with `partner_address` for the given `asset_address`. """

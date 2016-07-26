@@ -45,7 +45,7 @@ class TransferManager(object):
             self.assetmanager.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer, callback=callback)
 
-            task = self.assetmanager.raiden.protocol.send(
+            self.assetmanager.raiden.protocol.send_and_wait(
                 target,
                 direct_transfer,
             )
@@ -59,8 +59,8 @@ class TransferManager(object):
             if callback:
                 self.on_task_completed_callbacks.append(callback)
 
-        task.start()
-        return task
+            task.start()
+            task.join()
 
     def on_mediatedtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:

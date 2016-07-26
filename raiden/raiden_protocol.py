@@ -38,7 +38,7 @@ class RaidenProtocol(object):
 
     def _send_queued_messages(self):
         timeout = 0.1
-        countdown_to_send = self.try_interval / timeout  # try resend after 1s
+        countdown_to_send = self.try_interval / timeout
         countdown = 0
 
         stop = None
@@ -92,6 +92,15 @@ class RaidenProtocol(object):
             raise ValueError('message size excedes the maximum {}'.format(self.max_message_size))
 
         self.queued_messages.put((receiver_address, message))
+
+    def send_and_wait(self, receiver_address, message):
+        """Sends a message and wait for the response ack."""
+        self.send(receiver_address, message)
+
+        data = message.encode()
+        msghash = sha3(data)
+        while msghash in self.number_of_tries:
+            gevent.sleep(0.1)
 
     def send_ack(self, receiver_address, message):
         if not isaddress(receiver_address):
