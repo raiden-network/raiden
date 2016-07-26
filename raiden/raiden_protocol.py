@@ -122,5 +122,7 @@ class RaidenProtocol(object):
                     pex(message.echo)
                 ))
         else:
-            assert isinstance(message, Secret) or message.sender
-            self.raiden.on_message(message, msghash)
+            # message may not have been decoded
+            if message is not None:
+                assert isinstance(message, Secret) or message.sender
+                self.raiden.on_message(message, msghash)

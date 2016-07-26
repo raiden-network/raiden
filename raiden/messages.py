@@ -128,7 +128,6 @@ class SignedMessage(Message):
     @classmethod
     def decode(cls, data):
         result = messages.wrap_and_validate(data)
-        # result = messages.wrap(data)
 
         if result is None:
             return
