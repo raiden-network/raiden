@@ -12,6 +12,7 @@ from ethereum.utils import denoms, decode_hex
 from ethereum.slogging import getLogger
 from ethereum._solidity import compile_file
 from raiden.messages import Ping
+from raiden.blockchain.abi import get_contract_path
 
 from pyethapp.utils import bcolors as bc
 from pyethapp.console_service import GeventInputHook, SigINTHandler
@@ -153,7 +154,7 @@ class ConsoleTools(object):
         """
         token_proxy = self._chain.client.deploy_solidity_contract(
             self._raiden.address, 'HumanStandardToken',
-            compile_file('raiden/smart_contracts/HumanStandardToken.sol'),
+            compile_file(get_contract_path('HumanStandardToken.sol')),
             dict(),
             (10 ** 6, 'raiden', 2, 'RD'),
             gasprice=gasprice,
