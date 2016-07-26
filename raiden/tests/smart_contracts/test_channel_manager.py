@@ -19,7 +19,7 @@ def test_cmc(state, settle_timeout, netting_channel_abi, manager, events):  # py
 
     assert len(manager.getChannelsParticipants()) == 0
 
-    netting_channel_address1 = manager.newChannel(
+    netting_channel_address1_hex = manager.newChannel(
         address1,
         settle_timeout,
     )
@@ -37,18 +37,18 @@ def test_cmc(state, settle_timeout, netting_channel_abi, manager, events):  # py
     netting_contract_proxy1 = ABIContract(
         state,
         netting_channel_translator,
-        netting_channel_address1,
+        netting_channel_address1_hex,
     )
 
     assert netting_contract_proxy1.settleTimeout() == settle_timeout
 
-    netting_channel_address2 = manager.newChannel(
+    netting_channel_address2_hex = manager.newChannel(
         address3,
         settle_timeout,
     )
 
-    assert manager.getChannelWith(address1) == netting_channel_address1
-    assert manager.getChannelWith(address3) == netting_channel_address2
+    assert manager.getChannelWith(address1) == netting_channel_address1_hex
+    assert manager.getChannelWith(address3) == netting_channel_address2_hex
 
     msg_sender_channels = manager.nettingContractsByAddress(tester.DEFAULT_ACCOUNT)
     address1_channels = manager.nettingContractsByAddress(address1)
@@ -64,12 +64,12 @@ def test_cmc(state, settle_timeout, netting_channel_abi, manager, events):  # py
     assert events[0]['_event_type'] == 'ChannelNew'
     assert events[0]['participant1'] == tester.a0.encode('hex')
     assert events[0]['participant2'] == address1.encode('hex')
-    assert events[0]['nettingChannel'] == manager.address.encode('hex')
+    assert events[0]['nettingChannel'] == netting_channel_address1_hex
     assert events[0]['settleTimeout'] == 30
     assert events[1]['_event_type'] == 'ChannelNew'
     assert events[1]['participant1'] == tester.a0.encode('hex')
     assert events[1]['participant2'] == address3.encode('hex')
-    assert events[1]['nettingChannel'] == manager.address.encode('hex')
+    assert events[1]['nettingChannel'] == netting_channel_address2_hex
     assert events[1]['settleTimeout'] == 30
 
     # uncomment private in function to run test
