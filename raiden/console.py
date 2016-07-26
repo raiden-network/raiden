@@ -58,7 +58,10 @@ class Console(BaseService):
                                    raiden=self.app.raiden,
                                    chain=self.app.raiden.chain,
                                    discovery=self.app.discovery,
-                                   tools=ConsoleTools(self.app.raiden),
+                                   tools=ConsoleTools(self.app.raiden, self.app.discovery,
+                                       self.app.config['settle_timeout'],
+                                       self.app.config['reveal_timeout'],
+                                       ),
                                    denoms=denoms,
                                    true=True,
                                    false=False,
@@ -129,9 +132,12 @@ class Console(BaseService):
 
 
 class ConsoleTools(object):
-    def __init__(self, raiden_service):
+    def __init__(self, raiden_service, discovery, settle_timeout, reveal_timeout):
         self._chain = raiden_service.chain
         self._raiden = raiden_service
+        self._discovery = discovery
+        self.settle_timeout = settle_timeout
+        self.reveal_timeout = reveal_timeout
         self.assets = []
         self._ping_nonces = defaultdict(int)
 
@@ -140,7 +146,7 @@ class ConsoleTools(object):
             name='raidentester',
             symbol='RDT',
             decimals=2,
-            timeout=30,
+            timeout=60,
             gasprice=denoms.shannon * 20):
         """Create a proxy for a new HumanStandardToken, that is initialized with
         Args:
@@ -150,7 +156,7 @@ class ConsoleTools(object):
             decimals (int): decimal places
             kwargs (dict): will be passed to contract creation
         Returns:
-            token_proxy (pyethapp.rpc_client.ContractProxy) for the new token.
+            token_proxy: of the new token.
         """
         token_proxy = self._chain.client.deploy_solidity_contract(
             self._raiden.address, 'HumanStandardToken',
@@ -162,17 +168,17 @@ class ConsoleTools(object):
         self.assets.append(token_proxy)
         return token_proxy
 
-    def register_asset(self, token_proxy):
-        """Register a token with the asset manager.
+    def register_asset(self, token_address):
+        """Register a token with the raiden asset manager.
         Args:
-            token_proxy (pyethapp.rpc_client.ContractProxy): a token contract proxy.
+            token_address (string): a hex encoded token address.
         Returns:
-            manager (pyethapp.rpc_client.ContractProxy): the channel_manager contract_proxy.
+            channel_manager: the channel_manager contract_proxy.
         """
-        self._chain.default_registry.add_asset(token_proxy.address.encode('hex'))
-        manager = self._chain.manager_by_asset(token_proxy.address)
-        self._raiden.register_channel_manager(manager)
-        return manager
+        self._chain.default_registry.add_asset(token_address)
+        channel_manager = self._chain.manager_by_asset(token_address.decode('hex'))
+        self._raiden.register_channel_manager(channel_manager)
+        return channel_manager
 
     def ping(self, peer, timeout=5.):
         """See, if a peer is discoverable and up.
@@ -187,3 +193,56 @@ class ConsoleTools(object):
         event = gevent.event.AsyncResult()
         self._raiden.send_and_wait(address, msg, timeout, event)
         return event
+
+    def open_channel_with_funding(self, token_address, peer, amount,
+                                  settle_timeout=None,
+                                  reveal_timeout=None):
+        """Convenience method to open a channel.
+        Args:
+            token_address (str): hex encoded address of the token for the channel.
+            peer (str): hex encoded address of the channel peer.
+            amount (int): amount of initial funding of the channel.
+            settle_timeout (int): amount of blocks for the settle time (if None use app defaults).
+            reveal_timeout (int): amount of blocks for the reveal time (if None use app defaults).
+        Returns:
+            netting_channel: the opened netting channel.
+        """
+        try:
+            self._discovery.get(peer.decode('hex'))
+        except KeyError:
+            print("Error: peer {} not found in discovery".format(peer))
+            return
+        asset = self._raiden.chain.asset(token_address.decode('hex'))
+        channel_manager = self._chain.manager_by_asset(token_address.decode('hex'))
+        asset_manager = self._raiden.get_manager_by_asset_address(token_address.decode('hex'))
+        netcontract_address = channel_manager.new_netting_channel(self._raiden.address,
+                                                                peer.decode('hex'),
+                                                                settle_timeout or self.settle_timeout)
+        asset.approve(netcontract_address, amount)
+        netting_channel = self._chain.netting_channel(netcontract_address)
+        asset_manager.register_channel(netting_channel, reveal_timeout or self.reveal_timeout)
+        netting_channel.deposit(self._raiden.address, amount)
+        return netting_channel
+
+    def deposit(self, token_address, peer, amount):
+        """After your peer has called `open_channel_with_funding`, use this
+        to deposit to the channel as well.
+        Args:
+            token_address (str): hex encoded address of the token.
+            peer (str): hex encoded address of your peer.
+            amount (int): amount of deposit.
+        """
+        asset = self._chain.asset(token_address.decode('hex'))
+        assert asset
+        asset_manager = self._raiden.get_manager_by_asset_address(token_address.decode('hex'))
+        assert asset_manager
+        netcontract_address = asset_manager.get_channel_by_partner_address(
+            peer.decode('hex')).external_state.netting_channel.address
+
+        assert len(netcontract_address)
+
+        asset.approve(netcontract_address, amount)
+
+        netting_channel = self._chain.netting_channel(netcontract_address)
+        netting_channel.deposit(self._raiden.address, amount)
+        return netting_channel
