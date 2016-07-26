@@ -23,6 +23,7 @@ class RaidenProtocol(object):
     try_interval = 1.
     max_tries = 5
     max_message_size = 1200
+    short_delay = .1
 
     def __init__(self, transport, discovery, raiden):
         self.transport = transport
@@ -37,8 +38,7 @@ class RaidenProtocol(object):
         gevent.spawn(self._send_queued_messages)
 
     def _send_queued_messages(self):
-        timeout = 0.1
-        countdown_to_send = self.try_interval / timeout
+        countdown_to_send = self.try_interval / self.short_delay
         countdown = 0
 
         stop = None
@@ -82,12 +82,12 @@ class RaidenProtocol(object):
                     self.transport.send(self.raiden, host_port, data)
                     countdown = countdown_to_send
 
-                gevent.sleep(timeout)
+                gevent.sleep(self.short_delay)
                 countdown -= 1
 
             # consume last sent message
             self.queued_messages.get()
-            stop = self.stop_event.wait(timeout)
+            stop = self.stop_event.wait(self.short_delay)
 
     def send(self, receiver_address, message):
         if not isaddress(receiver_address):
@@ -109,7 +109,7 @@ class RaidenProtocol(object):
         msghash = sha3(data)
         # FIXME: add error handling
         while msghash in self.number_of_tries:
-            gevent.sleep(0.1)
+            gevent.sleep(self.short_delay)
 
     def send_ack(self, receiver_address, message):
         if not isaddress(receiver_address):
