@@ -43,8 +43,9 @@ class RaidenProtocol(object):
 
         stop = None
         while stop is None:
-            # blocks waiting for data in queue
-            receiver_address, message = self.queued_messages.get()
+            # blocks waiting for data in queue, don't remove data from
+            # the queue just now because sending can still fail.
+            receiver_address, message = self.queued_messages.peek()
 
             data = message.encode()
             host_port = self.discovery.get(receiver_address)
@@ -64,8 +65,13 @@ class RaidenProtocol(object):
             # loop should iterate as fast as possible checking for acks
             while msghash in self.number_of_tries:
                 if self.number_of_tries[msghash] > self.max_tries:
-                    # FIXME: suspend node + recover from the failure
-                    raise Exception('DEACTIVATED MSG resents {} {}'.format(
+                    # free send_and_wait...
+                    del self.number_of_tries[msghash]
+
+                    # FIXME: there was no connectivity or other network error?
+                    # for now just losing the packet but better error handler
+                    # needs to be added.
+                    log.error('DEACTIVATED MSG resents {} {}'.format(
                         pex(receiver_address),
                         message,
                     ))
@@ -79,6 +85,8 @@ class RaidenProtocol(object):
                 gevent.sleep(timeout)
                 countdown -= 1
 
+            # consume last sent message
+            self.queued_messages.get()
             stop = self.stop_event.wait(timeout)
 
     def send(self, receiver_address, message):
@@ -99,6 +107,7 @@ class RaidenProtocol(object):
 
         data = message.encode()
         msghash = sha3(data)
+        # FIXME: add error handling
         while msghash in self.number_of_tries:
             gevent.sleep(0.1)
 
