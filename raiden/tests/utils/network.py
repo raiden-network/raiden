@@ -272,9 +272,7 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
         )
 
     for app in apps:
-        for asset_address in app.raiden.chain.default_registry.asset_addresses():
-            manager = app.raiden.chain.manager_by_asset(asset_address)
-            app.raiden.register_channel_manager(manager)
+        app.raiden.register_registry(app.raiden.chain.default_registry)
 
     return apps
 
@@ -355,11 +353,7 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
     )
 
     for app in apps:
-        for asset_address in app.raiden.chain.default_registry.asset_addresses():
-            assert len(asset_address)
-            manager = app.raiden.chain.manager_by_asset(asset_address)
-            assert len(manager.address)
-            app.raiden.register_channel_manager(manager)
+        app.raiden.register_registry(app.raiden.chain.default_registry)
 
     return apps
 

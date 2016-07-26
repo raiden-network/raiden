@@ -131,9 +131,7 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
 
     discovery.register(app.raiden.address, *split_endpoint(external_listen_address))
 
-    for asset_address in blockchain_service.default_registry.asset_addresses():
-        manager = blockchain_service.manager_by_asset(asset_address)
-        app.raiden.register_channel_manager(manager)
+    app.raiden.register_registry(blockchain_service.default_registry)
 
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did

@@ -5,7 +5,7 @@ from ethereum.utils import encode_hex
 from pyethapp.jsonrpc import address_decoder
 
 from raiden.assetmanager import AssetManager
-from raiden.blockchain.abi import CHANNEL_MANAGER_ABI
+from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
 from raiden.channelgraph import ChannelGraph
 from raiden.tasks import LogListenerTask
 from raiden.encoding import messages
@@ -45,6 +45,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     """ A Raiden node. """
 
     def __init__(self, chain, privkey, transport, discovery, config):  # pylint: disable=too-many-arguments
+        self.registries = list()
         self.managers_by_asset_address = dict()
         self.managers_by_address = dict()
         self.event_listeners = list()
@@ -138,6 +139,30 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
                 return True
 
         return False
+
+    def register_registry(self, registry):
+        """ Register the registry and intialize all the related assets and
+        channels.
+        """
+        translator = ContractTranslator(REGISTRY_ABI)
+
+        assetadded = registry.assetadded_filter()
+
+        all_manager_addresses = registry.manager_addresses()
+
+        asset_listener = LogListenerTask(
+            assetadded,
+            self.on_event,
+            translator,
+        )
+        asset_listener.start()
+        self.event_listeners.append(asset_listener)
+
+        self.registries.append(registry)
+
+        for manager_address in all_manager_addresses:
+            channel_manager = self.chain.manager(manager_address)
+            self.register_channel_manager(channel_manager)
 
     def register_channel_manager(self, channel_manager):
         """ Discover and register the channels for the given asset. """
@@ -348,7 +373,15 @@ class RaidenEventHandler(object):
         self.raiden = raiden
 
     def on_event(self, emitting_contract_address, event):  # pylint: disable=unused-argument
-        log.debug('event received', type=event['_event_type'], contract=emitting_contract_address)
+        log.debug(
+            'event received',
+            type=event['_event_type'],
+            contract=emitting_contract_address,
+        )
+
+        if event['_event_type'] == 'AssetAdded':
+            self.event_assetadded(emitting_contract_address, event)
+
         if event['_event_type'] == 'ChannelNew':
             self.event_channelnew(emitting_contract_address, event)
 
@@ -367,6 +400,11 @@ class RaidenEventHandler(object):
         else:
             log.error('Unknow event {}'.format(repr(event)))
 
+    def event_assetadded(self, registry_address, event):
+        manager_address = address_decoder(event['channelManagerAddress'])
+        manager = self.raiden.chain.manager(manager_address)
+        self.raiden.register_channel_manager(manager)
+
     def event_channelnew(self, manager_address, event):  # pylint: disable=unused-argument
         if address_decoder(event['participant1']) != self.raiden.address and address_decoder(event['participant2']) != self.raiden.address:
             log.info('ignoring new channel, this is node is not a participant.')
@@ -374,6 +412,7 @@ class RaidenEventHandler(object):
 
         netting_channel_address_bin = address_decoder(event['nettingChannel'])
 
+        # shouldnt raise, filters are installed only for registered managers
         asset_manager = self.raiden.get_manager_by_address(manager_address)
         asset_manager.register_channel_by_address(
             netting_channel_address_bin,
@@ -390,14 +429,16 @@ class RaidenEventHandler(object):
         asset_address_bin = address_decoder(event['assetAddress'])
         participant_address_bin = address_decoder(event['participant'])
 
+        # shouldn't raise, all three addresses need to be registered
         manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
         channel = manager.get_channel_by_contract_address(netting_contract_address_bin)
-
-        # throws if the address is wrong
         channel_state = channel.get_state_for(participant_address_bin)
 
         if channel_state.contract_balance != event['balance']:
             channel_state.update_contract_balance(event['balance'])
+
+        if channel.external_state.opened_block == 0:
+            channel.external_state.opened_block = event['blockNumber']
 
     def event_channelclosed(self, netting_contract_address_bin, event):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
