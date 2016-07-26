@@ -204,13 +204,16 @@ class NettingChannelContract(object):
             address_B: Participant(),
         }
 
-        self.opened = None
+        # opened, settled, and closed default to 0 as it's the value used in
+        # the contract
+
+        self.opened = 0
         """ Block number when deposit() was first called. """
 
-        self.settled = None
+        self.settled = 0
         """ Block number when settle was sucessfully called. """
 
-        self.closed = None
+        self.closed = 0
         """ Block number when close() was first called (might be zero in testing scenarios). """
 
         self.closer = None
@@ -241,12 +244,12 @@ class NettingChannelContract(object):
         Returns:
             bool: True if the contract is open, False otherwise
         """
-        # During testing closed can be 0
-        if self.closed is not None:
+        # 0 is used for uninitialized values
+        if self.closed is not 0:
             return False
 
         # allow single funded channels
-        return all(
+        return any(
             state.has_deposited
             for state in self.participants.values()
         )
@@ -270,7 +273,7 @@ class NettingChannelContract(object):
         participant.has_deposited = True
         participant.deposit += amount
 
-        if self.isopen and self.opened is None:
+        if self.isopen and self.opened is 0:
             # track the block were the contract was openned
             self.opened = block_number
 
@@ -349,10 +352,10 @@ class NettingChannelContract(object):
                 respect to `first_encoded`. May be None.
         """
 
-        if self.settled is not None:
+        if self.settled is not 0:
             raise RuntimeError('Contract is settled.')
 
-        if self.closed is not None:
+        if self.closed is not 0:
             raise RuntimeError('Contract is closing.')
 
         # Close cannot accept a message that is not from a participant,
@@ -395,10 +398,10 @@ class NettingChannelContract(object):
             transfer_encoded (bin):
                 Last sent transfers received by the partner (can be sent by a third party).
         """
-        if self.settled is not None:
+        if self.settled is not 0:
             raise RuntimeError('Contract is settled.')
 
-        if self.closed is None:
+        if self.closed is 0:
             raise RuntimeError('Contract is open.')
 
         # third-parties need to call a separate method that receives:
@@ -442,17 +445,17 @@ class NettingChannelContract(object):
         if outdated:
             raise RuntimeError('Closer informed an outdated transfer.')  # TODO: penalize
 
-        if ctx['msg.sender'] == address:
-            state.transfer = transfer
-            state.state = STATE_PARTICIPANT
-        elif state.state == STATE_THIRDPARTY and state.transfer.nonce < transfer.nonce:
-            state.transfer = transfer
+        state.transfer = transfer
+        state.state = STATE_PARTICIPANT
+
+        # elif state.state == STATE_THIRDPARTY and state.transfer.nonce < transfer.nonce:
+        #     state.transfer = transfer
 
     def unlock(self, ctx, locked_encoded, merkleproof_encoded, secret):
-        if self.settled is not None:
+        if self.settled is not 0:
             raise RuntimeError('Contract is settled.')
 
-        if self.closed is None:
+        if self.closed is 0:
             raise RuntimeError('Contract is open.')
 
         if ctx['msg.sender'] not in self.participants:
@@ -476,7 +479,7 @@ class NettingChannelContract(object):
         is_valid_proof = check_proof(
             merkle_proof,
             transfer.locksroot,
-            sha3(transfer.lock.as_bytes),
+            sha3(lock.as_bytes),
         )
 
         if not is_valid_proof:
@@ -485,8 +488,9 @@ class NettingChannelContract(object):
         transfer.append(lock)
 
     def _get_netted(self, our_state, partner_state):
-        our_transfered_amount = 0.0
-        partner_transfered_amount = 0.0
+        # do not use floats
+        our_transfered_amount = 0
+        partner_transfered_amount = 0
 
         if our_state.transfer:
             our_transfered_amount = our_state.transfer.transfered_amount
@@ -497,8 +501,8 @@ class NettingChannelContract(object):
         return our_state.deposit + partner_transfered_amount - our_transfered_amount
 
     def settle(self, ctx):
-        assert self.settled is None
-        assert self.closed is not None
+        assert self.settled is 0
+        assert self.closed is not 0
         assert self.closed + self.settle_timeout <= ctx['block_number']
 
         for address, state in self.participants.items():

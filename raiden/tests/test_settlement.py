@@ -1,19 +1,25 @@
 # -*- coding: utf8 -*-
 import pytest
 
+from ethereum import slogging
+
 from raiden.mtree import check_proof
 from raiden.tests.utils.messages import setup_messages_cb
+from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channels,
     channel,
     direct_transfer,
     get_received_transfer,
-    hidden_mediated_transfer,
+    get_sent_transfer,
+    pending_mediated_transfer,
     transfer,
+    register_secret,
 )
 from raiden.utils import sha3
 
 # pylint: disable=too-many-locals,too-many-statements
+slogging.configure(':DEBUG')
 
 
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
@@ -41,7 +47,7 @@ def test_settlement(raiden_network, settle_timeout):
 
     assert app1.raiden.address in asset_manager0.partneraddress_channel
     assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert channel0.netting_contract.address == channel1.netting_contract.address
+    assert channel0.external_state.netting_channel.address == channel1.external_state.netting_channel.address
 
     transfermessage = channel0.create_lockedtransfer(amount, expiration, hashlock)
     app0.raiden.sign(transfermessage)
@@ -61,15 +67,15 @@ def test_settlement(raiden_network, settle_timeout):
     root = channel1.our_state.locked.root
     assert check_proof(merkle_proof, root, sha3(transfermessage.lock.as_bytes))
 
-    channel0.netting_contract.close(
+    channel0.external_state.netting_channel.close(
         app0.raiden.address,
         transfermessage,
         None,
     )
 
-    unlocked = [(merkle_proof, transfermessage.lock, secret)]
+    unlocked = [(merkle_proof, transfermessage.lock.as_bytes, secret)]
 
-    channel0.netting_contract.unlock(
+    channel0.external_state.netting_channel.unlock(
         app0.raiden.address,
         unlocked,
     )
@@ -77,56 +83,63 @@ def test_settlement(raiden_network, settle_timeout):
     for _ in range(settle_timeout):
         chain0.next_block()
 
-    channel0.netting_contract.settle()
+    channel0.external_state.netting_channel.settle()
 
 
-@pytest.mark.xfail()
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
-@pytest.mark.parametrize('channels_per_node', [2])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
-    """ An attacker cannot reuse a secret to double claim a lock. """
+    """ Any transfer following a secret revealed must update the locksroot, so
+    that an attacker cannot reuse a secret to double claim a lock.
+    """
     asset = assets_addresses[0]
     amount = 30
 
     app0, app1, app2, app3 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    # mediated transfer with the secret revealed
-    transfer(app0, app3, asset, amount)
+    # mediated transfer
+    secret = pending_mediated_transfer(raiden_network, asset, amount)
 
-    # any new transfer
+    # get a proof for the pending transfer
+    back_channel = channel(app1, app0, asset)
+    secret_transfer = get_received_transfer(back_channel, 0)
+    merkle_proof = back_channel.our_state.locked.get_proof(secret_transfer)
+
+    # reveal the secret
+    register_secret(raiden_network, asset, secret)
+
+    # a new transfer to update the hashlock
     direct_transfer(app0, app1, asset, amount)
 
-    import pdb; pdb.set_trace()
-    secret = ''
-    attack_channel = channel(app2, app1, asset)
-    secret_transfer = get_received_transfer(attack_channel, 0)
-    last_transfer = get_received_transfer(attack_channel, 1)
-    netting_contract_address = attack_channel.netting_contract.address
-
-    # create a fake proof
-    merkle_proof = attack_channel.our_state.locked.get_proof(secret_transfer)
+    forward_channel = channel(app0, app1, asset)
+    last_transfer = get_sent_transfer(forward_channel, 1)
 
     # call close giving the secret for a transfer that has being revealed
-    attack_channel.netting_contract.close(
+    back_channel.external_state.netting_channel.close(
         app1.raiden.address,
         last_transfer,
         None
     )
 
-    attack_channel.netting_contract.unlock(
-        app1.raiden.address,
-        [(merkle_proof, secret_transfer.lock, secret)],
-    )
+    # check that the double unlock will failed
+    with pytest.raises(Exception):
+        back_channel.external_state.netting_channel.unlock(
+            app1.raiden.address,
+            [(merkle_proof, secret_transfer.lock.as_bytes, secret)],
+        )
 
     # forward the block number to allow settle
     for _ in range(settle_timeout):
         app2.raiden.chain.next_block()
 
-    app1.raiden.chain.settle(asset, netting_contract_address)
+    back_channel.external_state.netting_channel.settle()
 
-    # check that the attack FAILED
-    # contract = app1.raiden.chain.asset_hashchannel[asset][netting_contract_address]
+    participant0 = back_channel.external_state.netting_channel.contract.participants[app0.raiden.address]
+    participant1 = back_channel.external_state.netting_channel.contract.participants[app1.raiden.address]
+
+    assert participant0.netted == participant0.deposit - amount * 2
+    assert participant1.netted == participant1.deposit + amount * 2
 
 
 @pytest.mark.xfail()
@@ -152,12 +165,12 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
 
     # The attacker creates a mediated transfer from it's account A1, to it's
     # account A2, throught the hub H
-    secret = hidden_mediated_transfer(raiden_chain, asset, amount)
+    secret = pending_mediated_transfer(raiden_chain, asset, amount)
 
     attack_channel = channel(app2, app1, asset)
     attack_transfer = get_received_transfer(attack_channel, 0)
-    attack_contract = attack_channel.netting_contract.address
-    hub_contract = channel(app1, app0, asset).netting_contract.address
+    attack_contract = attack_channel.external_state.netting_channel.address
+    hub_contract = channel(app1, app0, asset).external_state.netting_channel.address
 
     # the attacker can create a merkle proof of the locked transfer
     merkle_proof = attack_channel.our_state.locked.get_proof(attack_transfer)

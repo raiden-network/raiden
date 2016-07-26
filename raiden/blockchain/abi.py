@@ -2,12 +2,16 @@
 import os
 
 from ethereum import _solidity
-from ethereum.abi import event_id, _normalize_name
+from ethereum.abi import event_id, normalize_name
 
 import raiden
 
 __all__ = (
     'get_contract_path',
+
+    'REGISTRY_ABI',
+    'ASSETNEW_EVENT',
+    'ASSETNEW_EVENTID',
 
     'CHANNEL_MANAGER_ABI',
     'CHANNELNEW_EVENT',
@@ -22,7 +26,6 @@ __all__ = (
     'CHANNELSECRETREVEALED_EVENTID',
 
     'HUMAN_TOKEN_ABI',
-    'REGISTRY_ABI',
 )
 
 
@@ -40,7 +43,7 @@ def get_event(full_abi, event_name):
         if name is None:
             continue
 
-        normalized_name = _normalize_name(name)
+        normalized_name = normalize_name(name)
 
         if normalized_name == event_name:
             return description
@@ -50,7 +53,7 @@ def get_eventname_types(event_description):
     if 'name' not in event_description:
         raise ValueError('Not an event description, missing the name.')
 
-    name = _normalize_name(event_description['name'])
+    name = normalize_name(event_description['name'])
     encode_types = [
         element['type']
         for element in event_description['inputs']
@@ -88,6 +91,9 @@ HUMAN_TOKEN_ABI = human_token_compiled['abi']
 CHANNEL_MANAGER_ABI = channel_manager_compiled['abi']
 NETTING_CHANNEL_ABI = netting_channel_compiled['abi']
 REGISTRY_ABI = registry_compiled['abi']
+
+ASSETADDED_EVENT = get_event(REGISTRY_ABI, 'AssetAdded')
+ASSETADDED_EVENTID = event_id(*get_eventname_types(ASSETADDED_EVENT))
 
 CHANNELNEW_EVENT = get_event(CHANNEL_MANAGER_ABI, 'ChannelNew')
 CHANNELNEW_EVENTID = event_id(*get_eventname_types(CHANNELNEW_EVENT))

@@ -18,21 +18,21 @@
           tx_button(sess);
           // console.log("before close");
           // sess.close();
-          // window.onbeforeunload = function (evt, sess) {
-          //   var message = 'Are you sure you want to leave? Transaction states will be lost!';
-          //   if (typeof evt == 'undefined') {
-          //     evt = window.event;
-          //   }
-          //   if (evt) {
-          //     evt.returnValue = message;
-          //     sess.unsubscribe("http://localhost:8080/raiden#transfer_cb");
-          //     sess.close()
-          //     console.log('unsubscribed, closed')
+        //   window.onbeforeunload = function (evt, sess) {
+        //     var message = 'Are you sure you want to leave? Transaction states will be lost!';
+        //     if (typeof evt == 'undefined') {
+        //       evt = window.event;
+        //     }
+        //     if (evt) {
+        //       evt.returnValue = message;
+        //       sess.unsubscribe("http://localhost:8080/raiden#transfer_status");
+        //       sess.close()
+        //       console.log('unsubscribed, closed')
           //
-          //   }
-          //   // return message;
-          //   return message
-          // }
+        //     }
+        //     // return message;
+        //     return message
+        //   }
 
       },
 
@@ -49,7 +49,7 @@
   );
 
 
-  // closure for button deactivate 
+  // closure for button deactivate
   function tx_button_init(){
     var is_active = false
     function toggle(session){
@@ -89,7 +89,7 @@
   // FIXME: first callback doesn't get called after a reload!
   function subscribe_transfer(session) {
     console.log('subscription requested');
-    session.subscribe("http://localhost:8080/raiden#transfer_cb", function (topic, event) {
+    session.subscribe("http://localhost:8080/raiden#transfer_status", function (topic, event) {
       console.log(topic, event);
       var callback = event[0]
       var status = event[1]

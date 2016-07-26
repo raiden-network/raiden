@@ -29,11 +29,11 @@ def keccak(seed):
 
 
 def ishash(data):
-    return isinstance(data, bytes) and len(data) == 32
+    return isinstance(data, (bytes, bytearray)) and len(data) == 32
 
 
 def isaddress(data):
-    return isinstance(data, bytes) and len(data) == 20
+    return isinstance(data, (bytes, bytearray)) and len(data) == 20
 
 
 def pex(data):
@@ -47,3 +47,13 @@ def lpex(lst):
 def activate_ultratb():
     from IPython.core import ultratb
     sys.excepthook = ultratb.VerboseTB(call_pdb=True, tb_offset=6)
+
+
+def host_port_to_endpoint(host, port):
+    return "{}:{}".format(host, port)
+
+
+def split_endpoint(endpoint):
+    host, port = endpoint.split(':')
+    port = int(port)
+    return (host, port)

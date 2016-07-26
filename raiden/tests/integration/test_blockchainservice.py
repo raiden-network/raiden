@@ -1,10 +1,8 @@
 # -*- coding: utf8 -*-
 import random
 import string
-import time
 
 import pytest
-import gevent
 from ethereum import slogging
 from ethereum import _solidity
 from ethereum.keys import privtoaddr
@@ -12,10 +10,9 @@ from ethereum._solidity import compile_file
 from ethereum.utils import denoms
 from pyethapp.accounts import mk_privkey
 from pyethapp.rpc_client import JSONRPCClient
-from pyethapp.jsonrpc import quantity_decoder
 
 from raiden.blockchain.abi import get_contract_path
-from raiden.network.rpc.client import decode_topic
+from raiden.network.rpc.client import decode_topic, patch_send_transaction
 
 slogging.configure(
     ':DEBUG'
@@ -38,20 +35,6 @@ def privkey(seed):
 
 def make_address():
     return ''.join(random.choice(LETTERS) for _ in range(20))
-
-
-
-
-def wait_for_hydrachain(jsonrpc_client, number_of_nodes, timeout):
-    start = time.time()
-    quantity = jsonrpc_client.call('net_peerCount')
-
-    while quantity != number_of_nodes:
-        gevent.sleep(0.1)
-        quantity = quantity_decoder(jsonrpc_client.call('net_peerCount'))
-
-        if time.time() - start > timeout:
-            raise Exception('timeout')
 
 
 ADDR = addr('0')
@@ -130,20 +113,21 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
     assert manager.channels_by_participant(peer2_address) == [netting1_address]
     assert manager.channels_by_participant(peer3_address) == [netting2_address]
 
+    # single-funded channel
     netting_channel1.deposit(peer1_address, 100)
-    assert netting_channel1.isopen() is False
+    assert netting_channel1.isopen() is True
     assert netting_channel2.isopen() is False
 
     # with pytest.raises(Exception):
     #    blockchain_service.deposit(asset_address, netting1_address, peer1_address, 100)
 
     netting_channel2.deposit(peer1_address, 70)
-    assert netting_channel1.isopen() is False
-    assert netting_channel2.isopen() is False
+    assert netting_channel1.isopen() is True
+    assert netting_channel2.isopen() is True
 
     netting_channel1.deposit(peer2_address, 130)
     assert netting_channel1.isopen() is True
-    assert netting_channel2.isopen() is False
+    assert netting_channel2.isopen() is True
 
     # we need to allow the settlement of the channel even if no transfers were
     # made
@@ -160,7 +144,7 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
     #     blockchain_service.close(asset_address, netting2_address, peer1_address, peer1_last_sent_transfers)
 
     assert netting_channel1.isopen() is False
-    assert netting_channel2.isopen() is False
+    assert netting_channel2.isopen() is True
 
     netting_channel2.deposit(peer3_address, 21)
 
@@ -173,19 +157,16 @@ def test_new_netting_contract(blockchain_service, settle_timeout):
     assert netting_channel2.isopen() is True
 
 
-@pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('timeout', [3])
-def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
+def test_blockchain(private_keys, number_of_nodes, cluster, poll_timeout):
     # pylint: disable=too-many-locals
     addresses = [
         privtoaddr(priv)
         for priv in private_keys
     ]
 
-    privatekey_hex = hydrachain_cluster[0].config['node']['privkey_hex']
-    privatekey = privatekey_hex.decode('hex')
+    privatekey = private_keys[0]
     address = privtoaddr(privatekey)
     total_asset = 100
 
@@ -193,12 +174,7 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
         privkey=privatekey,
         print_communication=False,
     )
-
-    wait_for_hydrachain(
-        jsonrpc_client,
-        number_of_nodes - 1,
-        timeout,
-    )
+    patch_send_transaction(jsonrpc_client)
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())
@@ -208,7 +184,7 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
         humantoken_contracts,
         dict(),
         (total_asset, 'raiden', 2, 'Rd'),
-        timeout=timeout,
+        timeout=poll_timeout,
     )
 
     registry_path = get_contract_path('Registry.sol')
@@ -219,7 +195,7 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
         registry_contracts,
         dict(),
         tuple(),
-        timeout=timeout,
+        timeout=poll_timeout,
     )
 
     log_list = jsonrpc_client.call(
@@ -239,7 +215,7 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
         token_proxy.address,
         gasprice=denoms.wei,
     )
-    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
+    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=poll_timeout)
 
     assert len(registry_proxy.assetAddresses.call()) == 1
 
@@ -267,7 +243,8 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
         log_data[2:].decode('hex'),
     )
 
-    assert channel_manager_address == event['assetAddress'].decode('hex')
+    assert channel_manager_address == event['channelManagerAddress'].decode('hex')
+    assert token_proxy.address == event['assetAddress'].decode('hex')
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         registry_contracts['ChannelManagerContract']['abi'],
@@ -279,7 +256,7 @@ def test_blockchain(private_keys, number_of_nodes, hydrachain_cluster, timeout):
         10,
         gasprice=denoms.wei,
     )
-    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
+    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=poll_timeout)
 
     log_list = jsonrpc_client.call(
         'eth_getLogs',

@@ -5,7 +5,7 @@ from ethereum import slogging
 from ethereum.abi import ContractTranslator
 from ethereum.utils import sha3
 
-from raiden.channel import Channel, ChannelEndState, InvalidSecret
+from raiden.channel import Channel, ChannelEndState, ChannelExternalState, InvalidSecret
 from raiden.blockchain.abi import NETTING_CHANNEL_ABI
 from raiden.transfermanager import TransferManager
 from raiden.messages import Secret
@@ -118,20 +118,30 @@ class AssetManager(object):
             channel_details['partner_address'],
             channel_details['partner_balance'],
         )
-        channel = Channel(
-            netting_channel,
 
+        external_state = ChannelExternalState(
+            self.register_channel_for_hashlock,
+            self.raiden.chain.block_number,
+            netting_channel,
+        )
+
+        channel = Channel(
             our_state,
             partner_state,
+            external_state,
 
+            self.asset_address,
             reveal_timeout,
             channel_details['settle_timeout'],
-
-            self.raiden.chain.block_number,
         )
 
         self.partneraddress_channel[partner_state.address] = channel
         self.address_channel[netting_channel.address] = channel
+
+        self.channelgraph.add_path(
+            channel_details['our_address'],
+            channel_details['partner_address'],
+        )
 
         newbalance_listener.start()
         secretrevealed_listener.start()
@@ -175,7 +185,7 @@ class AssetManager(object):
 
     def channel_isactive(self, partner_address):
         # TODO: check if the partner's network is alive
-        return self.get_channel_by_partner_address(partner_address).isopen()
+        return self.get_channel_by_partner_address(partner_address).isopen
 
     def get_best_routes(self, amount, target, lock_timeout=None):
         """ Yield a two-tuple (path, channel) that can be used to mediate the

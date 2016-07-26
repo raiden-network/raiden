@@ -83,7 +83,7 @@ class UIHandler(object):
         assert isinstance(self.api, RaidenAPI)
         self.port = None  # neccessary?
         self.ui_service = None  # neccessary?
-        self.assetmanagers = self.api.raiden.assetmanagers
+        # self.assetmanagers = self.api.raiden.ass
         self.registrars = registrars  # NOTIMPLEMENTED
 
     @export_rpc
@@ -242,12 +242,12 @@ class WebUI(object):
         return app
 
     def serve_index(self, environ, start_response):
-        path = os.path.join(self.path, 'webui/index.html')
+        path = os.path.join(self.path, 'api/webui/index.html')
         start_response("200 OK", [("Content-Type", "text/html")])
         return open(path).readlines()
 
     def run(self):
-        static_path = os.path.join(self.path, 'webui')
+        static_path = os.path.join(self.path, 'api/webui')
 
         routes = [('^/static/', self.make_static_application('/static/', static_path)),
                   ('^/$', self.serve_index),

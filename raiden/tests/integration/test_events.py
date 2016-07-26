@@ -9,7 +9,7 @@ from raiden.tests.utils.transfer import (
     assert_synched_channels,
     channel,
     get_received_transfer,
-    hidden_mediated_transfer,
+    pending_mediated_transfer,
 )
 from raiden.tests.utils.network import CHAIN
 
@@ -22,13 +22,9 @@ slogging.configure(
     ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
 )
 
-from pyethapp.utils import enable_greenlet_debugger
-enable_greenlet_debugger()
-
 
 @pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
-@pytest.mark.parametrize('timeout', [3])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_event_new_channel(deployed_network, deposit, settle_timeout):
@@ -115,7 +111,6 @@ def test_event_new_channel(deployed_network, deposit, settle_timeout):
 
 @pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
-@pytest.mark.parametrize('timeout', [3])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_secret_revealed(deployed_network, deposit):
@@ -124,7 +119,7 @@ def test_secret_revealed(deployed_network, deposit):
     asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
     amount = 10
 
-    secret = hidden_mediated_transfer(deployed_network, asset_address, amount)
+    secret = pending_mediated_transfer(deployed_network, asset_address, amount)
 
     mediated_transfer = get_received_transfer(
         channel(app2, app1, asset_address),

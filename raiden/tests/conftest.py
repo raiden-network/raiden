@@ -10,10 +10,12 @@ from raiden.utils import sha3
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import (
+    patch_send_transaction,
     BlockChainService,
     BlockChainServiceMock,
-    MOCK_REGISTRY_ADDRESS,
+    DEFAULT_POLL_TIMEOUT,
     GAS_LIMIT,
+    MOCK_REGISTRY_ADDRESS,
 )
 from raiden.blockchain.abi import get_contract_path
 from raiden.app import DEFAULT_SETTLE_TIMEOUT
@@ -37,13 +39,23 @@ gevent.get_hub().SYSTEM_ERROR = BaseException
 PBKDF2_CONSTANTS['c'] = 100
 
 
-@pytest.fixture
-def hydrachainkey_seed():
-    return 'hydrachain:{}'
+def _raiden_cleanup(request, raiden_apps):
+    def _cleanup():
+        for app in raiden_apps:
+            app.stop()
+
+        # kill all leftover tasklets
+        cleanup_tasks()
+    request.addfinalizer(_cleanup)
 
 
 @pytest.fixture
-def hydrachain_number_of_nodes():
+def cluster_key_seed():
+    return 'cluster:{}'
+
+
+@pytest.fixture
+def cluster_number_of_nodes():
     return 3
 
 
@@ -66,6 +78,11 @@ def settle_timeout():
 
 
 @pytest.fixture
+def poll_timeout():
+    return DEFAULT_POLL_TIMEOUT
+
+
+@pytest.fixture
 def privatekey_seed():
     """ Raiden private key template. """
     return 'key:{}'
@@ -80,10 +97,10 @@ def private_keys(number_of_nodes, privatekey_seed):
 
 
 @pytest.fixture
-def cluster_private_keys(hydrachain_number_of_nodes, hydrachainkey_seed):
+def cluster_private_keys(cluster_number_of_nodes, cluster_key_seed):
     return [
-        sha3(hydrachainkey_seed.format(position))
-        for position in range(hydrachain_number_of_nodes)
+        sha3(cluster_key_seed.format(position))
+        for position in range(cluster_number_of_nodes)
     ]
 
 
@@ -97,11 +114,9 @@ def hydrachain_cluster(request, private_keys, cluster_private_keys, p2p_base_por
     )
 
     def _cleanup():
-        # First allow the services to cleanup themselves
         for app in hydrachain_apps:
             app.stop()
 
-        # Then kill any remaining tasklet
         cleanup_tasks()
 
     request.addfinalizer(_cleanup)
@@ -126,6 +141,11 @@ def geth_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmp
 
     request.addfinalizer(_cleanup)
     return geth_processes
+
+
+@pytest.fixture
+def cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):
+    return geth_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir)
 
 
 @pytest.fixture
@@ -171,7 +191,7 @@ def transport_class():
 
 @pytest.fixture
 def blockchain_service(request, registry_address):
-    """ A fixture to clean up the singleton. """
+    """ A mock blockchain for faster testing. """
     # pylint: disable=protected-access
     def _cleanup():
         BlockChainServiceMock._instance = None
@@ -191,7 +211,7 @@ def blockchain_service(request, registry_address):
 
 @pytest.fixture
 def raiden_chain(request, private_keys, asset, channels_per_node, deposit,
-                 settle_timeout, registry_address, blockchain_service,
+                 settle_timeout, poll_timeout, registry_address, blockchain_service,
                  transport_class):
     blockchain_service_class = BlockChainServiceMock
     blockchain_service.new_channel_manager_contract(asset)
@@ -203,26 +223,19 @@ def raiden_chain(request, private_keys, asset, channels_per_node, deposit,
         channels_per_node,
         deposit,
         settle_timeout,
+        poll_timeout,
         transport_class,
         blockchain_service_class,
     )
 
-    def _cleanup():
-        # First allow the services to cleanup themselves
-        for app in raiden_apps:
-            app.stop()
-
-        # Then kill any remaining tasklet
-        cleanup_tasks()
-
-    request.addfinalizer(_cleanup)
+    _raiden_cleanup(request, raiden_apps)
 
     return raiden_apps
 
 
 @pytest.fixture
 def raiden_network(request, private_keys, assets_addresses, channels_per_node,
-                   deposit, settle_timeout, registry_address, blockchain_service,
+                   deposit, settle_timeout, poll_timeout, registry_address, blockchain_service,
                    transport_class):
     blockchain_service_class = BlockChainServiceMock
 
@@ -238,27 +251,22 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
         channels_per_node,
         deposit,
         settle_timeout,
+        poll_timeout,
         transport_class,
         blockchain_service_class,
     )
 
-    def _cleanup():
-        # First allow the services to cleanup themselves
-        for app in raiden_apps:
-            app.stop()
-
-        # Then kill any remaining tasklet
-        cleanup_tasks()
-    request.addfinalizer(_cleanup)
+    _raiden_cleanup(request, raiden_apps)
 
     return raiden_apps
 
 
 @pytest.fixture
 def deployed_network(request, private_keys, channels_per_node, deposit,
-                     number_of_assets, settle_timeout, timeout,
-                     transport_class, hydrachain_cluster):
+                     number_of_assets, settle_timeout, poll_timeout,
+                     transport_class, geth_cluster):
 
+    gevent.sleep(2)
     assert channels_per_node in (0, 1, 2, CHAIN), (
         'deployed_network uses create_sequential_network that can only work '
         'with 0, 1 or 2 channels'
@@ -269,9 +277,11 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
     blockchain_service_class = BlockChainService
 
     jsonrpc_client = JSONRPCClient(
+        host='0.0.0.0',
         privkey=privatekey,
         print_communication=False,
     )
+    patch_send_transaction(jsonrpc_client)
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     registry_path = get_contract_path('Registry.sol')
@@ -285,7 +295,7 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
         registry_contracts,
         dict(),
         tuple(),
-        timeout=timeout,
+        timeout=poll_timeout,
     )
     registry_address = registry_proxy.address
 
@@ -302,13 +312,14 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
             humantoken_contracts,
             dict(),
             (total_asset, 'raiden', 2, 'Rd'),
-            timeout=timeout,
+            timeout=poll_timeout,
         )
         asset_address = token_proxy.address
+        assert len(asset_address)
         asset_addresses.append(asset_address)
 
         transaction_hash = registry_proxy.addAsset(asset_address)  # pylint: disable=no-member
-        jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=timeout)
+        jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=poll_timeout)
 
         # only the creator of the token starts with a balance, transfer from
         # the creator to the other nodes
@@ -331,17 +342,41 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
         channels_per_node,
         deposit,
         settle_timeout,
+        poll_timeout,
         transport_class,
         blockchain_service_class,
     )
 
-    def _cleanup():
-        # First allow the services to cleanup themselves
-        for app in raiden_apps:
-            app.stop()
-
-        # Then kill any remaining tasklet
-        cleanup_tasks()
-    request.addfinalizer(_cleanup)
+    _raiden_cleanup(request, raiden_apps)
 
     return raiden_apps
+
+
+@pytest.fixture(scope='function')
+def discovery_blockchain(request, private_keys, geth_cluster, poll_timeout):
+    gevent.sleep(2)
+    privatekey = private_keys[0]
+    address = privtoaddr(privatekey)
+
+    jsonrpc_client = JSONRPCClient(
+        host='0.0.0.0',
+        privkey=privatekey,
+        print_communication=False,
+    )
+    patch_send_transaction(jsonrpc_client)
+
+    # deploy discovery contract
+    discovery_contract_path = get_contract_path('EndpointRegistry.sol')
+    discovery_contracts = compile_file(discovery_contract_path, libraries=dict())
+    discovery_contract_proxy = jsonrpc_client.deploy_solidity_contract(
+        address,
+        'EndpointRegistry',
+        discovery_contracts,
+        dict(),
+        tuple(),
+        timeout=poll_timeout,
+    )
+    discovery_contract_address = discovery_contract_proxy.address
+    # initialize and return ContractDiscovery object
+    from raiden.network.discovery import ContractDiscovery
+    return ContractDiscovery(jsonrpc_client, discovery_contract_address), address

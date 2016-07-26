@@ -10,18 +10,20 @@ module.exports = {
         "images/": "images/"
     },
     deploy: [
-    "ChannelManagerLibrary",
-    "Dcdr",
-    "HumanStandardToken",
-    "NettingChannelLibrary",
-    "Registry",
-    "Standard_Token",
-    "StandardToken",
-    "Token"
+        "ChannelManagerContract",
+        "ChannelManagerLibrary",
+        "Dcdr",
+        "EndpointRegistry",
+        "HumanStandardToken",
+        "NettingChannelContract",
+        "NettingChannelLibrary",
+        "Registry",
+        "Standard_Token",
+        "StandardToken",
+        "Token"
         ],
     rpc: {
         host: "localhost",
-        port: 8101,
-        from: "329482da2a2c7b2412589d85312765f32514dd59"
+        port: 8545
     }
 };
