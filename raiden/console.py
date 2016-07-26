@@ -156,7 +156,7 @@ class ConsoleTools(object):
             self._raiden.address, 'HumanStandardToken',
             compile_file(get_contract_path('HumanStandardToken.sol')),
             dict(),
-            (10 ** 6, 'raiden', 2, 'RD'),
+            (initial_alloc, name, decimals, symbol),
             gasprice=gasprice,
             timeout=timeout)
         self.assets.append(token_proxy)
