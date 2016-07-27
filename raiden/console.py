@@ -205,6 +205,7 @@ class ConsoleTools(object):
         nonce = self._ping_nonces[peer]
         self._ping_nonces[peer] += 1
         msg = Ping(nonce)
+        self._raiden.sign(msg)
         event = gevent.event.AsyncResult()
         self._raiden.send_and_wait(peer.decode('hex'), msg, timeout, event)
         return event
