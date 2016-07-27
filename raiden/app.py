@@ -61,7 +61,8 @@ class App(object):  # pylint: disable=too-few-public-methods
 
 @click.option(
     '--privatekey',
-    help='Asks for the hex encoded ethereum private key.\nWARNING: do not give the privatekey on the commandline, instead wait for the prompt!',
+    help='Asks for the hex encoded ethereum private key.\n'
+    'WARNING: do not give the privatekey on the commandline, instead wait for the prompt!',
     type=str,
     prompt=True,
     hide_input=True,
@@ -75,13 +76,13 @@ class App(object):  # pylint: disable=too-few-public-methods
 @click.option(
     '--registry_contract_address',
     help='hex encoded address of the registry contract.',
-    default='11d37a0d5e08ddc8d095291d1aa3b95b503811d6',  # testnet default
+    default='5d2365c483d31c3da34ef7bb5ea710528370c580',  # testnet default
     type=str,
 )
 @click.option(
     '--discovery_contract_address',
     help='hex encoded address of the discovery contract.',
-    default='e0fa57c301f3b23d3bd6d1685cab71ead4e9fbb3',  # testnet default
+    default='662d172c9170f8a97e13a7a0309c8302e20b1123',  # testnet default
     type=str,
 )
 @click.option(
@@ -95,10 +96,18 @@ class App(object):  # pylint: disable=too-few-public-methods
     help='external "host:port" where the raiden service can be contacted on (through NAT).',
     default='',
     type=str,
-)
+    )
+@click.option(
+    '--logging',
+    help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
+    default=':INFO',
+    type=str,
+    )
 @click.command()
 def app(privatekey, eth_rpc_endpoint, registry_contract_address,
-        discovery_contract_address, listen_address, external_listen_address):
+        discovery_contract_address, listen_address, external_listen_address, logging):
+
+    slogging.configure(logging)
 
     if not external_listen_address:
         # notify('if you are behind a NAT, you should set
@@ -131,9 +140,7 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
 
     discovery.register(app.raiden.address, *split_endpoint(external_listen_address))
 
-    for asset_address in blockchain_service.default_registry.asset_addresses():
-        manager = blockchain_service.manager_by_asset(asset_address)
-        app.raiden.register_channel_manager(manager)
+    app.raiden.register_registry(blockchain_service.default_registry)
 
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did

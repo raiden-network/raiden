@@ -243,7 +243,8 @@ def test_blockchain(private_keys, number_of_nodes, cluster, poll_timeout):
         log_data[2:].decode('hex'),
     )
 
-    assert channel_manager_address == event['assetAddress'].decode('hex')
+    assert channel_manager_address == event['channelManagerAddress'].decode('hex')
+    assert token_proxy.address == event['assetAddress'].decode('hex')
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         registry_contracts['ChannelManagerContract']['abi'],

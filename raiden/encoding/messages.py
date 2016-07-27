@@ -254,19 +254,22 @@ def wrap_and_validate(data):
         message_type = CMDID_MESSAGE[first_byte]
     except KeyError:
         log.error('unknown cmdid {}'.format(first_byte))
+        return
 
     try:
         message = message_type(data)
     except ValueError:
         log.error('trying to decode invalid message')
+        return
 
     assert message_type.fields_spec[-1].name == 'signature', 'signature is not the last field'
     message_data = message.data[:-signature.size_bytes]
 
     try:
         publickey = recover_publickey(message_data, message.signature)
-    except ValueError:
+    except (ValueError, Exception):
         log.error('invalid signature')
+        return
 
     return message, publickey
 
