@@ -23,6 +23,22 @@ IPython.core.shellapp.InteractiveShellApp.gui.values += ('gevent',)
 inputhook_manager.register('gevent')(GeventInputHook)
 
 
+def print_usage():
+    print("\t{}use `{}raiden{}` to interact with the raiden service.".format(
+        bc.OKBLUE, bc.HEADER, bc.OKBLUE))
+    print("\tuse `{}chain{}` to interact with the blockchain.".format(bc.HEADER, bc.OKBLUE))
+    print("\tuse `{}discovery{}` to find raiden nodes.".format(bc.HEADER, bc.OKBLUE))
+    print("\tuse `{}tools{}` for convenience with tokens, channels, funding, ...".format(
+        bc.HEADER, bc.OKBLUE))
+    print("\tuse `{}denoms{}` for ether calculations".format(bc.HEADER, bc.OKBLUE))
+    print("\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(
+        bc.HEADER, bc.OKBLUE))
+    print("\tuse `{}lasterr(n){}` to see n lines of stderr. [default 1]".format(bc.HEADER, bc.OKBLUE))
+    print("\tuse `{}help(<topic>){}` for help on a specific topic.".format(bc.HEADER, bc.OKBLUE))
+    print("\ttype `{}usage(){}` to see this help again.".format(bc.HEADER, bc.OKBLUE))
+    print("\n" + bc.ENDC)
+
+
 class Console(BaseService):
 
     """A service starting an interactive ipython session when receiving the
@@ -59,35 +75,23 @@ class Console(BaseService):
                                    raiden=self.app.raiden,
                                    chain=self.app.raiden.chain,
                                    discovery=self.app.discovery,
-                                   tools=ConsoleTools(self.app.raiden, self.app.discovery,
-                                       self.app.config['settle_timeout'],
-                                       self.app.config['reveal_timeout'],
-                                       ),
+                                   tools=ConsoleTools(self.app.raiden,
+                                                      self.app.discovery,
+                                                      self.app.config['settle_timeout'],
+                                                      self.app.config['reveal_timeout'],
+                                                      ),
                                    denoms=denoms,
                                    true=True,
                                    false=False,
+                                   usage=print_usage,
                                    )
-
-        # for k, v in self.app.script_globals.items():
-        #     self.console_locals[k] = v
 
     def _run(self):
         self.interrupt.wait()
         print('\n' * 2)
         print("Entering Console" + bc.OKGREEN)
         print("Tip:" + bc.OKBLUE)
-        # TODO: log help disabled for now
-        # print("\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(
-        #     bc.HEADER, bc.OKBLUE))
-        # print("\tuse `{}lasterr(n){}` to see n lines of stderr.".format(bc.HEADER, bc.OKBLUE))
-        print("\tuse `{}help(raiden){}` for help on interacting with the raiden network.".format(
-            bc.HEADER, bc.OKBLUE))
-        print("\tuse `{}raiden{}` to interact with the raiden service.".format(bc.HEADER, bc.OKBLUE))
-        print("\tuse `{}chain{}` to interact with the blockchain.".format(bc.HEADER, bc.OKBLUE))
-        print("\tuse `{}discovery{}` to find raiden nodes.".format(bc.HEADER, bc.OKBLUE))
-        print("\tuse `{}tools{}` for convenience when creating tokens, opening channels, creating assets etc...".format(bc.HEADER, bc.OKBLUE))
-        print("\tuse `{}denoms{}` for ether calculations".format(bc.HEADER, bc.OKBLUE))
-        print("\n" + bc.ENDC)
+        print_usage()
 
         # Remove handlers that log to stderr
         root = getLogger()
@@ -285,7 +289,7 @@ class ConsoleTools(object):
             peer (string): hex encoded address of the peer
             pretty (boolean): if True, print a json representation instead of returning a dict
         Returns:
-            stats (dict): collected stats for the channel
+            stats (dict): collected stats for the channel or None if pretty
 
         """
         # Get the asset
@@ -299,7 +303,7 @@ class ConsoleTools(object):
         channel = asset_manager.get_channel_by_partner_address(peer.decode('hex'))
         assert channel
 
-        # Collect numbers
+        # Collect data
         stats = dict(
             transfers=dict(
                 received=[t.transfered_amount for t in channel.received_transfers],
