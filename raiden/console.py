@@ -144,26 +144,30 @@ class ConsoleTools(object):
         self._discovery = discovery
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
-        self.assets = []
         self._ping_nonces = defaultdict(int)
 
     def create_token(self,
-            initial_alloc=10 ** 6,
-            name='raidentester',
-            symbol='RDT',
-            decimals=2,
-            timeout=60,
-            gasprice=denoms.shannon * 20):
+                     initial_alloc=10 ** 6,
+                     name='raidentester',
+                     symbol='RDT',
+                     decimals=2,
+                     timeout=60,
+                     gasprice=denoms.shannon * 20,
+                     auto_register=True):
         """Create a proxy for a new HumanStandardToken (ERC20), that is
-        initialized with:
+        initialized with Args(below).
+        Per default it will be registered with 'raiden'.
+
         Args:
             initial_alloc (int): amount of initial tokens.
             name (str): human readable token name.
             symbol (str): token shorthand symbol.
-            decimals (int): decimal places
-            kwargs (dict): will be passed to contract creation
+            decimals (int): decimal places.
+            timeout (int): timeout in seconds for creation.
+            gasprice (int): gasprice for the creation transaction.
+            auto_register (boolean): if True(default), automatically register the asset with raiden.
         Returns:
-            token_proxy: of the new token.
+            token_address: the hex encoded address of the new token/asset.
         """
         # Deploy a new ERC20 token
         token_proxy = self._chain.client.deploy_solidity_contract(
@@ -173,8 +177,12 @@ class ConsoleTools(object):
             (initial_alloc, name, decimals, symbol),
             gasprice=gasprice,
             timeout=timeout)
-        self.assets.append(token_proxy)
-        return token_proxy
+        token_address = token_proxy.address.encode('hex')
+        if auto_register:
+            self.register_asset(token_address)
+        print("Successfully created {}the token '{}'.".format('and registered ' if auto_register else ' ',
+                                                               name))
+        return token_address
 
     def register_asset(self, token_address):
         """Register a token with the raiden asset manager.
@@ -224,8 +232,8 @@ class ConsoleTools(object):
             amount (int): amount of initial funding of the channel.
             settle_timeout (int): amount of blocks for the settle time (if None use app defaults).
             reveal_timeout (int): amount of blocks for the reveal time (if None use app defaults).
-        Returns:
-            netting_channel: the opened netting channel.
+        Return:
+            netting_channel: the (newly opened) netting channel object.
         """
         # Check, if peer is discoverable
         try:
@@ -262,6 +270,8 @@ class ConsoleTools(object):
             token_address (str): hex encoded address of the token.
             peer (str): hex encoded address of your peer.
             amount (int): amount of deposit.
+        Return:
+            netting_channel: the (open) netting channel object.
         """
         # Obtain the asset manager
         asset_manager = self._raiden.get_manager_by_asset_address(token_address.decode('hex'))
