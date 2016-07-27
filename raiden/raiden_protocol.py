@@ -94,10 +94,10 @@ class RaidenProtocol(object):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
         if isinstance(message, (Ack, BaseError)):
-            raise ValueError('Do not use send for Ack messages or Erorrs')
+            raise ValueError('Do not use send for Ack messages or Errors')
 
         if len(message.encode()) > self.max_message_size:
-            raise ValueError('message size excedes the maximum {}'.format(self.max_message_size))
+            raise ValueError('message size exceeds the maximum {}'.format(self.max_message_size))
 
         self.queued_messages.put((receiver_address, message))
 
@@ -163,8 +163,10 @@ class RaidenProtocol(object):
                     pex(message.echo)
                 ))
         else:
-            assert isinstance(message, Secret) or message.sender
-            self.raiden.on_message(message, msghash)
+            # message may not have been decoded
+            if message is not None:
+                assert isinstance(message, Secret) or message.sender
+                self.raiden.on_message(message, msghash)
 
     def stop(self):
         self.stop_event.set(True)

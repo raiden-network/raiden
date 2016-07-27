@@ -21,6 +21,7 @@ from raiden.blockchain.abi import (
     NETTING_CHANNEL_ABI,
     REGISTRY_ABI,
 
+    ASSETADDED_EVENTID,
     CHANNELNEWBALANCE_EVENTID,
     CHANNELCLOSED_EVENTID,
     CHANNELNEW_EVENTID,
@@ -298,7 +299,7 @@ class Registry(object):
 
         return self.proxy.channelManagerByAsset.call(
             asset_address,
-            startgas=GAS_LIMIT,
+            startgas=self.startgas,
         ).decode('hex')
 
     def asset_addresses(self):
@@ -306,6 +307,23 @@ class Registry(object):
             address_decoder(address)
             for address in self.proxy.assetAddresses.call(startgas=self.startgas)
         ]
+
+    def manager_addresses(self):
+        return [
+            address_decoder(address)
+            for address in self.proxy.channelManagerAddresses.call(startgas=self.startgas)
+        ]
+
+    def assetadded_filter(self):
+        topics = [ASSETADDED_EVENTID]
+
+        registry_address_bin = self.proxy.address
+        filter_id_raw = new_filter(self.client, registry_address_bin, topics)
+
+        return Filter(
+            self.client,
+            filter_id_raw,
+        )
 
 
 class ChannelManager(object):
@@ -477,7 +495,7 @@ class NettingChannel(object):
         return self.proxy.opened(startgas=self.startgas) != 0
 
     def partner(self, our_address):
-        data = self.proxy.addressAndBalance.call(startgas=GAS_LIMIT)
+        data = self.proxy.addressAndBalance.call(startgas=self.startgas)
 
         if data[0].decode('hex') == our_address:
             return address_decoder(data[2].decode('hex'))
@@ -722,6 +740,7 @@ class RegistryMock(object):
 
         self.asset_manager = dict()
         self.address_asset = dict()
+        self.assetadded_filters = list()
 
     def manager_address_by_asset(self, asset_address):
         return self.asset_manager[asset_address].address
@@ -748,6 +767,17 @@ class RegistryMock(object):
 
     def asset_addresses(self):
         return self.address_asset.keys()
+
+    def manager_addresses(self):
+        return [
+            manager.address
+            for manager in self.asset_manager.values()
+        ]
+
+    def assetadded_filter(self):
+        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
+        self.assetadded_filters.append(filter_)
+        return filter_
 
 
 class ChannelManagerMock(object):

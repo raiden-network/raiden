@@ -9,6 +9,10 @@ import raiden
 __all__ = (
     'get_contract_path',
 
+    'REGISTRY_ABI',
+    'ASSETNEW_EVENT',
+    'ASSETNEW_EVENTID',
+
     'CHANNEL_MANAGER_ABI',
     'CHANNELNEW_EVENT',
     'CHANNELNEW_EVENTID',
@@ -22,7 +26,6 @@ __all__ = (
     'CHANNELSECRETREVEALED_EVENTID',
 
     'HUMAN_TOKEN_ABI',
-    'REGISTRY_ABI',
 )
 
 
@@ -88,6 +91,9 @@ HUMAN_TOKEN_ABI = human_token_compiled['abi']
 CHANNEL_MANAGER_ABI = channel_manager_compiled['abi']
 NETTING_CHANNEL_ABI = netting_channel_compiled['abi']
 REGISTRY_ABI = registry_compiled['abi']
+
+ASSETADDED_EVENT = get_event(REGISTRY_ABI, 'AssetAdded')
+ASSETADDED_EVENTID = event_id(*get_eventname_types(ASSETADDED_EVENT))
 
 CHANNELNEW_EVENT = get_event(CHANNEL_MANAGER_ABI, 'ChannelNew')
 CHANNELNEW_EVENTID = event_id(*get_eventname_types(CHANNELNEW_EVENT))

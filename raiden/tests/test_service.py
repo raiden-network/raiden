@@ -34,7 +34,7 @@ def test_ping(raiden_network):
 def test_ping_dropped_message(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    # mock transport with packet loss, every 3nd is lost, starting with first message
+    # mock transport with packet loss, every 3rd is lost, starting with first message
     UnreliableTransport.droprate = 3
     RaidenProtocol.try_interval = 0.1  # for fast tests
     RaidenProtocol.repeat_messages = True
