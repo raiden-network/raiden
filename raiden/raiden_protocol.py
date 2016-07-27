@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 import gevent
-from gevent.queue import Queue
+from gevent.queue import Queue, Empty
 from gevent.event import AsyncResult
 from ethereum import slogging
 
@@ -29,23 +29,37 @@ class RaidenProtocol(object):
         self.transport = transport
         self.discovery = discovery
         self.raiden = raiden
-        self.queued_messages = Queue()
+        self.queued_messages = None
         self.stop_event = AsyncResult()
+        self.running = False
 
         self.number_of_tries = dict()  # msg hash: count_tries
         self.sent_acks = dict()  # msghash: Ack
 
-        gevent.spawn(self._send_queued_messages)
+        self.start()
+
+    def start(self):
+        if not self.running:
+            self.queued_messages = Queue()
+            self.stop_event.set(False)
+            gevent.spawn(self._send_queued_messages)
+
+    def stop(self):
+        self.stop_event.set(True)
 
     def _send_queued_messages(self):
         countdown_to_send = self.try_interval / self.short_delay
         countdown = 0
+        self.running = True
 
-        stop = None
-        while stop is None:
-            # blocks waiting for data in queue, don't remove data from
-            # the queue just now because sending can still fail.
-            receiver_address, message = self.queued_messages.peek()
+        while True:
+            if self.stop_event.get_nowait():
+                break
+
+            try:
+                receiver_address, message = self.queued_messages.peek(timeout=self.short_delay)
+            except Empty:
+                continue
 
             data = message.encode()
             host_port = self.discovery.get(receiver_address)
@@ -87,7 +101,8 @@ class RaidenProtocol(object):
 
             # consume last sent message
             self.queued_messages.get()
-            stop = self.stop_event.wait(self.short_delay)
+
+        self.running = False
 
     def send(self, receiver_address, message):
         if not isaddress(receiver_address):
@@ -167,6 +182,3 @@ class RaidenProtocol(object):
             if message is not None:
                 assert isinstance(message, Secret) or message.sender
                 self.raiden.on_message(message, msghash)
-
-    def stop(self):
-        self.stop_event.set(True)
