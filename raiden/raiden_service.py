@@ -445,6 +445,7 @@ class RaidenEventHandler(object):
         channel.external_state.closed_block = event['blockNumber']
 
         channel.external_state.netting_channel.update_transfer(
+            channel.our_state.address,
             channel.received_transfers[-1],
         )
 
