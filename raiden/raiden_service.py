@@ -382,7 +382,7 @@ class RaidenEventHandler(object):
         if event['_event_type'] == 'AssetAdded':
             self.event_assetadded(emitting_contract_address, event)
 
-        if event['_event_type'] == 'ChannelNew':
+        elif event['_event_type'] == 'ChannelNew':
             self.event_channelnew(emitting_contract_address, event)
 
         elif event['_event_type'] == 'ChannelNewBalance':
@@ -398,7 +398,7 @@ class RaidenEventHandler(object):
             self.event_channelsecretrevealed(emitting_contract_address, event)
 
         else:
-            log.error('Unknow event {}'.format(repr(event)))
+            log.error('Unknown event {}'.format(repr(event)))
 
     def event_assetadded(self, registry_address, event):
         manager_address = address_decoder(event['channelManagerAddress'])
