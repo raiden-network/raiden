@@ -24,6 +24,10 @@ IPython.core.shellapp.InteractiveShellApp.gui.values += ('gevent',)
 inputhook_manager.register('gevent')(GeventInputHook)
 
 
+class InsufficientFunds(BaseException):
+    pass
+
+
 def print_usage():
     print("\t{}use `{}raiden{}` to interact with the raiden service.".format(
         bc.OKBLUE, bc.HEADER, bc.OKBLUE))
@@ -257,12 +261,11 @@ class ConsoleTools(object):
         # Obtain the netting channel from the address
         netting_channel = self._chain.netting_channel(netcontract_address)
 
-        # Obtain a reference to the asset and approve the amount for funding
-        asset = self._raiden.chain.asset(token_address.decode('hex'))
-        asset.approve(netcontract_address, amount)
-
         # Register the netting channel with the asset manager
         asset_manager.register_channel(netting_channel, reveal_timeout or self.reveal_timeout)
+
+        # approve the locking of funds
+        self._approve_funding(token_address, netcontract_address, amount)
 
         # Fund the netting channel by depositing the amount
         netting_channel.deposit(self._raiden.address, amount)
@@ -286,10 +289,8 @@ class ConsoleTools(object):
             peer.decode('hex')).external_state.netting_channel.address
         assert len(netcontract_address)
 
-        # Obtain a reference for the asset and approve amount for funding
-        asset = self._chain.asset(token_address.decode('hex'))
-        assert asset
-        asset.approve(netcontract_address, amount)
+        # approve the locking of funds
+        self._approve_funding(token_address, netcontract_address, amount)
 
         # Obtain the netting channel and fund it by depositing the amount
         netting_channel = self._chain.netting_channel(netcontract_address)
@@ -347,3 +348,15 @@ class ConsoleTools(object):
             return stats
         else:
             print(json.dumps(stats, indent=2, sort_keys=True))
+
+    def _approve_funding(self, token_address, netcontract_address, amount):
+        # Obtain a reference to the asset and approve the amount for funding
+        asset = self._raiden.chain.asset(token_address.decode('hex'))
+        # Check balance of asset:
+        balance = asset.balance_of(self._raiden.address.encode('hex'))
+        if not balance >= amount:
+            raise InsufficientFunds("Not enough balance for token'{}' [{}]: have={}, need={}".format(
+                asset.proxy.name(), token_address, balance, amount
+            ))
+        # Approve the locking of funds
+        asset.approve(netcontract_address, amount)
