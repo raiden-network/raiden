@@ -14,6 +14,7 @@ from ethereum.slogging import getLogger
 from ethereum._solidity import compile_file
 from raiden.messages import Ping
 from raiden.blockchain.abi import get_contract_path
+from raiden.utils import sha3
 
 from pyethapp.utils import bcolors as bc
 from pyethapp.console_service import GeventInputHook, SigINTHandler
@@ -201,11 +202,12 @@ class ConsoleTools(object):
         self._raiden.register_channel_manager(channel_manager)
         return channel_manager
 
-    def ping(self, peer, timeout=5.):
+    def ping(self, peer):
         """See, if a peer is discoverable and up.
         Args:
             peer (string): the hex-encoded (ethereum) address of the peer.
-            timeout (float): how long to wait for the response.
+        Returns:
+            success (boolean): True if ping succeeded, False otherwise.
         """
         # Check, if peer is discoverable
         try:
@@ -218,9 +220,12 @@ class ConsoleTools(object):
         self._ping_nonces[peer] += 1
         msg = Ping(nonce)
         self._raiden.sign(msg)
-        event = gevent.event.AsyncResult()
-        self._raiden.send_and_wait(peer.decode('hex'), msg, timeout, event)
-        return event
+        try:
+            self._raiden.protocol._repeat_until_ack(peer.decode('hex'), msg)
+        except Exception as e:
+            if not e.message.startswith('DEACTIVATED'):
+                return e
+        return sha3(msg.encode()) not in self._raiden.protocol.number_of_tries
 
     def open_channel_with_funding(self, token_address, peer, amount,
                                   settle_timeout=None,
