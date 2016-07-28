@@ -1,13 +1,43 @@
 # -*- coding: utf8 -*-
 import gevent
-from gevent.queue import Queue, Empty
-from gevent.event import AsyncResult
+from gevent.queue import Queue
+from gevent.event import Event
 from ethereum import slogging
 
 from raiden.messages import decode, Ack, BaseError, Secret
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+
+
+class NotifyingQueue(Event):
+    """A queue that follows the wait protocol, as well as providing a stop event."""
+
+    def __init__(self):
+        super(NotifyingQueue, self).__init__()
+        self._queue = Queue()
+        self._stop_flag = False
+
+    def put(self, item):
+        """Add new item to the queue."""
+        self._queue.put(item)
+        self.set()
+
+    def get(self, block=True, timeout=None):
+        """Removes and returns an item from the queue."""
+        value = self._queue.get(block, timeout)
+        if self._queue.empty():
+            self.clear()
+        return value
+
+    def stop(self):
+        """Request a stop event."""
+        self._stop_flag = True
+        self.set()
+
+    def has_stop(self):
+        """True if a stop event was requested."""
+        return self._stop_flag
 
 
 class RaidenProtocol(object):
@@ -23,14 +53,13 @@ class RaidenProtocol(object):
     try_interval = 1.
     max_tries = 5
     max_message_size = 1200
-    short_delay = .1
+    short_delay = .01  # 10ms
 
     def __init__(self, transport, discovery, raiden):
         self.transport = transport
         self.discovery = discovery
         self.raiden = raiden
-        self.queued_messages = None
-        self.stop_event = AsyncResult()
+        self.message_queue = None
         self.running = False
 
         self.number_of_tries = dict()  # msg hash: count_tries
@@ -40,27 +69,21 @@ class RaidenProtocol(object):
 
     def start(self):
         if not self.running:
-            self.queued_messages = Queue()
-            self.stop_event.set(False)
+            self.message_queue = NotifyingQueue()
             gevent.spawn(self._send_queued_messages)
 
     def stop(self):
-        self.stop_event.set(True)
+        self.message_queue.stop()
 
     def _send_queued_messages(self):
-        countdown_to_send = self.try_interval / self.short_delay
-        countdown = 0
         self.running = True
 
         while True:
-            if self.stop_event.get_nowait():
+            self.message_queue.wait()
+            if self.message_queue.has_stop():
                 break
 
-            try:
-                receiver_address, message = self.queued_messages.peek(timeout=self.short_delay)
-            except Empty:
-                continue
-
+            receiver_address, message = self.message_queue.get()
             data = message.encode()
             host_port = self.discovery.get(receiver_address)
 
@@ -76,9 +99,16 @@ class RaidenProtocol(object):
                 message,
             ))
 
+            loops_for_retry = self.try_interval / self.short_delay
+            loop_count = loops_for_retry  # force send on first iteration
+
             # loop should iterate as fast as possible checking for acks
             while msghash in self.number_of_tries:
-                if self.number_of_tries[msghash] > self.max_tries:
+                # we were asked to give up...
+                if self.message_queue.has_stop():
+                    break
+
+                if self.number_of_tries[msghash] >= self.max_tries:
                     # free send_and_wait...
                     del self.number_of_tries[msghash]
 
@@ -90,17 +120,14 @@ class RaidenProtocol(object):
                         message,
                     ))
 
-                # only send a message again after some time (don't DOS!)
-                if countdown == 0:
-                    self.number_of_tries[msghash] += 1
+                # loop as fast as possible and only send messages at every X number of loops
+                if loop_count == loops_for_retry:
                     self.transport.send(self.raiden, host_port, data)
-                    countdown = countdown_to_send
+                    self.number_of_tries[msghash] += 1
+                    loop_count = 0
 
                 gevent.sleep(self.short_delay)
-                countdown -= 1
-
-            # consume last sent message
-            self.queued_messages.get()
+                loop_count += 1
 
         self.running = False
 
@@ -114,7 +141,7 @@ class RaidenProtocol(object):
         if len(message.encode()) > self.max_message_size:
             raise ValueError('message size exceeds the maximum {}'.format(self.max_message_size))
 
-        self.queued_messages.put((receiver_address, message))
+        self.message_queue.put((receiver_address, message))
 
     def send_and_wait(self, receiver_address, message):
         """Sends a message and wait for the response ack."""
