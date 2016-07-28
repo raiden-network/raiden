@@ -63,6 +63,7 @@ class RaidenProtocol(object):
         self.running = False
 
         self.number_of_tries = dict()  # msg hash: count_tries
+        self.status_by_message = dict()  # msg hash: status|None
         self.sent_acks = dict()  # msghash: Ack
 
         self.start()
@@ -111,6 +112,8 @@ class RaidenProtocol(object):
                 if self.number_of_tries[msghash] >= self.max_tries:
                     # free send_and_wait...
                     del self.number_of_tries[msghash]
+                    if msghash in self.status_by_message:
+                        self.status_by_message[msghash] = False
 
                     # FIXME: there was no connectivity or other network error?
                     # for now just losing the packet but better error handler
@@ -131,7 +134,7 @@ class RaidenProtocol(object):
 
         self.running = False
 
-    def send(self, receiver_address, message):
+    def send(self, receiver_address, message, with_status=False):
         if not isaddress(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
@@ -141,17 +144,22 @@ class RaidenProtocol(object):
         if len(message.encode()) > self.max_message_size:
             raise ValueError('message size exceeds the maximum {}'.format(self.max_message_size))
 
+        if with_status:
+            data = message.encode()
+            self.status_by_message[sha3(data)] = None
         self.message_queue.put((receiver_address, message))
 
     def send_and_wait(self, receiver_address, message):
         """Sends a message and wait for the response ack."""
-        self.send(receiver_address, message)
+        self.send(receiver_address, message, with_status=True)
 
         data = message.encode()
         msghash = sha3(data)
-        # FIXME: add error handling
-        while msghash in self.number_of_tries:
+        while self.status_by_message[msghash] is None:
             gevent.sleep(self.short_delay)
+        status = self.status_by_message[msghash]
+        del self.status_by_message[msghash]
+        return status
 
     def send_ack(self, receiver_address, message):
         if not isaddress(receiver_address):
@@ -199,6 +207,8 @@ class RaidenProtocol(object):
                 ))
 
                 del self.number_of_tries[message.echo]
+                if message.echo in self.status_by_message:
+                    self.status_by_message[message.echo] = True
             else:
                 log.info('DUPLICATED ACK RECEIVED {} [echo={}]'.format(
                     pex(self.raiden.address),
