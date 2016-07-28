@@ -442,9 +442,10 @@ class RaidenEventHandler(object):
 
     def event_channelclosed(self, netting_contract_address_bin, event):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.closed = event['blockNumber']
+        channel.external_state.closed_block = event['blockNumber']
 
-        channel.external_state.netting_channel.updateTransfer(
+        channel.external_state.netting_channel.update_transfer(
+            channel.our_state.address,
             channel.received_transfers[-1],
         )
 
@@ -452,7 +453,7 @@ class RaidenEventHandler(object):
 
     def event_channelsettled(self, netting_contract_address_bin, event):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.settled = event['blockNumber']
+        channel.external_state.settled_block = event['blockNumber']
 
     def event_channelsecretrevealed(self, netting_contract_address_bin, event):
         channel = self.raiden.chain.netting_channel(netting_contract_address_bin)
