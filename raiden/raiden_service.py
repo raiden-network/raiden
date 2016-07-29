@@ -452,8 +452,12 @@ class RaidenEventHandler(object):
         # TODO: unlock
 
     def event_channelsettled(self, netting_contract_address_bin, event):
+        log.debug("channel settle event received",
+                  netting_contract=netting_contract_address_bin.encode('hex'),
+                  event=event)
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
         channel.external_state.settled_block = event['blockNumber']
+        log.debug("set channel.external_state.settled_block", settled_block=event['blockNumber'])
 
     def event_channelsecretrevealed(self, netting_contract_address_bin, event):
         channel = self.raiden.chain.netting_channel(netting_contract_address_bin)
