@@ -8,6 +8,7 @@ from ethereum import slogging
 from raiden.messages import decode, Ack, DirectTransfer, RefundTransfer
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
+from raiden.tests.utils.network import CHAIN
 from raiden.utils import pex, sha3
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
@@ -150,9 +151,9 @@ def test_mediated_transfer(raiden_network):
     assert b_cb + amount == c_cb.balance
 
 
-@pytest.mark.xfail(reason='not implemented')
 @pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('asset', [sha3('cancel_transfer')[:20]])
 @pytest.mark.parametrize('deposit', [100])
 def test_cancel_transfer(raiden_chain, asset, deposit):
@@ -175,6 +176,8 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
     amount = 80
     direct_transfer(app1, app2, asset, amount)
 
+    assert len(messages) == 2  # DirectTransfer + Ack
+
     assert_synched_channels(
         channel(app0, app1, asset), deposit, [],
         channel(app1, app0, asset), deposit, []
@@ -185,10 +188,11 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
         channel(app2, app1, asset), deposit + amount, []
     )
 
-    # app1 -> app2 is the only available path and doens't have resource, app1
+    # app1 -> app2 is the only available path and doesn't have resource, app1
     # needs to send RefundTransfer to app0
     transfer(app0, app2, asset, 50)
 
+    # FIXME
     assert_synched_channels(
         channel(app0, app1, asset), deposit, [],
         channel(app1, app0, asset), deposit, []

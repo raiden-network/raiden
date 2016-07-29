@@ -135,6 +135,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             task = asset_manager.transfermanager.transfertasks.get(hashlock)
 
             if task is not None:
+                log.info("calling on_event for {}".format(task))
                 task.on_event(message)
                 return True
 
@@ -245,7 +246,7 @@ class RaidenAPI(object):
         if not asset_manager.has_path(self.raiden.address, target_bin):
             raise NoPathError('No path to address found')
 
-        transfer_manager = self.raiden.managers_by_asset_address[asset_address_bin].transfermanager
+        transfer_manager = asset_manager.transfermanager
         task = transfer_manager.transfer(amount, target_bin, callback=callback)
         task.join()
 

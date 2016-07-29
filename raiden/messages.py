@@ -271,7 +271,7 @@ class DirectTransfer(SignedMessage):
             to give a total order for the messages. This nonce is per
             participant, not shared.
         asset: The address of the asset being exchanged in the channel.
-        transfered_amount: The total amount of asset that wast transfered to
+        transfered_amount: The total amount of asset that was transferred to
             the channel partner. This value is monotonicly increasing and can
             be larger than a channels deposit, since the channels are
             bidirecional.
@@ -541,7 +541,7 @@ class MediatedTransfer(LockedTransfer):
 
 class RefundTransfer(LockedTransfer):
     """ Indicates that no route is available and transfer the amount back to
-    the previous node, allowing she to try another path to complete the
+    the previous node, allowing it to try another path to complete the
     transfer.
     """
     cmdid = messages.REFUNDTRANSFER
