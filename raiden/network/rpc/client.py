@@ -26,6 +26,7 @@ from raiden.blockchain.abi import (
     CHANNELCLOSED_EVENTID,
     CHANNELNEW_EVENTID,
     CHANNELSECRETREVEALED_EVENTID,
+    CHANNELSETTLED_EVENTID,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -603,6 +604,22 @@ class NettingChannel(object):
             filter_id_raw,
         )
 
+    def channelsettled_filter(self):
+        """ Install a new filter for ChannelSettled events.
+
+        Return:
+            Filter: The filter instance.
+        """
+        topics = [CHANNELSETTLED_EVENTID]
+
+        channel_manager_address_bin = self.proxy.address
+        filter_id_raw = new_filter(self.client, channel_manager_address_bin, topics)
+
+        return Filter(
+            self.client,
+            filter_id_raw,
+        )
+
 
 class BlockChainServiceMock(object):
     """ Mock implementation of BlockChainService that doesn't do JSON-RPC and
@@ -867,6 +884,7 @@ class NettingChannelMock(object):
         self.newbalance_filters = list()
         self.secretrevealed_filters = list()
         self.channelclose_filters = list()
+        self.channelsettle_filters = list()
 
     def asset_address(self):
         return self.contract.asset_address
@@ -977,4 +995,9 @@ class NettingChannelMock(object):
     def channelclosed_filter(self):
         filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
         self.channelclose_filters.append(filter_)
+        return filter_
+
+    def channelsettled_filter(self):
+        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
+        self.channelsettle_filters.append(filter_)
         return filter_

@@ -109,6 +109,13 @@ class AssetManager(object):
             translator,
         )
 
+        settled = netting_channel.channelsettled_filter()
+        settled_listener = LogListenerTask(
+            settled,
+            self.raiden.on_event,
+            translator,
+        )
+
         channel_details = netting_channel.detail(self.raiden.address)
         our_state = ChannelEndState(
             channel_details['our_address'],
@@ -146,6 +153,7 @@ class AssetManager(object):
         newbalance_listener.start()
         secretrevealed_listener.start()
         close_listener.start()
+        settled_listener.start()
 
         self.raiden.event_listeners.append(newbalance_listener)
         self.raiden.event_listeners.append(secretrevealed_listener)
