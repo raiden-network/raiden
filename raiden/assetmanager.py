@@ -158,6 +158,7 @@ class AssetManager(object):
         self.raiden.event_listeners.append(newbalance_listener)
         self.raiden.event_listeners.append(secretrevealed_listener)
         self.raiden.event_listeners.append(close_listener)
+        self.raiden.event_listeners.append(settled_listener)
 
     def register_channel_for_hashlock(self, channel, hashlock):
         channels_registered = self.hashlock_channel[hashlock]
