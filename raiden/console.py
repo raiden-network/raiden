@@ -14,7 +14,7 @@ from ethereum.slogging import getLogger
 from ethereum._solidity import compile_file
 from raiden.messages import Ping
 from raiden.blockchain.abi import get_contract_path
-from raiden.utils import sha3
+from raiden.utils import sha3, events
 
 from pyethapp.utils import bcolors as bc
 from pyethapp.console_service import GeventInputHook, SigINTHandler
@@ -360,3 +360,22 @@ class ConsoleTools(object):
             ))
         # Approve the locking of funds
         asset.approve(netcontract_address, amount)
+
+    def show_events_for(self, token_address, peer):
+        """Find all EVM-EventLogs for a channel.
+        Args:
+            token_address (string): hex encoded address of the token
+            peer (string): hex encoded address of the peer
+        Returns:
+            events (list)
+        """
+        # Obtain the asset manager
+        asset_manager = self._raiden.get_manager_by_asset_address(token_address.decode('hex'))
+        assert asset_manager
+        # Get the address for the netting contract
+        netcontract_address = asset_manager.get_channel_by_partner_address(
+            peer.decode('hex')).external_state.netting_channel.address
+        assert len(netcontract_address)
+        # Get the netting_channel instance
+        netting_channel = self._chain.netting_channel(netcontract_address)
+        return events.netting_channel_events(self._chain.client, netting_channel)
