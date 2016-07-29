@@ -144,6 +144,7 @@ class StartMediatedTransferTask(Task):
 
             # someone down the line timedout / couldn't proceed
             elif isinstance(response, (RefundTransfer, TransferTimeout)):
+                # XXX
                 self.transfermanager.on_hashlock_result(hashlock, False)
 
             # `target` received the MediatedTransfer
@@ -202,6 +203,7 @@ class StartMediatedTransferTask(Task):
 
             if response.sender == next_hop:
                 if isinstance(response, (RefundTransfer, TransferTimeout)):
+                    # XXX
                     return response
                 else:
                     log.info('Partner {} sent an invalid message'.format(pex(next_hop)))
@@ -312,9 +314,8 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         from_channel = assetmanager.partneraddress_channel[from_address]
 
         refund_transfer = from_channel.create_refundtransfer_for(transfer)
-        from_channel.register_transfer(refund_transfer)
-
         raiden.sign(refund_transfer)
+        from_channel.register_transfer(refund_transfer)
         raiden.send(from_address, refund_transfer)
 
         log.debug('REFUND MEDIATED TRANSFER from={} {}'.format(
@@ -322,8 +323,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             pex(raiden.address),
         ))
 
-        self.transfermanager.on_hashlock_result(transfer.hashlock, False)
-        return
+        self.transfermanager.on_hashlock_result(transfer.lock.hashlock, False)
 
     def send_and_wait_valid(self, raiden, path, mediated_transfer):
         message_timeout = raiden.config['msg_timeout']

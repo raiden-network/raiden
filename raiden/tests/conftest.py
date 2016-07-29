@@ -214,7 +214,9 @@ def raiden_chain(request, private_keys, asset, channels_per_node, deposit,
                  settle_timeout, poll_timeout, registry_address, blockchain_service,
                  transport_class):
     blockchain_service_class = BlockChainServiceMock
-    blockchain_service.new_channel_manager_contract(asset)
+
+    registry = blockchain_service.registry(registry_address)
+    registry.add_asset(asset)
 
     raiden_apps = create_sequential_network(
         private_keys,
