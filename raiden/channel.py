@@ -76,10 +76,10 @@ class LockedTransfers(object):
         ----------
 
         The sender needs to use this method before sending a locked transfer,
-        otherwise the calculate locksroot of the transfer message will be
+        otherwise the calculated locksroot of the transfer message will be
         invalid and the transfer will be rejected by the partner. Since the
         sender wants the transfer to be accepted by the receiver otherwise the
-        transfer won't proceed and the sender won't receive it's fee.
+        transfer won't proceed and the sender won't receive its fee.
 
         The receiver needs to use this method to update the container with a
         _valid_ transfer, otherwise the locksroot will not contain the pending
@@ -195,6 +195,7 @@ class ChannelEndState(object):
         return self.contract_balance - self.transfered_amount + other.transfered_amount
 
     def update_contract_balance(self, contract_balance):
+        """ Update the current participant's balance. """
         self.contract_balance = contract_balance
 
     def distributable(self, other):

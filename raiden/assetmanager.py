@@ -109,6 +109,13 @@ class AssetManager(object):
             translator,
         )
 
+        settled = netting_channel.channelsettled_filter()
+        settled_listener = LogListenerTask(
+            settled,
+            self.raiden.on_event,
+            translator,
+        )
+
         channel_details = netting_channel.detail(self.raiden.address)
         our_state = ChannelEndState(
             channel_details['our_address'],
@@ -138,13 +145,20 @@ class AssetManager(object):
         self.partneraddress_channel[partner_state.address] = channel
         self.address_channel[netting_channel.address] = channel
 
+        self.channelgraph.add_path(
+            channel_details['our_address'],
+            channel_details['partner_address'],
+        )
+
         newbalance_listener.start()
         secretrevealed_listener.start()
         close_listener.start()
+        settled_listener.start()
 
         self.raiden.event_listeners.append(newbalance_listener)
         self.raiden.event_listeners.append(secretrevealed_listener)
         self.raiden.event_listeners.append(close_listener)
+        self.raiden.event_listeners.append(settled_listener)
 
     def register_channel_for_hashlock(self, channel, hashlock):
         channels_registered = self.hashlock_channel[hashlock]
@@ -180,7 +194,7 @@ class AssetManager(object):
 
     def channel_isactive(self, partner_address):
         # TODO: check if the partner's network is alive
-        return self.get_channel_by_partner_address(partner_address).isopen()
+        return self.get_channel_by_partner_address(partner_address).isopen
 
     def get_best_routes(self, amount, target, lock_timeout=None):
         """ Yield a two-tuple (path, channel) that can be used to mediate the

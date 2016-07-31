@@ -21,10 +21,12 @@ from raiden.blockchain.abi import (
     NETTING_CHANNEL_ABI,
     REGISTRY_ABI,
 
+    ASSETADDED_EVENTID,
     CHANNELNEWBALANCE_EVENTID,
     CHANNELCLOSED_EVENTID,
     CHANNELNEW_EVENTID,
     CHANNELSECRETREVEALED_EVENTID,
+    CHANNELSETTLED_EVENTID,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -298,7 +300,7 @@ class Registry(object):
 
         return self.proxy.channelManagerByAsset.call(
             asset_address,
-            startgas=GAS_LIMIT,
+            startgas=self.startgas,
         ).decode('hex')
 
     def asset_addresses(self):
@@ -306,6 +308,23 @@ class Registry(object):
             address_decoder(address)
             for address in self.proxy.assetAddresses.call(startgas=self.startgas)
         ]
+
+    def manager_addresses(self):
+        return [
+            address_decoder(address)
+            for address in self.proxy.channelManagerAddresses.call(startgas=self.startgas)
+        ]
+
+    def assetadded_filter(self):
+        topics = [ASSETADDED_EVENTID]
+
+        registry_address_bin = self.proxy.address
+        filter_id_raw = new_filter(self.client, registry_address_bin, topics)
+
+        return Filter(
+            self.client,
+            filter_id_raw,
+        )
 
 
 class ChannelManager(object):
@@ -477,7 +496,7 @@ class NettingChannel(object):
         return self.proxy.opened(startgas=self.startgas) != 0
 
     def partner(self, our_address):
-        data = self.proxy.addressAndBalance.call(startgas=GAS_LIMIT)
+        data = self.proxy.addressAndBalance.call(startgas=self.startgas)
 
         if data[0].decode('hex') == our_address:
             return address_decoder(data[2].decode('hex'))
@@ -576,6 +595,22 @@ class NettingChannel(object):
             Filter: The filter instance.
         """
         topics = [CHANNELCLOSED_EVENTID]
+
+        channel_manager_address_bin = self.proxy.address
+        filter_id_raw = new_filter(self.client, channel_manager_address_bin, topics)
+
+        return Filter(
+            self.client,
+            filter_id_raw,
+        )
+
+    def channelsettled_filter(self):
+        """ Install a new filter for ChannelSettled events.
+
+        Return:
+            Filter: The filter instance.
+        """
+        topics = [CHANNELSETTLED_EVENTID]
 
         channel_manager_address_bin = self.proxy.address
         filter_id_raw = new_filter(self.client, channel_manager_address_bin, topics)
@@ -722,6 +757,7 @@ class RegistryMock(object):
 
         self.asset_manager = dict()
         self.address_asset = dict()
+        self.assetadded_filters = list()
 
     def manager_address_by_asset(self, asset_address):
         return self.asset_manager[asset_address].address
@@ -748,6 +784,17 @@ class RegistryMock(object):
 
     def asset_addresses(self):
         return self.address_asset.keys()
+
+    def manager_addresses(self):
+        return [
+            manager.address
+            for manager in self.asset_manager.values()
+        ]
+
+    def assetadded_filter(self):
+        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
+        self.assetadded_filters.append(filter_)
+        return filter_
 
 
 class ChannelManagerMock(object):
@@ -837,6 +884,7 @@ class NettingChannelMock(object):
         self.newbalance_filters = list()
         self.secretrevealed_filters = list()
         self.channelclose_filters = list()
+        self.channelsettle_filters = list()
 
     def asset_address(self):
         return self.contract.asset_address
@@ -947,4 +995,9 @@ class NettingChannelMock(object):
     def channelclosed_filter(self):
         filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
         self.channelclose_filters.append(filter_)
+        return filter_
+
+    def channelsettled_filter(self):
+        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
+        self.channelsettle_filters.append(filter_)
         return filter_

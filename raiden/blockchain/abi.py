@@ -9,6 +9,10 @@ import raiden
 __all__ = (
     'get_contract_path',
 
+    'REGISTRY_ABI',
+    'ASSETNEW_EVENT',
+    'ASSETNEW_EVENTID',
+
     'CHANNEL_MANAGER_ABI',
     'CHANNELNEW_EVENT',
     'CHANNELNEW_EVENTID',
@@ -20,9 +24,10 @@ __all__ = (
     'CHANNELCLOSED_EVENTID',
     'CHANNELSECRETREVEALED_EVENT',
     'CHANNELSECRETREVEALED_EVENTID',
+    'CHANNELSETTLED_EVENT',
+    'CHANNELSETTLED_EVENTID',
 
     'HUMAN_TOKEN_ABI',
-    'REGISTRY_ABI',
 )
 
 
@@ -89,6 +94,9 @@ CHANNEL_MANAGER_ABI = channel_manager_compiled['abi']
 NETTING_CHANNEL_ABI = netting_channel_compiled['abi']
 REGISTRY_ABI = registry_compiled['abi']
 
+ASSETADDED_EVENT = get_event(REGISTRY_ABI, 'AssetAdded')
+ASSETADDED_EVENTID = event_id(*get_eventname_types(ASSETADDED_EVENT))
+
 CHANNELNEW_EVENT = get_event(CHANNEL_MANAGER_ABI, 'ChannelNew')
 CHANNELNEW_EVENTID = event_id(*get_eventname_types(CHANNELNEW_EVENT))
 
@@ -100,3 +108,6 @@ CHANNELCLOSED_EVENTID = event_id(*get_eventname_types(CHANNELCLOSED_EVENT))
 
 CHANNELSECRETREVEALED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelSecretRevealed')
 CHANNELSECRETREVEALED_EVENTID = event_id(*get_eventname_types(CHANNELSECRETREVEALED_EVENT))
+
+CHANNELSETTLED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelSettled')
+CHANNELSETTLED_EVENTID = event_id(*get_eventname_types(CHANNELSETTLED_EVENT))

@@ -4,7 +4,7 @@ contract NettingChannelContract {
     using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
 
-    event ChannelNewBalance(address assetAddress, address participant, uint balance);
+    event ChannelNewBalance(address assetAddress, address participant, uint balance, uint blockNumber);
     event ChannelClosed(address closingAddress, uint blockNumber);
     event ChannelSettled(uint blockNumber);
     event ChannelSecretRevealed(bytes32 secret);
@@ -28,7 +28,7 @@ contract NettingChannelContract {
         (success, balance) = data.deposit(msg.sender, this, amount);
 
         if (success == true) {
-            ChannelNewBalance(data.token, msg.sender, balance);
+            ChannelNewBalance(data.token, msg.sender, balance, data.opened);
         }
     }
 
