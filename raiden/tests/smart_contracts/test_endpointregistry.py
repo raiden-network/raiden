@@ -29,30 +29,12 @@ def test_endpointregistry():
     registry_contract.registerEndpoint('127.0.0.1:4001')
     assert registry_contract.findAddressByEndpoint('127.0.0.1:4001') == sender
     assert registry_contract.findEndpointByAddress(sender) == '127.0.0.1:4001'
-    registry_contract.updateEndpoint('192.168.0.1:4002')
+    registry_contract.registerEndpoint('192.168.0.1:4002')
     assert registry_contract.findAddressByEndpoint('192.168.0.1:4002') == sender
     assert registry_contract.findEndpointByAddress(sender) == '192.168.0.1:4002'
     assert len(events) == 2
     assert events[0]['_event_type'] == 'AddressRegistered'
-    assert events[1]['_event_type'] == 'AddressUpdated'
-
-
-@pytest.mark.parametrize('number_of_nodes', [1])
-@pytest.mark.parametrize('poll_timeout', [50])
-def test_discovery_contract(discovery_blockchain):
-    contract_discovery_instance, address = discovery_blockchain
-    assert isinstance(contract_discovery_instance, ContractDiscovery)
-    contract_discovery_instance.register_endpoint('127.0.0.1', '4001')
-    gevent.sleep(30)  # FIXME: this should not be necessary!
-    assert contract_discovery_instance.find_address('127.0.0.1', '4001') == address.encode('hex')
-    gevent.sleep(30)
-    assert contract_discovery_instance.find_endpoint(address) == '127.0.0.1:4001'
-    gevent.sleep(30)
-    contract_discovery_instance.update_endpoint('192.168.0.1', '4002')
-    gevent.sleep(30)
-    assert contract_discovery_instance.find_address('192.168.0.1', '4002') == address.encode('hex')
-    gevent.sleep(30)
-    assert contract_discovery_instance.find_endpoint(address) == '192.168.0.1:4002'
+    assert events[1]['_event_type'] == 'AddressRegistered'
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -74,10 +56,13 @@ def test_api_compliance(discovery_blockchain, local):
 
     # test, that `update_endpoint` and 'classic' `register` do the same
     contract_discovery_instance.register(address, '127.0.0.1', 44444)
-    not local and gevent.sleep(30)
+    gevent.sleep(30)
     assert contract_discovery_instance.nodeid_by_host_port(('127.0.0.1', 44444)) == address
-
+    gevent.sleep(30)
+    assert contract_discovery_instance.get(address) == ('127.0.0.1', 44444)
     # test, that `register`ing twice does update do the same
     contract_discovery_instance.register(address, '127.0.0.1', 88888)
-    not local and gevent.sleep(30)
+    gevent.sleep(30)
     assert contract_discovery_instance.nodeid_by_host_port(('127.0.0.1', 88888)) == address
+    gevent.sleep(30)
+    assert contract_discovery_instance.get(address) == ('127.0.0.1', 88888)
