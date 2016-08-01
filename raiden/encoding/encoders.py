@@ -18,7 +18,7 @@ class integer(object):  # pylint: disable=invalid-name
         self.maximum = maximum
 
     def validate(self, value):
-        ''' Validates the intenger is in the value range. '''
+        ''' Validates the integer is in the value range. '''
         if not isinstance(value, (int, long)):
             raise ValueError('value is not an integer')
 
