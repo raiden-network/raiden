@@ -22,7 +22,6 @@ class TransferManager(object):
         task = self.transfertasks[hashlock]
         del self.transfertasks[hashlock]
 
-        # XXX
         for callback in self.on_task_completed_callbacks:
             result = callback(task, success)
 
