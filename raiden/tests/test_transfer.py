@@ -192,7 +192,6 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
     # needs to send RefundTransfer to app0
     transfer(app0, app2, asset, 50)
 
-    # FIXME
     assert_synched_channels(
         channel(app0, app1, asset), deposit, [],
         channel(app1, app0, asset), deposit, []
