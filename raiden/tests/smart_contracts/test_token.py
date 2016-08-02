@@ -4,7 +4,7 @@ from ethereum import tester
 from raiden.blockchain.abi import get_contract_path
 
 
-def test_ncc():
+def test_token():
     token_library_path = get_contract_path('StandardToken.sol')
     token_path = get_contract_path('HumanStandardToken.sol')
 
