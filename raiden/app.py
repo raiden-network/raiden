@@ -76,13 +76,13 @@ class App(object):  # pylint: disable=too-few-public-methods
 @click.option(
     '--registry_contract_address',
     help='hex encoded address of the registry contract.',
-    default='5d2365c483d31c3da34ef7bb5ea710528370c580',  # testnet default
+    default='b224d093ce716e2e9983107357dd9702098230e7',  # testnet default
     type=str,
 )
 @click.option(
     '--discovery_contract_address',
     help='hex encoded address of the discovery contract.',
-    default='662d172c9170f8a97e13a7a0309c8302e20b1123',  # testnet default
+    default='36d6e50d4d690a1cf7168bf7df33af5b5f01f438',  # testnet default
     type=str,
 )
 @click.option(

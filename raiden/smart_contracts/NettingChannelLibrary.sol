@@ -48,10 +48,20 @@ library NettingChannelLibrary {
         _
     }
 
+    modifier timeoutOver(Data storage self) {
+        if (self.closed + self.settleTimeout > block.number)
+            throw;
+        _
+    }
+
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
+    /// @param callerAddress (address) the address of the invoker of the function
+    /// @param channelAddress (address) the address of the channel
     /// @param amount (uint) the amount to be deposited to the address
+    /// @return success (bool) if the transfer was successful
+    /// @return balance (uint256) the new balance of the invoker
     function deposit(Data storage self, address callerAddress, address channelAddress, uint256 amount) returns (bool success, uint256 balance) {
         uint index;
 
@@ -352,7 +362,7 @@ library NettingChannelLibrary {
     /// @return participants (Participant[2]) the participants with netted balances
     function settle(Data storage self, address callerAddress)
         notSettledButClosed(self)
-        stillTimeout(self)
+        timeoutOver(self)
     {
         uint totalNetted;
         uint totalDeposit;

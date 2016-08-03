@@ -12,7 +12,6 @@ module.exports = {
     deploy: [
         "ChannelManagerContract",
         "ChannelManagerLibrary",
-        "Dcdr",
         "EndpointRegistry",
         "HumanStandardToken",
         "NettingChannelContract",

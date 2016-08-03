@@ -872,6 +872,11 @@ def test_settle(state, channel, token, asset_amount, events):
             sender=tester.k1,
         )
 
+    # still timeout
+    with pytest.raises(TransactionFailed):
+        channel.settle()
+
+    state.block.number = state.block.number + 40  # timeout over
     channel.settle()
 
     balance1 = half_amount + (transfered_amount2 - transfered_amount1) + lock_amount1 - lock_amount2
@@ -894,7 +899,7 @@ def test_settle(state, channel, token, asset_amount, events):
     assert events[1]['balance'] == 50
     assert events[2]['_event_type'] == 'ChannelClosed'
     assert events[2]['closingAddress'] == tester.a0.encode('hex')
-    assert events[2]['blockNumber'] == state.block.number
+    assert events[2]['blockNumber'] == 1158002
     assert events[3]['_event_type'] == 'ChannelSecretRevealed'
     assert events[3]['secret'] == 'x' * 32
     assert events[4]['_event_type'] == 'ChannelSecretRevealed'
