@@ -151,17 +151,15 @@ def test_mediated_transfer(raiden_network):
     assert b_cb + amount == c_cb.balance
 
 
+@pytest.mark.xfail(reason='MediatedTransfer doesnt yet update balances on Refund')
 @pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
-@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('asset', [sha3('cancel_transfer')[:20]])
 @pytest.mark.parametrize('deposit', [100])
 def test_cancel_transfer(raiden_chain, asset, deposit):
 
-    # TODO: use 4 nodes instead of 3 to check handling of MediatedTransfer as well
-    #       as StartMediatedTransfer...
-
-    app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
+    app0, app1, app2, app3 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     messages = setup_messages_cb()
     mlogger = MessageLogger()
@@ -176,38 +174,58 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
         channel(app2, app1, asset), deposit, []
     )
 
+    assert_synched_channels(
+        channel(app2, app3, asset), deposit, [],
+        channel(app3, app2, asset), deposit, []
+    )
+
+    assert_synched_channels(
+        channel(app0, app1, asset), deposit, [],
+        channel(app1, app0, asset), deposit, []
+    )
+
     # drain the channel app1 -> app2
-    amount = 80
-    direct_transfer(app1, app2, asset, amount)
+    amount12 = 50
+    direct_transfer(app1, app2, asset, amount12)
 
-    assert len(messages) == 2  # DirectTransfer + Ack
+    # drain the channel app2 -> app3
+    amount23 = 80
+    direct_transfer(app2, app3, asset, amount23)
+
+    assert_synched_channels(
+        channel(app1, app2, asset), deposit - amount12, [],
+        channel(app2, app1, asset), deposit + amount12, []
+    )
+
+    assert_synched_channels(
+        channel(app2, app3, asset), deposit - amount23, [],
+        channel(app3, app2, asset), deposit + amount23, []
+    )
+
+    # app1 -> app3 is the only available path but app2 -> app3 doesnt have
+    # resources and needs to send a RefundTransfer down the path
+    transfer(app0, app3, asset, 50)
 
     assert_synched_channels(
         channel(app0, app1, asset), deposit, [],
         channel(app1, app0, asset), deposit, []
     )
 
+    # FIXME
     assert_synched_channels(
-        channel(app1, app2, asset), deposit - amount, [],
-        channel(app2, app1, asset), deposit + amount, []
-    )
-
-    # app1 -> app2 is the only available path and doesn't have resource, app1
-    # needs to send RefundTransfer to app0
-    transfer(app0, app2, asset, 50)
-
-    assert_synched_channels(
-        channel(app0, app1, asset), deposit, [],
-        channel(app1, app0, asset), deposit, []
+        channel(app1, app2, asset), deposit - amount12, [],
+        channel(app2, app1, asset), deposit + amount12, []
     )
 
     assert_synched_channels(
-        channel(app1, app2, asset), deposit - amount, [],
-        channel(app2, app1, asset), deposit + amount, []
+        channel(app2, app3, asset), deposit - amount23, [],
+        channel(app3, app2, asset), deposit + amount23, []
     )
 
-    assert len(messages) == 6  # DirectTransfer + MediatedTransfer + RefundTransfer + a Ack for each
+    assert len(messages) == 12  # DT + DT + SMT + MT + RT + RT + ACKs
 
     app1_messages = mlogger.get_node_messages(pex(app1.raiden.address), only='sent')
-
     assert isinstance(app1_messages[-1], RefundTransfer)
+
+    app2_messages = mlogger.get_node_messages(pex(app2.raiden.address), only='sent')
+    assert isinstance(app2_messages[-1], RefundTransfer)
