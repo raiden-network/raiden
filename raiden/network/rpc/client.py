@@ -709,10 +709,6 @@ class BlockChainServiceMock(object):
         return self.address_manager[manager_address]
 
     def manager_by_asset(self, asset_address):
-        if asset_address not in self.asset_manager:
-            self.asset_manager[asset_address] = manager
-            self.address_manager[manager_address] = manager
-
         return self.asset_manager[asset_address]
 
     def registry(self, registry_address):
