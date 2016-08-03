@@ -374,12 +374,12 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
 
                 return response
 
+            if isinstance(response, RefundTransfer):
+                return response
+
             if response.target != raiden.address or response.sender != next_hop:
                 log.error('Invalid message supplied to the task. {}'.format(repr(response)))
                 continue
-
-            if isinstance(response, RefundTransfer):
-                return response
 
             log.error('Partner sent an invalid message. {}'.format(repr(response)))
 
