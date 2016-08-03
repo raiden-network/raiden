@@ -135,7 +135,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             task = asset_manager.transfermanager.transfertasks.get(hashlock)
 
             if task is not None:
-                log.info("calling on_event for {}".format(task))
                 task.on_event(message)
                 return True
 
