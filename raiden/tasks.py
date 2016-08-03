@@ -290,7 +290,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                 return
 
             if isinstance(response, RefundTransfer):
-                if response.lock.amount != transfer.amount:
+                if response.lock.amount != transfer.lock.amount:
                     log.info('Partner {} sent an refund message with an invalid amount'.format(
                         pex(next_hop),
                     ))
