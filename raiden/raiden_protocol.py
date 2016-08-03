@@ -59,7 +59,7 @@ class RaidenProtocol(object):
         self.transport = transport
         self.discovery = discovery
         self.raiden = raiden
-        self.message_queue = None
+        self.message_queue_by_address = dict()
         self.running = False
 
         self.number_of_tries = dict()  # msg hash: count_tries
@@ -70,21 +70,23 @@ class RaidenProtocol(object):
 
     def start(self):
         if not self.running:
-            self.message_queue = NotifyingQueue()
-            gevent.spawn(self._send_queued_messages)
+            self.running = True
 
     def stop(self):
-        self.message_queue.stop()
+        if self.running:
+            for message_queue in self.message_queue_by_address.itervalues():
+                message_queue.stop()
+            self.running = False
 
-    def _send_queued_messages(self):
-        self.running = True
+    def _send_queued_messages(self, receiver_address):
 
+        message_queue = self.message_queue_by_address[receiver_address]
         while True:
-            self.message_queue.wait()
-            if self.message_queue.has_stop():
+            message_queue.wait()
+            if message_queue.has_stop():
                 break
 
-            receiver_address, message = self.message_queue.get()
+            message = message_queue.get()
             data = message.encode()
             host_port = self.discovery.get(receiver_address)
 
@@ -106,7 +108,7 @@ class RaidenProtocol(object):
             # loop should iterate as fast as possible checking for acks
             while msghash in self.number_of_tries:
                 # we were asked to give up...
-                if self.message_queue.has_stop():
+                if message_queue.has_stop():
                     break
 
                 if self.number_of_tries[msghash] >= self.max_tries:
@@ -132,8 +134,6 @@ class RaidenProtocol(object):
                 gevent.sleep(self.short_delay)
                 loop_count += 1
 
-        self.running = False
-
     def send(self, receiver_address, message, with_status=False):
         if not isaddress(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
@@ -147,7 +147,12 @@ class RaidenProtocol(object):
         if with_status:
             data = message.encode()
             self.status_by_message[sha3(data)] = None
-        self.message_queue.put((receiver_address, message))
+
+        if not receiver_address in self.message_queue_by_address:
+            self.message_queue_by_address[receiver_address] = NotifyingQueue()
+            gevent.spawn(self._send_queued_messages, receiver_address)
+
+        self.message_queue_by_address[receiver_address].put(message)
 
     def send_and_wait(self, receiver_address, message):
         """Sends a message and wait for the response ack."""
