@@ -144,7 +144,8 @@ class StartMediatedTransferTask(Task):
 
             # someone down the line timedout / couldn't proceed
             elif isinstance(response, (RefundTransfer, TransferTimeout)):
-                # XXX
+                if hashlock in channel.partner_state.locked:
+                    channel.partner_state.locked.remove(hashlock)
                 self.transfermanager.on_hashlock_result(hashlock, False)
 
             # `target` received the MediatedTransfer
@@ -203,7 +204,6 @@ class StartMediatedTransferTask(Task):
 
             if response.sender == next_hop:
                 if isinstance(response, (RefundTransfer, TransferTimeout)):
-                    # XXX
                     return response
                 else:
                     log.info('Partner {} sent an invalid message'.format(pex(next_hop)))
@@ -296,9 +296,11 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                     ))
                     timeout = channel.create_timeouttransfer_for(transfer)
                     raiden.send(transfer.sender, timeout)
-                    self.transfermanager.on_hashlock_result(transfer.hashlock, False)
+                    self.transfermanager.on_hashlock_result(transfer.lock.hashlock, False)
                     return
                 else:
+                    # XXX: need to verify if extra action might be needed here, like
+                    #      removing locks
                     channel.register_transfer(response)
 
             elif isinstance(response, Secret):
@@ -318,10 +320,17 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         from_channel.register_transfer(refund_transfer)
         raiden.send(from_address, refund_transfer)
 
-        log.debug('REFUND MEDIATED TRANSFER from={} {}'.format(
+        log.debug('REFUND MEDIATED TRANSFER from={} to={}'.format(
             pex(from_address),
             pex(raiden.address),
         ))
+
+        # XXX: can we assume the hashlock will always be present on both EndStates?
+        hashlock = transfer.lock.hashlock
+        if hashlock in originating_channel.our_state.locked:
+            originating_channel.our_state.locked.remove(transfer.lock.hashlock)
+        if hashlock in originating_channel.partner_state.locked:
+            originating_channel.partner_state.locked.remove(transfer.lock.hashlock)
 
         self.transfermanager.on_hashlock_result(transfer.lock.hashlock, False)
 

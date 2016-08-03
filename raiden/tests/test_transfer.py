@@ -157,6 +157,10 @@ def test_mediated_transfer(raiden_network):
 @pytest.mark.parametrize('asset', [sha3('cancel_transfer')[:20]])
 @pytest.mark.parametrize('deposit', [100])
 def test_cancel_transfer(raiden_chain, asset, deposit):
+
+    # TODO: use 4 nodes instead of 3 to check handling of MediatedTransfer as well
+    #       as StartMediatedTransfer...
+
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     messages = setup_messages_cb()
