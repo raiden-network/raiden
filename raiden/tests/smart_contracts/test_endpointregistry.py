@@ -38,7 +38,7 @@ def test_endpointregistry():
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
-@pytest.mark.parametrize('poll_timeout', [50])
+@pytest.mark.parametrize('poll_timeout', [80])
 @pytest.mark.parametrize('local', [True, False])
 def test_api_compliance(discovery_blockchain, local):
     contract_discovery_instance, address = discovery_blockchain
@@ -56,13 +56,11 @@ def test_api_compliance(discovery_blockchain, local):
 
     # test, that `update_endpoint` and 'classic' `register` do the same
     contract_discovery_instance.register(address, '127.0.0.1', 44444)
-    gevent.sleep(30)
+    not local and gevent.sleep(30)
     assert contract_discovery_instance.nodeid_by_host_port(('127.0.0.1', 44444)) == address
-    gevent.sleep(30)
     assert contract_discovery_instance.get(address) == ('127.0.0.1', 44444)
     # test, that `register`ing twice does update do the same
     contract_discovery_instance.register(address, '127.0.0.1', 88888)
-    gevent.sleep(30)
+    not local and gevent.sleep(30)
     assert contract_discovery_instance.nodeid_by_host_port(('127.0.0.1', 88888)) == address
-    gevent.sleep(30)
     assert contract_discovery_instance.get(address) == ('127.0.0.1', 88888)
