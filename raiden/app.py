@@ -18,7 +18,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 INITIAL_PORT = 40001
-DEFAULT_SETTLE_TIMEOUT = 50
+DEFAULT_SETTLE_TIMEOUT = 6
 DEFAULT_REVEAL_TIMEOUT = 3
 
 
