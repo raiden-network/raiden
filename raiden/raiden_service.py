@@ -247,7 +247,7 @@ class RaidenAPI(object):
         # Obtain the asset manager
         asset_manager = self.raiden.get_manager_by_asset_address(asset_address.decode('hex'))
         # Create a new netting channel and store its address
-        netcontract_address = channel_manager.new_netting_channel(self._raiden.address,
+        netcontract_address = channel_manager.new_netting_channel(self.raiden.address,
                                                                 partner_address.decode('hex'),
                                                                 settle_timeout)
         # Obtain the netting channel from the address
