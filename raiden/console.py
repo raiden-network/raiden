@@ -252,7 +252,7 @@ class ConsoleTools(object):
                 settle_timeout=settle_timeout,
                 reveal_timeout=reveal_timeout)
 
-        return self._raiden.api.fund(token_address, peer, amount)
+        return self._raiden.api.deposit(token_address, peer, amount)
 
     def channel_stats_for(self, token_address, peer, pretty=False):
         """Collect information about sent and received transfers

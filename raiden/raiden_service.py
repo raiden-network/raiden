@@ -235,13 +235,19 @@ class RaidenAPI(object):
         return self.raiden.chain.default_registry.asset_addresses()
 
     def open(self, asset_address, partner_address,
-             settle_timeout=DEFAULT_SETTLE_TIMEOUT,
-             reveal_timeout=DEFAULT_REVEAL_TIMEOUT):
+             settle_timeout=None,
+             reveal_timeout=None):
         """ Open a channel with the peer at `partner_address`
         with the given `asset_address`.
         """
-        if settle_timeout < DEFAULT_SETTLE_TIMEOUT:
-            raise ValueError('Minimum `settle_timeout` is {} blocks.'.format(DEFAULT_SETTLE_TIMEOUT))
+        if reveal_timeout is None:
+            reveal_timeout = self.raiden.config['reveal_timeout']
+        if settle_timeout is None:
+            settle_timeout = self.raiden.config['settle_timeout']
+
+        if settle_timeout < self.raiden.config['settle_timeout']:
+            raise ValueError('Configured minimum `settle_timeout` is {} blocks.'.format(
+                self.raiden.config['settle_timeout']))
         # Obtain the channel manager
         channel_manager = self.raiden.chain.manager_by_asset(asset_address.decode('hex'))
         # Obtain the asset manager
@@ -282,7 +288,7 @@ class RaidenAPI(object):
         asset.approve(netcontract_address, amount)
 
         # Obtain the netting channel and fund it by depositing the amount
-        netting_channel = self.chain.netting_channel(netcontract_address)
+        netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         netting_channel.deposit(self.raiden.address, amount)
         return netting_channel
 
