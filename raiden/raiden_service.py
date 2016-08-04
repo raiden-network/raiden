@@ -12,9 +12,11 @@ from raiden.encoding import messages
 from raiden.messages import Ack, SignedMessage
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.utils import privtoaddr, isaddress, pex
-from raiden.app import DEFAULT_SETTLE_TIMEOUT, DEFAULT_REVEAL_TIMEOUT
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+
+DEFAULT_SETTLE_TIMEOUT = 10
+DEFAULT_REVEAL_TIMEOUT = 3
 
 
 def safe_address_decode(address):

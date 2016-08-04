@@ -109,7 +109,7 @@ def setup_channels(asset_address, app_pairs, deposit, settle_timeout):  # pylint
 
             # netting contract does allow settle time lower than 30
             contract_settle_timeout = netting_channel.settle_timeout()
-            assert contract_settle_timeout == max(30, settle_timeout)
+            assert contract_settle_timeout == max(6, settle_timeout)
 
         check_channel(
             first,

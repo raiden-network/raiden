@@ -7,7 +7,7 @@ import click
 from ethereum import slogging
 from pyethapp.rpc_client import JSONRPCClient
 
-from raiden.raiden_service import RaidenService
+from raiden.raiden_service import RaidenService, DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import BlockChainService
@@ -18,8 +18,6 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 INITIAL_PORT = 40001
-DEFAULT_SETTLE_TIMEOUT = 6
-DEFAULT_REVEAL_TIMEOUT = 3
 
 
 class App(object):  # pylint: disable=too-few-public-methods
