@@ -24,10 +24,6 @@ IPython.core.shellapp.InteractiveShellApp.gui.values += ('gevent',)
 inputhook_manager.register('gevent')(GeventInputHook)
 
 
-class InsufficientFunds(BaseException):
-    pass
-
-
 def print_usage():
     print("\t{}use `{}raiden{}` to interact with the raiden service.".format(
         bc.OKBLUE, bc.HEADER, bc.OKBLUE))
@@ -150,6 +146,7 @@ class ConsoleTools(object):
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
         self._ping_nonces = defaultdict(int)
+        self.deposit = self._raiden.api.deposit
 
     def create_token(self,
                      initial_alloc=10 ** 6,
@@ -250,52 +247,12 @@ class ConsoleTools(object):
         except KeyError:
             print("Error: peer {} not found in discovery".format(peer))
             return
-        # Obtain the channel manager
-        channel_manager = self._chain.manager_by_asset(token_address.decode('hex'))
-        # Obtain the asset manager
-        asset_manager = self._raiden.get_manager_by_asset_address(token_address.decode('hex'))
-        # Create a new netting channel and store its address
-        netcontract_address = channel_manager.new_netting_channel(self._raiden.address,
-                                                                peer.decode('hex'),
-                                                                settle_timeout or self.settle_timeout)
-        # Obtain the netting channel from the address
-        netting_channel = self._chain.netting_channel(netcontract_address)
+        self._raiden.api.open(token_address,
+                peer,
+                settle_timeout=settle_timeout,
+                reveal_timeout=reveal_timeout)
 
-        # Register the netting channel with the asset manager
-        asset_manager.register_channel(netting_channel, reveal_timeout or self.reveal_timeout)
-
-        # approve the locking of funds
-        self._approve_funding(token_address, netcontract_address, amount)
-
-        # Fund the netting channel by depositing the amount
-        netting_channel.deposit(self._raiden.address, amount)
-        return netting_channel
-
-    def deposit(self, token_address, peer, amount):
-        """After your peer has called `open_channel_with_funding`, use this
-        to deposit to the channel as well.
-        Args:
-            token_address (str): hex encoded address of the token.
-            peer (str): hex encoded address of your peer.
-            amount (int): amount of deposit.
-        Return:
-            netting_channel: the (open) netting channel object.
-        """
-        # Obtain the asset manager
-        asset_manager = self._raiden.get_manager_by_asset_address(token_address.decode('hex'))
-        assert asset_manager
-        # Get the address for the netting contract
-        netcontract_address = asset_manager.get_channel_by_partner_address(
-            peer.decode('hex')).external_state.netting_channel.address
-        assert len(netcontract_address)
-
-        # approve the locking of funds
-        self._approve_funding(token_address, netcontract_address, amount)
-
-        # Obtain the netting channel and fund it by depositing the amount
-        netting_channel = self._chain.netting_channel(netcontract_address)
-        netting_channel.deposit(self._raiden.address, amount)
-        return netting_channel
+        return self._raiden.api.fund(token_address, peer, amount)
 
     def channel_stats_for(self, token_address, peer, pretty=False):
         """Collect information about sent and received transfers
@@ -348,18 +305,6 @@ class ConsoleTools(object):
             return stats
         else:
             print(json.dumps(stats, indent=2, sort_keys=True))
-
-    def _approve_funding(self, token_address, netcontract_address, amount):
-        # Obtain a reference to the asset and approve the amount for funding
-        asset = self._raiden.chain.asset(token_address.decode('hex'))
-        # Check balance of asset:
-        balance = asset.balance_of(self._raiden.address.encode('hex'))
-        if not balance >= amount:
-            raise InsufficientFunds("Not enough balance for token'{}' [{}]: have={}, need={}".format(
-                asset.proxy.name(), token_address, balance, amount
-            ))
-        # Approve the locking of funds
-        asset.approve(netcontract_address, amount)
 
     def show_events_for(self, token_address, peer):
         """Find all EVM-EventLogs for a channel.

@@ -12,6 +12,7 @@ from raiden.encoding import messages
 from raiden.messages import Ack, SignedMessage
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.utils import privtoaddr, isaddress, pex
+from raiden.app import DEFAULT_SETTLE_TIMEOUT, DEFAULT_REVEAL_TIMEOUT
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -38,6 +39,14 @@ class InvalidAddress(RaidenError):
 
 
 class InvalidAmount(RaidenError):
+    pass
+
+
+class InvalidState(RaidenError):
+    pass
+
+
+class InsufficientFunds(RaidenError):
     pass
 
 
@@ -223,6 +232,58 @@ class RaidenAPI(object):
         """ Return a list of the assets registered with the default registry. """
         return self.raiden.chain.default_registry.asset_addresses()
 
+    def open(self, asset_address, partner_address,
+             settle_timeout=DEFAULT_SETTLE_TIMEOUT,
+             reveal_timeout=DEFAULT_REVEAL_TIMEOUT):
+        """ Open a channel with the peer at `partner_address`
+        with the given `asset_address`.
+        """
+        if settle_timeout < DEFAULT_SETTLE_TIMEOUT:
+            raise ValueError('Minimum `settle_timeout` is {} blocks.'.format(DEFAULT_SETTLE_TIMEOUT))
+        # Obtain the channel manager
+        channel_manager = self.raiden.chain.manager_by_asset(asset_address.decode('hex'))
+        # Obtain the asset manager
+        asset_manager = self.raiden.get_manager_by_asset_address(asset_address.decode('hex'))
+        # Create a new netting channel and store its address
+        netcontract_address = channel_manager.new_netting_channel(self._raiden.address,
+                                                                partner_address.decode('hex'),
+                                                                settle_timeout)
+        # Obtain the netting channel from the address
+        netting_channel = self.raiden.chain.netting_channel(netcontract_address)
+
+        # Register the netting channel with the asset manager
+        asset_manager.register_channel(netting_channel, reveal_timeout or self.reveal_timeout)
+        return netting_channel
+
+    def deposit(self, asset_address, partner_address, amount):
+        """ Deposit `amount` in the channel with the peer at `partner_address` and the
+        given `asset_address` in order to be able to do transfers.
+        """
+        # Obtain the asset manager
+        asset_manager = self.raiden.get_manager_by_asset_address(asset_address.decode('hex'))
+        assert asset_manager
+        # Get the address for the netting contract
+        netcontract_address = asset_manager.get_channel_by_partner_address(
+            partner_address.decode('hex')).external_state.netting_channel.address
+        assert len(netcontract_address)
+
+        # Obtain a reference to the asset and approve the amount for funding
+        asset = self.raiden.chain.asset(asset_address.decode('hex'))
+        # Check balance of asset:
+        balance = asset.balance_of(self.raiden.address.encode('hex'))
+
+        if not balance >= amount:
+            raise InsufficientFunds("Not enough balance for token'{}' [{}]: have={}, need={}".format(
+                asset.proxy.name(), asset_address, balance, amount
+            ))
+        # Approve the locking of funds
+        asset.approve(netcontract_address, amount)
+
+        # Obtain the netting channel and fund it by depositing the amount
+        netting_channel = self.chain.netting_channel(netcontract_address)
+        netting_channel.deposit(self.raiden.address, amount)
+        return netting_channel
+
     def transfer(self, asset_address, amount, target, callback=None):
         """ Do a transfer with `target` with the given `amount` of `asset_address`. """
         if not isinstance(amount, (int, long)):
@@ -277,6 +338,33 @@ class RaidenAPI(object):
             first_transfer,
             second_transfer,
         )
+
+    def settle(self, asset_address, partner_address):
+        """ Settle a closed channel with `partner_address` for the given `asset_address`. """
+        asset_address_bin = safe_address_decode(asset_address)
+        partner_address_bin = safe_address_decode(partner_address)
+
+        if not isaddress(asset_address_bin) or asset_address_bin not in self.assets:
+            raise InvalidAddress('asset address is not valid.')
+
+        if not isaddress(partner_address_bin):
+            raise InvalidAddress('partner_address is not valid.')
+
+        manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
+        channel = manager.get_channel_by_partner_address(partner_address_bin)
+
+        if channel.isopen:
+            raise InvalidState('channel is still open.')
+
+        netting_channel = channel.external_state.netting_channel
+
+        if not (self.raiden.chain.client.block_number() >=
+                (channel.external_state.closed_block +
+                 netting_channel.detail(self.raiden.address)['settle_timeout'])):
+            raise InvalidState('settlement period not over.')
+
+        netting_channel.settle()
+        return netting_channel
 
 
 class RaidenMessageHandler(object):
