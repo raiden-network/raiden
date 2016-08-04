@@ -8,34 +8,21 @@ contract EndpointRegistry{
 //Events
 
 	event AddressRegistered(address indexed eth_address,string socket);
-    event AddressUpdated(address indexed eth_address,string old_socket,string newSocket);
 
 //Storage Variables
 
-	//Mapping of Ethereum Addresses => SocketEndpoints
+	// Mapping of Ethereum Addresses => SocketEndpoints
 	mapping (address => string) addressToSocket;
-	//Mapping of SocketEndpoints => Ethereum Addresses
+	// Mapping of SocketEndpoints => Ethereum Addresses
 	mapping (string => address) socketToAddress;
-	//list of all the Registered Addresses , still not used.
+	// list of all the Registered Addresses , still not used.
 	address[] eth_addresses;
 
 //modifiers
 
-    modifier nodoubleregister
-    {
-    	if(sha3(addressToSocket[msg.sender])!= sha3("")) throw;
-    	_	
-    }
-
-    modifier endpointExists
-    {
-    	if(sha3(addressToSocket[msg.sender]) == sha3("")) throw;
-        _
-    }
-
     modifier noEmptyString(string str)
     {
-        if(equals(str,"") == true) throw;
+        if(equals(str, "") == true) throw;
         _
     }
 
@@ -46,25 +33,14 @@ contract EndpointRegistry{
     @dev Registers the Ethereum Address to the Endpoint socket.
     @param string of socket in this format "127.0.0.1:40001" 
     */
-    function registerEndpoint(string socket) nodoubleregister 
+    function registerEndpoint(string socket) noEmptyString(socket)
     {
+        string old_socket = addressToSocket[msg.sender];
+        if(equals(old_socket, socket)) return; // Compare if the new socket matches the old one, if it does just return
+        socketToAddress[old_socket] = address(0); // Put the ethereum address 0 in front of the old_socket,old_socket:0x0
     	addressToSocket[msg.sender] = socket;
     	socketToAddress[socket] = msg.sender;
-        AddressRegistered(msg.sender,socket);
-    }
-
-    /* 
-    @notice Updates an existing mapping to a new socket
-    @dev Updates an existing mapping to a new socket
-    @param string of socket in this format "127.0.0.1:40001"  
-    */
-    function updateEndpoint(string socket) endpointExists noEmptyString(socket)
-    {
-    	string old_socket = addressToSocket[msg.sender];
-    	socketToAddress[old_socket]	= address(0);
-    	addressToSocket[msg.sender] = socket;
-    	socketToAddress[socket] = msg.sender;
-        AddressUpdated(msg.sender,old_socket,socket);
+        AddressRegistered(msg.sender, socket);
     }
 
     /* 
@@ -89,7 +65,7 @@ contract EndpointRegistry{
     	return socketToAddress[socket];
     }
 
-    function equals(string a,string b) internal constant returns (bool result)
+    function equals(string a, string b) internal constant returns (bool result)
     {
     if(sha3(a) == sha3(b)) return true;
     else return false;
