@@ -168,19 +168,6 @@ library NettingChannelLibrary {
 
         self.closingAddress = callerAddress;
         self.closed = block.number;
-
-        // TODO: penalize
-        // uint allowance, difference, transfered_amount;
-        // transfered_amount = sender.transferedAmount;
-        // allowance = node1.balance + node2.balance;
-        // if(amount1 > amount2) {
-        //     difference = amount1 - amount2;
-        // } else {
-        //     difference = amount2 - amount1;
-        // }
-        // if (difference > allowance) {
-        //     penalize();
-        // }
     }
 
     /// @notice close(bytes, bytes) to close a channel between to parties
@@ -238,20 +225,6 @@ library NettingChannelLibrary {
 
         self.closingAddress = callerAddress;
         self.closed = block.number;
-
-        // TODO: penalize
-        // uint allowance, difference, amount1, amount2;
-        // amount1 = node1.transferedAmount;
-        // amount2 = node2.transferedAmount;
-        // allowance = node1.balance + node2.balance;
-        // if(amount1 > amount2) {
-        //     difference = amount1 - amount2;
-        // } else {
-        //     difference = amount2 - amount1;
-        // }
-        // if (difference > allowance) {
-        //     penalize();
-        // }
     }
 
     /// @notice updateTransfer(bytes) to update last known transfer

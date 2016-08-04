@@ -24,6 +24,10 @@ def test_cmc(state, settle_timeout, netting_channel_abi, manager, events):  # py
         settle_timeout,
     )
 
+    # should fail if settleTimeout is too low
+    with pytest.raises(TransactionFailed):
+        manager.newChannel(address1, 5)
+
     # cannot have two channels at the same time
     with pytest.raises(TransactionFailed):
         manager.newChannel(address1, settle_timeout)
