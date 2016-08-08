@@ -144,8 +144,6 @@ class StartMediatedTransferTask(Task):
 
             # someone down the line timedout / couldn't proceed
             elif isinstance(response, (RefundTransfer, TransferTimeout)):
-                if hashlock in channel.partner_state.locked:
-                    channel.partner_state.locked.remove(hashlock)
                 self.transfermanager.on_hashlock_result(hashlock, False)
 
             # `target` received the MediatedTransfer
@@ -324,13 +322,6 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             pex(from_address),
             pex(raiden.address),
         ))
-
-        # XXX: can we assume the hashlock will always be present on both EndStates?
-        hashlock = transfer.lock.hashlock
-        if hashlock in originating_channel.our_state.locked:
-            originating_channel.our_state.locked.remove(transfer.lock.hashlock)
-        if hashlock in originating_channel.partner_state.locked:
-            originating_channel.partner_state.locked.remove(transfer.lock.hashlock)
 
         self.transfermanager.on_hashlock_result(transfer.lock.hashlock, False)
 
