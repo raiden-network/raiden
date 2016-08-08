@@ -1,4 +1,6 @@
 # -*- coding: utf8 -*-
+from __future__ import division
+
 from ethereum.utils import encode_hex
 
 from raiden.utils import keccak
@@ -38,7 +40,7 @@ def merkleroot(elements, proof=None, first=True):
     searching = proof.pop()
     assert searching is None or searching in elements
     out = []
-    for i in range(len(elements) / 2):
+    for i in range(len(elements) // 2):
         first = elements[i * 2]
         second = elements[i * 2 + 1]
 

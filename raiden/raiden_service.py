@@ -7,9 +7,9 @@ from pyethapp.jsonrpc import address_decoder
 from raiden.assetmanager import AssetManager
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
 from raiden.channelgraph import ChannelGraph
-from raiden.tasks import LogListenerTask
+from raiden.tasks import AlarmTask, LogListenerTask
 from raiden.encoding import messages
-from raiden.messages import Ack, SignedMessage
+from raiden.messages import SignedMessage
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.utils import privtoaddr, isaddress, pex
 
@@ -71,7 +71,11 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         message_handler = RaidenMessageHandler(self)
         event_handler = RaidenEventHandler(self)
 
+        alarm = AlarmTask(chain)
+        alarm.start()
+
         self.api = RaidenAPI(self)
+        self.alarm = alarm
         self.event_handler = event_handler
         self.message_handler = message_handler
 
@@ -165,7 +169,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         all_manager_addresses = registry.manager_addresses()
 
+        task_name = 'Registry {}'.format(pex(registry.address))
         asset_listener = LogListenerTask(
+            task_name,
             assetadded,
             self.on_event,
             translator,
@@ -189,7 +195,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         all_netting_contracts = channel_manager.channels_by_participant(self.address)
 
+        task_name = 'ChannelManager {}'.format(pex(channel_manager.address))
         channel_listener = LogListenerTask(
+            task_name,
             channelnew,
             self.on_event,
             translator,
@@ -465,40 +473,40 @@ class RaidenEventHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
 
-    def on_event(self, emitting_contract_address, event):  # pylint: disable=unused-argument
+    def on_event(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
         log.debug(
             'event received',
             type=event['_event_type'],
-            contract=emitting_contract_address,
+            contract=pex(emitting_contract_address_bin),
         )
 
         if event['_event_type'] == 'AssetAdded':
-            self.event_assetadded(emitting_contract_address, event)
+            self.event_assetadded(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelNew':
-            self.event_channelnew(emitting_contract_address, event)
+            self.event_channelnew(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelNewBalance':
-            self.event_channelnewbalance(emitting_contract_address, event)
+            self.event_channelnewbalance(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelClosed':
-            self.event_channelclosed(emitting_contract_address, event)
+            self.event_channelclosed(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelSettled':
-            self.event_channelsettled(emitting_contract_address, event)
+            self.event_channelsettled(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelSecretRevealed':
-            self.event_channelsecretrevealed(emitting_contract_address, event)
+            self.event_channelsecretrevealed(emitting_contract_address_bin, event)
 
         else:
             log.error('Unknown event {}'.format(repr(event)))
 
-    def event_assetadded(self, registry_address, event):
-        manager_address = address_decoder(event['channelManagerAddress'])
-        manager = self.raiden.chain.manager(manager_address)
+    def event_assetadded(self, registry_address_bin, event):
+        manager_address_bin = address_decoder(event['channelManagerAddress'])
+        manager = self.raiden.chain.manager(manager_address_bin)
         self.raiden.register_channel_manager(manager)
 
-    def event_channelnew(self, manager_address, event):  # pylint: disable=unused-argument
+    def event_channelnew(self, manager_address_bin, event):  # pylint: disable=unused-argument
         if address_decoder(event['participant1']) != self.raiden.address and address_decoder(event['participant2']) != self.raiden.address:
             log.info('ignoring new channel, this is node is not a participant.')
             return
@@ -506,7 +514,7 @@ class RaidenEventHandler(object):
         netting_channel_address_bin = address_decoder(event['nettingChannel'])
 
         # shouldnt raise, filters are installed only for registered managers
-        asset_manager = self.raiden.get_manager_by_address(manager_address)
+        asset_manager = self.raiden.get_manager_by_address(manager_address_bin)
         asset_manager.register_channel_by_address(
             netting_channel_address_bin,
             self.raiden.config['reveal_timeout'],
@@ -515,7 +523,7 @@ class RaidenEventHandler(object):
         log.info(
             'New channel created',
             channel_address=event['nettingChannel'],
-            manager_address=encode_hex(manager_address),
+            manager_address=pex(manager_address_bin),
         )
 
     def event_channelnewbalance(self, netting_contract_address_bin, event):
@@ -531,26 +539,18 @@ class RaidenEventHandler(object):
             channel_state.update_contract_balance(event['balance'])
 
         if channel.external_state.opened_block == 0:
-            channel.external_state.opened_block = event['blockNumber']
+            channel.external_state.set_opened(event['blockNumber'])
 
     def event_channelclosed(self, netting_contract_address_bin, event):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.closed_block = event['blockNumber']
-
-        channel.external_state.netting_channel.update_transfer(
-            channel.our_state.address,
-            channel.received_transfers[-1],
-        )
-
-        # TODO: unlock
+        channel.external_state.set_closed(event['blockNumber'])
 
     def event_channelsettled(self, netting_contract_address_bin, event):
         log.debug("channel settle event received",
-                  netting_contract=netting_contract_address_bin.encode('hex'),
+                  netting_contract=pex(netting_contract_address_bin),
                   event=event)
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.settled_block = event['blockNumber']
-        log.debug("set channel.external_state.settled_block", settled_block=event['blockNumber'])
+        channel.external_state.set_settled(event['blockNumber'])
 
     def event_channelsecretrevealed(self, netting_contract_address_bin, event):
         channel = self.raiden.chain.netting_channel(netting_contract_address_bin)

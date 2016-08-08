@@ -24,6 +24,7 @@ __all__ = (
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+REMOVE_CALLBACK = object()
 
 
 class Task(gevent.Greenlet):
@@ -54,15 +55,19 @@ class Task(gevent.Greenlet):
 
 
 class LogListenerTask(Task):
-    def __init__(self, filter_, callback, contract_translator):
+    def __init__(self, listener_name, filter_, callback, contract_translator):
         super(LogListenerTask, self).__init__()
 
+        self.listener_name = listener_name
         self.filter_ = filter_
         self.callback = callback
         self.contract_translator = contract_translator
 
         self.stop_event = AsyncResult()
         self.sleep_time = 0.5
+
+    def __repr__(self):
+        return '<LogListenerTask {}>'.format(self.listener_name)
 
     def _run(self):  # pylint: disable=method-hidden
         stop = None
@@ -71,6 +76,8 @@ class LogListenerTask(Task):
             filter_changes = self.filter_.changes()
 
             for log_event in filter_changes:
+                log.debug('New Events', task=self.listener_name)
+
                 event = self.contract_translator.decode_event(
                     log_event['topics'],
                     log_event['data'],
@@ -78,9 +85,79 @@ class LogListenerTask(Task):
 
                 if event is not None:
                     originating_contract = log_event['address']
-                    self.callback(originating_contract, event)
+
+                    try:
+                        self.callback(originating_contract, event)
+                    except:
+                        log.exception('unexpected exception on log listener')
 
             stop = self.stop_event.wait(self.sleep_time)
+
+    def stop(self):
+        self.stop_event.set(True)
+
+
+class AlarmTask(Task):
+    def __init__(self, chain):
+        super(AlarmTask, self).__init__()
+
+        self.callbacks = list()
+        self.stop_event = AsyncResult()
+        self.wait_time = 0.5
+        self.chain = chain
+        self.last_block_number = self.chain.block_number()
+
+    def register_callback(self, callback):
+        if not callable(callback):
+            raise ValueError('callback is not a callable')
+
+        self.callbacks.append(callback)
+
+    def _run(self):  # pylint: disable=method-hidden
+        stop = None
+        result = None
+        last_loop = time.time()
+        log.debug('starting block number', block_number=self.last_block_number)
+
+        while stop is None:
+            current_block = self.chain.block_number()
+
+            if current_block > self.last_block_number + 1:
+                difference = current_block - self.last_block_number - 1
+                log.error('alarm missed {} blocks'.format(difference))
+
+            if current_block != self.last_block_number:
+                self.last_block_number = current_block
+                log.debug('new block', number=current_block, timestamp=last_loop)
+
+                remove = list()
+                for callback in self.callbacks:
+                    try:
+                        result = callback(current_block)
+                    except:
+                        log.exception('unexpected exception on alarm')
+                    else:
+                        if result is REMOVE_CALLBACK:
+                            remove.append(callback)
+
+                for callback in remove:
+                    self.callbacks.remove(callback)
+
+            # we want this task to iterate in the tick of `wait_time`, so take
+            # into account how long we spent executing one tick.
+            work_time = time.time() - last_loop
+            if work_time > self.wait_time:
+                log.warning(
+                    'alarm loop is taking longer than the wait time',
+                    work_time=work_time,
+                    wait_time=self.wait_time,
+                )
+                sleep_time = 0.001
+            else:
+                sleep_time = self.wait_time - work_time
+
+            stop = self.stop_event.wait(sleep_time)
+            last_loop = time.time()
 
     def stop(self):
         self.stop_event.set(True)
@@ -181,7 +258,7 @@ class StartMediatedTransferTask(Task):
                     # /critical write section
 
                     if isinstance(response, Secret) and response.sender == next_hop:
-                        channel.claim_locked(secret)
+                        channel.register_secret(secret)
                         self.done_result.set(True)
                         self.transfermanager.on_hashlock_result(hashlock, True)
                         return

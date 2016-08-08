@@ -1,5 +1,7 @@
 # -*- coding: utf8 -*-
 import sys
+import string
+import random
 
 from Crypto.Hash import keccak as keccaklib
 from ethereum.utils import big_endian_to_int, sha3, int_to_big_endian, privtoaddr
@@ -13,11 +15,14 @@ __all__ = (
     'keccak',
     'ishash',
     'isaddress',
+    'make_address',
+    'make_privkey_address',
     'pex',
     'lpex',
 )
 
 # hashing
+LETTERS = string.printable
 
 
 def keccak_256(data):
@@ -34,6 +39,15 @@ def ishash(data):
 
 def isaddress(data):
     return isinstance(data, (bytes, bytearray)) and len(data) == 20
+
+
+def make_address():
+    return bytes(''.join(random.choice(LETTERS) for _ in range(20)))
+
+
+def make_privkey_address():
+    privkey = sha3(''.join(random.choice(LETTERS) for _ in range(20)))
+    return privkey, privtoaddr(privkey)
 
 
 def pex(data):

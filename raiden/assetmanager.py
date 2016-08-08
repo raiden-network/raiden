@@ -88,29 +88,37 @@ class AssetManager(object):
         # once from the status received from the netting contract and once from
         # the event, to avoid problems the we use the balance instead of the
         # deposit is used.
+        task_name = 'ChannelNewBalance {}'.format(pex(netting_channel.address))
         newbalance = netting_channel.channelnewbalance_filter()
         newbalance_listener = LogListenerTask(
+            task_name,
             newbalance,
             self.raiden.on_event,
             translator,
         )
 
+        task_name = 'ChannelSecretRevelead {}'.format(pex(netting_channel.address))
         secretrevealed = netting_channel.channelsecretrevealed_filter()
         secretrevealed_listener = LogListenerTask(
+            task_name,
             secretrevealed,
             self.raiden.on_event,
             translator,
         )
 
+        task_name = 'ChannelClosed {}'.format(pex(netting_channel.address))
         close = netting_channel.channelclosed_filter()
         close_listener = LogListenerTask(
+            task_name,
             close,
             self.raiden.on_event,
             translator,
         )
 
+        task_name = 'ChannelSettled {}'.format(pex(netting_channel.address))
         settled = netting_channel.channelsettled_filter()
         settled_listener = LogListenerTask(
+            task_name,
             settled,
             self.raiden.on_event,
             translator,
@@ -127,6 +135,7 @@ class AssetManager(object):
         )
 
         external_state = ChannelExternalState(
+            self.raiden.alarm.register_callback,
             self.register_channel_for_hashlock,
             self.raiden.chain.block_number,
             netting_channel,
@@ -185,9 +194,10 @@ class AssetManager(object):
 
             # update the channel by claiming the locked transfers
             try:
-                reveal_to.claim_locked(secret)
+                reveal_to.register_secret(secret)
             except InvalidSecret:
-                log.error('claiming lock failed')
+                log.error('registering the secret failed')
+                log.exception('registering the secret failed')
 
         assert len(self.hashlock_channel[hashlock]) == 0
         del self.hashlock_channel[hashlock]

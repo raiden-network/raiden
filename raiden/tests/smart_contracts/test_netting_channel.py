@@ -41,7 +41,7 @@ def test_close_single_direct_transfer(state, channel, token, events):  # pylint:
         channel.deposit(30, sender=tester.k2)  # not participant
 
     assert token.balanceOf(channel.address) == 0
-    assert token.approve(channel.address, 30) is True # allow the contract do deposit
+    assert token.approve(channel.address, 30) is True  # allow the contract do deposit
     assert channel.addressAndBalance()[1] == 0
     with pytest.raises(TransactionFailed):
         channel.deposit(5001)
@@ -107,7 +107,7 @@ def test_close_single_direct_transfer(state, channel, token, events):  # pylint:
     channel.closeSingleTransfer(direct_transfer)
 
     with pytest.raises(TransactionFailed):
-        channel.closeSingleTransfer(direct_transfer, sender=tester.k2) # not participant
+        channel.closeSingleTransfer(direct_transfer, sender=tester.k2)  # not participant
 
     assert channel.closed() == state.block.number
     assert channel.closingAddress() == tester.a0.encode('hex')
@@ -700,7 +700,7 @@ def test_unlock(token, channel, events, state):
     lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
     lockhash1 = sha3(lock1.as_bytes)
     merkleproof1 = [lockhash1]
-    locksroot1 = merkleroot([lockhash1,], merkleproof1)
+    locksroot1 = merkleroot([lockhash1], merkleproof1)
 
     nonce = 10
     asset = token.address
@@ -725,7 +725,7 @@ def test_unlock(token, channel, events, state):
     lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
     lockhash2 = sha3(lock2.as_bytes)
     merkleproof2 = [lockhash2]
-    locksroot2 = merkleroot([lockhash2,], merkleproof2)
+    # locksroot2 = merkleroot([lockhash2], merkleproof2)
 
     msg2 = DirectTransfer(
         2,              # nonce
@@ -746,13 +746,13 @@ def test_unlock(token, channel, events, state):
         secret1,
     )
 
-    # TODO: it must not be possible to unlock the same lock twive
+    # TODO: it must not be possible to unlock the same lock twice
     # with pytest.raises(TransactionFailed):
-        # channel.unlock(
-            # str(lock1.as_bytes),
-            # ''.join(merkleproof1),
-            # secret1,
-        # )
+    #     channel.unlock(
+    #         str(lock1.as_bytes),
+    #         ''.join(merkleproof1),
+    #         secret1,
+    #     )
 
     # expiration has passed, should fail
     state.block.number = 1158031

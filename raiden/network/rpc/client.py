@@ -1,6 +1,4 @@
 # -*- coding: utf8 -*-
-import string
-import random
 from collections import defaultdict
 from itertools import count
 
@@ -13,7 +11,7 @@ from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
 from pyethapp.rpc_client import topic_encoder
 
 from raiden import messages
-from raiden.utils import isaddress, pex
+from raiden.utils import isaddress, make_address, pex
 from raiden.blockchain.net_contract import NettingChannelContract
 from raiden.blockchain.abi import (
     HUMAN_TOKEN_ABI,
@@ -30,7 +28,6 @@ from raiden.blockchain.abi import (
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-LETTERS = string.printable
 MOCK_REGISTRY_ADDRESS = '7265676973747279726567697374727972656769'
 
 GAS_LIMIT = 3141592  # Morden's gasLimit.
@@ -41,6 +38,23 @@ FILTER_ID_GENERATOR = count()
 DEFAULT_POLL_TIMEOUT = 60
 
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
+
+# Coding standard for this module:
+#
+# There are two implementations, one based on the JSONRPCClient that will
+# request a real node and a Mock. The Mock is quite usefull for testing
+# purposes, because it's faster, sinc both implementation need to work with the
+# same code bases their interfaces must match exactly, so be sure to reflect
+# the change from one into another.
+#
+# The Json RPC implementation is based upon the pyethapp.rpc_client, this
+# client exposes object proxies for calling a contract as a usual python
+# object, for this module it was opted to expose a _synchronous_ interface to
+# the user by default, this interface should send the transaction, poll for
+# it's execution and if possible check if it was sucessfully executed, if not
+# report an error. Also, it was chosen to use an explicit coding, not reallying
+# on the `constant` modifier for `call`s and explicity passing the available
+# gas for the transaction and it's value.
 
 
 def patch_send_transaction(client, nonce_offset=0):
@@ -81,10 +95,6 @@ def new_filter(jsonrpc_client, contract_address, topics):
     }
 
     return jsonrpc_client.call('eth_newFilter', json_data)
-
-
-def make_address():
-    return bytes(''.join(random.choice(LETTERS) for _ in range(20)))
 
 
 def decode_topic(topic):
@@ -292,16 +302,28 @@ class Registry(object):
         return self.proxy.channelManagerByAsset.call(asset_address)
 
     def add_asset(self, asset_address):
-        transaction_hash = self.proxy.addAsset(
+        transaction_hash = self.proxy.addAsset.transact(
             asset_address,
             startgas=self.startgas,
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
-        return self.proxy.channelManagerByAsset.call(
+        channel_manager_address_encoded = self.proxy.channelManagerByAsset.call(
             asset_address,
             startgas=self.startgas,
-        ).decode('hex')
+        )
+
+        if not channel_manager_address_encoded:
+            log.error('add_asset failed', asset_address=pex(asset_address))
+            raise RuntimeError('add_asset failed')
+
+        channel_manager_address_bin = address_decoder(channel_manager_address_encoded)
+
+        log.info(
+            'add_asset called',
+            asset_address=pex(asset_address),
+            channel_manager_address=pex(channel_manager_address_bin),
+        )
 
     def asset_addresses(self):
         return [
@@ -363,7 +385,7 @@ class ChannelManager(object):
         else:
             other = peer1
 
-        transaction_hash = self.proxy.newChannel(
+        transaction_hash = self.proxy.newChannel.transact(
             other,
             settle_timeout,
             startgas=self.startgas,
@@ -371,15 +393,25 @@ class ChannelManager(object):
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
-        assert len(self.proxy.address)
-
-        address_encoded = self.proxy.getChannelWith.call(
+        netting_channel_address_encoded = self.proxy.getChannelWith.call(
             other,
             startgas=self.startgas,
         )
-        address_decoded = address_decoder(address_encoded)
-        assert len(address_decoded)
-        return address_decoded
+
+        if not netting_channel_address_encoded:
+            log.error('netting_channel_address failed', peer1=pex(peer1), peer2=pex(peer2))
+            raise RuntimeError('netting_channel_address failed')
+
+        netting_channel_address_bin = address_decoder(netting_channel_address_encoded)
+
+        log.info(
+            'new_netting_channel called',
+            peer1=pex(peer1),
+            peer2=pex(peer2),
+            netting_channel=pex(netting_channel_address_bin),
+        )
+
+        return netting_channel_address_bin
 
     def channels_addresses(self):
         # for simplicity the smart contract return a shallow list where every
@@ -490,13 +522,13 @@ class NettingChannel(object):
         return settle_timeout
 
     def isopen(self):
-        if self.proxy.closed(startgas=self.startgas) != 0:
+        if self.proxy.closed.call() != 0:
             return False
 
-        return self.proxy.opened(startgas=self.startgas) != 0
+        return self.proxy.opened.call() != 0
 
     def partner(self, our_address):
-        data = self.proxy.addressAndBalance.call(startgas=self.startgas)
+        data = self.proxy.addressAndBalance.call()
 
         if data[0].decode('hex') == our_address:
             return address_decoder(data[2].decode('hex'))
@@ -521,6 +553,8 @@ class NettingChannel(object):
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
+        log.info('deposit called', contract=pex(self.address), amount=amount)
+
     def opened(self):
         return self.proxy.opened.call()
 
@@ -534,15 +568,40 @@ class NettingChannel(object):
         if first_transfer and second_transfer:
             first_encoded = first_transfer.encode()
             second_encoded = second_transfer.encode()
-            self.proxy.close(first_encoded, second_encoded)
+
+            transaction_hash = self.proxy.close.transact(
+                first_encoded,
+                second_encoded,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+            log.info('close called', contract=pex(self.address), first_transfer=first_transfer, second_transfer=second_transfer)
 
         elif first_transfer:
             first_encoded = first_transfer.encode()
-            self.proxy.closeSingleTransfer(first_encoded)
+
+            transaction_hash = self.proxy.closeSingleTransfer.transact(
+                first_encoded,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+            log.info('close called', contract=pex(self.address), first_transfer=first_transfer)
 
         elif second_transfer:
             second_encoded = second_transfer.encode()
-            self.proxy.closeSingleTransfer(second_encoded)
+
+            transaction_hash = self.proxy.closeSingleTransfer.transact(
+                second_encoded,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+            log.info('close called', contract=pex(self.address), second_transfer=second_transfer)
 
         else:
             # TODO: allow to close nevertheless
@@ -551,10 +610,49 @@ class NettingChannel(object):
     def update_transfer(self, our_address, transfer):
         if transfer is not None:
             transfer_encoded = transfer.encode()
-            self.proxy.updateTransfer(transfer_encoded)
+
+            transaction_hash = self.proxy.updateTransfer.transact(
+                transfer_encoded,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+            # TODO: check if the ChannelSecretRevealed event was emitted and if it wasn't raise an error
+
+        log.info('update_transfer called', contract=pex(self.address), transfer=transfer)
+
+    def unlock(self, our_address, unlock_proofs):
+        unlock_proofs = list(unlock_proofs)  # force a list to get the length (could be a generator)
+        log.info('{} locks to unlock'.format(len(unlock_proofs)), contract=pex(self.address))
+
+        for merkle_proof, locked_encoded, secret in unlock_proofs:
+            if isinstance(locked_encoded, messages.Lock):
+                raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
+
+            merkleproof_encoded = ''.join(merkle_proof)
+
+            transaction_hash = self.proxy.unlock.transact(
+                locked_encoded,
+                merkleproof_encoded,
+                secret,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+            # TODO: check if the ChannelSecretRevealed event was emitted and if it wasn't raise an error
+
+            # if log.getEffectiveLevel() >= logging.INFO:  # only decode the lock if need to
+            lock = messages.Lock.from_bytes(locked_encoded)
+            log.info('unlock called', contract=pex(self.address), lock=lock, secret=encode_hex(secret))
 
     def settle(self):
-        self.proxy.settle()
+        transaction_hash = self.proxy.settle.transact(
+            startgas=self.startgas,
+            gasprice=self.gasprice,
+        )
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
+        log.info('settle called', contract=pex(self.address))
 
     def channelnewbalance_filter(self):
         """ Install a new filter for ChannelNewBalance events.
@@ -957,13 +1055,13 @@ class NettingChannelMock(object):
                 transfer.encode(),
             )
 
-    def unlock(self, our_address, unlocked_transfers):
+    def unlock(self, our_address, unlock_proofs):
         ctx = {
             'block_number': self.blockchain.block_number(),
             'msg.sender': our_address,
         }
 
-        for merkle_proof, locked_encoded, secret in unlocked_transfers:
+        for merkle_proof, locked_encoded, secret in unlock_proofs:
             if isinstance(locked_encoded, messages.Lock):
                 raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
 

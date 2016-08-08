@@ -2,6 +2,7 @@
 import pytest
 import gevent
 import gevent.monkey
+from ethereum import slogging
 from ethereum.keys import privtoaddr, PBKDF2_CONSTANTS
 from ethereum._solidity import compile_file
 from pyethapp.rpc_client import JSONRPCClient
@@ -37,9 +38,11 @@ from raiden.tests.utils.network import (
 gevent.monkey.patch_socket()
 gevent.get_hub().SYSTEM_ERROR = BaseException
 PBKDF2_CONSTANTS['c'] = 100
+log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def _raiden_cleanup(request, raiden_apps):
+    """ Helper to do proper cleanup. """
     def _cleanup():
         for app in raiden_apps:
             app.stop()
@@ -47,6 +50,77 @@ def _raiden_cleanup(request, raiden_apps):
         # kill all leftover tasklets
         cleanup_tasks()
     request.addfinalizer(_cleanup)
+
+
+def _hydrachain_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):
+    """ Helper to do proper cleanup. """
+    hydrachain_apps = create_hydrachain_cluster(
+        private_keys,
+        cluster_private_keys,
+        p2p_base_port,
+        str(tmpdir),
+    )
+
+    def _cleanup():
+        for app in hydrachain_apps:
+            app.stop()
+
+        cleanup_tasks()
+
+    request.addfinalizer(_cleanup)
+    return hydrachain_apps
+
+
+def _geth_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):
+    """ Helper to do proper cleanup. """
+    verbosity = request.config.option.verbose
+
+    geth_processes = create_geth_cluster(
+        private_keys,
+        cluster_private_keys,
+        p2p_base_port,
+        str(tmpdir),
+        verbosity,
+    )
+
+    def _cleanup():
+        for process in geth_processes:
+            process.terminate()
+
+        # Then kill any remaining tasklet
+        cleanup_tasks()
+
+    request.addfinalizer(_cleanup)
+    return geth_processes
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        '--cluster-type',
+        choices=['hydrachain', 'geth'],
+        default='geth',
+    )
+    parser.addoption(
+        '--log-config',
+        default=None,
+    )
+
+
+@pytest.fixture(autouse=True)
+def logging_level(request):
+    if request.config.option.log_config is not None:
+        slogging.configure(request.config.option.log_config)
+        return
+
+    if request.config.option.verbose > 0:
+        slogging.configure(':DEBUG')
+
+
+@pytest.fixture(scope='session', autouse=True)
+def enable_greenlet_debugger(request):
+    if request.config.option.usepdb:
+        from pyethapp.utils import enable_greenlet_debugger
+        enable_greenlet_debugger()
 
 
 @pytest.fixture
@@ -105,47 +179,29 @@ def cluster_private_keys(cluster_number_of_nodes, cluster_key_seed):
 
 
 @pytest.fixture
-def hydrachain_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):
-    hydrachain_apps = create_hydrachain_cluster(
-        private_keys,
-        cluster_private_keys,
-        p2p_base_port,
-        str(tmpdir),
-    )
-
-    def _cleanup():
-        for app in hydrachain_apps:
-            app.stop()
-
-        cleanup_tasks()
-
-    request.addfinalizer(_cleanup)
-    return hydrachain_apps
-
-
-@pytest.fixture
-def geth_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):
-    geth_processes = create_geth_cluster(
-        private_keys,
-        cluster_private_keys,
-        p2p_base_port,
-        str(tmpdir),
-    )
-
-    def _cleanup():
-        for process in geth_processes:
-            process.terminate()
-
-        # Then kill any remaining tasklet
-        cleanup_tasks()
-
-    request.addfinalizer(_cleanup)
-    return geth_processes
-
-
-@pytest.fixture
 def cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):
-    return geth_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir)
+    cluster_type = request.config.option.cluster_type
+
+    if cluster_type == 'geth':
+        return _geth_cluster(
+            request,
+            private_keys,
+            cluster_private_keys,
+            p2p_base_port,
+            tmpdir,
+        )
+
+    if cluster_type == 'hydrachain':
+        return _hydrachain_cluster(
+            request,
+            private_keys,
+            cluster_private_keys,
+            p2p_base_port,
+            tmpdir,
+        )
+
+    # check pytest_addoption
+    raise ValueError('unknow cluster type {}'.format(cluster_type))
 
 
 @pytest.fixture
@@ -216,6 +272,8 @@ def raiden_chain(request, private_keys, asset, channels_per_node, deposit,
     blockchain_service_class = BlockChainServiceMock
     blockchain_service.new_channel_manager_contract(asset)
 
+    verbosity = request.config.option.verbose
+
     raiden_apps = create_sequential_network(
         private_keys,
         asset,
@@ -226,6 +284,7 @@ def raiden_chain(request, private_keys, asset, channels_per_node, deposit,
         poll_timeout,
         transport_class,
         blockchain_service_class,
+        verbosity,
     )
 
     _raiden_cleanup(request, raiden_apps)
@@ -244,6 +303,8 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
     for asset in assets_addresses:
         registry.add_asset(asset)
 
+    verbosity = request.config.option.verbose
+
     raiden_apps = create_network(
         private_keys,
         assets_addresses,
@@ -254,6 +315,7 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
         poll_timeout,
         transport_class,
         blockchain_service_class,
+        verbosity,
     )
 
     _raiden_cleanup(request, raiden_apps)
@@ -264,7 +326,7 @@ def raiden_network(request, private_keys, assets_addresses, channels_per_node,
 @pytest.fixture
 def deployed_network(request, private_keys, channels_per_node, deposit,
                      number_of_assets, settle_timeout, poll_timeout,
-                     transport_class, geth_cluster):
+                     transport_class, cluster):
 
     gevent.sleep(2)
     assert channels_per_node in (0, 1, 2, CHAIN), (
@@ -276,10 +338,14 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
     address = privtoaddr(privatekey)
     blockchain_service_class = BlockChainService
 
+    print_communication = False
+    if request.config.option.verbose > 7:
+        print_communication = True
+
     jsonrpc_client = JSONRPCClient(
         host='0.0.0.0',
         privkey=privatekey,
-        print_communication=False,
+        print_communication=print_communication,
     )
     patch_send_transaction(jsonrpc_client)
 
@@ -289,6 +355,7 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())
     registry_contracts = compile_file(registry_path, libraries=dict())
 
+    log.info('Deploying registry contract')
     registry_proxy = jsonrpc_client.deploy_solidity_contract(
         address,
         'Registry',
@@ -306,6 +373,7 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
     total_asset = total_per_node * len(private_keys)
     asset_addresses = []
     for _ in range(number_of_assets):
+        log.info('Deploying one Token contract')
         token_proxy = jsonrpc_client.deploy_solidity_contract(
             address,
             'HumanStandardToken',
@@ -335,6 +403,8 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
         for key in private_keys:
             assert token_proxy.balanceOf(privtoaddr(key)) == total_per_node  # pylint: disable=no-member
 
+    verbosity = request.config.option.verbose
+
     raiden_apps = create_sequential_network(
         private_keys,
         asset_addresses[0],
@@ -345,6 +415,7 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
         poll_timeout,
         transport_class,
         blockchain_service_class,
+        verbosity,
     )
 
     _raiden_cleanup(request, raiden_apps)
@@ -352,16 +423,20 @@ def deployed_network(request, private_keys, channels_per_node, deposit,
     return raiden_apps
 
 
-@pytest.fixture(scope='function')
-def discovery_blockchain(request, private_keys, geth_cluster, poll_timeout):
+@pytest.fixture
+def discovery_blockchain(request, private_keys, cluster, poll_timeout):
     gevent.sleep(2)
     privatekey = private_keys[0]
     address = privtoaddr(privatekey)
 
+    print_communication = False
+    if request.config.option.verbose > 7:
+        print_communication = True
+
     jsonrpc_client = JSONRPCClient(
         host='0.0.0.0',
         privkey=privatekey,
-        print_communication=False,
+        print_communication=print_communication,
     )
     patch_send_transaction(jsonrpc_client)
 

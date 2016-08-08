@@ -4,6 +4,7 @@ import gevent.monkey
 import pytest
 
 from ethereum import slogging
+from ethereum.utils import sha3
 
 from raiden.tests.utils.transfer import (
     assert_synched_channels,
@@ -23,85 +24,71 @@ slogging.configure(
 )
 
 
-@pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_event_new_channel(deployed_network, deposit, settle_timeout):
     app0, app1 = deployed_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_address = app0.raiden.chain.asset_addresses[0]
+    asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
 
-    assert len(app0.raiden.managers_by_asset_address[asset_address].channels_by_partner) == 0
-    assert len(app1.raiden.managers_by_asset_address[asset_address].channels_by_partner) == 0
+    assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 0
+    assert len(app1.raiden.managers_by_asset_address[asset_address].address_channel) == 0
 
-    netcontract_address = app0.raiden.chain.new_netting_contract(
-        asset_address,
+    asset0 = app0.raiden.chain.asset(asset_address)
+    manager0 = app0.raiden.chain.manager_by_asset(asset_address)
+
+    asset1 = app1.raiden.chain.asset(asset_address)
+
+    netcontract_address = manager0.new_netting_channel(
         app0.raiden.address,
         app1.raiden.address,
         settle_timeout,
     )
 
+    netting_channel0 = app0.raiden.chain.netting_channel(netcontract_address)
+    netting_channel1 = app1.raiden.chain.netting_channel(netcontract_address)
+
     gevent.sleep(0.1)  # let the task run
 
     # channel is created but not opened and without funds
-    assert len(app0.raiden.managers_by_asset_address[asset_address].channels_by_partner) == 1
-    assert len(app1.raiden.managers_by_asset_address[asset_address].channels_by_partner) == 1
+    assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 1
+    assert len(app1.raiden.managers_by_asset_address[asset_address].address_channel) == 1
 
-    channel0 = app0.raiden.managers_by_asset_address[asset_address].channels_by_partner.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address[asset_address].channels_by_partner.values()[0]
+    channel0 = app0.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
+    channel1 = app1.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
 
     assert_synched_channels(
         channel0, 0, [],
         channel1, 0, [],
     )
 
-    app0.raiden.chain.asset_approve(
-        asset_address,
-        netcontract_address,
-        deposit,
-    )
-
-    app0.raiden.chain.deposit(
-        asset_address,
-        netcontract_address,
-        app0.raiden.address,
-        deposit,
-    )
+    asset0.approve(netcontract_address, deposit)
+    netting_channel0.deposit(app0.raiden.address, deposit)
 
     gevent.sleep(0.1)  # let the task run
 
     # channel is open but single funded
-    assert len(app0.raiden.managers_by_asset_address[asset_address].channels_by_partner) == 1
-    assert len(app1.raiden.managers_by_asset_address[asset_address].channels_by_partner) == 1
+    assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 1
+    assert len(app1.raiden.managers_by_asset_address[asset_address].address_channel) == 1
 
-    channel0 = app0.raiden.managers_by_asset_address[asset_address].channels_by_partner.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address[asset_address].channels_by_partner.values()[0]
+    channel0 = app0.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
+    channel1 = app1.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
 
     assert_synched_channels(
         channel0, deposit, [],
         channel1, 0, [],
     )
 
-    app1.raiden.chain.asset_approve(
-        asset_address,
-        netcontract_address,
-        deposit,
-    )
-
-    app1.raiden.chain.deposit(
-        asset_address,
-        netcontract_address,
-        app1.raiden.address,
-        deposit,
-    )
+    asset1.approve(netcontract_address, deposit)
+    netting_channel1.deposit(app1.raiden.address, deposit)
 
     # channel is open and funded by both participants
-    assert len(app0.raiden.managers_by_asset_address[asset_address].channels_by_partner) == 1
-    assert len(app1.raiden.managers_by_asset_address[asset_address].channels_by_partner) == 1
+    assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 1
+    assert len(app1.raiden.managers_by_asset_address[asset_address].address_channel) == 1
 
-    channel0 = app0.raiden.managers_by_asset_address[asset_address].channels_by_partner.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address[asset_address].channels_by_partner.values()[0]
+    channel0 = app0.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
+    channel1 = app1.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
 
     assert_synched_channels(
         channel0, deposit, [],
@@ -109,7 +96,6 @@ def test_event_new_channel(deployed_network, deposit, settle_timeout):
     )
 
 
-@pytest.mark.xfail(reason='flaky test')  # this test has timeout issues that need to be fixed
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -119,20 +105,32 @@ def test_secret_revealed(deployed_network, deposit):
     asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
     amount = 10
 
+    channel21 = channel(app2, app1, asset_address)
+    netting_channel = channel21.external_state.netting_channel
+
     secret = pending_mediated_transfer(deployed_network, asset_address, amount)
+    hashlock = sha3(secret)
 
-    mediated_transfer = get_received_transfer(
-        channel(app2, app1, asset_address),
-        0,
+    gevent.sleep(.1)  # wait for the messages
+
+    # balance_proof is ephemeral, for each new transfer it will be discarded
+    balance_proof = channel21.our_state.balance_proof
+    proof = balance_proof.get_proof_for(secret, hashlock)
+
+    # the secret hasn't been revealed yet (through messages)
+    assert len(balance_proof.pendinglocks) == 1
+    proofs = list(balance_proof.get_known_unlocks())
+    assert len(proofs) == 0
+
+    netting_channel.close(app2.raiden.address, balance_proof.transfer, None)
+
+    # reveal it through the blockchain (this needs to emit the SecretRevealed event)
+    netting_channel.unlock(
+        app2.raiden.address,
+        [proof],
     )
 
-    merkle_proof = channel(app2, app1, asset_address).our_state.locked.get_proof(mediated_transfer)
-
-    channel(app2, app1, asset_address).netting_contract.unlock(
-        [(merkle_proof, mediated_transfer.lock, secret)],
-    )
-
-    gevent.sleep(0.1)  # let the task run
+    channel21.settle_event.wait(timeout=60)
 
     assert_synched_channels(
         channel(app1, app2, asset_address), deposit - amount, [],

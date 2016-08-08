@@ -5,7 +5,6 @@ import gevent
 import pytest
 from ethereum import slogging
 
-from raiden.raiden_protocol import RaidenProtocol
 from raiden.messages import decode, Ack, DirectTransfer, RefundTransfer
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
@@ -13,9 +12,6 @@ from raiden.utils import pex, sha3
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
-
-from pyethapp.utils import enable_greenlet_debugger
-enable_greenlet_debugger()
 
 
 @pytest.mark.parametrize('privatekey_seed', ['transfer:{}'])
@@ -94,63 +90,72 @@ def test_transfer(raiden_network):
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('number_of_nodes', [10])
 def test_mediated_transfer(raiden_network):
-    RaidenProtocol.try_interval = 0.1
 
-    app0 = raiden_network[0]
+    def get_channel(from_, to_):
+        return ams_by_address[from_][asset_address].partneraddress_channel[to_]
+
+    alice_app = raiden_network[0]
     setup_messages_cb()
 
-    am0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager = alice_app.raiden.managers_by_asset_address.values()[0]
+    asset_address = asset_manager.asset_address
 
     # search for a path of length=2 A > B > C
     num_hops = 2
-    source = app0.raiden.address
+    initiator_address = alice_app.raiden.address
 
-    path_list = am0.channelgraph.get_paths_of_length(source, num_hops)
-    assert len(path_list)
+    paths_length_2 = asset_manager.channelgraph.get_paths_of_length(
+        initiator_address,
+        num_hops,
+    )
 
-    for path in path_list:
+    assert len(paths_length_2)
+    for path in paths_length_2:
         assert len(path) == num_hops + 1
-        assert path[0] == source
+        assert path[0] == initiator_address
 
-    path = path_list[0]
-    target = path[-1]
-    assert path in am0.channelgraph.get_shortest_paths(source, target)
-    assert min(len(p) for p in am0.channelgraph.get_shortest_paths(source, target)) == num_hops + 1
+    path = paths_length_2[0]
+
+    alice_address, bob_address, charlie_address = path
+
+    shortest_paths = list(asset_manager.channelgraph.get_shortest_paths(
+        initiator_address,
+        charlie_address,
+    ))
+
+    assert path in shortest_paths
+    assert min(len(path) for path in shortest_paths) == num_hops + 1
 
     ams_by_address = dict(
         (app.raiden.address, app.raiden.managers_by_asset_address)
         for app in raiden_network
     )
 
-    # addresses
-    hop1, hop2, hop3 = path
+    # channels (alice <-> bob <-> charlie)
+    channel_ab = get_channel(alice_address, bob_address)
+    channel_ba = get_channel(bob_address, alice_address)
+    channel_bc = get_channel(bob_address, charlie_address)
+    channel_cb = get_channel(charlie_address, bob_address)
 
-    # asset
-    asset_address = am0.asset_address
-
-    # channels
-    c_ab = ams_by_address[hop1][asset_address].partneraddress_channel[hop2]
-    c_ba = ams_by_address[hop2][asset_address].partneraddress_channel[hop1]
-    c_bc = ams_by_address[hop2][asset_address].partneraddress_channel[hop3]
-    c_cb = ams_by_address[hop3][asset_address].partneraddress_channel[hop2]
-
-    # initial channel balances
-    b_ab = c_ab.balance
-    b_ba = c_ba.balance
-    b_bc = c_bc.balance
-    b_cb = c_cb.balance
+    initial_balance_ab = channel_ab.balance
+    initial_balance_ba = channel_ba.balance
+    initial_balance_bc = channel_bc.balance
+    initial_balance_cb = channel_cb.balance
 
     amount = 10
 
-    app0.raiden.api.transfer(asset_address, amount, target)
+    alice_app.raiden.api.transfer(
+        asset_address,
+        amount,
+        charlie_address,
+    )
 
     gevent.sleep(1.)
 
-    # check
-    assert b_ab - amount == c_ab.balance
-    assert b_ba + amount == c_ba.balance
-    assert b_bc - amount == c_bc.balance
-    assert b_cb + amount == c_cb.balance
+    assert initial_balance_ab - amount == channel_ab.balance
+    assert initial_balance_ba + amount == channel_ba.balance
+    assert initial_balance_bc - amount == channel_bc.balance
+    assert initial_balance_cb + amount == channel_cb.balance
 
 
 @pytest.mark.xfail(reason='not implemented')

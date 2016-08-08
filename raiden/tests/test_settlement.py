@@ -13,7 +13,6 @@ from raiden.tests.utils.transfer import (
     get_received_transfer,
     get_sent_transfer,
     pending_mediated_transfer,
-    transfer,
     register_secret,
 )
 from raiden.utils import sha3
@@ -55,17 +54,25 @@ def test_settlement(raiden_network, settle_timeout):
     channel1.register_transfer(transfermessage)
 
     assert_synched_channels(
-        channel0, balance0, [transfermessage.lock],
-        channel1, balance1, []
+        channel0, balance0, [],
+        channel1, balance1, [transfermessage.lock],
     )
 
     # Bob learns the secret, but Alice did not send a signed updated balance to
     # reflect this Bob wants to settle
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
-    merkle_proof = channel1.our_state.locked.get_proof(transfermessage)
-    root = channel1.our_state.locked.root
-    assert check_proof(merkle_proof, root, sha3(transfermessage.lock.as_bytes))
+    unlock_proof = channel1.our_state.balance_proof.get_proof_for(secret, hashlock)
+
+    root = channel1.our_state.compute_merkleroot()
+
+    assert check_proof(
+        unlock_proof.merkle_proof,
+        root,
+        sha3(transfermessage.lock.as_bytes),
+    )
+    assert unlock_proof.lock_encoded == transfermessage.lock.as_bytes
+    assert unlock_proof.secret == secret
 
     channel0.external_state.netting_channel.close(
         app0.raiden.address,
@@ -73,11 +80,9 @@ def test_settlement(raiden_network, settle_timeout):
         None,
     )
 
-    unlocked = [(merkle_proof, transfermessage.lock.as_bytes, secret)]
-
     channel0.external_state.netting_channel.unlock(
         app0.raiden.address,
-        unlocked,
+        [unlock_proof],
     )
 
     for _ in range(settle_timeout):
@@ -100,11 +105,12 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
 
     # mediated transfer
     secret = pending_mediated_transfer(raiden_network, asset, amount)
+    hashlock = sha3(secret)
 
     # get a proof for the pending transfer
     back_channel = channel(app1, app0, asset)
     secret_transfer = get_received_transfer(back_channel, 0)
-    merkle_proof = back_channel.our_state.locked.get_proof(secret_transfer)
+    merkle_proof = back_channel.our_state.balance_proof.get_proof_for(secret, hashlock)
 
     # reveal the secret
     register_secret(raiden_network, asset, secret)

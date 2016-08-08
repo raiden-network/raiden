@@ -1,6 +1,10 @@
 # -*- coding: utf8 -*-
+from collections import defaultdict, namedtuple
+
+import gevent
 from ethereum import slogging
 from ethereum.utils import encode_hex
+from gevent.event import Event
 
 from raiden.messages import (
     BaseError,
@@ -9,10 +13,14 @@ from raiden.messages import (
     LockedTransfer,
     TransferTimeout,
 )
-from raiden.mtree import merkleroot, get_proof
+from raiden.mtree import merkleroot
 from raiden.utils import sha3, pex, lpex
+from raiden.tasks import REMOVE_CALLBACK
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+UnlockProof = namedtuple('UnlockProof', ('merkle_proof', 'lock_encoded', 'secret'))
 
 
 class InvalidNonce(BaseError):
@@ -35,142 +43,92 @@ class InsufficientBalance(BaseError):
     pass
 
 
-class LockedTransfers(object):
-    """ Mapping container for transactions with locked asset, mapping lockroot
-    to transfer.
+class BalanceProof(object):
+    """ Saves the state required to settle a netting contract. """
 
-    Container class used to keep track of transfers that have asset locked
-    because of the lack of the secret. The container can produce a updated
-    merkle root or proof that a given lock is included in the set.
-    """
+    def __init__(self, transfer, pendinglocks):
+        if not isinstance(pendinglocks, dict):
+            raise ValueError('pendinglocks must be a dictionary')
 
-    def __init__(self):
-        self.locked = dict()  #: A mapping from hashlock to the transfer
-        self._cached_lock_hashes = []  #: lock's hash cache `sha3(amount || expiration || hashlock)`
-        self._cached_root = None  #: the merkle proof of the current transfers
+        # gradualy move locks from pending to unlocked as secrets are revealed,
+        # preserve the merkletree and the lock data so that proofs can be
+        # calculated.
+        self.pendinglocks = pendinglocks
+        self.unlockedlocks = dict()
 
-    def __contains__(self, hashlock):
-        """ Return True if there is a pending transfer with the given hashlock, False otherwise. """
-        return hashlock in self.locked
+        merkletree = [
+            lockhashed
+            for _, lockhashed in pendinglocks.values()
+        ]
+        self._transfer = transfer
+        self._merkletree = merkletree
 
-    def __len__(self):
-        """ Return the count of pending transfers. """
-        return len(self.locked)
-
-    def __getitem__(self, hashlock):
-        """ Lookup a pending transfer by it's hashlock. """
-        return self.locked[hashlock]
-
-    def __iter__(self):
-        return self.locked.iterkeys()
-
-    def add(self, transfer):
-        """ Add a new mediated transfer into the set, registering it's lock.
-
-        This is used when a new transfer with locked asset is being created and
-        the path of nodes is being traversed from *initiator* to *target*. The
-        sender is the node from the channel that will transfer a given amount
-        of asset once the secret is revealed.
-
-        Motivation
-        ----------
-
-        The sender needs to use this method before sending a locked transfer,
-        otherwise the calculated locksroot of the transfer message will be
-        invalid and the transfer will be rejected by the partner. Since the
-        sender wants the transfer to be accepted by the receiver otherwise the
-        transfer won't proceed and the sender won't receive its fee.
-
-        The receiver needs to use this method to update the container with a
-        _valid_ transfer, otherwise the locksroot will not contain the pending
-        transfer. The receiver needs to ensure that the merkle root has the
-        hashlock include, otherwise it won't be able to claim it.
-
-        Args:
-            transfer (LockedTransfer): The transfer to be added.
-        """
-        assert transfer.lock.hashlock not in self.locked
-        self.locked[transfer.lock.hashlock] = transfer
-        self._cached_lock_hashes.append(sha3(transfer.lock.as_bytes))
-        self._cached_root = None
-
-    get = __getitem__
-
-    def remove(self, hashlock):
-        """ Remove a transfer from the locked set.
-
-        Args:
-            hashlock: The hashlock of the corresponding transfer.
-        """
-        self._cached_lock_hashes.remove(sha3(self.get(hashlock).lock.as_bytes))
-        self._cached_root = None
-        del self.locked[hashlock]
+    # api design: transfer and merkletree must be read-only for the life-time
+    # of a BalanceProof instance.
+    @property
+    def transfer(self):
+        # XXX: copy the transfer
+        return self._transfer
 
     @property
-    def outstanding(self):
-        """ Return the amount of asset that is locked in this container. """
-        return sum(
-            transfer.lock.amount
-            for transfer in self.locked.values()
+    def merkletree(self):
+        return list(self._merkletree)
+
+    def is_pending(self, hashlock):
+        """ True if a secret is needed for the given `hashlock`.
+
+        Returns:
+            True: If a secret is need for the given `hashlock`.
+            False: If the `hashlock` is *unknown*, this could mean the secret
+                was revealed or that the `hashlock` is completely unknown.
+        """
+        return hashlock in self.pendinglocks
+
+    def get_pending_lock(self, hashlock):
+        """ Return the corresponding lock for the given `hashlock`. """
+        lock, _ = self.pendinglocks[hashlock]
+        return lock
+
+    def register_secret(self, secret, hashlock=None):
+        if hashlock is None:
+            hashlock = sha3(secret)
+
+        if hashlock not in self.pendinglocks:
+            raise ValueError('secret does not unlock any pending lock.')
+
+        lock, lockhashed = self.pendinglocks[hashlock]
+        self.unlockedlocks[hashlock] = (secret, lock, lockhashed)
+
+        del self.pendinglocks[hashlock]
+
+    def get_known_unlocks(self):
+        """ Generate unlocking proofs for the known secrets. """
+        for secret, hashlock, _ in self.unlockedlocks.values():
+            yield self.get_proof_for(secret, hashlock)
+
+    def get_proof_for(self, secret, hashlock):
+        if hashlock in self.unlockedlocks:
+            secret2, lock, lockhashed = self.unlockedlocks[hashlock]
+
+            if secret != secret2:
+                raise ValueError('secret mismatch')
+
+        elif hashlock in self.pendinglocks:
+            lock, lockhashed = self.pendinglocks[hashlock]
+
+        else:
+            raise ValueError('Unknow hashlock')
+
+        lock_encoded = bytes(lock.as_bytes)  # forcing bytes because ethereum.abi doesnt work with bytearray
+        lock_hash = sha3(lock_encoded)
+        merkle_proof = [lock_hash]
+        merkleroot(list(self.merkletree), merkle_proof)
+
+        return UnlockProof(
+            merkle_proof,
+            lock_encoded,
+            secret,
         )
-
-    # XXX: Remove expired transfers?
-
-    @property
-    def root(self):
-        if self._cached_root is None:
-            self._cached_root = merkleroot(self._cached_lock_hashes)
-        return self._cached_root
-
-    def root_with(self, lock=None, exclude=None):
-        """ Calculate the merkle root of the hashes in the container.
-
-        Args:
-            lock: Additional hashlock to be included in the merkle tree, used
-                to calculate the updated merkle root without changing the store.
-            exclude: Hashlock to be ignored, used to calculated a the updated
-                merkle root without changing the store.
-        """
-        if lock and not isinstance(lock, Lock):
-            raise ValueError('lock must be a Lock')
-
-        if exclude and not isinstance(exclude, Lock):
-            raise ValueError('exclude must be a Lock')
-
-        lock_hash = exclude_hash = None
-
-        # temporarily add
-        if lock:
-            lock_hash = sha3(lock.as_bytes)
-            self._cached_lock_hashes.append(lock_hash)
-
-        # temporarily remove
-        if exclude:
-            exclude_hash = sha3(exclude.as_bytes)
-            self._cached_lock_hashes.remove(exclude_hash)
-
-        root = merkleroot(self._cached_lock_hashes)
-
-        # remove the temporarily added hash
-        if lock_hash:
-            assert lock_hash in self._cached_lock_hashes
-            self._cached_lock_hashes.remove(lock_hash)
-
-        # reinclude the temporarily removed hash
-        if exclude:
-            self._cached_lock_hashes.append(exclude_hash)
-
-        return root
-
-    def get_proof(self, transfer):
-        """ Return the merkle proof that transfer is one of the locked
-        transfers in the container.
-        """
-        hashlock = transfer.lock.hashlock
-        transfer = self.locked[hashlock]
-        proof_for = sha3(transfer.lock.as_bytes)
-        proof = get_proof(self._cached_lock_hashes, proof_for)
-        return proof
 
 
 class ChannelEndState(object):
@@ -181,40 +139,199 @@ class ChannelEndState(object):
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
 
-        self.contract_balance = participant_balance  #: total asset locked in the contract
-        self.transfered_amount = 0  #: total amount of transfered asset
-        self.address = participant_address  #: node's address
+        self.contract_balance = participant_balance
+        self.address = participant_address
 
+        # amount of asset transfered and unlocked
+        self.transfered_amount = 0
+
+        # sequential nonce, current value has not been used.
         # 0 is used in the netting contract to represent the lack of a
         # transfer, so this value must start at 1
-        self.nonce = 1  #: sequential nonce, current value has not been used
-        self.locked = LockedTransfers()  #: locked received
+        self.nonce = 1
+
+        # contains the last known message with a valid signature and
+        # transfered_amount, the secrets revealed since that transfer, and the
+        # pending locks
+        self.balance_proof = BalanceProof(None, dict())
+
+        # This contains only the locks for which there is no secret know yet. It
+        # does not imply that a proof of balance exists for the current unlocked
+        # balance.
+        self.hashlock_pendinglock = dict()
+
+    def locked(self):
+        """ Return how much asset is locked waiting for a secret. """
+        return sum(
+            lock.amount
+            for lock, _ in self.balance_proof.pendinglocks.values()
+        )
+
+    def update_contract_balance(self, contract_balance):
+        """ Update the contract balance, it must always increase. """
+        if contract_balance < self.contract_balance:
+            log.error('contract_balance cannot decrease')
+            raise ValueError('contract_balance cannot decrease')
+
+        self.contract_balance = contract_balance
 
     def balance(self, other):
         """ Return the current available balance of the participant. """
         return self.contract_balance - self.transfered_amount + other.transfered_amount
 
-    def update_contract_balance(self, contract_balance):
-        """ Update the current participant's balance. """
-        self.contract_balance = contract_balance
-
     def distributable(self, other):
         """ Return the available amount of the asset that can be transfered in
-        the channel `(total - locked)`.
+        the channel.
         """
-        return self.balance(other) - other.locked.outstanding
+        return self.balance(other) - other.locked()
 
-    def claim_locked(self, partner, secret, locksroot=None):
-        """ Update the balance of this end of the channel by claiming the
-        transfer.
+    def compute_merkleroot(self):
+        """ Compute the resulting merkle root if the lock `include` is added. """
+        if self.balance_proof is None:
+            return ''
 
-        This methods needs to be called once a `Secret` message is received,
-        otherwise the nodes can get out-of-sync and messages will be rejected.
+        temporary_tree = [
+            lockhashed
+            for _, lockhashed in self.balance_proof.pendinglocks.values()
+        ]
+        root = merkleroot(temporary_tree)
+
+        return root
+
+    def compute_merkleroot_with(self, include, lockhashed=None):
+        """ Compute the resulting merkle root if the lock `include` is added. """
+
+        if not isinstance(include, Lock):
+            raise ValueError('include must be a Lock')
+
+        # exploit the cached sha3(lock.as_bytes) in the pendinglocks
+        temporary_tree = [
+            lockhashed_
+            for _, lockhashed_ in self.balance_proof.pendinglocks.values()
+        ]
+
+        if lockhashed is None:
+            include_hash = sha3(include.as_bytes)
+        else:
+            include_hash = lockhashed
+
+        temporary_tree.append(include_hash)
+        root = merkleroot(temporary_tree)
+
+        return root
+
+    def compute_merkleroot_without(self, exclude):
+        """ Compute the resulting merkle root if the lock `exclude` is removed. """
+
+        if isinstance(exclude, Lock):
+            raise ValueError('exclude must be a Lock')
+
+        if exclude.hashlock not in self.balance_proof.pendinglocks:
+            raise ValueError('unknown lock `exclude`', exclude=exclude)
+
+        # exploit the cached sha3(lock.as_bytes) in the pendinglocks
+        temporary_tree = [
+            lockhashed
+            for _, lockhashed in self.balance_proof.pendinglocks.values()
+        ]
+
+        exclude_hash = sha3(exclude.as_bytes)
+        temporary_tree.remove(exclude_hash)
+        root = merkleroot(temporary_tree)
+
+        return root
+
+    # api design: using specialized methods to force the user to register the
+    # transfer and the lock in a single step
+    def register_locked_transfer(self, transfer):
+        """ Register the latest known transfer.
+
+        The sender needs to use this method before sending a locked transfer,
+        otherwise the calculate locksroot of the transfer message will be
+        invalid and the transfer will be rejected by the partner. Since the
+        sender wants the transfer to be accepted by the receiver otherwise the
+        transfer won't proceed and the sender won't receive it's fee.
+
+        The receiver needs to use this method to update the container with a
+        _valid_ transfer, otherwise the locksroot will not contain the pending
+        transfer. The receiver needs to ensure that the merkle root has the
+        hashlock include, otherwise it won't be able to claim it.
+
+        Args:
+            transfer (LockedTransfer): The transfer to be added.
+        """
+        if not isinstance(transfer, LockedTransfer):
+            raise ValueError('transfer must be LockedTransfer')
+
+        lock = transfer.lock
+
+        if self.balance_proof.is_pending(lock.hashlock):
+            raise ValueError('hashlock is already registered')
+
+        # this value is being cached by:
+        # - copying the pendinglocks from the previous `balance_proof`
+        #   preserving the computed hashes
+        # - computing it here and using this value for the compute_merkleroot_with
+        # - reusing pendinglocks in compute_merkleroot_with/out methods
+        lockhashed = sha3(lock.as_bytes)
+
+        new_locksroot = self.compute_merkleroot_with(lock, lockhashed=lockhashed)
+        if transfer.locksroot != new_locksroot:
+            raise ValueError(
+                'locksroot mismatch',
+                expected=new_locksroot,
+                sent=transfer.locksroot,
+            )
+
+        pendinglocks = dict(self.balance_proof.pendinglocks)
+        pendinglocks[lock.hashlock] = (lock, lockhashed)
+
+        self.balance_proof = BalanceProof(
+            transfer,
+            pendinglocks,
+        )
+
+    def register_direct_transfer(self, transfer):
+        if not isinstance(transfer, DirectTransfer):
+            raise ValueError('transfer must be a DirectTransfer')
+
+        # exploit the cached sha3(lock.as_bytes) in the pendinglocks
+        temporary_tree = [
+            lockhashed
+            for _, lockhashed in self.balance_proof.pendinglocks.values()
+        ]
+        current_locksroot = merkleroot(temporary_tree)
+
+        if transfer.locksroot != current_locksroot:
+            raise ValueError(
+                'locksroot mismatch',
+                expected=current_locksroot,
+                sent=transfer.locksroot,
+            )
+
+        pendinglocks = dict(self.balance_proof.pendinglocks)
+
+        self.balance_proof = BalanceProof(
+            transfer,
+            pendinglocks,
+        )
+
+    def register_secret(self, partner, secret):
+        """ Register the secret and update the balances for the unlocked
+        amount.
+
+        This methods needs to be called once a `Secret` message is received or
+        a `SecretRevealed` event happens, otherwise the nodes can get
+        out-of-sync and messages will be rejected.
+
+        Note:
+            As a sender remove the freed hashlock to avoid double netting of a
+            locked transfer (as a receiver this is "just" synching).
 
         Args:
             partner: The partner end from which we are receiving, this is
                 required to keep both ends in sync.
-            secret: Releases a lock.
+            secret: The secret being registered.
 
         Raises:
             InvalidSecret: If there is no lock register for the given secret
@@ -228,49 +345,121 @@ class ChannelEndState(object):
         # locksroot that acknowledges the unlocked asset
         hashlock = sha3(secret)
 
-        if hashlock not in self.locked:
-            raise InvalidSecret(hashlock)
-
+        # Start of the critical read/write section
+        #
         # The balance and lockroot work hand-in-hand, both values need to be
         # synchronized at all times with the penalty of losing asset.
         #
         # This section works for cooperative multitasking, for preempted
         # multitasking synchronization needs to be done.
 
-        # start of the critical write section
-        lock = self.locked[hashlock].lock
-        if locksroot and self.locked.root_with(None, exclude=lock) != locksroot:
-            raise InvalidLocksRoot(hashlock)
+        if not self.balance_proof.is_pending(hashlock):
+            raise InvalidSecret(hashlock)
 
-        # Indirectly update balance by setting the partner's transfered_amount,
-        # the new value needs to be checked
+        lock = self.balance_proof.get_pending_lock(hashlock)
         amount = lock.amount
+
+        # Indirectly update balance by setting the partner's transfered_amount
         partner.transfered_amount += amount
 
-        # Important: as a sender remove the freed hashlock to avoid double
-        # netting of a locked transfer (as a receiver this is "just" synching)
-        self.locked.remove(hashlock)
-        # end of the critical write section
+        self.balance_proof.register_secret(secret, hashlock=hashlock)
+        # end of the critical read/write section
 
 
 class ChannelExternalState(object):
-    def __init__(self, register_channel_for_hashlock, get_block_number, netting_channel):
+    def __init__(self, register_block_alarm, register_channel_for_hashlock,
+                 get_block_number, netting_channel):
+        self.register_block_alarm = register_block_alarm
         self.register_channel_for_hashlock = register_channel_for_hashlock
         self.get_block_number = get_block_number
 
         self.netting_channel = netting_channel
-        self.opened_block = netting_channel.opened()
-        self.closed_block = netting_channel.closed()
-        self.settled_block = netting_channel.settled()
+
+        # api design: allow the user to access these attributes as read-only
+        # but force him to use the `set_` methods, the use of methods is to
+        # signal that additinal code might get executed
+        self._opened_block = netting_channel.opened()
+        self._closed_block = netting_channel.closed()
+        self._settled_block = netting_channel.settled()
+
+        self.callbacks_opened = list()
+        self.callbacks_closed = list()
+        self.callbacks_settled = list()
+
+    @property
+    def opened_block(self):
+        return self._opened_block
+
+    @property
+    def closed_block(self):
+        return self._closed_block
+
+    @property
+    def settled_block(self):
+        return self._settled_block
+
+    def set_opened(self, block_number):
+        if self._opened_block != 0:
+            raise RuntimeError('channel is already open')
+
+        self._opened_block = block_number
+
+        for callback in self.callbacks_opened:
+            callback(block_number)
+
+    def set_closed(self, block_number):
+        if self._closed_block != 0:
+            raise RuntimeError('channel is already closed')
+
+        self._closed_block = block_number
+
+        for callback in self.callbacks_closed:
+            callback(block_number)
+
+    def set_settled(self, block_number):
+        if self._settled_block != 0:
+            raise RuntimeError('channel is already settled')
+
+        self._settled_block = block_number
+
+        for callback in self.callbacks_settled:
+            callback(block_number)
+
+    def callback_on_opened(self, callback):
+        if self._opened_block != 0:
+            callback(self._opened_block)
+
+        self.callbacks_opened.append(callback)
+
+    def callback_on_closed(self, callback):
+        if self._closed_block != 0:
+            callback(self._closed_block)
+
+        self.callbacks_closed.append(callback)
+
+    def callback_on_settled(self, callback):
+        if self._settled_block != 0:
+            callback(self._settled_block)
+
+        self.callbacks_settled.append(callback)
 
     def isopen(self):
-        if self.closed_block != 0:
+        if self._closed_block != 0:
             return False
 
-        if self.opened_block != 0:
+        if self._opened_block != 0:
             return True
 
         return False
+
+    def update_transfer(self, our_address, transfer):
+        return self.netting_channel.update_transfer(our_address, transfer)
+
+    def unlock(self, our_address, unlock_proofs):
+        return self.netting_channel.unlock(our_address, unlock_proofs)
+
+    def settle(self):
+        return self.netting_channel.settle()
 
 
 class Channel(object):
@@ -287,9 +476,19 @@ class Channel(object):
         self.settle_timeout = settle_timeout
         self.external_state = external_state
 
+        self.open_event = Event()
+        self.close_event = Event()
+        self.settle_event = Event()
+
+        external_state.callback_on_opened(lambda _: self.open_event.set())
+        external_state.callback_on_closed(lambda _: self.close_event.set())
+        external_state.callback_on_settled(lambda _: self.settle_event.set())
+
+        external_state.callback_on_closed(self.channel_closed)
+
         self.received_transfers = []
         self.sent_transfers = []  #: transfers that were sent, required for settling
-        self.transfer_callbacks = []  # list of (Transfer, callback) tuples
+        self.transfer_callbacks = defaultdict(list)  # mapping of transfer to callback list
 
     @property
     def isopen(self):
@@ -303,7 +502,7 @@ class Channel(object):
     @property
     def transfered_amount(self):
         """ Return how much we transfered to partner. """
-        return self.our_state.transfer_amount
+        return self.our_state.transfered_amount
 
     @property
     def balance(self):
@@ -329,21 +528,48 @@ class Channel(object):
         The locked value is equal to locked transfers that have being
         initialized but the secret has not being revealed.
         """
-        return self.partner_state.locked.outstanding
+        return self.partner_state.locked()
 
     @property
     def outstanding(self):
-        """ Return the current amount of asset that is we are waiting a secret
-        to be freed.
-        """
-        return self.our_state.locked.outstanding
+        return self.our_state.locked()
+
+    def channel_closed(self, block_number):
+        self.external_state.register_block_alarm(self.blockalarm_for_settle)
+
+        balance_proof = self.partner_state.balance_proof
+
+        transfer = balance_proof.transfer
+        unlock_proofs = balance_proof.get_known_unlocks()
+
+        self.external_state.update_transfer(self.our_state.address, transfer)
+        self.external_state.unlock(self.our_state.address, unlock_proofs)
+
+    def blockalarm_for_settle(self, block_number):
+        def _settle():
+            for _ in range(3):
+                try:
+                    self.external_state.settle()
+                except:
+                    log.exception('Timedout while calling settle')
+
+                # wait for the settle event, it could be our transaction or our
+                # partner's
+                self.settle_event.wait(0.5)
+
+                if self.settle_event.is_set():
+                    log.info('channel automatically settled')
+                    return
+
+        if self.external_state.closed_block + self.settle_timeout >= block_number:
+            gevent.spawn(_settle)  # don't block the alarm
+            return REMOVE_CALLBACK
 
     def handle_callbacks(self, transfer):
-        # TODO: dict mapping transfer -> callback + cleanup
-        for pos, (callback_transfer, callback) in enumerate(self.transfer_callbacks):
-            if callback_transfer is transfer:
-                callback(None, True)
-                del self.transfer_callbacks[pos]
+        for callback in self.transfer_callbacks[transfer]:
+            callback(None, True)
+
+        del self.transfer_callbacks[transfer]
 
     def get_state_for(self, node_address_bin):
         if self.our_state.address == node_address_bin:
@@ -354,7 +580,7 @@ class Channel(object):
 
         raise Exception('Unknow address {}'.format(encode_hex(node_address_bin)))
 
-    def claim_locked(self, secret, locksroot=None):
+    def register_secret(self, secret):
         """ Claim locked transfer from any of the ends of the channel.
 
         Args:
@@ -363,24 +589,28 @@ class Channel(object):
         hashlock = sha3(secret)
 
         # receiving a secret (releasing our funds)
-        if hashlock in self.our_state.locked:
+        if self.our_state.balance_proof.is_pending(hashlock):
+            lock = self.our_state.balance_proof.get_pending_lock(hashlock)
+
             log.debug('ASSET UNLOCKED node:{} asset:{} hashlock:{} amount:{}'.format(
                 pex(self.our_state.address),
                 pex(self.asset_address),
                 pex(hashlock),
-                self.our_state.locked[hashlock].lock.amount,
+                lock.amount,
             ))
-            self.our_state.claim_locked(self.partner_state, secret, locksroot)
+            self.our_state.register_secret(self.partner_state, secret)
 
         # sending a secret (updating the mirror)
-        elif hashlock in self.partner_state.locked:
+        elif self.partner_state.balance_proof.is_pending(hashlock):
+            lock = self.partner_state.balance_proof.get_pending_lock(hashlock)
+
             log.debug('ASSET UNLOCKED node:{} asset:{} hashlock:{} amount:{}'.format(
                 pex(self.our_state.address),
                 pex(self.asset_address),
                 pex(hashlock),
-                self.partner_state.locked[hashlock].lock.amount,
+                lock.amount,
             ))
-            self.partner_state.claim_locked(self.our_state, secret, locksroot)
+            self.partner_state.register_secret(self.our_state, secret)
         else:
             raise ValueError('The secret doesnt unlock any hashlock')
 
@@ -397,7 +627,7 @@ class Channel(object):
             self.sent_transfers.append(transfer)
 
             if callback:
-                self.transfer_callbacks.append((transfer, callback))
+                self.transfer_callbacks[transfer].append(callback)
 
         elif transfer.recipient == self.our_state.address:
             self.register_transfer_from_to(
@@ -458,10 +688,13 @@ class Channel(object):
             if amount + transfer.lock.amount > distributable:
                 raise InsufficientBalance(transfer)
 
+            if to_state.balance_proof.is_pending(transfer.lock.hashlock):
+                raise ValueError('hashlock is already registered')
+
             # As a receiver: Check that all locked transfers are registered in
             # the locksroot, if any hashlock is missing there is no way to
             # claim it while the channel is closing
-            expected_locksroot = to_state.locked.root_with(transfer.lock)
+            expected_locksroot = to_state.compute_merkleroot_with(transfer.lock)
             if expected_locksroot != transfer.locksroot:
                 log.error(
                     'LOCKSROOT MISMATCH node:{} {} > {}'.format(
@@ -499,6 +732,13 @@ class Channel(object):
 
                 raise ValueError('Expiration smaller than the minimum requried.')
 
+        if isinstance(transfer, DirectTransfer) and transfer.secret:
+            hashlock = sha3(transfer.secret)
+            lock = to_state.locked[hashlock]
+
+            if to_state.compute_merkleroot_without(lock) != transfer.locksroot:
+                raise InvalidLocksRoot(hashlock)
+
         # all checks need to be done before the internal state of the channel
         # is changed, otherwise if a check fails and state was changed the
         # channel will be left trashed
@@ -516,7 +756,7 @@ class Channel(object):
                 hashlock_list=lpex(transfer.lock.hashlock for transfer in to_state.locked.locked.itervalues()),
             )
 
-            to_state.locked.add(transfer)
+            to_state.register_locked_transfer(transfer)
 
             # register this channel as waiting for the secret (the secret can
             # be revealed through a message or an blockchain log)
@@ -525,22 +765,24 @@ class Channel(object):
                 transfer.lock.hashlock,
             )
 
-        if isinstance(transfer, DirectTransfer) and transfer.secret:
-            log.debug(
-                'REGISTERED SECRET node:{} from:{} to:{}'.format(
-                    pex(self.our_state.address),
-                    pex(from_state.address),
-                    pex(to_state.address),
-                ),
-                lock_hashlock=pex(sha3(transfer.secret)),
-                lock_secret=pex(transfer.secret),
-            )
+        if isinstance(transfer, DirectTransfer):
+            to_state.register_direct_transfer(transfer)
 
-            to_state.claim_locked(
-                from_state,
-                transfer.secret,
-                transfer.locksroot,
-            )
+            if transfer.secret:
+                log.debug(
+                    'REGISTERED SECRET node:{} from:{} to:{}'.format(
+                        pex(self.our_state.address),
+                        pex(from_state.address),
+                        pex(to_state.address),
+                    ),
+                    lock_hashlock=pex(sha3(transfer.secret)),
+                    lock_secret=pex(transfer.secret),
+                )
+
+                to_state.register_secret(
+                    from_state,
+                    transfer.secret,
+                )
 
         from_state.transfered_amount = transfer.transfered_amount
         from_state.nonce += 1
@@ -583,7 +825,7 @@ class Channel(object):
 
         # start of critical read section
         transfered_amount = from_.transfered_amount + amount
-        current_locksroot = to_.locked.root
+        current_locksroot = to_.compute_merkleroot()
         # end of critical read section
 
         return DirectTransfer(
@@ -643,7 +885,7 @@ class Channel(object):
 
         # start of critical read section
         transfered_amount = from_.transfered_amount
-        updated_locksroot = to_.locked.root_with(lock)
+        updated_locksroot = to_.compute_merkleroot_with(include=lock)
         # end of critical read section
 
         return LockedTransfer(
@@ -687,7 +929,7 @@ class Channel(object):
         """ Return RefundTransfer for `transfer`. """
         lock = transfer.lock
 
-        if lock.hashlock not in self.our_state.locked:
+        if not self.our_state.balance_proof.is_pending(lock.hashlock):
             raise ValueError('Unknow hashlock')
 
         locked_transfer = self.create_lockedtransfer(
@@ -704,7 +946,7 @@ class Channel(object):
         """ Return a TransferTimeout for `transfer`. """
         lock = transfer.lock
 
-        if lock.hashlock not in self.our_state.locked:
+        if not self.our_state.balance_proof.is_pending(lock.hashlock):
             raise ValueError('Unknow hashlock')
 
         return TransferTimeout(

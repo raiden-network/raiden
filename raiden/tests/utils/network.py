@@ -191,7 +191,7 @@ def network_with_minimum_channels(apps, channels_per_node):
 
 def create_network(private_keys, assets_addresses, registry_address,  # pylint: disable=too-many-arguments
                    channels_per_node, deposit, settle_timeout, poll_timeout,
-                   transport_class, blockchain_service_class):
+                   transport_class, blockchain_service_class, verbosity):
     """ Initialize a local test network using the UDP protocol.
 
     Note:
@@ -237,9 +237,13 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
 
         discovery.register(nodeid, host, port)
 
+        print_communication = False
+        if verbosity > 7:
+            print_communication = True
+
         jsonrpc_client = JSONRPCClient(
             privkey=privatekey_bin,
-            print_communication=False,
+            print_communication=print_communication,
         )
         blockchain_service = blockchain_service_class(
             jsonrpc_client,
@@ -280,7 +284,7 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
 def create_sequential_network(private_keys, asset_address, registry_address,  # pylint: disable=too-many-arguments
                               channels_per_node, deposit, settle_timeout,
                               poll_timeout, transport_class,
-                              blockchain_service_class):
+                              blockchain_service_class, verbosity):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
@@ -312,9 +316,13 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
 
         discovery.register(nodeid, host, port)
 
+        print_communication = False
+        if verbosity > 7:
+            print_communication = True
+
         jsonrpc_client = JSONRPCClient(
             privkey=privatekey_bin,
-            print_communication=False,
+            print_communication=print_communication,
         )
         blockchain_service = blockchain_service_class(
             jsonrpc_client,
@@ -463,7 +471,7 @@ def create_hydrachain_cluster(private_keys, hydrachain_private_keys, p2p_base_po
     return all_apps
 
 
-def geth_to_cmd(node, datadir):
+def geth_to_cmd(node, datadir, verbosity):
     """
     Transform a node configuration into a cmd-args list for `subprocess.Popen`.
 
@@ -501,7 +509,7 @@ def geth_to_cmd(node, datadir):
         '--rpcaddr', '0.0.0.0',
         '--jitvm=false',
         '--networkid', '627',
-        '--verbosity', '0',
+        '--verbosity', str(verbosity),
         '--fakepow',
         '--datadir', datadir,
     ])
@@ -588,7 +596,9 @@ def geth_wait_and_check(privatekeys):
             raise ValueError('account is with a balance of 0')
 
 
-def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_datadir):  # pylint: disable=too-many-locals,too-many-statements
+def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_datadir, verbosity):
+    # pylint: disable=too-many-locals,too-many-statements
+
     # TODO: handle better the errors cases:
     # - cant bind, port in use
     start_rpcport = 4000
@@ -653,7 +663,8 @@ def create_geth_cluster(private_keys, geth_private_keys, p2p_base_port, base_dat
         if 'minerthreads' in config:
             geth_create_account(nodedir, private_keys[i])
 
-        cmds.append(geth_to_cmd(config, nodedir))
+        commandline = geth_to_cmd(config, nodedir, verbosity)
+        cmds.append(commandline)
 
     # save current term settings before running geth
     if isinstance(sys.stdin, file):  # check that the test is running on non-capture mode

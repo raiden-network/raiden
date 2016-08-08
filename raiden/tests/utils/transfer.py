@@ -132,7 +132,7 @@ def register_secret(app_chain, asset, secret):
         manager.register_secret(secret)
 
 
-def assert_synched_channels(channel0, balance0, lock_list0, channel1, balance1, lock_list1):  # pylint: disable=too-many-arguments
+def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1, balance1, outstanding_locks1):  # pylint: disable=too-many-arguments
     """ Assert the values of two synched channels.
 
     Note:
@@ -142,14 +142,14 @@ def assert_synched_channels(channel0, balance0, lock_list0, channel1, balance1, 
     total_asset = channel0.contract_balance + channel1.contract_balance
     assert total_asset == channel0.balance + channel1.balance
 
-    locked_amount0 = sum(lock.amount for lock in lock_list0)
-    locked_amount1 = sum(lock.amount for lock in lock_list1)
+    locked_amount0 = sum(lock.amount for lock in outstanding_locks0)
+    locked_amount1 = sum(lock.amount for lock in outstanding_locks1)
 
-    assert_balance(channel0, balance0, locked_amount1, channel0.balance - locked_amount0)
-    assert_balance(channel1, balance1, locked_amount0, channel1.balance - locked_amount1)
+    assert_balance(channel0, balance0, locked_amount0, channel0.balance - locked_amount1)
+    assert_balance(channel1, balance1, locked_amount1, channel1.balance - locked_amount0)
 
-    assert_locked(channel0, lock_list0)
-    assert_locked(channel1, lock_list1)
+    assert_locked(channel0, outstanding_locks0)
+    assert_locked(channel1, outstanding_locks1)
 
     assert_mirror(channel0, channel1)
 
@@ -158,16 +158,16 @@ def assert_mirror(channel0, channel1):
     """ Assert that `channel0` has a correct `partner_state` to represent
     `channel1` and vice-versa.
     """
-    assert channel0.our_state.locked.root == channel1.partner_state.locked.root
-    assert channel0.our_state.locked.outstanding == channel1.partner_state.locked.outstanding
+    assert channel0.our_state.compute_merkleroot() == channel1.partner_state.compute_merkleroot()
+    assert channel0.our_state.locked() == channel1.partner_state.locked()
     assert channel0.our_state.transfered_amount == channel1.partner_state.transfered_amount
     assert channel0.our_state.balance(channel0.partner_state) == channel1.partner_state.balance(channel1.our_state)
 
     assert channel0.distributable == channel0.our_state.distributable(channel0.partner_state)
     assert channel0.distributable == channel1.partner_state.distributable(channel1.our_state)
 
-    assert channel1.our_state.locked.root == channel0.partner_state.locked.root
-    assert channel1.our_state.locked.outstanding == channel0.partner_state.locked.outstanding
+    assert channel1.our_state.compute_merkleroot() == channel0.partner_state.compute_merkleroot()
+    assert channel1.our_state.locked() == channel0.partner_state.locked()
     assert channel1.our_state.transfered_amount == channel0.partner_state.transfered_amount
     assert channel1.our_state.balance(channel1.partner_state) == channel0.partner_state.balance(channel0.our_state)
 
@@ -175,31 +175,34 @@ def assert_mirror(channel0, channel1):
     assert channel1.distributable == channel0.partner_state.distributable(channel0.our_state)
 
 
-def assert_locked(channel0, lock_list):
+def assert_locked(channel0, outstanding_locks):
     """ Assert the locks create from `channel`. """
     # a locked transfer is registered in the _partner_ state
-    hashroot = merkleroot(sha3(lock.as_bytes) for lock in lock_list)
+    hashroot = merkleroot(sha3(lock.as_bytes) for lock in outstanding_locks)
 
-    assert len(channel0.partner_state.locked) == len(lock_list)
-    assert channel0.partner_state.locked.root == hashroot
-    assert channel0.partner_state.locked.outstanding == sum(lock.amount for lock in lock_list)
+    assert len(channel0.our_state.balance_proof.pendinglocks) == len(outstanding_locks)
+    assert channel0.our_state.compute_merkleroot() == hashroot
+    assert channel0.our_state.locked() == sum(lock.amount for lock in outstanding_locks)
+    assert channel0.outstanding == sum(lock.amount for lock in outstanding_locks)
 
-    for lock in lock_list:
-        assert lock.hashlock in channel0.partner_state.locked
+    for lock in outstanding_locks:
+        assert lock.hashlock in channel0.our_state.balance_proof.pendinglocks
 
 
 def assert_balance(channel0, balance, outstanding, distributable):
     """ Assert the channel0 overall asset values. """
     assert channel0.balance == balance
-    assert channel0.outstanding == outstanding
     assert channel0.distributable == distributable
+    assert channel0.outstanding == outstanding
+
+    # the amount of asset locked in our end of the channel is equal to how much
+    # we have outstading
+    assert channel0.our_state.locked() == outstanding
 
     assert channel0.balance == channel0.our_state.balance(channel0.partner_state)
     assert channel0.distributable == channel0.our_state.distributable(channel0.partner_state)
-    assert channel0.outstanding == channel0.our_state.locked.outstanding
 
     assert channel0.balance >= 0
     assert channel0.distributable >= 0
     assert channel0.locked >= 0
-    assert channel0.outstanding >= 0
     assert channel0.balance == channel0.locked + channel0.distributable
