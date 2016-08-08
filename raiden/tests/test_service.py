@@ -97,3 +97,74 @@ def test_ping_udp(raiden_network):
     decoded = decode(messages[1])
     assert isinstance(decoded, Ack)
     assert decoded.echo == ping.hash
+
+
+@pytest.mark.parametrize('privatekey_seed', ['ping_dropped_message:{}'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('transport_class', [UnreliableTransport])
+def test_ping_ordering(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    # mock transport with packet loss, every 3rd is lost, starting with first message
+    droprate = UnreliableTransport.droprate = 3
+    RaidenProtocol.try_interval = 0.1  # for fast tests
+    RaidenProtocol.repeat_messages = True
+
+    messages = setup_messages_cb()
+    UnreliableTransport.network.counter = 0
+
+    ping_amount = 5
+
+    hashes = []
+    for nonce in range(ping_amount):
+        ping = Ping(nonce=nonce)
+        app0.raiden.sign(ping)
+        app0.raiden.protocol.send(app1.raiden.address, ping)
+        hashes.append(ping.hash)
+
+    gevent.sleep(2)  # give some time for messages to be handled
+
+    expected_message_amount = ping_amount * droprate
+    assert len(messages) == expected_message_amount
+
+    for i in range(0, expected_message_amount, droprate):
+        assert isinstance(decode(messages[i]), Ping)
+
+    for i in range(1, expected_message_amount, droprate):
+        assert isinstance(decode(messages[i]), Ping)
+
+    for i, j in zip(range(2, expected_message_amount, droprate), range(ping_amount)):
+        decoded = decode(messages[i])
+        assert isinstance(decoded, Ack)
+        assert decoded.echo == hashes[j]
+
+    RaidenProtocol.repeat_messages = False
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_send_queue_stops(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    messages = setup_messages_cb()
+
+    gevent.sleep(.5)
+    assert app0.raiden.protocol.running == True
+
+    # simulate some message activity
+    for nonce in range(3):
+        ping = Ping(nonce=nonce)
+        app0.raiden.sign(ping)
+        app0.raiden.protocol.send(app1.raiden.address, ping)
+
+    app0.raiden.protocol.stop()
+    gevent.sleep(.5)
+    assert app0.raiden.protocol.running == False
+
+    # now try stopping without message activity
+    app0.raiden.protocol.start()
+    gevent.sleep(.5)
+    assert app0.raiden.protocol.running == True
+
+    app0.raiden.protocol.stop()
+    gevent.sleep(.5)
+    assert app0.raiden.protocol.running == False

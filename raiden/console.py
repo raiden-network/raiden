@@ -221,12 +221,7 @@ class ConsoleTools(object):
         self._ping_nonces[peer] += 1
         msg = Ping(nonce)
         self._raiden.sign(msg)
-        try:
-            self._raiden.protocol._repeat_until_ack(peer.decode('hex'), msg)
-        except Exception as e:
-            if not e.message.startswith('DEACTIVATED'):
-                return e
-        return sha3(msg.encode()) not in self._raiden.protocol.number_of_tries
+        return self._raiden.protocol.send_and_wait(peer.decode('hex'), msg)
 
     def open_channel_with_funding(self, token_address, peer, amount,
                                   settle_timeout=None,

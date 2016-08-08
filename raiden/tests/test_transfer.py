@@ -5,6 +5,7 @@ import gevent
 import pytest
 from ethereum import slogging
 
+from raiden.raiden_protocol import RaidenProtocol
 from raiden.messages import decode, Ack, DirectTransfer, RefundTransfer
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
@@ -93,6 +94,8 @@ def test_transfer(raiden_network):
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('number_of_nodes', [10])
 def test_mediated_transfer(raiden_network):
+    RaidenProtocol.try_interval = 0.1
+
     app0 = raiden_network[0]
     setup_messages_cb()
 

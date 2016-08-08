@@ -217,6 +217,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         for listener in self.event_listeners:
             listener.stop_event.set(True)
             self.chain.uninstall_filter(listener.filter_.filter_id_raw)
+        self.protocol.stop()
 
 
 class RaidenAPI(object):
@@ -315,8 +316,7 @@ class RaidenAPI(object):
             raise NoPathError('No path to address found')
 
         transfer_manager = self.raiden.managers_by_asset_address[asset_address_bin].transfermanager
-        task = transfer_manager.transfer(amount, target_bin, callback=callback)
-        task.join()
+        transfer_manager.transfer(amount, target_bin, callback=callback)
 
     def close(self, asset_address, partner_address):
         """ Close a channel opened with `partner_address` for the given `asset_address`. """
