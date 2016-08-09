@@ -18,7 +18,7 @@ from raiden.network.rpc.client import (
     MOCK_REGISTRY_ADDRESS,
 )
 from raiden.blockchain.abi import get_contract_path
-from raiden.app import DEFAULT_SETTLE_TIMEOUT
+from raiden.raiden_service import DEFAULT_SETTLE_TIMEOUT
 from raiden.tests.utils.network import (
     create_network,
     create_sequential_network,

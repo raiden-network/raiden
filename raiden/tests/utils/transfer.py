@@ -97,7 +97,7 @@ def pending_mediated_transfer(app_chain, asset, amount):
     fee = 0
     secret = None
     hashlock = None
-    expiration = app_chain[0].raiden.chain.block_number() + 10  # XXX:
+    expiration = app_chain[0].raiden.chain.block_number() + 5  # XXX:
     initiator_app = app_chain[0]
     target_app = app_chain[0]
 

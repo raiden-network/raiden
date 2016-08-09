@@ -104,7 +104,7 @@ def test_locked_transfer(raiden_network):
     amount = 10
 
     # reveal_timeout <= expiration < contract.lock_time
-    expiration = app0.raiden.chain.block_number() + 15
+    expiration = app0.raiden.chain.block_number() + 5
 
     secret = 'secret'
     hashlock = sha3(secret)
@@ -169,7 +169,7 @@ def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: d
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
 
-    expiration = app0.raiden.chain.block_number() + 15
+    expiration = app0.raiden.chain.block_number() + 5
 
     unclaimed_locks = []
     transfers_list = []
@@ -257,7 +257,7 @@ def test_register_invalid_transfer(raiden_network):
     balance1 = channel1.balance
 
     amount = 10
-    expiration = app0.raiden.chain.block_number() + 15
+    expiration = app0.raiden.chain.block_number() + 5
 
     secret = 'secret'
     hashlock = sha3(secret)

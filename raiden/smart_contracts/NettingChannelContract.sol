@@ -9,10 +9,18 @@ contract NettingChannelContract {
     event ChannelSettled(uint blockNumber);
     event ChannelSecretRevealed(bytes32 secret);
 
-    function NettingChannelContract(address assetAddress, address participant1, address participant2, uint timeout) {
-        if (timeout < 30) {
-            timeout = 30;
-        }
+    modifier settleTimeoutNotTooLow(uint t) {
+        if (t < 6) throw;
+        _
+    }
+
+    function NettingChannelContract(
+        address assetAddress,
+        address participant1,
+        address participant2,
+        uint timeout)
+        settleTimeoutNotTooLow(timeout)
+    {
 
         data.participants[0].nodeAddress = participant1;
         data.participants[1].nodeAddress = participant2;

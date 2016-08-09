@@ -41,7 +41,7 @@ def test_settlement(raiden_network, settle_timeout):
     balance1 = channel1.balance
 
     amount = 10
-    expiration = 10
+    expiration = 5
     secret = 'secret'
     hashlock = sha3(secret)
 

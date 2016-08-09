@@ -787,6 +787,15 @@ def test_settle(state, channel, token, asset_amount, events):
     channel.deposit(half_amount)
     channel1.deposit(half_amount)
 
+    assert events[0]['_event_type'] == 'ChannelNewBalance'
+    assert events[0]['assetAddress'] == token.address.encode('hex')
+    assert events[0]['participant'] == tester.a0.encode('hex')
+    assert events[0]['balance'] == 50
+    assert events[1]['_event_type'] == 'ChannelNewBalance'
+    assert events[1]['assetAddress'] == token.address.encode('hex')
+    assert events[1]['participant'] == tester.a1.encode('hex')
+    assert events[1]['balance'] == 50
+
     secret1 = 'x' * 32
     hashlock1 = sha3(secret1)
     lock_amount1 = 29
@@ -843,6 +852,10 @@ def test_settle(state, channel, token, asset_amount, events):
 
     channel.close(direct_transfer1, direct_transfer2)
 
+    assert events[2]['_event_type'] == 'ChannelClosed'
+    assert events[2]['closingAddress'] == tester.a0.encode('hex')
+    assert events[2]['blockNumber'] == state.block.number
+
     channel.unlock(
         str(lock1.as_bytes),
         ''.join(merkleproof1),
@@ -854,6 +867,11 @@ def test_settle(state, channel, token, asset_amount, events):
         secret2,
         sender=tester.k1
     )
+
+    assert events[3]['_event_type'] == 'ChannelSecretRevealed'
+    assert events[3]['secret'] == 'x' * 32
+    assert events[4]['_event_type'] == 'ChannelSecretRevealed'
+    assert events[4]['secret'] == 'y' * 32
 
     secret4 = 'k' * 32
     hashlock4 = sha3(secret4)
@@ -876,8 +894,17 @@ def test_settle(state, channel, token, asset_amount, events):
     with pytest.raises(TransactionFailed):
         channel.settle()
 
+    assert channel.settleTimeout() == 30
+    assert channel.closed() == state.block.number
+    assert channel.closed() + channel.settleTimeout() > state.block.number
+
     state.block.number = state.block.number + 40  # timeout over
+    assert channel.closed() == state.block.number - 40
+    assert channel.closed() + channel.settleTimeout() < state.block.number
     channel.settle()
+
+    assert events[5]['_event_type'] == 'ChannelSettled'
+    assert events[5]['blockNumber'] == state.block.number
 
     balance1 = half_amount + (transfered_amount2 - transfered_amount1) + lock_amount1 - lock_amount2
     balance2 = half_amount + (transfered_amount1 - transfered_amount2) - lock_amount1 + lock_amount2
@@ -889,20 +916,3 @@ def test_settle(state, channel, token, asset_amount, events):
         channel.settle()
 
     assert len(events) == 6
-    assert events[0]['_event_type'] == 'ChannelNewBalance'
-    assert events[0]['assetAddress'] == token.address.encode('hex')
-    assert events[0]['participant'] == tester.a0.encode('hex')
-    assert events[0]['balance'] == 50
-    assert events[1]['_event_type'] == 'ChannelNewBalance'
-    assert events[1]['assetAddress'] == token.address.encode('hex')
-    assert events[1]['participant'] == tester.a1.encode('hex')
-    assert events[1]['balance'] == 50
-    assert events[2]['_event_type'] == 'ChannelClosed'
-    assert events[2]['closingAddress'] == tester.a0.encode('hex')
-    assert events[2]['blockNumber'] == 1158002
-    assert events[3]['_event_type'] == 'ChannelSecretRevealed'
-    assert events[3]['secret'] == 'x' * 32
-    assert events[4]['_event_type'] == 'ChannelSecretRevealed'
-    assert events[4]['secret'] == 'y' * 32
-    assert events[5]['_event_type'] == 'ChannelSettled'
-    assert events[5]['blockNumber'] == state.block.number

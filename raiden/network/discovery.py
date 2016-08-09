@@ -49,36 +49,19 @@ class ContractDiscovery(Discovery):
 
     def register(self, nodeid, host, port):
         assert isaddress(nodeid)
-        try:
-            self.get(nodeid)
-            self.update_endpoint(host, port)  # FIXME: this could NOOP if nothing has changed
-        except KeyError:
-            self.register_endpoint(host, port)
+        self.discovery_proxy.registerEndpoint(host_port_to_endpoint(host, port))
 
     def get(self, nodeid):
-        endpoint = self.find_endpoint(nodeid)
+        # check whether to encode or decode nodeid
+        endpoint = self.discovery_proxy.findEndpointByAddress(nodeid.encode('hex'))
         if endpoint is '':
             raise KeyError('Unknow address {}'.format(pex(nodeid)))
-        host, port = split_endpoint(endpoint)
-        port = int(port)
-        return (host, port)
+        return split_endpoint(endpoint)
 
     def nodeid_by_host_port(self, host_port):
         host, port = host_port
-        address = self.find_address(host, str(port))
+        address = self.discovery_proxy.findAddressByEndpoint(host_port_to_endpoint(host, port))
         # the 0 address means nothing found
         if set(address) == {'0'}:
             return None
         return address.decode('hex')
-
-    def register_endpoint(self, host, port):
-        self.discovery_proxy.registerEndpoint(host_port_to_endpoint(host, port))
-
-    def update_endpoint(self, host, port):
-        self.discovery_proxy.updateEndpoint(host_port_to_endpoint(host, port))
-
-    def find_endpoint(self, nodeid):
-        return self.discovery_proxy.findEndpointByAddress(nodeid.encode('hex'))
-
-    def find_address(self, host, port):
-        return self.discovery_proxy.findAddressByEndpoint(host_port_to_endpoint(host, port))
