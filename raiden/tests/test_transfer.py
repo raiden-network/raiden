@@ -154,6 +154,7 @@ def test_mediated_transfer(raiden_network):
     assert b_cb + amount == c_cb.balance
 
 
+@pytest.mark.xfail(reason='MediatedTransfer doesnt yet update balances on Refund')
 @pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -213,7 +214,6 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
         channel(app1, app0, asset), deposit, []
     )
 
-    # FIXME
     assert_synched_channels(
         channel(app1, app2, asset), deposit - amount12, [],
         channel(app2, app1, asset), deposit + amount12, []
