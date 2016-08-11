@@ -4,7 +4,6 @@ from __future__ import print_function
 import copy
 import json
 import os
-import random
 import sys
 import time
 import termios
@@ -21,12 +20,12 @@ from pyethapp.accounts import Account
 from pyethapp.config import update_config_from_genesis_json
 from pyethapp.console_service import Console
 from pyethapp.jsonrpc import address_encoder, quantity_decoder
-from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
 from raiden.app import App, INITIAL_PORT
 from raiden.network.discovery import Discovery
-from raiden.network.rpc.client import BlockChainServiceMock, GAS_LIMIT_HEX
+from raiden.network.rpc.client import GAS_LIMIT_HEX
+from raiden.tests.utils.mock_client import BlockChainServiceMock
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -204,7 +203,6 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
     """
     # pylint: disable=too-many-locals
 
-    random.seed(1337)
     num_nodes = len(private_keys)
 
     if channels_per_node is not CHAIN and channels_per_node > num_nodes:
@@ -241,14 +239,11 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
         if verbosity > 7:
             print_communication = True
 
-        jsonrpc_client = JSONRPCClient(
-            privkey=privatekey_bin,
-            print_communication=print_communication,
-        )
         blockchain_service = blockchain_service_class(
-            jsonrpc_client,
+            privatekey_bin,
             registry_address,
             poll_timeout=poll_timeout,
+            print_communication=print_communication,
         )
 
         app = create_app(
@@ -281,10 +276,9 @@ def create_network(private_keys, assets_addresses, registry_address,  # pylint: 
     return apps
 
 
-def create_sequential_network(private_keys, asset_address, registry_address,  # pylint: disable=too-many-arguments
+def create_sequential_network(blockchain_services, asset_address, registry_address,  # pylint: disable=too-many-arguments
                               channels_per_node, deposit, settle_timeout,
-                              poll_timeout, transport_class,
-                              blockchain_service_class, verbosity):
+                              poll_timeout, transport_class, verbosity):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
@@ -295,10 +289,8 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
     """
     # pylint: disable=too-many-locals
 
-    random.seed(42)
-
     host = '127.0.0.1'
-    num_nodes = len(private_keys)
+    num_nodes = len(blockchain_services)
 
     if num_nodes < 2:
         raise ValueError('cannot create a network with less than two nodes')
@@ -307,32 +299,21 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
         raise ValueError('can only create networks with 0, 1, 2 or CHAIN channels')
 
     discovery = Discovery()
-    blockchain_service_class = blockchain_service_class or BlockChainServiceMock
 
     apps = []
-    for idx, privatekey_bin in enumerate(private_keys):
+    for idx, blockchain in enumerate(blockchain_services):
         port = INITIAL_PORT + idx
-        nodeid = privtoaddr(privatekey_bin)
+        private_key = blockchain.private_key
+        nodeid = privtoaddr(private_key)
 
         discovery.register(nodeid, host, port)
 
-        print_communication = False
         if verbosity > 7:
-            print_communication = True
-
-        jsonrpc_client = JSONRPCClient(
-            privkey=privatekey_bin,
-            print_communication=print_communication,
-        )
-        blockchain_service = blockchain_service_class(
-            jsonrpc_client,
-            registry_address,
-            poll_timeout=poll_timeout,
-        )
+            blockchain.set_verbose()
 
         app = create_app(
-            privatekey_bin,
-            blockchain_service,
+            private_key,
+            blockchain,
             discovery,
             transport_class,
             port=port,
@@ -364,6 +345,20 @@ def create_sequential_network(private_keys, asset_address, registry_address,  # 
         app.raiden.register_registry(app.raiden.chain.default_registry)
 
     return apps
+
+
+def create_tester_sequential_network(private_keys, asset_address,  # pylint: disable=too-many-arguments
+                                     registry_address, channels_per_node,
+                                     deposit, settle_timeout, poll_timeout,
+                                     transport_class, blockchain_service_class,
+                                     verbosity):
+    num_nodes = len(private_keys)
+
+    if num_nodes < 2:
+        raise ValueError('cannot create a network with less than two nodes')
+
+    if channels_per_node not in (0, 1, 2, CHAIN):
+        raise ValueError('can only create networks with 0, 1, 2 or CHAIN channels')
 
 
 def hydrachain_wait(privatekeys, number_of_nodes):

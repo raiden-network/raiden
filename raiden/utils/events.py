@@ -2,8 +2,9 @@
 """
 from ethereum.abi import ContractTranslator
 from ethereum.utils import normalize_address
-from pyethapp.jsonrpc import address_encoder
+from pyethapp.jsonrpc import address_encoder, data_decoder
 from pyethapp.rpc_client import ContractProxy
+
 from raiden.network.rpc.client import decode_topic
 
 __all__ = (
@@ -55,10 +56,16 @@ def all_contract_events(rpc, contract_address, abi, start_block=None, end_block=
         end_block=end_block,
     )
 
-    events = [
-        translator.decode_event(map(decode_topic, event['topics']), event['data'])
-        for event in events_raw
-    ]
+    events = list()
+    for event_encoded in events_raw:
+        topics_ids = [
+            decode_topic(topic)
+            for topic in event_encoded['topics']
+        ]
+        event_data = data_decoder(event_encoded['data'])
+
+        event = translator.decode_event(topics_ids, event_data)
+        events.append(event)
     return events
 
 
@@ -79,7 +86,8 @@ def proxy_contract_events(rpc, proxy, start_block=None, end_block=None):
         proxy.address.encode('hex'),
         proxy.abi,
         start_block=start_block,
-        end_block=end_block)
+        end_block=end_block,
+    )
 
 
 def netting_channel_events(rpc, netting_channel, end_block=None):

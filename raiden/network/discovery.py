@@ -1,10 +1,13 @@
 # -*- coding: utf8 -*-
-from raiden.utils import (
-        isaddress, pex,
-        host_port_to_endpoint, split_endpoint
-        )
-from raiden.blockchain.abi import get_contract_path
 from ethereum import _solidity
+
+from raiden.utils import (
+    host_port_to_endpoint,
+    isaddress,
+    pex,
+    split_endpoint,
+)
+from raiden.blockchain.abi import get_contract_path
 
 discovery_contract_compiled = _solidity.compile_contract(
     get_contract_path('EndpointRegistry.sol'),

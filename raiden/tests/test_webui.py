@@ -1,16 +1,14 @@
 # -*- coding: utf8 -*-
 import pytest
 import logging
-from ethereum.utils import sha3, privtoaddr
+from ethereum.utils import sha3
 from ethereum import slogging
 
-from pyethapp.rpc_client import JSONRPCClient
 from raiden.app import DEFAULT_SETTLE_TIMEOUT
-from raiden.network.rpc.client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.messages import setup_messages_cb
-from raiden.tests.utils.network import create_network, create_app
-from raiden.network.discovery import Discovery
+from raiden.tests.utils.network import create_network
+from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
 from raiden.api.wamp_server import WAMPRouter
 
 
@@ -38,9 +36,9 @@ def test_webui():  # pylint: disable=too-many-locals
     ]
 
     BlockChainServiceMock._instance = True
-    blockchain_service= BlockChainServiceMock(None, MOCK_REGISTRY_ADDRESS)
+    blockchain_service = BlockChainServiceMock(None, MOCK_REGISTRY_ADDRESS)
     # overwrite the instance
-    BlockChainServiceMock._instance = blockchain_service # pylint: disable=redefined-variable-type
+    BlockChainServiceMock._instance = blockchain_service  # pylint: disable=redefined-variable-type
 
     registry = blockchain_service.registry(MOCK_REGISTRY_ADDRESS)
 
@@ -84,7 +82,6 @@ def test_webui():  # pylint: disable=too-many-locals
 
 
 if __name__ == '__main__':
-    import logging
     slogging.configure(':DEBUG')
     logging.basicConfig(level=logging.DEBUG)
 

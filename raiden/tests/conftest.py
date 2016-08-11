@@ -2,21 +2,22 @@
 import pytest
 import gevent
 import gevent.monkey
-from ethereum import slogging
+from ethereum import slogging, tester
 from ethereum.keys import privtoaddr, PBKDF2_CONSTANTS
 from ethereum._solidity import compile_file
+from ethereum.tester import ABIContract, ContractTranslator
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.utils import sha3
 from raiden.tests.utils.tests import cleanup_tasks
+from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
+from raiden.tests.utils.tester_client import BlockChainServiceTesterMock
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import (
     patch_send_transaction,
     BlockChainService,
-    BlockChainServiceMock,
     DEFAULT_POLL_TIMEOUT,
     GAS_LIMIT,
-    MOCK_REGISTRY_ADDRESS,
 )
 from raiden.blockchain.abi import get_contract_path
 from raiden.raiden_service import DEFAULT_SETTLE_TIMEOUT
@@ -24,6 +25,7 @@ from raiden.tests.utils.network import (
     create_network,
     create_sequential_network,
     create_hydrachain_cluster,
+    create_tester_sequential_network,
     create_geth_cluster,
     CHAIN,
     DEFAULT_DEPOSIT,
@@ -42,7 +44,13 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def _raiden_cleanup(request, raiden_apps):
-    """ Helper to do proper cleanup. """
+    """ Helper to do proper cleanup.
+
+    Two tests in sequence could run on the a UDP server on the same port, a
+    hanging greenlet from the previous tests could send packet to the new test
+    messing things up. Kill all greenlets to make sure that no left-over state
+    from a previous test interferes with a new one.
+    """
     def _cleanup():
         for app in raiden_apps:
             app.stop()
@@ -95,11 +103,17 @@ def _geth_cluster(request, private_keys, cluster_private_keys, p2p_base_port, tm
 
 
 def pytest_addoption(parser):
+    # hydrachain is a faster but unstable option, by default we use geth
     parser.addoption(
         '--cluster-type',
         choices=['hydrachain', 'geth'],
         default='geth',
     )
+
+    # useful to configure raiden's logging and hydrachain if (--cluster-type is
+    # hydrachain, note that some times the configuration fail with hydrachain
+    # because a pyethapp/ethereum module could have it's root logger configure
+    # before)
     parser.addoption(
         '--log-config',
         default=None,
@@ -108,6 +122,10 @@ def pytest_addoption(parser):
 
 @pytest.fixture(autouse=True)
 def logging_level(request):
+    """ Set ups the test logging level.
+
+    For integration tests this also sets the geth verbosity.
+    """
     if request.config.option.log_config is not None:
         slogging.configure(request.config.option.log_config)
         return
@@ -154,6 +172,11 @@ def settle_timeout():
 @pytest.fixture
 def poll_timeout():
     return DEFAULT_POLL_TIMEOUT
+
+
+@pytest.fixture
+def asset_amount():
+    return 10000
 
 
 @pytest.fixture
@@ -217,11 +240,6 @@ def deposit():
 
 
 @pytest.fixture
-def registry_address():
-    return MOCK_REGISTRY_ADDRESS
-
-
-@pytest.fixture
 def number_of_assets():
     return 1
 
@@ -269,13 +287,19 @@ def blockchain_service(request, registry_address):
 def raiden_chain(request, private_keys, asset, channels_per_node, deposit,
                  settle_timeout, poll_timeout, registry_address, blockchain_service,
                  transport_class):
-    blockchain_service_class = BlockChainServiceMock
-    blockchain_service.new_channel_manager_contract(asset)
-
     verbosity = request.config.option.verbose
 
+    blockchain_services = list()
+    for privkey in private_keys:
+        blockchain = BlockChainServiceMock(
+            privkey,
+            MOCK_REGISTRY_ADDRESS,
+        )
+
+        blockchain_services.append(blockchain)
+
     raiden_apps = create_sequential_network(
-        private_keys,
+        blockchain_services,
         asset,
         registry_address,
         channels_per_node,
@@ -283,7 +307,6 @@ def raiden_chain(request, private_keys, asset, channels_per_node, deposit,
         settle_timeout,
         poll_timeout,
         transport_class,
-        blockchain_service_class,
         verbosity,
     )
 
@@ -455,3 +478,180 @@ def discovery_blockchain(request, private_keys, cluster, poll_timeout):
     # initialize and return ContractDiscovery object
     from raiden.network.discovery import ContractDiscovery
     return ContractDiscovery(jsonrpc_client, discovery_contract_address), address
+
+
+@pytest.fixture(scope='session')
+def token_abi():
+    human_token_path = get_contract_path('HumanStandardToken.sol')
+    human_token_compiled = compile_file(human_token_path, combined='abi')
+    human_token_abi = human_token_compiled['HumanStandardToken']['abi']
+    return human_token_abi
+
+
+@pytest.fixture(scope='session')
+def channel_manager_abi():
+    channel_manager_path = get_contract_path('ChannelManagerContract.sol')
+    channel_manager_compiled = compile_file(channel_manager_path, combined='abi')
+    channel_manager_abi = channel_manager_compiled['ChannelManagerContract']['abi']
+    return channel_manager_abi
+
+
+@pytest.fixture(scope='session')
+def netting_channel_abi():
+    netting_channel_path = get_contract_path('NettingChannelContract.sol')
+    netting_channel_compiled = compile_file(netting_channel_path, combined='abi')
+    netting_channel_abi = netting_channel_compiled['NettingChannelContract']['abi']
+    return netting_channel_abi
+
+
+@pytest.fixture(scope='session')
+def registry_abi():
+    registry_path = get_contract_path('Registry.sol')
+    registry_compiled = compile_file(registry_path, combined='abi')
+    registry_abi = registry_compiled['Registry']['abi']
+    return registry_abi
+
+
+@pytest.fixture
+def tester_state():
+    state = tester.state()
+    state.block.number = 1150001  # HOMESTEAD_FORK_BLKNUM=1150000
+    return state
+
+
+@pytest.fixture
+def tester_events():
+    events = []
+    return events
+
+
+@pytest.fixture
+def tester_token_address(asset_amount, tester_state):
+    standard_token_path = get_contract_path('StandardToken.sol')
+    human_token_path = get_contract_path('HumanStandardToken.sol')
+
+    standard_token_address = tester_state.contract(
+        None,
+        path=standard_token_path,
+        language='solidity',
+    )
+
+    human_token_libraries = {
+        'StandardToken': standard_token_address.encode('hex'),
+    }
+    human_token_proxy = tester_state.abi_contract(  # using abi_contract because of the constructor_parameters
+        None,
+        path=human_token_path,
+        language='solidity',
+        libraries=human_token_libraries,
+        constructor_parameters=[asset_amount, 'raiden', 0, 'rd'],
+    )
+
+    tester_state.mine()
+
+    human_token_address = human_token_proxy.address
+    return human_token_address
+
+
+@pytest.fixture
+def tester_nettingchannel_library_address(tester_state):
+    netting_library_path = get_contract_path('NettingChannelLibrary.sol')
+    library_address = tester_state.contract(
+        None,
+        path=netting_library_path,
+        language='solidity',
+        contract_name='NettingChannelLibrary',
+    )
+    return library_address
+
+
+@pytest.fixture
+def tester_channelmanager_library_address(tester_state, tester_nettingchannel_library_address):
+    channelmanager_library_path = get_contract_path('ChannelManagerLibrary.sol')
+    manager_address = tester_state.contract(
+        None,
+        path=channelmanager_library_path,
+        language='solidity',
+        contract_name='ChannelManagerLibrary',
+        libraries={
+            'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex'),
+        }
+    )
+    return manager_address
+
+
+@pytest.fixture
+def tester_registry_address(tester_state, tester_channelmanager_library_address):
+    registry_path = get_contract_path('Registry.sol')
+    registry_address = tester_state.contract(
+        None,
+        path=registry_path,
+        language='solidity',
+        contract_name='Registry',
+        libraries={
+            'ChannelManagerLibrary': tester_channelmanager_library_address.encode('hex')
+        }
+    )
+    return registry_address
+
+
+@pytest.fixture
+def tester_token(tester_state, tester_token_address, token_abi, tester_events):
+    translator = ContractTranslator(token_abi)
+
+    return ABIContract(
+        tester_state,
+        translator,
+        tester_token_address,
+        log_listener=tester_events.append,
+    )
+
+
+@pytest.fixture
+def tester_registry(tester_state, registry_abi, tester_registry_address, tester_events):
+    translator = ContractTranslator(registry_abi)
+
+    return ABIContract(
+        tester_state,
+        translator,
+        tester_registry_address,
+        log_listener=tester_events.append,
+    )
+
+
+@pytest.fixture
+def tester_default_channel_manager(tester_state, tester_token, tester_registry,
+                                   tester_events, channel_manager_abi):
+    contract_address = tester_registry.addAsset(tester_token.address)
+    translator = ContractTranslator(channel_manager_abi)
+    channel_manager_abi = ABIContract(
+        tester_state,
+        translator,
+        contract_address,
+        log_listener=tester_events.append,
+    )
+    return channel_manager_abi
+
+
+def tester_chain(request, tester_state, tester_registry, private_keys, asset,
+                 channels_per_node, deposit, settle_timeout):
+
+    blockchain_service_class = BlockChainServiceTesterMock
+    verbosity = request.config.option.verbose
+
+    raiden_apps = create_tester_sequential_network(
+        private_keys,
+        asset,
+        registry_address,
+        channels_per_node,
+        deposit,
+        settle_timeout,
+        poll_timeout,
+        transport_class,
+        blockchain_service_class,
+        verbosity,
+    )
+
+    _raiden_cleanup(request, raiden_apps)
+
+    return raiden_apps
