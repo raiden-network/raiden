@@ -4,7 +4,7 @@ from itertools import count
 
 from ethereum import tester, slogging
 from ethereum.utils import encode_hex, privtoaddr
-from pyethapp.jsonrpc import address_encoder, address_decoder
+from pyethapp.jsonrpc import address_decoder
 
 from raiden import messages
 from raiden.blockchain.abi import get_contract_path
@@ -18,39 +18,6 @@ from raiden.blockchain.abi import (
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 FILTER_ID_GENERATOR = count()
-
-
-def deploy_registry(tester_state):
-    netting_library_path = get_contract_path('NettingChannelLibrary.sol')
-    netting_library_address = tester_state.contract(
-        None,
-        path=netting_library_path,
-        language='solidity',
-        contract_name='NettingChannelLibrary',
-    )
-
-    channelmanager_library_path = get_contract_path('ChannelManagerLibrary.sol')
-    channelmanager_library_address = tester_state.contract(
-        None,
-        path=channelmanager_library_path,
-        language='solidity',
-        contract_name='ChannelManagerLibrary',
-        libraries={
-            'NettingChannelLibrary': address_encoder(netting_library_address),
-        }
-    )
-
-    registry_path = get_contract_path('Registry.sol')
-    registry_address = tester_state.contract(
-        None,
-        path=registry_path,
-        language='solidity',
-        contract_name='Registry',
-        libraries={
-            'ChannelManagerLibrary': address_encoder(channelmanager_library_address)
-        }
-    )
-    return registry_address
 
 
 class FilterTesterMock(object):
@@ -72,9 +39,8 @@ class FilterTesterMock(object):
 
 
 class BlockChainServiceTesterMock(object):
-    def __init__(self, privatekey, registry_address, **kwargs):
-        # self.tester_state = tester.state()
-        # registry_address = deploy_registry(self.tester_state)
+    def __init__(self, privatekey, tester_state, registry_address, **kwargs):
+        self.tester_state = tester_state
         default_registry = RegistryTesterMock(self, registry_address)
 
         self.privatekey = privatekey
