@@ -11,7 +11,6 @@ from raiden.network.discovery import Discovery
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
-DEFAULT_DEPOSIT = 2 ** 240  # Arbitrary initial balance for each channel
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 
 
@@ -163,12 +162,12 @@ def network_with_minimum_channels(apps, channels_per_node):
 
 def create_network(blockchain_services, assets_addresses, channels_per_node,
                    deposit, settle_timeout, transport_class, verbosity):
-    """ Initialize a local test network using the UDP protocol.
+    """ Initialize a raiden test network.
 
     Note:
         The generated network will use two subnets, 127.0.0.10 and 127.0.0.11,
-        for this test to work both virtual interfaces must be created prior to
-        the test execution::
+        for this test to work in a mac both virtual interfaces must be created
+        prior to the test execution::
 
             ifconfig lo:0 127.0.0.10
             ifconfig lo:1 127.0.0.11

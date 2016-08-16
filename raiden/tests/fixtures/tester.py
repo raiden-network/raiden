@@ -3,7 +3,7 @@ import pytest
 from ethereum import tester
 from ethereum.tester import ABIContract, ContractTranslator
 
-from raiden.blockchain import get_contract_path
+from raiden.blockchain.abi import get_contract_path
 
 
 @pytest.fixture
@@ -40,7 +40,6 @@ def tester_token_address(asset_amount, tester_state):
         libraries=human_token_libraries,
         constructor_parameters=[asset_amount, 'raiden', 0, 'rd'],
     )
-
     tester_state.mine()
 
     human_token_address = human_token_proxy.address
@@ -56,6 +55,7 @@ def tester_nettingchannel_library_address(tester_state):
         language='solidity',
         contract_name='NettingChannelLibrary',
     )
+    tester_state.mine()
     return library_address
 
 
@@ -71,6 +71,7 @@ def tester_channelmanager_library_address(tester_state, tester_nettingchannel_li
             'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex'),
         }
     )
+    tester_state.mine()
     return manager_address
 
 
@@ -86,6 +87,7 @@ def tester_registry_address(tester_state, tester_channelmanager_library_address)
             'ChannelManagerLibrary': tester_channelmanager_library_address.encode('hex')
         }
     )
+    tester_state.mine()
     return registry_address
 
 

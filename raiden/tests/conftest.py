@@ -5,10 +5,7 @@ import gevent.monkey
 from ethereum import slogging
 from ethereum.keys import PBKDF2_CONSTANTS
 
-# we need to use fixture for the default values otherwise
-# pytest.mark.parametrize won't work (pytest 2.9.2)
-
-# pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
+from raiden.tests.fixtures import *
 
 # otherwise running hydrachain will block the test
 gevent.monkey.patch_socket()
@@ -32,9 +29,10 @@ def pytest_addoption(parser):
 
 @pytest.fixture(autouse=True)
 def logging_level(request):
-    """ Set ups the test logging level.
+    """ Configure the logging level.
 
-    For integration tests this also sets the geth verbosity.
+    For integration tests this also sets the geth verbosity and the hydrachain
+    loggers.
     """
     if request.config.option.log_config is not None:
         slogging.configure(request.config.option.log_config)

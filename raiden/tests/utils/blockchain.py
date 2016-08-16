@@ -12,23 +12,24 @@ import gevent
 import ethereum.blocks
 import ethereum.config
 import ethereum.db
-from ethereum.keys import privtoaddr
 from devp2p.crypto import privtopub
 from devp2p.utils import host_port_pubkey_to_uri
+from ethereum.keys import privtoaddr
 from ethereum import slogging, tester
-from ethereum.utils import denoms, encode_hex, int_to_addr
+from ethereum.utils import denoms, encode_hex, int_to_addr, zpad
 from pyethapp.accounts import Account
 from pyethapp.config import update_config_from_genesis_json
 from pyethapp.console_service import Console
-from pyethapp.jsonrpc import address_encoder, quantity_decoder
+from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder, quantity_decoder
 from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
-from raiden.network.rpc.client import GAS_LIMIT_HEX
+from raiden.network.rpc.client import GAS_LIMIT, GAS_LIMIT_HEX
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
-DEFAULT_BALANCE = str(denoms.turing * 1)
+DEFAULT_BALANCE = denoms.turing * 1
+DEFAULT_BALANCE_BIN = str(denoms.turing * 1)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
 
@@ -70,7 +71,7 @@ def hydrachain_create_blockchain(private_keys, hydrachain_private_keys,
 
     alloc = {
         encode_hex(address): {
-            'balance': DEFAULT_BALANCE,
+            'balance': DEFAULT_BALANCE_BIN,
         }
         for address in account_addresses
     }
@@ -278,7 +279,7 @@ def geth_create_blockchain(private_keys, geth_private_keys, p2p_base_port,
 
     alloc = {
         address_encoder(address): {
-            'balance': DEFAULT_BALANCE,
+            'balance': DEFAULT_BALANCE_BIN,
         }
         for address in account_addresses
     }
@@ -370,10 +371,11 @@ def tester_create_blockchain(private_keys):
         for i in range(1, 5)
     }
 
+    # NOTE: we are *not* setting a balance for tester's default accounts
     for privkey in private_keys:
         address = privtoaddr(privkey)
         alloc[address] = {
-            'wei': DEFAULT_BALANCE,
+            'balance': DEFAULT_BALANCE,
         }
 
     db = ethereum.db.EphemDB()
@@ -382,22 +384,24 @@ def tester_create_blockchain(private_keys):
         ethereum.config.default_config,
     )
     genesis_overwrite = {
-        'nonce': '0x00006d6f7264656e',
-        'difficulty': '0x20000',
-        'mixhash': '0x00000000000000000000000000000000000000647572616c65787365646c6578',
-        'coinbase': '0x0000000000000000000000000000000000000000',
-        'timestamp': '0x00',
-        # 'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-        'extraData': '0x',
-        'gasLimit': GAS_LIMIT_HEX,
+        'nonce': zpad(data_decoder('0x00006d6f7264656e'), 8),
+        'difficulty': quantity_decoder('0x20000'),
+        'mixhash': zpad(b'\x00', 32),
+        'coinbase': address_decoder('0x0000000000000000000000000000000000000000'),
+        'timestamp': 0,
+        'extra_data': b'',
+        'gas_limit': GAS_LIMIT,
         'start_alloc': alloc,
     }
     genesis_block = ethereum.blocks.genesis(
         env,
         **genesis_overwrite
     )
+    genesis_block.number = genesis_block.config['HOMESTEAD_FORK_BLKNUM'] + 1
 
     tester_state.db = db
     tester_state.env = env
     tester_state.block = genesis_block
     tester_state.blocks = [genesis_block]
+
+    return tester_state

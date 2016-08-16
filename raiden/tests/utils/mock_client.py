@@ -139,6 +139,9 @@ class AssetMock(object):
     def balance_of(self, address):  # pylint: disable=unused-argument,no-self-use
         return float('inf')
 
+    def transfer(self, address_to, amount):
+        pass
+
 
 class RegistryMock(object):
     def __init__(self, blockchain, address=None):

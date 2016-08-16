@@ -8,6 +8,7 @@ from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 
 from raiden import messages
+from raiden.blockchain.abi import get_contract_path
 from raiden.utils import pex, isaddress
 from raiden.blockchain.abi import (
     HUMAN_TOKEN_ABI,
@@ -115,6 +116,7 @@ class BlockChainService(object):
 
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
+        self.address = privtoaddr(privatekey_bin)
         self.poll_timeout = poll_timeout
         self.default_registry = self.registry(registry_address)
 
@@ -190,6 +192,34 @@ class BlockChainService(object):
 
     def uninstall_filter(self, filter_id_raw):
         self.client.call('eth_uninstallFilter', filter_id_raw)
+
+    def deploy_contract(self, contract_name, contract_file, constructor_parameters=None):
+        contract_path = get_contract_path(contract_file)
+        contracts = _solidity.compile_file(contract_path, libraries=dict())
+
+        log.info('Deploying "{}" contract'.format(contract_file))
+
+        proxy = self.client.deploy_solidity_contract(
+            self.address,
+            contract_name,
+            contracts,
+            dict(),
+            constructor_parameters,
+            timeout=self.poll_timeout,
+        )
+        return proxy.address
+
+    def deploy_and_register_asset(self, contract_name, contract_file, constructor_parameters=None):
+        assert self.default_registry
+
+        token_address = self.deploy_contract(
+            contract_name,
+            contract_file,
+            constructor_parameters,
+        )
+        self.default_registry.add_asset(token_address)  # pylint: disable=no-member
+
+        return token_address
 
 
 class Filter(object):
@@ -270,6 +300,16 @@ class Asset(object):
     def balance_of(self, address):
         """ Return the balance of `address`. """
         return self.proxy.balanceOf.call(address)
+
+    def transfer(self, to_address, amount):
+        transaction_hash = self.proxy.transfer.transact(  # pylint: disable=no-member
+            to_address,
+            amount,
+            startgas=self.startgas,
+            gasprice=self.gasprice,
+        )
+        self.client.poll(transaction_hash.decode('hex'))
+        # TODO: check Transfer event
 
 
 class Registry(object):

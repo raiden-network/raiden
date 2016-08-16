@@ -18,7 +18,7 @@ from raiden.app import App, DEFAULT_SETTLE_TIMEOUT
 from raiden.network.discovery import Discovery
 from raiden.network.rpc.client import BlockChainService
 from raiden.utils import privtoaddr, sha3
-from raiden.tests.utils.network import DEFAULT_DEPOSIT
+from raiden.tests.fixtures.variables import DEFAULT_DEPOSIT
 
 TRANSFER_AMOUNT = 1
 ASSET_ADDRESS = sha3('tps')[:20]
