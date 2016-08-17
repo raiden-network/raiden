@@ -1,6 +1,9 @@
 # -*- coding: utf8 -*-
 from __future__ import print_function
 
+from gevent import monkey
+monkey.patch_all()
+
 import signal
 import gevent
 import click
