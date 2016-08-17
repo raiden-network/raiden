@@ -67,7 +67,8 @@ class App(object):  # pylint: disable=too-few-public-methods
 )
 @click.option(
     '--eth_rpc_endpoint',
-    help='"host:port" address of ethereum JSON-RPC server.',
+    help='"host:port" address of ethereum JSON-RPC server.\n'
+    'Also accepts a prefix URL (http:// or https://) with optional port',
     default='127.0.0.1:8545',  # geth default jsonrpc port
     type=str,
 )
@@ -113,7 +114,6 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         external_listen_address = listen_address
 
     # config_file = args.config_file
-    rpc_connection = split_endpoint(eth_rpc_endpoint)
     (listen_host, listen_port) = split_endpoint(listen_address)
 
     config = App.default_config.copy()
@@ -121,11 +121,28 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
     config['port'] = listen_port
     config['privatekey_hex'] = privatekey
 
+    endpoint = eth_rpc_endpoint
+    use_ssl = False
+
+    if eth_rpc_endpoint.startswith("http://"):
+        endpoint = eth_rpc_endpoint[len("http://"):]
+        rpc_port = 80
+    elif eth_rpc_endpoint.startswith("https://"):
+        endpoint = eth_rpc_endpoint[len("https://"):]
+        use_ssl = True
+        rpc_port = 443
+
+    if not ':' in endpoint:  # no port was given in url
+        rpc_host = endpoint
+    else:
+        rpc_host, rpc_port = split_endpoint(endpoint)
+
     jsonrpc_client = JSONRPCClient(
         privkey=privatekey,
-        host=rpc_connection[0],
-        port=rpc_connection[1],
+        host=rpc_host,
+        port=rpc_port,
         print_communication=False,
+        use_ssl=use_ssl,
     )
 
     blockchain_service = BlockChainService(
