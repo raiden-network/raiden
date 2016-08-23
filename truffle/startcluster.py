@@ -84,7 +84,7 @@ def to_cmd(node, datadir=None):
         cmd.append('--mine')
         cmd.append('--etherbase 0')
     if datadir:
-        assert isinstance(datadir, str)
+        assert isinstance(datadir, basestring)
         cmd.append('--datadir {}'.format(datadir))
     cmd.extend(DEFAULT_ARGS)
     return shlex.split(' '.join(cmd))
@@ -122,7 +122,11 @@ def init_datadir(datadir, accounts=DEFAULTACCOUNTS):
         ))
 
 
-def create_node_configurations(num_nodes, miner=True, start_port=30301, start_rpcport=8101):
+def create_node_configurations(num_nodes,
+                               miner=True,
+                               start_port=30301,
+                               start_rpcport=8101,
+                               host='127.0.0.1'):
     """
     Create configurations (ports, keys, etc...) for `num_nodes`.
 
@@ -130,6 +134,7 @@ def create_node_configurations(num_nodes, miner=True, start_port=30301, start_rp
     :param miner: if True, setup the first node to be a mining node
     :param start_port: the first p2p port to assign
     :param start_rpcport: the first rpc port to assign
+    :param host: the host for the node to run on
     :return: list of node configurations (dicts)
     """
     nodes = []
@@ -142,13 +147,17 @@ def create_node_configurations(num_nodes, miner=True, start_port=30301, start_rp
         node['nodekeyhex'] = encode_hex(node['nodekey'])
         node['pub'] = encode_hex(privtopub_enode(node['nodekey']))
         node['address'] = privtoaddr(node['nodekey'])
+        node['host'] = host
         node['port'] = start_port + i
         node['rpcport'] = start_rpcport + i
-        node['enode'] = 'enode://{pub}@127.0.0.1:{port}'.format(**node)
+        node['enode'] = 'enode://{pub}@{host}:{port}'.format(**node)
         nodes.append(node)
-        for node in nodes:
-            node['bootnodes'] = ','.join(node['enode'] for node in nodes)
     return nodes
+
+
+def update_bootnodes(nodes):
+    for node in nodes:
+        node['bootnodes'] = ','.join(node['enode'] for node in nodes)
 
 
 def boot(cmds):
@@ -185,6 +194,7 @@ if __name__ == '__main__':
 
     datadir = tempfile.mkdtemp()
     nodes = create_node_configurations(NUM_GETH_NODES)
+    update_bootnodes(nodes)
     cmds = prepare_for_exec(nodes, datadir)
     boot(cmds)
     while True:

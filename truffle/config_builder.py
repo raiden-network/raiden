@@ -4,6 +4,7 @@ import click
 import json
 from genesis_builder import generate_accounts, mk_genesis
 from startcluster import RAIDEN_PORT as START_PORT
+from startcluster import create_node_configurations, update_bootnodes, to_cmd
 
 
 def build_node_list(hosts, nodes_per_host):
@@ -71,6 +72,31 @@ def accounts(hosts, nodes_per_host):
     print json.dumps(generate_accounts(node_list), indent=2)
 
 
+@click.argument(
+    'geth_hosts',
+    nargs=-1,
+    type=str,
+)
+@click.argument(
+    'datadir',
+    type=str,
+)
+@cli.command()
+def geth_commands(geth_hosts, datadir):
+    """This is helpful to setup a private cluster of geth nodes that won't need discovery
+    (because they will have their `bootnodes` parameter pointed at each other).
+    """
+    nodes = []
+    for host in geth_hosts:
+        nodes.extend(create_node_configurations(1, host=host))
+    for node in nodes:
+        node.pop('unlock')
+    update_bootnodes(nodes)
+    print json.dumps(
+        {'{host}:{port}'.format(**node): ' '.join(to_cmd(node, datadir=datadir)) for node in nodes},
+        indent=2)
+
+
 @cli.command()
 def usage():
     print "Example usage:"
@@ -83,6 +109,9 @@ def usage():
     print "\n"
     print "\tconfig_builder.py accounts 5 127.0.0.1 127.0.0.2"
     print "\t-> create full account-spec {endpoint: (privatekey, address)} for 10 nodes on the two hosts."
+    print "\n"
+    print "\tconfig_builder.py geth_commands /tmp/foo 127.0.0.1 127.0.0.2"
+    print "\t-> create commands for geth nodes on both hosts with the datadir set to /tmp/foo."
 
 if __name__ == '__main__':
     cli()
