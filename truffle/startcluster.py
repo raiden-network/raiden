@@ -6,8 +6,10 @@ import time
 import tempfile
 import signal
 from subprocess import Popen, PIPE
-from ethereum.utils import denoms, sha3, privtoaddr, encode_hex
+from ethereum.utils import sha3, privtoaddr, encode_hex
 from devp2p.crypto import privtopub as privtopub_enode
+
+from genesis_builder import mk_genesis, generate_accounts
 
 # DEFAULTS
 NUM_GETH_NODES = 3
@@ -35,31 +37,6 @@ NODE_CONFIG = [
     'unlock'
 ]
 
-GENESIS_STUB = {
-    'config': {
-        'homesteadBlock': 1
-    },
-    'nonce': '0x0000000000000042',
-    'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'difficulty': '0x4000',
-    'coinbase': '0x0000000000000000000000000000000000000000',
-    'timestamp': '0x00',
-    'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'extraData': CLUSTER_NAME,
-    'gasLimit': '0xfffffffff'
-}
-
-
-def generate_accounts(seeds):
-    """Create private keys and addresses for all seeds.
-    """
-    return {
-        seed: dict(
-            privatekey=encode_hex(sha3(seed)),
-            address=encode_hex(privtoaddr(sha3(seed)))
-        ) for seed in seeds}
-
-
 # a list of `num_raiden_accounts` account addresses with a predictable privkey:
 # privkey = sha3('127.0.0.1:`raiden_port + i`')
 DEFAULTACCOUNTS = [
@@ -68,25 +45,7 @@ DEFAULTACCOUNTS = [
 ]
 
 
-def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
-    """
-    Create a genesis-block dict with allocation for all `accounts`.
-
-    :param accounts: list of account addresses (hex)
-    :param initial_alloc: the amount to allocate for the `accounts`
-    :return: genesis dict
-    """
-    genesis = GENESIS_STUB.copy()
-    genesis['alloc'] = {
-        account: {
-            'balance': str(initial_alloc)
-        }
-        for account in accounts
-    }
-    return genesis
-
-
-def prepare_for_exec(nodes, parentdir):
+def prepare_for_exec(nodes, parentdir, accounts=DEFAULTACCOUNTS):
     """
     Prepare the configurations from `nodes` for execution, i.e.
     - prepare dataddirs
@@ -102,7 +61,7 @@ def prepare_for_exec(nodes, parentdir):
     for node in nodes:
         nodedir = os.path.join(parentdir, node['nodekeyhex'])
         os.makedirs(nodedir)
-        init_datadir(nodedir)
+        init_datadir(nodedir, accounts=accounts)
         if 'minerthreads' in node:
             create_keystore_account(nodedir)
         cmds.append(to_cmd(node, datadir=nodedir))
