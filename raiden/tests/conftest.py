@@ -36,10 +36,18 @@ def logging_level(request):
     """
     if request.config.option.log_config is not None:
         slogging.configure(request.config.option.log_config)
-        return
 
-    if request.config.option.verbose > 0:
+    elif request.config.option.verbose > 5:
+        slogging.configure(':TRACE')
+
+    elif request.config.option.verbose > 3:
         slogging.configure(':DEBUG')
+
+    elif request.config.option.verbose > 1:
+        slogging.configure(':INFO')
+
+    else:
+        slogging.configure(':WARNING')
 
 
 @pytest.fixture(scope='session', autouse=True)

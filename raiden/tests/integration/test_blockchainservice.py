@@ -3,7 +3,6 @@ import random
 import string
 
 import pytest
-from ethereum import slogging
 from ethereum import _solidity
 from ethereum.keys import privtoaddr
 from ethereum._solidity import compile_file
@@ -14,12 +13,6 @@ from pyethapp.rpc_client import JSONRPCClient
 from raiden.blockchain.abi import get_contract_path
 from raiden.network.rpc.client import decode_topic, patch_send_transaction
 
-slogging.configure(
-    ':DEBUG'
-    ',eth.chain.tx:DEBUG'
-    ',jsonrpc:DEBUG'
-    ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
-)
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
 LETTERS = string.printable

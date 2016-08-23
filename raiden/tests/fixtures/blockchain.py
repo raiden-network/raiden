@@ -1,14 +1,16 @@
 # -*- coding: utf8 -*-
+from __future__ import division
+
 import pytest
 from ethereum import slogging
 from ethereum.keys import privtoaddr
 from ethereum._solidity import compile_file
-from pyethapp.rpc_client import address_encoder, JSONRPCClient
+from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.blockchain.abi import get_contract_path
 from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
 from raiden.tests.utils.tests import cleanup_tasks
-from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
+from raiden.tests.utils.tester_client import BlockChainServiceTesterMock
 from raiden.network.rpc.client import (
     patch_send_transaction,
     BlockChainService,
@@ -16,7 +18,6 @@ from raiden.network.rpc.client import (
 from raiden.tests.utils.blockchain import (
     geth_create_blockchain,
     hydrachain_create_blockchain,
-    tester_create_blockchain,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -29,20 +30,15 @@ __all__ = (
 
 
 @pytest.fixture
-def assets_addresses(deposit, number_of_assets, blockchain_services):
+def assets_addresses(asset_amount, deposit, number_of_assets, blockchain_services):
     chain = blockchain_services[0]
-
-    # `total_per_node = channels_per_node * deposit`
-    # assuming 3 is the maximum number of channels used.
-    total_per_node = 3 * deposit
-    total_asset = total_per_node * len(blockchain_services)
 
     result = list()
     for _ in range(number_of_assets):
         asset_address = chain.deploy_and_register_asset(
             contract_name='HumanStandardToken',
             contract_file='HumanStandardToken.sol',
-            constructor_parameters=(total_asset, 'raiden', 2, 'Rd'),
+            constructor_parameters=(asset_amount, 'raiden', 2, 'Rd'),
         )
         result.append(asset_address)
 
@@ -51,7 +47,7 @@ def assets_addresses(deposit, number_of_assets, blockchain_services):
         for transfer_to in blockchain_services[1:]:
             chain.asset(asset_address).transfer(
                 privtoaddr(transfer_to.private_key),
-                total_per_node,
+                asset_amount // len(blockchain_services),
             )
 
     return result
@@ -193,15 +189,14 @@ def _jsonrpc_services(private_keys, verbose, poll_timeout):
 
 
 def _mock_services(private_keys, request):
+    # make sure we are getting and leaving a clean state, just in case the
+    # BlockChainServiceMock wasn't instantiate through the proper fixture.
+
     @request.addfinalizer
     def _cleanup():
-        BlockChainServiceMock._instance = None
+        BlockChainServiceMock.reset()
 
-    # pylint: disable=protected-access,redefined-variable-type
-    BlockChainServiceMock._instance = True
-    blockchain_service = BlockChainServiceMock(None, MOCK_REGISTRY_ADDRESS)
-    BlockChainServiceMock._instance = blockchain_service
-    # pylint: enable=protected-access,redefined-variable-type
+    BlockChainServiceMock.reset()
 
     blockchain_services = list()
     for privkey in private_keys:
@@ -214,22 +209,20 @@ def _mock_services(private_keys, request):
     return blockchain_services
 
 
-def _tester_services(private_keys):
-    tester_state = tester_create_blockchain(private_keys)
-
-    registry_address = tester_deploy_contract(
-        tester_state,
-        private_keys[0],
-        contract_name='Registry',
-        contract_file='Registry.sol',
-    )
+def _tester_services(tester_state, tester_registry_address, private_keys):
+    # registry_address = tester_deploy_contract(
+    #     tester_state,
+    #     private_keys[0],
+    #     contract_name='Registry',
+    #     contract_file='Registry.sol',
+    # )
 
     blockchain_services = list()
     for privkey in private_keys:
         blockchain = BlockChainServiceTesterMock(
             privkey,
             tester_state,
-            registry_address,
+            tester_registry_address,
         )
         blockchain_services.append(blockchain)
 

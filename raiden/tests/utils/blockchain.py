@@ -9,28 +9,33 @@ import termios
 import subprocess
 
 import gevent
-import ethereum.blocks
-import ethereum.config
-import ethereum.db
 from devp2p.crypto import privtopub
 from devp2p.utils import host_port_pubkey_to_uri
 from ethereum.keys import privtoaddr
-from ethereum import slogging, tester
-from ethereum.utils import denoms, encode_hex, int_to_addr, zpad
+from ethereum import slogging
+from ethereum.utils import denoms, encode_hex
 from pyethapp.accounts import Account
 from pyethapp.config import update_config_from_genesis_json
 from pyethapp.console_service import Console
-from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder, quantity_decoder
+from pyethapp.jsonrpc import address_encoder, quantity_decoder
 from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
-from raiden.network.rpc.client import GAS_LIMIT, GAS_LIMIT_HEX
+from raiden.network.rpc.client import GAS_LIMIT_HEX
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_BALANCE = denoms.turing * 1
 DEFAULT_BALANCE_BIN = str(denoms.turing * 1)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
+
+
+def wait_until_block(chain, block):
+    # we expect `next_block` to block until the next block, but, it could
+    # advance miss and advance two or more
+    curr_block = chain.block_number()
+    while curr_block < block:
+        curr_block = chain.next_block()
 
 
 def hydrachain_wait(privatekeys, number_of_nodes):
@@ -360,48 +365,3 @@ def geth_create_blockchain(private_keys, geth_private_keys, p2p_base_port,
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
 
     return processes_list
-
-
-def tester_create_blockchain(private_keys):
-    tester_state = tester.state()
-
-    # special addresses 1 to 5
-    alloc = {
-        int_to_addr(i): {'wei': 1}
-        for i in range(1, 5)
-    }
-
-    # NOTE: we are *not* setting a balance for tester's default accounts
-    for privkey in private_keys:
-        address = privtoaddr(privkey)
-        alloc[address] = {
-            'balance': DEFAULT_BALANCE,
-        }
-
-    db = ethereum.db.EphemDB()
-    env = ethereum.config.Env(
-        db,
-        ethereum.config.default_config,
-    )
-    genesis_overwrite = {
-        'nonce': zpad(data_decoder('0x00006d6f7264656e'), 8),
-        'difficulty': quantity_decoder('0x20000'),
-        'mixhash': zpad(b'\x00', 32),
-        'coinbase': address_decoder('0x0000000000000000000000000000000000000000'),
-        'timestamp': 0,
-        'extra_data': b'',
-        'gas_limit': GAS_LIMIT,
-        'start_alloc': alloc,
-    }
-    genesis_block = ethereum.blocks.genesis(
-        env,
-        **genesis_overwrite
-    )
-    genesis_block.number = genesis_block.config['HOMESTEAD_FORK_BLKNUM'] + 1
-
-    tester_state.db = db
-    tester_state.env = env
-    tester_state.block = genesis_block
-    tester_state.blocks = [genesis_block]
-
-    return tester_state

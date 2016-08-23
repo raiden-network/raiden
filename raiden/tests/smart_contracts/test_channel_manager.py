@@ -2,12 +2,33 @@
 import pytest
 
 from ethereum import tester
-from ethereum.utils import sha3
+from ethereum.utils import encode_hex, sha3, privtoaddr
 from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
 
 from raiden.blockchain.abi import get_contract_path
 
 
+@pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
+def test_channelnew_event(settle_timeout, tester_state, tester_default_channel_manager, tester_events):
+    manager = tester_default_channel_manager
+
+    address0 = privtoaddr(tester.DEFAULT_KEY)
+    address1 = privtoaddr(tester.k1)
+
+    netting_channel_address1_hex = manager.newChannel(
+        address1,
+        settle_timeout,
+    )
+
+    last_event = tester_events[-1]
+    assert last_event['_event_type'] == 'ChannelNew'
+    assert last_event['nettingChannel'] == netting_channel_address1_hex
+    assert last_event['participant1'] == encode_hex(address0)
+    assert last_event['participant2'] == encode_hex(address1)
+    assert last_event['settleTimeout'] == settle_timeout
+
+
+@pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
 def test_channelmanager(tester_state, tester_token, tester_events,
                         tester_channelmanager_library_address, settle_timeout,
                         netting_channel_abi):

@@ -1,9 +1,11 @@
 # -*- coding: utf8 -*-
+import pytest
 from ethereum import tester
 
 from raiden.blockchain.abi import get_contract_path
 
 
+@pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
 def test_endpointregistry(tester_state, tester_events):
     account0 = tester.DEFAULT_ACCOUNT
     sender = account0.encode('hex')

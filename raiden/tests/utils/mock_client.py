@@ -30,52 +30,39 @@ class BlockChainServiceMock(object):
     Note:
         This class is built for testing purposes.
     """
-    # HACK: Using a singleton to share state among all nodes in a test
-    _instance = None
 
-    def __new__(cls, *args, **kwargs):  # pylint: disable=unused-argument
-        # This check was added to force proper cleanup (set _instance to
-        # None at the end of each test)
-        if cls._instance is None:
-            raise Exception(
-                'Do not instantiate this class directly, use the '
-                'blockchain_service fixture'
-            )
+    @classmethod
+    def reset(cls):
+        """ HACK: this reset the global state of the mock blockchain, needs to
+        be called after each test.
 
-        if cls._instance is True:
-            blockchain_service = super(BlockChainServiceMock, cls).__new__(cls, *args, **kwargs)
+        We need to use global state because we are not controlling the
+        `BlockChainService`s instantiation, since each instance need to agree
+        on the state we need to share it.
 
-            # __init__ is executed multiple times, so we need to do the
-            # initializatoin here (otherwise the values would be overwritten)
+        We need to reset it otherwise consecutive tests would fail.
+        """
+        # do not start at 0, since that is taken as the default None value
+        # for uint in the smart contract
+        cls.block_number_ = 1
+        cls.address_asset = dict()
+        cls.address_manager = dict()
+        cls.address_contract = dict()
+        cls.address_registry = dict()
+        cls.asset_manager = dict()
 
-            # do not start at 0, since that is taken as the default None value
-            # for uint in the smart contract
-            blockchain_service.block_number_ = 1
-            blockchain_service.address_asset = dict()
-            blockchain_service.address_manager = dict()
-            blockchain_service.address_contract = dict()
-            blockchain_service.address_registry = dict()
-            blockchain_service.asset_manager = dict()
-
-            registry = RegistryMock(
-                blockchain_service,
-                address=MOCK_REGISTRY_ADDRESS,
-            )
-            blockchain_service.default_registry = registry
-            blockchain_service.address_registry[MOCK_REGISTRY_ADDRESS] = registry
-
-            cls._instance = blockchain_service
-
-        return cls._instance
-    # /HACK
+        registry = RegistryMock(address=MOCK_REGISTRY_ADDRESS)
+        cls.default_registry = registry
+        cls.address_registry[MOCK_REGISTRY_ADDRESS] = registry
 
     # Note: all these methods need to be "atomic" because the mock is going to
     # be used by multiple clients. Not using blocking functions should be
     # sufficient
-    def __init__(self, privatekey_bin, registry_address, **kwargs):
-        self.privatekey_bin = privatekey_bin
+    def __init__(self, private_key, registry_address, **kwargs):
+        self.private_key = private_key
 
-    def next_block(self):
+    @classmethod
+    def next_block(cls):
         """ Equivalent to the mining of a new block.
 
         Note:
@@ -84,10 +71,12 @@ class BlockChainServiceMock(object):
             channel contract needs the current block number to decide if the
             closing of a channel can be closed or not.
         """
-        self.block_number_ += 1
+        cls.block_number_ += 1
+        return cls.block_number_
 
-    def block_number(self):
-        return self.block_number_
+    @classmethod
+    def block_number(cls):
+        return cls.block_number_
 
     def asset(self, asset_address):
         return self.address_asset[asset_address]
@@ -106,6 +95,11 @@ class BlockChainServiceMock(object):
 
     def uninstall_filter(self, filter_id_raw):
         pass
+
+    def deploy_and_register_asset(self, contract_name, contract_file, constructor_parameters=None):
+        new_address = make_address()
+        self.default_registry.add_asset(new_address)
+        return new_address
 
 
 class FilterMock(object):
@@ -127,10 +121,8 @@ class FilterMock(object):
 
 
 class AssetMock(object):
-    def __init__(self, blockchain, address=None):
+    def __init__(self, address=None):
         self.address = address or make_address()
-        self.blockchain = blockchain
-
         self.contract_allowance = defaultdict(int)
 
     def approve(self, contract_address, allowance):
@@ -144,9 +136,8 @@ class AssetMock(object):
 
 
 class RegistryMock(object):
-    def __init__(self, blockchain, address=None):
+    def __init__(self, address=None):
         self.address = address or make_address()
-        self.blockchain = blockchain
 
         self.asset_manager = dict()
         self.address_asset = dict()
@@ -165,15 +156,15 @@ class RegistryMock(object):
         if asset_address in self.address_asset:
             raise ValueError('duplicated address {}'.format(encode_hex(asset_address)))
 
-        asset = AssetMock(self.blockchain, address=asset_address)
-        manager = ChannelManagerMock(self.blockchain, asset_address)
+        asset = AssetMock(address=asset_address)
+        manager = ChannelManagerMock(asset_address)
 
         self.address_asset[asset_address] = asset
         self.asset_manager[asset_address] = manager
 
-        self.blockchain.address_asset[asset_address] = asset
-        self.blockchain.address_manager[manager.address] = manager
-        self.blockchain.asset_manager[asset_address] = manager
+        BlockChainServiceMock.address_asset[asset_address] = asset
+        BlockChainServiceMock.address_manager[manager.address] = manager
+        BlockChainServiceMock.asset_manager[asset_address] = manager
 
     def asset_addresses(self):
         return self.address_asset.keys()
@@ -191,9 +182,8 @@ class RegistryMock(object):
 
 
 class ChannelManagerMock(object):
-    def __init__(self, blockchain, asset_address, address=None):
+    def __init__(self, asset_address, address=None):
         self.address = address or make_address()
-        self.blockchain = blockchain
 
         self.asset_address_ = asset_address
         self.pair_channel = dict()
@@ -216,6 +206,9 @@ class ChannelManagerMock(object):
         if not isaddress(peer2):
             raise ValueError('The peer2 must be a valid address')
 
+        if peer1 == peer2:
+            raise ValueError('Cannot open a channel with itself')
+
         pair = tuple(sorted((peer1, peer2)))
         if pair in self.pair_channel:
             raise ValueError('({}, {}) already have a channel'.format(
@@ -224,7 +217,6 @@ class ChannelManagerMock(object):
             ))
 
         channel = NettingChannelMock(
-            self.blockchain,
             self.asset_address(),
             peer1,
             peer2,
@@ -234,7 +226,7 @@ class ChannelManagerMock(object):
         self.participant_channels[peer1].append(channel)
         self.participant_channels[peer2].append(channel)
 
-        self.blockchain.address_contract[channel.address] = channel
+        BlockChainServiceMock.address_contract[channel.address] = channel
 
         # generate the events
         for filter_ in self.address_filter[peer1]:
@@ -261,10 +253,9 @@ class ChannelManagerMock(object):
 
 
 class NettingChannelMock(object):
-    def __init__(self, blockchain, asset_address, peer1, peer2, settle_timeout,  # pylint: disable=too-many-arguments
+    def __init__(self, asset_address, peer1, peer2, settle_timeout,  # pylint: disable=too-many-arguments
                  address=None):
         self.address = address or make_address()
-        self.blockchain = blockchain
 
         self.contract = NettingChannelContract(
             asset_address,
@@ -292,7 +283,11 @@ class NettingChannelMock(object):
         return self.contract.partner(our_address)
 
     def deposit(self, our_address, amount):
-        self.contract.deposit(our_address, amount, self.blockchain.block_number())
+        self.contract.deposit(
+            our_address,
+            amount,
+            BlockChainServiceMock.block_number(),
+        )
 
     def opened(self):
         return self.contract.opened
@@ -319,7 +314,7 @@ class NettingChannelMock(object):
 
     def close(self, our_address, first_transfer, second_transfer):
         ctx = {
-            'block_number': self.blockchain.block_number(),
+            'block_number': BlockChainServiceMock.block_number(),
             'msg.sender': our_address,
         }
 
@@ -340,7 +335,7 @@ class NettingChannelMock(object):
 
     def update_transfer(self, our_address, transfer):
         ctx = {
-            'block_number': self.blockchain.block_number(),
+            'block_number': BlockChainServiceMock.block_number(),
             'msg.sender': our_address,
         }
 
@@ -352,7 +347,7 @@ class NettingChannelMock(object):
 
     def unlock(self, our_address, unlock_proofs):
         ctx = {
-            'block_number': self.blockchain.block_number(),
+            'block_number': BlockChainServiceMock.block_number(),
             'msg.sender': our_address,
         }
 
@@ -371,7 +366,7 @@ class NettingChannelMock(object):
 
     def settle(self):
         ctx = {
-            'block_number': self.blockchain.block_number(),
+            'block_number': BlockChainServiceMock.block_number(),
         }
         self.contract.settle(ctx)
 

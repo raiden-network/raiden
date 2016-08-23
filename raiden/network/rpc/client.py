@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+import gevent
 import rlp
 from ethereum import slogging
 from ethereum import _solidity
@@ -120,6 +121,19 @@ class BlockChainService(object):
         self.poll_timeout = poll_timeout
         self.default_registry = self.registry(registry_address)
 
+    def block_number(self):
+        return self.client.blocknumber()
+
+    def next_block(self):
+        target_block_number = self.block_number() + 1
+        current_block = target_block_number
+
+        while not current_block >= target_block_number:
+            current_block = self.block_number()
+            gevent.sleep(0.5)
+
+        return current_block
+
     def asset(self, asset_address):
         """ Return a proxy to interact with an asset. """
         if asset_address not in self.address_asset:
@@ -186,9 +200,6 @@ class BlockChainService(object):
             )
 
         return self.address_registry[registry_address]
-
-    def block_number(self):
-        return self.client.blocknumber()
 
     def uninstall_filter(self, filter_id_raw):
         self.client.call('eth_uninstallFilter', filter_id_raw)

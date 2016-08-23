@@ -62,12 +62,24 @@ def privatekey_seed():
 
 
 @pytest.fixture
+def asset_amount(number_of_nodes, deposit):
+    total_per_node = 3 * (deposit + 1)
+    total_asset = total_per_node * number_of_nodes
+    return total_asset
+
+
+@pytest.fixture
 def private_keys(number_of_nodes, privatekey_seed):
     """ Private keys for each raiden node. """
-    return [
+    result = [
         sha3(privatekey_seed.format(position))
         for position in range(number_of_nodes)
     ]
+
+    # this must not happen, otherwise the keys and addresses will be equal!
+    assert len(set(result)) == number_of_nodes, '`privatekey_seed` generate repeated keys'
+
+    return result
 
 
 @pytest.fixture

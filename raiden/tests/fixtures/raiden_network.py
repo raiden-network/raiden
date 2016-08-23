@@ -1,12 +1,13 @@
 # -*- coding: utf8 -*-
 import gevent
 import pytest
-from ethereum import slogging
+from ethereum import slogging, _solidity
+from ethereum.keys import privtoaddr
 from pyethapp.rpc_client import JSONRPCClient
 
-from ethereum.keys import privtoaddr
 from raiden.blockchain.abi import get_contract_path
 from raiden.network.discovery import ContractDiscovery
+from raiden.network.rpc.client import patch_send_transaction
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.network import (
     CHAIN,
@@ -32,11 +33,15 @@ def _raiden_cleanup(request, raiden_apps):
 
 
 @pytest.fixture
-def raiden_chain(request, private_keys, assets_addresses, channels_per_node,
-                 deposit, settle_timeout, poll_timeout, blockchain_services,
-                 transport_class):
+def raiden_chain(request, assets_addresses, channels_per_node, deposit,
+                 settle_timeout, blockchain_services, transport_class):
     if len(assets_addresses) > 1:
         raise ValueError('raiden_chain only works with a single asset')
+
+    assert channels_per_node in (0, 1, 2, CHAIN), (
+        'deployed_network uses create_sequential_network that can only work '
+        'with 0, 1 or 2 channels'
+    )
 
     verbosity = request.config.option.verbose
 
@@ -56,46 +61,14 @@ def raiden_chain(request, private_keys, assets_addresses, channels_per_node,
 
 
 @pytest.fixture
-def raiden_network(request, private_keys, assets_addresses, channels_per_node,
-                   deposit, settle_timeout, poll_timeout, blockchain_services,
-                   transport_class):
+def raiden_network(request, assets_addresses, channels_per_node, deposit,
+                   settle_timeout, blockchain_services, transport_class):
 
     verbosity = request.config.option.verbose
 
     raiden_apps = create_network(
         blockchain_services,
         assets_addresses,
-        channels_per_node,
-        deposit,
-        settle_timeout,
-        transport_class,
-        verbosity,
-    )
-
-    _raiden_cleanup(request, raiden_apps)
-
-    return raiden_apps
-
-
-@pytest.fixture
-def deployed_network(request, private_keys, asset_addresses, channels_per_node,
-                     deposit, settle_timeout, poll_timeout,
-                     blockchain_services, transport_class):
-
-    if len(asset_addresses) > 1:
-        # currently using create_sequential_network
-        raise ValueError('deployed_network only works with one asset')
-
-    assert channels_per_node in (0, 1, 2, CHAIN), (
-        'deployed_network uses create_sequential_network that can only work '
-        'with 0, 1 or 2 channels'
-    )
-
-    verbosity = request.config.option.verbose
-
-    raiden_apps = create_sequential_network(
-        blockchain_services,
-        asset_addresses[0],
         channels_per_node,
         deposit,
         settle_timeout,
@@ -127,7 +100,7 @@ def discovery_blockchain(request, private_keys, cluster, poll_timeout):
 
     # deploy discovery contract
     discovery_contract_path = get_contract_path('EndpointRegistry.sol')
-    discovery_contracts = compile_file(discovery_contract_path, libraries=dict())
+    discovery_contracts = _solidity.compile_file(discovery_contract_path, libraries=dict())
     discovery_contract_proxy = jsonrpc_client.deploy_solidity_contract(
         address,
         'EndpointRegistry',

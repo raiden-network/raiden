@@ -1,34 +1,22 @@
 # -*- coding: utf8 -*-
 import gevent
-import gevent.monkey
 import pytest
 
-from ethereum import slogging
 from ethereum.utils import sha3
 
 from raiden.tests.utils.transfer import (
     assert_synched_channels,
     channel,
-    get_received_transfer,
     pending_mediated_transfer,
 )
 from raiden.tests.utils.network import CHAIN
-
-# Monkey patch subprocess.Popen used by solidity wrapper
-gevent.monkey.patch_socket()  # patch_subprocess()
-slogging.configure(
-    ':DEBUG'
-    ',eth.chain.tx:DEBUG'
-    ',jsonrpc:DEBUG'
-    ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
-)
 
 
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_event_new_channel(deployed_network, deposit, settle_timeout):
-    app0, app1 = deployed_network  # pylint: disable=unbalanced-tuple-unpacking
+def test_event_new_channel(raiden_chain, deposit, settle_timeout):
+    app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
 
@@ -99,8 +87,8 @@ def test_event_new_channel(deployed_network, deposit, settle_timeout):
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_secret_revealed(deployed_network, deposit):
-    app0, app1, app2 = deployed_network
+def test_secret_revealed(raiden_chain, deposit):
+    app0, app1, app2 = raiden_chain
 
     asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
     amount = 10
@@ -108,7 +96,7 @@ def test_secret_revealed(deployed_network, deposit):
     channel21 = channel(app2, app1, asset_address)
     netting_channel = channel21.external_state.netting_channel
 
-    secret = pending_mediated_transfer(deployed_network, asset_address, amount)
+    secret = pending_mediated_transfer(raiden_chain, asset_address, amount)
     hashlock = sha3(secret)
 
     gevent.sleep(.1)  # wait for the messages

@@ -724,7 +724,7 @@ class Channel(object):
 
             if not transfer.lock.expiration - block_number > self.reveal_timeout:
                 log.error(
-                    'Expiration smaller than the minimum requried.',
+                    'Expiration smaller too small.',
                     lock_expiration=transfer.lock.expiration,
                     current_block=block_number,
                     reveal_timeout=self.reveal_timeout,

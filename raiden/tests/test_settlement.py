@@ -4,6 +4,7 @@ import pytest
 from ethereum import slogging
 
 from raiden.mtree import check_proof
+from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.messages import setup_messages_cb
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
@@ -40,7 +41,7 @@ def test_settlement(raiden_network, settle_timeout):
     balance1 = channel1.balance
 
     amount = 10
-    expiration = 5
+    expiration = app0.raiden.chain.block_number() + 5
     secret = 'secret'
     hashlock = sha3(secret)
 
@@ -85,8 +86,8 @@ def test_settlement(raiden_network, settle_timeout):
         [unlock_proof],
     )
 
-    for _ in range(settle_timeout):
-        chain0.next_block()
+    settle_expiration = chain0.block_number() + settle_timeout
+    wait_until_block(chain0, settle_expiration)
 
     channel0.external_state.netting_channel.settle()
 
@@ -94,6 +95,7 @@ def test_settlement(raiden_network, settle_timeout):
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('blockchain_type', ['mock'])  # TODO: expose the netted amount in all clients
 def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
     """ Any transfer following a secret revealed must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
@@ -136,8 +138,8 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
         )
 
     # forward the block number to allow settle
-    for _ in range(settle_timeout):
-        app2.raiden.chain.next_block()
+    settle_expiration = app2.raiden.chain.block_number() + settle_timeout
+    wait_until_block(app2.raiden.chain, settle_expiration)
 
     back_channel.external_state.netting_channel.settle()
 
@@ -188,9 +190,9 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
         None
     )
 
-    # wait until the last block to reveal the secret
-    for _ in range(attack_transfer.lock.expiration - 1):
-        app2.raiden.chain.next_block()
+    # wait until the last block to reveal the secret, hopefully we are not
+    # missing a block during the test
+    wait_until_block(app2.raiden.chain, attack_transfer.lock.expiration - 1)
 
     # since the attacker knows the secret he can net the lock
     attack_channel.netting_channel.unlock(

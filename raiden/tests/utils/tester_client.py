@@ -89,6 +89,50 @@ def tester_deploy_contract(tester_state, private_key, contract_name, contract_fi
     return contract_address
 
 
+class ChannelExternalStateTester(object):
+    def __init__(self, tester_state, private_key, address):
+        self.tester_state = tester_state
+        self.proxy = NettingChannelTesterMock(
+            tester_state,
+            private_key,
+            address,
+        )
+
+        self.callbacks_on_opened = list()
+        self.callbacks_on_closed = list()
+        self.callbacks_on_settled = list()
+
+    def opened_block(self):
+        return self.proxy.opened()
+
+    def closed_block(self):
+        return self.proxy.closed()
+
+    def settled_block(self):
+        return self.proxy.settled()
+
+    def isopen(self):
+        return self.proxy.isopen()
+
+    def update_transfer(self, our_address, transfer):
+        return self.proxy.update_transfer(our_address, transfer)
+
+    def unlock(self, our_address, unlock_proofs):
+        return self.proxy.unlock(our_address, unlock_proofs)
+
+    def settle(self):
+        return self.proxy.settle()
+
+    def callback_on_opened(self, callback):
+        self.callbacks_on_opened.append(callback)
+
+    def callback_on_closed(self, callback):
+        self.callbacks_on_closed.append(callback)
+
+    def callback_on_settled(self, callback):
+        self.callbacks_on_settled.append(callback)
+
+
 class FilterTesterMock(object):
     def __init__(self, jsonrpc_client, filter_id_raw):
         self.filter_id_raw = filter_id_raw
@@ -121,10 +165,11 @@ class BlockChainServiceTesterMock(object):
         self.address_registry = dict()
         self.asset_manager = dict()
 
+    def block_number(self):
+        return self.tester_state.block.number
+
     def next_block(self):
         self.tester_state.mine(number_of_blocks=1)
-
-    def block_number(self):
         return self.tester_state.block.number
 
     def asset(self, asset_address):

@@ -1,16 +1,77 @@
 # -*- coding: utf8 -*-
 import pytest
+import ethereum.db
+import ethereum.blocks
+import ethereum.config
 from ethereum import tester
-from ethereum.tester import ABIContract, ContractTranslator
+from ethereum.utils import int_to_addr, zpad
+from ethereum.keys import privtoaddr
+from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 
+from raiden.network.rpc.client import GAS_LIMIT
 from raiden.blockchain.abi import get_contract_path
+from raiden.tests.utils.blockchain import DEFAULT_BALANCE
+from raiden.tests.utils.tester import create_channelmanager_proxy, create_registryproxy, create_tokenproxy
 
 
 @pytest.fixture
-def tester_state():
-    state = tester.state()
-    state.block.number = 1150001  # HOMESTEAD_FORK_BLKNUM=1150000
-    return state
+def tester_blockgas_limit():
+    """ The tester's block gas limit. Increase this value to avoid `mine`ing to
+    if the blockgas is not of interest for the test.
+    """
+    return GAS_LIMIT
+
+
+@pytest.fixture
+def tester_state(private_keys, tester_blockgas_limit):
+    tester_state = tester.state()
+
+    # special addresses 1 to 5
+    alloc = {
+        int_to_addr(i): {'wei': 1}
+        for i in range(1, 5)
+    }
+
+    for privkey in private_keys:
+        address = privtoaddr(privkey)
+        alloc[address] = {
+            'balance': DEFAULT_BALANCE,
+        }
+
+    for account in tester.accounts:
+        alloc[account] = {
+            'balance': DEFAULT_BALANCE,
+        }
+
+    db = ethereum.db.EphemDB()
+    env = ethereum.config.Env(
+        db,
+        ethereum.config.default_config,
+    )
+    genesis_overwrite = {
+        'nonce': zpad(data_decoder('0x00006d6f7264656e'), 8),
+        'difficulty': quantity_decoder('0x20000'),
+        'mixhash': zpad(b'\x00', 32),
+        'coinbase': address_decoder('0x0000000000000000000000000000000000000000'),
+        'timestamp': 0,
+        'extra_data': b'',
+        'gas_limit': tester_blockgas_limit,
+        'start_alloc': alloc,
+    }
+    genesis_block = ethereum.blocks.genesis(
+        env,
+        **genesis_overwrite
+    )
+
+    # enable DELEGATECALL opcode
+    genesis_block.number = genesis_block.config['HOMESTEAD_FORK_BLKNUM'] + 1
+
+    tester_state.db = db
+    tester_state.env = env
+    tester_state.block = genesis_block
+    tester_state.blocks = [genesis_block]
+
+    return tester_state
 
 
 @pytest.fixture
@@ -28,6 +89,7 @@ def tester_token_address(asset_amount, tester_state):
         path=standard_token_path,
         language='solidity',
     )
+    tester_state.mine(number_of_blocks=1)
 
     human_token_libraries = {
         'StandardToken': standard_token_address.encode('hex'),
@@ -40,7 +102,7 @@ def tester_token_address(asset_amount, tester_state):
         libraries=human_token_libraries,
         constructor_parameters=[asset_amount, 'raiden', 0, 'rd'],
     )
-    tester_state.mine()
+    tester_state.mine(number_of_blocks=1)
 
     human_token_address = human_token_proxy.address
     return human_token_address
@@ -55,7 +117,7 @@ def tester_nettingchannel_library_address(tester_state):
         language='solidity',
         contract_name='NettingChannelLibrary',
     )
-    tester_state.mine()
+    tester_state.mine(number_of_blocks=1)
     return library_address
 
 
@@ -71,7 +133,7 @@ def tester_channelmanager_library_address(tester_state, tester_nettingchannel_li
             'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex'),
         }
     )
-    tester_state.mine()
+    tester_state.mine(number_of_blocks=1)
     return manager_address
 
 
@@ -87,43 +149,23 @@ def tester_registry_address(tester_state, tester_channelmanager_library_address)
             'ChannelManagerLibrary': tester_channelmanager_library_address.encode('hex')
         }
     )
-    tester_state.mine()
+    tester_state.mine(number_of_blocks=1)
     return registry_address
 
 
 @pytest.fixture
-def tester_token(tester_state, tester_token_address, token_abi, tester_events):
-    translator = ContractTranslator(token_abi)
-
-    return ABIContract(
+def tester_token(tester_state, tester_token_address, tester_events):
+    return create_tokenproxy(
         tester_state,
-        translator,
         tester_token_address,
-        log_listener=tester_events.append,
+        tester_events,
     )
 
 
 @pytest.fixture
-def tester_registry(tester_state, registry_abi, tester_registry_address, tester_events):
-    translator = ContractTranslator(registry_abi)
-
-    return ABIContract(
+def tester_registry(tester_state, tester_registry_address, tester_events):
+    return create_registryproxy(
         tester_state,
-        translator,
         tester_registry_address,
-        log_listener=tester_events.append,
+        tester_events,
     )
-
-
-@pytest.fixture
-def tester_default_channel_manager(tester_state, tester_token, tester_registry,
-                                   tester_events, channel_manager_abi):
-    contract_address = tester_registry.addAsset(tester_token.address)
-    translator = ContractTranslator(channel_manager_abi)
-    channel_manager_abi = ABIContract(
-        tester_state,
-        translator,
-        contract_address,
-        log_listener=tester_events.append,
-    )
-    return channel_manager_abi
