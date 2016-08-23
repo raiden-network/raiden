@@ -16,12 +16,6 @@ CLUSTER_NAME = 'raiden'
 RAIDEN_PORT = 40001
 DEFAULT_PW = 'notsosecret'
 
-# a list of `num_raiden_accounts` account addresses with a predictable privkey:
-# privkey = sha3('127.0.0.1:`raiden_port + i`')
-DEFAULTACCOUNTS = [
-    encode_hex(privtoaddr(sha3('127.0.0.1:{}'.format(RAIDEN_PORT + i))))
-    for i in range(NUM_RAIDEN_ACCOUNTS)
-]
 
 # default args to pass to `geth` for all calls, e.g. verbosity, ...
 DEFAULT_ARGS = [
@@ -54,6 +48,24 @@ GENESIS_STUB = {
     'extraData': CLUSTER_NAME,
     'gasLimit': '0xfffffffff'
 }
+
+
+def generate_accounts(seeds):
+    """Create private keys and addresses for all seeds.
+    """
+    return {
+        seed: dict(
+            privatekey=encode_hex(sha3(seed)),
+            address=encode_hex(privtoaddr(sha3(seed)))
+        ) for seed in seeds}
+
+
+# a list of `num_raiden_accounts` account addresses with a predictable privkey:
+# privkey = sha3('127.0.0.1:`raiden_port + i`')
+DEFAULTACCOUNTS = [
+    value['address'] for value in generate_accounts([
+        '127.0.0.1:{}'.format(RAIDEN_PORT + i) for i in range(NUM_RAIDEN_ACCOUNTS)]).values()
+]
 
 
 def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
@@ -92,7 +104,7 @@ def prepare_for_exec(nodes, parentdir):
         os.makedirs(nodedir)
         init_datadir(nodedir)
         if 'minerthreads' in node:
-            create_account(nodedir)
+            create_keystore_account(nodedir)
         cmds.append(to_cmd(node, datadir=nodedir))
     return cmds
 
@@ -119,7 +131,7 @@ def to_cmd(node, datadir=None):
     return shlex.split(' '.join(cmd))
 
 
-def create_account(datadir, privkey=encode_hex(sha3('localhost:627'))):
+def create_keystore_account(datadir, privkey=encode_hex(sha3('localhost:627'))):
     """
     Create an account in `datadir` -- since we're not interested
     in the rewards, we don't care about the created address.
@@ -142,10 +154,10 @@ def create_account(datadir, privkey=encode_hex(sha3('localhost:627'))):
     assert create.returncode == 0
 
 
-def init_datadir(datadir):
+def init_datadir(datadir, accounts=DEFAULTACCOUNTS):
     genesis_path = os.path.join(datadir, 'custom_genesis.json')
     with open(genesis_path, 'w') as f:
-        json.dump(mk_genesis(DEFAULTACCOUNTS), f)
+        json.dump(mk_genesis(accounts), f)
     Popen(shlex.split(
         'geth --datadir {} init {}'.format(datadir, genesis_path)
         ))
