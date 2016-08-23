@@ -4,7 +4,7 @@ import click
 import json
 from genesis_builder import generate_accounts, mk_genesis
 from startcluster import RAIDEN_PORT as START_PORT
-from startcluster import create_node_configurations, update_bootnodes, to_cmd
+from startcluster import create_node_configuration, update_bootnodes, to_cmd
 
 
 def build_node_list(hosts, nodes_per_host):
@@ -87,8 +87,8 @@ def geth_commands(geth_hosts, datadir):
     (because they will have their `bootnodes` parameter pointed at each other).
     """
     nodes = []
-    for host in geth_hosts:
-        nodes.extend(create_node_configurations(1, host=host))
+    for i, host in enumerate(geth_hosts):
+        nodes.append(create_node_configuration(host=host, node_key_seed=i))
     for node in nodes:
         node.pop('unlock')
     update_bootnodes(nodes)

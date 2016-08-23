@@ -123,39 +123,64 @@ def init_datadir(datadir, accounts=DEFAULTACCOUNTS):
 
 
 def create_node_configurations(num_nodes,
-                               miner=True,
-                               start_port=30301,
-                               start_rpcport=8101,
-                               host='127.0.0.1'):
+                              miner=True,
+                              start_port=30301,
+                              start_rpcport=8101,
+                              host='127.0.0.1',
+                              ):
     """
-    Create configurations (ports, keys, etc...) for `num_nodes`.
+    Create multiple configurations (ports, keys, etc...) for `num_nodes` on `host`.
 
     :param num_nodes: the number of nodes to create
     :param miner: if True, setup the first node to be a mining node
     :param start_port: the first p2p port to assign
     :param start_rpcport: the first rpc port to assign
-    :param host: the host for the node to run on
     :return: list of node configurations (dicts)
     """
     nodes = []
     for i in range(num_nodes):
-        node = dict()
-        if miner and i == 0:
-            node['minerthreads'] = 1  # conservative
-            node['unlock'] = 0
-        node['nodekey'] = sha3('node:{}'.format(i))
-        node['nodekeyhex'] = encode_hex(node['nodekey'])
-        node['pub'] = encode_hex(privtopub_enode(node['nodekey']))
-        node['address'] = privtoaddr(node['nodekey'])
-        node['host'] = host
-        node['port'] = start_port + i
-        node['rpcport'] = start_rpcport + i
-        node['enode'] = 'enode://{pub}@{host}:{port}'.format(**node)
+        node = create_node_configuration(
+            miner=miner and i == 0,
+            port=start_port + i,
+            rpcport=start_rpcport + i,
+            node_key_seed=i
+        )
         nodes.append(node)
     return nodes
 
 
+def create_node_configuration(miner=True,
+                              port=30301,
+                              rpcport=8101,
+                              host='127.0.0.1',
+                              node_key_seed=0):
+    """
+    Create configuration (ports, keys, etc...) for one node.
+
+    :param miner: if True, setup to be a mining node
+    :param port: the p2p port to assign
+    :param rpcport: the port to assign
+    :param host: the host for the node to run on
+    :return: node configuration dict
+    """
+    node = dict()
+    if miner:
+        node['minerthreads'] = 1  # conservative
+        node['unlock'] = 0
+    node['nodekey'] = sha3('node:{}'.format(node_key_seed))
+    node['nodekeyhex'] = encode_hex(node['nodekey'])
+    node['pub'] = encode_hex(privtopub_enode(node['nodekey']))
+    node['address'] = privtoaddr(node['nodekey'])
+    node['host'] = host
+    node['port'] = port
+    node['rpcport'] = rpcport
+    node['enode'] = 'enode://{pub}@{host}:{port}'.format(**node)
+    return node
+
+
 def update_bootnodes(nodes):
+    """Join the bootnodes for number of node configurations.
+    """
     for node in nodes:
         node['bootnodes'] = ','.join(node['enode'] for node in nodes)
 
