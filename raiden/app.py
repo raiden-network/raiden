@@ -71,7 +71,7 @@ class App(object):  # pylint: disable=too-few-public-methods
 @click.option(
     '--eth_rpc_endpoint',
     help='"host:port" address of ethereum JSON-RPC server.\n'
-    'Also accepts a prefix URL (http:// or https://) with optional port',
+    'Also accepts a protocol prefix (http:// or https://) with optional port',
     default='127.0.0.1:8545',  # geth default jsonrpc port
     type=str,
 )
