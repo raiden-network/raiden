@@ -3,10 +3,6 @@ num_nodes = 10000
 max_id = 2**32
 max_id = num_nodes * 100
 
-
-def distance(a, b):
-    a, b = sorted([a, b])
-
 node_by_id = dict()
 nodeids = []
 
