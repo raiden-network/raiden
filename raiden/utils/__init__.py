@@ -54,6 +54,6 @@ def host_port_to_endpoint(host, port):
 
 
 def split_endpoint(endpoint):
-    host, port = endpoint.split(':')
+    host, port = endpoint.split(':')[:2]
     port = int(port)
     return (host, port)
