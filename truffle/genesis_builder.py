@@ -42,4 +42,6 @@ def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
         }
         for account in accounts
     }
+    # add the zero-privatekey account ("0" * 64) for convenience
+    genesis['alloc']['3f17f1962b36e491b30a40b2405849e597ba5fb5'] = dict(balance=str(initial_alloc))
     return genesis
