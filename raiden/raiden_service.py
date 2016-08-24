@@ -502,10 +502,6 @@ class RaidenEventHandler(object):
         self.raiden.register_channel_manager(manager)
 
     def event_channelnew(self, manager_address, event):  # pylint: disable=unused-argument
-        if address_decoder(event['participant1']) != self.raiden.address and address_decoder(event['participant2']) != self.raiden.address:
-            log.info('ignoring new channel, this is node is not a participant.')
-            return
-
         netting_channel_address_bin = address_decoder(event['nettingChannel'])
 
         # shouldnt raise, filters are installed only for registered managers
@@ -513,6 +509,11 @@ class RaidenEventHandler(object):
         asset_manager.register_channel_by_address(
             netting_channel_address_bin,
             self.raiden.config['reveal_timeout'],
+        )
+
+        asset_manager.channelgraph.add_path(
+            event['participant1'].decode('hex'),
+            event['participant2'].decode('hex'),
         )
 
         log.info(
