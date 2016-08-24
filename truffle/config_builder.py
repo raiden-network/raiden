@@ -145,7 +145,7 @@ def usage():
     print "\tconfig_builder.py account_file"
     print "\t-> create an account file that can be used as etherbase in geth instances."
     print "\n"
-    print "\tconfig_builder.py merge genesis.json state_dump.json"
+    print "\tconfig_builder.py merge state_dump.json genesis.json"
     print "\t-> merge the deployed contracts of state_dump.json into genesis.json and create a new genesis.json."
 
 if __name__ == '__main__':
