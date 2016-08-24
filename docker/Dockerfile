@@ -20,9 +20,6 @@ RUN git clone https://github.com/raiden-network/raiden.git /apps/raiden \
     && pip install --upgrade -r requirements.txt \
     && python setup.py develop
 
-RUN apt-get purge -y automake build-essential git-core \
-    && apt-get -y autoremove
-
 WORKDIR /apps/raiden
 
 EXPOSE 40001/udp
