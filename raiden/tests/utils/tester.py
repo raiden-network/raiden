@@ -10,13 +10,19 @@ from raiden.blockchain.abi import (
     REGISTRY_ABI,
 )
 
-# using an invalid key as the proxies default_key to force the user to set
-# `sender`. The reason for this is that too many tests were mixing the wrong
-# key, the alternative was to instantiate a proxy per key, which was adding to
-# much code-bloat, using an invalid key we effectvelly disable the "feature" of
-# the ABIContract to use a default key, making all the calls explicit, this is
-# intentional!
-INVALID_KEY = sha3('7')
+
+class InvalidKey(str):
+    # using an invalid key as the proxies default_key to force the user to set
+    # `sender`. The reason for this is that too many tests were mixing the
+    # wrong key, the alternative was to instantiate a proxy per key, which was
+    # adding to much code-bloat, using an invalid key we effectvelly disable
+    # the "feature" of the ABIContract to use a default key, making all the
+    # calls explicit, this is intentional!
+    def __getitem__(self, key):
+        # please provide an explicit key while testing with tester
+        raise Exception('sender key was not set')
+
+INVALID_KEY = InvalidKey('default_key_was_not_set')
 
 
 def create_tokenproxy(tester_state, tester_token_address, tester_events):
@@ -67,15 +73,17 @@ def create_nettingchannel_proxy(tester_state, tester_nettingchannel_address, tes
     return netting_channel_abi
 
 
-def channel_from_nettingcontract(our_address, netting_contract, external_state, reveal_timeout):
+def channel_from_nettingcontract(our_key, netting_contract, external_state, reveal_timeout):
     """ Create a `channel.Channel` for the `nettnig_contract`.
 
     Use this to make sure that both implementation (the smart contract and the
     python code) work in tandem.
     """
-    asset_address_hex = netting_contract.assetAddress()
-    settle_timeout = netting_contract.settleTimeout()
-    address1_hex, balance1, address2_hex, balance2 = netting_contract.addressAndBalance()
+    our_address = privtoaddr(our_key)
+
+    asset_address_hex = netting_contract.assetAddress(sender=our_key)
+    settle_timeout = netting_contract.settleTimeout(sender=our_key)
+    address1_hex, balance1, address2_hex, balance2 = netting_contract.addressAndBalance(sender=our_key)
 
     asset_address = decode_hex(asset_address_hex)
     address1 = decode_hex(address1_hex)
@@ -112,16 +120,22 @@ def channel_from_nettingcontract(our_address, netting_contract, external_state, 
     return channel
 
 
-def new_channelmanager(our_key, tester_state, tester_registry, tester_asset):
+def new_channelmanager(our_key, tester_state, tester_events, tester_registry, tester_token):
     channel_manager_address = tester_registry.addAsset(
         tester_token.address,
-        sender=privatekey0,
+        sender=our_key,
     )
     tester_state.mine(number_of_blocks=1)
 
+    channelmanager = create_channelmanager_proxy(
+        tester_state,
+        channel_manager_address,
+        tester_events,
+    )
+    return channelmanager
 
-def new_nettingcontract(our_key, partner_key, tester_state,
-                        tester_events, channelmanager, settle_timeout):
+
+def new_nettingcontract(our_key, partner_key, tester_state, tester_events, channelmanager, settle_timeout):
 
     netting_channel_address0_hex = channelmanager.newChannel(
         privtoaddr(partner_key),
@@ -140,5 +154,4 @@ def new_nettingcontract(our_key, partner_key, tester_state,
         default_key=INVALID_KEY,
     )
 
-    return new_net
     return nettingchannel

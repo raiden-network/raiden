@@ -451,6 +451,9 @@ class ChannelManager(object):
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
+        # TODO: raise if the transaction failed because there is an existing
+        # channel in place
+
         netting_channel_address_encoded = self.proxy.getChannelWith.call(
             other,
             startgas=self.startgas,

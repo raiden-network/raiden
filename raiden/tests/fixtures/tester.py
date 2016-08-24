@@ -11,7 +11,7 @@ from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 from raiden.network.rpc.client import GAS_LIMIT
 from raiden.blockchain.abi import get_contract_path
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
-from raiden.tests.utils.tester import create_channelmanager_proxy, create_registryproxy, create_tokenproxy
+from raiden.tests.utils.tester import create_registryproxy, create_tokenproxy
 
 
 @pytest.fixture

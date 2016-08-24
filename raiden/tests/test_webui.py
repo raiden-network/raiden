@@ -35,11 +35,8 @@ def test_webui():  # pylint: disable=too-many-locals
         for position in range(num_nodes)
     ]
 
-    BlockChainServiceMock._instance = True
+    BlockChainServiceMock.reset()
     blockchain_service = BlockChainServiceMock(None, MOCK_REGISTRY_ADDRESS)
-    # overwrite the instance
-    BlockChainServiceMock._instance = blockchain_service  # pylint: disable=redefined-variable-type
-
     registry = blockchain_service.registry(MOCK_REGISTRY_ADDRESS)
 
     for asset in assets_addresses:
@@ -79,6 +76,8 @@ def test_webui():  # pylint: disable=too-many-locals
 
     wamp = WAMPRouter(app0.raiden, 8080, ['channel', 'test'])
     wamp.run()
+
+    BlockChainServiceMock.reset()
 
 
 if __name__ == '__main__':

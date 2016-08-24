@@ -5,22 +5,12 @@ from raiden.mtree import merkleroot, check_proof, get_proof, NoHash32Error
 from raiden.utils import keccak
 
 
-def test_small():
-    values = [x * 32 for x in 'a']
-    proof_for = values[-1]
-    proof = [proof_for]
-    r = merkleroot(values, proof)
-    assert check_proof(proof, r, proof_for)
-
-
 def test_empy():
-    r = merkleroot('')
-    assert r == ''
+    assert merkleroot('') == ''
 
 
 def test_multiple_empty():
-    r = merkleroot(['', ''])
-    assert r == ''
+    assert merkleroot(['', '']) == ''
 
 
 def test_non_hash():
@@ -29,90 +19,111 @@ def test_non_hash():
 
 
 def test_single():
-    h = keccak('x')
-    assert merkleroot([h]) == h
+    hash_0 = keccak('x')
+    assert merkleroot([hash_0]) == hash_0
 
 
 def test_duplicates():
-    h = keccak('x')
-    h1 = keccak('y')
-    assert merkleroot([h, h]) == h
-    assert merkleroot([h, h1, h]) == merkleroot([h, h1])
+    hash_0 = keccak('x')
+    hash_1 = keccak('y')
+
+    assert merkleroot([hash_0, hash_0]) == hash_0, 'duplicates should be removed'
+    assert merkleroot([hash_0, hash_1, hash_0]) == merkleroot([hash_0, hash_1]), 'duplicates should be removed'
 
 
-def test_basic():
-    values = [x * 32 for x in 'ab']
-    proof_for = values[-1]
-    proof = [proof_for]
-    r = merkleroot(values, proof)
-    # print pex(r)
-    # print 'proof', proof
-    assert check_proof(proof, r, proof_for)
+def test_one():
+    hash_0 = 'a' * 32
 
-    proof_for = values[-1]
-    proof = [proof_for]
-    r = merkleroot(values, proof)
-    # print pex(r)
-    # print 'proof', proof
-    assert check_proof(proof, r, proof_for)
+    merkle_tree = [hash_0]
+    merkle_proof = [hash_0]  # modified in place
+    merkle_root = merkleroot(merkle_tree, merkle_proof)
+
+    assert merkle_proof == []
+    assert merkle_root == hash_0
+    assert check_proof(merkle_proof, merkle_root, hash_0) is True
+
+
+def test_two():
+    hash_0 = 'a' * 32
+    hash_1 = 'b' * 32
+
+    merkle_tree = [hash_0, hash_1]
+
+    merkle_proof = [hash_0]  # modified in place
+    merkle_root = merkleroot(merkle_tree, merkle_proof)
+
+    assert merkle_proof == [hash_1]
+    assert merkle_root == keccak(hash_0 + hash_1)
+    assert check_proof(merkle_proof, merkle_root, hash_0)
+
+    merkle_proof = [hash_1]  # modified in place
+    merkle_root = merkleroot(merkle_tree, merkle_proof)
+
+    assert merkle_proof == [hash_0]
+    assert merkle_root == keccak(hash_0 + hash_1)
+    assert check_proof(merkle_proof, merkle_root, hash_1)
+
+
+def test_three():
+    hash_0 = 'a' * 32
+    hash_1 = 'b' * 32
+    hash_2 = 'c' * 32
+
+    merkle_tree = [hash_0, hash_1, hash_2]
+    calculated_root = keccak(keccak(hash_0 + hash_1) + hash_2)
+
+    merkle_proof = [hash_0]  # modified in place
+    merkle_root = merkleroot(merkle_tree, merkle_proof)
+
+    assert merkle_proof == [hash_1, hash_2]
+    assert merkle_root == calculated_root
+    assert check_proof(merkle_proof, merkle_root, hash_0)
+
+    merkle_proof = [hash_1]  # modified in place
+    merkle_root = merkleroot(merkle_tree, merkle_proof)
+
+    assert merkle_proof == [hash_0, hash_2]
+    assert merkle_root == calculated_root
+    assert check_proof(merkle_proof, merkle_root, hash_1)
+
+    merkle_proof = [hash_2]  # modified in place
+    merkle_root = merkleroot(merkle_tree, merkle_proof)
+
+    # with an odd number of values, the last value wont appear by itself in the
+    # proof since it isn't hashed with another value
+    assert merkle_proof == [keccak(hash_0 + hash_1)]
+    assert merkle_root == calculated_root
+    assert check_proof(merkle_proof, merkle_root, hash_2)
 
 
 def test_get_proof():
-    values = [x * 32 for x in 'ab']
-    proof_for = values[-1]
-    proof = [proof_for]
-    r = merkleroot(values, proof)
-    # print pex(r)
-    # print 'proof', proof
-    assert check_proof(proof, r, proof_for)
+    hash_0 = 'a' * 32
+    hash_1 = 'b' * 32
 
-    proof_for = values[-1]
-    proof = get_proof(values, proof_for, r)
-    assert check_proof(proof, r, proof_for)
+    merkle_tree = [hash_0, hash_1]
 
+    merkle_proof = [hash_0]  # modified in place
+    merkle_root = merkleroot(merkle_tree, merkle_proof)
+    assert check_proof(merkle_proof, merkle_root, hash_0)
 
-def test_basic3():
-    values = [x * 32 for x in 'abc']
-    proof_for = values[-1]
-    proof = [proof_for]
-    r = merkleroot(values, proof)
-    # print pex(r)
-    # print 'proof', pexl(proof)
-    assert check_proof(proof, r, proof_for)
-    proof_for = values[0]
-    proof = [proof_for]
-    r = merkleroot(values, proof)
-    # print pex(r)
-    # print 'proof', pexl(proof)
-    assert check_proof(proof, r, proof_for)
+    second_merkle_proof = get_proof(merkle_tree, hash_0, merkle_root)
+    assert check_proof(second_merkle_proof, merkle_root, hash_0)
+    assert merkle_proof == second_merkle_proof
 
 
-def do_test_many(values):
-    for i, v in enumerate(values):
-        proof = [v]
-        r = merkleroot(values, proof)
-        assert check_proof(proof, r, v)
-        proof = get_proof(values, v, r)
-        assert check_proof(proof, r, v)
+def test_many(tree_up_to=10):
+    for number_of_leaves in range(tree_up_to):
+        merkle_tree = [
+            keccak(str(value))
+            for value in range(number_of_leaves)
+        ]
 
+        for value in merkle_tree:
+            merkle_proof = [value]
+            merkle_root = merkleroot(merkle_tree, merkle_proof)
+            second_proof = get_proof(merkle_tree, value, merkle_root)
 
-def test_many(num=10):
-    for nummi in range(1, num + 1):
-        values = [keccak(str(i)) for i in range(nummi)]
-        rvalues = list(reversed(values))
-        r = do_test_many(values)
-        r0 = do_test_many(rvalues)
-        assert r == r0
+            assert check_proof(merkle_proof, merkle_root, value) is True
+            assert check_proof(second_proof, merkle_root, value) is True
 
-
-def do_test_speed(rounds=100, num_hashes=1000):
-    import time
-    values = [keccak(str(i)) for i in range(num_hashes)]
-    st = time.time()
-    for i in range(rounds):
-        merkleroot(values)
-    elapsed = time.time() - st
-    print '%d additions per second' % (num_hashes * rounds / elapsed)
-
-if __name__ == '__main__':
-    do_test_speed()
+        assert merkleroot(merkle_tree) == merkleroot(reversed(merkle_tree))
