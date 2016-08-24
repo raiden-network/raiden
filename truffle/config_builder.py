@@ -5,6 +5,7 @@ import json
 from genesis_builder import generate_accounts, mk_genesis
 from startcluster import RAIDEN_PORT as START_PORT
 from startcluster import create_node_configuration, update_bootnodes, to_cmd
+from pyethapp.accounts import Account
 
 
 def build_node_list(hosts, nodes_per_host):
@@ -91,10 +92,38 @@ def geth_commands(geth_hosts, datadir):
         nodes.append(create_node_configuration(host=host, node_key_seed=i))
     for node in nodes:
         node.pop('unlock')
+        node.pop('rpcport')
     update_bootnodes(nodes)
     print json.dumps(
         {'{host}:{port}'.format(**node): ' '.join(to_cmd(node, datadir=datadir)) for node in nodes},
         indent=2)
+
+
+@click.argument(
+    'genesis_json',
+    type=click.File()
+)
+@click.argument(
+    'state_json',
+    type=click.File()
+)
+@cli.command()
+def merge(genesis_json, state_json):
+    genesis = json.load(genesis_json)
+    state = json.load(state_json)
+    assert 'alloc' in genesis
+    accounts = [key for key in genesis['alloc']]
+    for account, data in state['accounts'].items():
+        if account not in accounts:
+            [data.pop(key) for key in "nonce root codeHash".split()]
+            genesis['alloc'][account] = data
+    print json.dumps(genesis, indent=2)
+
+
+@cli.command()
+def account_file():
+    account = Account.new('', key="1" * 64)
+    print account.dump()
 
 
 @cli.command()
@@ -112,6 +141,12 @@ def usage():
     print "\n"
     print "\tconfig_builder.py geth_commands /tmp/foo 127.0.0.1 127.0.0.2"
     print "\t-> create commands for geth nodes on both hosts with the datadir set to /tmp/foo."
+    print "\n"
+    print "\tconfig_builder.py account_file"
+    print "\t-> create an account file that can be used as etherbase in geth instances."
+    print "\n"
+    print "\tconfig_builder.py merge genesis.json state_dump.json"
+    print "\t-> merge the deployed contracts of state_dump.json into genesis.json and create a new genesis.json."
 
 if __name__ == '__main__':
     cli()
