@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: raiden
+spec:
+  containers:
+  - name: geth
+    image: ethereum/go-ethereum
+    args:
+    - --testnet
+    - --rpc
+  - name: raiden
+    image: raidennetwork/raiden
+    replicas: 3
+    args:
+    - --listen_address=127.0.0.1:40001
+    - --privatekey=will-be-automated-later
