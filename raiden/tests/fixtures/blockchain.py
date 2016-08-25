@@ -30,7 +30,7 @@ __all__ = (
 
 
 @pytest.fixture
-def assets_addresses(asset_amount, deposit, number_of_assets, blockchain_services):
+def assets_addresses(asset_amount, number_of_assets, blockchain_services):
     chain = blockchain_services[0]
 
     result = list()

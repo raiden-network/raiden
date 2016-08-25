@@ -80,7 +80,7 @@ def tester_events():
 
 
 @pytest.fixture
-def tester_token_address(asset_amount, tester_state):
+def tester_token_address(private_keys, asset_amount, tester_state):
     standard_token_path = get_contract_path('StandardToken.sol')
     human_token_path = get_contract_path('HumanStandardToken.sol')
 
@@ -101,6 +101,7 @@ def tester_token_address(asset_amount, tester_state):
         language='solidity',
         libraries=human_token_libraries,
         constructor_parameters=[asset_amount, 'raiden', 0, 'rd'],
+        sender=private_keys[0],
     )
     tester_state.mine(number_of_blocks=1)
 
@@ -154,12 +155,31 @@ def tester_registry_address(tester_state, tester_channelmanager_library_address)
 
 
 @pytest.fixture
-def tester_token(tester_state, tester_token_address, tester_events):
+def tester_token_raw(tester_state, tester_token_address, tester_events):
     return create_tokenproxy(
         tester_state,
         tester_token_address,
         tester_events,
     )
+
+
+@pytest.fixture
+def tester_token(asset_amount, private_keys, tester_state, tester_token_address, tester_events):
+    token = create_tokenproxy(
+        tester_state,
+        tester_token_address,
+        tester_events,
+    )
+
+    privatekey0 = private_keys[0]
+    for transfer_to in private_keys[1:]:
+        token.transfer(
+            privtoaddr(transfer_to),
+            asset_amount // len(private_keys),
+            sender=privatekey0,
+        )
+
+    return token
 
 
 @pytest.fixture

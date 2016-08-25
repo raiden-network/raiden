@@ -119,7 +119,8 @@ class BalanceProof(object):
         else:
             raise ValueError('Unknow hashlock')
 
-        lock_encoded = bytes(lock.as_bytes)  # forcing bytes because ethereum.abi doesnt work with bytearray
+        # forcing bytes because ethereum.abi doesnt work with bytearray
+        lock_encoded = bytes(lock.as_bytes)
         lock_hash = sha3(lock_encoded)
         merkle_proof = [lock_hash]
         merkleroot(list(self.merkletree), merkle_proof)

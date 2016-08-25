@@ -24,7 +24,8 @@ FILTER_ID_GENERATOR = count()
 # NOTE: mine after each transaction to reset block.gas_used
 
 
-def tester_deploy_contract(tester_state, private_key, contract_name, contract_file, constructor_parameters=None):
+def tester_deploy_contract(tester_state, private_key, contract_name,
+                           contract_file, constructor_parameters=None):
     contract_path = get_contract_path(contract_file)
     all_contracts = _solidity.compile_file(contract_path, libraries=dict())
 
@@ -43,7 +44,10 @@ def tester_deploy_contract(tester_state, private_key, contract_name, contract_fi
     for deploy_contract in deployment_order:
         dependency_contract = all_contracts[deploy_contract]
 
-        hex_bytecode = _solidity.solidity_resolve_symbols(dependency_contract['bin_hex'], libraries)
+        hex_bytecode = _solidity.solidity_resolve_symbols(
+            dependency_contract['bin_hex'],
+            libraries,
+        )
         bytecode = decode_hex(hex_bytecode)
 
         dependency_contract['bin_hex'] = hex_bytecode
@@ -101,6 +105,9 @@ class ChannelExternalStateTester(object):
         self.callbacks_on_opened = list()
         self.callbacks_on_closed = list()
         self.callbacks_on_settled = list()
+
+    def get_block_number(self):
+        return self.tester_state.block.number
 
     def opened_block(self):
         return self.proxy.opened()
@@ -535,7 +542,12 @@ class NettingChannelTesterMock(object):
                 second_encoded,
             )
             self.tester_state.mine(number_of_blocks=1)
-            log.info('close called', contract=pex(self.address), first_transfer=first_transfer, second_transfer=second_transfer)
+            log.info(
+                'close called',
+                contract=pex(self.address),
+                first_transfer=first_transfer,
+                second_transfer=second_transfer,
+            )
 
         elif first_transfer:
             first_encoded = first_transfer.encode()
@@ -564,7 +576,8 @@ class NettingChannelTesterMock(object):
         log.info('update_transfer called', contract=pex(self.address), transfer=transfer)
 
     def unlock(self, our_address, unlock_proofs):
-        unlock_proofs = list(unlock_proofs)  # force a list to get the length (could be a generator)
+        # force a list to get the length (could be a generator)
+        unlock_proofs = list(unlock_proofs)
         log.info('{} locks to unlock'.format(len(unlock_proofs)), contract=pex(self.address))
 
         for merkle_proof, locked_encoded, secret in unlock_proofs:
@@ -581,7 +594,12 @@ class NettingChannelTesterMock(object):
             self.tester_state.mine(number_of_blocks=1)
 
             lock = messages.Lock.from_bytes(locked_encoded)
-            log.info('unlock called', contract=pex(self.address), lock=lock, secret=encode_hex(secret))
+            log.info(
+                'unlock called',
+                contract=pex(self.address),
+                lock=lock,
+                secret=encode_hex(secret),
+            )
 
     def settle(self):
         self.proxy.settle()

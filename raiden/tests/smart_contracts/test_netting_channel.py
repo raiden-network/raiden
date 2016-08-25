@@ -4,34 +4,34 @@ from __future__ import division
 import pytest
 from ethereum import abi, tester, slogging
 from ethereum.tester import ABIContract, TransactionFailed
-from ethereum.utils import encode_hex
+from ethereum.utils import encode_hex, privtoaddr
 
 from raiden.messages import Lock, DirectTransfer, MediatedTransfer
 from raiden.mtree import merkleroot
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
 from raiden.utils import sha3
 from raiden.tests.utils.tester_client import ChannelExternalStateTester
-from raiden.tests.utils.tester import channel_from_nettingcontract, new_channelmanager, new_nettingcontract
+from raiden.tests.utils.tester import (
+    channel_from_nettingcontract,
+    new_channelmanager,
+    new_nettingcontract,
+)
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 @pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
-def test_channeldeposit(asset_amount, settle_timeout, tester_state,
+def test_channeldeposit(private_keys, settle_timeout, tester_state,
                         tester_token, tester_events, tester_registry):
 
-    address0 = tester.DEFAULT_ACCOUNT
-    address1 = tester.a1
-    privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = tester.k1
+    privatekey0 = private_keys[0]
+    privatekey1 = private_keys[1]
+    address0 = privtoaddr(privatekey0)
+    address1 = privtoaddr(privatekey1)
     unknow_key = tester.k3
 
-    amount1 = asset_amount // 2
-    assert tester_token.transfer(address1, amount1, sender=privatekey0) is True
-    assert tester_token.balanceOf(address1, sender=privatekey0) == amount1
-
-    total_amount = tester_token.balanceOf(address0, sender=privatekey0)
-    deposit_amount = total_amount // 10
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
+    deposit_amount = initial_balance0 // 10
 
     channel_manager = new_channelmanager(
         privatekey0,
@@ -77,7 +77,7 @@ def test_channeldeposit(asset_amount, settle_timeout, tester_state,
     assert channel.deposit(deposit_amount, sender=privatekey0) is True
 
     assert tester_token.balanceOf(channel.address, sender=privatekey0) == deposit_amount
-    assert tester_token.balanceOf(address0, sender=privatekey0) == total_amount - deposit_amount
+    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 - deposit_amount  # noqa
     assert channel.opened(sender=privatekey0) == tester_state.block.number
 
     assert channel.addressAndBalance(sender=privatekey0)[0] == encode_hex(address0)
@@ -89,7 +89,7 @@ def test_channeldeposit(asset_amount, settle_timeout, tester_state,
     assert channel.deposit(deposit_amount, sender=privatekey0) is True
 
     assert tester_token.balanceOf(channel.address, sender=privatekey0) == deposit_amount * 2
-    assert tester_token.balanceOf(address0, sender=privatekey0) == total_amount - deposit_amount * 2
+    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 - deposit_amount * 2  # noqa
     assert channel.opened(sender=privatekey0) == tester_state.block.number
 
     assert channel.addressAndBalance(sender=privatekey0)[0] == encode_hex(address0)
@@ -105,7 +105,7 @@ def test_channeldeposit(asset_amount, settle_timeout, tester_state,
     assert channel.deposit(deposit_amount, sender=privatekey0) is True
 
     assert tester_token.balanceOf(channel.address, sender=privatekey0) == deposit_amount * 3
-    assert tester_token.balanceOf(address0, sender=privatekey0) == total_amount - deposit_amount * 3
+    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 - deposit_amount * 3  # noqa
     assert channel.opened(sender=privatekey0) == tester_state.block.number
 
     assert channel.addressAndBalance(sender=privatekey0)[0] == encode_hex(address0)
@@ -115,14 +115,13 @@ def test_channeldeposit(asset_amount, settle_timeout, tester_state,
 
 
 @pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
-def test_channelnewbalance_event(asset_amount, tester_state, tester_events,
-                                 tester_token, tester_registry,
-                                 settle_timeout):
-    privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = tester.k1
-    address0 = tester.DEFAULT_ACCOUNT
-    address0_hex = encode_hex(address0)
-    address1_hex = encode_hex(address1)
+def test_channelnewbalance_event(private_keys, settle_timeout,
+                                 tester_state, tester_events, tester_token,
+                                 tester_registry):
+    privatekey0 = private_keys[0]
+    privatekey1 = private_keys[1]
+    address0 = privtoaddr(privatekey0)
+    address1 = privtoaddr(privatekey1)
 
     channel_manager = new_channelmanager(
         privatekey0,
@@ -141,59 +140,69 @@ def test_channelnewbalance_event(asset_amount, tester_state, tester_events,
         settle_timeout,
     )
 
-    deposit_amount = asset_amount // 10
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
+    deposit_amount = initial_balance0 // 10
 
     assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey0) is True
-    assert tester_token.transfer(address1, deposit_amount, sender=privatekey0)
     assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey1) is True
 
     previous_events = list(tester_events)
     assert nettingchannel.deposit(deposit_amount, sender=privatekey0) is True
+    assert len(previous_events) + 2 == len(tester_events)
+
     block_number = tester_state.block.number
 
-    assert len(previous_events) + 2 == len(tester_events)
     transfer_event = tester_events[-2]
+    assert transfer_event == {
+        '_event_type': 'Transfer',
+        '_from': encode_hex(address0),
+        '_to': nettingchannel.address,
+        '_value': deposit_amount,
+    }
+
     newbalance_event = tester_events[-1]
-
-    assert transfer_event['_from'] == address0_hex
-    assert transfer_event['_to'] == nettingchannel.address
-    assert transfer_event['_value'] == deposit_amount
-
-    assert newbalance_event['_event_type'] == 'ChannelNewBalance'
-    assert newbalance_event['assetAddress'] == encode_hex(tester_token.address)
-    assert newbalance_event['participant'] == address0_hex
-    assert newbalance_event['balance'] == deposit_amount
-    assert newbalance_event['blockNumber'] == block_number
+    assert newbalance_event == {
+        '_event_type': 'ChannelNewBalance',
+        'assetAddress': encode_hex(tester_token.address),
+        'participant': encode_hex(address0),
+        'balance': deposit_amount,
+        'blockNumber': block_number,
+    }
 
     previous_events = list(tester_events)
     assert nettingchannel.deposit(deposit_amount, sender=privatekey1) is True
+    assert len(previous_events) + 2 == len(tester_events)
+
     block_number = tester_state.block.number
 
-    assert len(previous_events) + 2 == len(tester_events)
     transfer_event = tester_events[-2]
+    assert transfer_event == {
+        '_event_type': 'Transfer',
+        '_from': encode_hex(address1),
+        '_to': nettingchannel.address,
+        '_value': deposit_amount,
+    }
+
     newbalance_event = tester_events[-1]
-
-    assert transfer_event['_from'] == address1_hex
-    assert transfer_event['_to'] == nettingchannel.address
-    assert transfer_event['_value'] == deposit_amount
-
-    assert newbalance_event['_event_type'] == 'ChannelNewBalance'
-    assert newbalance_event['assetAddress'] == encode_hex(tester_token.address)
-    assert newbalance_event['participant'] == address1_hex
-    assert newbalance_event['balance'] == deposit_amount
-    assert newbalance_event['blockNumber'] == block_number
+    assert newbalance_event == {
+        '_event_type': 'ChannelNewBalance',
+        'assetAddress': encode_hex(tester_token.address),
+        'participant': encode_hex(address1),
+        'balance': deposit_amount,
+        'blockNumber': block_number,
+    }
 
 
 @pytest.mark.xfail(reason='to be implemented')
 @pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
-def test_closewithouttransfer_settle(tester_state, asset_amount,
-                                     settle_timeout, tester_token,
-                                     tester_events, tester_registry):
+def test_closewithouttransfer_settle(private_keys, settle_timeout,
+                                     tester_state, tester_token, tester_events,
+                                     tester_registry):
 
-    address0 = tester.DEFAULT_ACCOUNT
-    address1 = tester.a1
-    privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = tester.k1
+    privatekey0 = private_keys[0]
+    privatekey1 = private_keys[1]
+    address0 = privtoaddr(privatekey0)
+    address1 = privtoaddr(privatekey1)
     unknow_key = tester.k3
 
     channel_manager = new_channelmanager(
@@ -213,16 +222,13 @@ def test_closewithouttransfer_settle(tester_state, asset_amount,
         settle_timeout,
     )
 
-    amount = asset_amount // 2
-    deposit_amount = 100
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
+    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
 
-    assert tester_token.transfer(address1, amount, sender=privatekey0) is True
+    deposit_amount = initial_balance0 // 10
 
     assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey0) is True
     assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey1) is True
-
-    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
-    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
 
     assert nettingchannel.deposit(deposit_amount, sender=privatekey0) is True
     assert nettingchannel.deposit(deposit_amount, sender=privatekey1) is True
@@ -233,13 +239,17 @@ def test_closewithouttransfer_settle(tester_state, asset_amount,
     # this method needs to be implemetned, the name could be changed
     previous_events = list(tester_events)
     nettingchannel.closeWithoutTransfers(sender=privatekey0)
+    assert len(previous_events) + 1 == len(tester_events)
+
     block_number = tester_state.block.number
 
     close_event = tester_events[-1]
-    assert len(previous_events) + 1 == len(tester_events)
-    assert close_event['_event_type'] == 'ChannelClosed'
-    assert close_event['closingAddress'] == encode_hex(address0)
-    assert close_event['blockNumber'] == block_number
+    assert close_event == {
+        '_event_type': 'ChannelClosed',
+        'closingAddress': encode_hex(address0),
+        'blockNumber': block_number,
+    }
+
     assert nettingchannel.closed() == block_number
     assert nettingchannel.closingAddress() == encode_hex(address0)
 
@@ -250,32 +260,38 @@ def test_closewithouttransfer_settle(tester_state, asset_amount,
     block_number = tester_state.block.number
 
     assert len(previous_events) + 3 == len(tester_events)
+
     transfer0_event = tester_events[-3]
+    assert transfer0_event == {
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address0),
+        '_value': deposit_amount,
+    }
+
     transfer1_event = tester_events[-2]
+    assert transfer1_event == {
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address1),
+        '_value': deposit_amount,
+    }
+
     settle_event = tester_events[-1]
-
-    assert transfer0_event['_from'] == nettingchannel.address
-    assert transfer0_event['_to'] == encode_hex(address0)
-    assert transfer0_event['_value'] == deposit_amount
-
-    assert transfer1_event['_from'] == nettingchannel.address
-    assert transfer1_event['_to'] == encode_hex(address1)
-    assert transfer1_event['_value'] == deposit_amount
-
-    assert settle_event['_event_type'] == 'ChannelSettled'
-    assert settle_event['blockNumber'] == block_number
+    assert settle_event == {
+        '_event_type': 'ChannelSettled',
+        'blockNumber': block_number,
+    }
 
     assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0
     assert tester_token.balanceOf(address1, sender=privatekey1) == initial_balance1
 
 
 @pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
-def test_closesingle_settle(asset_amount, settle_timeout, tester_state,
+def test_closesingle_settle(private_keys, settle_timeout, tester_state,
                             tester_events, tester_token, tester_registry):
-    address0 = tester.DEFAULT_ACCOUNT
-    address1 = tester.a1
-    privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = tester.k1
+    privatekey0 = private_keys[0]
+    privatekey1 = private_keys[1]
+    address0 = privtoaddr(privatekey0)
+    address1 = privtoaddr(privatekey1)
     unknow_key = tester.k3
 
     channel_manager = new_channelmanager(
@@ -295,12 +311,12 @@ def test_closesingle_settle(asset_amount, settle_timeout, tester_state,
         settle_timeout,
     )
 
-    deposit_amount = asset_amount // 10
-    assert tester_token.approve(nettingchannel.address, asset_amount, sender=privatekey0) is True
-
     initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
     initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
 
+    deposit_amount = initial_balance0 // 10
+
+    assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey0) is True
     assert nettingchannel.deposit(deposit_amount, sender=privatekey0) is True
 
     # instantiate channel only after the transfer is made so that the balances
@@ -327,13 +343,17 @@ def test_closesingle_settle(asset_amount, settle_timeout, tester_state,
 
     previous_events = list(tester_events)
     nettingchannel.closeSingleTransfer(direct_transfer_data, sender=privatekey0)
+    assert len(previous_events) + 1 == len(tester_events)
+
     block_number = tester_state.block.number
 
     close_event = tester_events[-1]
-    assert len(previous_events) + 1 == len(tester_events)
-    assert close_event['_event_type'] == 'ChannelClosed'
-    assert close_event['closingAddress'] == encode_hex(address0)
-    assert close_event['blockNumber'] == block_number
+    assert close_event == {
+        '_event_type': 'ChannelClosed',
+        'closingAddress': encode_hex(address0),
+        'blockNumber': block_number,
+    }
+
     assert nettingchannel.closed(sender=privatekey0) == block_number
     assert nettingchannel.closingAddress(sender=privatekey0) == encode_hex(address0)
 
@@ -344,33 +364,41 @@ def test_closesingle_settle(asset_amount, settle_timeout, tester_state,
     block_number = tester_state.block.number
 
     assert len(previous_events) + 3 == len(tester_events)
+
     transfer0_event = tester_events[-3]
+    assert transfer0_event == {
+        '_event_type': 'Transfer',
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address0),
+        '_value': deposit_amount - transfer_amount,
+    }
+
     transfer1_event = tester_events[-2]
+    assert transfer1_event == {
+        '_event_type': 'Transfer',
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address1),
+        '_value': transfer_amount,
+    }
+
     settle_event = tester_events[-1]
+    assert settle_event == {
+        '_event_type': 'ChannelSettled',
+        'blockNumber': block_number,
+    }
 
-    assert transfer0_event['_from'] == nettingchannel.address
-    assert transfer0_event['_to'] == encode_hex(address0)
-    assert transfer0_event['_value'] == deposit_amount - transfer_amount
-
-    assert transfer1_event['_from'] == nettingchannel.address
-    assert transfer1_event['_to'] == encode_hex(address1)
-    assert transfer1_event['_value'] == transfer_amount
-
-    assert settle_event['_event_type'] == 'ChannelSettled'
-    assert settle_event['blockNumber'] == block_number
-
-    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 - transfer_amount
-    assert tester_token.balanceOf(address1, sender=privatekey1) == initial_balance1 + transfer_amount
+    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 - transfer_amount  # noqa
+    assert tester_token.balanceOf(address1, sender=privatekey1) == initial_balance1 + transfer_amount  # noqa
 
 
 @pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
-def test_close_settle(asset_amount, settle_timeout, tester_state,
+def test_close_settle(private_keys, settle_timeout, tester_state,
                       tester_events, tester_token, tester_registry):
 
-    address0 = tester.DEFAULT_ACCOUNT
-    address1 = tester.a1
-    privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = tester.k1
+    privatekey0 = private_keys[0]
+    privatekey1 = private_keys[1]
+    address0 = privtoaddr(privatekey0)
+    address1 = privtoaddr(privatekey1)
     unknow_key = tester.k3
 
     channel_manager = new_channelmanager(
@@ -390,16 +418,15 @@ def test_close_settle(asset_amount, settle_timeout, tester_state,
         settle_timeout,
     )
 
-    asset_amount = tester_token.balanceOf(address0, sender=privatekey0)
-    deposit_amount = asset_amount // 10
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
+    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
+
+    deposit_amount = initial_balance0 // 10
 
     assert tester_token.transfer(address1, deposit_amount, sender=privatekey0) is True
 
-    assert tester_token.approve(nettingchannel.address, asset_amount, sender=privatekey0) is True
-    assert tester_token.approve(nettingchannel.address, asset_amount, sender=privatekey1) is True
-
-    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
-    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
+    assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey0) is True
+    assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey1) is True
 
     assert nettingchannel.deposit(deposit_amount, sender=privatekey0) is True
     assert nettingchannel.deposit(deposit_amount, sender=privatekey1) is True
@@ -418,10 +445,6 @@ def test_close_settle(asset_amount, settle_timeout, tester_state,
         DEFAULT_REVEAL_TIMEOUT,
     )
 
-    transfer_amount0 = 10
-    direct_transfer0 = channel0.create_directtransfer(transfer_amount0)
-    direct_transfer0.sign(privatekey0)
-
     externalstate1 = ChannelExternalStateTester(
         tester_state,
         privatekey1,
@@ -433,6 +456,10 @@ def test_close_settle(asset_amount, settle_timeout, tester_state,
         externalstate1,
         DEFAULT_REVEAL_TIMEOUT,
     )
+
+    transfer_amount0 = 10
+    direct_transfer0 = channel0.create_directtransfer(transfer_amount0)
+    direct_transfer0.sign(privatekey0)
 
     transfer_amount1 = 30
     direct_transfer1 = channel1.create_directtransfer(transfer_amount1)
@@ -451,13 +478,17 @@ def test_close_settle(asset_amount, settle_timeout, tester_state,
         str(direct_transfer1.packed().data),
         sender=privatekey0,
     )
+    assert len(previous_events) + 1 == len(tester_events)
+
     block_number = tester_state.block.number
 
     close_event = tester_events[-1]
-    assert len(previous_events) + 1 == len(tester_events)
-    assert close_event['_event_type'] == 'ChannelClosed'
-    assert close_event['closingAddress'] == encode_hex(address0)
-    assert close_event['blockNumber'] == block_number
+    assert close_event == {
+        '_event_type': 'ChannelClosed',
+        'closingAddress': encode_hex(address0),
+        'blockNumber': block_number,
+    }
+
     assert nettingchannel.closed(sender=privatekey0) == block_number
     assert nettingchannel.closingAddress(sender=privatekey0) == encode_hex(address0)
 
@@ -465,34 +496,44 @@ def test_close_settle(asset_amount, settle_timeout, tester_state,
 
     previous_events = list(tester_events)
     nettingchannel.settle(sender=privatekey0)
+    assert len(previous_events) + 3 == len(tester_events)
+
     block_number = tester_state.block.number
 
-    assert len(previous_events) + 3 == len(tester_events)
     transfer0_event = tester_events[-3]
+    assert transfer0_event == {
+        '_event_type': 'Transfer',
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address0),
+        '_value': deposit_amount - transfer_amount0 + transfer_amount1,
+    }
+
     transfer1_event = tester_events[-2]
+    assert transfer1_event == {
+        '_event_type': 'Transfer',
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address1),
+        '_value': deposit_amount + transfer_amount0 - transfer_amount1,
+    }
+
     settle_event = tester_events[-1]
+    assert settle_event == {
+        '_event_type': 'ChannelSettled',
+        'blockNumber': block_number,
+    }
 
-    assert transfer0_event['_from'] == nettingchannel.address
-    assert transfer0_event['_to'] == encode_hex(address0)
-    assert transfer0_event['_value'] == deposit_amount - transfer_amount0 + transfer_amount1
-
-    assert transfer1_event['_from'] == nettingchannel.address
-    assert transfer1_event['_to'] == encode_hex(address1)
-    assert transfer1_event['_value'] == deposit_amount + transfer_amount0 - transfer_amount1
-
-    assert settle_event['_event_type'] == 'ChannelSettled'
-    assert settle_event['blockNumber'] == block_number
-
-    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 - transfer_amount0 + transfer_amount1
-    assert tester_token.balanceOf(address1, sender=privatekey1) == initial_balance1 + transfer_amount0 - transfer_amount1
+    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 - transfer_amount0 + transfer_amount1  # noqa
+    assert tester_token.balanceOf(address1, sender=privatekey1) == initial_balance1 + transfer_amount0 - transfer_amount1  # noqa
 
 
 @pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
-def test_two_messages_mediated_transfer(tester_state, tester_token, channel, events):
-    address0 = tester.DEFAULT_ACCOUNT
-    address1 = tester.a1
-    privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = tester.k1
+def test_two_messages_mediated_transfer(private_keys, settle_timeout,
+                                        tester_state, tester_token,
+                                        tester_events, tester_registry):
+    privatekey0 = private_keys[0]
+    privatekey1 = private_keys[1]
+    address0 = privtoaddr(privatekey0)
+    address1 = privtoaddr(privatekey1)
     unknow_key = tester.k3
 
     channel_manager = new_channelmanager(
@@ -512,11 +553,13 @@ def test_two_messages_mediated_transfer(tester_state, tester_token, channel, eve
         settle_timeout,
     )
 
-    deposit_amount = asset_amount // 10
-    assert tester_token.approve(nettingchannel.address, asset_amount, sender=privatekey0) is True
-
     initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
     initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
+
+    deposit_amount = initial_balance0 // 10
+
+    assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey0) is True
+    assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey1) is True
 
     assert nettingchannel.deposit(deposit_amount, sender=privatekey0) is True
     assert nettingchannel.deposit(deposit_amount, sender=privatekey1) is True
@@ -535,10 +578,6 @@ def test_two_messages_mediated_transfer(tester_state, tester_token, channel, eve
         DEFAULT_REVEAL_TIMEOUT,
     )
 
-    transfer_amount0 = 10
-    direct_transfer0 = channel0.create_directtransfer(transfer_amount0)
-    direct_transfer0.sign(privatekey0)
-
     externalstate1 = ChannelExternalStateTester(
         tester_state,
         privatekey1,
@@ -551,139 +590,127 @@ def test_two_messages_mediated_transfer(tester_state, tester_token, channel, eve
         DEFAULT_REVEAL_TIMEOUT,
     )
 
-    transfer_amount1 = 30
-    direct_transfer1 = channel1.create_directtransfer(transfer_amount1)
-    direct_transfer1.sign(privatekey1)
+    lock_amount0 = 29
+    lock_expiration0 = tester_state.block.number + settle_timeout // 3
+    hashlock0 = sha3(tester.k0)
 
-    hashlock1 = sha3(tester.k0)
+    mediated_transfer0 = channel0.create_mediatedtransfer(
+        transfer_initiator=address0,
+        transfer_target=address1,
+        fee=0,
+        amount=lock_amount0,
+        expiration=lock_expiration0,
+        hashlock=hashlock0,
+    )
+    mediated_transfer0.sign(privatekey0)
+
     lock_amount1 = 29
-    lock_expiration1 = 31
-    lock1 = Lock(lock_amount1, lock_expiration1, hashlock1)
-    locksroot1 = merkleroot([
-        sha3(lock1.as_bytes),
-    ])
+    lock_expiration1 = 1 + tester_state.block.number + settle_timeout // 3
+    hashlock1 = sha3(tester.k1)
 
-    hashlock2 = sha3(tester.k1)
-    lock_amount2 = 29
-    lock_expiration2 = 31
-    lock2 = Lock(lock_amount2, lock_expiration2, hashlock2)
-    locksroot2 = merkleroot([
-        sha3(lock2.as_bytes),
-    ])
-
-    nonce = 1
-    asset = tester_token.address
-    transfered_amount = 3
-    recipient = tester.a2
-    locksroot = locksroot1
-    target = tester.a1
-    initiator = tester.a0
-
-    msg1 = MediatedTransfer(
-        nonce,
-        asset,
-        transfered_amount,
-        recipient,
-        locksroot,
-        lock1,
-        target,
-        initiator,
+    mediated_transfer1 = channel1.create_mediatedtransfer(
+        transfer_initiator=address1,
+        transfer_target=address0,
         fee=0,
+        amount=lock_amount1,
+        expiration=lock_expiration1,
+        hashlock=hashlock1,
     )
-    msg1.sign(tester.k0)
-    packed = msg1.packed()
-    mediated_transfer1 = str(packed.data)
+    mediated_transfer1.sign(privatekey1)
 
-    nonce = 2
-    asset = tester_token.address
-    transfered_amount = 4
-    recipient = tester.a2
-    locksroot = locksroot2
-    target = tester.a0
-    initiator = tester.a1
+    with pytest.raises(TransactionFailed):
+        nettingchannel.close(
+            str(mediated_transfer0.packed().data),
+            str(mediated_transfer1.packed().data),
+            sender=unknow_key,
+        )
 
-    msg2 = MediatedTransfer(
-        nonce,
-        asset,
-        transfered_amount,
-        recipient,
-        locksroot,
-        lock2,
-        target,
-        initiator,
-        fee=0,
+    previous_events = list(tester_events)
+    nettingchannel.close(
+        str(mediated_transfer0.packed().data),
+        str(mediated_transfer1.packed().data),
+        sender=privatekey0,
     )
-    msg2.sign(tester.k1)
-    packed = msg2.packed()
-    mediated_transfer2 = str(packed.data)
+    assert len(previous_events) + 1 == len(tester_events)
 
-    channel.close(mediated_transfer1, mediated_transfer2)
+    block_number = tester_state.block.number
 
-    # Test with message sender tester.a0
-    assert channel.closed() == tester_state.block.number
-    assert channel.closingAddress() == tester.a0.encode('hex')
-    # assert channel.participants(0)[10] == 1
-    # assert channel.participants(0)[11] == token.address.encode('hex')
-    # assert channel.participants(0)[9] == tester.a0.encode('hex')
-    # assert channel.participants(0)[12] == tester.a1.encode('hex')
-    # assert channel.participants(0)[3] == 1
-    # assert channel.participants(0)[13] == locksroot1
-    # assert channel.participants(0)[7] == '\x00' * 32
+    close_event = tester_events[-1]
+    assert close_event == {
+        '_event_type': 'ChannelClosed',
+        'closingAddress': encode_hex(address0),
+        'blockNumber': block_number,
+    }
+    assert nettingchannel.closed(sender=privatekey0) == block_number
+    assert nettingchannel.closingAddress(sender=privatekey0) == encode_hex(address0)
 
-    # Test with message sender tester.a1
-    assert channel.closed() == tester_state.block.number
-    assert channel.closingAddress() == tester.a0.encode('hex')
-    # assert channel.participants(1)[10] == 2
-    # assert channel.participants(1)[11] == token.address.encode('hex')
-    # assert channel.participants(1)[9] == tester.a1.encode('hex')
-    # assert channel.participants(1)[12] == tester.a0.encode('hex')
-    # assert channel.participants(1)[3] == 3
-    # assert channel.participants(1)[13] == locksroot2
-    # assert channel.participants(1)[7] == '\x00' * 32
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
 
+    previous_events = list(tester_events)
+    nettingchannel.settle(sender=privatekey0)
+    block_number = tester_state.block.number
 
-@pytest.mark.parametrize('asset_amount', [100])
-@pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
-def test_all_asset(asset_amount, tester_state, channel, tester_token, tester_events):
-    half_amount = asset_amount / 2
-    assert tester_token.transfer(tester.a1, half_amount) is True
+    assert len(previous_events) + 3 == len(tester_events)
 
-    token1 = ABIContract(
-        tester_state,
-        tester_token.translator,
-        tester_token.address,
-        default_key=tester.k1,
-    )
-    assert tester_token.approve(channel.address, half_amount) is True
-    assert token1.approve(channel.address, half_amount) is True
+    transfer0_event = tester_events[-3]
+    assert transfer0_event == {
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address0),
+        '_value': deposit_amount,
+    }
 
-    channel1 = ABIContract(
-        tester_state,
-        channel.translator,
-        channel.address,
-        default_key=tester.k1,
-    )
-    assert channel.deposit(half_amount) is True
-    assert channel1.deposit(half_amount) is True
+    transfer1_event = tester_events[-2]
+    assert transfer1_event == {
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address1),
+        '_value': deposit_amount,
+    }
 
-    _, deposit1, _, deposit2 = channel.addressAndBalance()
+    settle_event = tester_events[-1]
+    assert settle_event == {
+        '_event_type': 'ChannelSettled',
+        'blockNumber': block_number,
+    }
 
-    assert deposit1 == half_amount
-    assert deposit2 == half_amount
-
-    assert tester_token.balanceOf(channel.address) == asset_amount
-    assert tester_token.balanceOf(tester.a0) == 0
-    assert tester_token.balanceOf(tester.a1) == 0
+    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0  # noqa
+    assert tester_token.balanceOf(address1, sender=privatekey1) == initial_balance1  # noqa
 
 
 @pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
 def test_update_direct_transfer(tester_state, tester_token, channel, tester_events):
-    # test global variables
-    assert channel.settleTimeout() == 30
-    assert channel.assetAddress() == tester_token.address.encode('hex')
-    assert channel.opened() == 0
-    assert channel.closed() == 0
-    assert channel.settled() == 0
+    privatekey0 = private_keys[0]
+    privatekey1 = private_keys[1]
+    address0 = privtoaddr(privatekey0)
+    address1 = privtoaddr(privatekey1)
+    unknow_key = tester.k3
+
+    channel_manager = new_channelmanager(
+        privatekey0,
+        tester_state,
+        tester_events,
+        tester_registry,
+        tester_token,
+    )
+
+    nettingchannel = new_nettingcontract(
+        privatekey0,
+        privatekey1,
+        tester_state,
+        tester_events,
+        channel_manager,
+        settle_timeout,
+    )
+
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
+    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
+
+    deposit_amount = initial_balance0 // 10
+
+    assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey0) is True
+    assert tester_token.approve(nettingchannel.address, deposit_amount, sender=privatekey1) is True
+
+    assert nettingchannel.deposit(deposit_amount, sender=privatekey0) is True
+    assert nettingchannel.deposit(deposit_amount, sender=privatekey1) is True
 
     hashlock1 = sha3(tester.k0)
     lock_amount1 = 29

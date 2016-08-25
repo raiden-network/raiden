@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 from ethereum import tester
-from ethereum.utils import decode_hex, privtoaddr, sha3
+from ethereum.utils import decode_hex, privtoaddr
 
 from raiden.channel import Channel, ChannelEndState
 from raiden.blockchain.abi import (
@@ -83,7 +83,9 @@ def channel_from_nettingcontract(our_key, netting_contract, external_state, reve
 
     asset_address_hex = netting_contract.assetAddress(sender=our_key)
     settle_timeout = netting_contract.settleTimeout(sender=our_key)
-    address1_hex, balance1, address2_hex, balance2 = netting_contract.addressAndBalance(sender=our_key)
+
+    address_balance = netting_contract.addressAndBalance(sender=our_key)
+    address1_hex, balance1, address2_hex, balance2 = address_balance
 
     asset_address = decode_hex(asset_address_hex)
     address1 = decode_hex(address1_hex)
@@ -135,7 +137,8 @@ def new_channelmanager(our_key, tester_state, tester_events, tester_registry, te
     return channelmanager
 
 
-def new_nettingcontract(our_key, partner_key, tester_state, tester_events, channelmanager, settle_timeout):
+def new_nettingcontract(our_key, partner_key, tester_state, tester_events,
+                        channelmanager, settle_timeout):
 
     netting_channel_address0_hex = channelmanager.newChannel(
         privtoaddr(partner_key),
