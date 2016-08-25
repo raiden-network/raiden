@@ -4,14 +4,30 @@ metadata:
   name: raiden
 spec:
   containers:
+  # TODO: if geth goes down, all raidens must be restarted?
   - name: geth
-    image: ethereum/go-ethereum
+    image: ethereum/client-go
+    # TODO: -p 8545:8545 -p 30303:30303
+    volumeMounts:
+    - name: geth-persistent-storage
+      mountPath: /data/geth
     args:
+    # TODO: build private blockchain
     - --testnet
     - --rpc
+    - --rpcaddr="0.0.0.0"
   - name: raiden
     image: raidennetwork/raiden
-    replicas: 3
+    replicas: 2
+    volumeMounts:
+    - name: raiden-persistent-storage
+      # TODO: maybe hostPath?
+      mountPath: /data/raiden
     args:
     - --listen_address=127.0.0.1:40001
     - --privatekey=will-be-automated-later
+  volumes:
+    - name: raiden-persistent-storage
+      emptyDir: {}
+    - name: geth-persistent-storage
+      emptyDir: {}
