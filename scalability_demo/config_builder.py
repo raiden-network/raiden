@@ -4,7 +4,7 @@ import click
 import json
 from genesis_builder import generate_accounts, mk_genesis
 from startcluster import RAIDEN_PORT as START_PORT
-from startcluster import create_node_configuration, update_bootnodes, to_cmd
+from startcluster import create_node_configuration, to_cmd
 from pyethapp.accounts import Account
 
 
@@ -93,7 +93,6 @@ def geth_commands(geth_hosts, datadir):
     for node in nodes:
         node.pop('unlock')
         node.pop('rpcport')
-    update_bootnodes(nodes)
     print json.dumps(
         {'{host}:{port}'.format(**node): ' '.join(to_cmd(node, datadir=datadir)) for node in nodes},
         indent=2)
