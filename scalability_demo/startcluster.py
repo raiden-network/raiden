@@ -21,7 +21,6 @@ DEFAULT_PW = 'notsosecret'
 
 # default args to pass to `geth` for all calls, e.g. verbosity, ...
 DEFAULT_ARGS = [
-    '--nodiscover',
     '--rpc',
     '--networkid {}'.format(sum(ord(c) for c in CLUSTER_NAME)),
 ]
@@ -86,7 +85,6 @@ def to_cmd(node, datadir=None):
     if datadir:
         assert isinstance(datadir, basestring)
         cmd.append('--datadir {}'.format(datadir))
-    cmd.extend(DEFAULT_ARGS)
     return shlex.split(' '.join(cmd))
 
 
