@@ -60,6 +60,8 @@ ${GETH} init ${DATADIR}/genesis.json
 mkdir -p ${DATADIR}/keystore
 ./config_builder.py account_file > ${DATADIR}/keystore/1.json
 
+./config_builder.py create_static_nodes ${IP_ADDRESSES} > ${DATADIR}/static-nodes.json
+
 # create run commands for all `geth` nodes in the cluster
 ./config_builder.py geth_commands ${DATADIR} ${IP_ADDRESSES}
 

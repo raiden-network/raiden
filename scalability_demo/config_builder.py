@@ -100,6 +100,21 @@ def geth_commands(geth_hosts, datadir):
 
 
 @click.argument(
+    'geth_hosts',
+    nargs=-1,
+    type=str,
+)
+@cli.command()
+def create_static_nodes(geth_hosts):
+    """Outputs content for a static-nodes.json file"""
+    nodes = []
+    for i, host in enumerate(geth_hosts):
+        nodes.append(create_node_configuration(host=host, node_key_seed=i))
+    all_nodes = [node['enode'] for node in nodes]
+    print(json.dumps(all_nodes))
+
+
+@click.argument(
     'genesis_json',
     type=click.File()
 )
