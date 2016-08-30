@@ -86,7 +86,6 @@ def to_cmd(node, datadir=None):
     if datadir:
         assert isinstance(datadir, basestring)
         cmd.append('--datadir {}'.format(datadir))
-    cmd.extend(DEFAULT_ARGS)
     return shlex.split(' '.join(cmd))
 
 
