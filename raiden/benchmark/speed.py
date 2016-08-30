@@ -15,6 +15,11 @@ from raiden.network.rpc.client import (
 )
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import create_network
+from raiden.benchmark.utils import (
+    print_serialization,
+    print_slow_function,
+    print_slow_path,
+)
 
 log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
 slogging.configure(':debug')
@@ -106,51 +111,6 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1,
     completed_transfers = num_transfers * num_assets
     tps = completed_transfers / elapsed
     print('Completed {} transfers at {} tps / {:.7}s'.format(completed_transfers, tps, elapsed))
-
-
-def print_serialization(pstats):  # pylint: disable=too-many-locals
-    print('ncalls         tottime  percall  %    cumtime  percall  function')
-    total_pct = 0.0
-
-    for path_line_func, data in pstats.sort_stats('module', 'cumulative').stats.items():
-        path, line, func = path_line_func  # pylint: disable=unused-variable
-
-        is_rlp = 'rlp' in path
-        is_encoding = 'encoding' in path
-        is_umsgpack = 'msgpack' in path
-        if is_rlp or is_encoding or is_umsgpack:
-            # primitive calls dont count recursion
-            # total calls count recursion
-            # total time is the time for the function itself (excluding subcalls)
-            # accumulated_time is the time of the function plus the subcalls
-            primitive_calls, total_calls, total_time, acc_time, callers = data  # pylint: disable=unused-variable
-
-            if primitive_calls != total_calls:
-                calls = '{}/{}'.format(total_calls, primitive_calls)
-            else:
-                calls = str(primitive_calls)
-
-            pct = (total_time / float(pstats.total_tt)) * 100
-            total_pct += pct
-            print('{:<14} {:<8.3f} {:<8.3f} {:<3.2f} {:<8.3f} {:<8.3f} {}'.format(
-                calls,
-                total_time,
-                float(total_time) / total_calls,
-                pct,
-                acc_time,
-                float(acc_time) / total_calls,
-                func,
-            ))
-
-    print(' Runtime: {}, Total %: {}'.format(pstats.total_tt, total_pct))
-
-
-def print_slow_path(pstats):
-    pstats.strip_dirs().sort_stats('cumulative').print_stats(15)
-
-
-def print_slow_function(pstats):
-    pstats.strip_dirs().sort_stats('time').print_stats(15)
 
 
 def main():
