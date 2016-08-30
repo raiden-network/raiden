@@ -8,18 +8,34 @@ from ethereum.utils import int_to_addr, zpad
 from ethereum.keys import privtoaddr
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 
-from raiden.network.rpc.client import GAS_LIMIT
 from raiden.blockchain.abi import get_contract_path
+from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
-from raiden.tests.utils.tester import create_registryproxy, create_tokenproxy
+from raiden.tests.utils.tester import (
+    create_registryproxy,
+    create_tokenproxy,
+    channel_from_nettingcontract,
+    new_channelmanager,
+    new_nettingcontract,
+)
+from raiden.tests.utils.tester_client import ChannelExternalStateTester
 
 
 @pytest.fixture
 def tester_blockgas_limit():
-    """ The tester's block gas limit. Increase this value to avoid `mine`ing to
-    if the blockgas is not of interest for the test.
+    """ The tester's block gas limit.
+
+    Set this value to `GAS_LIMIT`ing if the test needs to consider the gas usage.
+
+    Note:
+        `GAS_LIMIT` is defined in `raiden.network.rpc.client.GAS_LIMIT`
     """
-    return GAS_LIMIT
+    return 10 ** 10
+
+
+@pytest.fixture
+def tester_events():
+    return list()
 
 
 @pytest.fixture
@@ -72,11 +88,6 @@ def tester_state(private_keys, tester_blockgas_limit):
     tester_state.blocks = [genesis_block]
 
     return tester_state
-
-
-@pytest.fixture
-def tester_events():
-    return list()
 
 
 @pytest.fixture
@@ -159,7 +170,7 @@ def tester_token_raw(tester_state, tester_token_address, tester_events):
     return create_tokenproxy(
         tester_state,
         tester_token_address,
-        tester_events,
+        tester_events.append,
     )
 
 
@@ -168,7 +179,7 @@ def tester_token(asset_amount, private_keys, tester_state, tester_token_address,
     token = create_tokenproxy(
         tester_state,
         tester_token_address,
-        tester_events,
+        tester_events.append,
     )
 
     privatekey0 = private_keys[0]
@@ -187,5 +198,94 @@ def tester_registry(tester_state, tester_registry_address, tester_events):
     return create_registryproxy(
         tester_state,
         tester_registry_address,
-        tester_events,
+        tester_events.append,
     )
+
+
+@pytest.fixture
+def tester_channelmanager(private_keys, tester_state, tester_events,
+                          tester_registry, tester_token):
+    privatekey0 = private_keys[0]
+    channel_manager = new_channelmanager(
+        privatekey0,
+        tester_state,
+        tester_events.append,
+        tester_registry,
+        tester_token,
+    )
+    return channel_manager
+
+
+@pytest.fixture
+def tester_nettingcontracts(deposit, private_keys, settle_timeout,
+                            tester_state, tester_events, tester_channelmanager,
+                            tester_token):
+    raiden_chain = zip(private_keys[:-1], private_keys[1:])
+
+    result = list()
+    for pos, (first_key, second_key) in enumerate(raiden_chain, start=1):
+
+        # tester.py log_listener is enabled for the whole tester, meaning that
+        # a log_listener will receive all events that it can decode, even if
+        # the event is from a different contract, because of that we _must_
+        # only install the log_listener for the first ABI, otherwise the logs
+        # will be repeated for each ABI
+        if pos == 1:
+            log_listener = tester_events.append
+        else:
+            log_listener = None
+
+        nettingcontract = new_nettingcontract(
+            first_key,
+            second_key,
+            tester_state,
+            log_listener,
+            tester_channelmanager,
+            settle_timeout,
+        )
+        result.append(
+            (first_key, second_key, nettingcontract),
+        )
+
+        assert tester_token.approve(nettingcontract.address, deposit, sender=first_key) is True
+        assert tester_token.approve(nettingcontract.address, deposit, sender=second_key) is True
+
+        assert nettingcontract.deposit(deposit, sender=first_key) is True
+        assert nettingcontract.deposit(deposit, sender=second_key) is True
+
+    return result
+
+
+@pytest.fixture
+def tester_channels(tester_state, tester_nettingcontracts):
+    result = list()
+    for first_key, second_key, nettingcontract in tester_nettingcontracts:
+        first_externalstate = ChannelExternalStateTester(
+            tester_state,
+            first_key,
+            nettingcontract.address,
+        )
+        first_channel = channel_from_nettingcontract(
+            first_key,
+            nettingcontract,
+            first_externalstate,
+            DEFAULT_REVEAL_TIMEOUT,
+        )
+
+        second_externalstate = ChannelExternalStateTester(
+            tester_state,
+            second_key,
+            nettingcontract.address,
+        )
+        second_channel = channel_from_nettingcontract(
+            second_key,
+            nettingcontract,
+            second_externalstate,
+            DEFAULT_REVEAL_TIMEOUT,
+        )
+
+        result.append(
+            (first_key, second_key, nettingcontract, first_channel, second_channel)
+        )
+
+    return result

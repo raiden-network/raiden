@@ -103,10 +103,10 @@ def test_secret_revealed(raiden_chain, deposit):
 
     # balance_proof is ephemeral, for each new transfer it will be discarded
     balance_proof = channel21.our_state.balance_proof
-    proof = balance_proof.get_proof_for(secret, hashlock)
+    proof = balance_proof.get_proof_for_hashlock(secret, hashlock)
 
     # the secret hasn't been revealed yet (through messages)
-    assert len(balance_proof.pendinglocks) == 1
+    assert len(balance_proof.hashlock_pendinglocks) == 1
     proofs = list(balance_proof.get_known_unlocks())
     assert len(proofs) == 0
 

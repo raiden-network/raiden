@@ -8,9 +8,10 @@ from ethereum._solidity import compile_file
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.blockchain.abi import get_contract_path
+from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
 from raiden.tests.utils.tests import cleanup_tasks
-from raiden.tests.utils.tester_client import BlockChainServiceTesterMock
+from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
 from raiden.network.rpc.client import (
     patch_send_transaction,
     BlockChainService,
@@ -54,7 +55,7 @@ def assets_addresses(asset_amount, number_of_assets, blockchain_services):
 
 
 @pytest.fixture
-def blockchain_services(request, private_keys, poll_timeout, blockchain_backend, blockchain_type):
+def blockchain_services(request, private_keys, poll_timeout, blockchain_backend, blockchain_type, tester_blockgas_limit):
     verbose = request.config.option.verbose
 
     if blockchain_type in ('geth', 'hydrachain'):
@@ -67,6 +68,7 @@ def blockchain_services(request, private_keys, poll_timeout, blockchain_backend,
     if blockchain_type == 'tester':
         return _tester_services(
             private_keys,
+            tester_blockgas_limit,
         )
 
     if blockchain_type == 'mock':
@@ -209,19 +211,26 @@ def _mock_services(private_keys, request):
     return blockchain_services
 
 
-def _tester_services(tester_state, tester_registry_address, private_keys):
-    # registry_address = tester_deploy_contract(
-    #     tester_state,
-    #     private_keys[0],
-    #     contract_name='Registry',
-    #     contract_file='Registry.sol',
-    # )
+def _tester_services(private_keys, tester_blockgas_limit):
+    # calling the fixture directly because we don't want to force all
+    # blockchain_services to instantiate a state
+    tester = tester_state(
+        private_keys,
+        tester_blockgas_limit,
+    )
+
+    tester_registry_address = tester_deploy_contract(
+        tester,
+        private_keys[0],
+        contract_name='Registry',
+        contract_file='Registry.sol',
+    )
 
     blockchain_services = list()
     for privkey in private_keys:
         blockchain = BlockChainServiceTesterMock(
             privkey,
-            tester_state,
+            tester,
             tester_registry_address,
         )
         blockchain_services.append(blockchain)

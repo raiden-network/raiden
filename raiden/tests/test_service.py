@@ -11,7 +11,7 @@ from raiden.tests.utils.messages import setup_messages_cb
 slogging.configure(':DEBUG')
 
 
-@pytest.mark.parametrize('privatekey_seed', ['ping:{}'])
+@pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_ping(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -28,7 +28,7 @@ def test_ping(raiden_network):
     assert decoded.echo == ping.hash
 
 
-@pytest.mark.parametrize('privatekey_seed', ['ping_dropped_message:{}'])
+@pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
 def test_ping_dropped_message(raiden_network):
@@ -82,7 +82,7 @@ def test_ping_dropped_message(raiden_network):
     RaidenProtocol.repeat_messages = False
 
 
-@pytest.mark.parametrize('privatekey_seed', ['ping_udp:{}'])
+@pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UDPTransport])
 def test_ping_udp(raiden_network):

@@ -9,7 +9,6 @@ from raiden.blockchain.abi import get_contract_path
 from raiden.tests.utils.tester import new_channelmanager
 
 
-@pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
 def test_channelnew_event(settle_timeout, tester_state, tester_events,
                           tester_registry, tester_token):
 
@@ -32,14 +31,15 @@ def test_channelnew_event(settle_timeout, tester_state, tester_events,
     )
 
     last_event = tester_events[-1]
-    assert last_event['_event_type'] == 'ChannelNew'
-    assert last_event['nettingChannel'] == netting_channel_address1_hex
-    assert last_event['participant1'] == encode_hex(address0)
-    assert last_event['participant2'] == encode_hex(address1)
-    assert last_event['settleTimeout'] == settle_timeout
+    assert last_event == {
+        '_event_type': 'ChannelNew',
+        'nettingChannel': netting_channel_address1_hex,
+        'participant1': encode_hex(address0),
+        'participant2': encode_hex(address1),
+        'settleTimeout': settle_timeout,
+    }
 
 
-@pytest.mark.parametrize('tester_blockgas_limit', [10 ** 10])
 def test_channelmanager(tester_state, tester_token, tester_events,
                         tester_channelmanager_library_address, settle_timeout,
                         netting_channel_abi):
@@ -63,21 +63,25 @@ def test_channelmanager(tester_state, tester_token, tester_events,
         }
     )
 
-    initial_events = list(tester_events)
     assert len(channel_manager.getChannelsParticipants()) == 0, 'newly deployed contract must be empty'
 
     netting_channel_translator = ContractTranslator(netting_channel_abi)
+
+    previous_events = list(tester_events)
     netting_channel_address1_hex = channel_manager.newChannel(
         address1,
         settle_timeout,
     )
+    assert len(previous_events) + 1 == len(tester_events), 'ChannelNew event must be fired.'
 
-    assert len(tester_events) > len(initial_events), 'ChannelNew event must be fired.'
-
-    event = tester_events[-1]
-    assert event['_event_type'] == 'ChannelNew'
-    assert event['participant1'] == address0.encode('hex')
-    assert event['participant2'] == address1.encode('hex')
+    channelnew_event = tester_events[-1]
+    assert channelnew_event == {
+        '_event_type': 'ChannelNew',
+        'participant1': address0.encode('hex'),
+        'participant2': address1.encode('hex'),
+        'nettingChannel': netting_channel_address1_hex,
+        'settleTimeout': settle_timeout,
+    }
 
     # should fail if settleTimeout is too low
     with pytest.raises(TransactionFailed):
@@ -101,10 +105,12 @@ def test_channelmanager(tester_state, tester_token, tester_events,
 
     assert netting_contract_proxy1.settleTimeout() == settle_timeout
 
+    previous_events = list(tester_events)
     netting_channel_address2_hex = channel_manager.newChannel(
         address2,
         settle_timeout,
     )
+    assert len(previous_events) + 1 == len(tester_events), 'ChannelNew event must be fired.'
 
     assert channel_manager.getChannelWith(address1) == netting_channel_address1_hex
     assert channel_manager.getChannelWith(address2) == netting_channel_address2_hex
@@ -119,18 +125,14 @@ def test_channelmanager(tester_state, tester_token, tester_events,
 
     assert len(channel_manager.getChannelsParticipants()) == 4
 
-    assert len(tester_events) == 2
-    assert tester_events[0]['_event_type'] == 'ChannelNew'
-    assert tester_events[0]['participant1'] == address0.encode('hex')
-    assert tester_events[0]['participant2'] == address1.encode('hex')
-    assert tester_events[0]['nettingChannel'] == netting_channel_address1_hex
-    assert tester_events[0]['settleTimeout'] == settle_timeout
-
-    assert tester_events[1]['_event_type'] == 'ChannelNew'
-    assert tester_events[1]['participant1'] == address0.encode('hex')
-    assert tester_events[1]['participant2'] == address2.encode('hex')
-    assert tester_events[1]['nettingChannel'] == netting_channel_address2_hex
-    assert tester_events[1]['settleTimeout'] == settle_timeout
+    channelnew_event = tester_events[-1]
+    assert channelnew_event == {
+        '_event_type': 'ChannelNew',
+        'participant1': address0.encode('hex'),
+        'participant2': address2.encode('hex'),
+        'nettingChannel': netting_channel_address2_hex,
+        'settleTimeout': settle_timeout,
+    }
 
     # uncomment private in function to run test
     # assert channel_manager.numberOfItems(netting_channel_creator1) == 2

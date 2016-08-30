@@ -1,5 +1,4 @@
 # -*- coding: utf8 -*-
-import gevent
 import pytest
 from ethereum import slogging, _solidity
 from ethereum.keys import privtoaddr
@@ -79,41 +78,3 @@ def raiden_network(request, assets_addresses, channels_per_node, deposit,
     _raiden_cleanup(request, raiden_apps)
 
     return raiden_apps
-
-
-@pytest.fixture
-def discovery_blockchain(request, private_keys, cluster, poll_timeout):
-    gevent.sleep(2)
-    privatekey = private_keys[0]
-    address = privtoaddr(privatekey)
-
-    print_communication = False
-    if request.config.option.verbose > 7:
-        print_communication = True
-
-    jsonrpc_client = JSONRPCClient(
-        host='0.0.0.0',
-        privkey=privatekey,
-        print_communication=print_communication,
-    )
-    patch_send_transaction(jsonrpc_client)
-
-    # deploy discovery contract
-    discovery_contract_path = get_contract_path('EndpointRegistry.sol')
-    discovery_contracts = _solidity.compile_file(discovery_contract_path, libraries=dict())
-    discovery_contract_proxy = jsonrpc_client.deploy_solidity_contract(
-        address,
-        'EndpointRegistry',
-        discovery_contracts,
-        dict(),
-        tuple(),
-        timeout=poll_timeout,
-    )
-
-    discovery_contract_address = discovery_contract_proxy.address
-    discovery = ContractDiscovery(
-        jsonrpc_client,
-        discovery_contract_address,
-    )
-
-    return (discovery, address)

@@ -8,13 +8,13 @@ from ethereum import slogging
 from raiden.messages import decode, Ack, DirectTransfer, RefundTransfer
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
-from raiden.utils import pex, sha3
+from raiden.utils import pex
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
 
 
-@pytest.mark.parametrize('privatekey_seed', ['transfer:{}'])
+@pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_transfer(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -86,7 +86,7 @@ def test_transfer(raiden_network):
     assert isinstance(a1_recv_messages[0], DirectTransfer)
 
 
-@pytest.mark.parametrize('privatekey_seed', ['mediated_transfer:{}'])
+@pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('number_of_nodes', [10])
 def test_mediated_transfer(raiden_network):
@@ -159,10 +159,8 @@ def test_mediated_transfer(raiden_network):
 
 
 @pytest.mark.xfail(reason='not implemented')
-@pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
+@pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [3])
-@pytest.mark.parametrize('asset', [sha3('cancel_transfer')[:20]])
-@pytest.mark.parametrize('deposit', [100])
 def test_cancel_transfer(raiden_chain, asset, deposit):
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 

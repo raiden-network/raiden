@@ -1,4 +1,6 @@
 # -*- coding: utf8 -*-
+from __future__ import division
+
 import random
 import string
 
@@ -54,6 +56,13 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
         contract_file='HumanStandardToken.sol',
         constructor_parameters=(asset_amount, 'raiden', 2, 'Rd'),
     )
+
+    asset0 = blockchain_service0.asset(asset_address)
+    for transfer_to in raiden_network[1:]:
+        asset0.transfer(
+            privtoaddr(transfer_to.raiden.privkey),
+            asset_amount // len(raiden_network),
+        )
 
     manager0 = blockchain_service0.manager_by_asset(asset_address)
 
@@ -131,21 +140,29 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     netting_channel_01.deposit(peer0_address, 100)
     assert netting_channel_01.isopen() is True
     assert netting_channel_02.isopen() is False
+
     assert netting_channel_01.detail(peer0_address)['our_balance'] == 100
     assert netting_channel_01.detail(peer1_address)['our_balance'] == 0
 
     # with pytest.raises(Exception):
     #    blockchain_service0.deposit(asset_address, netting_address_01, peer0_address, 100)
 
+    # double-funded channel
     app0.raiden.chain.asset(asset_address).approve(netting_address_02, 70)
     netting_channel_02.deposit(peer0_address, 70)
     assert netting_channel_01.isopen() is True
     assert netting_channel_02.isopen() is True
 
-    app2.raiden.chain.asset(asset_address).approve(netting_address_01, 130)
-    app2.raiden.chain.netting_channel(netting_address_01).deposit(peer1_address, 130)
+    assert netting_channel_02.detail(peer0_address)['our_balance'] == 70
+    assert netting_channel_02.detail(peer2_address)['our_balance'] == 0
+
+    app2.raiden.chain.asset(asset_address).approve(netting_address_02, 130)
+    app2.raiden.chain.netting_channel(netting_address_02).deposit(peer2_address, 130)
     assert netting_channel_01.isopen() is True
     assert netting_channel_02.isopen() is True
+
+    assert netting_channel_02.detail(peer0_address)['our_balance'] == 70
+    assert netting_channel_02.detail(peer2_address)['our_balance'] == 130
 
     # TODO:
     # we need to allow the settlement of the channel even if no transfers were
@@ -176,6 +193,7 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     # assert netting_channel_02.isopen() is True
 
 
+@pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(blockchain_backend, private_keys, number_of_nodes, poll_timeout):

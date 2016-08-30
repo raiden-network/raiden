@@ -6,7 +6,9 @@ from raiden.raiden_service import DEFAULT_SETTLE_TIMEOUT
 from raiden.network.rpc.client import DEFAULT_POLL_TIMEOUT
 from raiden.network.transport import UDPTransport
 
-DEFAULT_DEPOSIT = 2 ** 240  # Arbitrary initial balance for each channel
+# Arbitrary initial balance for each channel, using a small number to tractable
+# numbers during testing
+DEFAULT_DEPOSIT = 200
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)

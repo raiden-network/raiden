@@ -25,49 +25,49 @@ class InvalidKey(str):
 INVALID_KEY = InvalidKey('default_key_was_not_set')
 
 
-def create_tokenproxy(tester_state, tester_token_address, tester_events):
+def create_tokenproxy(tester_state, tester_token_address, log_listener):
     translator = tester.ContractTranslator(HUMAN_TOKEN_ABI)
     token_abi = tester.ABIContract(
         tester_state,
         translator,
         tester_token_address,
-        log_listener=tester_events.append,
+        log_listener=log_listener,
         default_key=INVALID_KEY,
     )
     return token_abi
 
 
-def create_registryproxy(tester_state, tester_registry_address, tester_events):
+def create_registryproxy(tester_state, tester_registry_address, log_listener):
     translator = tester.ContractTranslator(REGISTRY_ABI)
     registry_abi = tester.ABIContract(
         tester_state,
         translator,
         tester_registry_address,
-        log_listener=tester_events.append,
+        log_listener=log_listener,
         default_key=INVALID_KEY,
     )
     return registry_abi
 
 
-def create_channelmanager_proxy(tester_state, tester_channelmanager_address, tester_events):
+def create_channelmanager_proxy(tester_state, tester_channelmanager_address, log_listener):
     translator = tester.ContractTranslator(CHANNEL_MANAGER_ABI)
     channel_manager_abi = tester.ABIContract(
         tester_state,
         translator,
         tester_channelmanager_address,
-        log_listener=tester_events.append,
+        log_listener=log_listener,
         default_key=INVALID_KEY,
     )
     return channel_manager_abi
 
 
-def create_nettingchannel_proxy(tester_state, tester_nettingchannel_address, tester_events):
+def create_nettingchannel_proxy(tester_state, tester_nettingchannel_address, log_listener):
     translator = tester.ContractTranslator(NETTING_CHANNEL_ABI)
     netting_channel_abi = tester.ABIContract(
         tester_state,
         translator,
         tester_nettingchannel_address,
-        log_listener=tester_events.append,
+        log_listener=log_listener,
         default_key=INVALID_KEY,
     )
     return netting_channel_abi
@@ -122,7 +122,7 @@ def channel_from_nettingcontract(our_key, netting_contract, external_state, reve
     return channel
 
 
-def new_channelmanager(our_key, tester_state, tester_events, tester_registry, tester_token):
+def new_channelmanager(our_key, tester_state, log_listener, tester_registry, tester_token):
     channel_manager_address = tester_registry.addAsset(
         tester_token.address,
         sender=our_key,
@@ -132,12 +132,12 @@ def new_channelmanager(our_key, tester_state, tester_events, tester_registry, te
     channelmanager = create_channelmanager_proxy(
         tester_state,
         channel_manager_address,
-        tester_events,
+        log_listener,
     )
     return channelmanager
 
 
-def new_nettingcontract(our_key, partner_key, tester_state, tester_events,
+def new_nettingcontract(our_key, partner_key, tester_state, log_listener,
                         channelmanager, settle_timeout):
 
     netting_channel_address0_hex = channelmanager.newChannel(
@@ -153,7 +153,7 @@ def new_nettingcontract(our_key, partner_key, tester_state, tester_events,
         tester_state,
         nettingchannel_translator,
         netting_channel_address0_hex,
-        log_listener=tester_events.append,
+        log_listener=log_listener,
         default_key=INVALID_KEY,
     )
 

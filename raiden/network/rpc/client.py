@@ -300,6 +300,10 @@ class Asset(object):
 
     def approve(self, contract_address, allowance):
         """ Aprove `contract_address` to transfer up to `deposit` amount of token. """
+        # TODO: check that `contract_address` is a netting channel and that
+        # `self.address` is one of the participants (maybe add this logic into
+        # `NettingChannel` and keep this straight forward)
+
         transaction_hash = self.proxy.approve.transact(
             contract_address,
             allowance,
@@ -547,6 +551,9 @@ class NettingChannel(object):
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
+        # check we are a participant of the given channel
+        self.detail(privtoaddr(self.client.privkey))
+
     def asset_address(self):
         return address_decoder(self.proxy.assetAddress.call())
 
@@ -606,6 +613,19 @@ class NettingChannel(object):
     def deposit(self, our_address, amount):  # pylint: disable=unused-argument
         if not isinstance(amount, (int, long)):
             raise ValueError('amount needs to be an integral number.')
+
+        asset = Asset(
+            self.client,
+            self.asset_address(),
+            poll_timeout=self.poll_timeout,
+        )
+        current_balance = asset.balance_of(privtoaddr(self.private_key))
+
+        if current_balance < amount:
+            raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(
+                amount,
+                current_balance,
+            ))
 
         transaction_hash = self.proxy.deposit.transact(
             amount,

@@ -3,7 +3,7 @@ from collections import defaultdict
 from itertools import count
 
 from ethereum import tester, slogging, _solidity
-from ethereum.abi import ContractTranslator
+from ethereum.abi import encode_abi, encode_single, ContractTranslator
 from ethereum.utils import decode_hex, encode_hex, privtoaddr
 from pyethapp.jsonrpc import address_decoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
@@ -12,8 +12,10 @@ from raiden import messages
 from raiden.blockchain.abi import get_contract_path
 from raiden.utils import pex, isaddress
 from raiden.blockchain.abi import (
-    HUMAN_TOKEN_ABI,
     CHANNEL_MANAGER_ABI,
+    CHANNELNEW_EVENT,
+    CHANNELNEW_EVENTID,
+    HUMAN_TOKEN_ABI,
     NETTING_CHANNEL_ABI,
     REGISTRY_ABI,
 )
@@ -22,6 +24,34 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 FILTER_ID_GENERATOR = count()
 
 # NOTE: mine after each transaction to reset block.gas_used
+
+
+def ethereum_event(eventid, eventabi, eventdata, contract_address):
+    event_types = [
+        param['type']
+        for param in eventabi['inputs']
+    ]
+
+    event_data = [
+        eventdata[param['name']]
+        for param in eventabi['inputs']
+        if not param['indexed']
+    ]
+
+    event_topics = [eventid] + [
+        encode_single(param['type'], eventdata[param['name']])
+        for param in eventabi['inputs']
+        if param['indexed']
+    ]
+
+    event_data = encode_abi(event_types, event_data)
+
+    event = {
+        'topics': event_topics,
+        'data': event_data,
+        'address': contract_address,
+    }
+    return event
 
 
 def tester_deploy_contract(tester_state, private_key, contract_name,
@@ -105,6 +135,7 @@ class ChannelExternalStateTester(object):
         self.callbacks_on_opened = list()
         self.callbacks_on_closed = list()
         self.callbacks_on_settled = list()
+        self.hashlock_channel = defaultdict(list)
 
     def get_block_number(self):
         return self.tester_state.block.number
@@ -129,6 +160,12 @@ class ChannelExternalStateTester(object):
 
     def settle(self):
         return self.proxy.settle()
+
+    def register_channel_for_hashlock(self, channel, hashlock):
+        channels_registered = self.hashlock_channel[hashlock]
+
+        if channel not in channels_registered:
+            channels_registered.append(channel)
 
     def callback_on_opened(self, callback):
         self.callbacks_on_opened.append(callback)
@@ -163,6 +200,7 @@ class BlockChainServiceTesterMock(object):
         self.tester_state = tester_state
         default_registry = RegistryTesterMock(tester_state, private_key, registry_address)
 
+        self.address = privtoaddr(private_key)
         self.private_key = private_key
         self.default_registry = default_registry
 
@@ -398,14 +436,23 @@ class ChannelManagerTesterMock(object):
             netting_channel_address_hex,
         )
 
+        data = {
+            '_event_type': 'ChannelNew',
+            'nettingChannel': channel.address,
+            'participant1': peer1,
+            'participant2': peer2,
+            'settleTimeout': settle_timeout,
+        }
+        event = ethereum_event(CHANNELNEW_EVENTID, CHANNELNEW_EVENT, data, self.address)
+
         # generate the events
         for filter_ in self.address_filter[peer1]:
-            filter_.event()
+            filter_.event(event)
 
         for filter_ in self.address_filter[peer2]:
-            filter_.event()
+            filter_.event(event)
 
-        return channel.address
+        return decode_hex(channel.address)
 
     def channels_addresses(self):
         channel_flat_encoded = self.proxy.getChannelsParticipants()
@@ -430,7 +477,7 @@ class ChannelManagerTesterMock(object):
 
     def channelnew_filter(self, participant_address):
         filter_ = FilterTesterMock(None, next(FILTER_ID_GENERATOR))
-        self.address_filter[participant_address] = filter_
+        self.address_filter[participant_address].append(filter_)
         return filter_
 
 
@@ -455,6 +502,9 @@ class NettingChannelTesterMock(object):
         self.channelclose_filters = list()
         self.channelsettle_filters = list()
 
+        # check we are a participant of the channel
+        self.detail(privtoaddr(private_key))
+
     def asset_address(self):
         result = address_decoder(self.proxy.assetAddress())
         self.tester_state.mine(number_of_blocks=1)
@@ -466,14 +516,13 @@ class NettingChannelTesterMock(object):
         return result
 
     def isopen(self):
+        # do not mine in this method
         closed = self.proxy.closed()
-        self.tester_state.mine(number_of_blocks=1)
 
         if closed != 0:
             return False
 
         opened = self.proxy.opened()
-        self.tester_state.mine(number_of_blocks=1)
 
         return opened != 0
 
@@ -483,6 +532,19 @@ class NettingChannelTesterMock(object):
         return result
 
     def deposit(self, our_address, amount):
+        asset = AssetTesterMock(
+            self.tester_state,
+            self.private_key,
+            self.asset_address(),
+        )
+        current_balance = asset.balance_of(privtoaddr(self.private_key))
+
+        if current_balance < amount:
+            raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(
+                amount,
+                current_balance,
+            ))
+
         self.proxy.deposit(amount)
         self.tester_state.mine(number_of_blocks=1)
 

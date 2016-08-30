@@ -73,10 +73,9 @@ library NettingChannelLibrary {
             throw;
         }
 
-        Participant[2] storage participants = self.participants;
-        Participant storage participant = participants[0];
+        Participant storage participant = self.participants[0];
         if (participant.nodeAddress != callerAddress) {
-            participant = participants[1];
+            participant = self.participants[1];
             if (participant.nodeAddress != callerAddress) {
                 throw;
             }

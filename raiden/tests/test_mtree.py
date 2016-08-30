@@ -65,12 +65,18 @@ def test_two():
 
 
 def test_three():
+    def sort_join(first, second):
+        return ''.join(sorted([first, second]))
+
     hash_0 = 'a' * 32
     hash_1 = 'b' * 32
     hash_2 = 'c' * 32
 
     merkle_tree = [hash_0, hash_1, hash_2]
-    calculated_root = keccak(keccak(hash_0 + hash_1) + hash_2)
+
+    hash_01 = b'me\xef\x9c\xa9=5\x16\xa4\xd3\x8a\xb7\xd9\x89\xc2\xb5\x00\xe2\xfc\x89\xcc\xdc\xf8x\xf9\xc4m\xaa\xf6\xad\r['
+    assert keccak(hash_0 + hash_1) == hash_01
+    calculated_root = keccak(hash_2 + hash_01)
 
     merkle_proof = [hash_0]  # modified in place
     merkle_root = merkleroot(merkle_tree, merkle_proof)
