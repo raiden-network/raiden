@@ -3,6 +3,7 @@
 import click
 import json
 from genesis_builder import generate_accounts, mk_genesis
+from create_compilation_dump import deploy_all
 from startcluster import RAIDEN_PORT as START_PORT
 from startcluster import create_node_configuration, update_bootnodes, to_cmd
 from pyethapp.accounts import Account
@@ -117,6 +118,29 @@ def merge(genesis_json, state_json):
         if account not in accounts:
             [data.pop(key) for key in "nonce root codeHash".split()]
             genesis['alloc'][account] = data
+    print json.dumps(genesis, indent=2)
+
+
+@click.argument(
+    'hosts',
+    nargs=-1,
+    type=str,
+)
+@click.argument(
+    'nodes_per_host',
+    default=1,
+    type=int
+)
+@cli.command()
+def full_genesis(hosts, nodes_per_host):
+    node_list = build_node_list(hosts, nodes_per_host)
+    accounts = generate_accounts(node_list)
+    genesis = mk_genesis([acc['address'] for acc in accounts.values()])
+    dump, blockchain_config = deploy_all()
+    for account, data in dump.items():
+        if not account in genesis['alloc']:
+            genesis['alloc'][account] = data
+    genesis['config']['raidenFlags'] = blockchain_config['raiden_flags']
     print json.dumps(genesis, indent=2)
 
 

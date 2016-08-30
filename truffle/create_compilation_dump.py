@@ -61,10 +61,11 @@ def deploy_all():
         dump.update({account: state.block.account_to_dict(account)})
     cleanup(dump)
 
-    with open('state_dump_py.json', 'w') as f:
-        json.dump(dump, f, indent=2)
-    print json.dumps(deployed, indent=2)
-    print '--registry_contract_adddress {Registry} --discovery_contract_address {EndpointRegistry}'.format(**deployed)
+    blockchain_config = dict(
+        raiden_flags='--registry_contract_adddress {Registry} --discovery_contract_address {EndpointRegistry}'
+        .format(**deployed))
+    blockchain_config['contract_addresses'] = deployed
+    return (dump, blockchain_config)
 
 
 def deploy_with_dependencies(contract_name, state, libraries=dict()):
@@ -131,4 +132,6 @@ def cleanup(dump):
 
 
 if __name__ == '__main__':
-    deploy_all()
+    dump, blockchain_config = deploy_all()
+    print json.dumps(dump, indent=2)
+    print json.dumps(blockchain_config, indent=2)
