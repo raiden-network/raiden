@@ -22,6 +22,7 @@ module.exports = {
         "Token"
         ],
     rpc: {
+        from: "0x19e7e376e7c213b7e7e7e46cc70a5dd086daff2a",
         host: "localhost",
         port: 8545
     }
