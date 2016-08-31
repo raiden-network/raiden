@@ -44,14 +44,13 @@
 
   tasks:
     - meta: refresh_inventory
-    - name: call 'date'
-      shell: cmd=date
 
     - name: add ethereum ppa
-      apt_repository: repo=ppa:ethereum/ethereum validate_certs=no
+      shell: sudo add-apt-repository ppa:ethereum/ethereum -y
 
     - name: install geth, solc
-      apt: name="{{ item }}"
+      apt: name="{{ item }}" update_cache=yes
+      sudo: yes
       with_items:
         - geth
         - solc
