@@ -181,7 +181,7 @@ class AssetManager(object):
 
             # send the secret to all channels registered, including the next
             # hop that might be the node that informed us about the secret
-            self.raiden.send(reveal_to.partner_state.address, secret_message)
+            self.raiden.send_async(reveal_to.partner_state.address, secret_message)
 
             # update the channel by claiming the locked transfers
             try:

@@ -10,7 +10,7 @@ from raiden.messages import (
     TransferTimeout,
 )
 from raiden.mtree import merkleroot, get_proof
-from raiden.utils import sha3, pex
+from raiden.utils import sha3, pex, lpex
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -118,7 +118,7 @@ class LockedTransfers(object):
 
     @property
     def root(self):
-        if not self._cached_root:
+        if self._cached_root is None:
             self._cached_root = merkleroot(self._cached_lock_hashes)
         return self._cached_root
 
@@ -461,7 +461,19 @@ class Channel(object):
             # As a receiver: Check that all locked transfers are registered in
             # the locksroot, if any hashlock is missing there is no way to
             # claim it while the channel is closing
-            if to_state.locked.root_with(transfer.lock) != transfer.locksroot:
+            expected_locksroot = to_state.locked.root_with(transfer.lock)
+            if expected_locksroot != transfer.locksroot:
+                log.error(
+                    'LOCKSROOT MISMATCH node:{} {} > {}'.format(
+                        pex(self.our_state.address),
+                        pex(from_state.address),
+                        pex(to_state.address),
+                        pex(self.partner_state.address),
+                    ),
+                    expected_locksroot=pex(expected_locksroot),
+                    received_locksroot=pex(transfer.locksroot),
+                    current_locksroot=pex(to_state.locked.root),
+                )
                 raise InvalidLocksRoot(transfer)
 
             # As a receiver: If the lock expiration is larger than the settling
@@ -501,6 +513,7 @@ class Channel(object):
                 lock_amount=transfer.lock.amount,
                 lock_expiration=transfer.lock.expiration,
                 lock_hashlock=pex(transfer.lock.hashlock),
+                hashlock_list=lpex(transfer.lock.hashlock for transfer in to_state.locked.locked.itervalues()),
             )
 
             to_state.locked.add(transfer)
@@ -534,13 +547,15 @@ class Channel(object):
 
         log.debug(
             'REGISTERED TRANSFER node:{} from:{} to:{} '
-            'transfer:{} transfered_amount:{} nonce:{}'.format(
+            'transfer:{} transfered_amount:{} nonce:{} '
+            'current_locksroot: {}'.format(
                 pex(self.our_state.address),
                 pex(from_state.address),
                 pex(to_state.address),
                 repr(transfer),
                 from_state.transfered_amount,
                 from_state.nonce,
+                pex(to_state.locked.root),
             )
         )
 

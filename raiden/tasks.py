@@ -29,28 +29,28 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 class Task(gevent.Greenlet):
     def __init__(self):
         super(Task, self).__init__()
-        self.event = None
+        self.response_message = None
 
     def on_completion(self, success):
         self.transfermanager.on_task_completed(self, success)
         return success
 
-    def on_event(self, msg):
+    def on_response(self, msg):
         # we might have timed out before
-        if self.event.ready():
+        if self.response_message.ready():
             log.debug('ALREADY HAD EVENT {task_repr} {event_value} now {raiden_message}'.format(
                 task_repr=self,
-                event_value=self.event.get(),
+                event_value=self.response_message.get(),
                 raiden_message=msg,
             ))
         else:
-            log.debug('SET EVENT {task_repr} {event_id} {raiden_message}'.format(
+            log.debug('RESPONSE MESSAGE RECEIVED {task_repr} {event_id} {raiden_message}'.format(
                 task_repr=repr(self),
-                event_id=id(self.event),
+                event_id=id(self.response_message),
                 raiden_message=msg,
             ))
 
-            self.event.set(msg)
+            self.response_message.set(msg)
 
 
 class LogListenerTask(Task):
@@ -87,12 +87,13 @@ class LogListenerTask(Task):
 
 
 class StartMediatedTransferTask(Task):
-    def __init__(self, transfermanager, amount, target):
+    def __init__(self, transfermanager, amount, target, done_result):
         super(StartMediatedTransferTask, self).__init__()
         self.amount = amount
         self.address = transfermanager.assetmanager.raiden.address
         self.target = target
         self.transfermanager = transfermanager
+        self.done_result = done_result
 
     def __repr__(self):
         return '<{} {}>'.format(
@@ -113,10 +114,24 @@ class StartMediatedTransferTask(Task):
             lock_timeout=None,
         )
 
+        transfer_details = 'initiator:{} target:{}'.format(
+            pex(self.address),
+            pex(self.target),
+        )
+        log.debug('START MEDIATED TRANSFER {}'.format(transfer_details))
+
         for path, channel in routes:
             # try a new secret
             secret = sha3(hex(random.getrandbits(256)))
             hashlock = sha3(secret)
+
+            next_hop = path[1]
+            transfer_details = 'path:{} hashlock:{}'.format(
+                lpex(path),
+                pex(hashlock),
+            )
+            log.debug('START MEDIATED TRANSFER NEW PATH {}'.format(transfer_details))
+
             self.transfermanager.register_task_for_hashlock(self, hashlock)
 
             lock_expiration = (
@@ -140,26 +155,38 @@ class StartMediatedTransferTask(Task):
 
             # `next_hop` timedout
             if response is None:
+                self.done_result.set(False)
                 self.transfermanager.on_hashlock_result(hashlock, False)
 
             # someone down the line timedout / couldn't proceed
             elif isinstance(response, (RefundTransfer, TransferTimeout)):
+                self.done_result.set(False)
                 self.transfermanager.on_hashlock_result(hashlock, False)
 
             # `target` received the MediatedTransfer
             elif response.sender == target and isinstance(response, SecretRequest):
                 secret_message = Secret(secret)
                 raiden.sign(secret_message)
-                raiden.send(target, secret_message)
+                raiden.send_async(target, secret_message)
 
-                # this might cause synchronization problems, since it can take
-                # a while for the partner to receive the secret
-                channel.claim_locked(secret)
+                # wait until `next_hop` received the secret to syncronize our
+                # state (otherwise we can send a new transfer with an invalid
+                # locksroot while the secret is in transit that will incur into
+                # additional retry/timeout latency)
+                while True:
+                    response = self.response_message.wait()
 
-                self.transfermanager.on_hashlock_result(hashlock, True)
+                    # critical write section
+                    self.response_message = AsyncResult()
+                    # /critical write section
 
-                # done, don't try a new path
-                return
+                    if isinstance(response, Secret) and response.sender == next_hop:
+                        channel.claim_locked(secret)
+                        self.done_result.set(True)
+                        self.transfermanager.on_hashlock_result(hashlock, True)
+                        return
+
+                    log.error('Invalid message ignoring. {}'.format(repr(response)))
             else:
                 log.error('Unexpected response {}'.format(repr(response)))
                 self.transfermanager.on_hashlock_result(hashlock, False)
@@ -175,29 +202,30 @@ class StartMediatedTransferTask(Task):
         next_hop = path[1]
         target = path[-1]
 
-        transfer_details = 'path:{} hash:{}'.format(
-            lpex(path),
-            pex(mediated_transfer.hash),
-        )
-        log.debug('MEDIATED TRANSFER STARTED {}'.format(transfer_details))
-
         current_time = time.time()
         limit_time = current_time + message_timeout
 
-        self.event = AsyncResult()
-        raiden.send(next_hop, mediated_transfer)
+        # this event is used by the transfermanager to notify the task that a
+        # response was received
+        self.response_message = AsyncResult()
+
+        raiden.send_async(next_hop, mediated_transfer)
 
         while current_time <= limit_time:
-            response = self.event.wait(limit_time - current_time)
+            # wait for a response message (not the Ack for the transfer)
+            response = self.response_message.wait(limit_time - current_time)
 
+            # reset so that a value can be received either because the current
+            # result was invalid or because we will wait for the next message.
+            #
             # critical write section
-            self.event = AsyncResult()  # reset so that a new value can be received
+            self.response_message = AsyncResult()
             # /critical write section
 
-            current_time = time.time()
-
             if response is None:
-                log.debug('MEDIATED TRANSFER TIMED OUT {}'.format(transfer_details))
+                log.debug('MEDIATED TRANSFER TIMED OUT hashlock:{}'.format(
+                    pex(mediated_transfer.lock.hashlock),
+                ))
                 return None
 
             if response.sender == next_hop:
@@ -214,6 +242,7 @@ class StartMediatedTransferTask(Task):
                     log.info('target {} sent an invalid message'.format(pex(target)))
                     return None
 
+            current_time = time.time()
             log.error('Invalid message ignoring. {}'.format(repr(response)))
 
         return None
@@ -260,6 +289,13 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             lock_timeout,
         )
 
+        transfer_details = 'initiator:{} node:{} target:{}'.format(
+            pex(transfer.initiator),
+            pex(self.address),
+            pex(transfer.target),
+        )
+        log.debug('MEDIATED TRANSFER {}'.format(transfer_details))
+
         for path, channel in routes:
             next_hop = path[1]
 
@@ -273,6 +309,12 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             )
             raiden.sign(mediated_transfer)
 
+            transfer_details = 'path:{} hashlock:{}'.format(
+                lpex(path),
+                pex(transfer.lock.hashlock),
+            )
+            log.debug('MEDIATED TRANSFER NEW PATH {}'.format(transfer_details))
+
             assetmanager.register_channel_for_hashlock(
                 channel,
                 transfer.lock.hashlock,
@@ -282,8 +324,8 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             response = self.send_and_wait_valid(raiden, path, mediated_transfer)
 
             if response is None:
-                timeout = channel.create_timeouttransfer_for(transfer)
-                raiden.send(transfer.sender, timeout)
+                timeout_message = channel.create_timeouttransfer_for(transfer)
+                raiden.send_async(transfer.sender, timeout_message)
                 self.transfermanager.on_hashlock_result(transfer.hashlock, False)
                 return
 
@@ -292,8 +334,8 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                     log.info('Partner {} sent an refund message with an invalid amount'.format(
                         pex(next_hop),
                     ))
-                    timeout = channel.create_timeouttransfer_for(transfer)
-                    raiden.send(transfer.sender, timeout)
+                    timeout_message = channel.create_timeouttransfer_for(transfer)
+                    raiden.send_async(transfer.sender, timeout_message)
                     self.transfermanager.on_hashlock_result(transfer.hashlock, False)
                     return
                 else:
@@ -315,11 +357,12 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         from_channel.register_transfer(refund_transfer)
 
         raiden.sign(refund_transfer)
-        raiden.send(from_address, refund_transfer)
+        raiden.send_async(from_address, refund_transfer)
 
-        log.debug('REFUND MEDIATED TRANSFER from={} {}'.format(
+        log.debug('REFUND MEDIATED TRANSFER from={} node:{} hashlock:{}'.format(
             pex(from_address),
             pex(raiden.address),
+            pex(transfer.lock.hashlock),
         ))
 
         self.transfermanager.on_hashlock_result(transfer.hashlock, False)
@@ -329,32 +372,26 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         message_timeout = raiden.config['msg_timeout']
         next_hop = path[1]
 
-        transfer_details = 'path:{} hash:{} initiator:{}'.format(
-            lpex(path),
-            pex(mediated_transfer.hash),
-            pex(mediated_transfer.initiator),
-        )
-        log.debug('MEDIATED TRANSFER {}'.format(transfer_details))
-
         current_time = time.time()
         limit_time = current_time + message_timeout
 
-        self.event = AsyncResult()
-        raiden.send(next_hop, mediated_transfer)
+        self.response_message = AsyncResult()
+        raiden.send_async(next_hop, mediated_transfer)
 
         while current_time <= limit_time:
-            response = self.event.wait(limit_time - current_time)
+            response = self.response_message.wait(limit_time - current_time)
 
             # critical write section
-            self.event = AsyncResult()  # reset so that a new value can be received
+            self.response_message = AsyncResult()  # reset so that a new value can be received
             # /critical write section
 
             current_time = time.time()
 
             if response is None:
-                log.error('MEDIATED TRANSFER TIMED OUT {} timeout:{}'.format(
-                    transfer_details,
+                log.error('MEDIATED TRANSFER TIMED OUT timeout:{} msghash:{} hashlock:{}'.format(
                     message_timeout,
+                    pex(mediated_transfer.hash),
+                    pex(mediated_transfer.lock.hashlock),
                 ))
                 return None
 
@@ -401,19 +438,20 @@ class EndMediatedTransferTask(Task):
         assetmanager = self.transfermanager.assetmanager
         raiden = assetmanager.raiden
 
-        transfer_details = '{} -> {} hash:{}'.format(
+        transfer_details = '{} -> {} msghash:{} hashlock:{}'.format(
             pex(transfer.target),
             pex(transfer.initiator),
             pex(transfer.hash),
+            pex(transfer.lock.hashlock),
         )
         log.debug('END MEDIATED TRANSFER {}'.format(transfer_details))
 
         secret_request = SecretRequest(transfer.lock.hashlock)
         raiden.sign(secret_request)
-        raiden.send(transfer.initiator, secret_request)
+        raiden.send_async(transfer.initiator, secret_request)
 
-        self.event = AsyncResult()
-        response = self.event.wait(raiden.config['msg_timeout'])
+        self.response_message = AsyncResult()
+        response = self.response_message.wait(raiden.config['msg_timeout'])
 
         if response is None:
             log.error('SECRETREQUEST TIMED OUT!')

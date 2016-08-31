@@ -22,14 +22,17 @@ from raiden.benchmark.utils import (
 )
 
 log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
-slogging.configure(':debug')
+slogging.configure(':DEBUG')
 
 
 def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1,
-                           channels_per_node=2, deposit=100):
+                           channels_per_node=2):
     # pylint: disable=too-many-locals
 
     assert num_assets <= num_nodes
+
+    amount = 10
+    deposit = amount * num_transfers
 
     private_keys = [
         sha3('mediated_transfer:{}'.format(position))
@@ -62,7 +65,6 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1,
     )
 
     def start_transfers(idx, curr_asset, num_transfers):
-        amount = 10
         curr_app = apps[idx]
         asset_manager = curr_app.raiden.get_manager_by_asset_address(curr_asset)
 
@@ -75,24 +77,15 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1,
 
         finished = gevent.event.Event()
 
-        def _completion_cb(task, success):
-            _completion_cb.num_transfers -= 1
-            if _completion_cb.num_transfers > 0:
-                curr_app.raiden.api.transfer_async(curr_asset, amount, target)
-            else:
-                finished.set()
+        def _transfer():
+            api = curr_app.raiden.api
+            for i in range(num_transfers):
+                async_result = api.transfer_async(curr_asset, amount, target)
+                async_result.wait()
 
-        _completion_cb.num_transfers = num_transfers
-        assetmanagers_by_address = {
-            node.raiden.address: node.raiden.managers_by_asset_address
-            for node in apps
-        }
+            finished.set()
 
-        next_hop = path[1]
-        next_assetmanager = assetmanagers_by_address[next_hop][curr_asset]
-        next_assetmanager.transfermanager.on_task_completed_callbacks.append(_completion_cb)
-
-        curr_app.raiden.api.transfer_async(curr_asset, amount, target)
+        gevent.spawn(_transfer)
         return finished
 
     finished_events = []
@@ -100,11 +93,10 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1,
     # Start all transfers
     start_time = time.time()
     for idx, curr_asset in enumerate(assets):
-        print('finished {}'.format(idx))
         finished = start_transfers(idx, curr_asset, num_transfers)
         finished_events.append(finished)
 
-    # Wait until all transfers are done
+    # Wait until the transfers for all assets are done
     gevent.wait(finished_events)
     elapsed = time.time() - start_time
 

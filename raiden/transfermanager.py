@@ -1,7 +1,9 @@
 # -*- coding: utf8 -*-
+from gevent.event import AsyncResult
 from ethereum import slogging
 
 from raiden.tasks import StartMediatedTransferTask, MediateTransferTask, EndMediatedTransferTask
+from raiden.utils import pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -28,7 +30,10 @@ class TransferManager(object):
             if result is True:
                 self.on_task_completed_callbacks.remove(callback)
 
-    def transfer(self, amount, target, callback=None):
+    def transfer(self, *args, **kwargs):
+        raise NotImplemented('use transfer_async')
+
+    def transfer_async(self, amount, target, callback=None):
         """ Transfer `amount` between this node and `target`.
 
         This method will start a asyncronous transfer, the transfer might fail
@@ -45,26 +50,36 @@ class TransferManager(object):
             self.assetmanager.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer, callback=callback)
 
-            self.assetmanager.raiden.protocol.send_and_wait(
+            return self.assetmanager.raiden.protocol.send_async(
                 target,
                 direct_transfer,
             )
 
         else:
+            result = AsyncResult()
             task = StartMediatedTransferTask(
                 self,
                 amount,
                 target,
+                result,
             )
+            task.start()
+
             if callback:
                 self.on_task_completed_callbacks.append(callback)
 
-            task.start()
-            task.join()
+            return result
 
     def on_mediatedtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
             raise RuntimeError('Received message for inexisting channel.')
+
+        transfer_details = 'sender:{} node:{} hashlock:{}'.format(
+            pex(transfer.sender),
+            pex(self.assetmanager.raiden.address),
+            pex(transfer.lock.hashlock),
+        )
+        log.debug('MEDIATED TRANSFER RECEIVED {}'.format(transfer_details))
 
         channel = self.assetmanager.partneraddress_channel[transfer.sender]
         channel.register_transfer(transfer)  # raises if the transfer is invalid

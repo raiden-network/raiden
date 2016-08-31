@@ -104,7 +104,10 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         message.sign(self.privkey)
 
-    def send(self, recipient, message):
+    def send(self, *args):
+        raise NotImplemented('use send_and_wait or send_async')
+
+    def send_async(self, recipient, message):
         """ Send `message` to `recipient` using the raiden protocol.
 
         The protocol will take care of resending the message on a given
@@ -115,9 +118,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         if not isaddress(recipient):
             raise ValueError('recipient is not a valid address.')
 
-        self.protocol.send(recipient, message)
+        return self.protocol.send_async(recipient, message)
 
-    def send_and_wait(self, recipient, message, timeout, event):
+    def send_and_wait(self, recipient, message, timeout):
         """ Send `message` to `recipient` and wait for the response or `timeout`.
 
         Args:
@@ -125,14 +128,15 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
                 message.
             message: The transfer message.
             timeout (float): How long should we wait for a response from `recipient`.
-            event (gevent.event.AsyncResult): Event that will receive the result.
 
         Returns:
             None: If the wait timed out
             object: The result from the event
         """
-        self.send(recipient, message)
-        return event.wait(timeout)
+        if not isaddress(recipient):
+            raise ValueError('recipient is not a valid address.')
+
+        self.protocol.send_and_wait(recipient, message, timeout)
 
     def message_for_task(self, message, hashlock):
         """ Sends the message to the corresponding task.
@@ -146,7 +150,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             task = asset_manager.transfermanager.transfertasks.get(hashlock)
 
             if task is not None:
-                task.on_event(message)
+                task.on_response(message)
                 return True
 
         return False
@@ -288,10 +292,13 @@ class RaidenAPI(object):
 
         return netting_channel
 
-    def transfer(self, asset_address, amount, target, callback=None):
+    def transfer(self, *args, **kwargs):
+        raise NotImplemented('use transfer_and_wait or transfer_async')
+
+    def transfer_and_wait(self, asset_address, amount, target, callback=None, timeout=None):
         """ Do a transfer with `target` with the given `amount` of `asset_address`. """
-        task = self.transfer_async(asset_address, amount, target, callback)
-        task.join()
+        async_result = self.transfer_async(asset_address, amount, target, callback)
+        return async_result.wait(timeout=timeout)
 
     def transfer_async(self, asset_address, amount, target, callback=None):
         if not isinstance(amount, (int, long)):
@@ -315,8 +322,8 @@ class RaidenAPI(object):
             raise NoPathError('No path to address found')
 
         transfer_manager = self.raiden.managers_by_asset_address[asset_address_bin].transfermanager
-        task = transfer_manager.transfer(amount, target_bin, callback=callback)
-        return task
+        async_result = transfer_manager.transfer_async(amount, target_bin, callback=callback)
+        return async_result
 
     def close(self, asset_address, partner_address):
         """ Close a channel opened with `partner_address` for the given `asset_address`. """
@@ -419,16 +426,6 @@ class RaidenMessageHandler(object):
 
         else:
             raise Exception("Unknow cmdid '{}'.".format(cmdid))
-
-        ack = Ack(
-            self.raiden.address,
-            msghash,
-        )
-
-        self.raiden.protocol.send_ack(
-            message.sender,
-            ack,
-        )
 
     def message_ping(self, message):
         log.info('ping received')
