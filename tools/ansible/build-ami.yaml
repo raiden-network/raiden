@@ -22,7 +22,7 @@
         wait: true
         count: "{{ count }}"
         instance_tags:
-          Name: Demo
+          Name: Build
       register: ec2
 
     - name: Add all instance public IPs to host group
@@ -54,6 +54,30 @@
         - solc
 
 - hosts: key_raiden
+  name: make DAG
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - build-ami
+  tags:
+    - dag
+  vars:
+    - dag: "{{ ansible_env.HOME }}/.ethash"
+
+
+  tasks:
+    - name: create '~/.ethash' directory
+      file:
+        path: "{{ dag }}"
+        state: directory
+
+    - name: make DAG 
+      shell: 
+        chdir: "{{ dag }}"
+        creates: "{{ dag }}/full-R23-0000000000000000"
+        cmd: "geth makedag 1 {{ dag }}" 
+
+- hosts: key_raiden
   name: install raiden 
   remote_user: "{{ remote_user }}"
   gather_facts: true
@@ -61,6 +85,8 @@
     - build-ami
   tags:
     - install_raiden 
+  vars:
+    - venv: "{{ ansible_env.HOME }}/raidenvenv"
 
   tasks:
     - name: install raiden system dependencies 
@@ -89,13 +115,13 @@
     - name: update setuptools
       pip:
         name: setuptools
-        virtualenv: "/home/ubuntu/raidenvenv"
+        virtualenv: "{{ venv }}"
         state: forcereinstall
 
     - name: install raiden
       pip:
         name: "."
-        virtualenv: "/home/ubuntu/raidenvenv"
+        virtualenv: "{{ venv }}"
         chdir: "{{ raiden_dir }}"
 
 - hosts: key_raiden
