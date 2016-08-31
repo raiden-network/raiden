@@ -29,6 +29,7 @@ Obtain the `raiden.pem` file and place it into `keys/raiden.pem`, then `chmod 60
 This playbook 
 - launches a new ubuntu instance: `-t init`
 - installs all dependencies: `-t install_geth,install_raiden`
+- prepare the DAG for mining: `-t dag`
 - **#FIXME** stores the result as a new AMI that can be used for launching a scenario: `-t store_ami`
 - terminates the instance: `-t terminate`
 
