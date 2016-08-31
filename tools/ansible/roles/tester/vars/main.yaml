@@ -1,3 +1,3 @@
-ami_id: ami-7f77b31f  # Amazon Linux AMI 2016.03.3 EBS backed
+ami_id: ami-3e32f05e  # Ubuntu Server 14.04 LTS (PV), SSD Volume Type 64bit
 region: us-west-2
 instance_type: t1.micro

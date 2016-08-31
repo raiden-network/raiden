@@ -37,18 +37,28 @@
 
 - hosts: key_raiden
   name: configuration play
-  remote_user: ec2-user
+  remote_user: "{{ remote_user }}"
   gather_facts: true
   tags:
     - configure
 
   tasks:
+    - meta: refresh_inventory
     - name: call 'date'
       shell: cmd=date
 
+    - name: add ethereum ppa
+      apt_repository: repo=ppa:ethereum/ethereum validate_certs=no
+
+    - name: install geth, solc
+      apt: name="{{ item }}"
+      with_items:
+        - geth
+        - solc
+
 - hosts: key_raiden
   name: terminate
-  remote_user: ec2-user
+  remote_user: "{{ remote_user }}"
   gather_facts: False
   roles:
     - tester
