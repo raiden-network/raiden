@@ -1,0 +1,2 @@
+scenario_ami_name: raiden_preinstalled
+instance_type: c3.2xlarge

@@ -30,7 +30,7 @@ This playbook
 - launches a new ubuntu instance: `-t init`
 - installs all dependencies: `-t install_geth,install_raiden`
 - prepare the DAG for mining: `-t dag`
-- **#FIXME** stores the result as a new AMI that can be used for launching a scenario: `-t store_ami`
+- stores the result as a new AMI that can be used for launching a scenario: `-t store_ami`
 - terminates the instance: `-t terminate`
 
 #### Usage
@@ -38,6 +38,9 @@ This playbook
     ansible-playbook build-ami.yaml
     # termination can be prevented by defining `keep=True`
     ansible-playbook build-ami.yaml -e "keep=True"
+    # to make sure, all amis are deleted, call
+    ansible-playbook build-ami.yaml -e "cleanup=True" -t store_ami
+    
 
 #### Parameters
 
@@ -47,3 +50,7 @@ See `roles/build-ami/vars/main.yaml`.
 
 This playbook
 - **#FIXME**
+
+DEV-notes: to use a previously created ami, include
+`roles/common/tasks/scenario_ami_id_from_name.yaml` before instance creation and use the fact
+`scenario_ami_id` with the `ec2` module for the `image` parameter.
