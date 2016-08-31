@@ -5,7 +5,7 @@
   vars:
     count: 1
   roles: 
-    - tester
+    - build-ami
   tags:
     - init
 
@@ -26,25 +26,23 @@
       register: ec2
 
     - name: Add all instance public IPs to host group
-      add_host: hostname={{ item.public_ip }} groups=ec2hosts
+      add_host: hostname={{ item.public_ip }} groups=key_raiden
       with_items: "{{ ec2.instances }}"
 
     - name: Wait for SSH to come up
       wait_for: host={{ item.public_ip }} port=22 delay=60 timeout=320 state=started
       with_items: "{{ ec2.instances }}"
-    # this will update the dynamic inventory; necessary whenever we create instances
-    - meta: refresh_inventory
 
 - hosts: key_raiden
-  name: configuration play
+  name: install geth 
   remote_user: "{{ remote_user }}"
   gather_facts: true
+  roles:
+    - build-ami
   tags:
-    - configure
+    - install_geth
 
   tasks:
-    - meta: refresh_inventory
-
     - name: add ethereum ppa
       shell: sudo add-apt-repository ppa:ethereum/ethereum -y
 
@@ -56,11 +54,56 @@
         - solc
 
 - hosts: key_raiden
+  name: install raiden 
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - build-ami
+  tags:
+    - install_raiden 
+
+  tasks:
+    - name: install raiden system dependencies 
+      apt: name="{{ item }}" update_cache=yes
+      sudo: yes
+      with_items:
+        - git-core
+        - python-pip
+        - python-dev
+        - python-virtualenv
+        - build-essential
+        - automake
+        - pkg-config
+        - libtool
+        - libffi-dev
+        - libgmp-dev
+        - libssl-dev
+
+    - name: clone raiden
+      git: 
+        repo: "https://github.com/raiden-network/raiden"
+        update: yes
+        version: "{{ raiden_version }}"
+        dest: "{{ raiden_dir }}"
+
+    - name: update setuptools
+      pip:
+        name: setuptools
+        virtualenv: "/home/ubuntu/raidenvenv"
+        state: forcereinstall
+
+    - name: install raiden
+      pip:
+        name: "."
+        virtualenv: "/home/ubuntu/raidenvenv"
+        chdir: "{{ raiden_dir }}"
+
+- hosts: key_raiden
   name: terminate
   remote_user: "{{ remote_user }}"
   gather_facts: False
   roles:
-    - tester
+    - build-ami
   tags:
     - terminate
 
@@ -73,3 +116,4 @@
         region: "{{ region }}"
         state: absent
         instance_ids: "{{ ansible_ec2_instance_id }}"
+      when: keep is not defined
