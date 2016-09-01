@@ -87,11 +87,17 @@
     - venv: "{{ ansible_env.HOME }}/raidenvenv"
 
   tasks:
+    - name: add py27 ppa
+      shell: 
+        cmd: add-apt-repository ppa:fkrull/deadsnakes-python2.7 -y
+      sudo: yes
+
     - name: install raiden system dependencies 
       apt: name="{{ item }}" update_cache=yes
       sudo: yes
       with_items:
         - git-core
+        - python2.7
         - python-pip
         - python-dev
         - python-virtualenv
@@ -119,6 +125,7 @@
     - name: install raiden
       pip:
         name: "."
+        extra_args: -e
         virtualenv: "{{ venv }}"
         chdir: "{{ raiden_dir }}"
 
@@ -148,7 +155,7 @@
 
     - name: wait some time because AWS does not realize deletion immediately
       pause:
-        minutes: 1
+        minutes: 3
       when: deleted.changed
 
     # Collect instance id: http://stackoverflow.com/a/27307254 
