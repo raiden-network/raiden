@@ -125,6 +125,7 @@
     - name: install raiden
       pip:
         name: "."
+        extra_args: -e
         virtualenv: "{{ venv }}"
         chdir: "{{ raiden_dir }}"
 
@@ -154,7 +155,7 @@
 
     - name: wait some time because AWS does not realize deletion immediately
       pause:
-        minutes: 1
+        minutes: 3
       when: deleted.changed
 
     # Collect instance id: http://stackoverflow.com/a/27307254 
