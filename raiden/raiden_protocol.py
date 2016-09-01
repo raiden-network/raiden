@@ -4,7 +4,7 @@ from gevent.queue import Queue
 from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
-from raiden.messages import decode, Ack, BaseError, Secret
+from raiden.messages import decode, Ack, Secret
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -132,14 +132,11 @@ class RaidenProtocol(object):
             messagedata,
         )
 
-    def send(self, *args):
-        raise NotImplemented('use send_async or send_and_wait')
-
     def send_async(self, receiver_address, message):
         if not isaddress(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
-        if isinstance(message, (Ack, BaseError)):
+        if isinstance(message, Ack):
             raise ValueError('Do not use send for Ack messages or Errors')
 
         if len(message.encode()) > self.max_message_size:
@@ -163,7 +160,7 @@ class RaidenProtocol(object):
         if not isaddress(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
-        if not isinstance(message, (Ack, BaseError)):
+        if not isinstance(message, Ack):
             raise ValueError('Use send_Ack only for Ack messages or Erorrs')
 
         host_port = self.discovery.get(receiver_address)

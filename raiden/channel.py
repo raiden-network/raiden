@@ -7,7 +7,6 @@ from ethereum.utils import encode_hex
 from gevent.event import Event
 
 from raiden.messages import (
-    BaseError,
     DirectTransfer,
     Lock,
     LockedTransfer,
@@ -33,23 +32,23 @@ UnlockPartialProof = namedtuple('UnlockProof', ('lock', 'secret'))
 UnlockProof = namedtuple('UnlockProof', ('merkle_proof', 'lock_encoded', 'secret'))
 
 
-class InvalidNonce(BaseError):
+class InvalidNonce(Exception):
     pass
 
 
-class InvalidSecret(BaseError):
+class InvalidSecret(Exception):
     pass
 
 
-class InvalidLocksRoot(BaseError):
+class InvalidLocksRoot(Exception):
     pass
 
 
-class InvalidLockTime(BaseError):
+class InvalidLockTime(Exception):
     pass
 
 
-class InsufficientBalance(BaseError):
+class InsufficientBalance(Exception):
     pass
 
 
@@ -170,7 +169,7 @@ class BalanceProof(object):
         merkleroot(list(self.merkletree), merkle_proof)
 
         return UnlockProof(
-            merkle_proof,
+            [],  # merkle_proof,
             lock_encoded,
             secret,
         )
@@ -322,9 +321,10 @@ class ChannelEndState(object):
         new_locksroot = self.compute_merkleroot_with(lock, lockhashed=lockhashed)
         if transfer.locksroot != new_locksroot:
             raise ValueError(
-                'locksroot mismatch',
-                expected=new_locksroot,
-                sent=transfer.locksroot,
+                'locksroot mismatch expected:{} got:{}'.format(
+                    pex(new_locksroot),
+                    pex(transfer.locksroot),
+                )
             )
 
         hashlock_pendinglocks = dict(self.balance_proof.hashlock_pendinglocks)
@@ -711,26 +711,17 @@ class Channel(object):
         if transfer.sender != from_state.address:
             raise ValueError('Unsigned transfer')
 
-        if transfer.transfered_amount < from_state.transfered_amount:
-            raise ValueError('Negative transfer')
-
         # nonce is changed only when a transfer is un/registered, if the test
         # fail either we are out of sync, a message out of order, or it's an
         # forged transfer
         if transfer.nonce < 1 or transfer.nonce != from_state.nonce:
             raise InvalidNonce(transfer)
 
-        amount = transfer.transfered_amount - from_state.transfered_amount
-        distributable = from_state.distributable(to_state)
-
-        if amount > distributable:
-            raise InsufficientBalance(transfer)
-
+        # if the locksroot is out-of-sync (because a transfer was created while
+        # a Secret was in trafic) the balance _will_ be wrong, so first check
+        # the locksroot and then the balance
         if isinstance(transfer, LockedTransfer):
             block_number = self.external_state.get_block_number()
-
-            if amount + transfer.lock.amount > distributable:
-                raise InsufficientBalance(transfer)
 
             if to_state.balance_proof.is_pending(transfer.lock.hashlock):
                 raise ValueError('hashlock is already registered')
@@ -749,8 +740,9 @@ class Channel(object):
                     ),
                     expected_locksroot=pex(expected_locksroot),
                     received_locksroot=pex(transfer.locksroot),
-                    current_locksroot=pex(to_state.locked.root),
+                    current_locksroot=pex(to_state.balance_proof.merkleroot),
                 )
+
                 raise InvalidLocksRoot(transfer)
 
             # As a receiver: If the lock expiration is larger than the settling
@@ -774,14 +766,35 @@ class Channel(object):
                     reveal_timeout=self.reveal_timeout,
                 )
 
-                raise ValueError('Expiration smaller than the minimum requried.')
+                raise ValueError('Expiration smaller than the minimum required.')
 
         if isinstance(transfer, DirectTransfer) and transfer.secret:
-            hashlock = sha3(transfer.secret)
-            lock = to_state.locked[hashlock]
+            raise NotImplementedError('DirectTransfer with a secret is not fully tested')
+            # hashlock = sha3(transfer.secret)
+            # lock = to_state.locked[hashlock]
+            # if to_state.compute_merkleroot_without(lock) != transfer.locksroot:
+            #     raise InvalidLocksRoot(hashlock)
 
-            if to_state.compute_merkleroot_without(lock) != transfer.locksroot:
-                raise InvalidLocksRoot(hashlock)
+        # only check the balance if the locksroot matched
+        if transfer.transfered_amount < from_state.transfered_amount:
+            msg = 'NEGATIVE TRANSFER node:{} {} > {} {}'.format(
+                pex(self.our_state.address),
+                pex(from_state.address),
+                pex(to_state.address),
+                transfer,
+            )
+            log.error(msg)
+            raise ValueError('Negative transfer')
+
+        amount = transfer.transfered_amount - from_state.transfered_amount
+        distributable = from_state.distributable(to_state)
+
+        if amount > distributable:
+            raise InsufficientBalance(transfer)
+
+        if isinstance(transfer, LockedTransfer):
+            if amount + transfer.lock.amount > distributable:
+                raise InsufficientBalance(transfer)
 
         # all checks need to be done before the internal state of the channel
         # is changed, otherwise if a check fails and state was changed the

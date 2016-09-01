@@ -33,7 +33,7 @@ def make_message(message, **attrs):
 
 ACK_CMDID = 0
 PING_CMDID = 1
-REJECTED_CMDID = 2
+LOCKSROOT_REJECTED_CMDID = 2
 SECRETREQUEST_CMDID = 3
 SECRET_CMDID = 4
 DIRECTTRANSFER_CMDID = 5
@@ -45,7 +45,7 @@ CONFIRMTRANSFER_CMDID = 10
 
 ACK = to_bigendian(ACK_CMDID)
 PING = to_bigendian(PING_CMDID)
-# REJECTED = to_bigendian(REJECTED_CMDID)
+LOCKSROOT_REJECTED = to_bigendian(LOCKSROOT_REJECTED_CMDID)
 SECRETREQUEST = to_bigendian(SECRETREQUEST_CMDID)
 SECRET = to_bigendian(SECRET_CMDID)
 DIRECTTRANSFER = to_bigendian(DIRECTTRANSFER_CMDID)
@@ -57,7 +57,7 @@ CONFIRMTRANSFER = to_bigendian(CONFIRMTRANSFER_CMDID)
 
 
 # pylint: disable=invalid-name
-log = slogging.get_logger('messages')
+log = slogging.get_logger(__name__)
 
 
 nonce = make_field('nonce', 8, '8s', integer(0, BYTE ** 8))
@@ -102,8 +102,21 @@ Ping = namedbuffer(
     ]
 )
 
-# FIXME: we need to know the type of each arg
-# Reject = Message('reject', [cmdid(REJECTED), pad(3), echo, erroid, args])
+LocksrootRejected = namedbuffer(
+    'locksroot_rejected',
+    [
+        cmdid(LOCKSROOT_REJECTED),
+        pad(3),
+        echo,
+
+        # secret*
+
+        # HACK: `wrap_and_validate` and `SignedMessage.sign` are using slices
+        # from the end of the buffer [:-65] to ignore the space used for the
+        # secrets
+        signature,
+    ]
+)
 
 SecretRequest = namedbuffer(
     'secret_request',
@@ -126,7 +139,7 @@ Secret = namedbuffer(
 )
 
 DirectTransfer = namedbuffer(
-    'transfer',
+    'direct_transfer',
     [
         cmdid(DIRECTTRANSFER),  # [0:1]
         pad(3),                 # [1:4]
@@ -228,7 +241,7 @@ Lock = namedbuffer(
 CMDID_MESSAGE = {
     ACK: Ack,
     PING: Ping,
-    # REJECTED: Rejected,
+    LOCKSROOT_REJECTED: LocksrootRejected,
     SECRETREQUEST: SecretRequest,
     SECRET: Secret,
     DIRECTTRANSFER: DirectTransfer,
@@ -263,10 +276,11 @@ def wrap_and_validate(data):
         return
 
     assert message_type.fields_spec[-1].name == 'signature', 'signature is not the last field'
-    message_data = message.data[:-signature.size_bytes]
+    message_data = message.data[:-signature.size_bytes]  # XXX: this slice must be from the end of the buffer
+    message_signature = message.data[-signature.size_bytes:]
 
     try:
-        publickey = recover_publickey(message_data, message.signature)
+        publickey = recover_publickey(message_data, message_signature)
     except (ValueError, Exception):
         log.error('invalid signature')
         return

@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-from __future__ import print_function
+from __future__ import print_function, division
 
 import time
 
@@ -24,23 +24,14 @@ log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
 slogging.configure(':DEBUG')
 
 
-def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1,
-                           channels_per_node=2):
-    # pylint: disable=too-many-locals
+def setup_apps(amount, assets, num_transfers, num_nodes, channels_per_node):
+    assert len(assets) <= num_nodes
 
-    assert num_assets <= num_nodes
-
-    amount = 10
     deposit = amount * num_transfers
 
     private_keys = [
         sha3('mediated_transfer:{}'.format(position))
         for position in range(num_nodes)
-    ]
-
-    assets = [
-        sha3('asset:{}'.format(number))[:20]
-        for number in range(num_assets)
     ]
 
     BlockChainServiceMock.reset()
@@ -67,6 +58,48 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1,
         verbosity,
     )
 
+    return apps
+
+
+def test_throughput(apps, assets, num_transfers, amount):
+    def start_transfers(curr_app, curr_asset, num_transfers):
+        asset_manager = curr_app.raiden.get_manager_by_asset_address(curr_asset)
+
+        all_paths = asset_manager.channelgraph.get_paths_of_length(
+            source=curr_app.raiden.address,
+            num_hops=2,
+        )
+        path = all_paths[0]
+        target = path[-1]
+
+        api = curr_app.raiden.api
+        events = list()
+
+        for i in range(num_transfers):
+            async_result = api.transfer_async(curr_asset, amount, target)
+            events.append(async_result)
+
+        return events
+
+    finished_events = []
+
+    # Start all transfers
+    start_time = time.time()
+    for idx, curr_asset in enumerate(assets):
+        curr_app = apps[idx]
+        finished = start_transfers(curr_app, curr_asset, num_transfers)
+        finished_events.extend(finished)
+
+    # Wait until the transfers for all assets are done
+    gevent.wait(finished_events)
+    elapsed = time.time() - start_time
+
+    completed_transfers = num_transfers * len(assets)
+    tps = completed_transfers / elapsed
+    print('Completed {} transfers {:.5} tps / {:.5}s'.format(completed_transfers, tps, elapsed))
+
+
+def test_latency(apps, assets, num_transfers, amount):
     def start_transfers(idx, curr_asset, num_transfers):
         curr_app = apps[idx]
         asset_manager = curr_app.raiden.get_manager_by_asset_address(curr_asset)
@@ -102,10 +135,15 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1,
     # Wait until the transfers for all assets are done
     gevent.wait(finished_events)
     elapsed = time.time() - start_time
+    completed_transfers = num_transfers * len(assets)
 
-    completed_transfers = num_transfers * num_assets
     tps = completed_transfers / elapsed
-    print('Completed {} transfers at {} tps / {:.7}s'.format(completed_transfers, tps, elapsed))
+    print('Completed {} transfers. tps:{:.5} latency:{:.5} time:{:.5}s'.format(
+        completed_transfers,
+        tps,
+        elapsed / completed_transfers,
+        elapsed,
+    ))
 
 
 def main():
@@ -116,6 +154,8 @@ def main():
     parser.add_argument('--assets', default=1, type=int)
     parser.add_argument('--channels-per-node', default=2, type=int)
     parser.add_argument('-p', '--profile', default=False, action='store_true')
+    parser.add_argument('--throughput', dest='throughput', action='store_true', default=True)
+    parser.add_argument('--latency', dest='throughput', action='store_false')
     args = parser.parse_args()
 
     if args.profile:
@@ -123,12 +163,24 @@ def main():
         GreenletProfiler.set_clock_type('cpu')
         GreenletProfiler.start()
 
-    test_mediated_transfer(
-        num_transfers=args.transfers,
-        num_nodes=args.nodes,
-        num_assets=args.assets,
-        channels_per_node=args.channels_per_node,
+    assets = [
+        sha3('asset:{}'.format(number))[:20]
+        for number in range(args.assets)
+    ]
+
+    amount = 10
+    apps = setup_apps(
+        amount,
+        assets,
+        args.transfers,
+        args.nodes,
+        args.channels_per_node,
     )
+
+    if args.throughput:
+        test_throughput(apps, assets, args.transfers, amount)
+    else:
+        test_latency(apps, assets, args.transfers, amount)
 
     if args.profile:
         GreenletProfiler.stop()

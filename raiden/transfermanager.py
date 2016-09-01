@@ -2,6 +2,8 @@
 from gevent.event import AsyncResult
 from ethereum import slogging
 
+from raiden.channel import InvalidLocksRoot
+from raiden.messages import LocksrootRejected
 from raiden.tasks import StartMediatedTransferTask, MediateTransferTask, EndMediatedTransferTask
 from raiden.utils import pex
 
@@ -29,9 +31,6 @@ class TransferManager(object):
 
             if result is True:
                 self.on_task_completed_callbacks.remove(callback)
-
-    def transfer(self, *args, **kwargs):
-        raise NotImplemented('use transfer_async')
 
     def transfer_async(self, amount, target, callback=None):
         """ Transfer `amount` between this node and `target`.
@@ -82,7 +81,20 @@ class TransferManager(object):
         log.debug('MEDIATED TRANSFER RECEIVED {}'.format(transfer_details))
 
         channel = self.assetmanager.partneraddress_channel[transfer.sender]
-        channel.register_transfer(transfer)  # raises if the transfer is invalid
+
+        try:
+            channel.register_transfer(transfer)  # raises if the transfer is invalid
+        except InvalidLocksRoot:
+            # raiden = self.assetmanager.raiden
+            # rejected = LocksrootRejected(transfer.hash)
+            # rejected.secrets.extend(
+            #     partial_proof.secret
+            #     for partial_proof in channel.our_state.balance_proof.unlockedlocks.values()
+            # )
+            # raiden.sign(rejected)
+            # raiden.protocol.send_async(transfer.sender, rejected)
+
+            raise
 
         if transfer.target == self.assetmanager.raiden.address:
             secret_request_task = EndMediatedTransferTask(
