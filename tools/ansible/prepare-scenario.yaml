@@ -45,14 +45,19 @@
       debug:
         var: node_ips
 
-    - name: register scenario folder
-      set_fact: scenario_folder="/tmp/{{ scenario_name }}"
-    
+    - include: roles/scenario/tasks/read_scenario_params.yaml
+
     - name: create scenario global folder
       local_action:
         module: file
         path: "{{ scenario_folder }}"
         state: directory
+
+    - name: store node_ips in scenario folder
+      copy:
+        content: 
+          node_ips: "{{ node_ips }}"
+        dest: "{{ scenario_folder }}/node_ips.json"
 
     - name: create scenario folders
       local_action:
@@ -60,12 +65,6 @@
         path: "{{ scenario_folder }}/{{ item }}/geth"
         state: directory
       with_items: "{{ node_ips }}"
-
-    - name: store node_ips in scenario folder
-      copy:
-        content: 
-          node_ips: "{{ node_ips }}"
-        dest: "{{ scenario_folder }}/node_ips.json"
 
 
 - hosts: localhost 

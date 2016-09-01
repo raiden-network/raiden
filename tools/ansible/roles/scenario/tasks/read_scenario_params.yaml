@@ -19,6 +19,7 @@
   run_once: yes
   set_fact:
     scenario_names: "{{ remote_facts.instances | map(attribute='tags') | map(attribute='Scenario') | list | unique}}"
+  when: scenario_name is not defined
 
 - name: fail if multiple scenarios are online
   fail: "there are more than one scenarios running: {{ scenario_names }}, please chose one by defining '-e scenario_name=<name>'"
@@ -32,6 +33,8 @@
 - name: set scenario_folder fact
   set_fact:
     scenario_folder: "/tmp/{{ scenario_name }}"
+  when: scenario_folder is not defined
 
 - name: read node_ips from scenario folder
   include_vars: "{{ scenario_folder }}/node_ips.json"
+  when: node_ips is not defined
