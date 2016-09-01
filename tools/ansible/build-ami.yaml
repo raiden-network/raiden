@@ -186,6 +186,7 @@
   tasks:
     # Collect instance id: http://stackoverflow.com/a/27307254 
     - action: ec2_facts
+
     - name: shutdown all ec2.instances
       local_action:
         module: ec2
