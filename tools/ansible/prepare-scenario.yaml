@@ -68,22 +68,20 @@
         dest: "{{ scenario_folder }}/node_ips.json"
 
 
-- hosts: tag_Name_Scenario
-  name: init geth 
-  remote_user: "{{ remote_user }}"
+- hosts: localhost 
+  name: prepare geth 
   gather_facts: true
   roles:
     - scenario 
     - common
   tags:
-    - init_geth
+    - prepare_geth
 
   tasks:
     - include: roles/scenario/tasks/read_scenario_params.yaml
 
     - name: run 'geth_commands'
-      local_action:
-        module: shell
+      shell:
         chdir: "../"
         cmd: "python config_builder.py geth_commands {{ node_ips | join(' ') }}"
       register: geth_commands
@@ -95,10 +93,88 @@
           geth_commands: "{{ geth_commands }}"
         dest: "{{ scenario_folder }}/geth_commands.json"
 
+    - name: put geth_command per node
+      copy:
+        content: "#!/usr/bin/env sh\n{{ geth_commands[item] }}"
+      dest: "{{ scenario_folder }}/{{ item }}/geth/start.sh"
+      mode: a+rx
+      with_items: "{{ node_ips }}"
+
+    - name: put static-bootnodes.json per node
+      copy:
+        content: "{{ geth_commands.static_bootnodes }}"
+        dest: "{{ scenario_folder }}/{{ item }}/geth/static-bootnodes.json"
+      with_items: "{{ node_ips }}"
+
+    - name: create default account (for mining)
+      shell:
+        chdir: "../"
+        cmd: python config_builder account_file
+      register: account_file
+
+    - name: store account file per node
+      copy:
+        content: "{{ account_file }}"
+        dest: "{{ scenario_folder }}/{{ item }}/geth/keystore/default.json"
+      with_items: "{{ node_ips }}"
+
+    - name: create blockchain config (genesis & raiden flags)
+      shell:
+        chdir: "../"
+        cmd: "python config_builder.py full_genesis {{ raiden_per_node }} {{ node_ips | join(' ') }}"
+      register: blockchain_config
+
+    - name: store genesis
+      copy:
+        content: "{{ blockchain_config }}"
+        dest: "{{ scenario_folder }}/{{ item }}/geth/genesis.json"
+      with_items: "{{ node_ips }}"
+
+    - name: store contract_flags
+      copy:
+        content: "{{ blockchain_config.config.raidenFlags }}"
+        dest: "{{ scenario_folder }}/{{ item }}/raiden_flags.txt"
+      with_items: "{{ node_ips }}"
+
+- hosts: localhost
+  name: prepare raiden
+  gather_facts: no
+  roles:
+    - scenario
+    - common
+  tags:
+    - prepare_raiden
+
+  tasks:
+    - include: roles/scenario/tasks/read_scenario_params.yaml
+
+    - name: create raiden node_list
+      shell:
+        chdir: "../"
+        cmd: "python config_builder.py accounts {{ raiden_per_node }} {{ node_ips | join(' ') }}"
+      register: raiden_accounts
+
+    - name: create raiden instance folders
+      file:
+        path: "{{ scenario_folder }}/{{ item.key.split(':').0 }}/{{ item.key.split(':').1 }}"
+        state: directory
+      with_dict: "{{ raiden_accounts }}"
+
+    - name: store private key per raiden node
+      copy:
+        content: "{{ item.value.privatekey }}"
+        path: "{{ scenario_folder }}/{{ item.key.split(':').0 }}/{{ item.key.split(':').1 }}/privatekey.txt"
+      with_dict: "{{ raiden_accounts }}"
+
+    - name: store address per raiden node
+      copy:
+        content: "{{ item.value.address }}"
+        path: "{{ scenario_folder }}/{{ item.key.split(':').0 }}/{{ item.key.split(':').1 }}/address.txt"
+      with_dict: "{{ raiden_accounts }}"
 
 
 - hosts: tag_Name_Scenario
-  name: init geth 
+  name: terminate
   remote_user: "{{ remote_user }}"
   gather_facts: true
   roles:
