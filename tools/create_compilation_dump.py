@@ -2,8 +2,9 @@
 # -*- coding: utf-8
 import json
 from ethereum import tester
-from ethereum.utils import privtoaddr, remove_0x_head
+from ethereum.utils import remove_0x_head
 from raiden.blockchain.abi import get_contract_path
+from raiden.utils import privatekey_to_address
 
 from ethereum import slogging
 slogging.configure(":INFO")
@@ -17,7 +18,7 @@ TARGETS = dict(
 )
 
 DEFAULT_KEY = ('1' * 64).decode('hex')
-DEFAULT_ACCOUNT = privtoaddr(DEFAULT_KEY)
+DEFAULT_ACCOUNT = privatekey_to_address(DEFAULT_KEY)
 
 
 def deploy_all():
@@ -93,14 +94,18 @@ def deploy_with_dependencies(contract_name, state, libraries=dict()):
                                       )
         libraries[dependency.split('.')[0]] = deployed.address.encode('hex')
         state.mine()
+
     log.DEV('deploying target', name=contract_name)
     log.DEV('known libraries', libraries=libraries)
-    contract = state.abi_contract(None,
-                                    path=get_contract_path(contract_name),
-                                    language='solidity',
-                                    libraries=libraries,
-                                    sender=DEFAULT_KEY,
-                                    )
+
+    contract = state.abi_contract(
+        None,
+        path=get_contract_path(contract_name),
+        language='solidity',
+        libraries=libraries,
+        sender=DEFAULT_KEY,
+    )
+
     libraries[contract_name.split('.')[0]] = contract.address.encode('hex')
     state.mine()
     return libraries

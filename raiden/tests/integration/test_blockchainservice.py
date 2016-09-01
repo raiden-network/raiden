@@ -1,40 +1,17 @@
 # -*- coding: utf8 -*-
 from __future__ import division
 
-import random
-import string
-
 import pytest
 from ethereum import _solidity
-from ethereum.keys import privtoaddr
 from ethereum._solidity import compile_file
 from ethereum.utils import denoms
-from pyethapp.accounts import mk_privkey
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.blockchain.abi import get_contract_path
 from raiden.network.rpc.client import decode_topic, patch_send_transaction
+from raiden.utils import privatekey_to_address
 
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
-
-LETTERS = string.printable
-
-
-def addr(seed):
-    return privtoaddr(privkey(seed))
-
-
-def privkey(seed):
-    return mk_privkey('42:account:{seed}'.format(seed=seed))
-
-
-def make_address():
-    return ''.join(random.choice(LETTERS) for _ in range(20))
-
-
-ADDR = addr('0')
-xADDR = '0x' + ADDR.encode('hex')  # pylint: disable=invalid-name
-PRIVKEY = privkey('0')
 
 
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
@@ -60,7 +37,7 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     asset0 = blockchain_service0.asset(asset_address)
     for transfer_to in raiden_network[1:]:
         asset0.transfer(
-            privtoaddr(transfer_to.raiden.privkey),
+            privatekey_to_address(transfer_to.raiden.privkey),
             asset_amount // len(raiden_network),
         )
 
@@ -199,12 +176,12 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
 def test_blockchain(blockchain_backend, private_keys, number_of_nodes, poll_timeout):
     # pylint: disable=too-many-locals
     addresses = [
-        privtoaddr(priv)
+        privatekey_to_address(priv)
         for priv in private_keys
     ]
 
     privatekey = private_keys[0]
-    address = privtoaddr(privatekey)
+    address = privatekey_to_address(privatekey)
     total_asset = 100
 
     jsonrpc_client = JSONRPCClient(

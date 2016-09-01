@@ -1,4 +1,7 @@
-from ethereum.utils import sha3, privtoaddr, encode_hex, denoms
+# -*- coding: utf8 -*-
+from ethereum.utils import sha3, encode_hex, denoms
+
+from raiden.utils import privatekey_to_address
 
 CLUSTER_NAME = 'raiden'
 
@@ -23,7 +26,7 @@ def generate_accounts(seeds):
     return {
         seed: dict(
             privatekey=encode_hex(sha3(seed)),
-            address=encode_hex(privtoaddr(sha3(seed)))
+            address=encode_hex(privatekey_to_address(sha3(seed)))
         ) for seed in seeds}
 
 

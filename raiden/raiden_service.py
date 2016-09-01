@@ -11,7 +11,7 @@ from raiden.tasks import AlarmTask, LogListenerTask
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.raiden_protocol import RaidenProtocol
-from raiden.utils import privtoaddr, isaddress, pex
+from raiden.utils import privatekey_to_address, isaddress, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -64,7 +64,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.chain = chain
         self.config = config
         self.privkey = privkey
-        self.address = privtoaddr(privkey)
+        self.address = privatekey_to_address(privkey)
         self.protocol = RaidenProtocol(transport, discovery, self)
         transport.protocol = self.protocol
 

@@ -3,11 +3,11 @@ from __future__ import division
 
 import pytest
 from ethereum import slogging
-from ethereum.keys import privtoaddr
 from ethereum._solidity import compile_file
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.blockchain.abi import get_contract_path
+from raiden.utils import privatekey_to_address
 from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
 from raiden.tests.utils.tests import cleanup_tasks
@@ -47,7 +47,7 @@ def assets_addresses(asset_amount, number_of_assets, blockchain_services):
         # the creator to the other nodes
         for transfer_to in blockchain_services[1:]:
             chain.asset(asset_address).transfer(
-                privtoaddr(transfer_to.private_key),
+                privatekey_to_address(transfer_to.private_key),
                 asset_amount // len(blockchain_services),
             )
 
@@ -157,7 +157,7 @@ def _jsonrpc_services(private_keys, verbose, poll_timeout):
     print_communication = True if verbose > 7 else False
 
     privatekey = private_keys[0]
-    address = privtoaddr(privatekey)
+    address = privatekey_to_address(privatekey)
     jsonrpc_client = JSONRPCClient(
         host='0.0.0.0',
         privkey=privatekey,

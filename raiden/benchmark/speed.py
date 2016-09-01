@@ -8,9 +8,8 @@ from ethereum import slogging
 from ethereum.utils import sha3
 
 from raiden.app import DEFAULT_SETTLE_TIMEOUT
-from raiden.network.rpc.client import (
+from raiden.tests.utils.mock_client import (
     BlockChainServiceMock,
-    DEFAULT_POLL_TIMEOUT,
     MOCK_REGISTRY_ADDRESS,
 )
 from raiden.network.transport import UDPTransport
@@ -44,24 +43,28 @@ def test_mediated_transfer(num_transfers=100, num_nodes=10, num_assets=1,
         for number in range(num_assets)
     ]
 
-    BlockChainServiceMock._instance = True
-    blockchain_service = BlockChainServiceMock(None, MOCK_REGISTRY_ADDRESS)
-    BlockChainServiceMock._instance = blockchain_service  # pylint: disable=redefined-variable-type
+    BlockChainServiceMock.reset()
+    blockchain_services = list()
+    for privkey in private_keys:
+        blockchain = BlockChainServiceMock(
+            privkey,
+            MOCK_REGISTRY_ADDRESS,
+        )
+        blockchain_services.append(blockchain)
 
-    registry = blockchain_service.registry(MOCK_REGISTRY_ADDRESS)
+    registry = blockchain_services[0].registry(MOCK_REGISTRY_ADDRESS)
     for asset in assets:
         registry.add_asset(asset)
 
+    verbosity = 3
     apps = create_network(
-        private_keys,
+        blockchain_services,
         assets,
-        MOCK_REGISTRY_ADDRESS,
         channels_per_node,
         deposit,
         DEFAULT_SETTLE_TIMEOUT,
-        DEFAULT_POLL_TIMEOUT,
         UDPTransport,
-        BlockChainServiceMock
+        verbosity,
     )
 
     def start_transfers(idx, curr_asset, num_transfers):

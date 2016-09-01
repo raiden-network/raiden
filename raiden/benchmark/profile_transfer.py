@@ -3,7 +3,6 @@ from __future__ import print_function
 
 from collections import namedtuple
 
-import gevent
 from ethereum import slogging
 
 from raiden import profiling
@@ -11,9 +10,8 @@ from raiden.app import DEFAULT_SETTLE_TIMEOUT
 from raiden.utils import sha3
 from raiden.tests.utils.network import create_network
 from raiden.network.transport import UDPTransport
-from raiden.network.rpc.client import (
+from raiden.tests.utils.mock_client import (
     BlockChainServiceMock,
-    DEFAULT_POLL_TIMEOUT,
     MOCK_REGISTRY_ADDRESS,
 )
 
@@ -186,24 +184,28 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
         for position in range(num_nodes)
     ]
 
-    BlockChainServiceMock._instance = True
-    blockchain_service = BlockChainServiceMock(None, MOCK_REGISTRY_ADDRESS)
-    BlockChainServiceMock._instance = blockchain_service  # pylint: disable=redefined-variable-type
+    BlockChainServiceMock.reset()
+    blockchain_services = list()
+    for privkey in private_keys:
+        blockchain = BlockChainServiceMock(
+            privkey,
+            MOCK_REGISTRY_ADDRESS,
+        )
+        blockchain_services.append(blockchain)
 
-    registry = blockchain_service.registry(MOCK_REGISTRY_ADDRESS)
+    registry = blockchain_services[0].registry(MOCK_REGISTRY_ADDRESS)
     for asset in assets:
         registry.add_asset(asset)
 
+    verbosity = 3
     apps = create_network(
-        private_keys,
+        blockchain_services,
         assets,
-        MOCK_REGISTRY_ADDRESS,
         channels_per_node,
         deposit,
         DEFAULT_SETTLE_TIMEOUT,
-        DEFAULT_POLL_TIMEOUT,
         UDPTransport,
-        BlockChainServiceMock
+        verbosity,
     )
 
     main_app = apps[0]
@@ -223,31 +225,16 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
     path = paths[0]
     target = path[-1]
 
-    assetmanagers_by_address = {
-        node.raiden.address: node.raiden.managers_by_asset_address
-        for node in apps
-    }
-
     # addresses
     a, b, c = path
     asset_address = main_assetmanager.asset_address
 
     amount = 10
-    finished = gevent.event.Event()
-
-    def signal_end(task, success):
-        finished.set()
-
-    # set shorter timeout for testing
-    destiny_assetmanager = assetmanagers_by_address[b][asset_address]
-    destiny_assetmanager.transfermanager.on_task_completed_callbacks.append(signal_end)
-
-    # GreenletProfiler.set_clock_type('cpu')
 
     # measure the hot path
     with profiling.profile():
-        main_api.transfer(asset_address, amount, target)
-        gevent.wait([finished])
+        result = main_api.transfer_async(asset_address, amount, target)
+        result.wait()
 
     profiling.print_all_threads()
     # profiling.print_merged()
@@ -259,10 +246,21 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--nodes', default=10, type=int)
     parser.add_argument('--channels-per-node', default=2, type=int)
+    parser.add_argument('--pdb', action='store_true', default=False)
 
     args = parser.parse_args()
 
-    profile_transfer(
-        num_nodes=args.nodes,
-        channels_per_node=args.channels_per_node,
-    )
+    if args.pdb:
+        try:
+            profile_transfer(
+                num_nodes=args.nodes,
+                channels_per_node=args.channels_per_node,
+            )
+        except:
+            import pdb
+            pdb.xpm()
+    else:
+        profile_transfer(
+            num_nodes=args.nodes,
+            channels_per_node=args.channels_per_node,
+        )

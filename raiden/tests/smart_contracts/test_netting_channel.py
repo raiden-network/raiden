@@ -4,7 +4,7 @@ from __future__ import division
 import pytest
 from ethereum import abi, tester, slogging
 from ethereum.tester import TransactionFailed
-from ethereum.utils import encode_hex, privtoaddr
+from ethereum.utils import encode_hex, privatekey_to_address
 
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
 from raiden.utils import sha3
@@ -27,8 +27,8 @@ def test_channeldeposit(private_keys, settle_timeout, tester_state,
 
     privatekey0 = private_keys[0]
     privatekey1 = private_keys[1]
-    address0 = privtoaddr(privatekey0)
-    address1 = privtoaddr(privatekey1)
+    address0 = privatekey_to_address(privatekey0)
+    address1 = privatekey_to_address(privatekey1)
     unknow_key = tester.k3
 
     channel_manager = new_channelmanager(
@@ -121,8 +121,8 @@ def test_channelnewbalance_event(private_keys, settle_timeout, tester_state,
 
     privatekey0 = private_keys[0]
     privatekey1 = private_keys[1]
-    address0 = privtoaddr(privatekey0)
-    address1 = privtoaddr(privatekey1)
+    address0 = privatekey_to_address(privatekey0)
+    address1 = privatekey_to_address(privatekey1)
 
     channel_manager = new_channelmanager(
         privatekey0,
@@ -200,8 +200,8 @@ def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
                                      tester_token):
 
     privatekey0, privatekey1, nettingchannel = tester_nettingcontracts[0]
-    address0 = privtoaddr(privatekey0)
-    address1 = privtoaddr(privatekey1)
+    address0 = privatekey_to_address(privatekey0)
+    address1 = privatekey_to_address(privatekey1)
     unknow_key = tester.k3
 
     initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
@@ -264,8 +264,8 @@ def test_closesingle_settle(deposit, settle_timeout, tester_channels,
                             tester_state, tester_events, tester_token):
 
     privatekey0, privatekey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    address0 = privtoaddr(privatekey0)
-    address1 = privtoaddr(privatekey1)
+    address0 = privatekey_to_address(privatekey0)
+    address1 = privatekey_to_address(privatekey1)
     unknow_key = tester.k3
 
     initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
@@ -334,8 +334,8 @@ def test_close_settle(deposit, settle_timeout, tester_state, tester_channels,
                       tester_events, tester_token):
 
     privatekey0, privatekey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    address0 = privtoaddr(privatekey0)
-    address1 = privtoaddr(privatekey1)
+    address0 = privatekey_to_address(privatekey0)
+    address1 = privatekey_to_address(privatekey1)
     unknow_key = tester.k3
 
     initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
@@ -416,8 +416,8 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
                                         tester_events):
 
     privatekey0, privatekey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    address0 = privtoaddr(privatekey0)
-    address1 = privtoaddr(privatekey1)
+    address0 = privatekey_to_address(privatekey0)
+    address1 = privatekey_to_address(privatekey1)
     unknow_key = tester.k3
 
     initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)

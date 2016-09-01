@@ -4,13 +4,13 @@ import rlp
 from ethereum import slogging
 from ethereum import _solidity
 from ethereum.transactions import Transaction
-from ethereum.utils import denoms, privtoaddr, int_to_big_endian, encode_hex, normalize_address
+from ethereum.utils import denoms, int_to_big_endian, encode_hex, normalize_address
 from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 
 from raiden import messages
 from raiden.blockchain.abi import get_contract_path
-from raiden.utils import pex, isaddress
+from raiden.utils import pex, isaddress, privatekey_to_address
 from raiden.blockchain.abi import (
     HUMAN_TOKEN_ABI,
     CHANNEL_MANAGER_ABI,
@@ -117,7 +117,7 @@ class BlockChainService(object):
 
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
-        self.address = privtoaddr(privatekey_bin)
+        self.address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
         self.default_registry = self.registry(registry_address)
 
@@ -442,7 +442,7 @@ class ChannelManager(object):
         if not isaddress(peer2):
             raise ValueError('The peer2 must be a valid address')
 
-        if privtoaddr(self.client.privkey) == peer1:
+        if privatekey_to_address(self.client.privkey) == peer1:
             other = peer2
         else:
             other = peer1
@@ -552,7 +552,7 @@ class NettingChannel(object):
         self.poll_timeout = poll_timeout
 
         # check we are a participant of the given channel
-        self.detail(privtoaddr(self.client.privkey))
+        self.detail(privatekey_to_address(self.client.privkey))
 
     def asset_address(self):
         return address_decoder(self.proxy.assetAddress.call())
@@ -619,7 +619,7 @@ class NettingChannel(object):
             self.asset_address(),
             poll_timeout=self.poll_timeout,
         )
-        current_balance = asset.balance_of(privtoaddr(self.private_key))
+        current_balance = asset.balance_of(privatekey_to_address(self.private_key))
 
         if current_balance < amount:
             raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(

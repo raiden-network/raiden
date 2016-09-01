@@ -5,7 +5,7 @@ from ethereum.slogging import getLogger
 
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
-from raiden.utils import sha3, ishash, big_endian_to_int, pex
+from raiden.utils import publickey_to_address, sha3, ishash, big_endian_to_int, pex
 
 __all__ = (
     'BaseError',
@@ -122,7 +122,7 @@ class SignedMessage(Message):
 
         packed.signature = signature
 
-        self.sender = signing.address_from_key(public_key)
+        self.sender = publickey_to_address(public_key)
         self.signature = packed.signature
 
     @classmethod
@@ -134,7 +134,7 @@ class SignedMessage(Message):
 
         packed, public_key = result
         message = cls.unpack(packed)  # pylint: disable=no-member
-        message.sender = signing.address_from_key(public_key)
+        message.sender = publickey_to_address(public_key)
         return message
 
 

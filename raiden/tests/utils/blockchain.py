@@ -11,7 +11,6 @@ import subprocess
 import gevent
 from devp2p.crypto import privtopub
 from devp2p.utils import host_port_pubkey_to_uri
-from ethereum.keys import privtoaddr
 from ethereum import slogging
 from ethereum.utils import denoms, encode_hex
 from pyethapp.accounts import Account
@@ -21,6 +20,7 @@ from pyethapp.jsonrpc import address_encoder, quantity_decoder
 from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
+from raiden.utils import privatekey_to_address
 from raiden.network.rpc.client import GAS_LIMIT_HEX
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -70,7 +70,7 @@ def hydrachain_create_blockchain(private_keys, hydrachain_private_keys,
         return host_port_pubkey_to_uri(host, p2p_base_port, pubkey)
 
     account_addresses = [
-        privtoaddr(priv)
+        privatekey_to_address(priv)
         for priv in private_keys
     ]
 
@@ -98,7 +98,7 @@ def hydrachain_create_blockchain(private_keys, hydrachain_private_keys,
     ]
 
     validators_addresses = [
-        privtoaddr(private_key)
+        privatekey_to_address(private_key)
         for private_key in hydrachain_private_keys
     ]
 
@@ -230,7 +230,7 @@ def geth_init_datadir(genesis, datadir):
 
 def geth_wait_and_check(privatekeys):
     """ Wait until the geth cluster is ready. """
-    address = address_encoder(privtoaddr(privatekeys[0]))
+    address = address_encoder(privatekey_to_address(privatekeys[0]))
     jsonrpc_running = False
     tries = 5
     jsonrpc_client = JSONRPCClient(
@@ -251,7 +251,7 @@ def geth_wait_and_check(privatekeys):
         raise ValueError('geth didnt start the jsonrpc interface')
 
     for key in set(privatekeys):
-        address = address_encoder(privtoaddr(key))
+        address = address_encoder(privatekey_to_address(key))
         jsonrpc_client = JSONRPCClient(
             host='0.0.0.0',
             privkey=key,
@@ -278,7 +278,7 @@ def geth_create_blockchain(private_keys, geth_private_keys, p2p_base_port,
     start_rpcport = 4000
 
     account_addresses = [
-        privtoaddr(key)
+        privatekey_to_address(key)
         for key in set(private_keys)
     ]
 
@@ -316,7 +316,7 @@ def geth_create_blockchain(private_keys, geth_private_keys, p2p_base_port,
         config['nodekey'] = key
         config['nodekeyhex'] = encode_hex(key)
         config['pub'] = encode_hex(privtopub(key))
-        config['address'] = privtoaddr(key)
+        config['address'] = privatekey_to_address(key)
         config['port'] = p2p_base_port + pos
         config['rpcport'] = start_rpcport + pos
         config['enode'] = 'enode://{pub}@127.0.0.1:{port}'.format(

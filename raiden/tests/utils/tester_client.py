@@ -4,13 +4,13 @@ from itertools import count
 
 from ethereum import tester, slogging, _solidity
 from ethereum.abi import encode_abi, encode_single, ContractTranslator
-from ethereum.utils import decode_hex, encode_hex, privtoaddr
+from ethereum.utils import decode_hex, encode_hex
 from pyethapp.jsonrpc import address_decoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
 from raiden import messages
 from raiden.blockchain.abi import get_contract_path
-from raiden.utils import pex, isaddress
+from raiden.utils import pex, isaddress, privatekey_to_address
 from raiden.blockchain.abi import (
     CHANNEL_MANAGER_ABI,
     CHANNELNEW_EVENT,
@@ -200,7 +200,7 @@ class BlockChainServiceTesterMock(object):
         self.tester_state = tester_state
         default_registry = RegistryTesterMock(tester_state, private_key, registry_address)
 
-        self.address = privtoaddr(private_key)
+        self.address = privatekey_to_address(private_key)
         self.private_key = private_key
         self.default_registry = default_registry
 
@@ -422,7 +422,7 @@ class ChannelManagerTesterMock(object):
         if not isaddress(peer2):
             raise ValueError('The peer2 must be a valid address')
 
-        if privtoaddr(self.private_key) == peer1:
+        if privatekey_to_address(self.private_key) == peer1:
             other = peer2
         else:
             other = peer1
@@ -503,7 +503,7 @@ class NettingChannelTesterMock(object):
         self.channelsettle_filters = list()
 
         # check we are a participant of the channel
-        self.detail(privtoaddr(private_key))
+        self.detail(privatekey_to_address(private_key))
 
     def asset_address(self):
         result = address_decoder(self.proxy.assetAddress())
@@ -537,7 +537,7 @@ class NettingChannelTesterMock(object):
             self.private_key,
             self.asset_address(),
         )
-        current_balance = asset.balance_of(privtoaddr(self.private_key))
+        current_balance = asset.balance_of(privatekey_to_address(self.private_key))
 
         if current_balance < amount:
             raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(

@@ -5,11 +5,11 @@ import ethereum.blocks
 import ethereum.config
 from ethereum import tester
 from ethereum.utils import int_to_addr, zpad
-from ethereum.keys import privtoaddr
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 
 from raiden.blockchain.abi import get_contract_path
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
+from raidne.utils import privatekey_to_address
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.tests.utils.tester import (
     create_registryproxy,
@@ -49,7 +49,7 @@ def tester_state(private_keys, tester_blockgas_limit):
     }
 
     for privkey in private_keys:
-        address = privtoaddr(privkey)
+        address = privatekey_to_address(privkey)
         alloc[address] = {
             'balance': DEFAULT_BALANCE,
         }
@@ -185,7 +185,7 @@ def tester_token(asset_amount, private_keys, tester_state, tester_token_address,
     privatekey0 = private_keys[0]
     for transfer_to in private_keys[1:]:
         token.transfer(
-            privtoaddr(transfer_to),
+            privatekey_to_address(transfer_to),
             asset_amount // len(private_keys),
             sender=privatekey0,
         )

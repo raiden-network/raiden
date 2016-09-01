@@ -1,12 +1,7 @@
 # -*- coding: utf8 -*-
 import pytest
-from ethereum import slogging, _solidity
-from ethereum.keys import privtoaddr
-from pyethapp.rpc_client import JSONRPCClient
+from ethereum import slogging
 
-from raiden.blockchain.abi import get_contract_path
-from raiden.network.discovery import ContractDiscovery
-from raiden.network.rpc.client import patch_send_transaction
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.network import (
     CHAIN,

@@ -3,11 +3,11 @@
 from __future__ import print_function, division
 
 import copy
-from ethereum.keys import privtoaddr
 from ethereum import slogging
 
 from raiden.app import App, INITIAL_PORT
 from raiden.network.discovery import Discovery
+from raiden.utils import privatekey_to_address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -193,7 +193,7 @@ def create_network(blockchain_services, assets_addresses, channels_per_node,
         else:
             host = '127.0.0.10'
 
-        nodeid = privtoaddr(private_key)
+        nodeid = privatekey_to_address(private_key)
         port = INITIAL_PORT + idx
 
         discovery.register(nodeid, host, port)
@@ -258,7 +258,7 @@ def create_sequential_network(blockchain_services, asset_address,
     for idx, blockchain in enumerate(blockchain_services):
         port = INITIAL_PORT + idx
         private_key = blockchain.private_key
-        nodeid = privtoaddr(private_key)
+        nodeid = privatekey_to_address(private_key)
 
         discovery.register(nodeid, host, port)
 

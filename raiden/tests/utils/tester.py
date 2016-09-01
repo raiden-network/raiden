@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 from ethereum import tester
-from ethereum.utils import decode_hex, privtoaddr
+from ethereum.utils import decode_hex, privatekey_to_address
 
 from raiden.channel import Channel, ChannelEndState
 from raiden.blockchain.abi import (
@@ -79,7 +79,7 @@ def channel_from_nettingcontract(our_key, netting_contract, external_state, reve
     Use this to make sure that both implementation (the smart contract and the
     python code) work in tandem.
     """
-    our_address = privtoaddr(our_key)
+    our_address = privatekey_to_address(our_key)
 
     asset_address_hex = netting_contract.assetAddress(sender=our_key)
     settle_timeout = netting_contract.settleTimeout(sender=our_key)
@@ -141,7 +141,7 @@ def new_nettingcontract(our_key, partner_key, tester_state, log_listener,
                         channelmanager, settle_timeout):
 
     netting_channel_address0_hex = channelmanager.newChannel(
-        privtoaddr(partner_key),
+        privatekey_to_address(partner_key),
         settle_timeout,
         sender=our_key,
     )

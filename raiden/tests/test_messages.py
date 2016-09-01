@@ -1,9 +1,9 @@
 # -*- coding: utf8 -*-
 from raiden.messages import Ping, Ack, decode, Lock, MediatedTransfer
-from raiden.utils import privtoaddr, sha3
+from raiden.utils import privatekey_to_address, sha3
 
 PRIVKEY = 'x' * 32
-ADDRESS = privtoaddr(PRIVKEY)
+ADDRESS = privatekey_to_address(PRIVKEY)
 
 
 def test_signature():

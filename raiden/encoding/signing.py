@@ -41,7 +41,3 @@ def sign(messagedata, private_key):
     publickey = key.pubkey.serialize(compressed=False)
 
     return signature, publickey
-
-
-def address_from_key(key):
-    return sha3(key[1:])[-20:]

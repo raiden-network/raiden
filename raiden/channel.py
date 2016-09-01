@@ -84,6 +84,7 @@ class BalanceProof(object):
         ]
         self._transfer = transfer
         self._merkletree = merkletree
+        self._merkleroot = None
 
     # api design: transfer and merkletree must be read-only for the life-time
     # of a BalanceProof instance.
@@ -95,6 +96,15 @@ class BalanceProof(object):
     @property
     def merkletree(self):
         return list(self._merkletree)
+
+    @property
+    def merkleroot(self):
+        root = self._merkleroot
+
+        if root is None:
+            self._merkleroot = root = merkleroot(self._merkletree)
+
+        return root
 
     def is_pending(self, hashlock):
         """ True if a secret is needed for the given `hashlock`.
@@ -787,7 +797,7 @@ class Channel(object):
                 lock_amount=transfer.lock.amount,
                 lock_expiration=transfer.lock.expiration,
                 lock_hashlock=pex(transfer.lock.hashlock),
-                hashlock_list=lpex(transfer.lock.hashlock for transfer in to_state.locked.locked.itervalues()),
+                hashlock_list=lpex(to_state.balance_proof.merkletree),
             )
 
             to_state.register_locked_transfer(transfer)
@@ -831,7 +841,7 @@ class Channel(object):
                 repr(transfer),
                 from_state.transfered_amount,
                 from_state.nonce,
-                pex(to_state.locked.root),
+                pex(to_state.balance_proof.merkleroot),
             )
         )
 
