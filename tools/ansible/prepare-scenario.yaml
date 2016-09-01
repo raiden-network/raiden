@@ -96,8 +96,8 @@
     - name: put geth_command per node
       copy:
         content: "#!/usr/bin/env sh\n{{ geth_commands[item] }}"
-      dest: "{{ scenario_folder }}/{{ item }}/geth/start.sh"
-      mode: a+rx
+        dest: "{{ scenario_folder }}/{{ item }}/geth/start.sh"
+        mode: a+rx
       with_items: "{{ node_ips }}"
 
     - name: put static-bootnodes.json per node
