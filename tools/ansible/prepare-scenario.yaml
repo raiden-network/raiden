@@ -82,7 +82,7 @@
     - name: run 'geth_commands'
       shell:
         chdir: "../"
-        cmd: "python config_builder.py geth_commands {{ node_ips | join(' ') }}"
+        cmd: "python config_builder.py geth_commands {{ user_home }}/geth {{ node_ips | join(' ') }}"
       register: geth_commands
 
 
