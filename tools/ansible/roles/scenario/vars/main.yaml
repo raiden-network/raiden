@@ -1,2 +1,4 @@
 scenario_ami_name: raiden_preinstalled
-instance_type: c3.2xlarge
+instance_type: t1.micro 
+number_of_nodes: 2
+raiden_per_node: 2
