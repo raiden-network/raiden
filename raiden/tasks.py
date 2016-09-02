@@ -246,21 +246,24 @@ class StartMediatedTransferTask(Task):
                 raiden.sign(secret_message)
                 raiden.send_async(target, secret_message)
 
+                # register the secret now and just incur with the additional
+                # overhead of message retry
+                # channel.register_secret(secret)
+
                 # wait until `next_hop` received the secret to syncronize our
                 # state (otherwise we can send a new transfer with an invalid
                 # locksroot while the secret is in transit that will incur into
                 # additional retry/timeout latency)
+                next_hop = path[1]
                 while True:
                     response = self.response_message.wait()
-
                     # critical write section
                     self.response_message = AsyncResult()
                     # /critical write section
-
                     if isinstance(response, Secret) and response.sender == next_hop:
-                        channel.register_secret(secret)
                         self.done_result.set(True)
                         self.transfermanager.on_hashlock_result(hashlock, True)
+                        channel.register_secret(secret)
                         return
 
                     log.error('Invalid message ignoring. {}'.format(repr(response)))
