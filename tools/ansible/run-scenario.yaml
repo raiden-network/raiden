@@ -31,6 +31,8 @@
     - common
   tags:
     - start_geth
+  vars:
+    scenario_runner: "{{ user_home }}/raiden/tools/app.py"
 
   tasks:
     # Collect instance id: http://stackoverflow.com/a/27307254 
@@ -38,4 +40,5 @@
 
       # note: this is far from working for ansible, just to get the general idea
     - name: shell command stub (for dir in {{ user_home }}/40*; do...)
-      debug: "~/40001$ ../raidenvenv/bin/raiden $(cat ../raiden_flags.txt) --privatekey $(cat privatekey.txt) --external_listen_address {{ node_ip }}:40001"
+      #chdir: "{{ user_home }}"
+      debug: "raidenvenv/bin/python {{ scenario_runner }} $(cat $dir/raiden_flags.txt) --privatekey $(cat $dir/privatekey.txt) --external_listen_address {{ node_ip }}:$( basename $dir )"
