@@ -6,9 +6,10 @@
 
 In this folder, run
 
-    pip install -r requirements.txt
+    pip install -r requirements.txt --no-deps
 
 to install ansible and dependent modules.
+**NOTE**: the `--no-deps` flag is important, because otherwise it breaks dependencies for `raiden`.
 
 ### AWS ACCESS
 Create a file `~/.boto` with contents:
