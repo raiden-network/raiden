@@ -71,11 +71,15 @@ def deploy_all():
 def deploy_with_dependencies(contract_name, state, libraries=dict()):
     dependencies = find_dependencies(
         get_contract_path(contract_name))
-    [libraries.pop(key) for key in libraries.keys() if not key in
-     [d.split('.')[0] for d in dependencies]]
+
+    dependency_names = [d.split('.')[0] for d in dependencies]
+    for key in list(libraries.keys()):
+        if not key in dependency_names:
+            libraries.pop(key)
+
     log.DEV("in deploy_with_dependencies", contract=contract_name, dependencies=dependencies)
     for dependency in dependencies:
-        # FIXME: this should not be needed!?
+        # 'Contract's are included in 'Registry' and should not be deployed alone
         if 'Contract' in dependency:
             continue
 
