@@ -62,7 +62,7 @@ def deploy_all():
     cleanup(dump)
 
     blockchain_config = dict(
-        raiden_flags='--registry_contract_adddress {Registry} --discovery_contract_address {EndpointRegistry}'
+        raiden_flags='--registry_contract_address {Registry} --discovery_contract_address {EndpointRegistry}'
         .format(**deployed))
     blockchain_config['contract_addresses'] = deployed
     return (dump, blockchain_config)
