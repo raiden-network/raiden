@@ -1,0 +1,22 @@
+- hosts: tag_Name_Scenario
+  name: start geth
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - scenario 
+    - common
+  tags:
+    - start_geth
+
+  tasks:
+    # Collect instance id: http://stackoverflow.com/a/27307254 
+    - action: ec2_facts
+
+    - name: init geth
+      shell:
+        cmd: "geth --datadir {{ geth_datadir }} init {{ geth_datadir }}/genesis.json"
+
+    - name: run geth command
+      shell:
+        #  run geth as a daemon in background with --start --background --quiet
+        cmd: "start-stop-daemon -S -b -q --pidfile /var/run/geth_raiden --exec {{ raiden_datadir}}/start.sh"

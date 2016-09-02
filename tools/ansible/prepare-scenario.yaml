@@ -78,7 +78,7 @@
     - name: run 'geth_commands'
       shell:
         chdir: "../"
-        cmd: "python config_builder.py geth_commands {{ user_home }}/geth {{ node_ips | join(' ') }}"
+        cmd: "python config_builder.py geth_commands {{ geth_datadir }} {{ node_ips | join(' ') }}"
       register: out
 
     - name: jsonify
@@ -184,6 +184,29 @@
         dest: "{{ scenario_folder }}/{{ item.key.split(':').0 }}/{{ item.key.split(':').1 }}/address.txt"
       with_dict: "{{ raiden_accounts }}"
 
+- hosts: tag_Name_Scenario
+  name: put configuration on hosts and init geth 
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - scenario
+    - common
+  tags:
+    - init_host 
+
+  tasks:
+    - include: roles/scenario/tasks/read_scenario_params.yaml
+
+    - action: ec2_facts
+
+    - name: debug node ip from facts 
+      debug:
+        var: ansible_ec2_local_ipv4 
+
+    - name: copy scenario folder for host
+      synchronize:
+        src: "{{ scenario_folder }}/{{ ansible_ec2_local_ipv4 }}/"
+        dest: "{{ user_home }}"
 
 - hosts: tag_Name_Scenario
   name: terminate

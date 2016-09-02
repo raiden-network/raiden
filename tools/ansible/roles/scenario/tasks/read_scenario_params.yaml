@@ -22,7 +22,8 @@
   when: scenario_name is not defined
 
 - name: fail if multiple scenarios are online
-  fail: "there are more than one scenarios running: {{ scenario_names }}, please chose one by defining '-e scenario_name=<name>'"
+  fail: 
+    msg: "there are more than one scenarios running: {{ scenario_names }}, please chose one by defining '-e scenario_name=<name>'"
   when: scenario_name is not defined and scenario_names|length > 1
 
 - name: set scenario_name fact
