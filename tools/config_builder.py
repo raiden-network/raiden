@@ -98,7 +98,7 @@ def accounts(ctx, hosts, nodes_per_host):
 @click.pass_context
 def geth_commands(ctx, geth_hosts, datadir):
     """This is helpful to setup a private cluster of geth nodes that won't need discovery
-    (because they will have their `bootnodes` parameter pointed at each other).
+    (because they can use the content of `static_nodes` as `static-nodes.json`).
     """
     pretty = ctx.obj['pretty']
     nodes = []
@@ -107,26 +107,10 @@ def geth_commands(ctx, geth_hosts, datadir):
     for node in nodes:
         node.pop('unlock')
         node.pop('rpcport')
-    print json.dumps(
-        {'{host}'.format(**node): ' '.join(to_cmd(node, datadir=datadir)) for node in nodes},
+    config = {'{host}'.format(**node): ' '.join(to_cmd(node, datadir=datadir)) for node in nodes}
+    config['static_nodes'] = [node['enode'] for node in nodes]
+    print json.dumps(config,
         indent=2 if pretty else None)
-
-
-@click.argument(
-    'geth_hosts',
-    nargs=-1,
-    type=str,
-)
-@cli.command()
-@click.pass_context
-def geth_static_nodes(ctx, geth_hosts):
-    pretty = ctx.obj['pretty']
-    """Outputs content for a static-nodes.json file"""
-    nodes = []
-    for i, host in enumerate(geth_hosts):
-        nodes.append(create_node_configuration(host=host, node_key_seed=i))
-    all_nodes = [node['enode'] for node in nodes]
-    print(json.dumps(all_nodes, indent=2 if pretty else None))
 
 
 @click.argument(
