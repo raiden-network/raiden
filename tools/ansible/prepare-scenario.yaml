@@ -83,7 +83,11 @@
       shell:
         chdir: "../"
         cmd: "python config_builder.py geth_commands {{ user_home }}/geth {{ node_ips | join(' ') }}"
-      register: geth_commands
+      register: out
+
+    - name: jsonify
+      set_fact:
+        geth_commands: "{{ out.stdout | from_json }}"
 
 
     - name: store geth_commands
@@ -99,17 +103,21 @@
         mode: a+rx
       with_items: "{{ node_ips }}"
 
-    - name: put static-bootnodes.json per node
+    - name: put static-nodes.json per node
       copy:
-        content: "{{ geth_commands.static_bootnodes }}"
-        dest: "{{ scenario_folder }}/{{ item }}/geth/static-bootnodes.json"
+        content: "{{ geth_commands.static_nodes }}"
+        dest: "{{ scenario_folder }}/{{ item }}/geth/static-nodes.json"
       with_items: "{{ node_ips }}"
 
     - name: create default account (for mining)
       shell:
         chdir: "../"
-        cmd: python config_builder account_file
-      register: account_file
+        cmd: python config_builder.py account_file
+      register: out
+
+    - name: jsonify
+      set_fact:
+        account_file: "{{ out.stdout | from_json }}"
 
     - name: store account file per node
       copy:
@@ -121,7 +129,11 @@
       shell:
         chdir: "../"
         cmd: "python config_builder.py full_genesis {{ raiden_per_node }} {{ node_ips | join(' ') }}"
-      register: blockchain_config
+      register: out
+
+    - name: jsonify
+      set_fact:
+        blockchain_config: "{{ out.stdout | from_json }}"
 
     - name: store genesis
       copy:
@@ -151,7 +163,12 @@
       shell:
         chdir: "../"
         cmd: "python config_builder.py accounts {{ raiden_per_node }} {{ node_ips | join(' ') }}"
-      register: raiden_accounts
+      register: out
+
+    - name: jsonify
+      set_fact:
+        raiden_accounts: "{{ out.stdout | from_json }}"
+
 
     - name: create raiden instance folders
       file:
