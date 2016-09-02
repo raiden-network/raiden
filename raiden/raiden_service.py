@@ -401,7 +401,7 @@ class RaidenMessageHandler(object):
         self.raiden = raiden
 
     def on_message(self, message, msghash):
-        """ Handles `message` and sends a ACK on success. """
+        """ Handles `message` and sends an ACK on success. """
         cmdid = message.cmdid
 
         # using explicity dispatch to make the code grepable

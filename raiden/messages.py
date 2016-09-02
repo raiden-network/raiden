@@ -1,6 +1,4 @@
 # -*- coding: utf8 -*-
-import warnings
-
 from ethereum.slogging import getLogger
 
 from raiden.encoding import messages, signing
@@ -37,7 +35,6 @@ class Message(MessageHashable):
 
     @property
     def hash(self):
-        warnings.warn('Expensive comparison called')
         packed = self.packed()
         return sha3(packed.data)
 
@@ -286,20 +283,17 @@ class DirectTransfer(SignedMessage):
         recipient: The address of raiden node participating in the channel.
         locksroot: The root of a merkle tree which records the current
             outstanding locks.
-        secret: If provided allows to settle a formerly locked transfer,
-            the given secret is already reflected in the locksroot.
     """
 
     cmdid = messages.DIRECTTRANSFER
 
-    def __init__(self, nonce, asset, transfered_amount, recipient, locksroot, secret=None):
+    def __init__(self, nonce, asset, transfered_amount, recipient, locksroot):
         super(DirectTransfer, self).__init__()
         self.nonce = nonce
         self.asset = asset
         self.transfered_amount = transfered_amount  #: total amount of asset sent to partner
         self.recipient = recipient  #: partner's address
         self.locksroot = locksroot  #: the merkle root that represent all pending locked transfers
-        self.secret = secret or ''  #: secret for settling a locked amount
 
     @staticmethod
     def unpack(packed):
@@ -309,7 +303,6 @@ class DirectTransfer(SignedMessage):
             packed.transfered_amount,
             packed.recipient,
             packed.locksroot,
-            packed.secret,
         )
         transfer.signature = packed.signature
 
@@ -321,7 +314,6 @@ class DirectTransfer(SignedMessage):
         packed.transfered_amount = self.transfered_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
-        packed.secret = self.secret
         packed.signature = self.signature
 
 
@@ -508,13 +500,14 @@ class MediatedTransfer(LockedTransfer):
         self.initiator = initiator
 
     def __repr__(self):
-        return '<{} [asset:{} nonce:{} transfered_amount:{} lock_amount:{} hash:{}]>'.format(
+        return '<{} [asset:{} nonce:{} transfered_amount:{} lock_amount:{} hash:{} locksroot:{}]>'.format(
             self.__class__.__name__,
             pex(self.asset),
             self.nonce,
             self.transfered_amount,
             self.lock.amount,
             pex(self.hash),
+            pex(self.locksroot),
         )
 
     @staticmethod

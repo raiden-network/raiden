@@ -154,6 +154,7 @@ def main():
     parser.add_argument('--assets', default=1, type=int)
     parser.add_argument('--channels-per-node', default=2, type=int)
     parser.add_argument('-p', '--profile', default=False, action='store_true')
+    parser.add_argument('--pdb', default=False, action='store_true')
     parser.add_argument('--throughput', dest='throughput', action='store_true', default=True)
     parser.add_argument('--latency', dest='throughput', action='store_false')
     args = parser.parse_args()
@@ -177,10 +178,23 @@ def main():
         args.channels_per_node,
     )
 
-    if args.throughput:
-        test_throughput(apps, assets, args.transfers, amount)
+    if args.pdb:
+        from pyethapp.utils import enable_greenlet_debugger
+        enable_greenlet_debugger()
+
+        try:
+            if args.throughput:
+                test_throughput(apps, assets, args.transfers, amount)
+            else:
+                test_latency(apps, assets, args.transfers, amount)
+        except:
+            import pdb
+            pdb.xpm()
     else:
-        test_latency(apps, assets, args.transfers, amount)
+        if args.throughput:
+            test_throughput(apps, assets, args.transfers, amount)
+        else:
+            test_latency(apps, assets, args.transfers, amount)
 
     if args.profile:
         GreenletProfiler.stop()

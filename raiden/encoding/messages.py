@@ -148,7 +148,7 @@ DirectTransfer = namedbuffer(
         recipient,              # [32:52]
         transfered_amount,
         optional_locksroot,
-        optional_secret,
+        optional_secret,        # TODO: remove from here and decoding in the smart contract
         signature,
     ]
 )
