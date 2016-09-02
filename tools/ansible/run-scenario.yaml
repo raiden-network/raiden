@@ -16,7 +16,7 @@
       shell:
         cmd: "geth --datadir {{ geth_datadir }} init {{ geth_datadir }}/genesis.json"
 
+      #  run geth as a daemon in background with --start --background --quiet
     - name: run geth command
       shell:
-        #  run geth as a daemon in background with --start --background --quiet
-        cmd: "start-stop-daemon -S -b -q --pidfile /var/run/geth_raiden --exec {{ raiden_datadir}}/start.sh"
+        cmd: "start-stop-daemon -S -b -q --pidfile /var/run/geth_raiden --exec {{ geth_datadir }}/start.sh"
