@@ -108,7 +108,7 @@ def geth_commands(ctx, geth_hosts, datadir):
         node.pop('unlock')
         node.pop('rpcport')
     print json.dumps(
-        {'{host}:{port}'.format(**node): ' '.join(to_cmd(node, datadir=datadir)) for node in nodes},
+        {'{host}'.format(**node): ' '.join(to_cmd(node, datadir=datadir)) for node in nodes},
         indent=2 if pretty else None)
 
 
