@@ -62,7 +62,7 @@
     - name: create scenario folders
       local_action:
         module: file
-        path: "{{ scenario_folder }}/{{ item }}/geth"
+        path: "{{ scenario_folder }}/{{ item }}/geth/keystore"
         state: directory
       with_items: "{{ node_ips }}"
 
