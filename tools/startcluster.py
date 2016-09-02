@@ -21,6 +21,7 @@ DEFAULT_PW = 'notsosecret'
 
 # default args to pass to `geth` for all calls, e.g. verbosity, ...
 DEFAULT_ARGS = [
+    '--nodiscover',
     '--rpc',
     '--networkid {}'.format(sum(ord(c) for c in CLUSTER_NAME)),
 ]
