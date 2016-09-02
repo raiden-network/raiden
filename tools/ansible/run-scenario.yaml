@@ -20,3 +20,22 @@
     - name: run geth command
       shell:
         cmd: "start-stop-daemon -S -b -q --pidfile /var/run/geth_raiden --exec {{ geth_datadir }}/start.sh"
+
+
+- hosts: tag_Name_Scenario
+  name: start raiden
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - scenario 
+    - common
+  tags:
+    - start_geth
+
+  tasks:
+    # Collect instance id: http://stackoverflow.com/a/27307254 
+    - action: ec2_facts
+
+      # note: this is far from working for ansible, just to get the general idea
+    - name: shell command stub (for dir in {{ user_home }}/40*; do...)
+      debug: "~/40001$ ../raidenvenv/bin/raiden $(cat ../raiden_flags.txt) --privatekey $(cat privatekey.txt) --external_listen_address {{ node_ip }}:40001"
