@@ -18,8 +18,13 @@ def build_node_list(hosts, nodes_per_host):
 
 
 @click.group()
-def cli():
-    pass
+@click.option(
+    '--pretty/--no-pretty',
+    default=False
+)
+@click.pass_context
+def cli(ctx, pretty):
+    ctx.obj['pretty'] = pretty
 
 
 @click.argument(
@@ -33,11 +38,13 @@ def cli():
     type=int
 )
 @cli.command()
-def nodes(hosts, nodes_per_host):
+@click.pass_context
+def nodes(ctx, hosts, nodes_per_host):
+    pretty = ctx.obj['pretty']
     if hosts is None:
         hosts = ['127.0.0.1']
     node_list = build_node_list(hosts, nodes_per_host)
-    print json.dumps(node_list, indent=2)
+    print json.dumps(node_list, indent=2 if pretty else None)
 
 
 @click.argument(
@@ -51,11 +58,13 @@ def nodes(hosts, nodes_per_host):
     type=int
 )
 @cli.command()
-def genesis(hosts, nodes_per_host):
+@click.pass_context
+def genesis(ctx, hosts, nodes_per_host):
+    pretty = ctx.obj['pretty']
     node_list = build_node_list(hosts, nodes_per_host)
     accounts = generate_accounts(node_list)
     genesis = mk_genesis([acc['address'] for acc in accounts.values()])
-    print json.dumps(genesis, indent=2)
+    print json.dumps(genesis, indent=2 if pretty else None)
 
 
 @click.argument(
@@ -69,9 +78,11 @@ def genesis(hosts, nodes_per_host):
     type=int
 )
 @cli.command()
-def accounts(hosts, nodes_per_host):
+@click.pass_context
+def accounts(ctx, hosts, nodes_per_host):
+    pretty = ctx.obj['pretty']
     node_list = build_node_list(hosts, nodes_per_host)
-    print json.dumps(generate_accounts(node_list), indent=2)
+    print json.dumps(generate_accounts(node_list), indent=2 if pretty else None)
 
 
 @click.argument(
@@ -84,10 +95,12 @@ def accounts(hosts, nodes_per_host):
     type=str,
 )
 @cli.command()
-def geth_commands(geth_hosts, datadir):
+@click.pass_context
+def geth_commands(ctx, geth_hosts, datadir):
     """This is helpful to setup a private cluster of geth nodes that won't need discovery
     (because they will have their `bootnodes` parameter pointed at each other).
     """
+    pretty = ctx.obj['pretty']
     nodes = []
     for i, host in enumerate(geth_hosts):
         nodes.append(create_node_configuration(host=host, node_key_seed=i))
@@ -96,7 +109,7 @@ def geth_commands(geth_hosts, datadir):
         node.pop('rpcport')
     print json.dumps(
         {'{host}:{port}'.format(**node): ' '.join(to_cmd(node, datadir=datadir)) for node in nodes},
-        indent=2)
+        indent=2 if pretty else None)
 
 
 @click.argument(
@@ -105,13 +118,15 @@ def geth_commands(geth_hosts, datadir):
     type=str,
 )
 @cli.command()
-def geth_static_nodes(geth_hosts):
+@click.pass_context
+def geth_static_nodes(ctx, geth_hosts):
+    pretty = ctx.obj['pretty']
     """Outputs content for a static-nodes.json file"""
     nodes = []
     for i, host in enumerate(geth_hosts):
         nodes.append(create_node_configuration(host=host, node_key_seed=i))
     all_nodes = [node['enode'] for node in nodes]
-    print(json.dumps(all_nodes))
+    print(json.dumps(all_nodes, indent=2 if pretty else None))
 
 
 @click.argument(
@@ -123,7 +138,9 @@ def geth_static_nodes(geth_hosts):
     type=click.File()
 )
 @cli.command()
-def merge(genesis_json, state_json):
+@click.pass_context
+def merge(ctx, genesis_json, state_json):
+    pretty = ctx.obj['pretty']
     genesis = json.load(genesis_json)
     state = json.load(state_json)
     assert 'alloc' in genesis
@@ -132,7 +149,7 @@ def merge(genesis_json, state_json):
         if account not in accounts:
             [data.pop(key) for key in "nonce root codeHash".split()]
             genesis['alloc'][account] = data
-    print json.dumps(genesis, indent=2)
+    print json.dumps(genesis, indent=2 if pretty else None)
 
 
 @click.argument(
@@ -146,7 +163,9 @@ def merge(genesis_json, state_json):
     type=int
 )
 @cli.command()
-def full_genesis(hosts, nodes_per_host):
+@click.pass_context
+def full_genesis(ctx, hosts, nodes_per_host):
+    pretty = ctx.obj['pretty']
     node_list = build_node_list(hosts, nodes_per_host)
     accounts = generate_accounts(node_list)
     genesis = mk_genesis([acc['address'] for acc in accounts.values()])
@@ -155,7 +174,7 @@ def full_genesis(hosts, nodes_per_host):
         if not account in genesis['alloc']:
             genesis['alloc'][account] = data
     genesis['config']['raidenFlags'] = blockchain_config['raiden_flags']
-    print json.dumps(genesis, indent=2)
+    print json.dumps(genesis, indent=2 if pretty else None)
 
 
 @cli.command()
@@ -190,4 +209,4 @@ def usage():
     print "\t-> merge the deployed contracts of state_dump.json into genesis.json and create a new genesis.json."
 
 if __name__ == '__main__':
-    cli()
+    cli(obj={})

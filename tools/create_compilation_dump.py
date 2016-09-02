@@ -132,6 +132,7 @@ def cleanup(dump):
 
 
 if __name__ == '__main__':
+    pretty = False
     dump, blockchain_config = deploy_all()
-    print json.dumps(dump, indent=2)
-    print json.dumps(blockchain_config, indent=2)
+    print json.dumps(dump, indent=2 if pretty else None)
+    print json.dumps(blockchain_config, indent=2 if pretty else None)

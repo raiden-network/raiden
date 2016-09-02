@@ -50,10 +50,11 @@ def deploy_all(client):
 
 if __name__ == "__main__":
     # FIXME: client params should be read from cmdline-args!
+    pretty = False
     client = JSONRPCClient(port=8545,
                            privkey='1' * 64,
                            print_communication=False,
                            )
     patch_send_transaction(client)
     deployed = deploy_all(client)
-    print json.dumps(deployed, indent=2)
+    print json.dumps(deployed, indent=2 if pretty else None)
