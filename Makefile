@@ -13,11 +13,7 @@ help:
 	#@echo "release - package and upload a release"
 	#@echo "dist - package"
 	#@echo "install - install the package to the active Python's site-packages"
-	@echo "clean-truffle - remove 'truffle init' artifacts"
-	@echo "build-truffle-container - build the truffle docker container"
-	@echo "compile - run truffle compile"
-	@echo "serve - run truffle serve"
-	@echo "deploy - run truffle deploy"
+	@echo "deploy - deploy contracts via rpc"
 
 
 
@@ -76,35 +72,13 @@ dist: clean
 install: clean
 	python setup.py install
 
-# targets for truffle deployment
 logging_settings = :info,contracts:debug
 mkfile_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-dockerargs := --rm 
-cmd := version
-opts := 
-# We need to determine the OS-specific user-id, so build-dir-mounts stay writable for the user
-UNAME := $(shell uname)
-ifeq ($(UNAME), Linux)
-	process_user := $(shell id -u):$(shell id -g)
-endif
-ifeq ($(UNAME), Darwin)
-	process_user := root
-endif
-
-call_truffle := docker run -it --user=$(process_user) -v $(mkfile_root)truffle:/code $(shell python -c "import os;print ' '.join('-v $(mkfile_root)raiden/smart_contracts/{}:/code/contracts/{}'.format(f, f) for f in os.listdir('$(mkfile_root)raiden/smart_contracts/') if f.endswith('.sol'))") --net=host $(dockerargs) truffle $(cmd) $(opts)
-
-clean-truffle:
-	rm -rf truffle/environments/*/contracts
-
 stop:
 	killall hydrachain
-	docker stop -t 0 truffleserver && docker rm truffleserver
 
 stop-geth:
 	killall -15 geth
-
-build-truffle-container:
-	cd truffle && docker build -t truffle .
 
 blockchain:
 	rm -f blockchain.log
@@ -112,20 +86,7 @@ blockchain:
 
 blockchain-geth:
 	rm -f blockchain.log
-	./truffle/startcluster.py
-
-serve: deploy
-	@$(MAKE) run-truffle cmd=serve dockerargs="-d --name truffleserver"
-	@echo "serving on http://localhost:8080 accounts are [ 0x8ed66d0dd4b88fb097a3a3c8c10175b8cadb1c66 0x2ca7fd47fc3c945a1f41fbc3f65c944df5a8f523 ]"
-
-compile:
-	@$(MAKE) run-truffle cmd=compile
-
-build:
-	@$(MAKE) run-truffle cmd=build
+	./tools/startcluster.py
 
 deploy: compile
-	@$(MAKE) run-truffle cmd=deploy
-
-run-truffle:
-	$(call_truffle)
+	./tools/deploy.py	

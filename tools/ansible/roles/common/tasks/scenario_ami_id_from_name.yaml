@@ -1,0 +1,15 @@
+# Use this to find a reference to our named AMI
+# - include: path/to/here
+# will create a fact named `scenario_ami_id` that can be used when launching instances
+- name: find AMI by name
+  local_action:
+    module: ec2_ami_find
+    region: "{{ region }}"
+    owner: self
+    name: "{{ scenario_ami_name }}"
+  register: ami_find
+
+- name: setup 'scenario_ami_id' fact
+  set_fact:
+    scenario_ami_id: "{{ ami_find.results[0].ami_id }}"
+  when: ami_find.results is defined and ami_find.results[0] is defined
