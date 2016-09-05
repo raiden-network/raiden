@@ -66,3 +66,16 @@
         msg: "raidenvenv/bin/raiden $(cat {{ item }}/raiden_flags.txt) --privatekey $(cat {{ item }}/privatekey.txt) --external_listen_address {{ ansible_ec2_local_ipv4 }}:{{ item }}"
       with_items:
         - "{{ raiden_ports }}"
+
+- hosts: tag_Name_Scenario
+  name: terminate
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - scenario 
+    - common
+  tags:
+    - terminate
+
+  tasks:
+    - include: roles/scenario/tasks/terminate.yaml
