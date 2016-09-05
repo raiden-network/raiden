@@ -12,14 +12,17 @@
     # Collect instance id: http://stackoverflow.com/a/27307254 
     - action: ec2_facts
 
+    - name: stop geth (KILL)
+      shell: "killall -15 geth"
+
     - name: init geth
       shell:
         cmd: "geth --datadir {{ geth_datadir }} init {{ geth_datadir }}/genesis.json"
 
-      #  run geth as a daemon in background with --start --background --quiet
+      # run geth in background and redirect output to ~/geth.log 
     - name: run geth command
       shell:
-        cmd: "start-stop-daemon -S -b -q --pidfile /var/run/geth_raiden --exec {{ geth_datadir }}/start.sh"
+        cmd: "nohup {{ geth_datadir }}/start.sh 2>&1 {{ user_home }}/geth.log &"
 
 
 - hosts: tag_Name_Scenario
