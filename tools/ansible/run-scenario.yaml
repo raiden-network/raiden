@@ -33,7 +33,7 @@
     - scenario 
     - common
   tags:
-    - start_geth
+    - start_raiden
   vars:
     scenario_runner: "{{ user_home }}/raiden/tools/app.py"
 
@@ -41,7 +41,28 @@
     # Collect instance id: http://stackoverflow.com/a/27307254 
     - action: ec2_facts
 
+    - name: configured raiden_ports
+      find: 
+        patterns: "4*"
+        paths: "{{ user_home }}"
+        file_type: directory
+      register: dirs
+
+    - name: set fact for ports
+      set_fact:
+        raiden_ports: "{{ dirs.files | map(attribute='path') | map('basename') | list }}"
+
+    - name: debug
+      debug:
+        var: dirs
+
+    - name: debug
+      debug:
+        var: raiden_ports
       # note: this is far from working for ansible, just to get the general idea
     - name: shell command stub (for dir in {{ user_home }}/40*; do...)
       #chdir: "{{ user_home }}"
-      debug: "raidenvenv/bin/python {{ scenario_runner }} $(cat $dir/raiden_flags.txt) --privatekey $(cat $dir/privatekey.txt) --external_listen_address {{ node_ip }}:$( basename $dir )"
+      debug: 
+        msg: "raidenvenv/bin/raiden $(cat {{ item }}/raiden_flags.txt) --privatekey $(cat {{ item }}/privatekey.txt) --external_listen_address {{ ansible_ec2_local_ipv4 }}:{{ item }}"
+      with_items:
+        - "{{ raiden_ports }}"
