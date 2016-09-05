@@ -105,11 +105,17 @@ class App(object):  # pylint: disable=too-few-public-methods
     default=':INFO',
     type=str,
     )
+@click.option(
+    '--logfile',
+    help='file path for logging to file',
+    default=None,
+    type=str,
+    )
 @click.command()
 def app(privatekey, eth_rpc_endpoint, registry_contract_address,
-        discovery_contract_address, listen_address, external_listen_address, logging):
+        discovery_contract_address, listen_address, external_listen_address, logging, logfile):
 
-    slogging.configure(logging)
+    slogging.configure(logging, log_file=logfile)
 
     if not external_listen_address:
         # notify('if you are behind a NAT, you should set
