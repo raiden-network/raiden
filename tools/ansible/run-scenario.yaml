@@ -3,14 +3,20 @@
   remote_user: "{{ remote_user }}"
   gather_facts: true
   roles:
-    - scenario 
+    - scenario
     - common
   tags:
     - start_geth
 
   tasks:
-    # Collect instance id: http://stackoverflow.com/a/27307254 
+    # Collect instance id: http://stackoverflow.com/a/27307254
     - action: ec2_facts
+
+    - name: install daemon
+      apt:
+        name: daemon
+        state: present
+      sudo: yes
 
     - name: stop geth (KILL)
       shell: "killall -15 geth"
@@ -20,10 +26,10 @@
       shell:
         cmd: "geth --datadir {{ geth_datadir }} init {{ geth_datadir }}/genesis.json"
 
-      # run geth in background and redirect output to ~/geth.log 
+      # run geth in background and redirect output to ~/geth.log
     - name: run geth command
       shell:
-        cmd: "nohup {{ geth_datadir }}/start.sh 2>&1 {{ user_home }}/geth.log &"
+        cmd: "daemon -o {{ user_home }}/geth.log {{ geth_datadir }}/start.sh"
 
 
 - hosts: tag_Name_Scenario
@@ -31,7 +37,7 @@
   remote_user: "{{ remote_user }}"
   gather_facts: true
   roles:
-    - scenario 
+    - scenario
     - common
   tags:
     - start_raiden
@@ -39,11 +45,11 @@
     scenario_runner: "{{ user_home }}/raiden/tools/app.py"
 
   tasks:
-    # Collect instance id: http://stackoverflow.com/a/27307254 
+    # Collect instance id: http://stackoverflow.com/a/27307254
     - action: ec2_facts
 
     - name: configured raiden_ports
-      find: 
+      find:
         patterns: "4*"
         paths: "{{ user_home }}"
         file_type: directory
@@ -63,7 +69,7 @@
       # note: this is far from working for ansible, just to get the general idea
     - name: shell command stub (for dir in {{ user_home }}/40*; do...)
       #chdir: "{{ user_home }}"
-      debug: 
+      debug:
         msg: "raidenvenv/bin/raiden $(cat {{ item }}/raiden_flags.txt) --privatekey $(cat {{ item }}/privatekey.txt) --external_listen_address {{ ansible_ec2_local_ipv4 }}:{{ item }}"
       with_items:
         - "{{ raiden_ports }}"
@@ -73,7 +79,7 @@
   remote_user: "{{ remote_user }}"
   gather_facts: true
   roles:
-    - scenario 
+    - scenario
     - common
   tags:
     - terminate
