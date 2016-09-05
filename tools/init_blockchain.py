@@ -23,7 +23,7 @@ def create_and_distribute_token(client, receivers,
     """Create a new ERC-20 token and distribute it among `receivers`.
     If `name` is None, the name will be derived from hashing all receivers.
     """
-    name = name or sha3(''.join(receivers)).encode('hex'),
+    name = name or sha3(''.join(receivers)).encode('hex')
     token_proxy = client.deploy_solidity_contract(
         client.sender,
         'HumanStandardToken',
