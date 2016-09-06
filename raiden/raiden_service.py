@@ -506,10 +506,15 @@ class RaidenEventHandler(object):
 
         # shouldnt raise, filters are installed only for registered managers
         asset_manager = self.raiden.get_manager_by_address(manager_address)
-        asset_manager.register_channel_by_address(
-            netting_channel_address_bin,
-            self.raiden.config['reveal_timeout'],
-        )
+
+        if address_decoder(event['participant1']) == self.raiden.address or \
+           address_decoder(event['participant2']) == self.raiden.address:
+            asset_manager.register_channel_by_address(
+                netting_channel_address_bin,
+                self.raiden.config['reveal_timeout'],
+            )
+        else:
+            log.info('not registering channel because this node is not a participant.')
 
         asset_manager.channelgraph.add_path(
             event['participant1'].decode('hex'),
