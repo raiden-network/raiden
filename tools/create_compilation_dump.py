@@ -40,6 +40,7 @@ def deploy_all(token_groups=dict()):
     for name, group in token_groups.items():
         token_name, address = create_and_distribute_token(state, group, name)
         tokens[token_name] = address
+        deployed[token_name] = address
 
     deployed.update(
         deploy_with_dependencies(
