@@ -201,11 +201,17 @@ def full_genesis(ctx, hosts, nodes_per_host):
     node_list = build_node_list(hosts, nodes_per_host)
     accounts = generate_accounts(node_list)
     genesis = mk_genesis([acc['address'] for acc in accounts.values()])
-    dump, blockchain_config = deploy_all()
+    dump, blockchain_config = deploy_all(token_groups={
+        # FIXME: we want to use actual scenario asset-groups here
+        account['address']: [acc['address'] for acc in accounts.values()]
+        for account in accounts.values()
+    })
     for account, data in dump.items():
         if not account in genesis['alloc']:
             genesis['alloc'][account] = data
+
     genesis['config']['raidenFlags'] = blockchain_config['raiden_flags']
+    genesis['config']['token_groups'] = blockchain_config['token_groups']
     print json.dumps(genesis, indent=2 if pretty else None)
 
 

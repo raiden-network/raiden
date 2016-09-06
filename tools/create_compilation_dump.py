@@ -20,7 +20,7 @@ DEFAULT_KEY = ('1' * 64).decode('hex')
 DEFAULT_ACCOUNT = privtoaddr(DEFAULT_KEY)
 
 
-def deploy_all():
+def deploy_all(token_groups=dict()):
     log.DEV("default key", raw=tester.DEFAULT_KEY, enc=tester.DEFAULT_KEY.encode('hex'))
     log.DEV("default account", raw=tester.DEFAULT_ACCOUNT, enc=tester.DEFAULT_ACCOUNT.encode('hex'))
     tester.DEFAULT_KEY = DEFAULT_KEY
@@ -33,7 +33,13 @@ def deploy_all():
     log.DEV('state', coinbase=state.block.coinbase.encode('hex'), balance=state.block.get_balance(DEFAULT_ACCOUNT))
     tester.gas_limit = 10 * 10 ** 6
     state.block.number = 1158001
+
     deployed = dict()
+
+    tokens = dict()
+    for name, group in token_groups.items():
+        token_name, address = create_and_distribute_token(state, group, name)
+        tokens[token_name] = address
 
     deployed.update(
         deploy_with_dependencies(
@@ -63,9 +69,34 @@ def deploy_all():
 
     blockchain_config = dict(
         raiden_flags='--registry_contract_address {Registry} --discovery_contract_address {EndpointRegistry}'
-        .format(**deployed))
+        .format(**deployed),
+        token_groups=tokens,
+    )
     blockchain_config['contract_addresses'] = deployed
     return (dump, blockchain_config)
+
+
+def create_and_distribute_token(state,
+                                receivers,
+                                name=None,
+                                amount_per_receiver=1000):
+    proxy = state.abi_contract(
+        None,
+        path=get_contract_path(TARGETS['token']),
+        language='solidity',
+        listen=False,
+        sender=DEFAULT_KEY,
+        constructor_parameters=(
+            len(receivers) * amount_per_receiver,
+            name,
+            2,
+            name[:4].upper()
+        )
+    )
+    for receiver in receivers:
+        proxy.transfer(receiver, amount_per_receiver)
+    state.mine(number_of_blocks=1)
+    return (name, proxy.address.encode('hex'))
 
 
 def deploy_with_dependencies(contract_name, state, libraries=dict()):
@@ -83,6 +114,7 @@ def deploy_with_dependencies(contract_name, state, libraries=dict()):
         log.DEV('known libraries', libraries=libraries)
         deployed = state.abi_contract(None,
                                       path=get_contract_path(dependency),
+                                      listen=False,
                                       language='solidity',
                                       libraries=libraries,
                                       sender=DEFAULT_KEY,
@@ -92,11 +124,12 @@ def deploy_with_dependencies(contract_name, state, libraries=dict()):
     log.DEV('deploying target', name=contract_name)
     log.DEV('known libraries', libraries=libraries)
     contract = state.abi_contract(None,
-                                    path=get_contract_path(contract_name),
-                                    language='solidity',
-                                    libraries=libraries,
-                                    sender=DEFAULT_KEY,
-                                    )
+                                  path=get_contract_path(contract_name),
+                                  listen=False,
+                                  language='solidity',
+                                  libraries=libraries,
+                                  sender=DEFAULT_KEY,
+                                  )
     libraries[contract_name.split('.')[0]] = contract.address.encode('hex')
     state.mine()
     return libraries
