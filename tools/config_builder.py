@@ -2,6 +2,7 @@
 
 import click
 import json
+import random
 from genesis_builder import generate_accounts, mk_genesis
 from create_compilation_dump import deploy_all
 from startcluster import RAIDEN_PORT as START_PORT
@@ -83,6 +84,53 @@ def accounts(ctx, hosts, nodes_per_host):
     pretty = ctx.obj['pretty']
     node_list = build_node_list(hosts, nodes_per_host)
     print json.dumps(generate_accounts(node_list), indent=2 if pretty else None)
+
+
+@click.argument(
+    'hosts',
+    nargs=-1,
+    type=str,
+)
+@click.argument(
+    'nodes_per_host',
+    default=1,
+    type=int
+)
+@cli.command()
+@click.pass_context
+def build_scenario(ctx, hosts, nodes_per_host):
+    pretty = ctx.obj['pretty']
+    node_list = build_node_list(hosts, nodes_per_host)
+    accounts = generate_accounts(node_list)
+
+    addresses = []
+    for node, data in accounts.items():
+        for k, v in data.items():
+            if k == 'address':
+                addresses.append(v)
+
+    random.shuffle(addresses)
+
+    scenario = dict()
+    scenario['assets'] = assets = list()
+
+    # TODO: this builds a simple test scenario connecting each
+    #       node to some other node one-by-one (for odd number,
+    #       ignores last one)...
+    total_assets = len(addresses) // 2
+    index = 0
+    for asset_num in range(total_assets):
+        data_for_asset = {
+            "channels": [addresses[index], addresses[index+1]],
+            "transfers_with_amount": {
+                addresses[index]: 100,
+                addresses[index+1]: 100,
+            }
+        }
+        assets.append(data_for_asset)
+        index += 2
+
+    print json.dumps(scenario, indent=2 if pretty else None)
 
 
 @click.argument(

@@ -184,6 +184,37 @@
         dest: "{{ scenario_folder }}/{{ item.key.split(':').0 }}/{{ item.key.split(':').1 }}/address.txt"
       with_dict: "{{ raiden_accounts }}"
 
+
+- hosts: localhost
+  name: build scenario description
+  gather_facts: no
+  roles:
+    - scenario
+    - common
+  tags:
+    - prepare_scenario
+
+  tasks:
+    - include: roles/scenario/tasks/read_scenario_params.yaml
+
+    - name: create raiden node_list
+      shell:
+        chdir: "../"
+        cmd: "python config_builder.py build_scenario {{ raiden_per_node }} {{ node_ips | join(' ') }}"
+      register: out
+
+    - name: jsonify
+      set_fact:
+        scenario_description: "{{ out.stdout | from_json }}"
+
+    - name: store scenario file per node
+      copy:
+        content: "{{ scenario_description }}"
+        dest: "{{ scenario_folder }}/{{ item }}/scenario.json"
+        mode: a+rx
+      with_items: "{{ node_ips }}"
+
+
 - hosts: tag_Name_Scenario
   name: put configuration on hosts and init geth 
   remote_user: "{{ remote_user }}"
