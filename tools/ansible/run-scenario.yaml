@@ -22,6 +22,14 @@
       shell: "killall -15 geth"
       ignore_errors: yes
 
+    - name: wipe geth blockchaindata (if present)
+      file:
+        path: "{{ geth_datadir }}/{{ item }}"
+        state: absent
+      with_items:
+        - chaindata
+        - dapp
+
     - name: init geth
       shell:
         cmd: "geth --datadir {{ geth_datadir }} init {{ geth_datadir }}/genesis.json"
