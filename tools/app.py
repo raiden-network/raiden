@@ -196,6 +196,7 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
                 # open; others should join by calling
                 # raiden.api.deposit, AFTER the channel came alive!
                 if node != app.raiden.address.encode('hex'):
+                    tools.register_asset(token_address)
                     channel = tools.open_channel_with_funding(
                         token_address, node, 1000)
                     transfers_by_channel[channel] = int(transfers_with_amount[node])
