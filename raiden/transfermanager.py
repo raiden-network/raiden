@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 from ethereum import slogging
+import gevent
 
 from raiden.tasks import StartMediatedTransferTask, MediateTransferTask, EndMediatedTransferTask
 
@@ -45,7 +46,8 @@ class TransferManager(object):
             self.assetmanager.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer, callback=callback)
 
-            self.assetmanager.raiden.protocol.send_and_wait(
+            return gevent.spawn(
+                self.assetmanager.raiden.protocol.send_and_wait,
                 target,
                 direct_transfer,
             )
@@ -60,7 +62,7 @@ class TransferManager(object):
                 self.on_task_completed_callbacks.append(callback)
 
             task.start()
-            task.join()
+            return task
 
     def on_mediatedtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
