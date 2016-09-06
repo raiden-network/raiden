@@ -121,10 +121,11 @@ def build_scenario(ctx, hosts, nodes_per_host):
     index = 0
     for asset_num in range(total_assets):
         data_for_asset = {
-            "channels": [addresses[index], addresses[index+1]],
+            "name": str(asset_num),
+            "channels": [addresses[index], addresses[index + 1]],
             "transfers_with_amount": {
                 addresses[index]: 100,
-                addresses[index+1]: 100,
+                addresses[index + 1]: 100,
             }
         }
         assets.append(data_for_asset)
@@ -194,24 +195,52 @@ def merge(ctx, genesis_json, state_json):
     default=1,
     type=int
 )
+@click.option(
+    '--scenario',
+    type=click.Path(
+        writable=True,
+        resolve_path=True,
+    ),
+    default=None,
+    help="(optional) update the assets in scenario.json with predeployed token addresses. "
+         "This modifies the file in place!"
+)
 @cli.command()
 @click.pass_context
-def full_genesis(ctx, hosts, nodes_per_host):
+def full_genesis(ctx, hosts, nodes_per_host, scenario):
     pretty = ctx.obj['pretty']
     node_list = build_node_list(hosts, nodes_per_host)
     accounts = generate_accounts(node_list)
     genesis = mk_genesis([acc['address'] for acc in accounts.values()])
-    dump, blockchain_config = deploy_all(token_groups={
-        # FIXME: we want to use actual scenario asset-groups here
+
+    if scenario is not None:
+        with open(scenario) as f:
+            script = json.load(f)
+        token_groups = {asset['name']: asset['channels']
+                        for asset in script['assets']
+                        }
+    else:
+        # create tokens for addresses x addresses
+        token_groups = {
         account['address']: [acc['address'] for acc in accounts.values()]
         for account in accounts.values()
-    })
+    }
+
+    dump, blockchain_config = deploy_all(token_groups=token_groups)
+
     for account, data in dump.items():
         if not account in genesis['alloc']:
             genesis['alloc'][account] = data
 
     genesis['config']['raidenFlags'] = blockchain_config['raiden_flags']
     genesis['config']['token_groups'] = blockchain_config['token_groups']
+
+    if scenario is not None:
+        for asset in script['assets']:
+            asset['token_address'] = blockchain_config['token_groups'][asset['name']]
+        with open(scenario, 'w') as f:
+            json.dump(script, f)
+
     print json.dumps(genesis, indent=2 if pretty else None)
 
 
