@@ -7,6 +7,7 @@ monkey.patch_all()
 import signal
 import gevent
 import click
+import json
 from ethereum import slogging
 from pyethapp.rpc_client import JSONRPCClient
 
@@ -14,8 +15,8 @@ from raiden.raiden_service import RaidenService, DEFAULT_REVEAL_TIMEOUT, DEFAULT
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import BlockChainService
-from raiden.console import Console
 from raiden.utils import pex, split_endpoint
+from raiden.console import ConsoleTools
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -171,7 +172,6 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         with open(scenario) as f:
             script = json.load(f)
 
-        from raiden.console import ConsoleTools
         tools = ConsoleTools(
                 app.raiden,
                 discovery,
@@ -181,20 +181,31 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
 
         transfers_by_channel = {}
 
-        tokens = script['tokens']
+        tokens = script['assets']
         for token in tokens:
-            token_address = tools.create_token()
+            # allow for prefunded tokens
+            if 'token_address' in token:
+                token_address = token['token_address']
+            else:
+                token_address = tools.create_token()
 
             transfers_with_amount = token['transfers_with_amount']
             for node in token['channels']:
-                channel = tools.open_channel_with_funding(
-                    token_address, node, 1000)
-                transfers_by_channel[channel] = int(transfers_with_amount[node])
+                # FIXME: in order to do bidirectional channels, only one side
+                # (i.e. only token['channels'][0]) should
+                # open; others should join by calling
+                # raiden.api.deposit, AFTER the channel came alive!
+                if node != app.raiden.address.encode('hex'):
+                    channel = tools.open_channel_with_funding(
+                        token_address, node, 1000)
+                    transfers_by_channel[channel] = int(transfers_with_amount[node])
 
-        def transfer(token_address, amount_per_transfer, total_transfers, peer):
+        def transfer(token_address, amount_per_transfer, total_transfers, channel):
+            peer = channel.partner(app.raiden.address)
+
             def transfer_():
                 for _ in xrange(total_transfers):
-                    app.raiden.transfer(token_transfer, amount_per_transfer, peer)
+                    app.raiden.transfer(token_address, amount_per_transfer, peer)
 
             return gevent.spawn(
                 transfer, amount_per_transfer, peer
@@ -202,7 +213,7 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
 
         greenlets = []
         for channel, amount in transfers_by_channel.items():
-            geenlets.append(transfer(token_address, 1, amount, peer))
+            greenlets.append(transfer(token_address, 1, amount, channel))
 
         gevent.joinall(greenlets)
 
