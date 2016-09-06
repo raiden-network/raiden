@@ -183,6 +183,10 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
 
         tokens = script['assets']
         for token in tokens:
+            # skip tokens/assets that we're not part of
+            if not app.raiden.address.encode('hex') in token['channels']:
+                continue
+
             # allow for prefunded tokens
             if 'token_address' in token:
                 token_address = token['token_address']
