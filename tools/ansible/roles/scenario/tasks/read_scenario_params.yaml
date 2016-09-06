@@ -12,6 +12,7 @@
     filters:
       instance-state-name: running
       "tag:Name": Scenario
+      "tag:user": "{{ user_tag }}"
   register: remote_facts
   when: scenario_name is not defined
 

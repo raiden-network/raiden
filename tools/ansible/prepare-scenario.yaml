@@ -28,6 +28,7 @@
         instance_tags:
           Name: Scenario
           Scenario: "{{ scenario_name }}"
+          user: "{{ user_tag }}"
       register: ec2
 
     - name: Add all instance public IPs to host group
