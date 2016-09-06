@@ -4,10 +4,10 @@ from __future__ import division
 import pytest
 from ethereum import abi, tester, slogging
 from ethereum.tester import TransactionFailed
-from ethereum.utils import encode_hex, privatekey_to_address
+from ethereum.utils import encode_hex
 
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
-from raiden.utils import sha3
+from raiden.utils import sha3, privatekey_to_address
 from raiden.tests.utils.tester import (
     new_channelmanager,
     new_nettingcontract,

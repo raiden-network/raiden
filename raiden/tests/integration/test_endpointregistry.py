@@ -13,7 +13,7 @@ from raiden.network.discovery import ContractDiscovery
 @pytest.mark.parametrize('poll_timeout', [80])
 def test_endpointregistry(blockchain_services, poll_timeout):
     chain = blockchain_services[0]
-    my_address = chain.address
+    my_address = chain.node_address
 
     # deploy discovery contract
     discovery_contract_path = get_contract_path('EndpointRegistry.sol')

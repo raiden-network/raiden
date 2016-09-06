@@ -1,14 +1,15 @@
 # -*- coding: utf8 -*-
 from ethereum import tester
-from ethereum.utils import decode_hex, privatekey_to_address
+from ethereum.utils import decode_hex
 
-from raiden.channel import Channel, ChannelEndState
 from raiden.blockchain.abi import (
     CHANNEL_MANAGER_ABI,
     NETTING_CHANNEL_ABI,
     HUMAN_TOKEN_ABI,
     REGISTRY_ABI,
 )
+from raiden.channel import Channel, ChannelEndState
+from raiden.utils import privatekey_to_address
 
 
 class InvalidKey(str):

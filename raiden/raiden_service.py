@@ -300,13 +300,12 @@ class RaidenAPI(object):
 
         return netting_channel
 
-    def transfer(self, *args, **kwargs):
-        raise NotImplemented('use transfer_and_wait or transfer_async')
-
     def transfer_and_wait(self, asset_address, amount, target, callback=None, timeout=None):
         """ Do a transfer with `target` with the given `amount` of `asset_address`. """
         async_result = self.transfer_async(asset_address, amount, target, callback)
         return async_result.wait(timeout=timeout)
+
+    transfer = transfer_and_wait  # expose a synchronous interface to the user
 
     def transfer_async(self, asset_address, amount, target, callback=None):
         if not isinstance(amount, (int, long)):

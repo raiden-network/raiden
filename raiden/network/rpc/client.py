@@ -117,7 +117,7 @@ class BlockChainService(object):
 
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
-        self.address = privatekey_to_address(privatekey_bin)
+        self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
         self.default_registry = self.registry(registry_address)
 
@@ -211,7 +211,7 @@ class BlockChainService(object):
         log.info('Deploying "{}" contract'.format(contract_file))
 
         proxy = self.client.deploy_solidity_contract(
-            self.address,
+            self.node_address,
             contract_name,
             contracts,
             dict(),
@@ -552,7 +552,8 @@ class NettingChannel(object):
         self.poll_timeout = poll_timeout
 
         # check we are a participant of the given channel
-        self.detail(privatekey_to_address(self.client.privkey))
+        self.node_address = privatekey_to_address(self.client.privkey)
+        self.detail(self.node_address)
 
     def asset_address(self):
         return address_decoder(self.proxy.assetAddress.call())
@@ -619,7 +620,7 @@ class NettingChannel(object):
             self.asset_address(),
             poll_timeout=self.poll_timeout,
         )
-        current_balance = asset.balance_of(privatekey_to_address(self.private_key))
+        current_balance = asset.balance_of(self.node_address)
 
         if current_balance < amount:
             raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(

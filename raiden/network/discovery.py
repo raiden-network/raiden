@@ -55,7 +55,7 @@ class ContractDiscovery(Discovery):
         )
 
     def register(self, nodeid, host, port):
-        if nodeid != self.chain.address:
+        if nodeid != self.chain.node_address:
             raise ValueError('You can only register your own endpoint.')
 
         transaction_hash = self.discovery_proxy.registerEndpoint.transact(
