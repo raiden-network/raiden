@@ -315,8 +315,7 @@ class RaidenAPI(object):
             raise NoPathError('No path to address found')
 
         transfer_manager = self.raiden.managers_by_asset_address[asset_address_bin].transfermanager
-        task = transfer_manager.transfer(amount, target_bin, callback=callback)
-        return task
+        return transfer_manager.transfer(amount, target_bin, callback=callback)
 
     def close(self, asset_address, partner_address):
         """ Close a channel opened with `partner_address` for the given `asset_address`. """
@@ -502,17 +501,23 @@ class RaidenEventHandler(object):
         self.raiden.register_channel_manager(manager)
 
     def event_channelnew(self, manager_address, event):  # pylint: disable=unused-argument
-        if address_decoder(event['participant1']) != self.raiden.address and address_decoder(event['participant2']) != self.raiden.address:
-            log.info('ignoring new channel, this is node is not a participant.')
-            return
-
         netting_channel_address_bin = address_decoder(event['nettingChannel'])
 
         # shouldnt raise, filters are installed only for registered managers
         asset_manager = self.raiden.get_manager_by_address(manager_address)
-        asset_manager.register_channel_by_address(
-            netting_channel_address_bin,
-            self.raiden.config['reveal_timeout'],
+
+        if address_decoder(event['participant1']) == self.raiden.address or \
+           address_decoder(event['participant2']) == self.raiden.address:
+            asset_manager.register_channel_by_address(
+                netting_channel_address_bin,
+                self.raiden.config['reveal_timeout'],
+            )
+        else:
+            log.info('not registering channel because this node is not a participant.')
+
+        asset_manager.channelgraph.add_path(
+            event['participant1'].decode('hex'),
+            event['participant2'].decode('hex'),
         )
 
         log.info(
