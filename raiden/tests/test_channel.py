@@ -43,14 +43,8 @@ def test_end_state():
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is False
 
-    with pytest.raises(KeyError):
-        assert state1.balance_proof.get_pending_lock(lock_hashlock)
-
-    with pytest.raises(KeyError):
-        assert state2.balance_proof.get_pending_lock(lock_hashlock)
-
-    assert state1.compute_merkleroot() == ''
-    assert state2.compute_merkleroot() == ''
+    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state2.balance_proof.merkleroot_for_unclaimed() == ''
 
     lock = Lock(
         lock_amount,
@@ -97,13 +91,8 @@ def test_end_state():
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is True
 
-    with pytest.raises(KeyError):
-        assert state1.balance_proof.get_pending_lock(lock_hashlock)
-
-    assert state2.balance_proof.get_pending_lock(lock_hashlock) is lock
-
-    assert state1.compute_merkleroot() == ''
-    assert state2.compute_merkleroot() == lock_hash
+    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
     with pytest.raises(ValueError):
         state1.update_contract_balance(balance1 - 10)
@@ -124,15 +113,30 @@ def test_end_state():
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is True
 
-    with pytest.raises(KeyError):
-        assert state1.balance_proof.get_pending_lock(lock_hashlock)
+    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
-    assert state2.balance_proof.get_pending_lock(lock_hashlock) is lock
+    # registering the secret should not change the locked amount
+    state2.register_secret(lock_secret)
 
-    assert state1.compute_merkleroot() == ''
-    assert state2.compute_merkleroot() == lock_hash
+    assert state1.contract_balance == balance1 + 10
+    assert state2.contract_balance == balance2
+    assert state1.balance(state2) == balance1 + 10
+    assert state2.balance(state1) == balance2
 
-    state2.register_secret(state1, lock_secret)
+    assert state1.distributable(state2) == balance1 - lock_amount + 10
+    assert state2.distributable(state1) == balance2
+
+    assert state1.locked() == 0
+    assert state2.locked() == lock_amount
+
+    assert state1.balance_proof.is_pending(lock_hashlock) is False
+    assert state2.balance_proof.is_pending(lock_hashlock) is False
+
+    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
+
+    state2.claim_lock(state1, lock_secret)
 
     assert state1.contract_balance == balance1 + 10
     assert state2.contract_balance == balance2
@@ -148,14 +152,8 @@ def test_end_state():
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is False
 
-    with pytest.raises(KeyError):
-        assert state1.balance_proof.get_pending_lock(lock_hashlock)
-
-    with pytest.raises(KeyError):
-        assert state2.balance_proof.get_pending_lock(lock_hashlock)
-
-    assert state1.compute_merkleroot() == ''
-    assert state2.compute_merkleroot() == ''
+    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state2.balance_proof.merkleroot_for_unclaimed() == ''
 
 
 def test_channel():
@@ -254,7 +252,7 @@ def test_channel():
     assert channel.our_state.locked() == 0
     assert channel.partner_state.locked() == amount2
 
-    channel.register_secret(secret)
+    channel.claim_lock(secret)
 
     assert channel.contract_balance == balance1
     assert channel.balance == balance1 - amount1 - amount2
@@ -379,8 +377,8 @@ def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: d
             secret = transfers_secret[i - 1]
 
             # synchronized clamining
-            channel0.register_secret(secret)
-            channel1.register_secret(secret)
+            channel0.claim_lock(secret)
+            channel1.claim_lock(secret)
 
             # update test state
             claimed_amount += transfer.lock.amount
@@ -490,8 +488,8 @@ def test_locked_transfer(raiden_network):
         channel1, balance1, [locked_transfer.lock],
     )
 
-    channel0.register_secret(secret)
-    channel1.register_secret(secret)
+    channel0.claim_lock(secret)
+    channel1.claim_lock(secret)
 
     # upon revelation of the secret both balances are updated
     assert_synched_channels(
@@ -547,8 +545,7 @@ def test_register_invalid_transfer(raiden_network):
         asset=channel0.asset_address,
         transfered_amount=channel1.balance + balance0 + amount,
         recipient=channel0.partner_state.address,
-        locksroot=channel0.partner_state.compute_merkleroot(),
-        secret=secret,
+        locksroot=channel0.partner_state.balance_proof.merkleroot_for_unclaimed(),
     )
     app0.raiden.sign(transfer2)
 

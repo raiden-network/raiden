@@ -18,8 +18,8 @@ from raiden.utils import pex, split_endpoint
 gevent.monkey.patch_all()
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
-
 INITIAL_PORT = 40001
+DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
 
 
 class App(object):  # pylint: disable=too-few-public-methods

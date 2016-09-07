@@ -14,7 +14,7 @@ from raiden.tests.utils.transfer import (
     get_received_transfer,
     get_sent_transfer,
     pending_mediated_transfer,
-    register_secret,
+    claim_lock,
 )
 from raiden.utils import sha3
 
@@ -63,9 +63,10 @@ def test_settlement(raiden_network, settle_timeout):
     # reflect this Bob wants to settle
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
-    unlock_proof = channel1.our_state.balance_proof.get_proof_for(secret, hashlock)
+    lock = channel1.our_state.balance_proof.get_lock_by_hashlock(hashlock)
+    unlock_proof = channel1.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
-    root = channel1.our_state.compute_merkleroot()
+    root = channel1.our_state.balance_proof.merkleroot_for_unclaimed()
 
     assert check_proof(
         unlock_proof.merkle_proof,
@@ -112,10 +113,11 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
     # get a proof for the pending transfer
     back_channel = channel(app1, app0, asset)
     secret_transfer = get_received_transfer(back_channel, 0)
-    merkle_proof = back_channel.our_state.balance_proof.get_proof_for(secret, hashlock)
+    lock = back_channel.our_state.balance_proof.get_lock_by_hashlock(hashlock)
+    unlock_proof = back_channel.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
     # reveal the secret
-    register_secret(raiden_network, asset, secret)
+    claim_lock(raiden_network, asset, secret)
 
     # a new transfer to update the hashlock
     direct_transfer(app0, app1, asset, amount)
@@ -134,7 +136,7 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
     with pytest.raises(Exception):
         back_channel.external_state.netting_channel.unlock(
             app1.raiden.address,
-            [(merkle_proof, secret_transfer.lock.as_bytes, secret)],
+            [(unlock_proof, secret_transfer.lock.as_bytes, secret)],
         )
 
     # forward the block number to allow settle
@@ -171,9 +173,9 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
     asset = asset_address[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
-    # The attacker creates a mediated transfer from it's account A1, to it's
-    # account A2, throught the hub H
+    # the attacker owns app0 and app2 and creates a transfer throught app1
     secret = pending_mediated_transfer(raiden_chain, asset, amount)
+    hashlock = sha3(secret)
 
     attack_channel = channel(app2, app1, asset)
     attack_transfer = get_received_transfer(attack_channel, 0)
@@ -181,7 +183,8 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
     hub_contract = channel(app1, app0, asset).external_state.netting_channel.address
 
     # the attacker can create a merkle proof of the locked transfer
-    merkle_proof = attack_channel.our_state.locked.get_proof(attack_transfer)
+    lock = attack_channel.our_state.balance_proof.get_lock_by_hashlock(hashlock)
+    unlock_proof = attack_channel.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
     # start the settle counter
     attack_channel.netting_channel.close(
@@ -196,7 +199,7 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
 
     # since the attacker knows the secret he can net the lock
     attack_channel.netting_channel.unlock(
-        [(merkle_proof, attack_transfer.lock, secret)],
+        [(unlock_proof, attack_transfer.lock, secret)],
     )
     # XXX: verify that the secret was publicized
 

@@ -504,13 +504,13 @@ class ChannelManager(object):
             for address in address_list
         ]
 
-    def channelnew_filter(self, participant_address):  # pylint: disable=unused-argument
+    def channelnew_filter(self):  # pylint: disable=unused-argument
         """ Install a new filter for ChannelNew events.
 
         Return:
             Filter: The filter instance.
         """
-        # participant_address_hex = address_encoder(participant_address)
+        # participant_address_hex = address_encoder(privatekey_to_address(self.client.privkey))
         # topics = [
         #     CHANNELNEW_EVENTID, [node_address_hex, None], [None, node_address_hex],
         # ]
@@ -699,9 +699,8 @@ class NettingChannel(object):
                 gasprice=self.gasprice,
             )
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+            log.info('update_transfer called', contract=pex(self.address), transfer=transfer)
             # TODO: check if the ChannelSecretRevealed event was emitted and if it wasn't raise an error
-
-        log.info('update_transfer called', contract=pex(self.address), transfer=transfer)
 
     def unlock(self, our_address, unlock_proofs):
         unlock_proofs = list(unlock_proofs)  # force a list to get the length (could be a generator)

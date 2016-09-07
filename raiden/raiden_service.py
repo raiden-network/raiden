@@ -191,7 +191,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         # To avoid missing changes, first create the filter, call the
         # contract and then start polling.
-        channelnew = channel_manager.channelnew_filter(self.address)
+        channelnew = channel_manager.channelnew_filter()
 
         all_netting_contracts = channel_manager.channels_by_participant(self.address)
 

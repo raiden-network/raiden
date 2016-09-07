@@ -4,6 +4,7 @@ import time
 
 import gevent
 from gevent.event import AsyncResult
+from gevent.timeout import Timeout
 
 from ethereum import slogging
 from ethereum.utils import sha3
@@ -25,6 +26,7 @@ __all__ = (
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 REMOVE_CALLBACK = object()
+DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
 
 
 class Task(gevent.Greenlet):
@@ -55,7 +57,8 @@ class Task(gevent.Greenlet):
 
 
 class LogListenerTask(Task):
-    def __init__(self, listener_name, filter_, callback, contract_translator):
+    def __init__(self, listener_name, filter_, callback, contract_translator,
+                 events_poll_timeout=DEFAULT_EVENTS_POLL_TIMEOUT):
         super(LogListenerTask, self).__init__()
 
         self.listener_name = listener_name
@@ -64,7 +67,14 @@ class LogListenerTask(Task):
         self.contract_translator = contract_translator
 
         self.stop_event = AsyncResult()
-        self.sleep_time = 0.5
+        self.sleep_time = events_poll_timeout
+
+        # exposes the AsyncResult timer, this allows us to raise the timeout
+        # inside this Task to force an update:
+        #
+        #   task.kill(task.timeout)
+        #
+        self.timeout = None
 
     def __repr__(self):
         return '<LogListenerTask {}>'.format(self.listener_name)
@@ -91,7 +101,8 @@ class LogListenerTask(Task):
                     except:
                         log.exception('unexpected exception on log listener')
 
-            stop = self.stop_event.wait(self.sleep_time)
+            self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
+            stop = self.stop_event.wait(self.timeout)
 
     def stop(self):
         self.stop_event.set(True)

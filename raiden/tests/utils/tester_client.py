@@ -3,7 +3,7 @@ from collections import defaultdict
 from itertools import count
 
 from ethereum import tester, slogging, _solidity
-from ethereum.abi import encode_abi, encode_single, ContractTranslator
+from ethereum.abi import ContractTranslator
 from ethereum.utils import decode_hex, encode_hex
 from pyethapp.jsonrpc import address_decoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
@@ -12,9 +12,13 @@ from raiden import messages
 from raiden.blockchain.abi import get_contract_path
 from raiden.utils import pex, isaddress, privatekey_to_address
 from raiden.blockchain.abi import (
+    ASSETADDED_EVENTID,
     CHANNEL_MANAGER_ABI,
-    CHANNELNEW_EVENT,
     CHANNELNEW_EVENTID,
+    CHANNELNEWBALANCE_EVENTID,
+    CHANNELSECRETREVEALED_EVENTID,
+    CHANNELCLOSED_EVENTID,
+    CHANNELSETTLED_EVENTID,
     HUMAN_TOKEN_ABI,
     NETTING_CHANNEL_ABI,
     REGISTRY_ABI,
@@ -24,34 +28,6 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 FILTER_ID_GENERATOR = count()
 
 # NOTE: mine after each transaction to reset block.gas_used
-
-
-def ethereum_event(eventid, eventabi, eventdata, contract_address):
-    event_types = [
-        param['type']
-        for param in eventabi['inputs']
-    ]
-
-    event_data = [
-        eventdata[param['name']]
-        for param in eventabi['inputs']
-        if not param['indexed']
-    ]
-
-    event_topics = [eventid] + [
-        encode_single(param['type'], eventdata[param['name']])
-        for param in eventabi['inputs']
-        if param['indexed']
-    ]
-
-    event_data = encode_abi(event_types, event_data)
-
-    event = {
-        'topics': event_topics,
-        'data': event_data,
-        'address': contract_address,
-    }
-    return event
 
 
 def tester_deploy_contract(tester_state, private_key, contract_name,
@@ -178,9 +154,10 @@ class ChannelExternalStateTester(object):
 
 
 class FilterTesterMock(object):
-    def __init__(self, jsonrpc_client, filter_id_raw):
+    def __init__(self, contract_address, topics, filter_id_raw):
         self.filter_id_raw = filter_id_raw
-        self.client = jsonrpc_client
+        self.contract_address = contract_address
+        self.topics = topics
         self.events = list()
 
     def changes(self):
@@ -189,7 +166,28 @@ class FilterTesterMock(object):
         return events
 
     def event(self, event):
-        self.events.append(event)
+        # TODO: implement OR
+        if event.topics == self.topics and event.address == self.contract_address:
+            self.events.append({
+                'topics': event.topics,
+                'data': event.data,
+                'address': event.address,
+            })
+
+            # HACK: trigger all the listeners to update the app's states. An
+            # alternative implemenation would to use `raiden.event_listeners`
+            # directly, this approach would have a chicken/egg problem since we
+            # need the BlockchainService in order to create the Raiden app.
+            # import gc
+            # from raiden.tasks import LogListenerTask
+            # event_listeners = [
+            #     listener
+            #     for listener in gc.get_objects()
+            #     if isinstance(listener, LogListenerTask)
+            # ]
+            # for listener in event_listeners:
+            #     if listener.started and listener.timeout is not None:
+            #         listener.kill(listener.timeout)
 
     def uninstall(self):
         self.events = list()
@@ -381,8 +379,9 @@ class RegistryTesterMock(object):
         return result
 
     def assetadded_filter(self):
-        filter_ = FilterTesterMock(None, next(FILTER_ID_GENERATOR))
-        self.assetadded_filters.append(filter_)
+        topics = [ASSETADDED_EVENTID]
+        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
 
 
@@ -436,22 +435,6 @@ class ChannelManagerTesterMock(object):
             netting_channel_address_hex,
         )
 
-        data = {
-            '_event_type': 'ChannelNew',
-            'nettingChannel': channel.address,
-            'participant1': peer1,
-            'participant2': peer2,
-            'settleTimeout': settle_timeout,
-        }
-        event = ethereum_event(CHANNELNEW_EVENTID, CHANNELNEW_EVENT, data, self.address)
-
-        # generate the events
-        for filter_ in self.address_filter[peer1]:
-            filter_.event(event)
-
-        for filter_ in self.address_filter[peer2]:
-            filter_.event(event)
-
         return decode_hex(channel.address)
 
     def channels_addresses(self):
@@ -475,9 +458,10 @@ class ChannelManagerTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
         return result
 
-    def channelnew_filter(self, participant_address):
-        filter_ = FilterTesterMock(None, next(FILTER_ID_GENERATOR))
-        self.address_filter[participant_address].append(filter_)
+    def channelnew_filter(self):
+        topics = [CHANNELNEW_EVENTID]
+        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
 
 
@@ -532,6 +516,9 @@ class NettingChannelTesterMock(object):
         return result
 
     def deposit(self, our_address, amount):
+        if privatekey_to_address(self.private_key) != our_address:
+            raise ValueError('our_address doesnt match the privatekey')
+
         asset = AssetTesterMock(
             self.tester_state,
             self.private_key,
@@ -668,21 +655,25 @@ class NettingChannelTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
 
     def channelnewbalance_filter(self):
-        filter_ = FilterTesterMock(None, next(FILTER_ID_GENERATOR))
-        self.newbalance_filters.append(filter_)
+        topics = [CHANNELNEWBALANCE_EVENTID]
+        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
 
     def channelsecretrevealed_filter(self):
-        filter_ = FilterTesterMock(None, next(FILTER_ID_GENERATOR))
-        self.secretrevealed_filters.append(filter_)
+        topics = [CHANNELSECRETREVEALED_EVENTID]
+        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
 
     def channelclosed_filter(self):
-        filter_ = FilterTesterMock(None, next(FILTER_ID_GENERATOR))
-        self.channelclose_filters.append(filter_)
+        topics = [CHANNELCLOSED_EVENTID]
+        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
 
     def channelsettled_filter(self):
-        filter_ = FilterTesterMock(None, next(FILTER_ID_GENERATOR))
-        self.channelsettle_filters.append(filter_)
+        topics = [CHANNELSETTLED_EVENTID]
+        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        self.tester_state.block.log_listeners.append(filter_.event)
         return filter_

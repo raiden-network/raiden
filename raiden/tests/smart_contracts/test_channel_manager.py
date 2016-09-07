@@ -19,7 +19,7 @@ def test_channelnew_event(settle_timeout, tester_state, tester_events,
     channel_manager = new_channelmanager(
         privatekey0,
         tester_state,
-        tester_events,
+        tester_events.append,
         tester_registry,
         tester_token,
     )

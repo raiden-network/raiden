@@ -14,7 +14,7 @@ from raiden.messages import (
     TransferTimeout,
 )
 from raiden.mtree import merkleroot
-from raiden.utils import sha3, pex, lpex
+from raiden.utils import sha3, pex
 from raiden.tasks import REMOVE_CALLBACK
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -69,12 +69,19 @@ class BalanceProof(object):
             containing the locks that are contained in the messages's
             locksroot.
         """
-        # gradualy move locks from pending to unclaimed to unlocked as secrets
-        # are revealed
+        # locks that we are mediating but the secret is unknow
         self.hashlock_pendinglocks = dict()
+
+        # locks that we known the secret but our partner hasn't updated it's
+        # state yet
         self.hashlock_unclaimedlocks = dict()
+
+        # locks that we known the secret and the partner has update it's state
+        # but we don't have an up-to-date transfer to use as a proof
         self.hashlock_unlockedlocks = dict()
 
+        # the latest known transfer with a correct locksroot that can be used
+        # as a proof
         self.transfer = None
 
     def unclaimed_merkletree(self):
@@ -158,11 +165,10 @@ class BalanceProof(object):
         unclaimed_locksroot = self.merkleroot_for_unclaimed()
 
         if direct_transfer.locksroot != unclaimed_locksroot:
-            raise ValueError(
-                'locksroot mismatch',
-                expected=unclaimed_locksroot,
-                sent=direct_transfer.locksroot,
-            )
+            raise ValueError('locksroot mismatch expected:{} sent:{}'.format(
+                pex(unclaimed_locksroot),
+                pex(direct_transfer.locksroot),
+            ))
 
         self.transfer = direct_transfer
         self.hashlock_unlockedlocks = dict()
@@ -822,22 +828,6 @@ class Channel(object):
         if isinstance(transfer, DirectTransfer):
             to_state.register_direct_transfer(transfer)
 
-            if transfer.secret:
-                log.debug(
-                    'REGISTERED SECRET node:{} from:{} to:{}'.format(
-                        pex(self.our_state.address),
-                        pex(from_state.address),
-                        pex(to_state.address),
-                    ),
-                    lock_hashlock=pex(sha3(transfer.secret)),
-                    lock_secret=pex(transfer.secret),
-                )
-
-                to_state.register_secret(
-                    from_state,
-                    transfer.secret,
-                )
-
         from_state.transfered_amount = transfer.transfered_amount
         from_state.nonce += 1
 
@@ -855,7 +845,7 @@ class Channel(object):
             )
         )
 
-    def create_directtransfer(self, amount, secret=None):
+    def create_directtransfer(self, amount):
         """ Return a DirectTransfer message.
 
         This message needs to be signed and registered with the channel before
@@ -886,7 +876,6 @@ class Channel(object):
             transfered_amount=transfered_amount,
             recipient=to_.address,
             locksroot=current_locksroot,
-            secret=secret,
         )
 
     def create_lockedtransfer(self, amount, expiration, hashlock):

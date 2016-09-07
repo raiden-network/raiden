@@ -3,13 +3,59 @@ from collections import defaultdict
 from itertools import count
 
 from ethereum.utils import encode_hex
+from ethereum.abi import encode_abi, encode_single
 
 from raiden import messages
 from raiden.utils import isaddress, make_address
 from raiden.blockchain.net_contract import NettingChannelContract
+from raiden.blockchain.abi import (
+    ASSETADDED_EVENT,
+    ASSETADDED_EVENTID,
+    CHANNELCLOSED_EVENT,
+    CHANNELCLOSED_EVENTID,
+    CHANNELNEWBALANCE_EVENT,
+    CHANNELNEWBALANCE_EVENTID,
+    CHANNELNEW_EVENT,
+    CHANNELNEW_EVENTID,
+    CHANNELSECRETREVEALED_EVENT,
+    CHANNELSECRETREVEALED_EVENTID,
+    CHANNELSETTLED_EVENT,
+    CHANNELSETTLED_EVENTID,
+)
 
 MOCK_REGISTRY_ADDRESS = '7265676973747279726567697374727972656769'
 FILTER_ID_GENERATOR = count()
+
+
+def ethereum_event(eventid, eventabi, eventdata, contract_address):
+    event_types = [
+        param['type']
+        for param in eventabi['inputs']
+    ]
+
+    event_data = [
+        eventdata[param['name']]
+        for param in eventabi['inputs']
+        if not param['indexed']
+    ]
+
+    event_topics = [eventid] + [
+        encode_single(param['type'], eventdata[param['name']])
+        for param in eventabi['inputs']
+        if param['indexed']
+    ]
+
+    event_data = encode_abi(event_types, event_data)
+
+    event = {
+        'topics': event_topics,
+        'data': event_data,
+        'address': contract_address,
+    }
+    return event
+
+
+# TODO: rename the implementation to stub
 
 
 class BlockChainServiceMock(object):
@@ -50,6 +96,7 @@ class BlockChainServiceMock(object):
         cls.address_contract = dict()
         cls.address_registry = dict()
         cls.asset_manager = dict()
+        cls.filters = defaultdict(list)
 
         registry = RegistryMock(address=MOCK_REGISTRY_ADDRESS)
         cls.default_registry = registry
@@ -103,10 +150,10 @@ class BlockChainServiceMock(object):
 
 
 class FilterMock(object):
-    def __init__(self, jsonrpc_client, filter_id_raw):
-        self.filter_id_raw = filter_id_raw
-        self.client = jsonrpc_client
+    def __init__(self, topics, filter_id_raw):
+        self.topics = topics
         self.events = list()
+        self.filter_id_raw = filter_id_raw
 
     def changes(self):
         events = self.events
@@ -114,7 +161,8 @@ class FilterMock(object):
         return events
 
     def event(self, event):
-        self.events.append(event)
+        if event['topics'] == self.topics:
+            self.events.append(event)
 
     def uninstall(self):
         self.events = list()
@@ -141,7 +189,6 @@ class RegistryMock(object):
 
         self.asset_manager = dict()
         self.address_asset = dict()
-        self.assetadded_filters = list()
 
     def manager_address_by_asset(self, asset_address):
         return self.asset_manager[asset_address].address
@@ -162,6 +209,16 @@ class RegistryMock(object):
         self.address_asset[asset_address] = asset
         self.asset_manager[asset_address] = manager
 
+        data = {
+            '_event_type': 'AssetAdded',
+            'assetAddress': asset_address,
+            'channelManagerAddress': manager.address,
+        }
+        event = ethereum_event(ASSETADDED_EVENTID, ASSETADDED_EVENT, data, self.address)
+
+        for filter_ in BlockChainServiceMock.filters[self.address]:
+            filter_.event(event)
+
         BlockChainServiceMock.address_asset[asset_address] = asset
         BlockChainServiceMock.address_manager[manager.address] = manager
         BlockChainServiceMock.asset_manager[asset_address] = manager
@@ -176,8 +233,9 @@ class RegistryMock(object):
         ]
 
     def assetadded_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.assetadded_filters.append(filter_)
+        topics = [ASSETADDED_EVENTID]
+        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
+        BlockChainServiceMock.filters[self.address].append(filter_)
         return filter_
 
 
@@ -188,8 +246,6 @@ class ChannelManagerMock(object):
         self.asset_address_ = asset_address
         self.pair_channel = dict()
         self.participant_channels = defaultdict(list)
-        self.participant_filter = defaultdict(list)
-        self.address_filter = defaultdict(list)
 
     def asset_address(self):
         return self.asset_address_
@@ -228,12 +284,17 @@ class ChannelManagerMock(object):
 
         BlockChainServiceMock.address_contract[channel.address] = channel
 
-        # generate the events
-        for filter_ in self.address_filter[peer1]:
-            filter_.event()
+        data = {
+            '_event_type': 'ChannelNew',
+            'nettingChannel': channel.address,
+            'participant1': peer1,
+            'participant2': peer2,
+            'settleTimeout': settle_timeout,
+        }
+        event = ethereum_event(CHANNELNEW_EVENTID, CHANNELNEW_EVENT, data, self.address)
 
-        for filter_ in self.address_filter[peer2]:
-            filter_.event()
+        for filter_ in BlockChainServiceMock.filters[self.address]:
+            filter_.event(event)
 
         return channel.address
 
@@ -246,9 +307,10 @@ class ChannelManagerMock(object):
             for channel in self.participant_channels[peer_address]
         ]
 
-    def channelnew_filter(self, participant_address):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.address_filter[participant_address] = filter_
+    def channelnew_filter(self):
+        topics = [CHANNELNEW_EVENTID]
+        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
+        BlockChainServiceMock.filters[self.address].append(filter_)
         return filter_
 
 
@@ -264,11 +326,6 @@ class NettingChannelMock(object):
             peer2,
             settle_timeout,
         )
-
-        self.newbalance_filters = list()
-        self.secretrevealed_filters = list()
-        self.channelclose_filters = list()
-        self.channelsettle_filters = list()
 
     def asset_address(self):
         return self.contract.asset_address
@@ -288,6 +345,19 @@ class NettingChannelMock(object):
             amount,
             BlockChainServiceMock.block_number(),
         )
+
+        our_data = self.contract.participants[our_address]
+        data = {
+            '_event_type': 'ChannelNewBalance',
+            'assetAddress': self.contract.asset_address,
+            'participant': our_address,
+            'balance': our_data.deposit,
+            'blockNumber': BlockChainServiceMock.block_number(),
+        }
+        event = ethereum_event(CHANNELNEWBALANCE_EVENTID, CHANNELNEWBALANCE_EVENT, data, self.address)
+
+        for filter_ in BlockChainServiceMock.filters[self.address]:
+            filter_.event(event)
 
     def opened(self):
         return self.contract.opened
@@ -333,6 +403,16 @@ class NettingChannelMock(object):
             second_encoded,
         )
 
+        data = {
+            '_event_type': 'ChannelClosed',
+            'closingAddress': our_address,
+            'blockNumber': BlockChainServiceMock.block_number(),
+        }
+        event = ethereum_event(CHANNELCLOSED_EVENTID, CHANNELCLOSED_EVENT, data, self.address)
+
+        for filter_ in BlockChainServiceMock.filters[self.address]:
+            filter_.event(event)
+
     def update_transfer(self, our_address, transfer):
         ctx = {
             'block_number': BlockChainServiceMock.block_number(),
@@ -364,28 +444,50 @@ class NettingChannelMock(object):
                 secret,
             )
 
+            data = {
+                '_event_type': 'ChannelSecretRevealed',
+                'secret': secret,
+            }
+            event = ethereum_event(CHANNELSECRETREVEALED_EVENTID, CHANNELSECRETREVEALED_EVENT, data, self.address)
+
+            for filter_ in BlockChainServiceMock.filters[self.address]:
+                filter_.event(event)
+
     def settle(self):
         ctx = {
             'block_number': BlockChainServiceMock.block_number(),
         }
         self.contract.settle(ctx)
 
+        data = {
+            '_event_type': 'ChannelSettled',
+            'blockNumber': BlockChainServiceMock.block_number(),
+        }
+        event = ethereum_event(CHANNELSETTLED_EVENTID, CHANNELSETTLED_EVENT, data, self.address)
+
+        for filter_ in BlockChainServiceMock.filters[self.address]:
+            filter_.event(event)
+
     def channelnewbalance_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.newbalance_filters.append(filter_)
+        topics = [CHANNELNEWBALANCE_EVENTID]
+        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
+        BlockChainServiceMock.filters[self.address].append(filter_)
         return filter_
 
     def channelsecretrevealed_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.secretrevealed_filters.append(filter_)
+        topics = [CHANNELSECRETREVEALED_EVENTID]
+        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
+        BlockChainServiceMock.filters[self.address].append(filter_)
         return filter_
 
     def channelclosed_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.channelclose_filters.append(filter_)
+        topics = [CHANNELCLOSED_EVENTID]
+        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
+        BlockChainServiceMock.filters[self.address].append(filter_)
         return filter_
 
     def channelsettled_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.channelsettle_filters.append(filter_)
+        topics = [CHANNELSETTLED_EVENTID]
+        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
+        BlockChainServiceMock.filters[self.address].append(filter_)
         return filter_

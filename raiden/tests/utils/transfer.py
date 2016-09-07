@@ -125,11 +125,14 @@ def pending_mediated_transfer(app_chain, asset, amount):
     return secret
 
 
-def register_secret(app_chain, asset, secret):
+def claim_lock(app_chain, asset, secret):
     """ Unlock a pending transfer. """
-    for app in app_chain:
-        manager = app.raiden.get_manager_by_asset_address(asset)
-        manager.register_secret(secret)
+    for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
+        channel_ = channel(from_, to_, asset)
+        channel_.claim_lock(secret)
+
+        channel_ = channel(to_, from_, asset)
+        channel_.claim_lock(secret)
 
 
 def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1, balance1, outstanding_locks1):  # pylint: disable=too-many-arguments
@@ -158,7 +161,7 @@ def assert_mirror(channel0, channel1):
     """ Assert that `channel0` has a correct `partner_state` to represent
     `channel1` and vice-versa.
     """
-    assert channel0.our_state.compute_merkleroot() == channel1.partner_state.compute_merkleroot()
+    assert channel0.our_state.balance_proof.merkleroot_for_unclaimed() == channel1.partner_state.balance_proof.merkleroot_for_unclaimed()
     assert channel0.our_state.locked() == channel1.partner_state.locked()
     assert channel0.our_state.transfered_amount == channel1.partner_state.transfered_amount
     assert channel0.our_state.balance(channel0.partner_state) == channel1.partner_state.balance(channel1.our_state)
@@ -166,7 +169,7 @@ def assert_mirror(channel0, channel1):
     assert channel0.distributable == channel0.our_state.distributable(channel0.partner_state)
     assert channel0.distributable == channel1.partner_state.distributable(channel1.our_state)
 
-    assert channel1.our_state.compute_merkleroot() == channel0.partner_state.compute_merkleroot()
+    assert channel1.our_state.balance_proof.merkleroot_for_unclaimed() == channel0.partner_state.balance_proof.merkleroot_for_unclaimed()
     assert channel1.our_state.locked() == channel0.partner_state.locked()
     assert channel1.our_state.transfered_amount == channel0.partner_state.transfered_amount
     assert channel1.our_state.balance(channel1.partner_state) == channel0.partner_state.balance(channel0.our_state)
@@ -181,7 +184,7 @@ def assert_locked(channel0, outstanding_locks):
     hashroot = merkleroot(sha3(lock.as_bytes) for lock in outstanding_locks)
 
     assert len(channel0.our_state.balance_proof.hashlock_pendinglocks) == len(outstanding_locks)
-    assert channel0.our_state.compute_merkleroot() == hashroot
+    assert channel0.our_state.balance_proof.merkleroot_for_unclaimed() == hashroot
     assert channel0.our_state.locked() == sum(lock.amount for lock in outstanding_locks)
     assert channel0.outstanding == sum(lock.amount for lock in outstanding_locks)
 
