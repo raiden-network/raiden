@@ -2,7 +2,7 @@
   name: init
   connection: local
   gather_facts: False
-  roles: 
+  roles:
     - build-ami
   tags:
     - init
@@ -15,10 +15,10 @@
         key_name: raiden
         region: "{{ region }}"
         group: raiden
-        instance_type: "{{ instance_type }}" 
+        instance_type: "{{ instance_type }}"
         image: "{{ ami_id }}"
         wait: true
-        count: 1 
+        count: 1
         instance_tags:
           Name: Build
       register: ec2
@@ -32,7 +32,7 @@
       with_items: "{{ ec2.instances }}"
 
 - hosts: tag_Name_Build
-  name: install geth 
+  name: install geth
   remote_user: "{{ remote_user }}"
   gather_facts: true
   roles:
@@ -44,12 +44,13 @@
     - name: add ethereum ppa
       shell: sudo add-apt-repository ppa:ethereum/ethereum -y
 
-    - name: install geth, solc
+    - name: install geth, solc, daemon
       apt: name="{{ item }}" update_cache=yes
       sudo: yes
       with_items:
         - geth
         - solc
+        - daemon
 
 - hosts: tag_Name_Build
   name: make DAG
@@ -69,30 +70,30 @@
         path: "{{ dag }}"
         state: directory
 
-    - name: make DAG 
-      shell: 
+    - name: make DAG
+      shell:
         chdir: "{{ dag }}"
         creates: "{{ dag }}/full-R23-0000000000000000"
-        cmd: "geth makedag 1 {{ dag }}" 
+        cmd: "geth makedag 1 {{ dag }}"
 
 - hosts: tag_Name_Build
-  name: install raiden 
+  name: install raiden
   remote_user: "{{ remote_user }}"
   gather_facts: true
   roles:
     - build-ami
   tags:
-    - install_raiden 
+    - install_raiden
   vars:
     - venv: "{{ ansible_env.HOME }}/raidenvenv"
 
   tasks:
     - name: add py27 ppa
-      shell: 
+      shell:
         cmd: add-apt-repository ppa:fkrull/deadsnakes-python2.7 -y
       sudo: yes
 
-    - name: install raiden system dependencies 
+    - name: install raiden system dependencies
       apt: name="{{ item }}" update_cache=yes
       sudo: yes
       with_items:
@@ -110,7 +111,7 @@
         - libssl-dev
 
     - name: clone raiden
-      git: 
+      git:
         repo: "https://github.com/raiden-network/raiden"
         update: yes
         version: "{{ raiden_version }}"
@@ -151,17 +152,17 @@
         wait: yes
         wait_timeout: 600
       register: deleted
-      when: scenario_ami_id is defined 
+      when: scenario_ami_id is defined
 
     - name: wait some time because AWS does not realize deletion immediately
       pause:
         minutes: 3
       when: deleted.changed
 
-    # Collect instance id: http://stackoverflow.com/a/27307254 
+    # Collect instance id: http://stackoverflow.com/a/27307254
     - action: ec2_facts
 
-    - name: store ami 
+    - name: store ami
       local_action:
         module: ec2_ami
         region: "{{ region }}"
@@ -184,7 +185,7 @@
     - terminate
 
   tasks:
-    # Collect instance id: http://stackoverflow.com/a/27307254 
+    # Collect instance id: http://stackoverflow.com/a/27307254
     - action: ec2_facts
 
     - name: shutdown all ec2.instances

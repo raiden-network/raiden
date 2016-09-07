@@ -70,6 +70,22 @@ This playbook
 - **#FIXME**
 
 # DEV-notes: 
-to use a previously created ami, include
-`roles/common/tasks/scenario_ami_id_from_name.yaml` before instance creation and use the fact
-`scenario_ami_id` with the `ec2` module for the `image` parameter.
+
+## User separation
+In order to avoid clashes between users, there is the `user_tag` variable. This works as follows:
+
+- add `-e user_tag=myname` to the first call to `prepare-scenario.yaml`
+- on later calls and when calling `run-scenario.yaml`, keep using `-e user_tag=myname` and add `--limit
+  tag_user_myname`.
+
+Full example:
+
+    ansible-playbook prepare-scenario.yaml -e "number_of_nodes=3 user_tag=peter keep=True"
+
+    ansible-playbook run-scenario.yaml --limit tag_user_peter -e "user_tag=peter keep=True"
+
+    ansible-playbook run-scenario.yaml --limit tag_user_peter -e "user_tag=peter" -t terminate
+
+The yoda'esque duplication of the arguments for `--limit` and `-e user_tag` comes from 
+1) the need of having the tag variable available for `ec2_remote_facts` in `roles/scenario/tasks/read_scenario_params.yaml` and
+2) `ec2.py` reversing the tag-name (`--limit` works on `ec2.py`)
