@@ -16,7 +16,7 @@
       apt:
         name: daemon
         state: present
-      sudo: yes
+      become: yes
 
     - name: stop geth (KILL)
       shell: "killall -15 geth"
@@ -56,6 +56,11 @@
     # Collect instance id: http://stackoverflow.com/a/27307254
     - action: ec2_facts
 
+    - name: overwrite standard raiden app.py with tools version
+      copy:
+        src: "../app.py"
+        dest: "{{ raiden_dir }}/raiden/app.py"
+
     - name: configured raiden_ports
       find:
         patterns: "4*"
@@ -67,20 +72,21 @@
       set_fact:
         raiden_ports: "{{ dirs.files | map(attribute='path') | map('basename') | list }}"
 
-    - name: debug
-      debug:
-        var: dirs
+    # TODO: create directory, get timestamp, save adding timestamp to bak name
+    #- name: backup old raiden log files
+    #  command: "mv -f {{ user_home }}/raiden-{{ item }}.log {{ user_home }}/raiden-{{ item }}.bak"
+    #  with_items:
+    #    - "{{ raiden_ports }}"
 
-    - name: debug
-      debug:
-        var: raiden_ports
+    - name: expand raiden flags
+      shell:
+        cmd: "echo $(cat {{ user_home}}/raiden_flags.txt)"
+      register: raiden_flags
 
-      # note: this is far from working for ansible, just to get the general idea
-    - name: shell command stub (for dir in {{ user_home }}/40*; do...)
-      #chdir: "{{ user_home }}"
-      debug:
-        msg: "raidenvenv/bin/python raiden/tools/app.py $(cat raiden_flags.txt) --privatekey $(cat {{ item }}/privatekey.txt) --external_listen_address {{ ansible_ec2_local_ipv4 }}:{{ item }} --scenario {{ item }}/scenario.json"
-        # chdir: "{{ user_home }}"
+    - name: execute raidens asynchronously
+      command: "{{ ansible_env.HOME }}/raidenvenv/bin/python {{ raiden_dir }}/raiden/app.py {{ raiden_flags.stdout }} --privatekey_file {{ user_home }}/{{ item }}/privatekey.txt --listen_address {{ ansible_ec2_local_ipv4 }}:{{ item }} --scenario {{ user_home }}/{{ item }}/scenario.json --logfile {{ user_home }}/raiden-{{ item }}.log"
+      async: 600
+      poll: 0
       with_items:
         - "{{ raiden_ports }}"
 
