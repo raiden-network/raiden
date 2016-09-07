@@ -1,173 +1,187 @@
 # -*- coding: utf8 -*-
-import random
-import string
+from __future__ import division
 
 import pytest
-from ethereum import slogging
 from ethereum import _solidity
-from ethereum.keys import privtoaddr
 from ethereum._solidity import compile_file
 from ethereum.utils import denoms
-from pyethapp.accounts import mk_privkey
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.blockchain.abi import get_contract_path
 from raiden.network.rpc.client import decode_topic, patch_send_transaction
+from raiden.utils import privatekey_to_address
 
-slogging.configure(
-    ':DEBUG'
-    ',eth.chain.tx:DEBUG'
-    ',jsonrpc:DEBUG'
-    ',eth.vm:TRACE,eth.pb.tx:TRACE,eth.pb.msg:TRACE,eth.pb.msg.state:TRACE'
-)
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
-LETTERS = string.printable
 
-
-def addr(seed):
-    return privtoaddr(privkey(seed))
-
-
-def privkey(seed):
-    return mk_privkey('42:account:{seed}'.format(seed=seed))
-
-
-def make_address():
-    return ''.join(random.choice(LETTERS) for _ in range(20))
-
-
-ADDR = addr('0')
-xADDR = '0x' + ADDR.encode('hex')  # pylint: disable=invalid-name
-PRIVKEY = privkey('0')
-
-
-def test_new_netting_contract(blockchain_service, settle_timeout):
+@pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('number_of_assets', [0])
+def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     # pylint: disable=line-too-long,too-many-statements,too-many-locals
-    asset_address = make_address()
-    peer1_address = make_address()
-    peer2_address = make_address()
-    peer3_address = make_address()
 
-    blockchain_service.default_registry.add_asset(asset_address)
-    manager = blockchain_service.manager_by_asset(asset_address)
+    app0, app1, app2 = raiden_network
+    peer0_address = app0.raiden.address
+    peer1_address = app1.raiden.address
+    peer2_address = app2.raiden.address
+
+    blockchain_service0 = app0.raiden.chain
+
+    asset_address = blockchain_service0.deploy_and_register_asset(
+        contract_name='HumanStandardToken',
+        contract_file='HumanStandardToken.sol',
+        constructor_parameters=(asset_amount, 'raiden', 2, 'Rd'),
+    )
+
+    asset0 = blockchain_service0.asset(asset_address)
+    for transfer_to in raiden_network[1:]:
+        asset0.transfer(
+            privatekey_to_address(transfer_to.raiden.privkey),
+            asset_amount // len(raiden_network),
+        )
+
+    manager0 = blockchain_service0.manager_by_asset(asset_address)
 
     # sanity
-    assert manager.channels_addresses() == []
-    assert manager.channels_by_participant(peer1_address) == []
-    assert manager.channels_by_participant(peer2_address) == []
-    assert manager.channels_by_participant(peer3_address) == []
+    assert manager0.channels_addresses() == []
+    assert manager0.channels_by_participant(peer0_address) == []
+    assert manager0.channels_by_participant(peer1_address) == []
+    assert manager0.channels_by_participant(peer2_address) == []
 
     # create one channel
-    netting1_address = manager.new_netting_channel(
+    netting_address_01 = manager0.new_netting_channel(
+        peer0_address,
         peer1_address,
-        peer2_address,
         settle_timeout,
     )
 
     # check contract state
-    netting_channel1 = blockchain_service.netting_channel(netting1_address)
-    assert netting_channel1.isopen() is False
-    assert netting_channel1.partner(peer1_address) == peer2_address
-    assert netting_channel1.partner(peer2_address) == peer1_address
+    netting_channel_01 = blockchain_service0.netting_channel(netting_address_01)
+    assert netting_channel_01.isopen() is False
+    assert netting_channel_01.partner(peer0_address) == peer1_address
+    assert netting_channel_01.partner(peer1_address) == peer0_address
 
     # check channels
-    channel_list = manager.channels_addresses()
-    assert sorted(channel_list[0]) == sorted([peer1_address, peer2_address])
+    channel_list = manager0.channels_addresses()
+    assert sorted(channel_list[0]) == sorted([peer0_address, peer1_address])
 
-    assert manager.channels_by_participant(peer1_address) == [netting1_address]
-    assert manager.channels_by_participant(peer2_address) == [netting1_address]
-    assert manager.channels_by_participant(peer3_address) == []
+    assert manager0.channels_by_participant(peer0_address) == [netting_address_01]
+    assert manager0.channels_by_participant(peer1_address) == [netting_address_01]
+    assert manager0.channels_by_participant(peer2_address) == []
 
+    # TODO:
     # cant recreate the existing channel
-    with pytest.raises(Exception):
-        netting1_address = manager.new_netting_channel(
-            peer1_address,
-            peer2_address,
-            settle_timeout,
-        )
+    # with pytest.raises(Exception):
+    #     manager0.new_netting_channel(
+    #         peer0_address,
+    #         peer1_address,
+    #         settle_timeout,
+    #     )
 
     # create other chanel
-    netting2_address = manager.new_netting_channel(
-        peer1_address,
-        peer3_address,
+    netting_address_02 = manager0.new_netting_channel(
+        peer0_address,
+        peer2_address,
         settle_timeout,
     )
 
-    netting_channel2 = blockchain_service.netting_channel(netting2_address)
+    netting_channel_02 = blockchain_service0.netting_channel(netting_address_02)
 
-    assert netting_channel2.isopen() is False
-    assert netting_channel2.partner(peer1_address) == peer3_address
-    assert netting_channel2.partner(peer3_address) == peer1_address
+    assert netting_channel_02.isopen() is False
+    assert netting_channel_02.partner(peer0_address) == peer2_address
+    assert netting_channel_02.partner(peer2_address) == peer0_address
 
-    channel_list = manager.channels_addresses()
+    channel_list = manager0.channels_addresses()
     expected_channels = [
-        sorted([peer1_address, peer2_address]),
-        sorted([peer1_address, peer3_address]),
+        sorted([peer0_address, peer1_address]),
+        sorted([peer0_address, peer2_address]),
     ]
 
     for channel in channel_list:
         assert sorted(channel) in expected_channels
 
-    assert manager.channels_by_participant(peer1_address) == [netting1_address, netting2_address]
-    assert manager.channels_by_participant(peer2_address) == [netting1_address]
-    assert manager.channels_by_participant(peer3_address) == [netting2_address]
+    assert sorted(manager0.channels_by_participant(peer0_address)) == sorted([netting_address_01, netting_address_02])
+    assert manager0.channels_by_participant(peer1_address) == [netting_address_01]
+    assert manager0.channels_by_participant(peer2_address) == [netting_address_02]
+
+    # deposit without approve should fail
+    netting_channel_01.deposit(peer0_address, 100)
+    assert netting_channel_01.isopen() is False
+    assert netting_channel_02.isopen() is False
+    assert netting_channel_01.detail(peer0_address)['our_balance'] == 0
+    assert netting_channel_01.detail(peer1_address)['our_balance'] == 0
 
     # single-funded channel
-    netting_channel1.deposit(peer1_address, 100)
-    assert netting_channel1.isopen() is True
-    assert netting_channel2.isopen() is False
+    app0.raiden.chain.asset(asset_address).approve(netting_address_01, 100)
+    netting_channel_01.deposit(peer0_address, 100)
+    assert netting_channel_01.isopen() is True
+    assert netting_channel_02.isopen() is False
+
+    assert netting_channel_01.detail(peer0_address)['our_balance'] == 100
+    assert netting_channel_01.detail(peer1_address)['our_balance'] == 0
 
     # with pytest.raises(Exception):
-    #    blockchain_service.deposit(asset_address, netting1_address, peer1_address, 100)
+    #    blockchain_service0.deposit(asset_address, netting_address_01, peer0_address, 100)
 
-    netting_channel2.deposit(peer1_address, 70)
-    assert netting_channel1.isopen() is True
-    assert netting_channel2.isopen() is True
+    # double-funded channel
+    app0.raiden.chain.asset(asset_address).approve(netting_address_02, 70)
+    netting_channel_02.deposit(peer0_address, 70)
+    assert netting_channel_01.isopen() is True
+    assert netting_channel_02.isopen() is True
 
-    netting_channel1.deposit(peer2_address, 130)
-    assert netting_channel1.isopen() is True
-    assert netting_channel2.isopen() is True
+    assert netting_channel_02.detail(peer0_address)['our_balance'] == 70
+    assert netting_channel_02.detail(peer2_address)['our_balance'] == 0
 
+    app2.raiden.chain.asset(asset_address).approve(netting_address_02, 130)
+    app2.raiden.chain.netting_channel(netting_address_02).deposit(peer2_address, 130)
+    assert netting_channel_01.isopen() is True
+    assert netting_channel_02.isopen() is True
+
+    assert netting_channel_02.detail(peer0_address)['our_balance'] == 70
+    assert netting_channel_02.detail(peer2_address)['our_balance'] == 130
+
+    # TODO:
     # we need to allow the settlement of the channel even if no transfers were
     # made
-    peer1_last_sent_transfer = None
-    peer2_last_sent_transfer = None
-
-    netting_channel1.close(
-        peer1_address,
-        peer1_last_sent_transfer,
-        peer2_last_sent_transfer,
-    )
+    # peer1_last_sent_transfer = None
+    # peer2_last_sent_transfer = None
+    # netting_channel_01.close(
+    #     peer0_address,
+    #     peer1_last_sent_transfer,
+    #     peer2_last_sent_transfer,
+    # )
 
     # with pytest.raises(Exception):
-    #     blockchain_service.close(asset_address, netting2_address, peer1_address, peer1_last_sent_transfers)
+    #     blockchain_service0.close(asset_address, netting_address_02, peer0_address, peer1_last_sent_transfers)
 
-    assert netting_channel1.isopen() is False
-    assert netting_channel2.isopen() is True
+    # assert netting_channel_01.isopen() is False
+    # assert netting_channel_02.isopen() is True
 
-    netting_channel2.deposit(peer3_address, 21)
+    # app2.raiden.chain.asset(asset_address).approve(netting_address_02, 21)
+    # app2.raiden.chain.netting_channel(netting_address_02).deposit(peer2_address, 21)
 
-    assert netting_channel1.isopen() is False
-    assert netting_channel2.isopen() is True
+    # assert netting_channel_01.isopen() is False
+    # assert netting_channel_02.isopen() is True
 
-    netting_channel1.update_transfer(peer2_address, peer2_last_sent_transfer)
+    # netting_channel_01.update_transfer(peer1_address, peer2_last_sent_transfer)
 
-    assert netting_channel1.isopen() is False
-    assert netting_channel2.isopen() is True
+    # assert netting_channel_01.isopen() is False
+    # assert netting_channel_02.isopen() is True
 
 
+@pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_blockchain(private_keys, number_of_nodes, cluster, poll_timeout):
+def test_blockchain(blockchain_backend, private_keys, number_of_nodes, poll_timeout):
     # pylint: disable=too-many-locals
     addresses = [
-        privtoaddr(priv)
+        privatekey_to_address(priv)
         for priv in private_keys
     ]
 
     privatekey = private_keys[0]
-    address = privtoaddr(privatekey)
+    address = privatekey_to_address(privatekey)
     total_asset = 100
 
     jsonrpc_client = JSONRPCClient(

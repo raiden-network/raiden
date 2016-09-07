@@ -6,7 +6,9 @@ import time
 import tempfile
 import signal
 from subprocess import Popen, PIPE
-from ethereum.utils import sha3, privtoaddr, encode_hex
+
+from raiden.utils import privatekey_to_address
+from ethereum.utils import sha3, encode_hex
 from devp2p.crypto import privtopub as privtopub_enode
 
 from genesis_builder import mk_genesis, generate_accounts
@@ -169,7 +171,7 @@ def create_node_configuration(miner=True,
     node['nodekey'] = sha3('node:{}'.format(node_key_seed))
     node['nodekeyhex'] = encode_hex(node['nodekey'])
     node['pub'] = encode_hex(privtopub_enode(node['nodekey']))
-    node['address'] = privtoaddr(node['nodekey'])
+    node['address'] = privatekey_to_address(node['nodekey'])
     node['host'] = host
     node['port'] = port
     node['rpcport'] = rpcport

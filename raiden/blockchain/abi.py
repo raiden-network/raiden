@@ -10,8 +10,8 @@ __all__ = (
     'get_contract_path',
 
     'REGISTRY_ABI',
-    'ASSETNEW_EVENT',
-    'ASSETNEW_EVENTID',
+    'ASSETADDED_EVENT',
+    'ASSETADDED_EVENTID',
 
     'CHANNEL_MANAGER_ABI',
     'CHANNELNEW_EVENT',

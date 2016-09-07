@@ -1,12 +1,10 @@
 # -*- coding: utf8 -*-
 from __future__ import print_function
 
-from gevent import monkey
-monkey.patch_all()
-
 import signal
 import gevent
 import click
+import gevent.monkey
 from ethereum import slogging
 from pyethapp.rpc_client import JSONRPCClient
 
@@ -17,10 +15,11 @@ from raiden.network.rpc.client import BlockChainService
 from raiden.console import Console
 from raiden.utils import pex, split_endpoint
 
+gevent.monkey.patch_all()
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
-
 INITIAL_PORT = 40001
+DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
 
 
 class App(object):  # pylint: disable=too-few-public-methods
@@ -98,7 +97,7 @@ class App(object):  # pylint: disable=too-few-public-methods
     help='external "host:port" where the raiden service can be contacted on (through NAT).',
     default='',
     type=str,
-    )
+)
 @click.option(
     '--logging',
     help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
@@ -141,7 +140,7 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         use_ssl = True
         rpc_port = 443
 
-    if not ':' in endpoint:  # no port was given in url
+    if ':' not in endpoint:  # no port was given in url
         rpc_host = endpoint
     else:
         rpc_host, rpc_port = split_endpoint(endpoint)

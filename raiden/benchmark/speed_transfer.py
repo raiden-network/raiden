@@ -89,8 +89,8 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
         if i > max_locked:
             idx = i - max_locked
             secret = secrets[idx]
-            channel0.claim_locked(secret)
-            channel1.claim_locked(secret)
+            channel0.register_secret(secret)
+            channel1.register_secret(secret)
 
     elapsed = time.time() - start
     print('%d transfers per second' % (num_transfers / elapsed))

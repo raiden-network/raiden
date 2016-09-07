@@ -4,7 +4,7 @@ from __future__ import print_function
 import contextlib
 import timeit
 
-from raiden.utils import privtoaddr, sha3
+from raiden.utils import sha3, privatekey_to_address
 from raiden.messages import (
     Ack, Ping, SecretRequest, Secret, DirectTransfer, Lock, LockedTransfer,
     MediatedTransfer, RefundTransfer, TransferTimeout, ConfirmTransfer, decode,
@@ -12,7 +12,7 @@ from raiden.messages import (
 
 
 PRIVKEY = 'x' * 32
-ADDRESS = privtoaddr(PRIVKEY)
+ADDRESS = privatekey_to_address(PRIVKEY)
 HASH = sha3(PRIVKEY)
 ITERATIONS = 1000000  # timeit default
 
@@ -168,10 +168,10 @@ def benchmark_alternatives():
     import umsgpack
 
     from raiden.messages import decode, Ack, Ping, MediatedTransfer, Lock
-    from raiden.utils import privtoaddr, sha3
+    from raiden.utils import privatekey_to_address, sha3
 
     privkey = 'x' * 32
-    address = privtoaddr(privkey)
+    address = privatekey_to_address(privkey)
 
     m0 = Ping(nonce=0)
     m0.sign(privkey)

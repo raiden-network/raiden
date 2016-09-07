@@ -7,11 +7,11 @@ from pyethapp.jsonrpc import address_decoder
 from raiden.assetmanager import AssetManager
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
 from raiden.channelgraph import ChannelGraph
-from raiden.tasks import LogListenerTask
+from raiden.tasks import AlarmTask, LogListenerTask
 from raiden.encoding import messages
-from raiden.messages import Ack, SignedMessage
+from raiden.messages import SignedMessage
 from raiden.raiden_protocol import RaidenProtocol
-from raiden.utils import privtoaddr, isaddress, pex
+from raiden.utils import privatekey_to_address, isaddress, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -64,14 +64,18 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.chain = chain
         self.config = config
         self.privkey = privkey
-        self.address = privtoaddr(privkey)
+        self.address = privatekey_to_address(privkey)
         self.protocol = RaidenProtocol(transport, discovery, self)
         transport.protocol = self.protocol
 
         message_handler = RaidenMessageHandler(self)
         event_handler = RaidenEventHandler(self)
 
+        alarm = AlarmTask(chain)
+        alarm.start()
+
         self.api = RaidenAPI(self)
+        self.alarm = alarm
         self.event_handler = event_handler
         self.message_handler = message_handler
 
@@ -104,7 +108,10 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         message.sign(self.privkey)
 
-    def send(self, recipient, message):
+    def send(self, *args):
+        raise NotImplemented('use send_and_wait or send_async')
+
+    def send_async(self, recipient, message):
         """ Send `message` to `recipient` using the raiden protocol.
 
         The protocol will take care of resending the message on a given
@@ -115,9 +122,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         if not isaddress(recipient):
             raise ValueError('recipient is not a valid address.')
 
-        self.protocol.send(recipient, message)
+        return self.protocol.send_async(recipient, message)
 
-    def send_and_wait(self, recipient, message, timeout, event):
+    def send_and_wait(self, recipient, message, timeout):
         """ Send `message` to `recipient` and wait for the response or `timeout`.
 
         Args:
@@ -125,14 +132,15 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
                 message.
             message: The transfer message.
             timeout (float): How long should we wait for a response from `recipient`.
-            event (gevent.event.AsyncResult): Event that will receive the result.
 
         Returns:
             None: If the wait timed out
             object: The result from the event
         """
-        self.send(recipient, message)
-        return event.wait(timeout)
+        if not isaddress(recipient):
+            raise ValueError('recipient is not a valid address.')
+
+        self.protocol.send_and_wait(recipient, message, timeout)
 
     def message_for_task(self, message, hashlock):
         """ Sends the message to the corresponding task.
@@ -146,7 +154,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             task = asset_manager.transfermanager.transfertasks.get(hashlock)
 
             if task is not None:
-                task.on_event(message)
+                task.on_response(message)
                 return True
 
         return False
@@ -161,7 +169,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         all_manager_addresses = registry.manager_addresses()
 
+        task_name = 'Registry {}'.format(pex(registry.address))
         asset_listener = LogListenerTask(
+            task_name,
             assetadded,
             self.on_event,
             translator,
@@ -181,11 +191,13 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         # To avoid missing changes, first create the filter, call the
         # contract and then start polling.
-        channelnew = channel_manager.channelnew_filter(self.address)
+        channelnew = channel_manager.channelnew_filter()
 
         all_netting_contracts = channel_manager.channels_by_participant(self.address)
 
+        task_name = 'ChannelManager {}'.format(pex(channel_manager.address))
         channel_listener = LogListenerTask(
+            task_name,
             channelnew,
             self.on_event,
             translator,
@@ -288,10 +300,12 @@ class RaidenAPI(object):
 
         return netting_channel
 
-    def transfer(self, asset_address, amount, target, callback=None):
+    def transfer_and_wait(self, asset_address, amount, target, callback=None, timeout=None):
         """ Do a transfer with `target` with the given `amount` of `asset_address`. """
-        task = self.transfer_async(asset_address, amount, target, callback)
-        task.join()
+        async_result = self.transfer_async(asset_address, amount, target, callback)
+        return async_result.wait(timeout=timeout)
+
+    transfer = transfer_and_wait  # expose a synchronous interface to the user
 
     def transfer_async(self, asset_address, amount, target, callback=None):
         if not isinstance(amount, (int, long)):
@@ -315,8 +329,8 @@ class RaidenAPI(object):
             raise NoPathError('No path to address found')
 
         transfer_manager = self.raiden.managers_by_asset_address[asset_address_bin].transfermanager
-        task = transfer_manager.transfer(amount, target_bin, callback=callback)
-        return task
+        async_result = transfer_manager.transfer_async(amount, target_bin, callback=callback)
+        return async_result
 
     def close(self, asset_address, partner_address):
         """ Close a channel opened with `partner_address` for the given `asset_address`. """
@@ -386,7 +400,7 @@ class RaidenMessageHandler(object):
         self.raiden = raiden
 
     def on_message(self, message, msghash):
-        """ Handles `message` and sends a ACK on success. """
+        """ Handles `message` and sends an ACK on success. """
         cmdid = message.cmdid
 
         # using explicity dispatch to make the code grepable
@@ -419,16 +433,6 @@ class RaidenMessageHandler(object):
 
         else:
             raise Exception("Unknow cmdid '{}'.".format(cmdid))
-
-        ack = Ack(
-            self.raiden.address,
-            msghash,
-        )
-
-        self.raiden.protocol.send_ack(
-            message.sender,
-            ack,
-        )
 
     def message_ping(self, message):
         log.info('ping received')
@@ -468,40 +472,40 @@ class RaidenEventHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
 
-    def on_event(self, emitting_contract_address, event):  # pylint: disable=unused-argument
+    def on_event(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
         log.debug(
             'event received',
             type=event['_event_type'],
-            contract=emitting_contract_address,
+            contract=pex(emitting_contract_address_bin),
         )
 
         if event['_event_type'] == 'AssetAdded':
-            self.event_assetadded(emitting_contract_address, event)
+            self.event_assetadded(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelNew':
-            self.event_channelnew(emitting_contract_address, event)
+            self.event_channelnew(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelNewBalance':
-            self.event_channelnewbalance(emitting_contract_address, event)
+            self.event_channelnewbalance(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelClosed':
-            self.event_channelclosed(emitting_contract_address, event)
+            self.event_channelclosed(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelSettled':
-            self.event_channelsettled(emitting_contract_address, event)
+            self.event_channelsettled(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelSecretRevealed':
-            self.event_channelsecretrevealed(emitting_contract_address, event)
+            self.event_channelsecretrevealed(emitting_contract_address_bin, event)
 
         else:
             log.error('Unknown event {}'.format(repr(event)))
 
-    def event_assetadded(self, registry_address, event):
-        manager_address = address_decoder(event['channelManagerAddress'])
-        manager = self.raiden.chain.manager(manager_address)
+    def event_assetadded(self, registry_address_bin, event):
+        manager_address_bin = address_decoder(event['channelManagerAddress'])
+        manager = self.raiden.chain.manager(manager_address_bin)
         self.raiden.register_channel_manager(manager)
 
-    def event_channelnew(self, manager_address, event):  # pylint: disable=unused-argument
+    def event_channelnew(self, manager_address_bin, event):  # pylint: disable=unused-argument
         if address_decoder(event['participant1']) != self.raiden.address and address_decoder(event['participant2']) != self.raiden.address:
             log.info('ignoring new channel, this is node is not a participant.')
             return
@@ -509,7 +513,7 @@ class RaidenEventHandler(object):
         netting_channel_address_bin = address_decoder(event['nettingChannel'])
 
         # shouldnt raise, filters are installed only for registered managers
-        asset_manager = self.raiden.get_manager_by_address(manager_address)
+        asset_manager = self.raiden.get_manager_by_address(manager_address_bin)
         asset_manager.register_channel_by_address(
             netting_channel_address_bin,
             self.raiden.config['reveal_timeout'],
@@ -518,7 +522,7 @@ class RaidenEventHandler(object):
         log.info(
             'New channel created',
             channel_address=event['nettingChannel'],
-            manager_address=encode_hex(manager_address),
+            manager_address=pex(manager_address_bin),
         )
 
     def event_channelnewbalance(self, netting_contract_address_bin, event):
@@ -534,26 +538,18 @@ class RaidenEventHandler(object):
             channel_state.update_contract_balance(event['balance'])
 
         if channel.external_state.opened_block == 0:
-            channel.external_state.opened_block = event['blockNumber']
+            channel.external_state.set_opened(event['blockNumber'])
 
     def event_channelclosed(self, netting_contract_address_bin, event):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.closed_block = event['blockNumber']
-
-        channel.external_state.netting_channel.update_transfer(
-            channel.our_state.address,
-            channel.received_transfers[-1],
-        )
-
-        # TODO: unlock
+        channel.external_state.set_closed(event['blockNumber'])
 
     def event_channelsettled(self, netting_contract_address_bin, event):
         log.debug("channel settle event received",
-                  netting_contract=netting_contract_address_bin.encode('hex'),
+                  netting_contract=pex(netting_contract_address_bin),
                   event=event)
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.settled_block = event['blockNumber']
-        log.debug("set channel.external_state.settled_block", settled_block=event['blockNumber'])
+        channel.external_state.set_settled(event['blockNumber'])
 
     def event_channelsecretrevealed(self, netting_contract_address_bin, event):
         channel = self.raiden.chain.netting_channel(netting_contract_address_bin)

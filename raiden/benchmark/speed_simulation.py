@@ -17,8 +17,8 @@ import networkx
 from raiden.app import App, DEFAULT_SETTLE_TIMEOUT
 from raiden.network.discovery import Discovery
 from raiden.network.rpc.client import BlockChainService
-from raiden.utils import privtoaddr, sha3
-from raiden.tests.utils.network import DEFAULT_DEPOSIT
+from raiden.utils import sha3, privatekey_to_address
+from raiden.tests.fixtures.variables import DEFAULT_DEPOSIT
 
 TRANSFER_AMOUNT = 1
 ASSET_ADDRESS = sha3('tps')[:20]
@@ -28,7 +28,7 @@ def hostport_to_privkeyaddr(host, port):
     """ Return `(private key, address)` deterministically generated. """
     myip_port = '{}:{}'.format(host, port)
     privkey = sha3(myip_port)
-    addr = privtoaddr(privkey)
+    addr = privatekey_to_address(privkey)
 
     return privkey, addr
 
@@ -98,7 +98,7 @@ def setup_tps(rpc_server, config_path, channelmanager_address, asset_address,
     node_addresses = []
     for node in config['nodes']:
         privkey = sha3('{}:{}'.format(node['host'], node['port']))
-        node_addresses.append(privtoaddr(privkey))
+        node_addresses.append(privatekey_to_address(privkey))
 
     random_raiden_network(
         asset_address,
@@ -155,13 +155,13 @@ def tps_run(host, port, config, rpc_server, channelmanager_address,
 
     for asset_address in blockchain_service.asset_addresses:
         all_netting_contracts = blockchain_service.nettingaddresses_by_asset_participant(
-            asset,
+            asset_address,
             app.raiden.address,
         )
 
         for netting_contract_address in all_netting_contracts:
             app.raiden.setup_channel(
-                asset,
+                asset_address,
                 netting_contract_address,
                 app.config['reveal_timeout'],
             )

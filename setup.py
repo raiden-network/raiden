@@ -29,12 +29,14 @@ with open('README.md') as readme_file:
 history = ''
 
 
-install_requires = set(x.strip() for x in open('requirements.txt'))
 install_requires_replacements = {
     'https://github.com/HydraChain/hydrachain/tarball/develop': 'hydrachain',
 }
 
-install_requires = [install_requires_replacements.get(r, r) for r in install_requires]
+install_requires = list(set(
+    install_requires_replacements.get(requirement.strip(), requirement.strip())
+    for requirement in open('requirements.txt')
+))
 
 test_requirements = []
 
@@ -45,14 +47,14 @@ setup(
     version=version,
     description="",
     long_description=readme + '\n\n' + history,
-    author="HeikoHeiko",
+    author='HeikoHeiko',
     author_email='heiko@brainbot.com',
     url='https://github.com/heikoheiko/raiden',
     packages=[
         'raiden'
     ],
     include_package_data=True,
-    license="BSD",
+    license='BSD',
     zip_safe=False,
     keywords='raiden',
     classifiers=[

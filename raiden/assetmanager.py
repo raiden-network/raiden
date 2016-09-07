@@ -5,7 +5,7 @@ from ethereum import slogging
 from ethereum.abi import ContractTranslator
 from ethereum.utils import sha3
 
-from raiden.channel import Channel, ChannelEndState, ChannelExternalState, InvalidSecret
+from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.blockchain.abi import NETTING_CHANNEL_ABI
 from raiden.transfermanager import TransferManager
 from raiden.messages import Secret
@@ -88,29 +88,37 @@ class AssetManager(object):
         # once from the status received from the netting contract and once from
         # the event, to avoid problems the we use the balance instead of the
         # deposit is used.
+        task_name = 'ChannelNewBalance {}'.format(pex(netting_channel.address))
         newbalance = netting_channel.channelnewbalance_filter()
         newbalance_listener = LogListenerTask(
+            task_name,
             newbalance,
             self.raiden.on_event,
             translator,
         )
 
+        task_name = 'ChannelSecretRevelead {}'.format(pex(netting_channel.address))
         secretrevealed = netting_channel.channelsecretrevealed_filter()
         secretrevealed_listener = LogListenerTask(
+            task_name,
             secretrevealed,
             self.raiden.on_event,
             translator,
         )
 
+        task_name = 'ChannelClosed {}'.format(pex(netting_channel.address))
         close = netting_channel.channelclosed_filter()
         close_listener = LogListenerTask(
+            task_name,
             close,
             self.raiden.on_event,
             translator,
         )
 
+        task_name = 'ChannelSettled {}'.format(pex(netting_channel.address))
         settled = netting_channel.channelsettled_filter()
         settled_listener = LogListenerTask(
+            task_name,
             settled,
             self.raiden.on_event,
             translator,
@@ -127,6 +135,7 @@ class AssetManager(object):
         )
 
         external_state = ChannelExternalState(
+            self.raiden.alarm.register_callback,
             self.register_channel_for_hashlock,
             self.raiden.chain.block_number,
             netting_channel,
@@ -166,7 +175,7 @@ class AssetManager(object):
         if channel not in channels_registered:
             channels_registered.append(channel)
 
-    def register_secret(self, secret):
+    def handle_secret(self, secret):
         """ Handle a secret that could be received from a Secret message or a
         ChannelSecretRevealed event.
         """
@@ -179,17 +188,33 @@ class AssetManager(object):
         while channels_reveal:
             reveal_to = channels_reveal.pop()
 
-            # send the secret to all channels registered, including the next
-            # hop that might be the node that informed us about the secret
-            self.raiden.send(reveal_to.partner_state.address, secret_message)
+            # critical read/write section
+            # The channel and it's queue must be changed in sync, a transfer
+            # must not be created and the balance_proof must not be changed
+            # while we update the state (relaying on the GIL and non-blocing
+            # apis instead of an explicit lock).
 
-            # update the channel by claiming the locked transfers
-            try:
-                reveal_to.claim_locked(secret)
-            except InvalidSecret:
-                log.error('claiming lock failed')
+            # If we created the mediated transfer update our local state and
+            # notify our partner to do the same, this operation needs to be
+            # synchronized with the merkletree of locks to inhibit locksroot
+            # conflicts.
+            if reveal_to.partner_state.balance_proof.is_pending(hashlock):
+                reveal_to.claim_lock(secret)
+                self.raiden.send_async(reveal_to.partner_state.address, secret_message)
 
-        assert len(self.hashlock_channel[hashlock]) == 0
+            # Otherwise we received the transfer, reveal it to the
+            # originating_channel so that it can update it's internal state and
+            # allow us to update too.
+            elif reveal_to.our_state.balance_proof.is_pending(hashlock):
+                # register the secret so that a balance proof can be generated
+                reveal_to.register_secret(secret)
+                self.raiden.send_async(reveal_to.partner_state.address, secret_message)
+
+            else:
+                log.error('No corresponding hashlock for the given secret.')
+
+        # delete the list it wont ever be used again (unless we have a sha3
+        # colision)
         del self.hashlock_channel[hashlock]
 
     def channel_isactive(self, partner_address):

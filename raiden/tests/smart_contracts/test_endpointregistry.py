@@ -1,66 +1,30 @@
 # -*- coding: utf8 -*-
 import pytest
-
-import gevent
 from ethereum import tester
-from ethereum.slogging import configure
 
-from raiden.network.discovery import ContractDiscovery, Discovery
 from raiden.blockchain.abi import get_contract_path
 
-configure(':DEBUG')
 
+def test_endpointregistry(tester_state, tester_events):
+    account0 = tester.DEFAULT_ACCOUNT
+    sender = account0.encode('hex')
 
-def test_endpointregistry():
-    registry_contract_path = get_contract_path('EndpointRegistry.sol')
-    events = []
-    state = tester.state()
-    assert state.block.number < 1150000
-    state.block.number = 1158001
-    assert state.block.number > 1150000
-    sender = tester.a0.encode('hex')
-    registry_contract = state.abi_contract(
+    endpointregistry_path = get_contract_path('EndpointRegistry.sol')
+    registry_contract = tester_state.abi_contract(
         None,
-        path=registry_contract_path,
+        path=endpointregistry_path,
         language='solidity',
-        log_listener=events.append,
+        log_listener=tester_events.append,
     )
-    sender = tester.a0.encode('hex')
+
     registry_contract.registerEndpoint('127.0.0.1:4001')
     assert registry_contract.findAddressByEndpoint('127.0.0.1:4001') == sender
     assert registry_contract.findEndpointByAddress(sender) == '127.0.0.1:4001'
+
     registry_contract.registerEndpoint('192.168.0.1:4002')
     assert registry_contract.findAddressByEndpoint('192.168.0.1:4002') == sender
     assert registry_contract.findEndpointByAddress(sender) == '192.168.0.1:4002'
-    assert len(events) == 2
-    assert events[0]['_event_type'] == 'AddressRegistered'
-    assert events[1]['_event_type'] == 'AddressRegistered'
 
-
-@pytest.mark.parametrize('number_of_nodes', [1])
-@pytest.mark.parametrize('poll_timeout', [80])
-@pytest.mark.parametrize('local', [True, False])
-def test_api_compliance(discovery_blockchain, local):
-    contract_discovery_instance, address = discovery_blockchain
-    if local:
-        contract_discovery_instance = Discovery()
-        assert isinstance(contract_discovery_instance, Discovery)
-    else:
-        assert isinstance(contract_discovery_instance, ContractDiscovery)
-
-    # test that `get` for unknown address raises KeyError
-    with pytest.raises(KeyError):
-        assert contract_discovery_instance.get(('01' * 20).decode('hex')) is None
-
-    assert contract_discovery_instance.nodeid_by_host_port(('127.0.0.1', 44444)) is None
-
-    # test, that `update_endpoint` and 'classic' `register` do the same
-    contract_discovery_instance.register(address, '127.0.0.1', 44444)
-    not local and gevent.sleep(30)
-    assert contract_discovery_instance.nodeid_by_host_port(('127.0.0.1', 44444)) == address
-    assert contract_discovery_instance.get(address) == ('127.0.0.1', 44444)
-    # test, that `register`ing twice does update do the same
-    contract_discovery_instance.register(address, '127.0.0.1', 88888)
-    not local and gevent.sleep(30)
-    assert contract_discovery_instance.nodeid_by_host_port(('127.0.0.1', 88888)) == address
-    assert contract_discovery_instance.get(address) == ('127.0.0.1', 88888)
+    assert len(tester_events) == 2
+    assert tester_events[0]['_event_type'] == 'AddressRegistered'
+    assert tester_events[1]['_event_type'] == 'AddressRegistered'

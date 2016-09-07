@@ -1,17 +1,17 @@
 # -*- coding: utf8 -*-
-import warnings
-
 from ethereum.slogging import getLogger
 
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
-from raiden.utils import sha3, ishash, big_endian_to_int, pex
+from raiden.encoding.messages import LocksrootRejected as LocksrootRejectedNamedbuffer
+from raiden.encoding.messages import secret as secret_field
+from raiden.encoding.messages import signature as signature_field
+from raiden.utils import publickey_to_address, sha3, ishash, big_endian_to_int, pex
 
 __all__ = (
-    'BaseError',
     'Ack',
     'Ping',
-    # 'Rejected',
+    'LocksrootRejected',
     'SecretRequest',
     'Secret',
     'DirectTransfer',
@@ -26,32 +26,6 @@ __all__ = (
 log = getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class BaseError(Exception):
-    errorid = 0
-    echo = ''
-    error_map = dict()
-
-    def __init__(self, msg_or_echo, *args):
-        if isinstance(msg_or_echo, SignedMessage):
-            self.echo = msg_or_echo.hash
-        else:
-            assert ishash(msg_or_echo)
-            self.echo = msg_or_echo
-        super(BaseError, self).__init__(*args)
-
-    # def asmessage(self):
-    #     return Rejected(self.echo, self.errorid, *self.args)
-
-    @classmethod
-    def register(cls):
-        assert issubclass(cls, BaseError)
-        BaseError.error_map[cls.errorid] = cls
-
-BaseError.register()
-
-# pylint: disable=too-few-public-methods,too-many-arguments
-
-
 class MessageHashable(object):
     pass
 
@@ -61,7 +35,6 @@ class Message(MessageHashable):
 
     @property
     def hash(self):
-        warnings.warn('Expensive comparison called')
         packed = self.packed()
         return sha3(packed.data)
 
@@ -117,13 +90,13 @@ class SignedMessage(Message):
         field = packed.fields_spec[-1]
         assert field.name == 'signature', 'signature is not the last field'
 
-        message_data = packed.data[:-field.size_bytes]
+        message_data = packed.data[:-field.size_bytes]  # XXX: this slice must be from the end of the buffer
         signature, public_key = signing.sign(message_data, private_key)
 
-        packed.signature = signature
+        packed.data[-field.size_bytes:] = signature
 
-        self.sender = signing.address_from_key(public_key)
-        self.signature = packed.signature
+        self.sender = publickey_to_address(public_key)
+        self.signature = signature
 
     @classmethod
     def decode(cls, data):
@@ -134,7 +107,7 @@ class SignedMessage(Message):
 
         packed, public_key = result
         message = cls.unpack(packed)  # pylint: disable=no-member
-        message.sender = signing.address_from_key(public_key)
+        message.sender = publickey_to_address(public_key)
         return message
 
 
@@ -182,33 +155,65 @@ class Ping(SignedMessage):
         packed.signature = self.signature
 
 
-# class Rejected(SignedMessage):
-#     """ All rejected messages should be confirmed by a `Rejected` which
-#     echoes the orginals Message hash.
-#     """
-#
-#     cmdid = messages.REJECT
-#
-#     def __init__(self, echo, errorid, *args):
-#         self.echo = echo
-#         self.errorid = errorid
-#         self.args = args
-#
-#     def aserror(self):
-#         cls = BaseError[self.errorid]
-#         return cls(self.echo, *self.args)
-#
-#     @staticmethod
-#     def unpack(packed):
-#         rejected =  Rejected(packed.echo, packed.errorid, *packed.args)
-#         rejected.signature = packed.signature
-#         return rejected
-#
-#     def pack(self, packed):
-#         packed.echo = self.echo
-#         packed.errorid = self.errorid
-#         packed.args = self.args
-#         packed.signature = self.signature
+class LocksrootRejected(SignedMessage):
+    """ If there is a locksroot mismatch this message needs to be sent to
+    inform the partner.
+
+    Upon receiving this message a node must update all it's secrets and
+    recreating all transfers that are pending Acknowledgment.
+    """
+
+    cmdid = messages.LOCKSROOT_REJECTED
+
+    def __init__(self, echo):
+        super(LocksrootRejected, self).__init__()
+        self.echo = echo
+        self.secrets = list()
+
+    @staticmethod
+    def unpack(packed):
+        rejected = LocksrootRejected(packed.echo)
+        rejected.signature = packed.data[-signature_field.size_bytes:]  # XXX: this slice must be from the end of the buffer
+
+        # LocksrootRejected.size includes the signature size
+        start = LocksrootRejectedNamedbuffer.size - signature_field.size_bytes
+
+        while start < len(packed.data) - signature_field.size_bytes:
+            end = start + secret_field.size_bytes
+            secret = packed.data[start:end]
+            rejected.secrets.append(secret)
+            start = end
+
+        return rejected
+
+    def pack(self, packed):
+        packed.echo = self.echo
+
+    def packed(self):
+        size = LocksrootRejectedNamedbuffer.size + len(self.secrets) * secret_field.size_bytes
+
+        if size > 1200:  # RaidenProtocol.max_message_size:
+            log.error('cannot encode all the secrets, the resulting packed would be too large and ignored')
+            raise RuntimeError('cannot encode all the secrets, the resulting packed would be too large and ignored')
+
+        data = bytearray(size)
+        data[0] = self.cmdid
+
+        if self.signature:
+            data[-signature_field.size_bytes:] = self.signature
+
+        packed = LocksrootRejectedNamedbuffer(data)
+        self.pack(packed)
+
+        # LocksrootRejectedNamedbuffer.size includes the signature size
+        start = LocksrootRejectedNamedbuffer.size - signature_field.size_bytes
+
+        for pos, secret in enumerate(self.secrets):
+            end = start + secret_field.size_bytes
+            data[start:end] = secret
+            start = end
+
+        return packed
 
 
 class SecretRequest(SignedMessage):
@@ -278,20 +283,17 @@ class DirectTransfer(SignedMessage):
         recipient: The address of raiden node participating in the channel.
         locksroot: The root of a merkle tree which records the current
             outstanding locks.
-        secret: If provided allows to settle a formerly locked transfer,
-            the given secret is already reflected in the locksroot.
     """
 
     cmdid = messages.DIRECTTRANSFER
 
-    def __init__(self, nonce, asset, transfered_amount, recipient, locksroot, secret=None):
+    def __init__(self, nonce, asset, transfered_amount, recipient, locksroot):
         super(DirectTransfer, self).__init__()
         self.nonce = nonce
         self.asset = asset
         self.transfered_amount = transfered_amount  #: total amount of asset sent to partner
         self.recipient = recipient  #: partner's address
         self.locksroot = locksroot  #: the merkle root that represent all pending locked transfers
-        self.secret = secret or ''  #: secret for settling a locked amount
 
     @staticmethod
     def unpack(packed):
@@ -301,7 +303,6 @@ class DirectTransfer(SignedMessage):
             packed.transfered_amount,
             packed.recipient,
             packed.locksroot,
-            packed.secret,
         )
         transfer.signature = packed.signature
 
@@ -313,7 +314,6 @@ class DirectTransfer(SignedMessage):
         packed.transfered_amount = self.transfered_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
-        packed.secret = self.secret
         packed.signature = self.signature
 
 
@@ -499,6 +499,17 @@ class MediatedTransfer(LockedTransfer):
         self.fee = fee
         self.initiator = initiator
 
+    def __repr__(self):
+        return '<{} [asset:{} nonce:{} transfered_amount:{} lock_amount:{} hash:{} locksroot:{}]>'.format(
+            self.__class__.__name__,
+            pex(self.asset),
+            self.nonce,
+            self.transfered_amount,
+            self.lock.amount,
+            pex(self.hash),
+            pex(self.locksroot),
+        )
+
     @staticmethod
     def unpack(packed):
         lock = Lock(
@@ -635,7 +646,7 @@ class ConfirmTransfer(SignedMessage):
 CMDID_TO_CLASS = {
     messages.ACK: Ack,
     messages.PING: Ping,
-    # REJECTED: Rejected,
+    messages.LOCKSROOT_REJECTED: LocksrootRejected,
     messages.SECRETREQUEST: SecretRequest,
     messages.SECRET: Secret,
     messages.DIRECTTRANSFER: DirectTransfer,

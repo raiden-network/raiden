@@ -21,6 +21,9 @@ contract NettingChannelContract {
         uint timeout)
         settleTimeoutNotTooLow(timeout)
     {
+        if (participant1 == participant2) {
+            throw;
+        }
 
         data.participants[0].nodeAddress = participant1;
         data.participants[1].nodeAddress = participant2;
@@ -29,7 +32,7 @@ contract NettingChannelContract {
         data.settleTimeout = timeout;
     }
 
-    function deposit(uint256 amount) {
+    function deposit(uint256 amount) returns (bool) {
         bool success;
         uint256 balance;
 
@@ -38,6 +41,8 @@ contract NettingChannelContract {
         if (success == true) {
             ChannelNewBalance(data.token, msg.sender, balance, data.opened);
         }
+
+        return success;
     }
 
     function partner(address one_address) constant returns (address) {

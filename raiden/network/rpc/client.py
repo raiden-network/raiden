@@ -1,20 +1,16 @@
 # -*- coding: utf8 -*-
-import string
-import random
-from collections import defaultdict
-from itertools import count
-
+import gevent
 import rlp
 from ethereum import slogging
 from ethereum import _solidity
 from ethereum.transactions import Transaction
-from ethereum.utils import denoms, privtoaddr, int_to_big_endian, encode_hex, normalize_address
+from ethereum.utils import denoms, int_to_big_endian, encode_hex, normalize_address
 from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
-from pyethapp.rpc_client import topic_encoder
+from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 
 from raiden import messages
-from raiden.utils import isaddress, pex
-from raiden.blockchain.net_contract import NettingChannelContract
+from raiden.blockchain.abi import get_contract_path
+from raiden.utils import pex, isaddress, privatekey_to_address
 from raiden.blockchain.abi import (
     HUMAN_TOKEN_ABI,
     CHANNEL_MANAGER_ABI,
@@ -30,17 +26,30 @@ from raiden.blockchain.abi import (
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-LETTERS = string.printable
-MOCK_REGISTRY_ADDRESS = '7265676973747279726567697374727972656769'
 
 GAS_LIMIT = 3141592  # Morden's gasLimit.
 GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
 GAS_PRICE = denoms.shannon * 20
 
-FILTER_ID_GENERATOR = count()
 DEFAULT_POLL_TIMEOUT = 60
 
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
+
+# Coding standard for this module:
+#
+# We have addtional Mock implementation that are quite usefull for testing
+# purposes, since all implementations need to work with the same code bases
+# their interfaces must match exactly, so be sure to reflect the change from
+# one into another. [tests/utils/*_client.py]
+#
+# The Json RPC implementation is based upon the pyethapp.rpc_client, this
+# client exposes object proxies for calling a contract as a usual python
+# object, for this module it was opted to expose a _synchronous_ interface to
+# the user by default, this interface should send the transaction, poll for
+# it's execution and if possible check if it was sucessfully executed, if not
+# report an error. Also, it was chosen to use an explicit coding, not reallying
+# on the `constant` modifier for `call`s and explicity passing the available
+# gas for the transaction and it's value.
 
 
 def patch_send_transaction(client, nonce_offset=0):
@@ -53,7 +62,7 @@ def patch_send_transaction(client, nonce_offset=0):
     except:
         patch_necessary = True
 
-    def send_transaction(sender, to, value=0, data='', startgas=3141592,
+    def send_transaction(sender, to, value=0, data='', startgas=GAS_LIMIT,
                          gasprice=GAS_PRICE, nonce=None):
         """Custom implementation for `pyethapp.rpc_client.JSONRPCClient.send_transaction`.
         This is necessary to support other remotes that don't support pyethapp's extended specs.
@@ -83,10 +92,6 @@ def new_filter(jsonrpc_client, contract_address, topics):
     return jsonrpc_client.call('eth_newFilter', json_data)
 
 
-def make_address():
-    return bytes(''.join(random.choice(LETTERS) for _ in range(20)))
-
-
 def decode_topic(topic):
     return int(topic[2:], 16)
 
@@ -95,17 +100,39 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes,unused-argument
 
-    def __init__(self, jsonrpc_client, registry_address, poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def __init__(self, privatekey_bin, registry_address, poll_timeout=DEFAULT_POLL_TIMEOUT, **kwargs):
         self.address_asset = dict()
         self.address_manager = dict()
         self.address_contract = dict()
         self.address_registry = dict()
         self.asset_manager = dict()
 
+        # if this object fells like a problem for testing consider using one of
+        # the mock blockchains
+        jsonrpc_client = JSONRPCClient(
+            privkey=privatekey_bin,
+            print_communication=kwargs.get('print_communication', False),
+        )
+        patch_send_transaction(jsonrpc_client)
+
         self.client = jsonrpc_client
+        self.private_key = privatekey_bin
+        self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
-        patch_send_transaction(self.client)
         self.default_registry = self.registry(registry_address)
+
+    def block_number(self):
+        return self.client.blocknumber()
+
+    def next_block(self):
+        target_block_number = self.block_number() + 1
+        current_block = target_block_number
+
+        while not current_block >= target_block_number:
+            current_block = self.block_number()
+            gevent.sleep(0.5)
+
+        return current_block
 
     def asset(self, asset_address):
         """ Return a proxy to interact with an asset. """
@@ -174,11 +201,36 @@ class BlockChainService(object):
 
         return self.address_registry[registry_address]
 
-    def block_number(self):
-        return self.client.blocknumber()
-
     def uninstall_filter(self, filter_id_raw):
         self.client.call('eth_uninstallFilter', filter_id_raw)
+
+    def deploy_contract(self, contract_name, contract_file, constructor_parameters=None):
+        contract_path = get_contract_path(contract_file)
+        contracts = _solidity.compile_file(contract_path, libraries=dict())
+
+        log.info('Deploying "{}" contract'.format(contract_file))
+
+        proxy = self.client.deploy_solidity_contract(
+            self.node_address,
+            contract_name,
+            contracts,
+            dict(),
+            constructor_parameters,
+            timeout=self.poll_timeout,
+        )
+        return proxy.address
+
+    def deploy_and_register_asset(self, contract_name, contract_file, constructor_parameters=None):
+        assert self.default_registry
+
+        token_address = self.deploy_contract(
+            contract_name,
+            contract_file,
+            constructor_parameters,
+        )
+        self.default_registry.add_asset(token_address)  # pylint: disable=no-member
+
+        return token_address
 
 
 class Filter(object):
@@ -225,18 +277,18 @@ class Asset(object):
                  gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
         result = jsonrpc_client.call(
             'eth_getCode',
-            asset_address.encode('hex'),
+            address_encoder(asset_address),
             'latest',
         )
 
         if result == '0x':
             raise ValueError('Address given for asset {} does not contain code'.format(
-                asset_address.encode('hex'),
+                address_encoder(asset_address),
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
             HUMAN_TOKEN_ABI,
-            asset_address.encode('hex'),
+            address_encoder(asset_address),
         )
 
         self.address = asset_address
@@ -248,6 +300,10 @@ class Asset(object):
 
     def approve(self, contract_address, allowance):
         """ Aprove `contract_address` to transfer up to `deposit` amount of token. """
+        # TODO: check that `contract_address` is a netting channel and that
+        # `self.address` is one of the participants (maybe add this logic into
+        # `NettingChannel` and keep this straight forward)
+
         transaction_hash = self.proxy.approve.transact(
             contract_address,
             allowance,
@@ -260,24 +316,34 @@ class Asset(object):
         """ Return the balance of `address`. """
         return self.proxy.balanceOf.call(address)
 
+    def transfer(self, to_address, amount):
+        transaction_hash = self.proxy.transfer.transact(  # pylint: disable=no-member
+            to_address,
+            amount,
+            startgas=self.startgas,
+            gasprice=self.gasprice,
+        )
+        self.client.poll(transaction_hash.decode('hex'))
+        # TODO: check Transfer event
+
 
 class Registry(object):
     def __init__(self, jsonrpc_client, registry_address, startgas=GAS_LIMIT,  # pylint: disable=too-many-arguments
                  gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
         result = jsonrpc_client.call(
             'eth_getCode',
-            registry_address.encode('hex'),
+            address_encoder(registry_address),
             'latest',
         )
 
         if result == '0x':
             raise ValueError('Asset address {} does not contain code'.format(
-                registry_address.encode('hex'),
+                address_encoder(registry_address),
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
             REGISTRY_ABI,
-            registry_address.encode('hex'),
+            address_encoder(registry_address),
         )
 
         self.address = registry_address
@@ -292,16 +358,28 @@ class Registry(object):
         return self.proxy.channelManagerByAsset.call(asset_address)
 
     def add_asset(self, asset_address):
-        transaction_hash = self.proxy.addAsset(
+        transaction_hash = self.proxy.addAsset.transact(
             asset_address,
             startgas=self.startgas,
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
-        return self.proxy.channelManagerByAsset.call(
+        channel_manager_address_encoded = self.proxy.channelManagerByAsset.call(
             asset_address,
             startgas=self.startgas,
-        ).decode('hex')
+        )
+
+        if not channel_manager_address_encoded:
+            log.error('add_asset failed', asset_address=pex(asset_address))
+            raise RuntimeError('add_asset failed')
+
+        channel_manager_address_bin = address_decoder(channel_manager_address_encoded)
+
+        log.info(
+            'add_asset called',
+            asset_address=pex(asset_address),
+            channel_manager_address=pex(channel_manager_address_bin),
+        )
 
     def asset_addresses(self):
         return [
@@ -332,18 +410,18 @@ class ChannelManager(object):
                  gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
         result = jsonrpc_client.call(
             'eth_getCode',
-            manager_address.encode('hex'),
+            address_encoder(manager_address),
             'latest',
         )
 
         if result == '0x':
             raise ValueError('Channel manager address {} does not contain code'.format(
-                manager_address.encode('hex'),
+                address_encoder(manager_address),
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
             CHANNEL_MANAGER_ABI,
-            manager_address.encode('hex'),
+            address_encoder(manager_address),
         )
 
         self.address = manager_address
@@ -358,12 +436,18 @@ class ChannelManager(object):
         return address_decoder(self.proxy.tokenAddress.call())
 
     def new_netting_channel(self, peer1, peer2, settle_timeout):
-        if privtoaddr(self.client.privkey) == peer1:
+        if not isaddress(peer1):
+            raise ValueError('The pee1 must be a valid address')
+
+        if not isaddress(peer2):
+            raise ValueError('The peer2 must be a valid address')
+
+        if privatekey_to_address(self.client.privkey) == peer1:
             other = peer2
         else:
             other = peer1
 
-        transaction_hash = self.proxy.newChannel(
+        transaction_hash = self.proxy.newChannel.transact(
             other,
             settle_timeout,
             startgas=self.startgas,
@@ -371,15 +455,28 @@ class ChannelManager(object):
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
-        assert len(self.proxy.address)
+        # TODO: raise if the transaction failed because there is an existing
+        # channel in place
 
-        address_encoded = self.proxy.getChannelWith.call(
+        netting_channel_address_encoded = self.proxy.getChannelWith.call(
             other,
             startgas=self.startgas,
         )
-        address_decoded = address_decoder(address_encoded)
-        assert len(address_decoded)
-        return address_decoded
+
+        if not netting_channel_address_encoded:
+            log.error('netting_channel_address failed', peer1=pex(peer1), peer2=pex(peer2))
+            raise RuntimeError('netting_channel_address failed')
+
+        netting_channel_address_bin = address_decoder(netting_channel_address_encoded)
+
+        log.info(
+            'new_netting_channel called',
+            peer1=pex(peer1),
+            peer2=pex(peer2),
+            netting_channel=pex(netting_channel_address_bin),
+        )
+
+        return netting_channel_address_bin
 
     def channels_addresses(self):
         # for simplicity the smart contract return a shallow list where every
@@ -387,7 +484,7 @@ class ChannelManager(object):
         channel_flat_encoded = self.proxy.getChannelsParticipants.call(startgas=self.startgas)
 
         channel_flat = [
-            channel.decode('hex')
+            address_decoder(channel)
             for channel in channel_flat_encoded
         ]
 
@@ -407,13 +504,13 @@ class ChannelManager(object):
             for address in address_list
         ]
 
-    def channelnew_filter(self, participant_address):  # pylint: disable=unused-argument
+    def channelnew_filter(self):  # pylint: disable=unused-argument
         """ Install a new filter for ChannelNew events.
 
         Return:
             Filter: The filter instance.
         """
-        # participant_address_hex = participant_address.encode('hex')
+        # participant_address_hex = address_encoder(privatekey_to_address(self.client.privkey))
         # topics = [
         #     CHANNELNEW_EVENTID, [node_address_hex, None], [None, node_address_hex],
         # ]
@@ -433,18 +530,18 @@ class NettingChannel(object):
                  gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
         result = jsonrpc_client.call(
             'eth_getCode',
-            channel_address.encode('hex'),
+            address_encoder(channel_address),
             'latest',
         )
 
         if result == '0x':
             raise ValueError('Address given for netting channel {} does not contain code'.format(
-                channel_address.encode('hex'),
+                address_encoder(channel_address),
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
             NETTING_CHANNEL_ABI,
-            channel_address.encode('hex'),
+            address_encoder(channel_address),
         )
 
         self.address = channel_address
@@ -454,6 +551,10 @@ class NettingChannel(object):
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
+        # check we are a participant of the given channel
+        self.node_address = privatekey_to_address(self.client.privkey)
+        self.detail(self.node_address)
+
     def asset_address(self):
         return address_decoder(self.proxy.assetAddress.call())
 
@@ -461,7 +562,7 @@ class NettingChannel(object):
         data = self.proxy.addressAndBalance.call(startgas=self.startgas)
         settle_timeout = self.proxy.settleTimeout.call(startgas=self.startgas)
 
-        if data[0].decode('hex') == our_address:
+        if address_decoder(data[0]) == our_address:
             return {
                 'our_address': address_decoder(data[0]),
                 'our_balance': data[1],
@@ -470,7 +571,7 @@ class NettingChannel(object):
                 'settle_timeout': settle_timeout,
             }
 
-        if data[2].decode('hex') == our_address:
+        if address_decoder(data[2]) == our_address:
             return {
                 'our_address': address_decoder(data[2]),
                 'our_balance': data[3],
@@ -490,19 +591,19 @@ class NettingChannel(object):
         return settle_timeout
 
     def isopen(self):
-        if self.proxy.closed(startgas=self.startgas) != 0:
+        if self.proxy.closed.call() != 0:
             return False
 
-        return self.proxy.opened(startgas=self.startgas) != 0
+        return self.proxy.opened.call() != 0
 
     def partner(self, our_address):
-        data = self.proxy.addressAndBalance.call(startgas=self.startgas)
+        data = self.proxy.addressAndBalance.call()
 
-        if data[0].decode('hex') == our_address:
-            return address_decoder(data[2].decode('hex'))
+        if address_decoder(data[0]) == our_address:
+            return address_decoder(data[2])
 
-        if data[2].decode('hex') == our_address:
-            return address_decoder(data[0].decode('hex'))
+        if address_decoder(data[2]) == our_address:
+            return address_decoder(data[0])
 
         raise ValueError('We [{}] are not a participant of the given channel ({}, {})'.format(
             pex(our_address),
@@ -514,12 +615,27 @@ class NettingChannel(object):
         if not isinstance(amount, (int, long)):
             raise ValueError('amount needs to be an integral number.')
 
+        asset = Asset(
+            self.client,
+            self.asset_address(),
+            poll_timeout=self.poll_timeout,
+        )
+        current_balance = asset.balance_of(self.node_address)
+
+        if current_balance < amount:
+            raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(
+                amount,
+                current_balance,
+            ))
+
         transaction_hash = self.proxy.deposit.transact(
             amount,
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+        log.info('deposit called', contract=pex(self.address), amount=amount)
 
     def opened(self):
         return self.proxy.opened.call()
@@ -534,15 +650,40 @@ class NettingChannel(object):
         if first_transfer and second_transfer:
             first_encoded = first_transfer.encode()
             second_encoded = second_transfer.encode()
-            self.proxy.close(first_encoded, second_encoded)
+
+            transaction_hash = self.proxy.close.transact(
+                first_encoded,
+                second_encoded,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+            log.info('close called', contract=pex(self.address), first_transfer=first_transfer, second_transfer=second_transfer)
 
         elif first_transfer:
             first_encoded = first_transfer.encode()
-            self.proxy.closeSingleTransfer(first_encoded)
+
+            transaction_hash = self.proxy.closeSingleTransfer.transact(
+                first_encoded,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+            log.info('close called', contract=pex(self.address), first_transfer=first_transfer)
 
         elif second_transfer:
             second_encoded = second_transfer.encode()
-            self.proxy.closeSingleTransfer(second_encoded)
+
+            transaction_hash = self.proxy.closeSingleTransfer.transact(
+                second_encoded,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+            log.info('close called', contract=pex(self.address), second_transfer=second_transfer)
 
         else:
             # TODO: allow to close nevertheless
@@ -551,10 +692,48 @@ class NettingChannel(object):
     def update_transfer(self, our_address, transfer):
         if transfer is not None:
             transfer_encoded = transfer.encode()
-            self.proxy.updateTransfer(transfer_encoded)
+
+            transaction_hash = self.proxy.updateTransfer.transact(
+                transfer_encoded,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+            log.info('update_transfer called', contract=pex(self.address), transfer=transfer)
+            # TODO: check if the ChannelSecretRevealed event was emitted and if it wasn't raise an error
+
+    def unlock(self, our_address, unlock_proofs):
+        unlock_proofs = list(unlock_proofs)  # force a list to get the length (could be a generator)
+        log.info('{} locks to unlock'.format(len(unlock_proofs)), contract=pex(self.address))
+
+        for merkle_proof, locked_encoded, secret in unlock_proofs:
+            if isinstance(locked_encoded, messages.Lock):
+                raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
+
+            merkleproof_encoded = ''.join(merkle_proof)
+
+            transaction_hash = self.proxy.unlock.transact(
+                locked_encoded,
+                merkleproof_encoded,
+                secret,
+                startgas=self.startgas,
+                gasprice=self.gasprice,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+            # TODO: check if the ChannelSecretRevealed event was emitted and if it wasn't raise an error
+
+            # if log.getEffectiveLevel() >= logging.INFO:  # only decode the lock if need to
+            lock = messages.Lock.from_bytes(locked_encoded)
+            log.info('unlock called', contract=pex(self.address), lock=lock, secret=encode_hex(secret))
 
     def settle(self):
-        self.proxy.settle()
+        transaction_hash = self.proxy.settle.transact(
+            startgas=self.startgas,
+            gasprice=self.gasprice,
+        )
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
+        log.info('settle called', contract=pex(self.address))
 
     def channelnewbalance_filter(self):
         """ Install a new filter for ChannelNewBalance events.
@@ -619,385 +798,3 @@ class NettingChannel(object):
             self.client,
             filter_id_raw,
         )
-
-
-class BlockChainServiceMock(object):
-    """ Mock implementation of BlockChainService that doesn't do JSON-RPC and
-    doesn't require a running node.
-
-    A mock block chain, the user can assume that this mock represents
-    up-to-date information.
-
-    The actions that the user can perform on the blockchain are:
-
-        - Transfer money to a contract/channel to create it
-        - Create a new channel, by executing an exiting contract
-
-        - Call a method in an existing channel (close and settle)
-        - List existing  channels for a given address (?)
-
-    Note:
-        This class is built for testing purposes.
-    """
-    # HACK: Using a singleton to share state among all nodes in a test
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):  # pylint: disable=unused-argument
-        # This check was added to force proper cleanup (set _instance to
-        # None at the end of each test)
-        if cls._instance is None:
-            raise Exception(
-                'Do not instantiate this class directly, use the '
-                'blockchain_service fixture'
-            )
-
-        if cls._instance is True:
-            blockchain_service = super(BlockChainServiceMock, cls).__new__(cls, *args, **kwargs)
-
-            # __init__ is executed multiple times, so we need to do the
-            # initializatoin here (otherwise the values would be overwritten)
-
-            # do not start at 0, since that is taken as the default None value
-            # for uint in the smart contract
-            blockchain_service.block_number_ = 1
-            blockchain_service.address_asset = dict()
-            blockchain_service.address_manager = dict()
-            blockchain_service.address_contract = dict()
-            blockchain_service.address_registry = dict()
-            blockchain_service.asset_manager = dict()
-
-            registry = RegistryMock(
-                blockchain_service,
-                address=MOCK_REGISTRY_ADDRESS,
-            )
-            blockchain_service.default_registry = registry
-            blockchain_service.address_registry[MOCK_REGISTRY_ADDRESS] = registry
-
-            cls._instance = blockchain_service
-
-        return cls._instance
-    # /HACK
-
-    # Note: all these methods need to be "atomic" because the mock is going to
-    # be used by multiple clients. Not using blocking functions should be
-    # sufficient
-    def __init__(self, jsonrpc_client, registry_address, testnet=False,
-                 poll_timeout=None):
-        pass
-
-    def next_block(self):
-        """ Equivalent to the mining of a new block.
-
-        Note:
-            This method does not create any representation of the new block, it
-            just increases current block number. This is necessary since the
-            channel contract needs the current block number to decide if the
-            closing of a channel can be closed or not.
-        """
-        self.block_number_ += 1
-
-    def block_number(self):
-        return self.block_number_
-
-    def asset(self, asset_address):
-        return self.address_asset[asset_address]
-
-    def netting_channel(self, netting_channel_address):
-        return self.address_contract[netting_channel_address]
-
-    def manager(self, manager_address):
-        return self.address_manager[manager_address]
-
-    def manager_by_asset(self, asset_address):
-        return self.asset_manager[asset_address]
-
-    def registry(self, registry_address):
-        return self.address_registry[registry_address]
-
-    def uninstall_filter(self, filter_id_raw):
-        pass
-
-
-class FilterMock(object):
-    def __init__(self, jsonrpc_client, filter_id_raw):
-        self.filter_id_raw = filter_id_raw
-        self.client = jsonrpc_client
-        self.events = list()
-
-    def changes(self):
-        events = self.events
-        self.events = list()
-        return events
-
-    def event(self, event):
-        self.events.append(event)
-
-    def uninstall(self):
-        self.events = list()
-
-
-class AssetMock(object):
-    def __init__(self, blockchain, address=None):
-        self.address = address or make_address()
-        self.blockchain = blockchain
-
-        self.contract_allowance = defaultdict(int)
-
-    def approve(self, contract_address, allowance):
-        self.contract_allowance[contract_address] += allowance
-
-    def balance_of(self, address):  # pylint: disable=unused-argument,no-self-use
-        return float('inf')
-
-
-class RegistryMock(object):
-    def __init__(self, blockchain, address=None):
-        self.address = address or make_address()
-        self.blockchain = blockchain
-
-        self.asset_manager = dict()
-        self.address_asset = dict()
-        self.assetadded_filters = list()
-
-    def manager_address_by_asset(self, asset_address):
-        return self.asset_manager[asset_address].address
-
-    def add_asset(self, asset_address):
-        """ The equivalent of instatiating a new `ChannelManagerContract`
-        contract that will manage channels for a given asset in the blockchain.
-
-        Raises:
-            ValueError: If asset_address is not a valid address or is already registered.
-        """
-        if asset_address in self.address_asset:
-            raise ValueError('duplicated address {}'.format(encode_hex(asset_address)))
-
-        asset = AssetMock(self.blockchain, address=asset_address)
-        manager = ChannelManagerMock(self.blockchain, asset_address)
-
-        self.address_asset[asset_address] = asset
-        self.asset_manager[asset_address] = manager
-
-        self.blockchain.address_asset[asset_address] = asset
-        self.blockchain.address_manager[manager.address] = manager
-        self.blockchain.asset_manager[asset_address] = manager
-
-    def asset_addresses(self):
-        return self.address_asset.keys()
-
-    def manager_addresses(self):
-        return [
-            manager.address
-            for manager in self.asset_manager.values()
-        ]
-
-    def assetadded_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.assetadded_filters.append(filter_)
-        return filter_
-
-
-class ChannelManagerMock(object):
-    def __init__(self, blockchain, asset_address, address=None):
-        self.address = address or make_address()
-        self.blockchain = blockchain
-
-        self.asset_address_ = asset_address
-        self.pair_channel = dict()
-        self.participant_channels = defaultdict(list)
-        self.participant_filter = defaultdict(list)
-        self.address_filter = defaultdict(list)
-
-    def asset_address(self):
-        return self.asset_address_
-
-    def new_netting_channel(self, peer1, peer2, settle_timeout):
-        """ Creates a new netting contract between peer1 and peer2.
-
-        Raises:
-            ValueError: If peer1 or peer2 is not a valid address.
-        """
-        if not isaddress(peer1):
-            raise ValueError('The pee1 must be a valid address')
-
-        if not isaddress(peer2):
-            raise ValueError('The peer2 must be a valid address')
-
-        pair = tuple(sorted((peer1, peer2)))
-        if pair in self.pair_channel:
-            raise ValueError('({}, {}) already have a channel'.format(
-                encode_hex(peer1),
-                encode_hex(peer2)
-            ))
-
-        channel = NettingChannelMock(
-            self.blockchain,
-            self.asset_address(),
-            peer1,
-            peer2,
-            settle_timeout,
-        )
-        self.pair_channel[pair] = channel
-        self.participant_channels[peer1].append(channel)
-        self.participant_channels[peer2].append(channel)
-
-        self.blockchain.address_contract[channel.address] = channel
-
-        # generate the events
-        for filter_ in self.address_filter[peer1]:
-            filter_.event()
-
-        for filter_ in self.address_filter[peer2]:
-            filter_.event()
-
-        return channel.address
-
-    def channels_addresses(self):
-        return self.pair_channel.keys()
-
-    def channels_by_participant(self, peer_address):
-        return [
-            channel.address
-            for channel in self.participant_channels[peer_address]
-        ]
-
-    def channelnew_filter(self, participant_address):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.address_filter[participant_address] = filter_
-        return filter_
-
-
-class NettingChannelMock(object):
-    def __init__(self, blockchain, asset_address, peer1, peer2, settle_timeout,  # pylint: disable=too-many-arguments
-                 address=None):
-        self.address = address or make_address()
-        self.blockchain = blockchain
-
-        self.contract = NettingChannelContract(
-            asset_address,
-            self.address,
-            peer1,
-            peer2,
-            settle_timeout,
-        )
-
-        self.newbalance_filters = list()
-        self.secretrevealed_filters = list()
-        self.channelclose_filters = list()
-        self.channelsettle_filters = list()
-
-    def asset_address(self):
-        return self.contract.asset_address
-
-    def settle_timeout(self):
-        return self.contract.settle_timeout
-
-    def isopen(self):
-        return self.contract.isopen
-
-    def partner(self, our_address):
-        return self.contract.partner(our_address)
-
-    def deposit(self, our_address, amount):
-        self.contract.deposit(our_address, amount, self.blockchain.block_number())
-
-    def opened(self):
-        return self.contract.opened
-
-    def closed(self):
-        return self.contract.closed
-
-    def settled(self):
-        return self.contract.settled
-
-    def detail(self, our_address):
-        partner_address = self.contract.partner(our_address)
-
-        our_balance = self.contract.participants[our_address].deposit
-        partner_balance = self.contract.participants[partner_address].deposit
-
-        return {
-            'our_address': our_address,
-            'our_balance': our_balance,
-            'partner_address': partner_address,
-            'partner_balance': partner_balance,
-            'settle_timeout': self.contract.settle_timeout,
-        }
-
-    def close(self, our_address, first_transfer, second_transfer):
-        ctx = {
-            'block_number': self.blockchain.block_number(),
-            'msg.sender': our_address,
-        }
-
-        first_encoded = None
-        second_encoded = None
-
-        if first_transfer is not None:
-            first_encoded = first_transfer.encode()
-
-        if second_transfer is not None:
-            second_encoded = second_transfer.encode()
-
-        self.contract.close(
-            ctx,
-            first_encoded,
-            second_encoded,
-        )
-
-    def update_transfer(self, our_address, transfer):
-        ctx = {
-            'block_number': self.blockchain.block_number(),
-            'msg.sender': our_address,
-        }
-
-        if transfer is not None:
-            self.contract.update_transfer(
-                ctx,
-                transfer.encode(),
-            )
-
-    def unlock(self, our_address, unlocked_transfers):
-        ctx = {
-            'block_number': self.blockchain.block_number(),
-            'msg.sender': our_address,
-        }
-
-        for merkle_proof, locked_encoded, secret in unlocked_transfers:
-            if isinstance(locked_encoded, messages.Lock):
-                raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
-
-            merkleproof_encoded = ''.join(merkle_proof)
-
-            self.contract.unlock(
-                ctx,
-                locked_encoded,
-                merkleproof_encoded,
-                secret,
-            )
-
-    def settle(self):
-        ctx = {
-            'block_number': self.blockchain.block_number(),
-        }
-        self.contract.settle(ctx)
-
-    def channelnewbalance_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.newbalance_filters.append(filter_)
-        return filter_
-
-    def channelsecretrevealed_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.secretrevealed_filters.append(filter_)
-        return filter_
-
-    def channelclosed_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.channelclose_filters.append(filter_)
-        return filter_
-
-    def channelsettled_filter(self):
-        filter_ = FilterMock(None, next(FILTER_ID_GENERATOR))
-        self.channelsettle_filters.append(filter_)
-        return filter_
