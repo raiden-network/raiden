@@ -56,17 +56,18 @@ This playbook will
 - prepare `geth` configurations (
     - `genesis` with `<raiden_per_node>` * `<number_of_nodes>` prefunded accounts
     - `static-bootnodes` for the collected IPs)
-- `init`ialize `geth` on all nodes
 - create scenario folders for each `<raiden_per_node>` on all nodes containing 
     - `privatekey` + `contract_flags`
-    - *#FIXME* `peers`
-    - *#FIXME* `scenario_config`
+    - `scenario_config` (`scenario.json`)
 - start `geth` on all nodes
 - *#FIXME* create assets from `scenario_config`
 
 ### run-scenario.yaml
 
 This playbook
+
+- `init`ialize `geth` on all nodes
+- updates raiden repository if `force_pull` is set to True
 - **#FIXME**
 
 # DEV-notes: 
