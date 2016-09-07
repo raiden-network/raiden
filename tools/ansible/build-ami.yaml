@@ -44,12 +44,13 @@
     - name: add ethereum ppa
       shell: sudo add-apt-repository ppa:ethereum/ethereum -y
 
-    - name: install geth, solc
+    - name: install geth, solc, daemon
       apt: name="{{ item }}" update_cache=yes
       sudo: yes
       with_items:
         - geth
         - solc
+        - daemon
 
 - hosts: tag_Name_Build
   name: make DAG

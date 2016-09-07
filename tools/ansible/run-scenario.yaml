@@ -12,12 +12,6 @@
     # Collect instance id: http://stackoverflow.com/a/27307254
     - action: ec2_facts
 
-    - name: install daemon
-      apt:
-        name: daemon
-        state: present
-      become: yes
-
     - name: stop geth (KILL)
       shell: "killall -15 geth"
       ignore_errors: yes
