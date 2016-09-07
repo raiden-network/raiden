@@ -224,6 +224,12 @@ class SecretRequest(SignedMessage):
         super(SecretRequest, self).__init__()
         self.hashlock = hashlock
 
+    def __repr__(self):
+        return '<{} [hashlock:{}]>'.format(
+            self.__class__.__name__,
+            pex(self.hashlock),
+        )
+
     @staticmethod
     def unpack(packed):
         secret_request = SecretRequest(packed.hashlock)
@@ -239,10 +245,18 @@ class Secret(SignedMessage):
     """ Provides the secret to a hashlock. """
     cmdid = messages.SECRET
 
-    def __init__(self, secret):
+    def __init__(self, secret, recipient):
         super(Secret, self).__init__()
         self.secret = secret
+        self.recipient = recipient
         self._hashlock = None
+
+    def __repr__(self):
+        return '<{} [hashlock:{} hash:{}]>'.format(
+            self.__class__.__name__,
+            pex(self.hashlock),
+            pex(self.hash),
+        )
 
     @property
     def hashlock(self):
@@ -252,12 +266,13 @@ class Secret(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        secret = Secret(packed.secret)
+        secret = Secret(packed.secret, packed.recipient)
         secret.signature = packed.signature
         return secret
 
     def pack(self, packed):
         packed.secret = self.secret
+        packed.recipient = self.recipient
         packed.signature = self.signature
 
 

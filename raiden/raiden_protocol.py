@@ -88,7 +88,7 @@ class RaidenProtocol(object):
             ack_result = self.msghash_asyncresult[messagehash]
             host_port = self.discovery.get(receiver_address)
 
-            log.info('SENDING {} > {} : [{}] {}'.format(
+            log.info('SENDING {} -> {} msghash:{} {}'.format(
                 pex(self.raiden.address),
                 pex(receiver_address),
                 pex(messagehash),
@@ -97,17 +97,17 @@ class RaidenProtocol(object):
             self.transport.send(self.raiden, host_port, messagedata)
 
             retries_left = self.max_retries
-            while not ack_result.wait(timeout=self.try_interval):
+            while ack_result.wait(timeout=self.try_interval) is None:  # ack_result can be False
                 retries_left -= 1
+                # TODO: fix the graph
+                # if retries_left < 1:
+                #     log.error('DEACTIVATED MSG resents {} {}'.format(
+                #         pex(receiver_address),
+                #         message,
+                #     ))
+                #     return
 
-                if retries_left < 1:
-                    log.error('DEACTIVATED MSG resents {} {}'.format(
-                        pex(receiver_address),
-                        message,
-                    ))
-                    return
-
-                log.info('SENDING {} > {} : [{}] {}'.format(
+                log.info('SENDING {} -> {} msghash:{} {}'.format(
                     pex(self.raiden.address),
                     pex(receiver_address),
                     pex(messagehash),
@@ -115,8 +115,17 @@ class RaidenProtocol(object):
                 ))
                 self.transport.send(self.raiden, host_port, messagedata)
 
+            log.debug('{} {}'.format(
+                pex(messagehash),
+                ack_result.get_nowait(),
+            ))
+
     def _send(self, receiver_address, message, messagedata, messagehash):
         if receiver_address not in self.address_queue:
+            log.debug('new queue created for {} > {}'.format(
+                pex(self.raiden.address),
+                pex(receiver_address),
+            ))
             self.address_queue[receiver_address] = NotifyingQueue()
             self.address_greenlet[receiver_address] = gevent.spawn(self._send_queued_messages, receiver_address)
 
@@ -197,12 +206,12 @@ class RaidenProtocol(object):
             ack_result = self.msghash_asyncresult[message.echo]
 
             if ack_result.ready():
-                log.info('DUPLICATED ACK RECEIVED {} [echo={}]'.format(
+                log.info('DUPLICATED ACK RECEIVED node:{} [echo={}]'.format(
                     pex(self.raiden.address),
                     pex(message.echo)
                 ))
             else:
-                log.info('ACK RECEIVED {} [echo={}]'.format(
+                log.info('ACK RECEIVED node:{} [echo={}]'.format(
                     pex(self.raiden.address),
                     pex(message.echo)
                 ))

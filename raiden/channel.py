@@ -14,7 +14,7 @@ from raiden.messages import (
     TransferTimeout,
 )
 from raiden.mtree import merkleroot
-from raiden.utils import sha3, pex
+from raiden.utils import sha3, pex, lpex
 from raiden.tasks import REMOVE_CALLBACK
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -617,8 +617,10 @@ class Channel(object):
         # receiving a secret (releasing our funds)
         if self.our_state.balance_proof.is_known(hashlock):
             lock = self.our_state.balance_proof.get_lock_by_hashlock(hashlock)
-            log.debug('SECRET REGISTERED node:{} asset:{} hashlock:{} amount:{}'.format(
+            log.debug('SECRET REGISTERED node:{} {} > {} asset:{} hashlock:{} amount:{}'.format(
                 pex(self.our_state.address),
+                pex(self.our_state.address),
+                pex(self.partner_state.address),
                 pex(self.asset_address),
                 pex(hashlock),
                 lock.amount,
@@ -629,7 +631,9 @@ class Channel(object):
         # sending a secret (updating the mirror)
         elif self.partner_state.balance_proof.is_known(hashlock):
             lock = self.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
-            log.debug('SECRET REGISTERED node:{} asset:{} hashlock:{} amount:{}'.format(
+            log.debug('SECRET REGISTERED node:{} {} > {} asset:{} hashlock:{} amount:{}'.format(
+                pex(self.our_state.address),
+                pex(self.partner_state.address),
                 pex(self.our_state.address),
                 pex(self.asset_address),
                 pex(hashlock),
@@ -647,10 +651,13 @@ class Channel(object):
         # receiving a secret (releasing our funds)
         if self.our_state.balance_proof.is_known(hashlock):
             lock = self.our_state.balance_proof.get_lock_by_hashlock(hashlock)
-            log.debug('ASSET UNLOCKED node:{} asset:{} hashlock:{} amount:{}'.format(
+            log.debug('ASSET UNLOCKED node:{} {} > {} asset:{} hashlock:{} lockhash:{} amount:{}'.format(
                 pex(self.our_state.address),
+                pex(self.our_state.address),
+                pex(self.partner_state.address),
                 pex(self.asset_address),
                 pex(hashlock),
+                pex(sha3(lock.as_bytes)),
                 lock.amount,
             ))
             self.our_state.claim_lock(self.partner_state, secret)
@@ -658,10 +665,13 @@ class Channel(object):
         # sending a secret (updating the mirror)
         elif self.partner_state.balance_proof.is_known(hashlock):
             lock = self.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
-            log.debug('ASSET UNLOCKED node:{} asset:{} hashlock:{} amount:{}'.format(
+            log.debug('ASSET UNLOCKED node:{} {} > {} asset:{} hashlock:{} lockhash:{} amount:{}'.format(
+                pex(self.our_state.address),
+                pex(self.partner_state.address),
                 pex(self.our_state.address),
                 pex(self.asset_address),
                 pex(hashlock),
+                pex(sha3(lock.as_bytes)),
                 lock.amount,
             ))
             self.partner_state.claim_lock(self.our_state, secret)
@@ -743,11 +753,12 @@ class Channel(object):
             expected_locksroot = to_state.compute_merkleroot_with(transfer.lock)
             if expected_locksroot != transfer.locksroot:
                 log.error(
-                    'LOCKSROOT MISMATCH node:{} {} > {}'.format(
+                    'LOCKSROOT MISMATCH node:{} {} > {} lockhash:{} lockhashes:{}'.format(
                         pex(self.our_state.address),
                         pex(from_state.address),
                         pex(to_state.address),
-                        pex(self.partner_state.address),
+                        pex(sha3(transfer.lock.as_bytes)),
+                        lpex(to_state.balance_proof.unclaimed_merkletree()),
                     ),
                     expected_locksroot=pex(expected_locksroot),
                     received_locksroot=pex(transfer.locksroot),
@@ -805,10 +816,12 @@ class Channel(object):
 
         if isinstance(transfer, LockedTransfer):
             log.debug(
-                'REGISTERED LOCK node:{} {} > {}'.format(
+                'REGISTERED LOCK node:{} {} > {} currentlocksroot:{} lockhashes:{}'.format(
                     pex(self.our_state.address),
                     pex(from_state.address),
                     pex(to_state.address),
+                    pex(to_state.balance_proof.merkleroot_for_unclaimed()),
+                    lpex(to_state.balance_proof.unclaimed_merkletree()),
                 ),
                 lock_amount=transfer.lock.amount,
                 lock_expiration=transfer.lock.expiration,
@@ -832,7 +845,7 @@ class Channel(object):
         from_state.nonce += 1
 
         log.debug(
-            'REGISTERED TRANSFER node:{} from:{} to:{} '
+            'REGISTERED TRANSFER node:{} {} > {} '
             'transfer:{} transfered_amount:{} nonce:{} '
             'current_locksroot:{}'.format(
                 pex(self.our_state.address),

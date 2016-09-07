@@ -21,7 +21,7 @@ from raiden.benchmark.utils import (
 )
 
 log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
-slogging.configure(':DEBUG')
+# slogging.configure(':DEBUG')
 
 
 def setup_apps(amount, assets, num_transfers, num_nodes, channels_per_node):

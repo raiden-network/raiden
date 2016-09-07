@@ -182,11 +182,11 @@ class AssetManager(object):
         hashlock = sha3(secret)
         channels_reveal = self.hashlock_channel[hashlock]
 
-        secret_message = Secret(secret)
-        self.raiden.sign(secret_message)
-
         while channels_reveal:
             reveal_to = channels_reveal.pop()
+
+            secret_message = Secret(secret, reveal_to.partner_state.address)
+            self.raiden.sign(secret_message)
 
             # critical read/write section
             # The channel and it's queue must be changed in sync, a transfer
