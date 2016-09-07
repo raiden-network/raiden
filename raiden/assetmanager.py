@@ -5,7 +5,7 @@ from ethereum import slogging
 from ethereum.abi import ContractTranslator
 from ethereum.utils import sha3
 
-from raiden.channel import Channel, ChannelEndState, ChannelExternalState, InvalidSecret
+from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.blockchain.abi import NETTING_CHANNEL_ABI
 from raiden.transfermanager import TransferManager
 from raiden.messages import Secret
@@ -189,28 +189,29 @@ class AssetManager(object):
             reveal_to = channels_reveal.pop()
 
             # critical read/write section
-            # The channel and it's queue must be locked, a transfer must not be
-            # created and the balance_proof must not be changed while we update
-            # the state.
+            # The channel and it's queue must be changed in sync, a transfer
+            # must not be created and the balance_proof must not be changed
+            # while we update the state (relaying on the GIL and non-blocing
+            # apis instead of an explicit lock).
 
-            # if we are the end that created the transfer we can update the
-            # local state and notify our partner to do the same, this operation
-            # needs to be synchronized with the merkletree of locks to inhibit
-            # locksroot conflicts
+            # If we created the mediated transfer update our local state and
+            # notify our partner to do the same, this operation needs to be
+            # synchronized with the merkletree of locks to inhibit locksroot
+            # conflicts.
             if reveal_to.partner_state.balance_proof.is_pending(hashlock):
                 reveal_to.claim_lock(secret)
                 self.raiden.send_async(reveal_to.partner_state.address, secret_message)
 
-            # if we are the end that received the transfer, reveal the secret
-            # to the originating_channel so that it can update it's internal
-            # state and allow us to update too
+            # Otherwise we received the transfer, reveal it to the
+            # originating_channel so that it can update it's internal state and
+            # allow us to update too.
             elif reveal_to.our_state.balance_proof.is_pending(hashlock):
                 # register the secret so that a balance proof can be generated
                 reveal_to.register_secret(secret)
                 self.raiden.send_async(reveal_to.partner_state.address, secret_message)
 
             else:
-                log.error('there is corresponding hashlock for the given secret')
+                log.error('No corresponding hashlock for the given secret.')
 
         # delete the list it wont ever be used again (unless we have a sha3
         # colision)

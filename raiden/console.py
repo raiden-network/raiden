@@ -14,7 +14,7 @@ from ethereum.slogging import getLogger
 from ethereum._solidity import compile_file
 from raiden.messages import Ping
 from raiden.blockchain.abi import get_contract_path
-from raiden.utils import sha3, events
+from raiden.utils import events
 
 from pyethapp.utils import bcolors as bc
 from pyethapp.console_service import GeventInputHook, SigINTHandler
@@ -182,8 +182,10 @@ class ConsoleTools(object):
         token_address = token_proxy.address.encode('hex')
         if auto_register:
             self.register_asset(token_address)
-        print("Successfully created {}the token '{}'.".format('and registered ' if auto_register else ' ',
-                                                               name))
+        print("Successfully created {}the token '{}'.".format(
+            'and registered ' if auto_register else ' ',
+            name
+        ))
         return token_address
 
     def register_asset(self, token_address):
@@ -242,10 +244,13 @@ class ConsoleTools(object):
         except KeyError:
             print("Error: peer {} not found in discovery".format(peer))
             return
-        self._raiden.api.open(token_address,
-                peer,
-                settle_timeout=settle_timeout,
-                reveal_timeout=reveal_timeout)
+
+        self._raiden.api.open(
+            token_address,
+            peer,
+            settle_timeout=settle_timeout,
+            reveal_timeout=reveal_timeout,
+        )
 
         return self._raiden.api.deposit(token_address, peer, amount)
 

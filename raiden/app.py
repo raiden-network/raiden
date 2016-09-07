@@ -103,13 +103,13 @@ class App(object):  # pylint: disable=too-few-public-methods
     help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
     default=':INFO',
     type=str,
-    )
+)
 @click.option(
     '--logfile',
     help='file path for logging to file',
     default=None,
     type=str,
-    )
+)
 @click.command()
 def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         discovery_contract_address, listen_address, external_listen_address, logging, logfile):

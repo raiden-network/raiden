@@ -1,3 +1,4 @@
+# -*- coding: utf8 -*-
 import os
 import json
 
@@ -14,8 +15,7 @@ from raiden.raiden_service import (
 )
 
 
-
-#  monkey patch: gevent-websocket to support 'extra' argument
+# monkey patch: gevent-websocket to support 'extra' argument
 class _Resource(Resource):
     def __init__(self, apps=None, extra=None):
         super(_Resource, self).__init__(apps)
@@ -43,10 +43,10 @@ class _Resource(Resource):
         else:
             return current_app(environ, start_response)
 
-class _WampProtocol(WampProtocol):
 
+class _WampProtocol(WampProtocol):
     def __init__(self, *args, **kwargs):
-        super(_WampProtocol,self).__init__(*args, **kwargs)
+        super(_WampProtocol, self).__init__(*args, **kwargs)
 
     def on_message(self, message):
         # FIX: handle when ws is already closed (message is None)
@@ -191,10 +191,9 @@ class UIService(WebSocketApplication):
         print "closed"
 
 
-
 class WebUI(object):
-    """ Wrapping class to start ws/http server
-    """
+    """ Wrapping class to start ws/http server. """
+
     def __init__(self, handler, registrars=None, port=8080):
         self.handler = handler
         self.port = self.handler.port = port

@@ -2,8 +2,6 @@
 from gevent.event import AsyncResult
 from ethereum import slogging
 
-from raiden.channel import InvalidLocksRoot
-from raiden.messages import LocksrootRejected
 from raiden.tasks import StartMediatedTransferTask, MediateTransferTask, EndMediatedTransferTask
 from raiden.utils import pex
 
