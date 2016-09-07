@@ -134,8 +134,7 @@ Secret = namedbuffer(
         cmdid(SECRET),  # [0:1]
         pad(3),         # [1:4]
         secret,         # [4:36]
-        recipient,
-        signature,
+        signature,      # [36:101]
     ]
 )
 

@@ -253,7 +253,7 @@ class StartMediatedTransferTask(Task):
 
             # `target` received the MediatedTransfer
             elif response.sender == target and isinstance(response, SecretRequest):
-                secret_message = Secret(secret, target)
+                secret_message = Secret(secret)
                 raiden.sign(secret_message)
                 raiden.send_async(target, secret_message)
 
@@ -584,7 +584,7 @@ class EndMediatedTransferTask(Task):
         # updated
         originating_channel.register_secret(response.secret)
 
-        secret_message = Secret(response.secret, mediated_transfer.sender)
+        secret_message = Secret(response.secret)
         raiden.sign(secret_message)
         raiden.send_async(mediated_transfer.sender, secret_message)
 

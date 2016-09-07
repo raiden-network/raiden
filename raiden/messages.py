@@ -245,10 +245,9 @@ class Secret(SignedMessage):
     """ Provides the secret to a hashlock. """
     cmdid = messages.SECRET
 
-    def __init__(self, secret, recipient):
+    def __init__(self, secret):
         super(Secret, self).__init__()
         self.secret = secret
-        self.recipient = recipient
         self._hashlock = None
 
     def __repr__(self):
@@ -266,13 +265,12 @@ class Secret(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        secret = Secret(packed.secret, packed.recipient)
+        secret = Secret(packed.secret)
         secret.signature = packed.signature
         return secret
 
     def pack(self, packed):
         packed.secret = self.secret
-        packed.recipient = self.recipient
         packed.signature = self.signature
 
 

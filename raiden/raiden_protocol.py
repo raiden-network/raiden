@@ -115,11 +115,6 @@ class RaidenProtocol(object):
                 ))
                 self.transport.send(self.raiden, host_port, messagedata)
 
-            log.debug('{} {}'.format(
-                pex(messagehash),
-                ack_result.get_nowait(),
-            ))
-
     def _send(self, receiver_address, message, messagedata, messagehash):
         if receiver_address not in self.address_queue:
             log.debug('new queue created for {} > {}'.format(
