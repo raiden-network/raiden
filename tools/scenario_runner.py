@@ -28,8 +28,7 @@ def run(ctx, scenario, **kwargs):
     ctx.params.pop('scenario')
     app = ctx.invoke(orig_app)
     if scenario:
-        with open(scenario) as f:
-            script = json.load(f)
+        script = json.load(scenario)
 
         tools = ConsoleTools(
                 app.raiden,
