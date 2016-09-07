@@ -2,7 +2,7 @@
   name: init
   connection: local
   gather_facts: yes
-  roles: 
+  roles:
     - scenario
     - common
   tags:
@@ -21,7 +21,7 @@
         key_name: raiden
         region: "{{ region }}"
         group: raiden
-        instance_type: "{{ instance_type }}" 
+        instance_type: "{{ instance_type }}"
         image: "{{ scenario_ami_id }}"
         wait: true
         count: "{{ number_of_nodes }}"
@@ -52,7 +52,7 @@
 
     - name: store node_ips in scenario folder
       copy:
-        content: 
+        content:
           node_ips: "{{ node_ips }}"
         dest: "{{ scenario_folder }}/node_ips.json"
 
@@ -76,7 +76,7 @@
   tasks:
     - include: roles/scenario/tasks/read_scenario_params.yaml
 
-    - name: create scenario.json 
+    - name: create scenario.json
       shell:
         chdir: "../"
         cmd: "python config_builder.py build_scenario {{ raiden_per_node }} {{ node_ips | join(' ') }}"
@@ -86,18 +86,18 @@
       set_fact:
         scenario_description: "{{ out.stdout | from_json }}"
 
-    - name: store scenario file toplevel 
+    - name: store scenario file toplevel
       copy:
         content: "{{ scenario_description }}"
         dest: "{{ scenario_folder }}/scenario.json"
         mode: a+r
 
 
-- hosts: localhost 
-  name: prepare geth 
+- hosts: localhost
+  name: prepare geth
   gather_facts: true
   roles:
-    - scenario 
+    - scenario
     - common
   tags:
     - prepare_geth
@@ -221,23 +221,23 @@
 
 
 - hosts: tag_Name_Scenario
-  name: put configuration on hosts and init geth 
+  name: put configuration on hosts and init geth
   remote_user: "{{ remote_user }}"
   gather_facts: true
   roles:
     - scenario
     - common
   tags:
-    - init_host 
+    - init_host
 
   tasks:
     - include: roles/scenario/tasks/read_scenario_params.yaml
 
     - action: ec2_facts
 
-    - name: debug node ip from facts 
+    - name: debug node ip from facts
       debug:
-        var: ansible_ec2_local_ipv4 
+        var: ansible_ec2_local_ipv4
 
     - name: copy scenario folder for host
       synchronize:
@@ -249,7 +249,7 @@
   remote_user: "{{ remote_user }}"
   gather_facts: true
   roles:
-    - scenario 
+    - scenario
     - common
   tags:
     - terminate
