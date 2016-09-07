@@ -63,6 +63,21 @@
         state: directory
       with_items: "{{ node_ips }}"
 
+- hosts: tag_Name_Scenario
+  name: read DAG into fs-cache
+  remote_user: "{{ remote_user }}"
+  gather_facts: no
+  roles:
+    - scenario
+    - common
+  tags:
+    - read_dag
+
+  tasks:
+    - name: cat DAG file (in background) to update fs-cache
+      shell: "cat {{ user_home }}/.ethash/full-R23-0000000000000000 > /dev/null"
+      async: 600
+      poll: 0
 
 - hosts: localhost
   name: build scenario description
