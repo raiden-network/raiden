@@ -58,58 +58,70 @@ class App(object):  # pylint: disable=too-few-public-methods
         self.transport.stop()
         self.raiden.stop()
 
-
-@click.option(
+_options = [
+click.option(
     '--privatekey',
     help='Asks for the hex encoded ethereum private key.\n'
     'WARNING: do not give the privatekey on the commandline, instead wait for the prompt!',
     type=str,
     prompt=True,
     hide_input=True,
-)
-@click.option(
+),
+click.option(
     '--eth_rpc_endpoint',
     help='"host:port" address of ethereum JSON-RPC server.\n'
     'Also accepts a protocol prefix (http:// or https://) with optional port',
     default='127.0.0.1:8545',  # geth default jsonrpc port
     type=str,
-)
-@click.option(
+),
+click.option(
     '--registry_contract_address',
     help='hex encoded address of the registry contract.',
     default='07d153249abe665be6ca49999952c7023abb5169',  # testnet default
     type=str,
-)
-@click.option(
+),
+click.option(
     '--discovery_contract_address',
     help='hex encoded address of the discovery contract.',
     default='1376c0c3e876ed042df42320d8a554a51c8c8a87',  # testnet default
     type=str,
-)
-@click.option(
+),
+click.option(
     '--listen_address',
     help='"host:port" for the raiden service to listen on.',
     default="0.0.0.0:{}".format(INITIAL_PORT),
     type=str,
-)
-@click.option(  # FIXME: implement NAT-punching
+),
+click.option(  # FIXME: implement NAT-punching
     '--external_listen_address',
     help='external "host:port" where the raiden service can be contacted on (through NAT).',
     default='',
     type=str,
-)
-@click.option(
+),
+click.option(
     '--logging',
     help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
     default=':INFO',
     type=str,
-    )
-@click.option(
+),
+click.option(
     '--logfile',
     help='file path for logging to file',
     default=None,
     type=str,
-    )
+),
+]
+
+
+def options(func):
+    """Having the common app options as a decorator facilitates reuse.
+    """
+    for option in _options:
+        func = option(func)
+    return func
+
+
+@options
 @click.command()
 def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         discovery_contract_address, listen_address, external_listen_address, logging, logfile):
