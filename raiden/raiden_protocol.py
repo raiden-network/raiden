@@ -80,13 +80,13 @@ class RaidenProtocol(object):
         # Note: this task can be killed at any time
 
         queue = self.address_queue[receiver_address]
+        host_port = self.discovery.get(receiver_address)
 
         while queue.wait():
             # avoid to reserialize the message and calculate it's hash
             message, messagedata, messagehash = queue.get()
 
             ack_result = self.msghash_asyncresult[messagehash]
-            host_port = self.discovery.get(receiver_address)
 
             log.info('SENDING {} -> {} msghash:{} {}'.format(
                 pex(self.raiden.address),
@@ -147,7 +147,7 @@ class RaidenProtocol(object):
             raise ValueError('message size exceeds the maximum {}'.format(self.max_message_size))
 
         messagedata = message.encode()
-        messagehash = sha3(messagedata)
+        messagehash = sha3(messagedata + receiver_address)
         ack_result = AsyncResult()
         self.msghash_asyncresult[messagehash] = ack_result
 
@@ -188,7 +188,7 @@ class RaidenProtocol(object):
             log.error('receive packet larger than maximum size', length=len(data))
             return
 
-        msghash = sha3(data)
+        msghash = sha3(data + self.raiden.address)
 
         # check if we handled this message already, if so repeat Ack
         if msghash in self.msghash_acks:
