@@ -50,16 +50,6 @@ class TransferManager(object):
                 direct_transfer,
             )
 
-            #FIXME: hack to fix API expectations of RaidenAPI.transfer
-            class nooptask(object):
-                def __init__(self):
-                    import warnings
-                    warnings.warn("transfermanager.transfer needs a fix!")
-
-                def join(self):
-                    pass
-            return nooptask()
-
         else:
             task = StartMediatedTransferTask(
                 self,
@@ -71,7 +61,6 @@ class TransferManager(object):
 
             task.start()
             task.join()
-            return task
 
     def on_mediatedtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
