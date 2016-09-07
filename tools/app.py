@@ -62,12 +62,9 @@ class App(object):  # pylint: disable=too-few-public-methods
 
 
 @click.option(
-    '--privatekey',
-    help='Asks for the hex encoded ethereum private key.\n'
-    'WARNING: do not give the privatekey on the commandline, instead wait for the prompt!',
+    '--privatekey_file',
+    help='Read private key from file.\n',
     type=str,
-    prompt=True,
-    hide_input=True,
 )
 @click.option(
     '--eth_rpc_endpoint',
@@ -119,7 +116,7 @@ class App(object):  # pylint: disable=too-few-public-methods
     type=str,
     )
 @click.command()
-def app(privatekey, eth_rpc_endpoint, registry_contract_address,
+def app(privatekey_file, eth_rpc_endpoint, registry_contract_address,
         discovery_contract_address, listen_address, external_listen_address,
         logging, scenario, logfile):
 
@@ -136,6 +133,9 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
     config = App.default_config.copy()
     config['host'] = listen_host
     config['port'] = listen_port
+
+    with open(privatekey_file) as f:
+        privatekey = f.read().rstrip()
     config['privatekey_hex'] = privatekey
 
     endpoint = eth_rpc_endpoint
