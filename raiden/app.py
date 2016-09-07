@@ -164,7 +164,10 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
     discovery.register(app.raiden.address, *split_endpoint(external_listen_address))
 
     app.raiden.register_registry(blockchain_service.default_registry)
+    return app
 
+
+def run(app):
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
@@ -181,6 +184,6 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
 
     app.stop()
 
-
 if __name__ == '__main__':
-    app()
+    app = app()
+    run(app)
