@@ -3,11 +3,10 @@ import sys
 import string
 import random
 
+import secp256k1
 from Crypto.Hash import keccak as keccaklib
 from secp256k1 import PrivateKey
 from ethereum.utils import big_endian_to_int, sha3, int_to_big_endian
-
-from raiden.encoding.signing import GLOBAL_CTX
 
 __all__ = (
     'sha3',
@@ -25,8 +24,27 @@ __all__ = (
     'lpex',
 )
 
-# hashing
 LETTERS = string.printable
+
+# From the secp256k1 header file:
+#
+#     The purpose of context structures is to cache large precomputed data tables
+#     that are expensive to construct, and also to maintain the randomization data
+#     for blinding.
+#
+#     Do not create a new context object for each operation, as construction is
+#     far slower than all other API calls (~100 times slower than an ECDSA
+#     verification).
+#
+#     A constructed context can safely be used from multiple threads
+#     simultaneously, but API call that take a non-const pointer to a context
+#     need exclusive access to it. In particular this is the case for
+#     secp256k1_context_destroy and secp256k1_context_randomize.
+#
+#     Regarding randomization, either do it once at creation time (in which case
+#     you do not need any locking for the other calls), or use a read-write lock.
+#
+GLOBAL_CTX = secp256k1.lib.secp256k1_context_create(secp256k1.ALL_FLAGS)
 
 
 def keccak_256(data):
