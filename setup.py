@@ -30,7 +30,6 @@ history = ''
 
 
 install_requires_replacements = {
-    'https://github.com/HydraChain/hydrachain/tarball/develop': 'hydrachain',
 }
 
 install_requires = list(set(

@@ -74,15 +74,9 @@ install: clean
 
 logging_settings = :info,contracts:debug
 mkfile_root := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-stop:
-	killall hydrachain
 
 stop-geth:
 	killall -15 geth
-
-blockchain:
-	rm -f blockchain.log
-	-(hydrachain -d $(shell mktemp -d) -l $(logging_settings) -c p2p.listen_host="127.0.0.1" -c discovery.listen_host="127.0.0.1" -c jsonrpc.corsdomain='http://localhost:8080' --log-file=blockchain.log runmultiple > /dev/null 2>&1 &)
 
 blockchain-geth:
 	rm -f blockchain.log
