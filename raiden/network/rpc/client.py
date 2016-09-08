@@ -100,7 +100,7 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes,unused-argument
 
-    def __init__(self, privatekey_bin, registry_address, poll_timeout=DEFAULT_POLL_TIMEOUT, **kwargs):
+    def __init__(self, privatekey_bin, registry_address, host, port, poll_timeout=DEFAULT_POLL_TIMEOUT, **kwargs):
         self.address_asset = dict()
         self.address_manager = dict()
         self.address_contract = dict()
@@ -111,6 +111,8 @@ class BlockChainService(object):
         # the mock blockchains
         jsonrpc_client = JSONRPCClient(
             privkey=privatekey_bin,
+            host=host,
+            port=port,
             print_communication=kwargs.get('print_communication', False),
         )
         patch_send_transaction(jsonrpc_client)

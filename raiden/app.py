@@ -157,19 +157,13 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
     else:
         rpc_host, rpc_port = split_endpoint(endpoint)
 
-    jsonrpc_client = JSONRPCClient(
-        privkey=privatekey,
-        host=rpc_host,
-        port=rpc_port,
-        print_communication=False,
-        use_ssl=use_ssl,
-    )
-
     blockchain_service = BlockChainService(
         privatekey.decode('hex'),
         registry_contract_address.decode('hex'),
+        host=rpc_host,
+        port=rpc_port,
     )
-    discovery = ContractDiscovery(jsonrpc_client, discovery_contract_address.decode('hex'))  # FIXME: double encoding
+    discovery = ContractDiscovery(blockchain_service, discovery_contract_address.decode('hex'))  # FIXME: double encoding
 
     app = App(config, blockchain_service, discovery)
 
