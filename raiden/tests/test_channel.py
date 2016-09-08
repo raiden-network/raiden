@@ -73,7 +73,7 @@ def test_end_state():
         transfer_initiator,
         fee,
     )
-    mediated_transfer.sign(privkey1)
+    mediated_transfer.sign(privkey1, address1)
 
     state2.register_locked_transfer(mediated_transfer)
 
@@ -214,7 +214,7 @@ def test_channel():
 
     amount1 = 10
     directtransfer = channel.create_directtransfer(amount1)
-    directtransfer.sign(privkey1)
+    directtransfer.sign(privkey1, address1)
     channel.register_transfer(directtransfer)
 
     assert channel.contract_balance == balance1
@@ -239,7 +239,7 @@ def test_channel():
         expiration,
         hashlock,
     )
-    mediatedtransfer.sign(privkey1)
+    mediatedtransfer.sign(privkey1, address1)
 
     channel.register_transfer(mediatedtransfer)
 

@@ -3,6 +3,7 @@ from ethereum import slogging
 from ethereum.abi import ContractTranslator
 from ethereum.utils import encode_hex
 from pyethapp.jsonrpc import address_decoder
+from secp256k1 import PrivateKey
 
 from raiden.assetmanager import AssetManager
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
@@ -10,6 +11,7 @@ from raiden.channelgraph import ChannelGraph
 from raiden.tasks import AlarmTask, LogListenerTask
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
+from raiden.encoding.signing import GLOBAL_CTX
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.utils import privatekey_to_address, isaddress, pex
 
@@ -55,7 +57,17 @@ class InsufficientFunds(RaidenError):
 class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     """ A Raiden node. """
 
-    def __init__(self, chain, privkey, transport, discovery, config):  # pylint: disable=too-many-arguments
+    def __init__(self, chain, private_key_bin, transport, discovery, config):  # pylint: disable=too-many-arguments
+        if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
+            raise ValueError('invalid private_key')
+
+        private_key = PrivateKey(
+            private_key_bin,
+            ctx=GLOBAL_CTX,
+            raw=True,
+        )
+        pubkey = private_key.pubkey.serialize(compressed=False)
+
         self.registries = list()
         self.managers_by_asset_address = dict()
         self.managers_by_address = dict()
@@ -63,8 +75,10 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         self.chain = chain
         self.config = config
-        self.privkey = privkey
-        self.address = privatekey_to_address(privkey)
+        self.privkey = private_key_bin
+        self.pubkey = pubkey
+        self.private_key = private_key
+        self.address = privatekey_to_address(private_key_bin)
         self.protocol = RaidenProtocol(transport, discovery, self)
         transport.protocol = self.protocol
 
@@ -106,7 +120,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         if not isinstance(message, SignedMessage):
             raise ValueError('{} is not signable.'.format(repr(message)))
 
-        message.sign(self.privkey)
+        message.sign(self.private_key, self.address)
 
     def send(self, *args):
         raise NotImplemented('use send_and_wait or send_async')

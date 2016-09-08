@@ -83,7 +83,7 @@ class SignedMessage(Message):
         self.signature = b''
         self.sender = b''
 
-    def sign(self, private_key):
+    def sign(self, private_key, node_address):
         """ Sign message using `private_key`. """
         packed = self.packed()
 
@@ -91,11 +91,11 @@ class SignedMessage(Message):
         assert field.name == 'signature', 'signature is not the last field'
 
         message_data = packed.data[:-field.size_bytes]  # XXX: this slice must be from the end of the buffer
-        signature, public_key = signing.sign(message_data, private_key)
+        signature = signing.sign(message_data, private_key)
 
         packed.data[-field.size_bytes:] = signature
 
-        self.sender = publickey_to_address(public_key)
+        self.sender = node_address
         self.signature = signature
 
     @classmethod

@@ -1,20 +1,19 @@
 # -*- coding: utf8 -*-
 from raiden.messages import Ping, Ack, decode, Lock, MediatedTransfer
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import make_privkey_address, sha3
 
-PRIVKEY = 'x' * 32
-ADDRESS = privatekey_to_address(PRIVKEY)
+PRIVKEY, ADDRESS = make_privkey_address()
 
 
 def test_signature():
     ping = Ping(nonce=0)
-    ping.sign(PRIVKEY)
+    ping.sign(PRIVKEY, ADDRESS)
     assert ping.sender == ADDRESS
 
 
 def test_encoding():
     ping = Ping(nonce=0)
-    ping.sign(PRIVKEY)
+    ping.sign(PRIVKEY, ADDRESS)
     decoded_ping = decode(ping.encode())
     assert isinstance(decoded_ping, Ping)
     assert decoded_ping.sender == ADDRESS == ping.sender
@@ -26,7 +25,7 @@ def test_encoding():
 
 def test_hash():
     ping = Ping(nonce=0)
-    ping.sign(PRIVKEY)
+    ping.sign(PRIVKEY, ADDRESS)
     data = ping.encode()
     msghash = sha3(data)
     decoded_ping = decode(data)
@@ -64,6 +63,6 @@ def test_mediated_transfer():
         initiator,
         fee,
     )
-    mediated_transfer.sign(PRIVKEY)
+    mediated_transfer.sign(PRIVKEY, ADDRESS)
     decoded_mediated_transfer = decode(mediated_transfer.encode())
     assert decoded_mediated_transfer == mediated_transfer

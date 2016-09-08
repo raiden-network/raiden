@@ -5,7 +5,9 @@ import pytest
 from ethereum import abi, tester, slogging
 from ethereum.tester import TransactionFailed
 from ethereum.utils import encode_hex
+from secp256k1 import PrivateKey
 
+from raiden.encoding.signing import GLOBAL_CTX
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
 from raiden.utils import sha3, privatekey_to_address
 from raiden.tests.utils.tester import (
@@ -263,24 +265,26 @@ def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
 def test_closesingle_settle(deposit, settle_timeout, tester_channels,
                             tester_state, tester_events, tester_token):
 
-    privatekey0, privatekey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    address0 = privatekey_to_address(privatekey0)
-    address1 = privatekey_to_address(privatekey1)
+    privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
+
+    privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
+    address0 = privatekey_to_address(privatekey0_raw)
+    address1 = privatekey_to_address(privatekey1_raw)
     unknow_key = tester.k3
 
-    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
-    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0_raw)
+    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
 
     transfer_amount = 10
     direct_transfer = channel0.create_directtransfer(transfer_amount)
-    direct_transfer.sign(privatekey0)
+    direct_transfer.sign(privatekey0, address0)
     direct_transfer_data = str(direct_transfer.packed().data)
 
     with pytest.raises(TransactionFailed):
         nettingchannel.closeSingleTransfer(sender=unknow_key)
 
     previous_events = list(tester_events)
-    nettingchannel.closeSingleTransfer(direct_transfer_data, sender=privatekey0)
+    nettingchannel.closeSingleTransfer(direct_transfer_data, sender=privatekey0_raw)
     assert len(previous_events) + 1 == len(tester_events)
 
     block_number = tester_state.block.number
@@ -292,13 +296,13 @@ def test_closesingle_settle(deposit, settle_timeout, tester_channels,
         'blockNumber': block_number,
     }
 
-    assert nettingchannel.closed(sender=privatekey0) == block_number
-    assert nettingchannel.closingAddress(sender=privatekey0) == encode_hex(address0)
+    assert nettingchannel.closed(sender=privatekey0_raw) == block_number
+    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address0)
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
     previous_events = list(tester_events)
-    nettingchannel.settle(sender=privatekey0)
+    nettingchannel.settle(sender=privatekey0_raw)
     assert len(previous_events) + 3 == len(tester_events)
 
     block_number = tester_state.block.number
@@ -325,29 +329,31 @@ def test_closesingle_settle(deposit, settle_timeout, tester_channels,
         'blockNumber': block_number,
     }
 
-    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 + deposit - transfer_amount  # noqa
-    assert tester_token.balanceOf(address1, sender=privatekey1) == initial_balance1 + deposit + transfer_amount  # noqa
-    assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1) == 0
+    assert tester_token.balanceOf(address0, sender=privatekey0_raw) == initial_balance0 + deposit - transfer_amount  # noqa
+    assert tester_token.balanceOf(address1, sender=privatekey1_raw) == initial_balance1 + deposit + transfer_amount  # noqa
+    assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == 0
 
 
 def test_close_settle(deposit, settle_timeout, tester_state, tester_channels,
                       tester_events, tester_token):
 
-    privatekey0, privatekey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    address0 = privatekey_to_address(privatekey0)
-    address1 = privatekey_to_address(privatekey1)
+    privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
+    privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
+    address0 = privatekey_to_address(privatekey0_raw)
+    address1 = privatekey_to_address(privatekey1_raw)
     unknow_key = tester.k3
 
-    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
-    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0_raw)
+    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
 
     transfer_amount0 = 10
     direct_transfer0 = channel0.create_directtransfer(transfer_amount0)
-    direct_transfer0.sign(privatekey0)
+    direct_transfer0.sign(privatekey0, address0)
 
     transfer_amount1 = 30
     direct_transfer1 = channel1.create_directtransfer(transfer_amount1)
-    direct_transfer1.sign(privatekey1)
+    direct_transfer1.sign(privatekey1, address1)
 
     with pytest.raises(TransactionFailed):
         nettingchannel.close(
@@ -360,7 +366,7 @@ def test_close_settle(deposit, settle_timeout, tester_state, tester_channels,
     nettingchannel.close(
         str(direct_transfer0.packed().data),
         str(direct_transfer1.packed().data),
-        sender=privatekey0,
+        sender=privatekey0_raw,
     )
     assert len(previous_events) + 1 == len(tester_events)
 
@@ -373,13 +379,13 @@ def test_close_settle(deposit, settle_timeout, tester_state, tester_channels,
         'blockNumber': block_number,
     }
 
-    assert nettingchannel.closed(sender=privatekey0) == block_number
-    assert nettingchannel.closingAddress(sender=privatekey0) == encode_hex(address0)
+    assert nettingchannel.closed(sender=privatekey0_raw) == block_number
+    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address0)
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
     previous_events = list(tester_events)
-    nettingchannel.settle(sender=privatekey0)
+    nettingchannel.settle(sender=privatekey0_raw)
     assert len(previous_events) + 3 == len(tester_events)
 
     block_number = tester_state.block.number
@@ -406,22 +412,24 @@ def test_close_settle(deposit, settle_timeout, tester_state, tester_channels,
         'blockNumber': block_number,
     }
 
-    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 + deposit - transfer_amount0 + transfer_amount1  # noqa
-    assert tester_token.balanceOf(address1, sender=privatekey1) == initial_balance1 + deposit + transfer_amount0 - transfer_amount1  # noqa
-    assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1) == 0
+    assert tester_token.balanceOf(address0, sender=privatekey0_raw) == initial_balance0 + deposit - transfer_amount0 + transfer_amount1  # noqa
+    assert tester_token.balanceOf(address1, sender=privatekey1_raw) == initial_balance1 + deposit + transfer_amount0 - transfer_amount1  # noqa
+    assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == 0
 
 
 def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
                                         tester_channels, tester_token,
                                         tester_events):
 
-    privatekey0, privatekey1, nettingchannel, channel0, channel1 = tester_channels[0]
-    address0 = privatekey_to_address(privatekey0)
-    address1 = privatekey_to_address(privatekey1)
+    privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
+    privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
+    address0 = privatekey_to_address(privatekey0_raw)
+    address1 = privatekey_to_address(privatekey1_raw)
     unknow_key = tester.k3
 
-    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0)
-    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0_raw)
+    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
 
     lock_amount0 = 29
     lock_expiration0 = tester_state.block.number + DEFAULT_REVEAL_TIMEOUT + 3
@@ -435,7 +443,7 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
         expiration=lock_expiration0,
         hashlock=hashlock0,
     )
-    mediated_transfer0.sign(privatekey0)
+    mediated_transfer0.sign(privatekey0, address0)
 
     lock_amount1 = 29
     lock_expiration1 = tester_state.block.number + DEFAULT_REVEAL_TIMEOUT + 5
@@ -449,7 +457,7 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
         expiration=lock_expiration1,
         hashlock=hashlock1,
     )
-    mediated_transfer1.sign(privatekey1)
+    mediated_transfer1.sign(privatekey1, address1)
 
     with pytest.raises(TransactionFailed):
         nettingchannel.close(
@@ -462,7 +470,7 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
     nettingchannel.close(
         str(mediated_transfer0.packed().data),
         str(mediated_transfer1.packed().data),
-        sender=privatekey0,
+        sender=privatekey0_raw,
     )
     assert len(previous_events) + 1 == len(tester_events)
 
@@ -474,13 +482,13 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
         'closingAddress': encode_hex(address0),
         'blockNumber': block_number,
     }
-    assert nettingchannel.closed(sender=privatekey0) == block_number
-    assert nettingchannel.closingAddress(sender=privatekey0) == encode_hex(address0)
+    assert nettingchannel.closed(sender=privatekey0_raw) == block_number
+    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address0)
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
     previous_events = list(tester_events)
-    nettingchannel.settle(sender=privatekey0)
+    nettingchannel.settle(sender=privatekey0_raw)
     block_number = tester_state.block.number
 
     assert len(previous_events) + 3 == len(tester_events)
@@ -507,18 +515,22 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
         'blockNumber': block_number,
     }
 
-    assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 + deposit  # noqa
-    assert tester_token.balanceOf(address1, sender=privatekey1) == initial_balance1 + deposit  # noqa
-    assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1) == 0
+    assert tester_token.balanceOf(address0, sender=privatekey0_raw) == initial_balance0 + deposit  # noqa
+    assert tester_token.balanceOf(address1, sender=privatekey1_raw) == initial_balance1 + deposit  # noqa
+    assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == 0
 
 
 @pytest.mark.xfail()
 def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, tester_events):
-    privatekey0, privatekey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
+    privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
+    address0 = privatekey_to_address(privatekey0_raw)
+    address1 = privatekey_to_address(privatekey1_raw)
 
     transfer_amount = 3
     first_direct_transfer0 = channel0.create_directtransfer(transfer_amount)
-    first_direct_transfer0.sign(privatekey0)
+    first_direct_transfer0.sign(privatekey0, address0)
     first_direct_transfer0_data = str(first_direct_transfer0.packed().data)
 
     channel0.register_transfer(first_direct_transfer0)
@@ -526,7 +538,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
 
     transfer_amount = 5
     second_direct_transfer0 = channel0.create_directtransfer(transfer_amount)
-    second_direct_transfer0.sign(privatekey0)
+    second_direct_transfer0.sign(privatekey0, address0)
     second_direct_transfer0_data = str(second_direct_transfer0.packed().data)
 
     channel0.register_transfer(second_direct_transfer0)
@@ -534,7 +546,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
 
     transfer_amount = 7
     third_direct_transfer0 = channel0.create_directtransfer(transfer_amount)
-    third_direct_transfer0.sign(privatekey0)
+    third_direct_transfer0.sign(privatekey0, address0)
     third_direct_transfer0_data = str(third_direct_transfer0.packed().data)
 
     channel0.register_transfer(third_direct_transfer0)
@@ -542,7 +554,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
 
     transfer_amount = 11
     fourth_direct_transfer0 = channel0.create_directtransfer(transfer_amount)
-    fourth_direct_transfer0.sign(privatekey0)
+    fourth_direct_transfer0.sign(privatekey0, address0)
     fourth_direct_transfer0_data = str(fourth_direct_transfer0.packed().data)
 
     channel0.register_transfer(fourth_direct_transfer0)
@@ -550,7 +562,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
 
     transfer_amount = 13
     direct_transfer1 = channel1.create_directtransfer(transfer_amount)
-    direct_transfer1.sign(privatekey1)
+    direct_transfer1.sign(privatekey1, address1)
     direct_transfer1_data = str(direct_transfer1.packed().data)
 
     channel0.register_transfer(direct_transfer1)
@@ -560,32 +572,32 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(
             second_direct_transfer0_data,
-            sender=privatekey0,
+            sender=privatekey0_raw,
         )
 
     nettingchannel.close(
         second_direct_transfer0_data,
         direct_transfer1_data,
-        sender=privatekey0,
+        sender=privatekey0_raw,
     )
 
     # who closes the channel cannot call updateTransfer
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(
             third_direct_transfer0_data,
-            sender=privatekey0,
+            sender=privatekey0_raw,
         )
 
     # nonce too low
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(
             first_direct_transfer0_data,
-            sender=privatekey1,
+            sender=privatekey1_raw,
         )
 
     nettingchannel.updateTransfer(
         third_direct_transfer0_data,
-        sender=privatekey1,
+        sender=privatekey1_raw,
     )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
@@ -594,7 +606,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(
             fourth_direct_transfer0_data,
-            sender=privatekey1,
+            sender=privatekey1_raw,
         )
 
     # TODO:
@@ -606,11 +618,15 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
 
 @pytest.mark.xfail()
 def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels, tester_events):
-    privatekey0, privatekey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
+    privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
+    address0 = privatekey_to_address(privatekey0_raw)
+    address1 = privatekey_to_address(privatekey1_raw)
 
     transfer_amount = 3
     direct_transfer0 = channel0.create_directtransfer(transfer_amount)
-    direct_transfer0.sign(privatekey0)
+    direct_transfer0.sign(privatekey0, address0)
     direct_transfer0_data = str(direct_transfer0.packed().data)
 
     channel0.register_transfer(direct_transfer0)
@@ -629,7 +645,7 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
         expiration=lock_expiration,
         hashlock=lock_hashlock,
     )
-    mediated_transfer0.sign(privatekey0)
+    mediated_transfer0.sign(privatekey0, address0)
     mediated_transfer0_data = str(mediated_transfer0.packed().data)
 
     channel0.register_transfer(mediated_transfer0)
@@ -637,7 +653,7 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
 
     transfer_amount = 13
     direct_transfer1 = channel1.create_directtransfer(transfer_amount)
-    direct_transfer1.sign(privatekey1)
+    direct_transfer1.sign(privatekey1, address1)
     direct_transfer1_data = str(direct_transfer1.packed().data)
 
     channel0.register_transfer(direct_transfer1)
@@ -646,12 +662,12 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
     nettingchannel.close(
         direct_transfer0_data,
         direct_transfer1_data,
-        sender=privatekey0,
+        sender=privatekey0_raw,
     )
 
     nettingchannel.updateTransfer(
         mediated_transfer0_data,
-        sender=privatekey1,
+        sender=privatekey1_raw,
     )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
@@ -664,7 +680,10 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
 
 @pytest.mark.xfail()
 def test_unlock(tester_token, tester_channels, tester_events, tester_state):
-    privatekey0, privatekey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
+    privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
+    address0 = privatekey_to_address(privatekey0_raw)
 
     target = tester.a0
     initiator = tester.a1
@@ -682,7 +701,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
         expiration=lock_expiration0,
         hashlock=lock_hashlock0,
     )
-    mediated_transfer0.sign(privatekey0)
+    mediated_transfer0.sign(privatekey0, address0)
 
     channel0.register_transfer(mediated_transfer0)
     channel1.register_transfer(mediated_transfer0)
@@ -703,7 +722,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
         expiration=lock_expiration1,
         hashlock=lock_hashlock1,
     )
-    mediated_transfer1.sign(privatekey0)
+    mediated_transfer1.sign(privatekey0, address0)
     mediated_transfer1_data = str(mediated_transfer1.packed().data)
 
     channel0.register_transfer(mediated_transfer1)
@@ -713,7 +732,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
 
     nettingchannel.closeSingleTransfer(
         mediated_transfer1_data,
-        sender=privatekey0,
+        sender=privatekey0_raw,
     )
 
     unlockproof0 = channel1.our_state.balance_proof.compute_proof_for_lock(
@@ -727,7 +746,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
             str(unlockproof0.lock_encoded),
             ''.join(unlockproof0.merkle_proof),
             unlockproof0.secret,
-            sender=privatekey1,
+            sender=privatekey1_raw,
         )
 
     transfer = channel1.partner_state.balance_proof.transfer

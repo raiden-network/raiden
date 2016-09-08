@@ -7,6 +7,8 @@ from Crypto.Hash import keccak as keccaklib
 from secp256k1 import PrivateKey
 from ethereum.utils import big_endian_to_int, sha3, int_to_big_endian
 
+from raiden.encoding.signing import GLOBAL_CTX
+
 __all__ = (
     'sha3',
     'keccak_256',
@@ -48,8 +50,15 @@ def make_address():
 
 
 def make_privkey_address():
-    privkey = sha3(''.join(random.choice(LETTERS) for _ in range(20)))
-    return privkey, privatekey_to_address(privkey)
+    private_key_bin = sha3(''.join(random.choice(LETTERS) for _ in range(20)))
+    privkey = PrivateKey(
+        private_key_bin,
+        ctx=GLOBAL_CTX,
+        raw=True,
+    )
+    pubkey = privkey.pubkey.serialize(compressed=False)
+    address = publickey_to_address(pubkey)
+    return privkey, address
 
 
 def pex(data):
@@ -79,7 +88,11 @@ def publickey_to_address(publickey):
     return sha3(publickey[1:])[12:]
 
 
-def privatekey_to_address(private_key):
-    privkey = PrivateKey(private_key, raw=True)
-    pubkey = privkey.pubkey.serialize(compressed=False)
+def privatekey_to_address(private_key_bin):
+    private_key = PrivateKey(
+        private_key_bin,
+        ctx=GLOBAL_CTX,
+        raw=True,
+    )
+    pubkey = private_key.pubkey.serialize(compressed=False)
     return publickey_to_address(pubkey)
