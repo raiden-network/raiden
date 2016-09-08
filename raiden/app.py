@@ -173,12 +173,17 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
     return app
 
 
-def run(app):
+@options
+@click.command()
+@click.pass_context
+def run(ctx, **kwargs):
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
 
-    console = Console(app)
+    app_ = ctx.invoke(app, **kwargs)
+
+    console = Console(app_)
     console.start()
 
     # wait for interrupt
@@ -190,6 +195,6 @@ def run(app):
 
     app.stop()
 
+
 if __name__ == '__main__':
-    app = app()
-    run(app)
+    run()
