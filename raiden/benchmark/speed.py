@@ -21,7 +21,6 @@ from raiden.benchmark.utils import (
 )
 
 log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
-slogging.configure(':DEBUG')
 
 
 def setup_apps(amount, assets, num_transfers, num_nodes, channels_per_node):
@@ -157,7 +156,11 @@ def main():
     parser.add_argument('--pdb', default=False, action='store_true')
     parser.add_argument('--throughput', dest='throughput', action='store_true', default=True)
     parser.add_argument('--latency', dest='throughput', action='store_false')
+    parser.add_argument('--log', action='store_true', default=False)
     args = parser.parse_args()
+
+    if args.log:
+        slogging.configure(':DEBUG')
 
     if args.profile:
         import GreenletProfiler
