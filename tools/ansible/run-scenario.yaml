@@ -50,6 +50,11 @@
     # Collect instance id: http://stackoverflow.com/a/27307254
     - action: ec2_facts
 
+    - name: overwrite scenario_runner.py from local version (for testing)
+      copy:
+        src: "../scenario_runner.py"
+        dest: "{{ scenario_runner }}"
+
     - name: configured raiden_ports
       find:
         patterns: "4*"
