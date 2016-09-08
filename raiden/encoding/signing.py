@@ -12,7 +12,7 @@ def recover_publickey(messagedata, signature):
         raise ValueError('invalid signature')
 
     key = PublicKey(
-        ctx=secp256k1.lib.secp256k1_context_clone(GLOBAL_CTX),
+        ctx=GLOBAL_CTX,
         flags=ALL_FLAGS,  # FLAG_SIGN is required to recover publickeys
     )
 
@@ -26,7 +26,7 @@ def recover_publickey(messagedata, signature):
 
     publickey = PublicKey(
         publickey_data,
-        ctx=secp256k1.lib.secp256k1_context_clone(GLOBAL_CTX)
+        ctx=GLOBAL_CTX
     )
 
     return publickey.serialize(compressed=False)
@@ -38,7 +38,7 @@ def sign(messagedata, private_key):
 
     key = PrivateKey(
         private_key,
-        ctx=secp256k1.lib.secp256k1_context_clone(GLOBAL_CTX),
+        ctx=GLOBAL_CTX,
         raw=True,
     )
 
