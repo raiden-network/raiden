@@ -3,6 +3,7 @@ import pytest
 import gevent
 from ethereum import slogging
 
+from raiden.utils import sha3
 from raiden.messages import Ping, Ack, decode
 from raiden.network.transport import UnreliableTransport, UDPTransport
 from raiden.raiden_protocol import RaidenProtocol
@@ -25,7 +26,7 @@ def test_ping(raiden_network):
     assert decode(messages[0]) == ping
     decoded = decode(messages[1])
     assert isinstance(decoded, Ack)
-    assert decoded.echo == ping.hash
+    assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -56,7 +57,7 @@ def test_ping_dropped_message(raiden_network):
         decoded = decode(messages[i])
         assert isinstance(decoded, Ack)
 
-    assert decoded.echo == ping.hash
+    assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
 
     # try failing Ack
     messages = setup_messages_cb()
@@ -77,7 +78,7 @@ def test_ping_dropped_message(raiden_network):
     for i in [1, 3]:
         decoded = decode(messages[i])
         assert isinstance(decoded, Ack)
-    assert decoded.echo == ping.hash
+    assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
 
     RaidenProtocol.repeat_messages = False
 
@@ -96,7 +97,7 @@ def test_ping_udp(raiden_network):
     assert decode(messages[0]) == ping
     decoded = decode(messages[1])
     assert isinstance(decoded, Ack)
-    assert decoded.echo == ping.hash
+    assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
 
 
 @pytest.mark.parametrize('privatekey_seed', ['ping_dropped_message:{}'])
@@ -121,7 +122,8 @@ def test_ping_ordering(raiden_network):
         ping = Ping(nonce=nonce)
         app0.raiden.sign(ping)
         app0.raiden.protocol.send_and_wait(app1.raiden.address, ping)
-        hashes.append(ping.hash)
+        pinghash = sha3(ping.encode() + app1.raiden.address)
+        hashes.append(pinghash)
 
     gevent.sleep(2)  # give some time for messages to be handled
 

@@ -8,7 +8,7 @@ from ethereum import slogging
 from raiden.messages import decode, Ack, DirectTransfer, RefundTransfer
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
-from raiden.utils import pex
+from raiden.utils import pex, sha3
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
@@ -57,7 +57,7 @@ def test_transfer(raiden_network):
 
     ack_message = decode(messages[1])
     assert isinstance(ack_message, Ack)
-    assert ack_message.echo == directtransfer_message.hash
+    assert ack_message.echo == sha3(directtransfer_message.encode() + app1.raiden.address)
 
     a0_messages = mlogger.get_node_messages(a0_address)
     assert len(a0_messages) == 2
