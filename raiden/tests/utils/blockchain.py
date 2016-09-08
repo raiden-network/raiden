@@ -10,13 +10,9 @@ import subprocess
 
 import gevent
 from devp2p.crypto import privtopub
-from devp2p.utils import host_port_pubkey_to_uri
 from ethereum import slogging
 from ethereum.utils import denoms, encode_hex
-from pyethapp.accounts import Account
-from pyethapp.config import update_config_from_genesis_json
-from pyethapp.console_service import Console
-from pyethapp.jsonrpc import address_encoder, quantity_decoder
+from pyethapp.jsonrpc import address_encoder
 from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
@@ -36,112 +32,6 @@ def wait_until_block(chain, block):
     curr_block = chain.block_number()
     while curr_block < block:
         curr_block = chain.next_block()
-
-
-def hydrachain_wait(privatekeys, number_of_nodes):
-    """ Wait until the hydrchain cluster is ready. """
-    jsonrpc_client = JSONRPCClient(
-        host='0.0.0.0',
-        privkey=privatekeys[0],
-        print_communication=False,
-    )
-
-    quantity = jsonrpc_client.call('net_peerCount')
-    tries = 5
-
-    while quantity != number_of_nodes and tries > 0:
-        gevent.sleep(0.5)
-        quantity = quantity_decoder(jsonrpc_client.call('net_peerCount'))
-
-    if quantity != number_of_nodes:
-        raise Exception('hydrachain is taking to long to initialize')
-
-
-def hydrachain_create_blockchain(private_keys, hydrachain_private_keys,
-                                 p2p_base_port, base_datadir):
-    """ Initializes a hydrachain network used for testing. """
-    # pylint: disable=too-many-locals
-    from hydrachain.app import services, start_app, HPCApp
-    import pyethapp.config as konfig
-
-    def privkey_to_uri(private_key):
-        host = b'0.0.0.0'
-        pubkey = privtopub(private_key)
-        return host_port_pubkey_to_uri(host, p2p_base_port, pubkey)
-
-    account_addresses = [
-        privatekey_to_address(priv)
-        for priv in private_keys
-    ]
-
-    alloc = {
-        encode_hex(address): {
-            'balance': DEFAULT_BALANCE_BIN,
-        }
-        for address in account_addresses
-    }
-
-    genesis = {
-        'nonce': '0x00006d6f7264656e',
-        'difficulty': '0x20000',
-        'mixhash': '0x00000000000000000000000000000000000000647572616c65787365646c6578',
-        'coinbase': '0x0000000000000000000000000000000000000000',
-        'timestamp': '0x00',
-        'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-        'extraData': '0x',
-        'gasLimit': GAS_LIMIT_HEX,
-        'alloc': alloc,
-    }
-
-    bootstrap_nodes = [
-        privkey_to_uri(hydrachain_private_keys[0]),
-    ]
-
-    validators_addresses = [
-        privatekey_to_address(private_key)
-        for private_key in hydrachain_private_keys
-    ]
-
-    all_apps = []
-    for number, private_key in enumerate(hydrachain_private_keys):
-        config = konfig.get_default_config(services + [HPCApp])
-        config = update_config_from_genesis_json(config, genesis)
-
-        datadir = os.path.join(base_datadir, str(number))
-        konfig.setup_data_dir(datadir)
-
-        account = Account.new(
-            password='',
-            key=private_key,
-        )
-
-        config['data_dir'] = datadir
-        config['hdc']['validators'] = validators_addresses
-        config['node']['privkey_hex'] = encode_hex(private_key)
-        config['jsonrpc']['listen_port'] += number
-        config['client_version_string'] = 'NODE{}'.format(number)
-
-        # setting to 0 so that the CALLCODE opcode works at the start of the
-        # network
-        config['eth']['block']['HOMESTEAD_FORK_BLKNUM'] = 0
-
-        config['discovery']['bootstrap_nodes'] = bootstrap_nodes
-        config['discovery']['listen_port'] = p2p_base_port + number
-
-        config['p2p']['listen_port'] = p2p_base_port + number
-        config['p2p']['min_peers'] = min(10, len(hydrachain_private_keys) - 1)
-        config['p2p']['max_peers'] = len(hydrachain_private_keys) * 2
-
-        # only one of the nodes should have the Console service running
-        if number != 0 and Console.name not in config['deactivated_services']:
-            config['deactivated_services'].append(Console.name)
-
-        hydrachain_app = start_app(config, accounts=[account])
-        all_apps.append(hydrachain_app)
-
-    hydrachain_wait(private_keys, len(hydrachain_private_keys) - 1)
-
-    return all_apps
 
 
 def geth_to_cmd(node, datadir, verbosity):

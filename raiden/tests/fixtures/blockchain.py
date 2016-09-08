@@ -18,7 +18,6 @@ from raiden.network.rpc.client import (
 )
 from raiden.tests.utils.blockchain import (
     geth_create_blockchain,
-    hydrachain_create_blockchain,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -58,7 +57,7 @@ def assets_addresses(asset_amount, number_of_assets, blockchain_services):
 def blockchain_services(request, private_keys, poll_timeout, blockchain_backend, blockchain_type, tester_blockgas_limit):
     verbose = request.config.option.verbose
 
-    if blockchain_type in ('geth', 'hydrachain'):
+    if blockchain_type in ('geth',):
         return _jsonrpc_services(
             private_keys,
             verbose,
@@ -93,15 +92,6 @@ def blockchain_backend(request, private_keys, blockchain_private_keys,
             tmpdir,
         )
 
-    if blockchain_type == 'hydrachain':
-        return _hydrachain_blockchain(
-            request,
-            private_keys,
-            blockchain_private_keys,
-            blockchain_p2p_base_port,
-            tmpdir,
-        )
-
     if blockchain_type == 'tester':
         return ()
 
@@ -110,25 +100,6 @@ def blockchain_backend(request, private_keys, blockchain_private_keys,
 
     # check pytest_addoption
     raise ValueError('unknow cluster type {}'.format(blockchain_type))
-
-
-def _hydrachain_blockchain(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):
-    """ Helper to do proper cleanup. """
-    hydrachain_apps = hydrachain_create_blockchain(
-        private_keys,
-        cluster_private_keys,
-        p2p_base_port,
-        str(tmpdir),
-    )
-
-    def _cleanup():
-        for app in hydrachain_apps:
-            app.stop()
-
-        cleanup_tasks()
-
-    request.addfinalizer(_cleanup)
-    return hydrachain_apps
 
 
 def _geth_blockchain(request, private_keys, cluster_private_keys, p2p_base_port, tmpdir):

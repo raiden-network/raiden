@@ -52,7 +52,7 @@ def channels_per_node():
 
 @pytest.fixture
 def poll_timeout():
-    """ Timeout in seconds for polling a cluster. Used for geth and hydrachain. """
+    """ Timeout in seconds for polling a cluster. Used for geth. """
     return DEFAULT_POLL_TIMEOUT
 
 
@@ -98,7 +98,7 @@ def blockchain_type(request):
 @pytest.fixture
 def blockchain_number_of_nodes():
     """ Number of nodes in a the cluster, not the same as the number of raiden
-    nodes. Used for all hydrachain and geth clusters and ignored for tester and
+    nodes. Used for all geth clusters and ignored for tester and
     mock.
     """
     return 3

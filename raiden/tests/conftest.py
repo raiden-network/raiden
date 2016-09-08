@@ -7,7 +7,6 @@ from ethereum.keys import PBKDF2_CONSTANTS
 
 from raiden.tests.fixtures import *
 
-# otherwise running hydrachain will block the test
 gevent.monkey.patch_socket()
 gevent.get_hub().SYSTEM_ERROR = BaseException
 PBKDF2_CONSTANTS['c'] = 100
@@ -16,11 +15,10 @@ PBKDF2_CONSTANTS['c'] = 100
 def pytest_addoption(parser):
     parser.addoption(
         '--blockchain-type',
-        choices=['hydrachain', 'geth', 'tester', 'mock'],
+        choices=['geth', 'tester', 'mock'],
         default='geth',
     )
 
-    # might not work with all the hydrachain's loggers
     parser.addoption(
         '--log-config',
         default=None,
@@ -31,8 +29,7 @@ def pytest_addoption(parser):
 def logging_level(request):
     """ Configure the logging level.
 
-    For integration tests this also sets the geth verbosity and the hydrachain
-    loggers.
+    For integration tests this also sets the geth verbosity.
     """
     if request.config.option.log_config is not None:
         slogging.configure(request.config.option.log_config)
