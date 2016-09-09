@@ -29,7 +29,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 @click.pass_context  # pylint: disable=too-many-locals
 def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
     ctx.params.pop('scenario')
-    app = ctx.invoke(orig_app)
+    app = ctx.invoke(orig_app, **kwargs)
     if scenario:
         script = json.load(scenario)
 
@@ -43,6 +43,8 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
         transfers_by_channel = {}
 
         tokens = script['assets']
+        token_address = None
+        peer = None
         for token in tokens:
             # skip tokens/assets that we're not part of
             if not app.raiden.address.encode('hex') in token['channels']:
@@ -54,32 +56,67 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
             else:
                 token_address = tools.create_token()
 
+            nodes = token['channels']
+            if not app.raiden.address.encode('hex') in nodes:
+                continue
+
             transfers_with_amount = token['transfers_with_amount']
-            for node in token['channels']:
-                # FIXME: in order to do bidirectional channels, only one side
-                # (i.e. only token['channels'][0]) should
-                # open; others should join by calling
-                # raiden.api.deposit, AFTER the channel came alive!
-                if node != app.raiden.address.encode('hex'):
-                    tools.register_asset(token_address)
-                    channel = tools.open_channel_with_funding(
-                        token_address, node, 1000)
-                    transfers_by_channel[channel] = int(transfers_with_amount[node])
+
+            # FIXME: in order to do bidirectional channels, only one side
+            # (i.e. only token['channels'][0]) should
+            # open; others should join by calling
+            # raiden.api.deposit, AFTER the channel came alive!
+
+            # FIXME: leave unidirectional for now
+
+            if app.raiden.address.encode('hex') == nodes[0]:
+                tools.register_asset(token_address)
+                log.info("opening channel for {}".format(token_address))
+                channel = tools.open_channel_with_funding(
+                    token_address, nodes[1], 1000)
+                log.info("new channel is {}".format(channel))
+                #transfers_by_channel[channel] = int(transfers_with_amount[nodes[1]])
+                transfers_by_channel[channel] = 1
+                peer = nodes[1]
+            else:
+                peer = nodes[0]
+                continue
 
         def transfer(token_address, amount_per_transfer, total_transfers, channel):
+            if channel is None:
+                return
+
             peer = channel.partner(app.raiden.address)
 
             def transfer_():
+                log.info("making {} transfers".format(total_transfers))
                 for _ in xrange(total_transfers):
                     app.raiden.transfer(token_address, amount_per_transfer, peer)
 
             return gevent.spawn(transfer_)
 
+        log.info("transfers_by_channel: {}".format(transfers_by_channel))
+
         greenlets = []
         for channel, amount in transfers_by_channel.items():
-            greenlets.append(transfer(token_address, 1, amount, channel))
+            log.info("adding greenlet for token_address {} for channel {}".format(
+                token_address, channel))
+            greenlet = transfer(token_address, 1, amount, channel)
+            if greenlet is not None:
+                greenlets.append(greenlet)
 
+        log.info("join all")
         gevent.joinall(greenlets)
+
+        log.info("will wait for signals")
+
+        event = gevent.event.Event()
+        gevent.signal(signal.SIGQUIT, event.set)
+        gevent.signal(signal.SIGTERM, event.set)
+        gevent.signal(signal.SIGINT, event.set)
+        event.wait()
+
+        log.info("stats: {}".format(tools.channel_stats_for(token_address, peer)))
 
     else:
         # wait for interrupt
