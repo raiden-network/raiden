@@ -42,8 +42,11 @@ NODE_CONFIG = [
 # a list of `num_raiden_accounts` account addresses with a predictable privkey:
 # privkey = sha3('127.0.0.1:`raiden_port + i`')
 DEFAULTACCOUNTS = [
-    value['address'] for value in generate_accounts([
-        '127.0.0.1:{}'.format(RAIDEN_PORT + i) for i in range(NUM_RAIDEN_ACCOUNTS)]).values()
+    value['address']
+    for value in generate_accounts([
+        '127.0.0.1:{}'.format(RAIDEN_PORT + i)
+        for i in range(NUM_RAIDEN_ACCOUNTS)
+    ]).values()
 ]
 
 
@@ -116,19 +119,21 @@ def create_keystore_account(datadir, privkey=encode_hex(sha3('localhost:627'))):
 
 def init_datadir(datadir, accounts=DEFAULTACCOUNTS):
     genesis_path = os.path.join(datadir, 'custom_genesis.json')
+
     with open(genesis_path, 'w') as f:
         json.dump(mk_genesis(accounts), f)
+
     Popen(shlex.split(
         'geth --datadir {} init {}'.format(datadir, genesis_path)
-        ))
+    ))
 
 
 def create_node_configurations(num_nodes,
-                              miner=True,
-                              start_port=30301,
-                              start_rpcport=8101,
-                              host='127.0.0.1',
-                              ):
+                               miner=True,
+                               start_port=30301,
+                               start_rpcport=8101,
+                               host='127.0.0.1',
+                               ):
     """
     Create multiple configurations (ports, keys, etc...) for `num_nodes` on `host`.
 
@@ -194,8 +199,10 @@ def boot(cmds):
     try:
         for cmd in cmds:
             if '--unlock' in cmd:
-                proc = Popen(cmd,
-                    universal_newlines=True, stdin=PIPE
+                proc = Popen(
+                    cmd,
+                    universal_newlines=True,
+                    stdin=PIPE,
                 )
                 # write password to unlock
                 proc.stdin.write(DEFAULT_PW + os.linesep)
@@ -213,6 +220,7 @@ def boot(cmds):
 
 def shutdown_handler(_signo, _stackframe):
     raise SystemExit
+
 
 if __name__ == '__main__':
     signal.signal(signal.SIGTERM, shutdown_handler)

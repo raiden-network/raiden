@@ -1,18 +1,23 @@
 #!/usr/bin/env python
+from __future__ import print_function
+
 import os
 import json
+
 from ethereum._solidity import compile_contract
-from ethereum.utils import denoms
+from ethereum.utils import denoms, decode_hex
 from pyethapp.rpc_client import JSONRPCClient
 from raiden.blockchain.abi import get_contract_path
 from raiden.network.rpc.client import patch_send_transaction
 
 
 # ordered list of solidity files to deploy for the raiden registry
-RAIDEN_CONTRACT_FILES = ["Token.sol", "NettingChannelLibrary.sol", "ChannelManagerLibrary.sol", "Registry.sol"]
-DISCOVERY_CONTRACT_FILES = ["EndpointRegistry.sol"]
+RAIDEN_CONTRACT_FILES = ['Token.sol', 'NettingChannelLibrary.sol', 'ChannelManagerLibrary.sol', 'Registry.sol']
+DISCOVERY_CONTRACT_FILES = ['EndpointRegistry.sol']
 
-name_from_file = lambda fn: os.path.split(fn)[-1].split('.')[0]
+
+def name_from_file(filename):
+    return os.path.split(filename)[-1].split('.')[0]
 
 
 def allcontracts(contract_files):
@@ -49,12 +54,29 @@ def deploy_all(client):
 
 
 if __name__ == "__main__":
-    # FIXME: client params should be read from cmdline-args!
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('port', type=int)
+    parser.add_argument('privatekey')
+    parser.add_argument('--pretty', default=False, action='store_true')
+    args = parser.parse_args()
+
+    port = args.port
+    privatekey_hex = args.privatekey
+    privatekey = decode_hex(privatekey_hex)
+
     pretty = False
-    client = JSONRPCClient(port=8545,
-                           privkey='1' * 64,
-                           print_communication=False,
-                           )
+    client = JSONRPCClient(
+        port=port,
+        privkey=privatekey,
+        print_communication=False,
+    )
     patch_send_transaction(client)
     deployed = deploy_all(client)
-    print json.dumps(deployed, indent=2 if pretty else None)
+
+    if args.pretty:
+        indent = 2
+    else:
+        indent = None
+
+    print(json.dumps(deployed, indent=indent))

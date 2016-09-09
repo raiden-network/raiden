@@ -519,30 +519,38 @@ class RaidenEventHandler(object):
         self.raiden.register_channel_manager(manager)
 
     def event_channelnew(self, manager_address_bin, event):  # pylint: disable=unused-argument
-        if address_decoder(event['participant1']) != self.raiden.address and address_decoder(event['participant2']) != self.raiden.address:
-            log.info('ignoring new channel, this is node is not a participant.')
-            return
-
-        netting_channel_address_bin = address_decoder(event['nettingChannel'])
-
-        # shouldnt raise, filters are installed only for registered managers
+        # should not raise, filters are installed only for registered managers
         asset_manager = self.raiden.get_manager_by_address(manager_address_bin)
-        asset_manager.register_channel_by_address(
-            netting_channel_address_bin,
-            self.raiden.config['reveal_timeout'],
+
+        participant1 = address_decoder(event['participant1'])
+        participant2 = address_decoder(event['participant2'])
+
+        asset_manager.channelgraph.add_path(
+            participant1,
+            participant2,
         )
 
-        log.info(
-            'New channel created',
-            channel_address=event['nettingChannel'],
-            manager_address=pex(manager_address_bin),
-        )
+        if participant1 == self.raiden.address or participant2 == self.raiden.address:
+            netting_channel_address_bin = address_decoder(event['nettingChannel'])
+
+            asset_manager.register_channel_by_address(
+                netting_channel_address_bin,
+                self.raiden.config['reveal_timeout'],
+            )
+
+            log.info(
+                'New channel created',
+                channel_address=event['nettingChannel'],
+                manager_address=pex(manager_address_bin),
+            )
+        else:
+            log.info('ignoring new channel, this is node is not a participant.')
 
     def event_channelnewbalance(self, netting_contract_address_bin, event):
         asset_address_bin = address_decoder(event['assetAddress'])
         participant_address_bin = address_decoder(event['participant'])
 
-        # shouldn't raise, all three addresses need to be registered
+        # should not raise, all three addresses need to be registered
         manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
         channel = manager.get_channel_by_contract_address(netting_contract_address_bin)
         channel_state = channel.get_state_for(participant_address_bin)

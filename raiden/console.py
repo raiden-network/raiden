@@ -1,17 +1,19 @@
+# -*- coding: utf8 -*-
 import cStringIO
-import sys
-from logging import StreamHandler, Formatter
-from collections import defaultdict
 import json
+import sys
+from collections import defaultdict
+from logging import StreamHandler, Formatter
 
 import gevent
-from gevent.event import Event
 import IPython
-from IPython.lib.inputhook import inputhook_manager
 from devp2p.service import BaseService
-from ethereum.utils import denoms
 from ethereum.slogging import getLogger
 from ethereum._solidity import compile_file
+from ethereum.utils import denoms
+from gevent.event import Event
+from IPython.lib.inputhook import inputhook_manager
+
 from raiden.messages import Ping
 from raiden.blockchain.abi import get_contract_path
 from raiden.utils import events
