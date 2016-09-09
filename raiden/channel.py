@@ -57,18 +57,6 @@ class BalanceProof(object):
     """ Saves the state required to settle a netting contract. """
 
     def __init__(self):
-        """
-        Args:
-            transfer: A transfer message object that can be used to close a
-            contract.
-
-            The message must be valid, with a correct `nonce`,
-            `transfered_amount`, and `locksroot`.
-
-            hashlock_pendinglocks Dict: A mapping from the hashlock to the lock
-            containing the locks that are contained in the messages's
-            locksroot.
-        """
         # locks that we are mediating but the secret is unknow
         self.hashlock_pendinglocks = dict()
 

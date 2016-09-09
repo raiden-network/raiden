@@ -22,7 +22,8 @@ class AssetManager(object):
         """
         Args:
             raiden (RaidenService): a node's service
-            asset_address (address): the asset address managed by this instance
+            asset_address (bin): the asset address managed by this instance
+            channel_manager_address (bin): The channel manager address.
             channelgraph (networkx.Graph): a graph representing the raiden network
         """
         if not isaddress(asset_address):
@@ -30,8 +31,7 @@ class AssetManager(object):
 
         self.partneraddress_channel = dict()  #: maps the partner address to the channel instance
         self.address_channel = dict()  #: maps the channel address to the channel instance
-        self.hashlock_channel = defaultdict(list)
-        ''' A list of channels that are waiting on the conditional lock. '''
+        self.hashlock_channel = defaultdict(list)  #: channels that are waiting on the conditional lock
 
         self.asset_address = asset_address
         self.channel_manager_address = channel_manager_address
@@ -46,9 +46,19 @@ class AssetManager(object):
         return self.channelgraph.has_path(source, target)
 
     def get_channel_by_partner_address(self, partner_address_bin):
+        """ Return the channel with `partner_address_bin`.
+
+        Raises:
+            KeyError: If there is no channel with partner_address_bin.
+        """
         return self.partneraddress_channel[partner_address_bin]
 
     def get_channel_by_contract_address(self, netting_channel_address_bin):
+        """ Return the channel with `netting_channel_address_bin`.
+
+        Raises:
+            KeyError: If there is no channel with netting_channel_address_bin.
+        """
         return self.address_channel[netting_channel_address_bin]
 
     def register_channel_by_address(self, netting_channel_address_bin, reveal_timeout):
@@ -80,14 +90,14 @@ class AssetManager(object):
         """
         translator = ContractTranslator(NETTING_CHANNEL_ABI)
 
-        # race condition:
-        # - if the filter is installed after a deposit is made it could be
-        # missed, to avoid that we first install the filter, then request the
-        # state from the node and then poll the filter.
-        # - with the above strategy the same deposit could be handled twice,
-        # once from the status received from the netting contract and once from
-        # the event, to avoid problems the we use the balance instead of the
-        # deposit is used.
+        # Race condition:
+        # - If the filter is installed after the call to `details` a deposit
+        # could be missed in the meantime, to avoid this we first install the
+        # filter listener and then call `deposit`.
+        # - Because of the above strategy a `deposit` event could be handled
+        # twice, for this reason we must not use `deposit` in the events but
+        # the resulting `balance`.
+
         task_name = 'ChannelNewBalance {}'.format(pex(netting_channel.address))
         newbalance = netting_channel.channelnewbalance_filter()
         newbalance_listener = LogListenerTask(
@@ -188,36 +198,49 @@ class AssetManager(object):
         while channels_reveal:
             reveal_to = channels_reveal.pop()
 
-            # critical read/write section
+            # When a secret is revealed a message could be in-transit
+            # containing the older lockroot, for this reason the recipient
+            # cannot update it's locksroot at the moment a secret was revealed.
+            #
+            # The protocol is to register the secret so that it can compute a
+            # proof of balance, if necessary, forward the secret to the sender
+            # and wait for the update from it. It's the sender duty to order
+            # the current in-transit (and possible the transfers in queue)
+            # transfers and the secret/locksroot update.
+            #
             # The channel and it's queue must be changed in sync, a transfer
-            # must not be created and the balance_proof must not be changed
-            # while we update the state (relaying on the GIL and non-blocing
-            # apis instead of an explicit lock).
+            # must not be created and while we update the balance_proof.
 
-            # If we created the mediated transfer update our local state and
-            # notify our partner to do the same, this operation needs to be
-            # synchronized with the merkletree of locks to inhibit locksroot
-            # conflicts.
+            # critical read/write section
+            # (relying on the GIL and non-blocking apis instead of an explicit
+            # lock).
+
+            # we are the sender, so we can claim the lock/update the locksroot
+            # and add the update message into the end of the message queue, all
+            # the messages will remain consistent (including the messages
+            # in-transit and the ones that are already in the queue)
             if reveal_to.partner_state.balance_proof.is_pending(hashlock):
                 reveal_to.claim_lock(secret)
                 self.raiden.send_async(reveal_to.partner_state.address, secret_message)
 
-            # Otherwise we received the transfer, reveal it to the
-            # originating_channel so that it can update it's internal state and
-            # allow us to update too.
+            # we are the recipient, register the secret so that a balance proof
+            # can be generate and reveal the secret to the sender. the asset
+            # will be claimed once the secret is received from the sender in
+            # the MediatedTransferTask
             elif reveal_to.our_state.balance_proof.is_pending(hashlock):
-                # register the secret so that a balance proof can be generated
                 reveal_to.register_secret(secret)
                 self.raiden.send_async(reveal_to.partner_state.address, secret_message)
 
             else:
                 log.error('No corresponding hashlock for the given secret.')
+            # /critical read/write section
 
         # delete the list it wont ever be used again (unless we have a sha3
-        # colision)
+        # collision)
         del self.hashlock_channel[hashlock]
 
     def channel_isactive(self, partner_address):
+        """ True if the channel with `partner_address` is open. """
         # TODO: check if the partner's network is alive
         return self.get_channel_by_partner_address(partner_address).isopen
 

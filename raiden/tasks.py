@@ -30,6 +30,12 @@ DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
 
 
 class Task(gevent.Greenlet):
+    """ Base class used to created tasks.
+
+    Note:
+        Always call super().__init__().
+    """
+
     def __init__(self):
         super(Task, self).__init__()
         self.response_message = None
@@ -57,8 +63,21 @@ class Task(gevent.Greenlet):
 
 
 class LogListenerTask(Task):
+    """ Task for polling for filter changes. """
+
     def __init__(self, listener_name, filter_, callback, contract_translator,
                  events_poll_timeout=DEFAULT_EVENTS_POLL_TIMEOUT):
+        """
+        Args:
+            listener_name (str): A name to distinguish listener tasks.
+            filter_ (raiden.network.rpc.client.Filter): A proxy for calling the
+                blockchain's filter api.
+            callback (function): A function to be called once an event happens.
+            contract_translator (ethereum.abi.ContractTranslator): A contract
+                translator to decode the event data.
+            events_poll_timeout (float): How long the tasks should sleep before
+                polling again.
+        """
         super(LogListenerTask, self).__init__()
 
         self.listener_name = listener_name
@@ -109,6 +128,8 @@ class LogListenerTask(Task):
 
 
 class AlarmTask(Task):
+    """ Task to notify when a block is mined. """
+
     def __init__(self, chain):
         super(AlarmTask, self).__init__()
 
@@ -119,6 +140,13 @@ class AlarmTask(Task):
         self.last_block_number = self.chain.block_number()
 
     def register_callback(self, callback):
+        """ Register a new callback.
+
+        Note:
+            This callback will be executed in the AlarmTask context and for
+            this reason it should not block, otherwise we can miss block
+            changes.
+        """
         if not callable(callback):
             raise ValueError('callback is not a callable')
 
@@ -243,12 +271,10 @@ class StartMediatedTransferTask(Task):
 
             # `next_hop` timedout
             if response is None:
-                self.done_result.set(False)
                 self.transfermanager.on_hashlock_result(hashlock, False)
 
             # someone down the line timedout / couldn't proceed
             elif isinstance(response, (RefundTransfer, TransferTimeout)):
-                self.done_result.set(False)
                 self.transfermanager.on_hashlock_result(hashlock, False)
 
             # `target` received the MediatedTransfer
@@ -258,7 +284,7 @@ class StartMediatedTransferTask(Task):
                 raiden.send_async(target, secret_message)
 
                 # register the secret now and just incur with the additional
-                # overhead of message retry
+                # overhead of retrying until the `next_hop` receives the secret
                 # forward_channel.register_secret(secret)
 
                 # wait until `next_hop` received the secret to syncronize our
@@ -274,8 +300,7 @@ class StartMediatedTransferTask(Task):
                     if isinstance(response, Secret) and response.sender == next_hop:
                         # critical read/write section
                         # The channel and it's queue must be locked, a transfer
-                        # must not be created and the balance_proof must not be
-                        # changed while we update the state.
+                        # must not be created while we update the balance_proof.
                         forward_channel.claim_lock(secret)
                         raiden.send_async(next_hop, secret_message)
                         # /critical write section
@@ -289,6 +314,13 @@ class StartMediatedTransferTask(Task):
             else:
                 log.error('Unexpected response {}'.format(repr(response)))
                 self.transfermanager.on_hashlock_result(hashlock, False)
+
+        transfer_details = 'initiator:{} target:{}'.format(
+            pex(self.address),
+            pex(self.target),
+        )
+        log.debug('START MEDIATED TRANSFER FAILED {}'.format(transfer_details))
+        self.done_result.set(False)  # all paths failed
 
     def send_and_wait_valid(self, raiden, path, mediated_transfer):  # pylint: disable=no-self-use
         """ Send the `mediated_transfer` and wait for either a message from
@@ -443,11 +475,6 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                     forward_channel.register_transfer(response)
 
             elif isinstance(response, Secret):
-                # our internal state cannot be update right away since there
-                # might exist messages in flight, first notify the `sender`
-                # about the secret and let him order it's messages and
-                # guarantee state consistency among the messages.
-
                 # update all channels and propagate the secret (this doesnt claim the lock yet)
                 assetmanager.handle_secret(response.secret)
 
