@@ -68,8 +68,9 @@
     #    - "{{ raiden_ports }}"
 
     - name: update repository if asked (set `-e force_pull=True`)
-      shell: "git pull --rebase"
-      chdir: "{{ raiden_dir }}"
+      shell:
+        cmd: "git pull --rebase"
+        chdir: "{{ raiden_dir }}"
       when: force_pull is defined
 
     - name: execute raidens asynchronously
