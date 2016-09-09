@@ -155,6 +155,8 @@ def _jsonrpc_services(private_keys, verbose, poll_timeout):
         blockchain = BlockChainService(
             privkey,
             registry_address,
+            '0.0.0.0',
+            jsonrpc_client.port,
         )
         blockchain_services.append(blockchain)
 
