@@ -69,6 +69,6 @@ setup(
     tests_require=test_requirements,
     entry_points='''
     [console_scripts]
-    raiden=raiden.app:app
+    raiden=raiden.app:run
     '''
 )
