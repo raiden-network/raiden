@@ -73,9 +73,7 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
                 for _ in xrange(total_transfers):
                     app.raiden.transfer(token_address, amount_per_transfer, peer)
 
-            return gevent.spawn(
-                transfer, amount_per_transfer, peer
-            )
+            return gevent.spawn(transfer_)
 
         greenlets = []
         for channel, amount in transfers_by_channel.items():
