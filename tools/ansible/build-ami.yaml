@@ -49,8 +49,14 @@
       sudo: yes
       with_items:
         - geth
-        - solc
         - daemon
+
+    - name: install static solc
+      get_url:
+        url: "https://github.com/brainbot-com/solidity-static/releases/download/v0.3.6/solc"
+        dest: "/usr/local/bin/solc"
+        mode: "a+x"
+      sudo: yes
 
 - hosts: tag_Name_Build
   name: make DAG
