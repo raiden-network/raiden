@@ -8,6 +8,7 @@ import json
 import click
 import gevent
 from gevent import monkey
+import time
 from ethereum import slogging
 
 from raiden.console import ConsoleTools
@@ -47,7 +48,8 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
         peer = None
         for token in tokens:
             # skip tokens/assets that we're not part of
-            if not app.raiden.address.encode('hex') in token['channels']:
+            nodes = token['channels']
+            if not app.raiden.address.encode('hex') in nodes:
                 continue
 
             # allow for prefunded tokens
@@ -56,10 +58,6 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
             else:
                 token_address = tools.create_token()
 
-            nodes = token['channels']
-            if not app.raiden.address.encode('hex') in nodes:
-                continue
-
             transfers_with_amount = token['transfers_with_amount']
 
             # FIXME: in order to do bidirectional channels, only one side
@@ -67,48 +65,82 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
             # open; others should join by calling
             # raiden.api.deposit, AFTER the channel came alive!
 
-            # FIXME: leave unidirectional for now
+            # NOTE: leaving unidirectional for now because it most
+            #       probably will get to higher throughput
 
+            def wait_for_node(node):
+                log.info("Looking for node {}".format(node))
+                while True:
+                    online = tools.ping(node)
+                    if online:
+                        break
+                    gevent.sleep(1)
+                log.info("Node {} came online".format(node))
+
+            #tools.register_asset(token_address)
             if app.raiden.address.encode('hex') == nodes[0]:
-                tools.register_asset(token_address)
-                log.info("opening channel for {}".format(token_address))
-                channel = tools.open_channel_with_funding(
-                    token_address, nodes[1], 1000)
-                log.info("new channel is {}".format(channel))
-                #transfers_by_channel[channel] = int(transfers_with_amount[nodes[1]])
-                transfers_by_channel[channel] = 1
                 peer = nodes[1]
+                wait_for_node(peer)
+
+                channel_manager = tools.register_asset(token_address)
+
+                amount = transfers_with_amount[nodes[0]]
+                log.info("Opening channel for {}".format(token_address))
+                channel = tools.open_channel_with_funding(token_address, peer, amount)
+                transfers_by_channel[channel] = int(transfers_with_amount[nodes[1]])
             else:
                 peer = nodes[0]
-                continue
+                wait_for_node(peer)
 
-        def transfer(token_address, amount_per_transfer, total_transfers, channel):
+        def transfer(token_address, amount_per_transfer, total_transfers, channel, is_async):
             if channel is None:
                 return
 
-            peer = channel.partner(app.raiden.address)
+            peer = channel.partner(app.raiden.address).encode('hex')
 
-            def transfer_():
-                log.info("making {} transfers".format(total_transfers))
+            def transfer_(peer_):
+                log.info("Making {} transfers to {}".format(total_transfers, peer_))
+                initial_time = time.time()
                 for _ in xrange(total_transfers):
-                    app.raiden.transfer(token_address, amount_per_transfer, peer)
+                    app.raiden.api.transfer(
+                        token_address.decode('hex'),
+                        amount_per_transfer,
+                        peer_,
+                    )
+                log.info("Making {} transfers took {}".format(
+                    total_transfers, time.time() - initial_time))
 
-            return gevent.spawn(transfer_)
+            if is_async:
+                return gevent.spawn(transfer_, peer)
+            else:
+                transfer_(peer)
 
-        log.info("transfers_by_channel: {}".format(transfers_by_channel))
+        # TODO: when finishing with the setup of the channel, write an output
+        #       file, e.g. 'raiden-<port>.stage1', and stop here waiting for a
+        #       signal to continue. Ansible should detect that all files are
+        #       available and send a signal to all nodes to sync the delivery
+        #       of messages.
+        #open('<logfile>.stage1, 'a').close()
+        #event = gevent.event.Event()
+        #gevent.signal(signal.SIGUSR2, event.set)
+        #event.wait()
 
-        greenlets = []
-        for channel, amount in transfers_by_channel.items():
-            log.info("adding greenlet for token_address {} for channel {}".format(
-                token_address, channel))
-            greenlet = transfer(token_address, 1, amount, channel)
-            if greenlet is not None:
-                greenlets.append(greenlet)
+        # If sending to multiple targets, do it asynchronously, otherwise
+        # keep it simple and just send to the single target on my thread.
+        if len(transfers_by_channel) > 1:
+            greenlets = []
+            for channel, amount in transfers_by_channel.items():
+                greenlet = transfer(token_address, 1, amount, channel, True)
+                if greenlet is not None:
+                    greenlets.append(greenlet)
 
-        log.info("join all")
-        gevent.joinall(greenlets)
+            gevent.joinall(greenlets)
 
-        log.info("will wait for signals")
+        else:
+            for channel, amount in transfers_by_channel.items():
+                transfer(token_address, 1, amount, channel, False)
+
+        log.info("Waiting for signals")
 
         event = gevent.event.Event()
         gevent.signal(signal.SIGQUIT, event.set)
@@ -116,7 +148,7 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
         gevent.signal(signal.SIGINT, event.set)
         event.wait()
 
-        log.info("stats: {}".format(tools.channel_stats_for(token_address, peer)))
+        log.info("Resulting stats: {}".format(tools.channel_stats_for(token_address, peer)))
 
     else:
         # wait for interrupt
