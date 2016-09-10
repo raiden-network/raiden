@@ -25,11 +25,17 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
     help='path to scenario.json',
     type=click.File()
 )
+@click.option(  # noqa
+    '--stage_prefix',
+    help='prefix of temporary stage files',
+    type=str
+)
 @options
 @click.command()
 @click.pass_context  # pylint: disable=too-many-locals
-def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
+def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argument
     ctx.params.pop('scenario')
+    ctx.params.pop('stage_prefix')
     app = ctx.invoke(orig_app, **kwargs)
     if scenario:
         script = json.load(scenario)
@@ -46,10 +52,11 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
         tokens = script['assets']
         token_address = None
         peer = None
+        our_node = app.raiden.address.encode('hex')
         for token in tokens:
             # skip tokens/assets that we're not part of
             nodes = token['channels']
-            if not app.raiden.address.encode('hex') in nodes:
+            if not our_node in nodes:
                 continue
 
             # allow for prefunded tokens
@@ -68,19 +75,17 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
             # NOTE: leaving unidirectional for now because it most
             #       probably will get to higher throughput
 
-            def wait_for_node(node):
-                log.info("Looking for node {}".format(node))
-                while True:
-                    online = tools.ping(node)
-                    if online:
-                        break
-                    gevent.sleep(1)
-                log.info("Node {} came online".format(node))
 
-            #tools.register_asset(token_address)
-            if app.raiden.address.encode('hex') == nodes[0]:
+            log.info("Waiting for all nodes to come online")
+
+            while not all(tools.ping(node) for node in nodes if node != our_node):
+                gevent.sleep(1)
+
+            log.info("All nodes are online")
+
+            # FIXME: attached to sending from first... bad!
+            if our_node == nodes[0]:
                 peer = nodes[1]
-                wait_for_node(peer)
 
                 channel_manager = tools.register_asset(token_address)
 
@@ -90,7 +95,13 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
                 transfers_by_channel[channel] = int(transfers_with_amount[nodes[1]])
             else:
                 peer = nodes[0]
-                wait_for_node(peer)
+
+        if stage_prefix is not None:
+            open('{}.stage1'.format(stage_prefix), 'a').close()
+            log.info("Done with initialization, waiting to continue...")
+            event = gevent.event.Event()
+            gevent.signal(signal.SIGUSR2, event.set)
+            event.wait()
 
         def transfer(token_address, amount_per_transfer, total_transfers, channel, is_async):
             if channel is None:
@@ -115,16 +126,6 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
             else:
                 transfer_(peer)
 
-        # TODO: when finishing with the setup of the channel, write an output
-        #       file, e.g. 'raiden-<port>.stage1', and stop here waiting for a
-        #       signal to continue. Ansible should detect that all files are
-        #       available and send a signal to all nodes to sync the delivery
-        #       of messages.
-        #open('<logfile>.stage1, 'a').close()
-        #event = gevent.event.Event()
-        #gevent.signal(signal.SIGUSR2, event.set)
-        #event.wait()
-
         # If sending to multiple targets, do it asynchronously, otherwise
         # keep it simple and just send to the single target on my thread.
         if len(transfers_by_channel) > 1:
@@ -136,11 +137,11 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
 
             gevent.joinall(greenlets)
 
-        else:
+        elif len(transfers_by_channel) == 1:
             for channel, amount in transfers_by_channel.items():
                 transfer(token_address, 1, amount, channel, False)
 
-        log.info("Waiting for signals")
+        log.info("Waiting for termination")
 
         event = gevent.event.Event()
         gevent.signal(signal.SIGQUIT, event.set)
@@ -148,10 +149,10 @@ def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
         gevent.signal(signal.SIGINT, event.set)
         event.wait()
 
-        log.info("Resulting stats: {}".format(tools.channel_stats_for(token_address, peer)))
+        log.info("Results: {}".format(tools.channel_stats_for(token_address, peer)))
 
     else:
-        # wait for interrupt
+        log.info("No scenario file supplied, doing nothing!")
         event = gevent.event.Event()
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
