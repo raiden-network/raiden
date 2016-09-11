@@ -47,12 +47,13 @@ def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argume
             app.config['reveal_timeout'],
         )
 
-        transfers_by_channel = {}
+        transfers_by_peer = {}
 
         tokens = script['assets']
         token_address = None
         peer = None
         our_node = app.raiden.address.encode('hex')
+        log.info("our address is {}".format(our_node))
         for token in tokens:
             # skip tokens/assets that we're not part of
             nodes = token['channels']
@@ -83,18 +84,20 @@ def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argume
 
             log.info("All nodes are online")
 
-            # FIXME: attached to sending from first... bad!
-            if our_node == nodes[0]:
-                peer = nodes[1]
+            if our_node != nodes[-1]:
+                our_index = nodes.index(our_node)
+                peer = nodes[our_index + 1]
 
                 channel_manager = tools.register_asset(token_address)
+                amount = transfers_with_amount[nodes[-1]]
 
-                amount = transfers_with_amount[nodes[0]]
-                log.info("Opening channel for {}".format(token_address))
+                log.info("Opening channel with {} for {}".format(peer, token_address))
                 channel = tools.open_channel_with_funding(token_address, peer, amount)
-                transfers_by_channel[channel] = int(transfers_with_amount[nodes[1]])
+                if our_index == 0:
+                    last_node = nodes[-1]
+                    transfers_by_peer[last_node] = int(amount)
             else:
-                peer = nodes[0]
+                peer = nodes[-2]
 
         if stage_prefix is not None:
             open('{}.stage1'.format(stage_prefix), 'a').close()
@@ -103,43 +106,38 @@ def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argume
             gevent.signal(signal.SIGUSR2, event.set)
             event.wait()
 
-        def transfer(token_address, amount_per_transfer, total_transfers, channel, is_async):
-            if channel is None:
-                return
-
-            peer = channel.partner(app.raiden.address).encode('hex')
-
-            def transfer_(peer_):
-                log.info("Making {} transfers to {}".format(total_transfers, peer_))
+        def transfer(token_address, amount_per_transfer, total_transfers, peer, is_async):
+            def transfer_():
+                log.info("Making {} transfers to {}".format(total_transfers, peer))
                 initial_time = time.time()
                 for _ in xrange(total_transfers):
                     app.raiden.api.transfer(
                         token_address.decode('hex'),
                         amount_per_transfer,
-                        peer_,
+                        peer,
                     )
                 log.info("Making {} transfers took {}".format(
                     total_transfers, time.time() - initial_time))
 
             if is_async:
-                return gevent.spawn(transfer_, peer)
+                return gevent.spawn(transfer_)
             else:
-                transfer_(peer)
+                transfer_()
 
         # If sending to multiple targets, do it asynchronously, otherwise
         # keep it simple and just send to the single target on my thread.
-        if len(transfers_by_channel) > 1:
+        if len(transfers_by_peer) > 1:
             greenlets = []
-            for channel, amount in transfers_by_channel.items():
-                greenlet = transfer(token_address, 1, amount, channel, True)
+            for peer, amount in transfers_by_peer.items():
+                greenlet = transfer(token_address, 1, amount, peer, True)
                 if greenlet is not None:
                     greenlets.append(greenlet)
 
             gevent.joinall(greenlets)
 
-        elif len(transfers_by_channel) == 1:
-            for channel, amount in transfers_by_channel.items():
-                transfer(token_address, 1, amount, channel, False)
+        elif len(transfers_by_peer) == 1:
+            for peer, amount in transfers_by_peer.items():
+                transfer(token_address, 1, amount, peer, False)
 
         log.info("Waiting for termination")
 
