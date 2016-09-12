@@ -210,7 +210,10 @@ class BlockChainService(object):
         contract_path = get_contract_path(contract_file)
         contracts = _solidity.compile_file(contract_path, libraries=dict())
 
-        log.info('Deploying "{}" contract'.format(contract_file))
+        log.info(
+            'Deploying "%s" contract',
+            contract_file,
+        )
 
         proxy = self.client.deploy_solidity_contract(
             self.node_address,
@@ -706,7 +709,11 @@ class NettingChannel(object):
 
     def unlock(self, our_address, unlock_proofs):
         unlock_proofs = list(unlock_proofs)  # force a list to get the length (could be a generator)
-        log.info('{} locks to unlock'.format(len(unlock_proofs)), contract=pex(self.address))
+        log.info(
+            '%s locks to unlock',
+            len(unlock_proofs),
+            contract=pex(self.address),
+        )
 
         for merkle_proof, locked_encoded, secret in unlock_proofs:
             if isinstance(locked_encoded, messages.Lock):

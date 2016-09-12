@@ -511,7 +511,7 @@ class RaidenEventHandler(object):
             self.event_channelsecretrevealed(emitting_contract_address_bin, event)
 
         else:
-            log.error('Unknown event {}'.format(repr(event)))
+            log.error('Unknown event %s', repr(event))
 
     def event_assetadded(self, registry_address_bin, event):
         manager_address_bin = address_decoder(event['channelManagerAddress'])
@@ -566,9 +566,11 @@ class RaidenEventHandler(object):
         channel.external_state.set_closed(event['blockNumber'])
 
     def event_channelsettled(self, netting_contract_address_bin, event):
-        log.debug("channel settle event received",
-                  netting_contract=pex(netting_contract_address_bin),
-                  event=event)
+        log.debug(
+            'channel settle event received',
+            netting_contract=pex(netting_contract_address_bin),
+            event=event,
+        )
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
         channel.external_state.set_settled(event['blockNumber'])
 

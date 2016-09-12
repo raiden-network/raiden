@@ -257,16 +257,21 @@ class AssetManager(object):
             channel = self.partneraddress_channel[partner]
 
             if not channel.isopen:
-                log.info('channel {} - {} is close, ignoring'.format(pex(path[0]), pex(path[1])))
+                log.info(
+                    'channel %s - %s is close, ignoring',
+                    pex(path[0]),
+                    pex(path[1]),
+                )
                 continue
 
             # we can't intermediate the transfer if we don't have enough funds
             if amount > channel.distributable:
-                log.info('channel {} - {} doesnt have enough funds [{}], ignoring'.format(
+                log.info(
+                    'channel %s - %s doesnt have enough funds [%s], ignoring',
                     pex(path[0]),
                     pex(path[1]),
                     amount,
-                ))
+                )
                 continue
 
             # Our partner won't accept a locked transfer that can expire after

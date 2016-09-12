@@ -71,14 +71,14 @@ class TransferManager(object):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
             raise RuntimeError('Received message for inexisting channel.')
 
-        transfer_details = 'node:{} {} > {} hashlock:{} [{}]'.format(
+        log.debug(
+            'MEDIATED TRANSFER RECEIVED node:%s %s > %s hashlock:%s [%s]%s',
             pex(self.assetmanager.raiden.address),
             pex(transfer.sender),
             pex(self.assetmanager.raiden.address),
             pex(transfer.lock.hashlock),
             repr(transfer),
         )
-        log.debug('MEDIATED TRANSFER RECEIVED {}'.format(transfer_details))
 
         channel = self.assetmanager.get_channel_by_partner_address(transfer.sender)
         channel.register_transfer(transfer)  # raises if the transfer is invalid

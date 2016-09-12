@@ -47,17 +47,19 @@ class Task(gevent.Greenlet):
     def on_response(self, msg):
         # we might have timed out before
         if self.response_message.ready():
-            log.debug('ALREADY HAD EVENT {task_repr} {event_value} now {raiden_message}'.format(
-                task_repr=self,
-                event_value=self.response_message.get(),
-                raiden_message=msg,
-            ))
+            log.debug(
+                'ALREADY HAD EVENT %s %s now %s',
+                self,
+                self.response_message.get(),
+                msg,
+            )
         else:
-            log.debug('RESPONSE MESSAGE RECEIVED {task_repr} {event_id} {raiden_message}'.format(
-                task_repr=repr(self),
-                event_id=id(self.response_message),
-                raiden_message=msg,
-            ))
+            log.debug(
+                'RESPONSE MESSAGE RECEIVED %s %s %s',
+                repr(self),
+                id(self.response_message),
+                msg,
+            )
 
             self.response_message.set(msg)
 
@@ -163,7 +165,10 @@ class AlarmTask(Task):
 
             if current_block > self.last_block_number + 1:
                 difference = current_block - self.last_block_number - 1
-                log.error('alarm missed {} blocks'.format(difference))
+                log.error(
+                    'alarm missed %s blocks',
+                    difference,
+                )
 
             if current_block != self.last_block_number:
                 self.last_block_number = current_block
@@ -230,11 +235,11 @@ class StartMediatedTransferTask(Task):
             lock_timeout=None,
         )
 
-        transfer_details = 'initiator:{} target:{}'.format(
+        log.debug(
+            'START MEDIATED TRANSFER initiator:%s target:%s',
             pex(self.address),
             pex(self.target),
         )
-        log.debug('START MEDIATED TRANSFER {}'.format(transfer_details))
 
         for path, forward_channel in routes:
             # try a new secret
@@ -242,11 +247,12 @@ class StartMediatedTransferTask(Task):
             hashlock = sha3(secret)
 
             next_hop = path[1]
-            transfer_details = 'path:{} hashlock:{}'.format(
+
+            log.debug(
+                'START MEDIATED TRANSFER NEW PATH path:%s hashlock:%s',
                 lpex(path),
                 pex(hashlock),
             )
-            log.debug('START MEDIATED TRANSFER NEW PATH {}'.format(transfer_details))
 
             self.transfermanager.register_task_for_hashlock(self, hashlock)
 
@@ -310,16 +316,22 @@ class StartMediatedTransferTask(Task):
 
                         return
 
-                    log.error('Invalid message ignoring. {}'.format(repr(response)))
+                    log.error(
+                        'Invalid message ignoring. %s',
+                        repr(response),
+                    )
             else:
-                log.error('Unexpected response {}'.format(repr(response)))
+                log.error(
+                    'Unexpected response %s',
+                    repr(response),
+                )
                 self.transfermanager.on_hashlock_result(hashlock, False)
 
-        transfer_details = 'initiator:{} target:{}'.format(
+        log.debug(
+            'START MEDIATED TRANSFER FAILED initiator:%s target:%s',
             pex(self.address),
             pex(self.target),
         )
-        log.debug('START MEDIATED TRANSFER FAILED {}'.format(transfer_details))
         self.done_result.set(False)  # all paths failed
 
     def send_and_wait_valid(self, raiden, path, mediated_transfer):  # pylint: disable=no-self-use
@@ -354,27 +366,37 @@ class StartMediatedTransferTask(Task):
             # /critical write section
 
             if response is None:
-                log.debug('MEDIATED TRANSFER TIMED OUT hashlock:{}'.format(
+                log.debug(
+                    'MEDIATED TRANSFER TIMED OUT hashlock:%s',
                     pex(mediated_transfer.lock.hashlock),
-                ))
+                )
                 return None
 
             if response.sender == next_hop:
                 if isinstance(response, (RefundTransfer, TransferTimeout)):
                     return response
                 else:
-                    log.info('Partner {} sent an invalid message'.format(pex(next_hop)))
+                    log.info(
+                        'Partner %s sent an invalid message',
+                        pex(next_hop),
+                    )
                     return None
 
             if response.sender == target:
                 if isinstance(response, SecretRequest):
                     return response
                 else:
-                    log.info('target {} sent an invalid message'.format(pex(target)))
+                    log.info(
+                        'target %s sent an invalid message',
+                        pex(target),
+                    )
                     return None
 
             current_time = time.time()
-            log.error('Invalid message ignoring. {}'.format(repr(response)))
+            log.error(
+                'Invalid message ignoring. %s',
+                repr(response),
+            )
 
         return None
 
@@ -420,12 +442,12 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             lock_timeout,
         )
 
-        transfer_details = 'initiator:{} node:{} target:{}'.format(
+        log.debug(
+            'MEDIATED TRANSFER initiator:%s node:%s target:%s',
             pex(transfer.initiator),
             pex(self.address),
             pex(transfer.target),
         )
-        log.debug('MEDIATED TRANSFER {}'.format(transfer_details))
 
         for path, forward_channel in routes:
             next_hop = path[1]
@@ -440,11 +462,11 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             )
             raiden.sign(mediated_transfer)
 
-            transfer_details = 'path:{} hashlock:{}'.format(
+            log.debug(
+                'MEDIATED TRANSFER NEW PATH path:{} hashlock:{}',
                 lpex(path),
                 pex(transfer.lock.hashlock),
             )
-            log.debug('MEDIATED TRANSFER NEW PATH {}'.format(transfer_details))
 
             # Using assetmanager to register the interest because it outlives
             # this task, the secret handling will happend only _once_
@@ -464,9 +486,10 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
 
             if isinstance(response, RefundTransfer):
                 if response.lock.amount != transfer.amount:
-                    log.info('Partner {} sent an refund message with an invalid amount'.format(
+                    log.info(
+                        'Partner %s sent an refund message with an invalid amount',
                         pex(next_hop),
-                    ))
+                    )
                     timeout_message = forward_channel.create_timeouttransfer_for(transfer)
                     raiden.send_async(transfer.sender, timeout_message)
                     self.transfermanager.on_hashlock_result(transfer.lock.hashlock, False)
@@ -506,11 +529,12 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         raiden.sign(refund_transfer)
         raiden.send_async(from_address, refund_transfer)
 
-        log.debug('REFUND MEDIATED TRANSFER from={} node:{} hashlock:{}'.format(
+        log.debug(
+            'REFUND MEDIATED TRANSFER from=%s node:%s hashlock:%s',
             pex(from_address),
             pex(raiden.address),
             pex(transfer.lock.hashlock),
-        ))
+        )
 
         self.transfermanager.on_hashlock_result(transfer.lock.hashlock, False)
         return
@@ -535,12 +559,13 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             current_time = time.time()
 
             if response is None:
-                log.error('MEDIATED TRANSFER TIMED OUT node:{} timeout:{} msghash:{} hashlock:{}'.format(
+                log.error(
+                    'MEDIATED TRANSFER TIMED OUT node:%s timeout:%s msghash:%s hashlock:%s',
                     pex(raiden.address),
                     message_timeout,
                     pex(mediated_transfer.hash),
                     pex(mediated_transfer.lock.hashlock),
-                ))
+                )
                 return None
 
             if isinstance(response, Secret):
@@ -551,13 +576,13 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                 return response
 
             if response.target != raiden.address or response.sender != next_hop:
-                log.error('Invalid message supplied to the task. {}'.format(repr(response)))
+                log.error('Invalid message supplied to the task. %s', repr(response))
                 continue
 
             if isinstance(response, RefundTransfer):
                 return response
 
-            log.error('Partner sent an invalid message. {}'.format(repr(response)))
+            log.error('Partner sent an invalid message. %s', repr(response))
 
         return None
 
@@ -587,13 +612,13 @@ class EndMediatedTransferTask(Task):
         originating_channel = assetmanager.get_channel_by_partner_address(mediated_transfer.sender)
         raiden = assetmanager.raiden
 
-        transfer_details = '{} -> {} msghash:{} hashlock:{}'.format(
+        log.debug(
+            'END MEDIATED TRANSFER %s -> %s msghash:%s hashlock:%s',
             pex(mediated_transfer.target),
             pex(mediated_transfer.initiator),
             pex(mediated_transfer.hash),
             pex(mediated_transfer.lock.hashlock),
         )
-        log.debug('END MEDIATED TRANSFER {}'.format(transfer_details))
 
         secret_request = SecretRequest(mediated_transfer.lock.hashlock)
         raiden.sign(secret_request)
@@ -644,11 +669,12 @@ class EndMediatedTransferTask(Task):
             # /critical write section
 
             if response is None:
-                log.error('SECRETREQUEST TIMED OUT node:{} msghash:{} hashlock:{}'.format(
+                log.error(
+                    'SECRETREQUEST TIMED OUT node:%s msghash:%s hashlock:%s',
                     pex(raiden.address),
                     pex(secret_request.hash),
                     pex(mediated_transfer.lock.hashlock),
-                ))
+                )
                 return None
 
             if isinstance(response, Secret):
