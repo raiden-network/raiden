@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+import logging
 import random
 import time
 
@@ -47,19 +48,21 @@ class Task(gevent.Greenlet):
     def on_response(self, msg):
         # we might have timed out before
         if self.response_message.ready():
-            log.debug(
-                'ALREADY HAD EVENT %s %s now %s',
-                self,
-                self.response_message.get(),
-                msg,
-            )
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'ALREADY HAD EVENT %s %s now %s',
+                    self,
+                    self.response_message.get(),
+                    msg,
+                )
         else:
-            log.debug(
-                'RESPONSE MESSAGE RECEIVED %s %s %s',
-                repr(self),
-                id(self.response_message),
-                msg,
-            )
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'RESPONSE MESSAGE RECEIVED %s %s %s',
+                    repr(self),
+                    id(self.response_message),
+                    msg,
+                )
 
             self.response_message.set(msg)
 
@@ -235,11 +238,12 @@ class StartMediatedTransferTask(Task):
             lock_timeout=None,
         )
 
-        log.debug(
-            'START MEDIATED TRANSFER initiator:%s target:%s',
-            pex(self.address),
-            pex(self.target),
-        )
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'START MEDIATED TRANSFER initiator:%s target:%s',
+                pex(self.address),
+                pex(self.target),
+            )
 
         for path, forward_channel in routes:
             # try a new secret
@@ -248,11 +252,12 @@ class StartMediatedTransferTask(Task):
 
             next_hop = path[1]
 
-            log.debug(
-                'START MEDIATED TRANSFER NEW PATH path:%s hashlock:%s',
-                lpex(path),
-                pex(hashlock),
-            )
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'START MEDIATED TRANSFER NEW PATH path:%s hashlock:%s',
+                    lpex(path),
+                    pex(hashlock),
+                )
 
             self.transfermanager.register_task_for_hashlock(self, hashlock)
 
@@ -327,11 +332,13 @@ class StartMediatedTransferTask(Task):
                 )
                 self.transfermanager.on_hashlock_result(hashlock, False)
 
-        log.debug(
-            'START MEDIATED TRANSFER FAILED initiator:%s target:%s',
-            pex(self.address),
-            pex(self.target),
-        )
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'START MEDIATED TRANSFER FAILED initiator:%s target:%s',
+                pex(self.address),
+                pex(self.target),
+            )
+
         self.done_result.set(False)  # all paths failed
 
     def send_and_wait_valid(self, raiden, path, mediated_transfer):  # pylint: disable=no-self-use
@@ -366,37 +373,45 @@ class StartMediatedTransferTask(Task):
             # /critical write section
 
             if response is None:
-                log.debug(
-                    'MEDIATED TRANSFER TIMED OUT hashlock:%s',
-                    pex(mediated_transfer.lock.hashlock),
-                )
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug(
+                        'MEDIATED TRANSFER TIMED OUT hashlock:%s',
+                        pex(mediated_transfer.lock.hashlock),
+                    )
+
                 return None
 
             if response.sender == next_hop:
                 if isinstance(response, (RefundTransfer, TransferTimeout)):
                     return response
                 else:
-                    log.info(
-                        'Partner %s sent an invalid message',
-                        pex(next_hop),
-                    )
+                    if log.isEnabledFor(logging.INFO):
+                        log.info(
+                            'Partner %s sent an invalid message',
+                            pex(next_hop),
+                        )
+
                     return None
 
             if response.sender == target:
                 if isinstance(response, SecretRequest):
                     return response
                 else:
-                    log.info(
-                        'target %s sent an invalid message',
-                        pex(target),
-                    )
+                    if log.isEnabledFor(logging.INFO):
+                        log.info(
+                            'target %s sent an invalid message',
+                            pex(target),
+                        )
+
                     return None
 
             current_time = time.time()
-            log.error(
-                'Invalid message ignoring. %s',
-                repr(response),
-            )
+
+            if log.isEnabledFor(logging.ERROR):
+                log.error(
+                    'Invalid message ignoring. %s',
+                    repr(response),
+                )
 
         return None
 
@@ -442,12 +457,13 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             lock_timeout,
         )
 
-        log.debug(
-            'MEDIATED TRANSFER initiator:%s node:%s target:%s',
-            pex(transfer.initiator),
-            pex(self.address),
-            pex(transfer.target),
-        )
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'MEDIATED TRANSFER initiator:%s node:%s target:%s',
+                pex(transfer.initiator),
+                pex(self.address),
+                pex(transfer.target),
+            )
 
         for path, forward_channel in routes:
             next_hop = path[1]
@@ -462,11 +478,12 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             )
             raiden.sign(mediated_transfer)
 
-            log.debug(
-                'MEDIATED TRANSFER NEW PATH path:{} hashlock:{}',
-                lpex(path),
-                pex(transfer.lock.hashlock),
-            )
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'MEDIATED TRANSFER NEW PATH path:%s hashlock:%s',
+                    lpex(path),
+                    pex(transfer.lock.hashlock),
+                )
 
             # Using assetmanager to register the interest because it outlives
             # this task, the secret handling will happend only _once_

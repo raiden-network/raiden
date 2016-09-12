@@ -75,7 +75,7 @@ class TransferManager(object):
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
-                'MEDIATED TRANSFER RECEIVED node:%s %s > %s hashlock:%s [%s]%s',
+                'MEDIATED TRANSFER RECEIVED node:%s %s > %s hashlock:%s [%s]',
                 pex(self.assetmanager.raiden.address),
                 pex(transfer.sender),
                 pex(self.assetmanager.raiden.address),
