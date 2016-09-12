@@ -9,6 +9,11 @@ function info() {
     printf "$(tput bold)$(tput setaf 4) -> $1$(tput sgr0)\n" >&1
 }
 
+msg() {
+    # bold and green
+    printf "$(tput bold)$(tput setaf 2) $1$(tput sgr0)\n" >&1
+}
+
 INIT=$1
 
 GETHPORT=8101
@@ -64,3 +69,9 @@ tmux send-keys -t raiden:3 "token_address_hex = tools.create_token()" C-m
 tmux send-keys -t raiden:3 "asset_proxy = raiden.chain.asset(token_address_hex.decode('hex'))" C-m
 tmux send-keys -t raiden:3 "asset_proxy.transfer('${ADDRESS2}'.decode('hex'), 100000)" C-m
 tmux send-keys -t raiden:3 "asset_proxy.transfer('${ADDRESS2}'.decode('hex'), 100000)" C-m
+
+echo
+echo 'tmux sesion created, attach to it using the following command:'
+echo
+msg 'tmux attach-session -t raiden'
+echo
