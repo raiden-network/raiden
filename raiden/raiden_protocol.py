@@ -1,4 +1,6 @@
 # -*- coding: utf8 -*-
+import logging
+
 import gevent
 from gevent.queue import Queue
 from gevent.event import AsyncResult, Event
@@ -88,27 +90,7 @@ class RaidenProtocol(object):
 
             ack_result = self.msghash_asyncresult[messagehash]
 
-            log.info(
-                'SENDING %s -> %s msghash:%s %s',
-                pex(self.raiden.address),
-                pex(receiver_address),
-                pex(messagehash),
-                message,
-            )
-            self.transport.send(self.raiden, host_port, messagedata)
-
-            retries_left = self.max_retries
-            while ack_result.wait(timeout=self.try_interval) is None:  # ack_result can be False
-                retries_left -= 1
-                # TODO: fix the graph
-                # if retries_left < 1:
-                #     log.error(
-                #            'DEACTIVATED MSG resents %s %s',
-                #            pex(receiver_address),
-                #            message,
-                #     )
-                #     return
-
+            if log.isEnabledFor(logging.INFO):
                 log.info(
                     'SENDING %s -> %s msghash:%s %s',
                     pex(self.raiden.address),
@@ -116,15 +98,42 @@ class RaidenProtocol(object):
                     pex(messagehash),
                     message,
                 )
+
+            self.transport.send(self.raiden, host_port, messagedata)
+
+            retries_left = self.max_retries
+            while ack_result.wait(timeout=self.try_interval) is None:  # ack_result can be False
+                retries_left -= 1
+                # TODO: fix the graph
+                # if retries_left < 1:
+                #     if log.isEnabledFor(logging.ERROR):
+                #         log.error(
+                #                'DEACTIVATED MSG resents %s %s',
+                #                pex(receiver_address),
+                #                message,
+                #         )
+                #         return
+
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'SENDING %s -> %s msghash:%s %s',
+                        pex(self.raiden.address),
+                        pex(receiver_address),
+                        pex(messagehash),
+                        message,
+                    )
+
                 self.transport.send(self.raiden, host_port, messagedata)
 
     def _send(self, receiver_address, message, messagedata, messagehash):
         if receiver_address not in self.address_queue:
-            log.debug(
-                'new queue created for %s > %s',
-                pex(self.raiden.address),
-                pex(receiver_address),
-            )
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'new queue created for %s > %s',
+                    pex(self.raiden.address),
+                    pex(receiver_address),
+                )
+
             self.address_queue[receiver_address] = NotifyingQueue()
             self.address_greenlet[receiver_address] = gevent.spawn(self._send_queued_messages, receiver_address)
 
@@ -175,14 +184,15 @@ class RaidenProtocol(object):
         messagedata = message.encode()
         messagehash = sha3(messagedata)
 
-        log.info(
-            'SENDING ACK %s > %s : [%s] [echo=%s] %s',
-            pex(self.raiden.address),
-            pex(receiver_address),
-            pex(messagehash),
-            pex(message.echo),
-            message,
-        )
+        if log.isEnabledFor(logging.INFO):
+            log.info(
+                'SENDING ACK %s > %s : [%s] [echo=%s] %s',
+                pex(self.raiden.address),
+                pex(receiver_address),
+                pex(messagehash),
+                pex(message.echo),
+                message,
+            )
 
         self.msghash_acks[message.echo] = (host_port, messagedata, messagehash)
         self._send_ack(*self.msghash_acks[message.echo])
@@ -206,17 +216,20 @@ class RaidenProtocol(object):
             ack_result = self.msghash_asyncresult[message.echo]
 
             if ack_result.ready():
-                log.info(
-                    'DUPLICATED ACK RECEIVED node:%s [echo=%s]',
-                    pex(self.raiden.address),
-                    pex(message.echo)
-                )
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'DUPLICATED ACK RECEIVED node:%s [echo=%s]',
+                        pex(self.raiden.address),
+                        pex(message.echo)
+                    )
             else:
-                log.info(
-                    'ACK RECEIVED node:%s [echo=%s]',
-                    pex(self.raiden.address),
-                    pex(message.echo)
-                )
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'ACK RECEIVED node:%s [echo=%s]',
+                        pex(self.raiden.address),
+                        pex(message.echo)
+                    )
+
                 ack_result.set(True)
 
         elif message is not None:
@@ -237,7 +250,8 @@ class RaidenProtocol(object):
             )
 
         else:  # payload was not a valid message and decoding failed
-            log.error(
-                'could not decode message %s',
-                pex(data),
-            )
+            if log.isEnabledFor(logging.ERROR):
+                log.error(
+                    'could not decode message %s',
+                    pex(data),
+                )

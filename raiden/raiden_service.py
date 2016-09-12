@@ -1,4 +1,6 @@
 # -*- coding: utf8 -*-
+import logging
+
 from ethereum import slogging
 from ethereum.abi import ContractTranslator
 from ethereum.utils import encode_hex
@@ -486,11 +488,12 @@ class RaidenEventHandler(object):
         self.raiden = raiden
 
     def on_event(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
-        log.debug(
-            'event received',
-            type=event['_event_type'],
-            contract=pex(emitting_contract_address_bin),
-        )
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'event received',
+                type=event['_event_type'],
+                contract=pex(emitting_contract_address_bin),
+            )
 
         if event['_event_type'] == 'AssetAdded':
             self.event_assetadded(emitting_contract_address_bin, event)
@@ -538,11 +541,12 @@ class RaidenEventHandler(object):
                 self.raiden.config['reveal_timeout'],
             )
 
-            log.info(
-                'New channel created',
-                channel_address=event['nettingChannel'],
-                manager_address=pex(manager_address_bin),
-            )
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'New channel created',
+                    channel_address=event['nettingChannel'],
+                    manager_address=pex(manager_address_bin),
+                )
         else:
             log.info('ignoring new channel, this is node is not a participant.')
 
@@ -566,11 +570,13 @@ class RaidenEventHandler(object):
         channel.external_state.set_closed(event['blockNumber'])
 
     def event_channelsettled(self, netting_contract_address_bin, event):
-        log.debug(
-            'channel settle event received',
-            netting_contract=pex(netting_contract_address_bin),
-            event=event,
-        )
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'channel settle event received',
+                netting_contract=pex(netting_contract_address_bin),
+                event=event,
+            )
+
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
         channel.external_state.set_settled(event['blockNumber'])
 

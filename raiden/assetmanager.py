@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+import logging
 from collections import defaultdict
 
 from ethereum import slogging
@@ -257,21 +258,24 @@ class AssetManager(object):
             channel = self.partneraddress_channel[partner]
 
             if not channel.isopen:
-                log.info(
-                    'channel %s - %s is close, ignoring',
-                    pex(path[0]),
-                    pex(path[1]),
-                )
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'channel %s - %s is close, ignoring',
+                        pex(path[0]),
+                        pex(path[1]),
+                    )
+
                 continue
 
             # we can't intermediate the transfer if we don't have enough funds
             if amount > channel.distributable:
-                log.info(
-                    'channel %s - %s doesnt have enough funds [%s], ignoring',
-                    pex(path[0]),
-                    pex(path[1]),
-                    amount,
-                )
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'channel %s - %s doesnt have enough funds [%s], ignoring',
+                        pex(path[0]),
+                        pex(path[1]),
+                        amount,
+                    )
                 continue
 
             # Our partner won't accept a locked transfer that can expire after
@@ -279,14 +283,15 @@ class AssetManager(object):
             # after channel is settled and he would lose the asset, or before
             # the minimum required.
             if lock_timeout and not channel.reveal_timeout <= lock_timeout < channel.settle_timeout:
-                log.info(
-                    'lock_expiration is too large, channel/path cannot be used',
-                    lock_timeout=lock_timeout,
-                    reveal_timeout=channel.reveal_timeout,
-                    settle_timeout=channel.settle_timeout,
-                    nodeid=pex(path[0]),
-                    partner=pex(path[1]),
-                )
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'lock_expiration is too large, channel/path cannot be used',
+                        lock_timeout=lock_timeout,
+                        reveal_timeout=channel.reveal_timeout,
+                        settle_timeout=channel.settle_timeout,
+                        nodeid=pex(path[0]),
+                        partner=pex(path[1]),
+                    )
                 continue
 
             yield (path, channel)

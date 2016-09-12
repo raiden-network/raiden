@@ -1,4 +1,6 @@
 # -*- coding: utf8 -*-
+import logging
+
 from gevent.event import AsyncResult
 from ethereum import slogging
 
@@ -71,14 +73,15 @@ class TransferManager(object):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
             raise RuntimeError('Received message for inexisting channel.')
 
-        log.debug(
-            'MEDIATED TRANSFER RECEIVED node:%s %s > %s hashlock:%s [%s]%s',
-            pex(self.assetmanager.raiden.address),
-            pex(transfer.sender),
-            pex(self.assetmanager.raiden.address),
-            pex(transfer.lock.hashlock),
-            repr(transfer),
-        )
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'MEDIATED TRANSFER RECEIVED node:%s %s > %s hashlock:%s [%s]%s',
+                pex(self.assetmanager.raiden.address),
+                pex(transfer.sender),
+                pex(self.assetmanager.raiden.address),
+                pex(transfer.lock.hashlock),
+                repr(transfer),
+            )
 
         channel = self.assetmanager.get_channel_by_partner_address(transfer.sender)
         channel.register_transfer(transfer)  # raises if the transfer is invalid

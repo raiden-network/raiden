@@ -266,7 +266,7 @@ def wrap_and_validate(data):
     try:
         message_type = CMDID_MESSAGE[first_byte]
     except KeyError:
-        log.error('unknown cmdid {}'.format(first_byte))
+        log.error('unknown cmdid %s', first_byte)
         return
 
     try:
@@ -299,7 +299,7 @@ def wrap(data):
     try:
         message_type = CMDID_MESSAGE[first_byte]
     except KeyError:
-        log.error('unknown cmdid {}'.format(first_byte))
+        log.error('unknown cmdid %s', first_byte)
         return
 
     try:
