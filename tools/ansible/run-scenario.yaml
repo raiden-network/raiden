@@ -78,9 +78,16 @@
         chdir: "{{ raiden_dir }}"
       when: force_pull is defined
 
+    - name: remove stage files
+      file:
+        path: "{{ user_home }}/raiden-{{ item }}.stage*"
+        state: absent
+      with_items:
+        - "{{ raiden_ports }}"
+
     - name: execute raidens asynchronously
       shell:
-        cmd: "{{ ansible_env.HOME }}/raidenvenv/bin/python {{ scenario_runner }} $(cat {{ ansible_env.HOME }}/raiden_flags.txt ) --privatekey $(cat {{ ansible_env.HOME }}/{{ item }}/privatekey.txt) --listen_address {{ ansible_ec2_local_ipv4 }}:{{ item }} --scenario {{ ansible_env.HOME }}/{{ item }}/scenario.json --logfile raiden-{{ item }}.log --stage_prefix=raiden-{{ item }}"
+        cmd: "{{ ansible_env.HOME }}/raidenvenv/bin/python {{ scenario_runner }} $(cat {{ ansible_env.HOME }}/raiden_flags.txt) --privatekey $(cat {{ ansible_env.HOME }}/{{ item }}/privatekey.txt) --listen_address {{ ansible_ec2_local_ipv4 }}:{{ item }} --scenario {{ ansible_env.HOME }}/{{ item }}/scenario.json --logfile raiden-{{ item }}.log --stage_prefix=raiden-{{ item }}"
         chdir: "{{ user_home }}"
       async: 1200
       poll: 0
@@ -95,7 +102,25 @@
         - "{{ raiden_ports }}"
 
     - name: signal all nodes to start sending messages
-      shell: "killall --signal=SIGUSR2 python"
+      shell:
+        cmd: "pgrep -a python | grep raiden | cut -d' ' -f1 | xargs kill --signal=SIGUSR2"
+      ignore_errors: True
+
+    - name: wait for raidens to finish transfers
+      wait_for:
+        path: "{{ user_home }}/raiden-{{ item }}.stage2"
+      with_items:
+        - "{{ raiden_ports }}"
+
+    - name: stop raiden nodes
+      shell:
+        cmd: "pgrep -a python | grep raiden | cut -d' ' -f1 | xargs kill"
+      ignore_errors: True
+
+    - name: stop geth
+      shell:
+        cmd: "killall geth"
+      ignore_errors: True
 
 - hosts: tag_Name_Scenario
   name: terminate
