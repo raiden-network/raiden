@@ -9,6 +9,7 @@ import click
 import gevent
 from gevent import monkey
 import time
+import random
 from ethereum import slogging
 
 from raiden.console import ConsoleTools
