@@ -14,12 +14,18 @@ from ethereum import slogging
 from raiden.console import ConsoleTools
 from raiden.app import app as orig_app
 from raiden.app import options
+from raiden.utils import split_endpoint
 
 
 monkey.patch_all()
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+@click.option(  # noqa
+    '--external_listen_address',
+    default='',
+    type=str,
+)
 @click.option(  # noqa
     '--scenario',
     help='path to scenario.json',
@@ -33,10 +39,22 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 @options
 @click.command()
 @click.pass_context  # pylint: disable=too-many-locals
-def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argument
+def run(ctx, external_listen_address, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argument
+    if not external_listen_address:
+        external_listen_address = kwargs['listen_address']
+
+    ctx.params.pop('external_listen_address')
     ctx.params.pop('scenario')
     ctx.params.pop('stage_prefix')
     app = ctx.invoke(orig_app, **kwargs)
+
+    app.discovery.register(
+        app.raiden.address,
+        *split_endpoint(external_listen_address)
+    )
+
+    app.raiden.register_registry(app.raiden.chain.default_registry)
+
     if scenario:
         script = json.load(scenario)
 
@@ -53,7 +71,7 @@ def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argume
         token_address = None
         peer = None
         our_node = app.raiden.address.encode('hex')
-        log.info("our address is {}".format(our_node))
+        log.warning("our address is {}".format(our_node))
         for token in tokens:
             # skip tokens/assets that we're not part of
             nodes = token['channels']
@@ -77,12 +95,12 @@ def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argume
             #       probably will get to higher throughput
 
 
-            log.info("Waiting for all nodes to come online")
+            log.warning("Waiting for all nodes to come online")
 
             while not all(tools.ping(node) for node in nodes if node != our_node):
                 gevent.sleep(1)
 
-            log.info("All nodes are online")
+            log.warning("All nodes are online")
 
             if our_node != nodes[-1]:
                 our_index = nodes.index(our_node)
@@ -91,8 +109,16 @@ def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argume
                 channel_manager = tools.register_asset(token_address)
                 amount = transfers_with_amount[nodes[-1]]
 
-                log.info("Opening channel with {} for {}".format(peer, token_address))
-                channel = tools.open_channel_with_funding(token_address, peer, amount)
+                log.warning("Opening channel with {} for {}".format(peer, token_address))
+
+                # opening channels, like life, is sometimes hard, but don't lose faith...
+                while True:
+                    try:
+                        channel = tools.open_channel_with_funding(token_address, peer, amount)
+                        break
+                    except KeyError:
+                        time.sleep(random.randrange(30))
+
                 if our_index == 0:
                     last_node = nodes[-1]
                     transfers_by_peer[last_node] = int(amount)
@@ -101,14 +127,14 @@ def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argume
 
         if stage_prefix is not None:
             open('{}.stage1'.format(stage_prefix), 'a').close()
-            log.info("Done with initialization, waiting to continue...")
+            log.warning("Done with initialization, waiting to continue...")
             event = gevent.event.Event()
             gevent.signal(signal.SIGUSR2, event.set)
             event.wait()
 
         def transfer(token_address, amount_per_transfer, total_transfers, peer, is_async):
             def transfer_():
-                log.info("Making {} transfers to {}".format(total_transfers, peer))
+                log.warning("Making {} transfers to {}".format(total_transfers, peer))
                 initial_time = time.time()
                 for _ in xrange(total_transfers):
                     app.raiden.api.transfer(
@@ -116,7 +142,7 @@ def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argume
                         amount_per_transfer,
                         peer,
                     )
-                log.info("Making {} transfers took {}".format(
+                log.warning("Making {} transfers took {}".format(
                     total_transfers, time.time() - initial_time))
 
             if is_async:
@@ -139,18 +165,21 @@ def run(ctx, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argume
             for peer, amount in transfers_by_peer.items():
                 transfer(token_address, 1, amount, peer, False)
 
-        log.info("Waiting for termination")
+        log.warning("Waiting for termination")
 
+        open('{}.stage2'.format(stage_prefix), 'a').close()
         event = gevent.event.Event()
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
         gevent.signal(signal.SIGINT, event.set)
         event.wait()
 
-        log.info("Results: {}".format(tools.channel_stats_for(token_address, peer)))
+        log.warning("Results: {}".format(tools.channel_stats_for(token_address, peer)))
 
     else:
-        log.info("No scenario file supplied, doing nothing!")
+        log.warning("No scenario file supplied, doing nothing!")
+
+        open('{}.stage2'.format(stage_prefix), 'a').close()
         event = gevent.event.Event()
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
