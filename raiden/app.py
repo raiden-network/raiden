@@ -91,12 +91,6 @@ _options = [
         default="0.0.0.0:{}".format(INITIAL_PORT),
         type=str,
     ),
-    click.option(  # FIXME: implement NAT-punching
-        '--external_listen_address',
-        help='external "host:port" where the raiden service can be contacted on (through NAT).',
-        default='',
-        type=str,
-    ),
     click.option(
         '--logging',
         help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
@@ -123,14 +117,9 @@ def options(func):
 @options
 @click.command()
 def app(privatekey, eth_rpc_endpoint, registry_contract_address,
-        discovery_contract_address, listen_address, external_listen_address, logging, logfile):
+        discovery_contract_address, listen_address, logging, logfile):
 
     slogging.configure(logging, log_file=logfile)
-
-    if not external_listen_address:
-        # notify('if you are behind a NAT, you should set
-        # `external_listen_address` and configure port forwarding on your router')
-        external_listen_address = listen_address
 
     # config_file = args.config_file
     (listen_host, listen_port) = split_endpoint(listen_address)
@@ -166,27 +155,37 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         decode_hex(discovery_contract_address)  # FIXME: double encoding
     )
 
-    app = App(config, blockchain_service, discovery)
-
-    discovery.register(
-        app.raiden.address,
-        *split_endpoint(external_listen_address)
-    )
-
-    app.raiden.register_registry(blockchain_service.default_registry)
-
-    return app
+    return App(config, blockchain_service, discovery)
 
 
+@click.option(  # FIXME: implement NAT-punching
+    '--external_listen_address',
+    help='external "host:port" where the raiden service can be contacted on (through NAT).',
+    default='',
+    type=str,
+)
 @options
 @click.command()
 @click.pass_context
-def run(ctx, **kwargs):
+def run(ctx, external_listen_address, **kwargs):
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
 
+    if not external_listen_address:
+        # notify('if you are behind a NAT, you should set
+        # `external_listen_address` and configure port forwarding on your router')
+        external_listen_address = kwargs['listen_address']
+
+    ctx.params.pop('external_listen_address')
     app_ = ctx.invoke(app, **kwargs)
+
+    app_.discovery.register(
+        app_.raiden.address,
+        *split_endpoint(external_listen_address)
+    )
+
+    app_.raiden.register_registry(app_.raiden.chain.default_registry)
 
     console = Console(app_)
     console.start()
