@@ -7,15 +7,13 @@ import random
 import secp256k1
 from Crypto.Hash import keccak as keccaklib
 from secp256k1 import PrivateKey
-from ethereum.utils import big_endian_to_int, sha3, int_to_big_endian
+from ethereum.utils import sha3
 
 import raiden
 
 __all__ = (
     'sha3',
     'keccak_256',
-    'big_endian_to_int',
-    'int_to_big_endian',
     'keccak',
     'ishash',
     'isaddress',
