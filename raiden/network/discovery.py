@@ -6,8 +6,8 @@ from raiden.utils import (
     isaddress,
     pex,
     split_endpoint,
+    get_contract_path,
 )
-from raiden.blockchain.abi import get_contract_path
 from raiden.network.rpc.client import DEFAULT_POLL_TIMEOUT
 
 discovery_contract_compiled = _solidity.compile_contract(

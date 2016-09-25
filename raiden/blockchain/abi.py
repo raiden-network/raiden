@@ -1,14 +1,9 @@
 # -*- coding: utf8 -*-
-import os
-
 from ethereum import _solidity
 from ethereum.abi import event_id, normalize_name
-
-import raiden
+from raiden.utils import get_contract_path
 
 __all__ = (
-    'get_contract_path',
-
     'REGISTRY_ABI',
     'ASSETADDED_EVENT',
     'ASSETADDED_EVENTID',
@@ -29,12 +24,6 @@ __all__ = (
 
     'HUMAN_TOKEN_ABI',
 )
-
-
-def get_contract_path(contract_name):
-    project_directory = os.path.dirname(raiden.__file__)
-    contract_path = os.path.join(project_directory, 'smart_contracts', contract_name)
-    return os.path.realpath(contract_path)
 
 
 def get_event(full_abi, event_name):

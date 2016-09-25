@@ -7,7 +7,7 @@ import json
 from ethereum._solidity import compile_contract
 from ethereum.utils import denoms, decode_hex
 from pyethapp.rpc_client import JSONRPCClient
-from raiden.blockchain.abi import get_contract_path
+from raiden.utils import get_contract_path
 from raiden.network.rpc.client import patch_send_transaction
 
 

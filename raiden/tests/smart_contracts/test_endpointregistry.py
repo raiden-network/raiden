@@ -1,8 +1,6 @@
 # -*- coding: utf8 -*-
-import pytest
 from ethereum import tester
-
-from raiden.blockchain.abi import get_contract_path
+from raiden.utils import get_contract_path
 
 
 def test_endpointregistry(tester_state, tester_events):

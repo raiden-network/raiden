@@ -7,9 +7,8 @@ from ethereum._solidity import compile_file
 from ethereum.utils import denoms
 from pyethapp.rpc_client import JSONRPCClient
 
-from raiden.blockchain.abi import get_contract_path
 from raiden.network.rpc.client import decode_topic, patch_send_transaction
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, get_contract_path
 
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 

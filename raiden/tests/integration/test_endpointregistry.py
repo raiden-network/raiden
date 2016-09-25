@@ -3,8 +3,7 @@ import pytest
 
 from ethereum import _solidity
 
-from raiden.utils import make_address
-from raiden.blockchain.abi import get_contract_path
+from raiden.utils import make_address, get_contract_path
 from raiden.network.discovery import ContractDiscovery
 
 

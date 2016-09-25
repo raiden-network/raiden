@@ -7,9 +7,9 @@ from ethereum import tester
 from ethereum.utils import int_to_addr, zpad
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 
-from raiden.blockchain.abi import get_contract_path
+
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.tests.utils.tester import (
     create_registryproxy,

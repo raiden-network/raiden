@@ -9,8 +9,7 @@ from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 
 from raiden import messages
-from raiden.blockchain.abi import get_contract_path
-from raiden.utils import pex, isaddress, privatekey_to_address
+from raiden.utils import get_contract_path, pex, isaddress, privatekey_to_address
 from raiden.blockchain.abi import (
     HUMAN_TOKEN_ABI,
     CHANNEL_MANAGER_ABI,

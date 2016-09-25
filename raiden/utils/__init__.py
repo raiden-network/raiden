@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+import os
 import sys
 import string
 import random
@@ -7,6 +8,8 @@ import secp256k1
 from Crypto.Hash import keccak as keccaklib
 from secp256k1 import PrivateKey
 from ethereum.utils import big_endian_to_int, sha3, int_to_big_endian
+
+import raiden
 
 __all__ = (
     'sha3',
@@ -22,6 +25,7 @@ __all__ = (
     'privatekey_to_address',
     'pex',
     'lpex',
+    'get_contract_path',
 )
 
 LETTERS = string.printable
@@ -114,3 +118,9 @@ def privatekey_to_address(private_key_bin):
     )
     pubkey = private_key.pubkey.serialize(compressed=False)
     return publickey_to_address(pubkey)
+
+
+def get_contract_path(contract_name):
+    project_directory = os.path.dirname(raiden.__file__)
+    contract_path = os.path.join(project_directory, 'smart_contracts', contract_name)
+    return os.path.realpath(contract_path)
