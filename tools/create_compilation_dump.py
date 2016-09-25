@@ -3,8 +3,7 @@
 import json
 from ethereum import tester
 from ethereum.utils import remove_0x_head
-from raiden.blockchain.abi import get_contract_path
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, get_contract_path
 
 from ethereum import slogging
 slogging.configure(":INFO")

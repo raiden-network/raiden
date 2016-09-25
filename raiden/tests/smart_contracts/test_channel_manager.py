@@ -3,9 +3,9 @@ import pytest
 
 from ethereum import tester
 from ethereum.utils import encode_hex, sha3
+from raiden.utils import get_contract_path
 from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
 
-from raiden.blockchain.abi import get_contract_path
 from raiden.tests.utils.tester import new_channelmanager
 
 

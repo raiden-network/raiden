@@ -6,8 +6,7 @@ from ethereum import slogging
 from ethereum._solidity import compile_file
 from pyethapp.rpc_client import JSONRPCClient
 
-from raiden.blockchain.abi import get_contract_path
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
 from raiden.tests.utils.tests import cleanup_tasks

@@ -15,8 +15,7 @@ from gevent.event import Event
 from IPython.lib.inputhook import inputhook_manager
 
 from raiden.messages import Ping
-from raiden.blockchain.abi import get_contract_path
-from raiden.utils import events
+from raiden.utils import events, get_contract_path
 
 from pyethapp.utils import bcolors as bc
 from pyethapp.console_service import GeventInputHook, SigINTHandler
