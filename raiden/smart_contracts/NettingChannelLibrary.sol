@@ -349,12 +349,12 @@ library NettingChannelLibrary {
         node1.netted = node1.balance + node2.transferedAmount - node1.transferedAmount;
         node2.netted = node2.balance + node1.transferedAmount - node2.transferedAmount;
 
-        for (k=0; k < node1.unlocked.length; k++) {
+        for (k = 0; k < node1.unlocked.length; k++) {
             node1.netted += node1.unlocked[k].amount;
             node2.netted -= node1.unlocked[k].amount;
         }
 
-        for (k=0; k < node2.unlocked.length; k++) {
+        for (k = 0; k < node2.unlocked.length; k++) {
             node2.netted += node2.unlocked[k].amount;
             node1.netted -= node2.unlocked[k].amount;
         }
@@ -572,7 +572,7 @@ library NettingChannelLibrary {
         }
 
         n = new bytes(end-start);
-        for ( uint i = start; i < end; i ++) { //python style slice
+        for (uint i = start; i < end; i ++) { //python style slice
             n[i-start] = a[i];
         }
     }

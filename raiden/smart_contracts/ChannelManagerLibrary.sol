@@ -36,7 +36,7 @@ library ChannelManagerLibrary {
         address[] our_channels = self.nodeChannels[msg.sender];
         address channel;
 
-        for (i=0; i < our_channels.length; ++i) {
+        for (i = 0; i < our_channels.length; ++i) {
             channel = our_channels[i];
 
             if (NettingChannelContract(channel).partner(msg.sender) == partner) {
@@ -57,7 +57,7 @@ library ChannelManagerLibrary {
         uint i;
 
         address[] storage existingChannels = self.nodeChannels[msg.sender];
-        for (i=0; i<existingChannels.length; i++) {
+        for (i = 0; i < existingChannels.length; i++) {
             if (NettingChannelContract(existingChannels[i]).partner(msg.sender) == partner) {
                 throw;
             }

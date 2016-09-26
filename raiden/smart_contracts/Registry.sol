@@ -62,7 +62,7 @@ contract Registry {
 
         result = new address[](assets.length);
 
-        for (i=0; i<assets.length; i++) {
+        for (i = 0; i < assets.length; i++) {
             asset_address = assets[i];
             result[i] = registry[asset_address];
         }
