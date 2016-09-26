@@ -1,3 +1,5 @@
+pragma solidity ^0.4.0;
+
 import "ChannelManagerContract.sol";
 
 contract Registry {
@@ -9,13 +11,13 @@ contract Registry {
     modifier addressExists(address _address) {
         if (registry[_address] == 0x0)
             throw;
-        _
+        _;
     }
 
     modifier doesNotExist(address _address) {
         if (registry[_address] != 0x0)
             throw;
-        _
+        _;
     }
 
     function addAsset(address assetAddress)
