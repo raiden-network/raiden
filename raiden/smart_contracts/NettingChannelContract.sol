@@ -1,3 +1,5 @@
+pragma solidity ^0.4.0;
+
 import "NettingChannelLibrary.sol";
 
 contract NettingChannelContract {
@@ -11,7 +13,7 @@ contract NettingChannelContract {
 
     modifier settleTimeoutNotTooLow(uint t) {
         if (t < 6) throw;
-        _
+        _;
     }
 
     function NettingChannelContract(
