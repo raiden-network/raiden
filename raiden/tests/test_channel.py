@@ -53,13 +53,13 @@ def test_end_state():
     )
     lock_hash = sha3(lock.as_bytes)
 
-    transfered_amount = 0
+    transferred_amount = 0
     locksroot = state2.compute_merkleroot_with(lock)
 
     locked_transfer = LockedTransfer(
         nonce=state1.nonce,
         asset=asset_address,
-        transfered_amount=transfered_amount,
+        transferred_amount=transferred_amount,
         recipient=state2.address,
         locksroot=locksroot,
         lock=lock,
@@ -198,7 +198,7 @@ def test_channel():
 
     assert channel.contract_balance == our_state.contract_balance
     assert channel.balance == our_state.balance(partner_state)
-    assert channel.transfered_amount == our_state.transfered_amount
+    assert channel.transferred_amount == our_state.transferred_amount
     assert channel.distributable == our_state.distributable(partner_state)
     assert channel.outstanding == our_state.locked()
     assert channel.outstanding == 0
@@ -219,7 +219,7 @@ def test_channel():
 
     assert channel.contract_balance == balance1
     assert channel.balance == balance1 - amount1
-    assert channel.transfered_amount == amount1
+    assert channel.transferred_amount == amount1
     assert channel.distributable == balance1 - amount1
     assert channel.outstanding == 0
     assert channel.locked == 0
@@ -245,7 +245,7 @@ def test_channel():
 
     assert channel.contract_balance == balance1
     assert channel.balance == balance1 - amount1
-    assert channel.transfered_amount == amount1
+    assert channel.transferred_amount == amount1
     assert channel.distributable == balance1 - amount1 - amount2
     assert channel.outstanding == 0
     assert channel.locked == amount2
@@ -256,7 +256,7 @@ def test_channel():
 
     assert channel.contract_balance == balance1
     assert channel.balance == balance1 - amount1 - amount2
-    assert channel.transfered_amount == amount1 + amount2
+    assert channel.transferred_amount == amount1 + amount2
     assert channel.distributable == balance1 - amount1 - amount2
     assert channel.outstanding == 0
     assert channel.locked == 0
@@ -543,7 +543,7 @@ def test_register_invalid_transfer(raiden_network):
     transfer2 = DirectTransfer(
         nonce=channel0.our_state.nonce,
         asset=channel0.asset_address,
-        transfered_amount=channel1.balance + balance0 + amount,
+        transferred_amount=channel1.balance + balance0 + amount,
         recipient=channel0.partner_state.address,
         locksroot=channel0.partner_state.balance_proof.merkleroot_for_unclaimed(),
     )

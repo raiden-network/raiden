@@ -53,7 +53,7 @@ def test_transfer(raiden_network):
     assert len(messages) == 2  # DirectTransfer, Ack
     directtransfer_message = decode(messages[0])
     assert isinstance(directtransfer_message, DirectTransfer)
-    assert directtransfer_message.transfered_amount == amount
+    assert directtransfer_message.transferred_amount == amount
 
     ack_message = decode(messages[1])
     assert isinstance(ack_message, Ack)

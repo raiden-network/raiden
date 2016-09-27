@@ -323,14 +323,14 @@ class NettingChannelContract(object):
 
         return closer, partner
 
-    def _get_transfered_amount(self, transfer1, transfer2):
+    def _get_transferred_amount(self, transfer1, transfer2):
         amount1, amount2 = 0.0, 0.0
 
         if transfer1:
-            amount1 = transfer1.transfered_amount
+            amount1 = transfer1.transferred_amount
 
         if transfer2:
-            amount2 = transfer2.transfered_amount
+            amount2 = transfer2.transferred_amount
 
         return amount1, amount2
 
@@ -380,7 +380,7 @@ class NettingChannelContract(object):
         self.closed = ctx['block_number']
         self.closer = closer_state
 
-        amount1, amount2 = self._get_transfered_amount(closer, partner)
+        amount1, amount2 = self._get_transferred_amount(closer, partner)
         allowance = closer_state.deposit + partner_state.deposit
         difference = abs(amount1 - amount2)
 
@@ -489,16 +489,16 @@ class NettingChannelContract(object):
 
     def _get_netted(self, our_state, partner_state):
         # do not use floats
-        our_transfered_amount = 0
-        partner_transfered_amount = 0
+        our_transferred_amount = 0
+        partner_transferred_amount = 0
 
         if our_state.transfer:
-            our_transfered_amount = our_state.transfer.transfered_amount
+            our_transferred_amount = our_state.transfer.transferred_amount
 
         if partner_state.transfer:
-            partner_transfered_amount = partner_state.transfer.transfered_amount
+            partner_transferred_amount = partner_state.transfer.transferred_amount
 
-        return our_state.deposit + partner_transfered_amount - our_transfered_amount
+        return our_state.deposit + partner_transferred_amount - our_transferred_amount
 
     def settle(self, ctx):
         assert self.settled is 0

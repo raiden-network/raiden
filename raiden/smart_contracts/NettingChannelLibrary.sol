@@ -15,7 +15,7 @@ library NettingChannelLibrary {
         address nodeAddress;
         uint256 balance;
         uint256 netted;
-        uint256 transferedAmount;
+        uint256 transferredAmount;
         uint256 amount;
         bytes merkleProof;
         bytes32 hashlock;
@@ -346,8 +346,8 @@ library NettingChannelLibrary {
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
 
-        node1.netted = node1.balance + node2.transferedAmount - node1.transferedAmount;
-        node2.netted = node2.balance + node1.transferedAmount - node2.transferedAmount;
+        node1.netted = node1.balance + node2.transferredAmount - node1.transferredAmount;
+        node2.netted = node2.balance + node1.transferredAmount - node2.transferredAmount;
 
         for (k = 0; k < node1.unlocked.length; k++) {
             node1.netted += node1.unlocked[k].amount;
@@ -432,7 +432,7 @@ library NettingChannelLibrary {
         uint64 nonce;
         address asset;
         address recipient;
-        uint256 transferedAmount;
+        uint256 transferredAmount;
         bytes32 locksroot;
         bytes32 secret;
 
@@ -442,7 +442,7 @@ library NettingChannelLibrary {
             nonce := mload(add(message, 12))            // nonce [4:12]
             asset := mload(add(message, 32))            // asset [12:32]
             recipient := mload(add(message, 52))        // recipient [32:52]
-            transferedAmount := mload(add(message, 84)) // transfered_amount [52:84]
+            transferredAmount := mload(add(message, 84)) // transferred_amount [52:84]
             locksroot := mload(add(message, 116))       // optional_locksroot [84:116]
             secret := mload(add(message, 148))          // optional_secret [116:148]
         }
@@ -450,7 +450,7 @@ library NettingChannelLibrary {
         participant.nonce = nonce;
         participant.asset = asset;
         participant.recipient = recipient;
-        participant.transferedAmount = transferedAmount;
+        participant.transferredAmount = transferredAmount;
         participant.locksroot = locksroot;
         participant.secret = secret;
     }
@@ -466,7 +466,7 @@ library NettingChannelLibrary {
         address recipient;
         bytes32 locksroot;
         bytes32 hashlock;
-        uint256 transferedAmount;
+        uint256 transferredAmount;
         uint256 lockAmount;
 
         assembly {
@@ -480,7 +480,7 @@ library NettingChannelLibrary {
             // initiator [80:100]
             locksroot := mload(add(message, 132))   // locksroot [100:132]
             hashlock := mload(add(message, 164))    // hashlock [100:164]
-            transferedAmount := mload(add(message, 196)) // transfered_amount[164:196]
+            transferredAmount := mload(add(message, 196)) // transferred_amount[164:196]
             lockAmount := mload(add(message, 228))  // amount [196:228]
             // fee := mload(add(message, 260))      // fee [228:260]
         }
@@ -491,7 +491,7 @@ library NettingChannelLibrary {
         participant.recipient = recipient;
         participant.locksroot = locksroot;
         participant.hashlock = hashlock;
-        participant.transferedAmount = transferedAmount;
+        participant.transferredAmount = transferredAmount;
         participant.amount = lockAmount;
     }
 
@@ -505,7 +505,7 @@ library NettingChannelLibrary {
         address asset;
         address recipient;
         bytes32 locksroot;
-        uint256 transferedAmount;
+        uint256 transferredAmount;
         uint256 lockAmount;
         bytes32 hashlock;
 
@@ -517,7 +517,7 @@ library NettingChannelLibrary {
             asset := mload(add(message, 40))        // asset [20:40]
             recipient := mload(add(message, 60))    // recipient [40:60]
             locksroot := mload(add(message, 92))    // locksroot [60:92]
-            transferedAmount := mload(add(message, 124)) // transfered_amount [92:124]
+            transferredAmount := mload(add(message, 124)) // transferred_amount [92:124]
             lockAmount := mload(add(message, 156))  // amount [124:156]
             hashlock := mload(add(message, 188))    // hashlock [156:188]
         }
@@ -527,7 +527,7 @@ library NettingChannelLibrary {
         participant.asset = asset;
         participant.recipient = recipient;
         participant.locksroot = locksroot;
-        participant.transferedAmount = transferedAmount;
+        participant.transferredAmount = transferredAmount;
         participant.amount = lockAmount;
         participant.hashlock = hashlock;
     }
