@@ -267,7 +267,7 @@ class ChannelEndState(object):
         self.address = participant_address
 
         # amount of asset transfered and unlocked
-        self.transfered_amount = 0
+        self.transferred_amount = 0
 
         # sequential nonce, current value has not been used.
         # 0 is used in the netting contract to represent the lack of a
@@ -275,7 +275,7 @@ class ChannelEndState(object):
         self.nonce = 1
 
         # contains the last known message with a valid signature and
-        # transfered_amount, the secrets revealed since that transfer, and the
+        # transferred_amount, the secrets revealed since that transfer, and the
         # pending locks
         self.balance_proof = BalanceProof()
 
@@ -293,7 +293,7 @@ class ChannelEndState(object):
 
     def balance(self, other):
         """ Return the current available balance of the participant. """
-        return self.contract_balance - self.transfered_amount + other.transfered_amount
+        return self.contract_balance - self.transferred_amount + other.transferred_amount
 
     def distributable(self, other):
         """ Return the available amount of the asset that can be transfered in
@@ -373,7 +373,7 @@ class ChannelEndState(object):
         # Start of the critical read/write section
         lock = self.balance_proof.claim_lock_by_secret(secret)
         amount = lock.amount
-        partner.transfered_amount += amount
+        partner.transferred_amount += amount
         # end of the critical read/write section
 
 
@@ -511,9 +511,9 @@ class Channel(object):
         return self.our_state.contract_balance
 
     @property
-    def transfered_amount(self):
+    def transferred_amount(self):
         """ Return how much we transfered to partner. """
-        return self.our_state.transfered_amount
+        return self.our_state.transferred_amount
 
     @property
     def balance(self):
@@ -594,7 +594,7 @@ class Channel(object):
     def register_secret(self, secret):
         """ Register a secret.
 
-        This wont claim the lock (update the transfered_amount), it will only
+        This wont claim the lock (update the transferred_amount), it will only
         save the secret in case that a proof needs to be created. This method
         can be used for any of the ends of the channel.
 
@@ -793,7 +793,7 @@ class Channel(object):
                 raise ValueError('Expiration smaller than the minimum required.')
 
         # only check the balance if the locksroot matched
-        if transfer.transfered_amount < from_state.transfered_amount:
+        if transfer.transferred_amount < from_state.transferred_amount:
             if log.isEnabledFor(logging.ERROR):
                 log.error(
                     'NEGATIVE TRANSFER node:%s %s > %s %s',
@@ -805,7 +805,7 @@ class Channel(object):
 
             raise ValueError('Negative transfer')
 
-        amount = transfer.transfered_amount - from_state.transfered_amount
+        amount = transfer.transferred_amount - from_state.transferred_amount
         distributable = from_state.distributable(to_state)
 
         if amount > distributable:
@@ -847,19 +847,19 @@ class Channel(object):
         if isinstance(transfer, DirectTransfer):
             to_state.register_direct_transfer(transfer)
 
-        from_state.transfered_amount = transfer.transfered_amount
+        from_state.transferred_amount = transfer.transferred_amount
         from_state.nonce += 1
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
                 'REGISTERED TRANSFER node:%s %s > %s '
-                'transfer:%s transfered_amount:%s nonce:%s '
+                'transfer:%s transferred_amount:%s nonce:%s '
                 'current_locksroot:%s',
                 pex(self.our_state.address),
                 pex(from_state.address),
                 pex(to_state.address),
                 repr(transfer),
-                from_state.transfered_amount,
+                from_state.transferred_amount,
                 from_state.nonce,
                 pex(to_state.balance_proof.merkleroot_for_unclaimed()),
             )
@@ -887,13 +887,13 @@ class Channel(object):
 
             raise ValueError('Insufficient funds')
 
-        transfered_amount = from_.transfered_amount + amount
+        transferred_amount = from_.transferred_amount + amount
         current_locksroot = to_.balance_proof.merkleroot_for_unclaimed()
 
         return DirectTransfer(
             nonce=from_.nonce,
             asset=self.asset_address,
-            transfered_amount=transfered_amount,
+            transferred_amount=transferred_amount,
             recipient=to_.address,
             locksroot=current_locksroot,
         )
@@ -945,12 +945,12 @@ class Channel(object):
         lock = Lock(amount, expiration, hashlock)
 
         updated_locksroot = to_.compute_merkleroot_with(include=lock)
-        transfered_amount = from_.transfered_amount
+        transferred_amount = from_.transferred_amount
 
         return LockedTransfer(
             nonce=from_.nonce,
             asset=self.asset_address,
-            transfered_amount=transfered_amount,
+            transferred_amount=transferred_amount,
             recipient=to_.address,
             locksroot=updated_locksroot,
             lock=lock,

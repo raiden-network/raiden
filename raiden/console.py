@@ -280,8 +280,8 @@ class ConsoleTools(object):
         # Collect data
         stats = dict(
             transfers=dict(
-                received=[t.transfered_amount for t in channel.received_transfers],
-                sent=[t.transfered_amount for t in channel.sent_transfers],
+                received=[t.transferred_amount for t in channel.received_transfers],
+                sent=[t.transferred_amount for t in channel.sent_transfers],
             ),
             channel=(channel
                      if not pretty

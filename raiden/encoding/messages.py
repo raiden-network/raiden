@@ -73,7 +73,7 @@ locksroot = make_field('locksroot', 32, '32s')
 hashlock = make_field('hashlock', 32, '32s')
 secret = make_field('secret', 32, '32s')
 echo = make_field('echo', 32, '32s')
-transfered_amount = make_field('transfered_amount', 32, '32s', integer(0, BYTE ** 32))
+transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, BYTE ** 32))
 amount = make_field('amount', 32, '32s', integer(0, BYTE ** 32))
 fee = make_field('fee', 32, '32s', integer(0, BYTE ** 32))
 
@@ -146,7 +146,7 @@ DirectTransfer = namedbuffer(
         nonce,                  # [4:12]
         asset,                  # [12:32]
         recipient,              # [32:52]
-        transfered_amount,
+        transferred_amount,
         optional_locksroot,
         optional_secret,        # TODO: remove from here and decoding in the smart contract
         signature,
@@ -163,7 +163,7 @@ LockedTransfer = namedbuffer(
         asset,                  # [20:40]
         recipient,              # [40:60]
         locksroot,
-        transfered_amount,
+        transferred_amount,
         amount,
         hashlock,
         signature,
@@ -183,7 +183,7 @@ MediatedTransfer = namedbuffer(
         initiator,                # [80:100]
         locksroot,
         hashlock,
-        transfered_amount,
+        transferred_amount,
         amount,
         fee,
         signature,
@@ -200,7 +200,7 @@ RefundTransfer = namedbuffer(
         asset,                  # [20:40]
         recipient,              # [40:60]
         locksroot,
-        transfered_amount,
+        transferred_amount,
         amount,
         hashlock,
         signature,
