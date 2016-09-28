@@ -1,10 +1,14 @@
 import random
+random.seed(42)
 num_nodes = 10000
 max_id = 2**32
 max_id = num_nodes * 100
+num_channels = 4
 
 node_by_id = dict()
 nodeids = []
+
+print "use pypy"
 
 
 def get_closest_node_id(target_id):
@@ -45,7 +49,8 @@ class Node(object):
         assert other_id
         assert other_id in node_by_id
         node = node_by_id[other_id]
-        self.channels[node.id] = self.deposit / self.num_channels
+        # self.channels[node.id] = self.deposit / self.num_channels
+        self.channels[node.id] = self.deposit
         # node.channels[self.id] = node.deposit / node.num_channels
 
     def transfer(self, transfer):
@@ -75,6 +80,10 @@ class Node(object):
         channels = sorted(self.channels.keys(), lambda a, b: cmp(_distance(a), _distance(b)))
         # print target_id, channels
         for cid in channels:
+            if cid > target_id:
+                if len(transfer.path) > 1:  # not first
+                    # print 'breaking'
+                    break
             capacity = self.channels[cid]
             # print cid, capacity, transfer.amount
             if capacity < transfer.amount:
@@ -102,15 +111,18 @@ class Transfer(object):
         self.tried = []
         self.path = []
         self.success = False
+        # print self
+
+    def __repr__(self):
+        return '<Transfer v=%d t=%s>' % (self.amount, self.receiver)
 
 deposit_distribution = [100 * 2**i for i in range(5)]
-num_channel_distribution = [32]
+print deposit_distribution
 
 
 print 'setting up nodes'
 for i in range(num_nodes):
     node_id = random.randrange(max_id)
-    num_channels = random.choice(num_channel_distribution)
     deposit = random.choice(deposit_distribution)
     node = Node(node_id, num_channels, deposit)
     node_by_id[node.id] = node
@@ -140,13 +152,21 @@ def rand_transfer(amount):
     t.success = res
     return t
 
-transfers = []
-for i in range(100):
-    t = rand_transfer(1)
-    transfers.append(t)
 
-avg_path_len = sum([len(t.path) for t in transfers]) / float(len(transfers))
-avg_tried_len = sum([len(t.tried) for t in transfers]) / float(len(transfers))
+for value in deposit_distribution:
+    transfers = []
+    value /= 2
+    for i in range(100):
+        t = rand_transfer(value)
+        transfers.append(t)
 
-print 'avg_path_len', avg_path_len
-print 'avg_tried_len', avg_tried_len
+    avg_path_len = sum([len(t.path) for t in transfers]) / float(len(transfers))
+    avg_tried_len = sum([len(t.tried) for t in transfers]) / float(len(transfers))
+    median_tried_len = sorted([len(t.tried) for t in transfers])[len(transfers) / 2]
+    max_tried_len = max([len(t.tried) for t in transfers])
+    num_successful = sum(1 for t in transfers if t.success)
+
+    print 'value', value, deposit_distribution
+    print 'avg_path_len', avg_path_len
+    print 'avg_tried_len', avg_tried_len, median_tried_len, max_tried_len
+    print 'num_successful', num_successful, num_successful / float(len(transfers))
