@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+
 import logging
 import random
 import time
@@ -666,6 +666,7 @@ class EndMediatedTransferTask(Task):
 
             if isinstance(response, Secret) and response.sender == mediated_transfer.sender:
                 originating_channel.claim_lock(response.secret)
+                self.transfermanager.endtask_transfer_mapping[self] = self.originating_transfer
                 self.transfermanager.on_hashlock_result(mediated_transfer.lock.hashlock, True)
                 return
 

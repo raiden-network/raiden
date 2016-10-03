@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 import logging
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from itertools import chain
 
 import gevent
@@ -500,7 +500,8 @@ class Channel(object):
 
         self.received_transfers = []
         self.sent_transfers = []  #: transfers that were sent, required for settling
-        self.transfer_callbacks = defaultdict(list)  # mapping of transfer to callback list
+        self.on_withdrawable_callbacks = list()  # mapping of transfer to callback list
+        self.on_task_completed_callbacks = list()  # XXX naming
 
     @property
     def isopen(self):
@@ -546,6 +547,9 @@ class Channel(object):
     def outstanding(self):
         return self.our_state.locked()
 
+    def register_withdrawable_callback(self, callback):
+        self.on_withdrawable_callbacks.append(callback)
+
     def channel_closed(self, block_number):
         self.external_state.register_block_alarm(self.blockalarm_for_settle)
 
@@ -576,12 +580,6 @@ class Channel(object):
         if self.external_state.closed_block + self.settle_timeout >= block_number:
             gevent.spawn(_settle)  # don't block the alarm
             return REMOVE_CALLBACK
-
-    def handle_callbacks(self, transfer):
-        for callback in self.transfer_callbacks[transfer]:
-            callback(None, True)
-
-        del self.transfer_callbacks[transfer]
 
     def get_state_for(self, node_address_bin):
         if self.our_state.address == node_address_bin:
@@ -683,7 +681,7 @@ class Channel(object):
         else:
             raise ValueError('The secret doesnt unlock any hashlock')
 
-    def register_transfer(self, transfer, callback=None):
+    def register_transfer(self, transfer):
         """ Register a signed transfer, updating the channel's state accordingly. """
 
         if transfer.recipient == self.partner_state.address:
@@ -694,9 +692,6 @@ class Channel(object):
             )
 
             self.sent_transfers.append(transfer)
-
-            if callback:
-                self.transfer_callbacks[transfer].append(callback)
 
         elif transfer.recipient == self.our_state.address:
             self.register_transfer_from_to(
@@ -850,6 +845,24 @@ class Channel(object):
 
         from_state.transferred_amount = transfer.transferred_amount
         from_state.nonce += 1
+
+        if isinstance(transfer, DirectTransfer):
+            # if we are the recipient, spawn callback for incoming transfers
+            if transfer.recipient == self.our_state.address:
+                for callback in self.on_withdrawable_callbacks:
+                    gevent.spawn(callback(transfer.recipient, transfer.initiator,
+                                 transfer.asset, transfer.transfered_amount))
+            # if we are the sender, call the 'success' callback
+            elif from_state.address == self.our_state.address:
+                callbacks_to_remove = list()
+                for callback in self.on_task_completed_callbacks:
+                    result = callback(task=None, success=True)  # XXX maybe use gevent.spawn()
+
+                    if result is True:
+                        callbacks_to_remove.append(callback)
+
+                for callback in callbacks_to_remove:
+                    self.on_task_completed_callbacks.remove(callback)
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(

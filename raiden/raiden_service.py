@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 import logging
+import itertools
 
 from ethereum import slogging
 from ethereum.abi import ContractTranslator
@@ -402,6 +403,17 @@ class RaidenAPI(object):
 
         netting_channel.settle()
         return netting_channel
+
+    def register_on_withdrawable_callbacks(self, callbacks):
+        all_asset_managers = self.raiden.manager_by_asset_address.values()
+        # get all channel the node participates in:
+        all_channel = [am.partner_addres_channel.values() for am in all_asset_managers]
+        # and flatten the list:
+        all_channel = list(itertools.chain.from_iterable(all_channel))
+        for callback in list(callbacks):
+            for channel in all_channel:
+                channel.register_withdrawable_callback(callback)
+            self.raiden.transfermanager.on_result_callbacks
 
 
 class RaidenMessageHandler(object):
