@@ -392,7 +392,7 @@ if __name__ == '__main__':
     # # sim.rand_transfer(1.5)
 
     """
-    Todo Next: Model that nodes preferably connect nodes of similar capacity
+    Done: Model that nodes preferably connect nodes of similar capacity!!!
 
     Thoughts: The less value one has, the less valuable he is as a mediator
               therefore the less channels he should have open.

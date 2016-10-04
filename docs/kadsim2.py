@@ -35,8 +35,8 @@ class Node(object):
         return [(self.id + d) % self.sim.max_id for d in distances]
 
     def initiate_channels(self):
-        assert self.id in self.targets
         for target_id in self.targets:
+            assert target_id != self.targets
             node_id = self.sim.get_closest_node_id(target_id)
             self.connect(node_id)
             # connect other
@@ -161,7 +161,7 @@ class Transfer(object):
 
 class Simulation(object):
     num_nodes = 100000
-    max_id = 2**32
+    max_id = 2**256
     # max_id = num_nodes * 10
     num_channels = 32
     max_capacity = 128
@@ -181,11 +181,28 @@ class Simulation(object):
         p = self.min_capacity + (self.max_capacity - self.min_capacity) * x
         return p
 
-    def get_closest_node_id(self, target_id):
+    def _get_closest_node_id(self, target_id):
+        # this is very slow
         for node_id in self.nodeids:
             if node_id > target_id:
                 return node_id
         return self.nodeids[0]
+
+    def get_closest_node_id(self, target_id):
+        start, end = 0, len(self.nodeids) - 1
+        while end - start > 1:
+            idx = start + (end - start) / 2
+            if self.nodeids[idx] > target_id:
+                end = idx
+            else:
+                start = idx
+        assert end - start <= 1, (end, start)
+        ds = abs(self.nodeids[start] - target_id)
+        de = abs(self.nodeids[end] - target_id)
+        idx = min((ds, start), (de, end))[1]
+        # assert abs(self.nodeids[idx] -
+        #            target_id) <= abs(self._get_closest_node_id(target_id) - target_id)
+        return self.nodeids[idx]
 
     def _iteredges(self):
         for node in self.node_by_id.values():
@@ -274,7 +291,7 @@ class Simulation(object):
             max_tried_len = max([len(t.tried) for t in transfers])
 
             fmt = 'value:{:-5.2f}{:-5.2f} success:{:.2f} p_len:{:-4.0f} {:-4.0f} {:-4.0f} ' + \
-                  'tried:{:-4.0f} {:-4.0f} {:-4.0f}'
+                'tried:{:-4.0f} {:-4.0f} {:-4.0f}'
             print fmt.format(value, usable_nodes, pct_successful, avg_path_len,
                              median_path_len, max_path_len, avg_tried_len,
                              median_tried_len, max_tried_len)
@@ -284,17 +301,17 @@ if __name__ == '__main__':
     sim = Simulation()
 
     # config
-    sim.num_nodes = 100000
+    sim.num_nodes = 1000 * 1000
     sim.num_channels = 32
     sim.max_capacity = 128
     sim.min_capacity = 1
     sim.randomize_capacity = False
     sim.proactive_routing = True
-    sim.max_tried = 1000
+    sim.max_tried = 100
 
     # setup
     sim.setup_network()
-    # sim.dump_nodes(4)
+    sim.dump_nodes(4)
 
     # run sim
     print "running simulation w/proactive routing"
@@ -306,4 +323,17 @@ if __name__ == '__main__':
 
     """
     Todo Next: Model that nodes preferably connect nodes of similar capacity
+
+    Thoughts: The less value one has, the less valuable he is as a mediator
+              therefore the less channels he should have open.
+
+              The other way round for nodes with high values.
+
+
+              Q: Does it make sense to have different capacity based on the distance?
+
+                 Being able to transfer to neighbours is essential
+                 so transfers can be facillitated at all
+
+                 While having a short path is secondary.
     """
