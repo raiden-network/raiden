@@ -246,6 +246,7 @@ class BalanceProof(object):
         lock_encoded = bytes(lock.as_bytes)
         lock_hash = sha3(lock_encoded)
         merkle_proof = [lock_hash]
+        # Why is the return value not used here?
         merkleroot(merkletree, merkle_proof)
 
         return UnlockProof(
