@@ -50,7 +50,12 @@ setup(
     author_email='heiko@brainbot.com',
     url='https://github.com/heikoheiko/raiden',
     packages=[
-        'raiden'
+        'raiden',
+        'raiden.encoding',
+        'raiden.utils',
+        'raiden.blockchain',
+        'raiden.network',
+        'raiden.network.rpc',
     ],
     include_package_data=True,
     license='BSD',
