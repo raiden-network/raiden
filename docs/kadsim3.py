@@ -41,8 +41,6 @@ class Node(object):
     The other half is reserved for other nodes connecting.
     """
 
-    max_capacity_deviation = .5
-
     def __init__(self, sim, id, num_channels, capacity_per_channel):
         self.sim = sim
         self.id = id
@@ -67,13 +65,14 @@ class Node(object):
 
         # connected nodes should have the same order of magnitude capacity
         if sim.capacity_groups is True:
-            max_capacity = self.capacity_per_channel / (1. - self.max_capacity_deviation)
-            min_capacity = self.max_capacity_deviation * self.capacity_per_channel
+            max_capacity = self.capacity_per_channel / (1. - self.sim.max_capacity_deviation)
+            min_capacity = (1 - self.sim.max_capacity_deviation) * self.capacity_per_channel
 
         for target_id in self.targets:
             assert target_id != self.targets
             if sim.capacity_groups is True:
                 # stuff to optimize
+                node_id = None
                 idx = get_closest_node_idx(target_id, self.sim.nodeids)
                 offset = 0
                 max_idx = len(self.sim.node_by_id) - 1
@@ -90,6 +89,10 @@ class Node(object):
             self.connect(node_id)
             # connect other
             self.sim.node_by_id[node_id].connect(self.id)
+
+            if sim.capacity_groups:
+                capa = self.sim.node_by_id[node_id].capacity_per_channel
+                assert min_capacity < capa < max_capacity
 
     def connect(self, other_id):
         assert other_id
@@ -246,6 +249,7 @@ class Simulation(object):
     randomize_capacity = False
     proactive_routing = False
     capacity_groups = False
+    max_capacity_deviation = .3
     max_tried = 1000
 
     capacity_distribution = 'power'
@@ -334,6 +338,8 @@ class Simulation(object):
     def run(self, steps=4, samples=100):
         random.seed(42)
 
+        total_successful = 0
+
         for i in range(steps):
             value = self._capacity_distribution(i / float(steps)) / 2
             usable_nodes = len([n for n in self.node_by_id.values()
@@ -345,6 +351,7 @@ class Simulation(object):
 
             successful = [t for t in transfers if t.success]
             num_successful = len(successful)
+            total_successful += num_successful
             pct_successful = num_successful / float(len(transfers))
 
             if num_successful > 0:
@@ -362,6 +369,9 @@ class Simulation(object):
             print fmt.format(value, usable_nodes, pct_successful, avg_path_len,
                              median_path_len, max_path_len, avg_tried_len,
                              median_tried_len, max_tried_len)
+        num_transfers = steps * samples
+        pct_successful = (100 * total_successful) / num_transfers
+        print 'Of {} transfers {}% successful'.format(num_transfers, pct_successful)
 
 
 if __name__ == '__main__':
@@ -375,9 +385,10 @@ if __name__ == '__main__':
     sim.randomize_capacity = False
     sim.proactive_routing = False
     sim.capacity_groups = True
-
-    sim.max_tried = 100
+    sim.max_capacity_deviation = 0.3
     sim.capacity_distribution = 'power'  # or 'linear'
+
+    sim.max_tried = 500
 
     # setup
     sim.setup_network()
