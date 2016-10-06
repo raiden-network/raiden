@@ -276,25 +276,26 @@ class Secret(SignedMessage):
 
 
 class DirectTransfer(SignedMessage):
-    """ An direct asset exchange, used when both participants have a previously
-    openned channel.
+    """ A direct asset exchange, used when both participants have a previously
+    opened channel.
 
     Signs the unidirectional settled `balance` of `asset` to `recipient` plus
     locked transfers.
 
     Settled refers to the inclusion of formerly locked amounts.
-    Locked amounts are not included in the balance yet, but represented by the `locksroot`.
+    Locked amounts are not included in the balance yet, but represented
+    by the `locksroot`.
 
     Args:
         nonce: A sequential nonce, used to protected against replay attacks and
             to give a total order for the messages. This nonce is per
             participant, not shared.
         asset: The address of the asset being exchanged in the channel.
-        transferred_amount: The total amount of asset that wast transfered to
-            the channel partner. This value is monotonicly increasing and can
+        transferred_amount: The total amount of asset that was transfered to
+            the channel partner. This value is monotonically increasing and can
             be larger than a channels deposit, since the channels are
             bidirecional.
-        recipient: The address of raiden node participating in the channel.
+        recipient: The address of the raiden node participating in the channel.
         locksroot: The root of a merkle tree which records the current
             outstanding locks.
     """
@@ -385,16 +386,16 @@ class LockedTransfer(SignedMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
     she knows the secret to `hashlock`.
 
-    The asset amount is implicitely represented in the `locksroot` and won't be
+    The asset amount is implicitly represented in the `locksroot` and won't be
     reflected in the `transferred_amount` until the secret is revealed.
 
     This signs Carol, that she can claim locked_amount from Bob if she knows the secret to hashlock
 
     If the secret to hashlock becomes public, but Bob fails to sign Carol a netted balance,
     with an updated rootlock which reflects the deletion of the lock, then
-        Carol can request settlement on chain by providing:
-            any signed [nonce, asset, balance, recipient, locksroot, ...]
-            along a merkle proof from locksroot to the not yet netted formerly locked amount
+    Carol can request settlement on chain by providing:
+        any signed [nonce, asset, balance, recipient, locksroot, ...]
+        along a merkle proof from locksroot to the not yet netted formerly locked amount
     """
     cmdid = messages.LOCKEDTRANSFER
 
@@ -468,8 +469,8 @@ class LockedTransfer(SignedMessage):
 class MediatedTransfer(LockedTransfer):
 
     """
-    A MediatedTransfer has a `target` address to which a chain of transfers shall be established.
-    Here the `haslock` is mandatory.
+    A MediatedTransfer has a `target` address to which a chain of transfers shall
+    be established. Here the `haslock` is mandatory.
 
     `fee` is the remaining fee a recipient shall use to complete the mediated transfer.
     The recipient can deduct his own fee from the amount and lower `fee` to the remaining fee.
@@ -477,7 +478,7 @@ class MediatedTransfer(LockedTransfer):
     it can deduct a too high fee, but this would render completion of the transfer unlikely.
 
     The initiator of a mediated transfer will calculate fees based on the likely fees along the
-    path. Note, it can not determin the path, as it does not know which nodes are available.
+    path. Note, it can not determine the path, as it does not know which nodes are available.
 
     Initial `amount` should be expected received amount + fees.
 
@@ -565,8 +566,9 @@ class MediatedTransfer(LockedTransfer):
 
 
 class RefundTransfer(LockedTransfer):
-    """ Indicates that no route is available and transfer the amount back to
-    the previous node, allowing she to try another path to complete the
+    """
+    Indicates that no route is available and transfers the amount back to
+    the previous node, allowing it to try another path to complete the
     transfer.
     """
     cmdid = messages.REFUNDTRANSFER
@@ -606,13 +608,14 @@ class RefundTransfer(LockedTransfer):
 
 
 class TransferTimeout(SignedMessage):
-    """ Indicates that timeout happened during mediated transfer.
+    """
+    Indicates a timeout happened during a mediated transfer.
 
     This message is used when a node in a mediated chain doesn't consider any
-    of it's following nodes available. If node `A` is trying to send a transfer
-    to `D` throught `B1`, if `B1` consider all candidates for `c` unavailable
-    it will send a TransferTimeout back to `A`. `A` can try all other
-    candidates for `b` until it considers all it's paths unavailable.
+    of its following nodes available. If node `A` is trying to send a transfer
+    to `C` through `B` and `B` considers all candidates for `C` unavailable
+    it will send a TransferTimeout back to `A`. `A` can then try all other
+    candidates for `C` until it considers all it's paths unavailable.
     """
     cmdid = messages.TRANSFERTIMEOUT
 
