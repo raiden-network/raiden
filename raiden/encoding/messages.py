@@ -3,8 +3,8 @@ import struct
 
 from ethereum import slogging
 
-from raiden.encoding.format import buffer_for, make_field, namedbuffer, pad, BYTE
 from raiden.encoding.encoders import integer, optional_bytes
+from raiden.encoding.format import buffer_for, make_field, namedbuffer, pad, BYTE
 from raiden.encoding.signing import recover_publickey
 
 
@@ -61,6 +61,7 @@ log = slogging.get_logger(__name__)
 
 
 nonce = make_field('nonce', 8, '8s', integer(0, BYTE ** 8))
+identifier = make_field('identifier', 8, '8s', integer(0, BYTE ** 8))
 expiration = make_field('expiration', 8, '8s', integer(0, BYTE ** 8))
 
 asset = make_field('asset', 20, '20s')
@@ -123,8 +124,9 @@ SecretRequest = namedbuffer(
     [
         cmdid(SECRETREQUEST),  # [0:1]
         pad(3),                # [1:4]
-        hashlock,              # [4:36]
-        signature,             # [36:101]
+        identifier,            # [4:12]
+        hashlock,              # [12:46]
+        signature,             # [46:111]
     ]
 )
 
@@ -133,8 +135,9 @@ Secret = namedbuffer(
     [
         cmdid(SECRET),  # [0:1]
         pad(3),         # [1:4]
-        secret,         # [4:36]
-        signature,      # [36:101]
+        identifier,     # [4:12]
+        secret,         # [12:44]
+        signature,      # [44:109]
     ]
 )
 
@@ -143,9 +146,10 @@ DirectTransfer = namedbuffer(
     [
         cmdid(DIRECTTRANSFER),  # [0:1]
         pad(3),                 # [1:4]
-        nonce,                  # [4:12]
-        asset,                  # [12:32]
-        recipient,              # [32:52]
+        identifier,             # [4:12]
+        nonce,                  # [12:20]
+        asset,                  # [20:40]
+        recipient,              # [40:60]
         transferred_amount,
         optional_locksroot,
         optional_secret,        # TODO: remove from here and decoding in the smart contract
@@ -158,10 +162,11 @@ LockedTransfer = namedbuffer(
     [
         cmdid(LOCKEDTRANSFER),  # [0:1]
         pad(3),                 # [1:4]
-        nonce,                  # [4:12]
-        expiration,             # [12:20]
-        asset,                  # [20:40]
-        recipient,              # [40:60]
+        identifier,             # [4:12]
+        nonce,                  # [12:20]
+        expiration,             # [20:28]
+        asset,                  # [28:48]
+        recipient,              # [48:68]
         locksroot,
         transferred_amount,
         amount,
@@ -175,12 +180,13 @@ MediatedTransfer = namedbuffer(
     [
         cmdid(MEDIATEDTRANSFER),  # [0:1]
         pad(3),                   # [1:4]
-        nonce,                    # [4:12]
-        expiration,               # [12:20]
-        asset,                    # [20:40]
-        recipient,                # [40:60]
-        target,                   # [60:80]
-        initiator,                # [80:100]
+        identifier,               # [4:12]
+        nonce,                    # [12:20]
+        expiration,               # [20:28]
+        asset,                    # [28:48]
+        recipient,                # [48:68]
+        target,                   # [68:88]
+        initiator,                # [88:108]
         locksroot,
         hashlock,
         transferred_amount,
