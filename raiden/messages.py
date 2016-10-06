@@ -221,8 +221,9 @@ class SecretRequest(SignedMessage):
     """ Requests the secret which unlocks a hashlock. """
     cmdid = messages.SECRETREQUEST
 
-    def __init__(self, hashlock):
+    def __init__(self, identifier, hashlock):
         super(SecretRequest, self).__init__()
+        self.identifier = identifier
         self.hashlock = hashlock
 
     def __repr__(self):
@@ -233,11 +234,12 @@ class SecretRequest(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        secret_request = SecretRequest(packed.hashlock)
+        secret_request = SecretRequest(packed.identifier, packed.hashlock)
         secret_request.signature = packed.signature
         return secret_request
 
     def pack(self, packed):
+        packed.identifier = self.identifier
         packed.hashlock = self.hashlock
         packed.signature = self.signature
 
@@ -246,8 +248,9 @@ class Secret(SignedMessage):
     """ Provides the secret to a hashlock. """
     cmdid = messages.SECRET
 
-    def __init__(self, secret):
+    def __init__(self, identifier, secret):
         super(Secret, self).__init__()
+        self.identifier = identifier
         self.secret = secret
         self._hashlock = None
 
@@ -266,11 +269,12 @@ class Secret(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        secret = Secret(packed.secret)
+        secret = Secret(packed.identifier, packed.secret)
         secret.signature = packed.signature
         return secret
 
     def pack(self, packed):
+        packed.identifier = self.identifier
         packed.secret = self.secret
         packed.signature = self.signature
 
@@ -302,8 +306,9 @@ class DirectTransfer(SignedMessage):
 
     cmdid = messages.DIRECTTRANSFER
 
-    def __init__(self, nonce, asset, transferred_amount, recipient, locksroot):
+    def __init__(self, identifier, nonce, asset, transferred_amount, recipient, locksroot):
         super(DirectTransfer, self).__init__()
+        self.identifier = identifier
         self.nonce = nonce
         self.asset = asset
         self.transferred_amount = transferred_amount  #: total amount of asset sent to partner
@@ -313,6 +318,7 @@ class DirectTransfer(SignedMessage):
     @staticmethod
     def unpack(packed):
         transfer = DirectTransfer(
+            packed.identifier,
             packed.nonce,
             packed.asset,
             packed.transferred_amount,
@@ -324,6 +330,7 @@ class DirectTransfer(SignedMessage):
         return transfer
 
     def pack(self, packed):
+        packed.identifier = self.identifier
         packed.nonce = self.nonce
         packed.asset = self.asset
         packed.transferred_amount = self.transferred_amount
@@ -399,8 +406,9 @@ class LockedTransfer(SignedMessage):
     """
     cmdid = messages.LOCKEDTRANSFER
 
-    def __init__(self, nonce, asset, transferred_amount, recipient, locksroot, lock):
+    def __init__(self, identifier, nonce, asset, transferred_amount, recipient, locksroot, lock):
         super(LockedTransfer, self).__init__()
+        self.identifier = identifier
         self.nonce = nonce
         self.asset = asset
         self.transferred_amount = transferred_amount
@@ -411,6 +419,7 @@ class LockedTransfer(SignedMessage):
 
     def to_mediatedtransfer(self, target, initiator='', fee=0):
         return MediatedTransfer(
+            self.identifier,
             self.nonce,
             self.asset,
             self.transferred_amount,
@@ -441,6 +450,7 @@ class LockedTransfer(SignedMessage):
         )
 
         locked_transfer = LockedTransfer(
+            packed.identifier,
             packed.nonce,
             packed.asset,
             packed.transferred_amount,
@@ -452,6 +462,7 @@ class LockedTransfer(SignedMessage):
         return locked_transfer
 
     def pack(self, packed):
+        packed.identifier = self.identifier
         packed.nonce = self.nonce
         packed.asset = self.asset
         packed.transferred_amount = self.transferred_amount
@@ -489,8 +500,8 @@ class MediatedTransfer(LockedTransfer):
 
     cmdid = messages.MEDIATEDTRANSFER
 
-    def __init__(self, nonce, asset, transferred_amount, recipient, locksroot,
-                 lock, target, initiator, fee=0):
+    def __init__(self, identifier, nonce, asset, transferred_amount, recipient,
+                 locksroot, lock, target, initiator, fee=0):
 
         if nonce > 2 ** 64:
             raise ValueError('nonce is too large')
@@ -502,6 +513,7 @@ class MediatedTransfer(LockedTransfer):
             raise ValueError('transferred_amount is too large')
 
         super(MediatedTransfer, self).__init__(
+            identifier,
             nonce,
             asset,
             transferred_amount,
@@ -534,6 +546,7 @@ class MediatedTransfer(LockedTransfer):
         )
 
         mediated_transfer = MediatedTransfer(
+            packed.identifier,
             packed.nonce,
             packed.asset,
             packed.transferred_amount,
@@ -548,6 +561,7 @@ class MediatedTransfer(LockedTransfer):
         return mediated_transfer
 
     def pack(self, packed):
+        packed.identifier = self.identifier
         packed.nonce = self.nonce
         packed.asset = self.asset
         packed.transferred_amount = self.transferred_amount
