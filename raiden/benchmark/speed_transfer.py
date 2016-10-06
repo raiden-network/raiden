@@ -79,6 +79,7 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
         hashlock = sha3(secrets[i])
         locked_transfer = channel0.create_lockedtransfer(
             amount=amount,
+            identifier=1,  # TODO: fill in identifier
             expiration=expiration,
             hashlock=hashlock,
         )

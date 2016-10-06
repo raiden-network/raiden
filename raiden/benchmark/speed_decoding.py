@@ -54,14 +54,20 @@ def test_ping(iterations=ITERATIONS):
 
 def test_secret_request(iterations=ITERATIONS):
     hashlock = HASH
-    msg = SecretRequest(hashlock)
+    msg = SecretRequest(
+        1,  # TODO: fill in identifier
+        hashlock
+    )
     msg.sign(PRIVKEY)
     run_timeit('SecretRequest', msg, iterations=iterations)
 
 
 def test_secret(iterations=ITERATIONS):
     secret = HASH
-    msg = Secret(secret)
+    msg = Secret(
+        1,  # TODO: fill in identifier
+        secret
+    )
     msg.sign(PRIVKEY)
     run_timeit('Secret', msg, iterations=iterations)
 

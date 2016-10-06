@@ -100,7 +100,12 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_time
     channel21 = channel(app2, app1, asset_address)
     netting_channel = channel21.external_state.netting_channel
 
-    secret = pending_mediated_transfer(raiden_chain, asset_address, amount)
+    secret = pending_mediated_transfer(
+        raiden_chain,
+        asset_address,
+        amount,
+        1  # TODO: fill in identifier
+    )
     hashlock = sha3(secret)
 
     gevent.sleep(.1)  # wait for the messages

@@ -57,7 +57,7 @@ class TransferManager(object):
     def register_callback_for_result(self, callback):
         self.on_result_callbacks.append(callback)
 
-    def transfer_async(self, amount, target, callback=None):
+    def transfer_async(self, amount, identifier, target, callback=None):
         """ Transfer `amount` between this node and `target`.
 
         This method will start a asyncronous transfer, the transfer might fail
@@ -70,7 +70,10 @@ class TransferManager(object):
 
         if target in self.assetmanager.partneraddress_channel:
             channel = self.assetmanager.partneraddress_channel[target]
-            direct_transfer = channel.create_directtransfer(amount)
+            direct_transfer = channel.create_directtransfer(
+                amount,
+                1  # TODO: fill in identifier
+            )
             self.assetmanager.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer)
             if callback:
@@ -86,6 +89,7 @@ class TransferManager(object):
             task = StartMediatedTransferTask(
                 self,
                 amount,
+                identifier,
                 target,
                 result,
             )
