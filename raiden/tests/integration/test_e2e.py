@@ -20,4 +20,10 @@ def test_fullnetwork(raiden_chain):
     direct_transfer(app1, app2, asset_address, amount)
 
     amount = 30
-    mediated_transfer(app1, app2, asset_address, amount)
+    mediated_transfer(
+        app1,
+        app2,
+        asset_address,
+        amount,
+        1  # TODO: fill in identifier
+    )

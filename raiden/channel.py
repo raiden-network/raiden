@@ -885,7 +885,7 @@ class Channel(object):
                 pex(to_state.balance_proof.merkleroot_for_unclaimed()),
             )
 
-    def create_directtransfer(self, amount):
+    def create_directtransfer(self, amount, identifier):
         """ Return a DirectTransfer message.
 
         This message needs to be signed and registered with the channel before
@@ -912,6 +912,7 @@ class Channel(object):
         current_locksroot = to_.balance_proof.merkleroot_for_unclaimed()
 
         return DirectTransfer(
+            identifier=identifier,
             nonce=from_.nonce,
             asset=self.asset_address,
             transferred_amount=transferred_amount,
@@ -919,7 +920,7 @@ class Channel(object):
             locksroot=current_locksroot,
         )
 
-    def create_lockedtransfer(self, amount, expiration, hashlock):
+    def create_lockedtransfer(self, amount, identifier, expiration, hashlock):
         """ Return a LockedTransfer message.
 
         This message needs to be signed and registered with the channel before sent.
@@ -969,6 +970,7 @@ class Channel(object):
         transferred_amount = from_.transferred_amount
 
         return LockedTransfer(
+            identifier=identifier,
             nonce=from_.nonce,
             asset=self.asset_address,
             transferred_amount=transferred_amount,
@@ -978,7 +980,7 @@ class Channel(object):
         )
 
     def create_mediatedtransfer(self, transfer_initiator, transfer_target, fee,
-                                amount, expiration, hashlock):
+                                amount, identifier, expiration, hashlock):
         """ Return a MediatedTransfer message.
 
         This message needs to be signed and registered with the channel before
@@ -986,14 +988,15 @@ class Channel(object):
 
         Args:
             transfer_initiator (address): The node that requested the transfer.
-            transfer_target (address): The node that the transfer is destinated to.
-            amount (float): How much asset is being transferred.
+            transfer_target (address): The final destination node of the transfer
+            amount (float): How much of an asset is being transfered.
             expiration (int): The maximum block number until the transfer
                 message can be received.
         """
 
         locked_transfer = self.create_lockedtransfer(
             amount,
+            identifier,
             expiration,
             hashlock,
         )
@@ -1014,6 +1017,7 @@ class Channel(object):
 
         locked_transfer = self.create_lockedtransfer(
             lock.amount,
+            1,  # TODO: Perhaps add identifier in the refund transfer too?
             lock.expiration,
             lock.hashlock,
         )

@@ -49,7 +49,12 @@ def test_settlement(raiden_network, settle_timeout):
     assert asset_manager0.asset_address == asset_manager1.asset_address
     assert channel0.external_state.netting_channel.address == channel1.external_state.netting_channel.address
 
-    transfermessage = channel0.create_lockedtransfer(amount, expiration, hashlock)
+    transfermessage = channel0.create_lockedtransfer(
+        amount,
+        identifier=1,  # TODO: fill in identifier
+        expiration,
+        hashlock
+    )
     app0.raiden.sign(transfermessage)
     channel0.register_transfer(transfermessage)
     channel1.register_transfer(transfermessage)
@@ -107,7 +112,12 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
     app0, app1, app2, app3 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     # mediated transfer
-    secret = pending_mediated_transfer(raiden_network, asset, amount)
+    secret = pending_mediated_transfer(
+        raiden_network,
+        asset,
+        amount,
+        1  # TODO: fill in identifier
+    )
     hashlock = sha3(secret)
 
     # get a proof for the pending transfer
@@ -174,7 +184,12 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     # the attacker owns app0 and app2 and creates a transfer throught app1
-    secret = pending_mediated_transfer(raiden_chain, asset, amount)
+    secret = pending_mediated_transfer(
+        raiden_chain,
+        asset,
+        amount,
+        1  # TODO: fill in identifier
+    )
     hashlock = sha3(secret)
 
     attack_channel = channel(app2, app1, asset)

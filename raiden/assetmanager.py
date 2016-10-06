@@ -181,14 +181,14 @@ class AssetManager(object):
         if channel not in channels_registered:
             channels_registered.append(channel)
 
-    def handle_secret(self, secret):
+    def handle_secret(self, identifier, secret):
         """ Handle a secret that could be received from a Secret message or a
         ChannelSecretRevealed event.
         """
         hashlock = sha3(secret)
         channels_reveal = self.hashlock_channel[hashlock]
 
-        secret_message = Secret(secret)
+        secret_message = Secret(identifier, secret)
         self.raiden.sign(secret_message)
 
         while channels_reveal:

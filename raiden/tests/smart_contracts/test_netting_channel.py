@@ -276,7 +276,10 @@ def test_closesingle_settle(deposit, settle_timeout, tester_channels,
     initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
 
     transfer_amount = 10
-    direct_transfer = channel0.create_directtransfer(transfer_amount)
+    direct_transfer = channel0.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
     direct_transfer.sign(privatekey0, address0)
     direct_transfer_data = str(direct_transfer.packed().data)
 
@@ -348,11 +351,17 @@ def test_close_settle(deposit, settle_timeout, tester_state, tester_channels,
     initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
 
     transfer_amount0 = 10
-    direct_transfer0 = channel0.create_directtransfer(transfer_amount0)
+    direct_transfer0 = channel0.create_directtransfer(
+        transfer_amount0,
+        1  # TODO: fill in identifier
+    )
     direct_transfer0.sign(privatekey0, address0)
 
     transfer_amount1 = 30
-    direct_transfer1 = channel1.create_directtransfer(transfer_amount1)
+    direct_transfer1 = channel1.create_directtransfer(
+        transfer_amount1,
+        1  # TODO: fill in identifier
+    )
     direct_transfer1.sign(privatekey1, address1)
 
     with pytest.raises(TransactionFailed):
@@ -440,6 +449,7 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
         transfer_target=address1,
         fee=0,
         amount=lock_amount0,
+        identifier=1,  # TODO: fill in identifier
         expiration=lock_expiration0,
         hashlock=hashlock0,
     )
@@ -454,6 +464,7 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
         transfer_target=address0,
         fee=0,
         amount=lock_amount1,
+        identifier=1,  # TODO: fill in identifier
         expiration=lock_expiration1,
         hashlock=hashlock1,
     )
@@ -529,7 +540,10 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     address1 = privatekey_to_address(privatekey1_raw)
 
     transfer_amount = 3
-    first_direct_transfer0 = channel0.create_directtransfer(transfer_amount)
+    first_direct_transfer0 = channel0.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
     first_direct_transfer0.sign(privatekey0, address0)
     first_direct_transfer0_data = str(first_direct_transfer0.packed().data)
 
@@ -537,7 +551,10 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     channel1.register_transfer(first_direct_transfer0)
 
     transfer_amount = 5
-    second_direct_transfer0 = channel0.create_directtransfer(transfer_amount)
+    second_direct_transfer0 = channel0.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
     second_direct_transfer0.sign(privatekey0, address0)
     second_direct_transfer0_data = str(second_direct_transfer0.packed().data)
 
@@ -545,7 +562,10 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     channel1.register_transfer(second_direct_transfer0)
 
     transfer_amount = 7
-    third_direct_transfer0 = channel0.create_directtransfer(transfer_amount)
+    third_direct_transfer0 = channel0.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
     third_direct_transfer0.sign(privatekey0, address0)
     third_direct_transfer0_data = str(third_direct_transfer0.packed().data)
 
@@ -553,7 +573,10 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     channel1.register_transfer(third_direct_transfer0)
 
     transfer_amount = 11
-    fourth_direct_transfer0 = channel0.create_directtransfer(transfer_amount)
+    fourth_direct_transfer0 = channel0.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
     fourth_direct_transfer0.sign(privatekey0, address0)
     fourth_direct_transfer0_data = str(fourth_direct_transfer0.packed().data)
 
@@ -561,7 +584,10 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     channel1.register_transfer(fourth_direct_transfer0)
 
     transfer_amount = 13
-    direct_transfer1 = channel1.create_directtransfer(transfer_amount)
+    direct_transfer1 = channel1.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
     direct_transfer1.sign(privatekey1, address1)
     direct_transfer1_data = str(direct_transfer1.packed().data)
 
@@ -625,7 +651,10 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
     address1 = privatekey_to_address(privatekey1_raw)
 
     transfer_amount = 3
-    direct_transfer0 = channel0.create_directtransfer(transfer_amount)
+    direct_transfer0 = channel0.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
     direct_transfer0.sign(privatekey0, address0)
     direct_transfer0_data = str(direct_transfer0.packed().data)
 
@@ -642,6 +671,7 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
         transfer_target=target,
         fee=0,
         amount=lock_amount,
+        identifier=1,  # TODO: fill in identifier
         expiration=lock_expiration,
         hashlock=lock_hashlock,
     )
@@ -698,6 +728,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
         transfer_target=target,
         fee=0,
         amount=lock_amount0,
+        identifier=1,  # TODO: fill in identifier
         expiration=lock_expiration0,
         hashlock=lock_hashlock0,
     )
@@ -719,6 +750,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
         transfer_target=target,
         fee=0,
         amount=lock_amount1,
+        identifier=1,  # TODO: fill in identifier
         expiration=lock_expiration1,
         hashlock=lock_hashlock1,
     )

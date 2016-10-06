@@ -58,7 +58,7 @@ def direct_transfer(initiator_app, target_app, asset, amount):
     initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
 
 
-def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disable=too-many-arguments
+def mediated_transfer(initiator_app, target_app, asset, amount, identifier):  # pylint: disable=too-many-arguments
     """ Nice to read shortcut to make a MediatedTransfer.
 
     The secret will be revealed and the apps will be synchronized.
@@ -73,6 +73,7 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
         task = StartMediatedTransferTask(
             transfermanager,
             amount,
+            identifier,
             target_app.raiden.address,
         )
         task.start()
@@ -81,7 +82,7 @@ def mediated_transfer(initiator_app, target_app, asset, amount):  # pylint: disa
         initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
 
 
-def pending_mediated_transfer(app_chain, asset, amount):
+def pending_mediated_transfer(app_chain, asset, amount, identifier):
     """ Nice to read shortcut to make a MediatedTransfer were the secret is
     _not_ revealed.
 
@@ -115,6 +116,7 @@ def pending_mediated_transfer(app_chain, asset, amount):
             target_app.raiden.address,
             fee,
             amount,
+            identifier,
             expiration,
             hashlock,
         )

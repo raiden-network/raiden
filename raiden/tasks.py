@@ -211,9 +211,10 @@ class AlarmTask(Task):
 
 
 class StartMediatedTransferTask(Task):
-    def __init__(self, transfermanager, amount, target, done_result):
+    def __init__(self, transfermanager, amount, identifier, target, done_result):
         super(StartMediatedTransferTask, self).__init__()
         self.amount = amount
+        self.identifier = identifier
         self.address = transfermanager.assetmanager.raiden.address
         self.target = target
         self.transfermanager = transfermanager
@@ -227,6 +228,7 @@ class StartMediatedTransferTask(Task):
 
     def _run(self):  # pylint: disable=method-hidden,too-many-locals
         amount = self.amount
+        identifier = self.identifier
         target = self.target
         raiden = self.transfermanager.assetmanager.raiden
 
@@ -272,6 +274,7 @@ class StartMediatedTransferTask(Task):
                 target,
                 fee,
                 amount,
+                identifier,
                 lock_expiration,
                 hashlock,
             )
@@ -290,7 +293,7 @@ class StartMediatedTransferTask(Task):
 
             # `target` received the MediatedTransfer
             elif response.sender == target and isinstance(response, SecretRequest):
-                secret_message = Secret(secret)
+                secret_message = Secret(mediated_transfer.identifier, secret)
                 raiden.sign(secret_message)
                 raiden.send_async(target, secret_message)
 
@@ -473,6 +476,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                 transfer.target,
                 fee,
                 transfer.lock.amount,
+                transfer.identifier,
                 lock_expiration,
                 transfer.lock.hashlock,
             )
@@ -516,7 +520,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
 
             elif isinstance(response, Secret):
                 # update all channels and propagate the secret (this doesnt claim the lock yet)
-                assetmanager.handle_secret(response.secret)
+                assetmanager.handle_secret(transfer.identifier, response.secret)
 
                 # wait for the secret from `sender`
                 while True:
@@ -630,14 +634,18 @@ class EndMediatedTransferTask(Task):
         raiden = assetmanager.raiden
 
         log.debug(
-            'END MEDIATED TRANSFER %s -> %s msghash:%s hashlock:%s',
+            'END MEDIATED TRANSFER %s -> %s identifier:%s msghash:%s hashlock:%s',
             pex(mediated_transfer.target),
             pex(mediated_transfer.initiator),
+            pex(mediated_transfer.identifier),
             pex(mediated_transfer.hash),
             pex(mediated_transfer.lock.hashlock),
         )
 
-        secret_request = SecretRequest(mediated_transfer.lock.hashlock)
+        secret_request = SecretRequest(
+            mediated_transfer.identifier,
+            mediated_transfer.lock.hashlock
+        )
         raiden.sign(secret_request)
 
         response = self.send_and_wait_valid(raiden, mediated_transfer, secret_request)
@@ -653,7 +661,7 @@ class EndMediatedTransferTask(Task):
         # updated
         originating_channel.register_secret(response.secret)
 
-        secret_message = Secret(response.secret)
+        secret_message = Secret(mediated_transfer.identifier, response.secret)
         raiden.sign(secret_message)
         raiden.send_async(mediated_transfer.sender, secret_message)
 
