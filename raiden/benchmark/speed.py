@@ -78,8 +78,8 @@ def test_throughput(apps, assets, num_transfers, amount):
             async_result = api.transfer_async(
                 curr_asset,
                 amount,
-                1,  # TODO: fill in identifier
-                target)
+                target,
+                1)  # TODO: fill in identifier
             events.append(async_result)
 
         return events
@@ -122,8 +122,8 @@ def test_latency(apps, assets, num_transfers, amount):
                 async_result = api.transfer_async(
                     curr_asset,
                     amount,
-                    1,  # TODO: fill in identifier
-                    target
+                    target,
+                    1  # TODO: fill in identifier
                 )
                 async_result.wait()
 

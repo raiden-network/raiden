@@ -38,7 +38,7 @@ def get_received_transfer(app_channel, transfer_number):
     return app_channel.received_transfers[transfer_number]
 
 
-def transfer(initiator_app, target_app, asset, amount):
+def transfer(initiator_app, target_app, asset, amount, identifier):
     """ Nice to read shortcut to make a transfer.
 
     The transfer is either a DirectTransfer or a MediatedTransfer, in both
@@ -49,12 +49,12 @@ def transfer(initiator_app, target_app, asset, amount):
     initiator_app.raiden.api.transfer(
         asset,
         amount,
-        1,  # TODO: fill in identifier
-        target_app.raiden.address
+        target_app.raiden.address,
+        identifier
     )
 
 
-def direct_transfer(initiator_app, target_app, asset, amount):
+def direct_transfer(initiator_app, target_app, asset, amount, identifier=None):
     """ Nice to read shortcut to make a DirectTransfer. """
     assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
     has_channel = target_app.raiden.address in assetmanager.partneraddress_channel
@@ -63,8 +63,8 @@ def direct_transfer(initiator_app, target_app, asset, amount):
     initiator_app.raiden.api.transfer(
         asset,
         amount,
-        1,  # TODO: fill in identifier
-        target_app.raiden.address
+        target_app.raiden.address,
+        identifier,
     )
 
 
@@ -83,7 +83,7 @@ def mediated_transfer(initiator_app, target_app, asset, amount, identifier):  # 
         task = StartMediatedTransferTask(
             transfermanager,
             amount,
-            identifier,
+            identifier if identifier else 1,  # TODO: if not given what?
             target_app.raiden.address,
         )
         task.start()
@@ -92,8 +92,8 @@ def mediated_transfer(initiator_app, target_app, asset, amount, identifier):  # 
         initiator_app.raiden.api.transfer(
             asset,
             amount,
-            1,  # TODO: fill in identifier
-            target_app.raiden.address
+            target_app.raiden.address,
+            identifier
         )
 
 

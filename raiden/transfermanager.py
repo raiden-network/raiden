@@ -6,7 +6,7 @@ from gevent.event import AsyncResult
 from ethereum import slogging
 
 from raiden.tasks import StartMediatedTransferTask, MediateTransferTask, EndMediatedTransferTask
-from raiden.utils import pex
+from raiden.utils import pex, sha3
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -57,7 +57,14 @@ class TransferManager(object):
     def register_callback_for_result(self, callback):
         self.on_result_callbacks.append(callback)
 
-    def transfer_async(self, amount, identifier, target, callback=None):
+    def create_default_identifier(self, target):
+        return sha3(
+            self.assetmanager.raiden.address +
+            self.assetmanager.partneraddress_channel[target].our_state.nonce +
+            self.assetmanager.partneraddress_channel[target].external_state.netting_channel.address
+        )
+
+    def transfer_async(self, amount, target, identifier=None, callback=None):
         """ Transfer `amount` between this node and `target`.
 
         This method will start a asyncronous transfer, the transfer might fail
@@ -67,6 +74,10 @@ class TransferManager(object):
             - Network speed, making the transfer suficiently fast so it doesn't
             timeout.
         """
+
+        # Create a default identifier value
+        if not identifier:
+            identifier = self.create_default_identifier()
 
         if target in self.assetmanager.partneraddress_channel:
             channel = self.assetmanager.partneraddress_channel[target]
