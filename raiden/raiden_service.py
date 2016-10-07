@@ -405,15 +405,21 @@ class RaidenAPI(object):
         return netting_channel
 
     def register_on_withdrawable_callbacks(self, callbacks):
-        all_asset_managers = self.raiden.manager_by_asset_address.values()
+        # wrap in list if only one callback
+        try:
+            iter(callbacks)
+        except TypeError:
+            callbacks = [callbacks]
+        all_asset_managers = self.raiden.managers_by_asset_address.values()
         # get all channel the node participates in:
-        all_channel = [am.partner_addres_channel.values() for am in all_asset_managers]
+        all_channel = [am.partneraddress_channel.values() for am in all_asset_managers]
         # and flatten the list:
         all_channel = list(itertools.chain.from_iterable(all_channel))
-        for callback in list(callbacks):
+        for callback in callbacks:
             for channel in all_channel:
                 channel.register_withdrawable_callback(callback)
-            self.raiden.transfermanager.on_result_callbacks
+            for am in all_asset_managers:
+                am.transfermanager.register_callback_for_result(callback)
 
 
 class RaidenMessageHandler(object):

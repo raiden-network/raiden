@@ -850,8 +850,15 @@ class Channel(object):
             # if we are the recipient, spawn callback for incoming transfers
             if transfer.recipient == self.our_state.address:
                 for callback in self.on_withdrawable_callbacks:
-                    gevent.spawn(callback(transfer.recipient, transfer.initiator,
-                                 transfer.asset, transfer.transfered_amount))
+                    gevent.spawn(
+                        callback,
+                        transfer.asset,
+                        transfer.recipient,
+                        transfer.sender,  # 'initiator' is sender here
+                        transfer.transfered_amount,
+                        None  # no hashlock in DirectTransfer
+                    )
+
             # if we are the sender, call the 'success' callback
             elif from_state.address == self.our_state.address:
                 callbacks_to_remove = list()

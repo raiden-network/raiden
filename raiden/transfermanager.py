@@ -40,10 +40,19 @@ class TransferManager(object):
         for callback in callbacks_to_remove:
             self.on_task_completed_callbacks.remove(callback)
 
-        transfer = self.endtask_transfer_mapping[task]
-        for callback in self.on_result_callbacks:
-            gevent.spawn(callback(hashlock, success, transfer))
-        del self.endtask_transfer_mapping[task]
+        if task in self.endtask_transfer_mapping:
+            transfer = self.endtask_transfer_mapping[task]
+            for callback in self.on_result_callbacks:
+                gevent.spawn(
+                    callback(
+                        transfer.asset,
+                        transfer.recipient,
+                        transfer.initiator,
+                        transfer.transfered_amount,
+                        hashlock
+                    )
+                )
+            del self.endtask_transfer_mapping[task]
 
     def register_callback_for_result(self, callback):
         self.on_result_callbacks.append(callback)
