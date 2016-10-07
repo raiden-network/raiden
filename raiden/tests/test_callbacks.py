@@ -5,11 +5,7 @@ from collections import namedtuple
 import gevent
 import pytest
 from ethereum import slogging
-
-from raiden.messages import decode, Ack, DirectTransfer, RefundTransfer
-from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
-from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
-from raiden.utils import pex, sha3
+from raiden.utils import sha3
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
@@ -20,20 +16,20 @@ slogging.configure(':DEBUG')
 def test_direct_transfer_callback(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    messages = setup_messages_cb()
-    mlogger = MessageLogger()
-
-    a0_address = pex(app0.raiden.address)
-    a1_address = pex(app1.raiden.address)
+    # @ezdac: These vars are not used anywhere. Please address them
+    # messages = setup_messages_cb()
+    # mlogger = MessageLogger()
+    # a0_address = pex(app0.raiden.address)
+    # a1_address = pex(app1.raiden.address)
 
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
     asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
 
-    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
-
-    balance0 = channel0.balance
-    balance1 = channel1.balance
+    # @ezdac: These vars are not used anywhere. Please address them
+    # channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
+    # channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+    # balance0 = channel0.balance
+    # balance1 = channel1.balance
 
     assert asset_manager0.asset_address == asset_manager1.asset_address
     assert app1.raiden.address in asset_manager0.partneraddress_channel
@@ -44,15 +40,15 @@ def test_direct_transfer_callback(raiden_network):
 
     def assert_callback(cb_asset, cb_recipient, cb_sender, cb_amount, cb_hashlock):
         # check that callback only gets called once:
-        assert CALLED[0] == False
+        assert not CALLED[0]
 
         # set nonlocal
         CALLED[0] = True
         assert cb_asset == asset_manager0.asset_address
-        assert cb_recipient ==  app1.raiden.address
+        assert cb_recipient == app1.raiden.address
         assert cb_sender == app0.raiden.address
         assert cb_amount == amount
-        assert cb_hashlock == None
+        assert cb_hashlock is None
 
     # register callbacks to DirectTransfers (channel.py) and LockedTransfers (transfermanager.py)
     app1.raiden.api.register_on_withdrawable_callbacks(assert_callback)
@@ -74,20 +70,20 @@ def test_direct_transfer_callback(raiden_network):
 def test_on_hashlock_result_callback(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    messages = setup_messages_cb()
-    mlogger = MessageLogger()
-
-    a0_address = pex(app0.raiden.address)
-    a1_address = pex(app1.raiden.address)
+    # @ezdac: These vars are not used anywhere. Please address them
+    # messages = setup_messages_cb()
+    # mlogger = MessageLogger()
+    # a0_address = pex(app0.raiden.address)
+    # a1_address = pex(app1.raiden.address)
 
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
     asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
 
-    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
-
-    balance0 = channel0.balance
-    balance1 = channel1.balance
+    # @ezdac: These vars are not used anywhere. Please address them
+    # channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
+    # channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+    # balance0 = channel0.balance
+    # balance1 = channel1.balance
 
     assert asset_manager0.asset_address == asset_manager1.asset_address
     assert app1.raiden.address in asset_manager0.partneraddress_channel
@@ -100,12 +96,12 @@ def test_on_hashlock_result_callback(raiden_network):
 
     def assert_callback(cb_asset, cb_recipient, cb_sender, cb_amount, cb_hashlock):
         # check that callback only gets called once:
-        assert CALLED[0] == False
+        assert not CALLED[0]
 
         # set nonlocal
         CALLED[0] = True
         assert cb_asset == asset_manager0.asset_address
-        assert cb_recipient ==  app1.raiden.address
+        assert cb_recipient == app1.raiden.address
         assert cb_sender == app0.raiden.address
         assert cb_amount == amount
         assert cb_hashlock == hashlock
