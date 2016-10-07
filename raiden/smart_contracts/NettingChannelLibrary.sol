@@ -439,8 +439,8 @@ library NettingChannelLibrary {
         assembly {
             // cmdid [0:1]
             // pad [1:4]
-            // identifier [4:12]
-            nonce := mload(add(message, 20))             // nonce [12:20]
+            nonce := mload(add(message, 12))             // nonce [4:12]
+            // identifier [12:20]
             asset := mload(add(message, 40))             // asset [20:40]
             recipient := mload(add(message, 60))         // recipient [40:60]
             transferredAmount := mload(add(message, 92)) // transferred_amount [60:92]
@@ -473,8 +473,8 @@ library NettingChannelLibrary {
         assembly {
             // cmdid [0:1]
             // pad [1:4]
-            // identifier [4:12]
-            nonce := mload(add(message, 20))              // nonce [12:20]
+            nonce := mload(add(message, 12))              // nonce [4:12]
+            // identifier [12:20]
             expiration := mload(add(message, 28))         // expiration [20:28]
             asset := mload(add(message, 48))              // asset [28:48]
             recipient := mload(add(message, 68))          // recipient [48:68]
