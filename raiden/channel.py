@@ -267,7 +267,7 @@ class ChannelEndState(object):
         self.contract_balance = participant_balance
         self.address = participant_address
 
-        # amount of asset transfered and unlocked
+        # amount of asset transferred and unlocked
         self.transferred_amount = 0
 
         # sequential nonce, current value has not been used.
@@ -297,7 +297,7 @@ class ChannelEndState(object):
         return self.contract_balance - self.transferred_amount + other.transferred_amount
 
     def distributable(self, other):
-        """ Return the available amount of the asset that can be transfered in
+        """ Return the available amount of the asset that can be transferred in
         the channel.
         """
         return self.balance(other) - other.locked()
@@ -514,7 +514,7 @@ class Channel(object):
 
     @property
     def transferred_amount(self):
-        """ Return how much we transfered to partner. """
+        """ Return how much we transferred to partner. """
         return self.our_state.transferred_amount
 
     @property
@@ -855,7 +855,7 @@ class Channel(object):
                         transfer.asset,
                         transfer.recipient,
                         transfer.sender,  # 'initiator' is sender here
-                        transfer.transfered_amount,
+                        transfer.transferred_amount,
                         None  # no hashlock in DirectTransfer
                     )
 
@@ -987,7 +987,7 @@ class Channel(object):
         Args:
             transfer_initiator (address): The node that requested the transfer.
             transfer_target (address): The node that the transfer is destinated to.
-            amount (float): How much asset is being transfered.
+            amount (float): How much asset is being transferred.
             expiration (int): The maximum block number until the transfer
                 message can be received.
         """

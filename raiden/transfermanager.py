@@ -48,7 +48,7 @@ class TransferManager(object):
                         transfer.asset,
                         transfer.recipient,
                         transfer.initiator,
-                        transfer.transfered_amount,
+                        transfer.transferred_amount,
                         hashlock
                     )
                 )
