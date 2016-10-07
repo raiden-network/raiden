@@ -75,7 +75,11 @@ def test_throughput(apps, assets, num_transfers, amount):
         events = list()
 
         for i in range(num_transfers):
-            async_result = api.transfer_async(curr_asset, amount, target)
+            async_result = api.transfer_async(
+                curr_asset,
+                amount,
+                1,  # TODO: fill in identifier
+                target)
             events.append(async_result)
 
         return events
@@ -115,7 +119,12 @@ def test_latency(apps, assets, num_transfers, amount):
         def _transfer():
             api = curr_app.raiden.api
             for i in range(num_transfers):
-                async_result = api.transfer_async(curr_asset, amount, target)
+                async_result = api.transfer_async(
+                    curr_asset,
+                    amount,
+                    1,  # TODO: fill in identifier
+                    target
+                )
                 async_result.wait()
 
             finished.set()

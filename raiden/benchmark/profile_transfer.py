@@ -233,7 +233,12 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
 
     # measure the hot path
     with profiling.profile():
-        result = main_api.transfer_async(asset_address, amount, target)
+        result = main_api.transfer_async(
+            asset_address,
+            amount,
+            1,  # TODO: fill in identifier
+            target
+        )
         result.wait()
 
     profiling.print_all_threads()

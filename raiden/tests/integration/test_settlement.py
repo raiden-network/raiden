@@ -51,7 +51,7 @@ def test_settlement(raiden_network, settle_timeout):
 
     transfermessage = channel0.create_lockedtransfer(
         amount,
-        identifier=1,  # TODO: fill in identifier
+        1,  # TODO: fill in identifier
         expiration,
         hashlock
     )

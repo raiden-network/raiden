@@ -425,7 +425,7 @@ library NettingChannelLibrary {
     // TODO: use sstore instead of these temporaries
 
     function assignDirectTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 148) {  // raw message size (without signature)
+        if (message.length != 156) {  // raw message size (without signature)
             throw;
         }
 
@@ -439,12 +439,13 @@ library NettingChannelLibrary {
         assembly {
             // cmdid [0:1]
             // pad [1:4]
-            nonce := mload(add(message, 12))            // nonce [4:12]
-            asset := mload(add(message, 32))            // asset [12:32]
-            recipient := mload(add(message, 52))        // recipient [32:52]
-            transferredAmount := mload(add(message, 84)) // transferred_amount [52:84]
-            locksroot := mload(add(message, 116))       // optional_locksroot [84:116]
-            secret := mload(add(message, 148))          // optional_secret [116:148]
+            // identifier [4:12]
+            nonce := mload(add(message, 20))             // nonce [12:20]
+            asset := mload(add(message, 40))             // asset [20:40]
+            recipient := mload(add(message, 60))         // recipient [40:60]
+            transferredAmount := mload(add(message, 92)) // transferred_amount [60:92]
+            locksroot := mload(add(message, 124))        // optional_locksroot [92:124]
+            secret := mload(add(message, 156))           // optional_secret [124:156]
         }
 
         participant.nonce = nonce;
@@ -456,7 +457,7 @@ library NettingChannelLibrary {
     }
 
     function assignMediatedTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 260) {
+        if (message.length != 268) {
             throw;
         }
 
@@ -472,17 +473,18 @@ library NettingChannelLibrary {
         assembly {
             // cmdid [0:1]
             // pad [1:4]
-            nonce := mload(add(message, 12))        // nonce [4:12]
-            expiration := mload(add(message, 20))   // expiration [12:20]
-            asset := mload(add(message, 40))        // asset [20:40]
-            recipient := mload(add(message, 60))    // recipient [40:60]
-            // target [60:80]
-            // initiator [80:100]
-            locksroot := mload(add(message, 132))   // locksroot [100:132]
-            hashlock := mload(add(message, 164))    // hashlock [100:164]
-            transferredAmount := mload(add(message, 196)) // transferred_amount[164:196]
-            lockAmount := mload(add(message, 228))  // amount [196:228]
-            // fee := mload(add(message, 260))      // fee [228:260]
+            // identifier [4:12]
+            nonce := mload(add(message, 20))              // nonce [12:20]
+            expiration := mload(add(message, 28))         // expiration [20:28]
+            asset := mload(add(message, 48))              // asset [28:48]
+            recipient := mload(add(message, 68))          // recipient [48:68]
+            // target [68:88]
+            // initiator [88:108]
+            locksroot := mload(add(message, 140))         // locksroot [108:140]
+            hashlock := mload(add(message, 172))          // hashlock [140:172]
+            transferredAmount := mload(add(message, 204)) // transferred_amount[172:204]
+            lockAmount := mload(add(message, 236))        // amount [204:236]
+            // fee := mload(add(message, 268))            // fee [236:268]
         }
 
         participant.nonce = nonce;

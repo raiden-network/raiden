@@ -57,6 +57,7 @@ def test_end_state():
     locksroot = state2.compute_merkleroot_with(lock)
 
     locked_transfer = LockedTransfer(
+        1,  # TODO: fill in identifier
         nonce=state1.nonce,
         asset=asset_address,
         transferred_amount=transferred_amount,
@@ -557,6 +558,7 @@ def test_register_invalid_transfer(raiden_network):
 
     # handcrafted transfer because channel.create_transfer won't create it
     transfer2 = DirectTransfer(
+        1,  # TODO: fill in identifier
         nonce=channel0.our_state.nonce,
         asset=channel0.asset_address,
         transferred_amount=channel1.balance + balance0 + amount,
