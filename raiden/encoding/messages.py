@@ -146,8 +146,8 @@ DirectTransfer = namedbuffer(
     [
         cmdid(DIRECTTRANSFER),  # [0:1]
         pad(3),                 # [1:4]
-        identifier,             # [4:12]
-        nonce,                  # [12:20]
+        nonce,                  # [4:12]
+        identifier,             # [12:20]
         asset,                  # [20:40]
         recipient,              # [40:60]
         transferred_amount,
@@ -162,8 +162,8 @@ LockedTransfer = namedbuffer(
     [
         cmdid(LOCKEDTRANSFER),  # [0:1]
         pad(3),                 # [1:4]
-        identifier,             # [4:12]
-        nonce,                  # [12:20]
+        nonce,                  # [4:12]
+        identifier,             # [12:20]
         expiration,             # [20:28]
         asset,                  # [28:48]
         recipient,              # [48:68]
@@ -180,8 +180,8 @@ MediatedTransfer = namedbuffer(
     [
         cmdid(MEDIATEDTRANSFER),  # [0:1]
         pad(3),                   # [1:4]
-        identifier,               # [4:12]
-        nonce,                    # [12:20]
+        nonce,                    # [4:12]
+        identifier,               # [12:20]
         expiration,               # [20:28]
         asset,                    # [28:48]
         recipient,                # [48:68]
