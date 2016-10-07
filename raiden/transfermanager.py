@@ -73,7 +73,8 @@ class TransferManager(object):
             direct_transfer = channel.create_directtransfer(amount)
             self.assetmanager.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer)
-            channel.on_task_completed_callbacks.append(callback)
+            if callback:
+                channel.on_task_completed_callbacks.append(callback)
 
             return self.assetmanager.raiden.protocol.send_async(
                 target,
