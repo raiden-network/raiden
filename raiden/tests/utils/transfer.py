@@ -46,7 +46,12 @@ def transfer(initiator_app, target_app, asset, amount):
     will be revealed.
     """
 
-    initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
+    initiator_app.raiden.api.transfer(
+        asset,
+        amount,
+        1,  # TODO: fill in identifier
+        target_app.raiden.address
+    )
 
 
 def direct_transfer(initiator_app, target_app, asset, amount):
@@ -55,7 +60,12 @@ def direct_transfer(initiator_app, target_app, asset, amount):
     has_channel = target_app.raiden.address in assetmanager.partneraddress_channel
     assert has_channel, 'there is not a direct channel'
 
-    initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
+    initiator_app.raiden.api.transfer(
+        asset,
+        amount,
+        1,  # TODO: fill in identifier
+        target_app.raiden.address
+    )
 
 
 def mediated_transfer(initiator_app, target_app, asset, amount, identifier):  # pylint: disable=too-many-arguments
@@ -79,7 +89,12 @@ def mediated_transfer(initiator_app, target_app, asset, amount, identifier):  # 
         task.start()
         task.join()
     else:
-        initiator_app.raiden.api.transfer(asset, amount, target_app.raiden.address)
+        initiator_app.raiden.api.transfer(
+            asset,
+            amount,
+            1,  # TODO: fill in identifier
+            target_app.raiden.address
+        )
 
 
 def pending_mediated_transfer(app_chain, asset, amount, identifier):

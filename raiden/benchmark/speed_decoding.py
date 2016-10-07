@@ -95,7 +95,15 @@ def test_locked_transfer(iterations=ITERATIONS):
     balance = 1
     recipient = ADDRESS
     locksroot = sha3(ADDRESS)
-    msg = LockedTransfer(nonce, asset, balance, recipient, locksroot, lock)
+    msg = LockedTransfer(
+        1,  # TODO: fill in identifier
+        nonce,
+        asset,
+        balance,
+        recipient,
+        locksroot,
+        lock
+    )
     msg.sign(PRIVKEY)
     run_timeit('LockedTransfer', msg, iterations=iterations)
 

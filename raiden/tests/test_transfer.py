@@ -41,6 +41,7 @@ def test_transfer(raiden_network):
     app0.raiden.api.transfer(
         asset_manager0.asset_address,
         amount,
+        1,  # TODO: fill in identifier
         target=app1.raiden.address,
     )
     gevent.sleep(1)
@@ -147,6 +148,7 @@ def test_mediated_transfer(raiden_network):
     alice_app.raiden.api.transfer(
         asset_address,
         amount,
+        1,  # TODO: fill in identifier
         charlie_address,
     )
 

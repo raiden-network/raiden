@@ -53,6 +53,7 @@ def test_mediated_transfer():
 
     lock = Lock(amount, expiration, hashlock)
     mediated_transfer = MediatedTransfer(
+        1,  # TODO: fill in identifier
         nonce,
         asset,
         balance,
