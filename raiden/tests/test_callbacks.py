@@ -111,7 +111,7 @@ def test_on_hashlock_result_callback(raiden_network):
         assert cb_hashlock == hashlock
 
     # mock the transfer container:  # XXX eventually use messages.MediatedTransfer() message instead
-    Transfer = namedtuple('Transfer', ['asset', 'recipient', 'initiator', 'transfered_amount'])
+    Transfer = namedtuple('Transfer', ['asset', 'recipient', 'initiator', 'tranferred_amount'])
     transfer = Transfer(asset_manager0.asset_address,
                         app1.raiden.address,
                         app0.raiden.address,
