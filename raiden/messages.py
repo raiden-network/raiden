@@ -433,6 +433,7 @@ class LockedTransfer(SignedMessage):
 
     def to_refundtransfer(self):
         return RefundTransfer(
+            self.identifier,
             self.nonce,
             self.asset,
             self.transferred_amount,
@@ -596,6 +597,7 @@ class RefundTransfer(LockedTransfer):
         )
 
         locked_transfer = RefundTransfer(
+            packed.identifier,
             packed.nonce,
             packed.asset,
             packed.transferred_amount,
