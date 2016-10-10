@@ -58,11 +58,18 @@ class TransferManager(object):
         self.on_result_callbacks.append(callback)
 
     def create_default_identifier(self, target):
-        return sha3(
-            self.assetmanager.raiden.address +
-            self.assetmanager.partneraddress_channel[target].our_state.nonce +
+        """
+        The default message identifier value is the first 8 bytes of the sha3 of:
+            - Our Address
+            - Our nonce
+            - The address of the netting channel
+        """
+        hash = sha3("{}{}{}".format(
+            self.assetmanager.raiden.address,
+            self.assetmanager.partneraddress_channel[target].our_state.nonce,
             self.assetmanager.partneraddress_channel[target].external_state.netting_channel.address
-        )
+        ))
+        return int(hash[0:8].encode('hex'), 16)
 
     def transfer_async(self, amount, target, identifier=None, callback=None):
         """ Transfer `amount` between this node and `target`.
@@ -77,13 +84,13 @@ class TransferManager(object):
 
         # Create a default identifier value
         if not identifier:
-            identifier = self.create_default_identifier()
+            identifier = self.create_default_identifier(target)
 
         if target in self.assetmanager.partneraddress_channel:
             channel = self.assetmanager.partneraddress_channel[target]
             direct_transfer = channel.create_directtransfer(
                 amount,
-                1  # TODO: fill in identifier
+                identifier,
             )
             self.assetmanager.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer)
