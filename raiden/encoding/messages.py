@@ -202,13 +202,14 @@ RefundTransfer = namedbuffer(
         cmdid(REFUNDTRANSFER),  # [0:1]
         pad(3),                 # [1:4]
         nonce,                  # [4:12]
-        expiration,             # [12:20]
-        asset,                  # [20:40]
-        recipient,              # [40:60]
-        locksroot,
-        transferred_amount,
-        amount,
-        hashlock,
+        identifier,             # [12:20]
+        expiration,             # [20:28]
+        asset,                  # [28:48]
+        recipient,              # [48:68]
+        locksroot,              # [68:100]
+        transferred_amount,     # [100:132]
+        amount,                 # [132:164]
+        hashlock,               # [164:196]
         signature,
     ]
 )

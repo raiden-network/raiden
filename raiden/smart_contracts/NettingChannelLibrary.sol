@@ -147,8 +147,6 @@ library NettingChannelLibrary {
             throw;
         }
 
-        (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
-
         Participant[2] storage participants = self.participants;
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
@@ -156,6 +154,8 @@ library NettingChannelLibrary {
         if (callerAddress != node1.nodeAddress && callerAddress != node2.nodeAddress) {
             throw;
         }
+
+        (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
 
         if (node1.nodeAddress == transfer_address) {
             Participant storage sender = node1;
@@ -261,7 +261,7 @@ library NettingChannelLibrary {
             nonce := mload(add(transfer_raw, 12))  // skip cmdid and padding
         }
 
-        if (nonce < sender.nonce) {
+        if (nonce < sender.nonce || nonce == sender.nonce) {
             throw;
         }
 
@@ -409,18 +409,12 @@ library NettingChannelLibrary {
         }
     }
 
-    // notes:
-    // about the length of variable types:
-    //  - inside an assembly block a type of `bytes memory` works as a pointer to
-    //  memory, since bytes is variable size it follows the ethereum contract
-    //  abi.
-    //  - all variable length types start with a size-prefix of type uint256, so
-    //  the 256bits/32bytes represent the length of the object.
-    //  - the variable start pointing in the last byte of the length
-    // - pointer arithmetic works on a byte basis, to `add(var, 1)` will advance
-    // 1 byte.
-    // - the pointer should be at the _last_ byte of the value, mload loads
-    // values from higher-to-lower addresses
+    // NOTES about the length of variable types:
+    // - variable length types start with a size-prefix of 32bytes (uint256)
+    // - bytes is a variable length type
+    // - a variable with a bytes type will contain the address of the first data element
+    // - solidity starts indexing at 0 (so the 32th byte is at the offset 31)
+    //  ref: https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
 
     // TODO: use sstore instead of these temporaries
 
@@ -515,13 +509,14 @@ library NettingChannelLibrary {
             // cmdid [0:1]
             // pad [1:4]
             nonce := mload(add(message, 12))        // nonce [4:12]
-            expiration := mload(add(message, 20))   // expiration [12:20]
-            asset := mload(add(message, 40))        // asset [20:40]
-            recipient := mload(add(message, 60))    // recipient [40:60]
-            locksroot := mload(add(message, 92))    // locksroot [60:92]
-            transferredAmount := mload(add(message, 124)) // transferred_amount [92:124]
-            lockAmount := mload(add(message, 156))  // amount [124:156]
-            hashlock := mload(add(message, 188))    // hashlock [156:188]
+            // identifier [12:20]
+            expiration := mload(add(message, 28))   // expiration [20:28]
+            asset := mload(add(message, 48))        // asset [28:48]
+            recipient := mload(add(message, 68))    // recipient [48:68]
+            locksroot := mload(add(message, 92))    // locksroot [68:100]
+            transferredAmount := mload(add(message, 132)) // transferred_amount [100:132]
+            lockAmount := mload(add(message, 164))  // amount [132:164]
+            hashlock := mload(add(message, 196))    // hashlock [164:196]
         }
 
         participant.nonce = nonce;
