@@ -838,6 +838,7 @@ class NettingChannel(object):
                 contract=pex(self.address),
                 their_transfer=their_transfer,
             )
+
             # TODO: check if the ChannelSecretRevealed event was emitted and if
             # it wasn't raise an error
 
@@ -864,6 +865,7 @@ class NettingChannel(object):
                 gasprice=self.gasprice,
             )
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
             # TODO: check if the ChannelSecretRevealed event was emitted and if
             # it wasn't raise an error
 

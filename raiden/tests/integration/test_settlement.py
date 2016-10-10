@@ -50,9 +50,9 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert app1.raiden.address in asset_manager0.partneraddress_channel
     assert asset_manager0.asset_address == asset_manager1.asset_address
 
-    nettingaddress0 = channel0.external_state.netting_channel.address
-    nettingaddress1 = channel1.external_state.netting_channel.address
-    assert nettingaddress0 == nettingaddress1
+    netting_address0 = channel0.external_state.netting_channel.address
+    netting_address1 = channel1.external_state.netting_channel.address
+    assert netting_address0 == netting_address1
 
     identifier = 1
     fee = 0

@@ -9,7 +9,7 @@ secp256k1==0.12.1
 pycryptodome>=3.4.3
 miniupnpc
 networkx
-ethereum>=1.3.2
+ethereum>=1.5.3
 ethereum-serpent
 u-msgpack-python
 repoze.lru
