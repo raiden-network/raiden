@@ -68,7 +68,7 @@ def direct_transfer(initiator_app, target_app, asset, amount, identifier=None):
     )
 
 
-def mediated_transfer(initiator_app, target_app, asset, amount, identifier):  # pylint: disable=too-many-arguments
+def mediated_transfer(initiator_app, target_app, asset, amount, identifier=None):  # pylint: disable=too-many-arguments
     """ Nice to read shortcut to make a MediatedTransfer.
 
     The secret will be revealed and the apps will be synchronized.
@@ -79,11 +79,14 @@ def mediated_transfer(initiator_app, target_app, asset, amount, identifier):  # 
     # api.transfer() would do a DirectTransfer
     if has_channel:
         transfermanager = assetmanager.transfermanager
-
+        # Explicitly call the default identifier creation since this mock
+        # function here completely skips the `transfer_async()` call.
+        if not identifier:
+            identifier = transfermanager.create_default_identifier(target_app.raiden.address)
         task = StartMediatedTransferTask(
             transfermanager,
             amount,
-            identifier if identifier else 1,  # TODO: if not given what?
+            identifier,
             target_app.raiden.address,
         )
         task.start()
@@ -150,6 +153,12 @@ def claim_lock(app_chain, asset, secret):
 
         channel_ = channel(to_, from_, asset)
         channel_.claim_lock(secret)
+
+
+def assert_identifier_correct(initiator_app, asset, target, expected_id):
+    assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
+    got_id = assetmanager.transfermanager.create_default_identifier(target)
+    assert got_id == expected_id
 
 
 def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1, balance1, outstanding_locks1):  # pylint: disable=too-many-arguments

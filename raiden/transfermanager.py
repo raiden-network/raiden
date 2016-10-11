@@ -2,6 +2,7 @@
 import logging
 
 import gevent
+import random
 from gevent.event import AsyncResult
 from ethereum import slogging
 
@@ -61,13 +62,15 @@ class TransferManager(object):
         """
         The default message identifier value is the first 8 bytes of the sha3 of:
             - Our Address
-            - Our nonce
-            - The address of the netting channel
+            - Our target address
+            - The asset address
+            - A random 8 byte number for uniqueness
         """
-        hash = sha3("{}{}{}".format(
+        hash = sha3("{}{}{}{}".format(
             self.assetmanager.raiden.address,
-            self.assetmanager.partneraddress_channel[target].our_state.nonce,
-            self.assetmanager.partneraddress_channel[target].external_state.netting_channel.address
+            target,
+            self.assetmanager.asset_address,
+            random.randint(0, 18446744073709551614L)
         ))
         return int(hash[0:8].encode('hex'), 16)
 
