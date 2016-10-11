@@ -2,11 +2,12 @@
 import logging
 
 import gevent
+import random
 from gevent.event import AsyncResult
 from ethereum import slogging
 
 from raiden.tasks import StartMediatedTransferTask, MediateTransferTask, EndMediatedTransferTask
-from raiden.utils import pex
+from raiden.utils import pex, sha3
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -57,7 +58,23 @@ class TransferManager(object):
     def register_callback_for_result(self, callback):
         self.on_result_callbacks.append(callback)
 
-    def transfer_async(self, amount, identifier, target, callback=None):
+    def create_default_identifier(self, target):
+        """
+        The default message identifier value is the first 8 bytes of the sha3 of:
+            - Our Address
+            - Our target address
+            - The asset address
+            - A random 8 byte number for uniqueness
+        """
+        hash = sha3("{}{}{}{}".format(
+            self.assetmanager.raiden.address,
+            target,
+            self.assetmanager.asset_address,
+            random.randint(0, 18446744073709551614L)
+        ))
+        return int(hash[0:8].encode('hex'), 16)
+
+    def transfer_async(self, amount, target, identifier=None, callback=None):
         """ Transfer `amount` between this node and `target`.
 
         This method will start a asyncronous transfer, the transfer might fail
@@ -68,11 +85,15 @@ class TransferManager(object):
             timeout.
         """
 
+        # Create a default identifier value
+        if not identifier:
+            identifier = self.create_default_identifier(target)
+
         if target in self.assetmanager.partneraddress_channel:
             channel = self.assetmanager.partneraddress_channel[target]
             direct_transfer = channel.create_directtransfer(
                 amount,
-                1  # TODO: fill in identifier
+                identifier,
             )
             self.assetmanager.raiden.sign(direct_transfer)
             channel.register_transfer(direct_transfer)

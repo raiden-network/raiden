@@ -236,8 +236,8 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
         result = main_api.transfer_async(
             asset_address,
             amount,
-            1,  # TODO: fill in identifier
-            target
+            target,
+            1  # TODO: fill in identifier
         )
         result.wait()
 
