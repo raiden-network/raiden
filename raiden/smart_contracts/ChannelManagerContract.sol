@@ -118,5 +118,10 @@ contract ChannelManagerContract {
         ChannelNew(channel, msg.sender, partner, settle_timeout);
     }
 
+    function deleteChannel(address partner, address channelAddress) {
+        data.deleteChannel(partner, channelAddress);
+        ChannelDeleted(channelAddress, partner, msg.sender);
+    }
+
     function () { throw; }
 }

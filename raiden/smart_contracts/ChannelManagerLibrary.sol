@@ -87,4 +87,36 @@ library ChannelManagerLibrary {
 
         return channel_address;
     }
+
+    /// @notice deleteChannel(address) to remove a channel after it's been settled
+    /// @dev Remove channel after it's been settled
+    /// @param channelAddress (address) address of the channel to be closed
+    /// @param partner (address) address of the partner
+    function deleteChannel(Data storage self, address partner, address channelAddress) {
+        // make sure that channel is closed
+        if (!NettingChannelContract(channelAddress).isSettled()) throw;
+
+        address[] ourChannels = self.nodeChannels[msg.sender];
+        address[] partnerChannels = self.nodeChannels[partner];
+
+        // remove element from sender
+        for (uint i = 0; i < ourChannels.length; ++i) {
+            if (ourChannels[i] == channelAddress) {
+                ourChannels[i] = ourChannels[ourChannels.length -1];
+                ourChannels.length--;
+                break;
+            }
+        }
+
+        // remove element from partner
+        for (uint j = 0; j < partnerChannels.length; ++j) {
+            if (partnerChannels[j] == channelAddress) {
+                partnerChannels[j] = partnerChannels[partnerChannels.length -1];
+                partnerChannels.length--;
+                break;
+            }
+        }
+
+        // TODO: maybe call some suicide function on the channel
+    }
 }
