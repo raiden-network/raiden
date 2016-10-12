@@ -4,15 +4,20 @@ from __future__ import print_function
 import contextlib
 import timeit
 
+import secp256k1
+
 from raiden.utils import sha3, privatekey_to_address
+from raiden.messages import decode
 from raiden.messages import (
-    Ack, Ping, SecretRequest, Secret, DirectTransfer, Lock, LockedTransfer,
-    MediatedTransfer, RefundTransfer, TransferTimeout, ConfirmTransfer, decode,
+    Ack, ConfirmTransfer, DirectTransfer, Lock, MediatedTransfer, Ping,
+    RefundTransfer, Secret, SecretRequest, TransferTimeout,
 )
 
+GLOBAL_CTX = secp256k1.lib.secp256k1_context_create(secp256k1.ALL_FLAGS)
 
-PRIVKEY = 'x' * 32
-ADDRESS = privatekey_to_address(PRIVKEY)
+PRIVKEY_BIN = 'x' * 32
+PRIVKEY = secp256k1.PrivateKey(PRIVKEY_BIN, ctx=GLOBAL_CTX, raw=True)
+ADDRESS = privatekey_to_address(PRIVKEY_BIN)
 HASH = sha3(PRIVKEY)
 ITERATIONS = 1000000  # timeit default
 
@@ -39,76 +44,57 @@ def test_ack(iterations=ITERATIONS):
 
 def test_ping(iterations=ITERATIONS):
     msg = Ping(nonce=0)
-    msg.sign(PRIVKEY)
+    msg.sign(PRIVKEY, ADDRESS)
     run_timeit('Ping', msg, iterations=iterations)
 
 
-# def test_rejected(iterations=ITERATIONS):
-#     msg = Rejected(HASH, 1, [])
-#     msg.sign(PRIVKEY)
-#     run_timeit('Rejected', msg, iterations=iterations)
-# def test_rejected_with_args(iterations=ITERATIONS):
-#     msg = Rejected(HASH, 1, [1, 2, 3])
-#     run_timeit('Rejected with args', msg, iterations=iterations)
+# TODO: LOCKSROOT_REJECTED
 
 
 def test_secret_request(iterations=ITERATIONS):
+    identifier = 1
     hashlock = HASH
     msg = SecretRequest(
-        1,  # TODO: fill in identifier
+        identifier,
         hashlock
     )
-    msg.sign(PRIVKEY)
+    msg.sign(PRIVKEY, ADDRESS)
     run_timeit('SecretRequest', msg, iterations=iterations)
 
 
 def test_secret(iterations=ITERATIONS):
+    identifier = 1
     secret = HASH
     msg = Secret(
-        1,  # TODO: fill in identifier
+        identifier,
         secret
     )
-    msg.sign(PRIVKEY)
+    msg.sign(PRIVKEY, ADDRESS)
     run_timeit('Secret', msg, iterations=iterations)
 
 
 def test_direct_transfer(iterations=ITERATIONS):
+    identifier = 1
     nonce = 1
     asset = ADDRESS
     balance = 1
     recipient = ADDRESS
     locksroot = HASH
 
-    msg = DirectTransfer(nonce, asset, balance, recipient, locksroot)
-    msg.sign(PRIVKEY)
-    run_timeit('DirectTransfer', msg, iterations=iterations)
-
-
-def test_locked_transfer(iterations=ITERATIONS):
-    amount = 1
-    expiration = 1
-    hashlock = sha3(ADDRESS)
-    lock = Lock(amount, expiration, hashlock)
-
-    nonce = 1
-    asset = ADDRESS
-    balance = 1
-    recipient = ADDRESS
-    locksroot = sha3(ADDRESS)
-    msg = LockedTransfer(
-        1,  # TODO: fill in identifier
+    msg = DirectTransfer(
+        identifier,
         nonce,
         asset,
         balance,
         recipient,
         locksroot,
-        lock
     )
-    msg.sign(PRIVKEY)
-    run_timeit('LockedTransfer', msg, iterations=iterations)
+    msg.sign(PRIVKEY, ADDRESS)
+    run_timeit('DirectTransfer', msg, iterations=iterations)
 
 
 def test_mediated_transfer(iterations=ITERATIONS):
+    identifier = 1
     amount = 1
     expiration = 1
     hashlock = sha3(ADDRESS)
@@ -121,9 +107,19 @@ def test_mediated_transfer(iterations=ITERATIONS):
     locksroot = sha3(ADDRESS)
     target = ADDRESS
     initiator = ADDRESS
-    msg = MediatedTransfer(nonce, asset, balance, recipient, locksroot,
-                           lock, target, initiator, fee=0)
-    msg.sign(PRIVKEY)
+    msg = MediatedTransfer(
+        identifier,
+        nonce,
+        asset,
+        balance,
+        recipient,
+        locksroot,
+        lock,
+        target,
+        initiator,
+        fee=0,
+    )
+    msg.sign(PRIVKEY, ADDRESS)
 
     run_timeit('MediatedTranfer', msg, iterations=iterations)
 
@@ -134,13 +130,22 @@ def test_cancel_transfer(iterations=ITERATIONS):
     hashlock = sha3(ADDRESS)
     lock = Lock(amount, expiration, hashlock)
 
+    identifier = 1
     nonce = 1
     asset = ADDRESS
-    balance = 1
+    transferred_amount = 1
     recipient = ADDRESS
     locksroot = sha3(ADDRESS)
-    msg = RefundTransfer(nonce, asset, balance, recipient, locksroot, lock)
-    msg.sign(PRIVKEY)
+    msg = RefundTransfer(
+        identifier,
+        nonce,
+        asset,
+        transferred_amount,
+        recipient,
+        locksroot,
+        lock,
+    )
+    msg.sign(PRIVKEY, ADDRESS)
     run_timeit('RefundTransfer', msg, iterations=iterations)
 
 
@@ -148,30 +153,29 @@ def test_transfer_timeout(iterations=ITERATIONS):
     echo = HASH
     hashlock = HASH
     msg = TransferTimeout(echo, hashlock)
-    msg.sign(PRIVKEY)
+    msg.sign(PRIVKEY, ADDRESS)
     run_timeit('TransferTimeout', msg, iterations=iterations)
 
 
 def test_confirm_transfer(iterations=ITERATIONS):
     hashlock = HASH
     msg = ConfirmTransfer(hashlock)
-    msg.sign(PRIVKEY)
+    msg.sign(PRIVKEY, ADDRESS)
     run_timeit('ConfirmTransfer', msg, iterations=iterations)
 
 
 def test_all(iterations=ITERATIONS):
+    test_mediated_transfer(iterations=iterations)
     test_ack(iterations=iterations)
     test_ping(iterations=iterations)
-    # needs the args type
-    # test_reject(iterations=iterations)
-    # test_reject_with_args(iterations=iterations)
     test_secret_request(iterations=iterations)
     test_direct_transfer(iterations=iterations)
-    test_locked_transfer(iterations=iterations)
-    test_mediated_transfer(iterations=iterations)
     test_cancel_transfer(iterations=iterations)
     test_transfer_timeout(iterations=iterations)
     test_confirm_transfer(iterations=iterations)
+
+    # LockedTransfer cannot be encoded/decoded
+    # LocksrootRejected needs an additional argument
 
 
 def benchmark_alternatives():
@@ -188,7 +192,7 @@ def benchmark_alternatives():
     address = privatekey_to_address(privkey)
 
     m0 = Ping(nonce=0)
-    m0.sign(privkey)
+    m0.sign(privkey, ADDRESS)
 
     l1 = Lock(100, 50, sha3(address))
     m1 = MediatedTransfer(
@@ -201,7 +205,7 @@ def benchmark_alternatives():
         address,
         address,
     )
-    m1.sign(privkey)
+    m1.sign(privkey, ADDRESS)
 
     m2 = Ack(address, sha3(privkey))
     """
@@ -222,7 +226,12 @@ def benchmark_alternatives():
             code = code_base.format(variable_name)
 
             exec(code)
-            print('{} encoded {} size: {}'.format(codec_name, message, len(d)))  # noqa pylint: disable=undefined-variable
+
+            print('{} encoded {} size: {}'.format(
+                codec_name,
+                message,
+                len(d),  # NOQA pylint: disable=undefined-variable
+            ))
 
             result = timeit.timeit(code, setup, number=10000)
             print('{} {} (en)(de)coding speed: {}'.format(codec_name, message, result))
