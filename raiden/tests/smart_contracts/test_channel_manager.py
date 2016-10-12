@@ -134,15 +134,3 @@ def test_channelmanager(tester_state, tester_token, tester_events,
         'netting_channel': netting_channel_address2_hex,
         'settle_timeout': settle_timeout,
     }
-
-    # uncomment private in function to run test
-    # assert channel_manager.numberOfItems(netting_channel_creator1) == 2
-    # assert channel_manager.numberOfItems(sha3('address1')[:20]) == 1
-    # assert channel_manager.numberOfItems(sha3('iDontExist')[:20]) == 0
-    # vs = sorted((sha3('address1')[:20], sha3('address2')[:20]))
-    # k0 = channel_manager.key(sha3('address1')[:20], sha3('address2')[:20])
-    # assert k0 == sha3(vs[0] + vs[1])
-    # k1 = channel_manager.key(sha3('address2')[:20], sha3('address1')[:20])
-    # assert k1 == sha3(vs[0] + vs[1])
-    # with pytest.raises(TransactionFailed):
-    #    channel_manager.key(sha3('address1')[:20], sha3('address1')[:20])
