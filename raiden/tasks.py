@@ -83,6 +83,8 @@ class LogListenerTask(Task):
             events_poll_timeout (float): How long the tasks should sleep before
                 polling again.
         """
+        # pylint: disable=too-many-arguments
+
         super(LogListenerTask, self).__init__()
 
         self.listener_name = listener_name
@@ -122,7 +124,7 @@ class LogListenerTask(Task):
 
                     try:
                         self.callback(originating_contract, event)
-                    except:
+                    except:  # pylint: disable=bare-except
                         log.exception('unexpected exception on log listener')
 
             self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
@@ -181,7 +183,7 @@ class AlarmTask(Task):
                 for callback in self.callbacks:
                     try:
                         result = callback(current_block)
-                    except:
+                    except:  # pylint: disable=bare-except
                         log.exception('unexpected exception on alarm')
                     else:
                         if result is REMOVE_CALLBACK:
@@ -212,7 +214,10 @@ class AlarmTask(Task):
 
 class StartMediatedTransferTask(Task):
     def __init__(self, transfermanager, amount, identifier, target, done_result):
+        # pylint: disable=too-many-arguments
+
         super(StartMediatedTransferTask, self).__init__()
+
         self.amount = amount
         self.identifier = identifier
         self.address = transfermanager.assetmanager.raiden.address
@@ -226,7 +231,7 @@ class StartMediatedTransferTask(Task):
             pex(self.address),
         )
 
-    def _run(self):  # pylint: disable=method-hidden,too-many-locals
+    def _run(self):  # noqa pylint: disable=method-hidden,too-many-locals
         amount = self.amount
         identifier = self.identifier
         target = self.target
@@ -293,7 +298,11 @@ class StartMediatedTransferTask(Task):
 
             # `target` received the MediatedTransfer
             elif response.sender == target and isinstance(response, SecretRequest):
-                secret_message = Secret(mediated_transfer.identifier, secret)
+                secret_message = Secret(
+                    mediated_transfer.identifier,
+                    secret,
+                    mediated_transfer.asset,
+                )
                 raiden.sign(secret_message)
                 raiden.send_async(target, secret_message)
 
@@ -315,7 +324,9 @@ class StartMediatedTransferTask(Task):
                         # critical read/write section
                         # The channel and it's queue must be locked, a transfer
                         # must not be created while we update the balance_proof.
-                        forward_channel.claim_lock(secret)
+                        if forward_channel.partner_state.balance_proof.is_unclaimed(hashlock):
+                            forward_channel.release_lock(secret)
+
                         raiden.send_async(next_hop, secret_message)
                         # /critical write section
 
@@ -344,7 +355,7 @@ class StartMediatedTransferTask(Task):
 
         self.done_result.set(False)  # all paths failed
 
-    def send_and_wait_valid(self, raiden, path, mediated_transfer):  # pylint: disable=no-self-use
+    def send_and_wait_valid(self, raiden, path, mediated_transfer):  # noqa pylint: disable=no-self-use
         """ Send the `mediated_transfer` and wait for either a message from
         `target` or the `next_hop`.
 
@@ -437,7 +448,8 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             pex(self.address)
         )
 
-    def _run(self):  # pylint: disable=method-hidden,too-many-locals,too-many-branches,too-many-statements
+    def _run(self):
+        # pylint: disable=method-hidden,too-many-locals
         fee = self.fee
         transfer = self.originating_transfer
 
@@ -452,6 +464,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
 
         lock_expiration = transfer.lock.expiration - raiden.config['reveal_timeout']
         lock_timeout = lock_expiration - raiden.chain.block_number()
+        lock_hashlock = transfer.lock.hashlock
 
         # there are no guarantees that the next_hop will follow the same route
         routes = assetmanager.get_best_routes(
@@ -478,7 +491,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                 transfer.lock.amount,
                 transfer.identifier,
                 lock_expiration,
-                transfer.lock.hashlock,
+                lock_hashlock,
             )
             raiden.sign(mediated_transfer)
 
@@ -534,7 +547,9 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                     # secret, so we know this `response` message secret matches
                     # the secret from the `next_hop`
                     if isinstance(response, Secret) and response.sender == transfer.sender:
-                        originating_channel.claim_lock(response.secret)
+                        if originating_channel.our_state.balance_proof.is_unclaimed(lock_hashlock):
+                            originating_channel.withdraw_lock(response.secret)
+
                         self.transfermanager.on_hashlock_result(transfer.lock.hashlock, True)
                         return
 
@@ -631,6 +646,7 @@ class EndMediatedTransferTask(Task):
         assetmanager = self.transfermanager.assetmanager
         originating_channel = assetmanager.get_channel_by_partner_address(mediated_transfer.sender)
         raiden = assetmanager.raiden
+        hashlock = mediated_transfer.lock.hashlock
 
         log.debug(
             'END MEDIATED TRANSFER %s -> %s identifier:%s msghash:%s hashlock:%s',
@@ -643,7 +659,8 @@ class EndMediatedTransferTask(Task):
 
         secret_request = SecretRequest(
             mediated_transfer.identifier,
-            mediated_transfer.lock.hashlock
+            hashlock,
+            mediated_transfer.lock.amount,
         )
         raiden.sign(secret_request)
 
@@ -660,22 +677,28 @@ class EndMediatedTransferTask(Task):
         # updated
         originating_channel.register_secret(response.secret)
 
-        secret_message = Secret(mediated_transfer.identifier, response.secret)
+        secret_message = Secret(
+            mediated_transfer.identifier,
+            response.secret,
+            mediated_transfer.asset,
+        )
+
         raiden.sign(secret_message)
         raiden.send_async(mediated_transfer.sender, secret_message)
 
         # wait for the secret from `sender` to claim the lock
-        while True:
+        while originating_channel.our_state.balance_proof.is_unclaimed(hashlock):
             response = self.response_message.wait()
             # critical write section
             self.response_message = AsyncResult()
             # /critical write section
 
             if isinstance(response, Secret) and response.sender == mediated_transfer.sender:
-                originating_channel.claim_lock(response.secret)
-                self.transfermanager.endtask_transfer_mapping[self] = self.originating_transfer
-                self.transfermanager.on_hashlock_result(mediated_transfer.lock.hashlock, True)
-                return
+                if originating_channel.our_state.balance_proof.is_unclaimed(hashlock):
+                    originating_channel.withdraw_lock(response.secret)
+
+        self.transfermanager.endtask_transfer_mapping[self] = self.originating_transfer
+        self.transfermanager.on_hashlock_result(mediated_transfer.lock.hashlock, True)
 
     def send_and_wait_valid(self, raiden, mediated_transfer, secret_request):
         message_timeout = raiden.config['msg_timeout']

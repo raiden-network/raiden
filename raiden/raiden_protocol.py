@@ -6,7 +6,7 @@ from gevent.queue import Queue
 from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
-from raiden.messages import decode, Ack, Secret
+from raiden.messages import decode, Ack, SignedMessage
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -135,13 +135,16 @@ class RaidenProtocol(object):
                 )
 
             self.address_queue[receiver_address] = NotifyingQueue()
-            self.address_greenlet[receiver_address] = gevent.spawn(self._send_queued_messages, receiver_address)
+            self.address_greenlet[receiver_address] = gevent.spawn(
+                self._send_queued_messages,
+                receiver_address,
+            )
 
         self.address_queue[receiver_address].put(
             (message, messagedata, messagehash),
         )
 
-    def _send_ack(self, host_port, messagedata, messagehash):
+    def _send_ack(self, host_port, messagedata, messagehash):  # pylint: disable=unused-argument
         # ACK should not go into the queue
         self.transport.send(
             self.raiden,
@@ -233,7 +236,16 @@ class RaidenProtocol(object):
                 ack_result.set(True)
 
         elif message is not None:
-            assert isinstance(message, Secret) or message.sender
+            # all messages require an Ack, to send it back an address is required
+            assert isinstance(message, SignedMessage)
+
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'MESSAGE RECEIVED node:%s msghash:%s %s',
+                    pex(self.raiden.address),
+                    pex(msghash),
+                    message,
+                )
 
             # this might exit with an exception
             self.raiden.on_message(message, msghash)

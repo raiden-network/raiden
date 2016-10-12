@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 import logging
 import itertools
 
@@ -19,8 +19,8 @@ from raiden.utils import privatekey_to_address, isaddress, pex, GLOBAL_CTX
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
-DEFAULT_SETTLE_TIMEOUT = 10
-DEFAULT_REVEAL_TIMEOUT = 3
+DEFAULT_REVEAL_TIMEOUT = 30
+DEFAULT_SETTLE_TIMEOUT = DEFAULT_REVEAL_TIMEOUT * 20
 
 
 def safe_address_decode(address):
@@ -59,7 +59,9 @@ class InsufficientFunds(RaidenError):
 class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     """ A Raiden node. """
 
-    def __init__(self, chain, private_key_bin, transport, discovery, config):  # pylint: disable=too-many-arguments
+    def __init__(self, chain, private_key_bin, transport, discovery, config):
+        # pylint: disable=too-many-arguments
+
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
@@ -125,7 +127,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         message.sign(self.private_key, self.address)
 
     def send(self, *args):
-        raise NotImplemented('use send_and_wait or send_async')
+        raise NotImplementedError('use send_and_wait or send_async')
 
     def send_async(self, recipient, message):
         """ Send `message` to `recipient` using the raiden protocol.
@@ -137,6 +139,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         if not isaddress(recipient):
             raise ValueError('recipient is not a valid address.')
+
+        if recipient == self.address:
+            raise ValueError('programming error, sending message to itself')
 
         return self.protocol.send_async(recipient, message)
 
@@ -158,6 +163,30 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         self.protocol.send_and_wait(recipient, message, timeout)
 
+    # api design regarding locks:
+    # - `register_secret` method was added because secret registration can be a
+    #   cross asset operation
+    # - unlocking a lock is not a cross asset operation, for this reason it's
+    #   only available in the asset manager
+
+    def register_secret(self, secret):
+        """ Register the secret with any channel that has a hashlock on it.
+
+        This must search through all channels registered for a given hashlock
+        and ignoring the assets. Useful for refund transfer, split transfer,
+        and exchanges.
+        """
+        for asset_manager in self.managers_by_asset_address.values():
+            try:
+                asset_manager.register_secret(secret)
+            except:  # pylint: disable=bare-except
+                # Only channels that care about the given secret can be
+                # registered and channels that have claimed the lock must
+                # be removed, so an excpetion should not happen at this
+                # point, nevertheless handle it because we dont want a
+                # error in a channel to mess the state from others.
+                log.error('programming error')
+
     def message_for_task(self, message, hashlock):
         """ Sends the message to the corresponding task.
 
@@ -166,14 +195,17 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         Return:
             bool: True if a correspoding task is found, False otherwise.
         """
+        # allow multiple managers to register for the hashlock (used for exchanges)
+        found = False
+
         for asset_manager in self.managers_by_asset_address.values():
             task = asset_manager.transfermanager.transfertasks.get(hashlock)
 
             if task is not None:
                 task.on_response(message)
-                return True
+                found = True
 
-        return False
+        return found
 
     def register_registry(self, registry):
         """ Register the registry and intialize all the related assets and
@@ -264,13 +296,13 @@ class RaidenAPI(object):
         return self.raiden.chain.default_registry.asset_addresses()
 
     def open(self, asset_address, partner_address,
-             settle_timeout=None,
-             reveal_timeout=None):
+             settle_timeout=None, reveal_timeout=None):
         """ Open a channel with the peer at `partner_address`
         with the given `asset_address`.
         """
         if reveal_timeout is None:
             reveal_timeout = self.raiden.config['reveal_timeout']
+
         if settle_timeout is None:
             settle_timeout = self.raiden.config['settle_timeout']
 
@@ -286,7 +318,7 @@ class RaidenAPI(object):
             settle_timeout,
         )
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
-        asset_manager.register_channel(netting_channel, reveal_timeout or self.reveal_timeout)
+        asset_manager.register_channel(netting_channel, reveal_timeout)
 
         return netting_channel
 
@@ -304,9 +336,10 @@ class RaidenAPI(object):
         balance = asset.balance_of(self.raiden.address.encode('hex'))
 
         if not balance >= amount:
-            raise InsufficientFunds("Not enough balance for token'{}' [{}]: have={}, need={}".format(
+            msg = "Not enough balance for token'{}' [{}]: have={}, need={}".format(
                 asset.proxy.name(), asset_address, balance, amount
-            ))
+            )
+            raise InsufficientFunds(msg)
 
         asset.approve(netcontract_address, amount)
 
@@ -316,14 +349,26 @@ class RaidenAPI(object):
 
         return netting_channel
 
-    def transfer_and_wait(self, asset_address, amount, target, identifier=None, callback=None, timeout=None):
+    def transfer_and_wait(self, asset_address, amount, target, identifier=None,
+                          callback=None, timeout=None):
         """ Do a transfer with `target` with the given `amount` of `asset_address`. """
-        async_result = self.transfer_async(asset_address, amount, target, identifier, callback)
+        # pylint: disable=too-many-arguments
+
+        async_result = self.transfer_async(
+            asset_address,
+            amount,
+            target,
+            identifier,
+            callback,
+        )
         return async_result.wait(timeout=timeout)
 
     transfer = transfer_and_wait  # expose a synchronous interface to the user
 
-    def transfer_async(self, asset_address, amount, target, identifier=None, callback=None):
+    def transfer_async(self, asset_address, amount, target, identifier=None,
+                       callback=None):
+        # pylint: disable=too-many-arguments
+
         if not isinstance(amount, (int, long)):
             raise InvalidAmount('Amount not a number')
 
@@ -345,7 +390,12 @@ class RaidenAPI(object):
             raise NoPathError('No path to address found')
 
         transfer_manager = asset_manager.transfermanager
-        async_result = transfer_manager.transfer_async(amount, target_bin, identifier=identifier, callback=callback)
+        async_result = transfer_manager.transfer_async(
+            amount,
+            target_bin,
+            identifier=identifier,
+            callback=callback,
+        )
         return async_result
 
     def close(self, asset_address, partner_address):
@@ -415,11 +465,13 @@ class RaidenAPI(object):
         all_channel = [am.partneraddress_channel.values() for am in all_asset_managers]
         # and flatten the list:
         all_channel = list(itertools.chain.from_iterable(all_channel))
+
         for callback in callbacks:
             for channel in all_channel:
                 channel.register_withdrawable_callback(callback)
-            for am in all_asset_managers:
-                am.transfermanager.register_callback_for_result(callback)
+
+            for asset_manager in all_asset_managers:
+                asset_manager.transfermanager.register_callback_for_result(callback)
 
 
 class RaidenMessageHandler(object):
@@ -432,7 +484,7 @@ class RaidenMessageHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
 
-    def on_message(self, message, msghash):
+    def on_message(self, message, msghash):  # noqa pylint: disable=unused-argument
         """ Handles `message` and sends an ACK on success. """
         cmdid = message.cmdid
 
@@ -445,6 +497,9 @@ class RaidenMessageHandler(object):
 
         elif cmdid == messages.SECRETREQUEST:
             self.message_secretrequest(message)
+
+        elif cmdid == messages.REVEALSECRET:
+            self.message_revealsecret(message)
 
         elif cmdid == messages.SECRET:
             self.message_secret(message)
@@ -465,19 +520,39 @@ class RaidenMessageHandler(object):
             self.message_confirmtransfer(message)
 
         else:
-            raise Exception("Unknow cmdid '{}'.".format(cmdid))
+            raise Exception("Unhandled message cmdid '{}'.".format(cmdid))
 
-    def message_ping(self, message):
+    def message_ping(self, message):  # pylint: disable=unused-argument,no-self-use
         log.info('ping received')
 
     def message_confirmtransfer(self, message):
         pass
 
+    def message_revealsecret(self, message):
+        self.raiden.message_for_task(message, message.hashlock)
+
     def message_secretrequest(self, message):
         self.raiden.message_for_task(message, message.hashlock)
 
     def message_secret(self, message):
-        self.raiden.message_for_task(message, message.hashlock)
+        # notify the waiting tasks about the message (multiple tasks could
+        # happen in exchanges were a node is on both asset transfers), and make
+        # sure that the secret is register if it fails (or it has exited
+        # because the transfer was considered done)
+        try:
+            self.raiden.message_for_task(message, message.hashlock)
+        finally:
+            try:
+                # register the secret with all channels interested in it (this
+                # must not withdraw or unlock otherwise the state changes could
+                # flow in the wrong order in the path)
+                self.raiden.register_secret(message.secret)
+
+                # make sure we have a proper state change
+                asset_manager = self.raiden.get_manager_by_asset_address(message.asset)
+                asset_manager.handle_secretmessage(message)
+            except:  # pylint: disable=bare-except
+                log.exception('Unhandled exception')
 
     def message_refundtransfer(self, message):
         self.raiden.message_for_task(message, message.lock.hashlock)
@@ -534,7 +609,7 @@ class RaidenEventHandler(object):
         else:
             log.error('Unknown event %s', repr(event))
 
-    def event_assetadded(self, registry_address_bin, event):
+    def event_assetadded(self, registry_address_bin, event):  # pylint: disable=unused-argument
         manager_address_bin = address_decoder(event['channelManagerAddress'])
         manager = self.raiden.chain.manager(manager_address_bin)
         self.raiden.register_channel_manager(manager)
@@ -569,6 +644,13 @@ class RaidenEventHandler(object):
             log.info('ignoring new channel, this is node is not a participant.')
 
     def event_channelnewbalance(self, netting_contract_address_bin, event):
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'channel new balance event received',
+                netting_contract=pex(netting_contract_address_bin),
+                event=event,
+            )
+
         asset_address_bin = address_decoder(event['assetAddress'])
         participant_address_bin = address_decoder(event['participant'])
 
@@ -599,10 +681,5 @@ class RaidenEventHandler(object):
         channel.external_state.set_settled(event['blockNumber'])
 
     def event_channelsecretrevealed(self, netting_contract_address_bin, event):
-        channel = self.raiden.chain.netting_channel(netting_contract_address_bin)
-        asset_address_bin = channel.asset_address()
-        manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
-
-        # XXX: should reveal the secret to other asset managers?
-        # update all channels and propagate the secret
-        manager.register_secret(event['secret'])
+        # pylint: disable=unused-argument
+        self.raiden.register_secret(event['secret'])
