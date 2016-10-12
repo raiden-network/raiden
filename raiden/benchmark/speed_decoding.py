@@ -93,33 +93,6 @@ def test_direct_transfer(iterations=ITERATIONS):
     run_timeit('DirectTransfer', msg, iterations=iterations)
 
 
-# LockedTransfer cannot be encoded/decoded because it's not sent throught the
-# wire
-# def test_locked_transfer(iterations=ITERATIONS):
-#     identifier = 1
-#     amount = 1
-#     expiration = 1
-#     hashlock = sha3(ADDRESS)
-#     lock = Lock(amount, expiration, hashlock)
-#
-#     nonce = 1
-#     asset = ADDRESS
-#     balance = 1
-#     recipient = ADDRESS
-#     locksroot = sha3(ADDRESS)
-#     msg = LockedTransfer(
-#         identifier,
-#         nonce,
-#         asset,
-#         balance,
-#         recipient,
-#         locksroot,
-#         lock
-#     )
-#     msg.sign(PRIVKEY, ADDRESS)
-#     run_timeit('LockedTransfer', msg, iterations=iterations)
-
-
 def test_mediated_transfer(iterations=ITERATIONS):
     identifier = 1
     amount = 1
@@ -195,15 +168,14 @@ def test_all(iterations=ITERATIONS):
     test_mediated_transfer(iterations=iterations)
     test_ack(iterations=iterations)
     test_ping(iterations=iterations)
-    # needs the args type
-    # test_reject(iterations=iterations)
-    # test_reject_with_args(iterations=iterations)
     test_secret_request(iterations=iterations)
     test_direct_transfer(iterations=iterations)
-    # test_locked_transfer(iterations=iterations)
     test_cancel_transfer(iterations=iterations)
     test_transfer_timeout(iterations=iterations)
     test_confirm_transfer(iterations=iterations)
+
+    # LockedTransfer cannot be encoded/decoded
+    # LocksrootRejected needs an additional argument
 
 
 def benchmark_alternatives():
