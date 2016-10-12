@@ -14,7 +14,7 @@ def setup_messages_cb():
     def callback(sender_raiden, host_port, msg):  # pylint: disable=unused-argument
         messages.append(msg)
 
-    DummyTransport.network.on_send_cbs.extend([callback])
+    DummyTransport.network.on_send_cbs.append(callback)
 
     return messages
 
