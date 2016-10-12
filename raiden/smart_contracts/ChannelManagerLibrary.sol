@@ -117,6 +117,18 @@ library ChannelManagerLibrary {
             }
         }
 
+        // remove address from all_channels
+        for (uint k = 0; k < self.all_channels.length; ++k) {
+            if (self.all_channels[k] == channelAddress) {
+                self.all_channels[k] == self.all_channels[self.all_channels.length -1];
+                self.all_channels.length--;
+                break;
+            }
+        }
+
+        self.nodeChannels[msg.sender] = ourChannels;
+        self.nodeChannels[partner] = partnerChannels;
+
         // TODO: maybe call some suicide function on the channel
     }
 }

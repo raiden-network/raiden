@@ -63,7 +63,7 @@ contract NettingChannelContract {
     }
 
     function isSettled() returns (bool) {
-        data.isSettled();
+        return data.isSettled();
     }
 
     function closeSingleTransfer(bytes signed_transfer) {

@@ -3,8 +3,10 @@ import pytest
 
 from ethereum import tester
 from ethereum.utils import encode_hex, sha3
-from raiden.utils import get_contract_path
+from raiden.utils import get_contract_path, privatekey_to_address
+from raiden.encoding.signing import GLOBAL_CTX
 from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
+from secp256k1 import PrivateKey
 
 from raiden.tests.utils.tester import new_channelmanager
 
@@ -134,3 +136,136 @@ def test_channelmanager(tester_state, tester_token, tester_events,
         'netting_channel': netting_channel_address2_hex,
         'settle_timeout': settle_timeout,
     }
+
+
+def test_deleteChannel(tester_state, tester_token, tester_events,
+                       tester_channelmanager_library_address, settle_timeout,
+                       netting_channel_abi, private_keys, tester_channels):
+    # pylint: disable=too-many-locals,too-many-statements
+
+    priv_key_raw, _, _, channel0, _ = tester_channels[0]
+
+    privatekey0 = PrivateKey(private_keys[0], ctx=GLOBAL_CTX, raw=True)
+    key0 = private_keys[0]
+    key1 = private_keys[1]
+    address0 = privatekey_to_address(key0)
+    address1 = privatekey_to_address(key1)
+    inexisting_address = sha3('this_does_not_exist')[:20]
+
+    assert key0 == priv_key_raw
+
+    channelmanager_path = get_contract_path('ChannelManagerContract.sol')
+    channel_manager = tester_state.abi_contract(
+        None,
+        path=channelmanager_path,
+        language='solidity',
+        constructor_parameters=[tester_token.address],
+        contract_name='ChannelManagerContract',
+        log_listener=tester_events.append,
+        libraries={
+            'ChannelManagerLibrary': tester_channelmanager_library_address.encode('hex'),
+        }
+    )
+
+    assert len(channel_manager.getChannelsParticipants()) == 0, 'newly deployed contract must be empty'
+
+    netting_channel_translator = ContractTranslator(netting_channel_abi)
+
+    netting_channel_address1_hex = channel_manager.newChannel(
+        address1,
+        settle_timeout,
+        sender=key0,
+    )
+
+    # should fail if settleTimeout is too low
+    with pytest.raises(TransactionFailed):
+        channel_manager.newChannel(address1, 5)
+
+    # cannot have two channels at the same time
+    with pytest.raises(TransactionFailed):
+        channel_manager.newChannel(address1, settle_timeout, sender=key0)
+
+    # should trow if there is no channel for the given address
+    with pytest.raises(TransactionFailed):
+        channel_manager.getChannelWith(inexisting_address)
+
+    assert len(channel_manager.getChannelsParticipants()) == 2
+
+    netting_contract_proxy1 = ABIContract(
+        tester_state,
+        netting_channel_translator,
+        netting_channel_address1_hex,
+    )
+
+    assert netting_contract_proxy1.settleTimeout() == settle_timeout
+
+    assert netting_contract_proxy1.assetAddress(sender=key0) == encode_hex(tester_token.address)
+    assert tester_token.approve(netting_contract_proxy1.address, 50, sender=key0) is True
+    assert tester_token.approve(netting_contract_proxy1.address, 50, sender=key1) is True
+    assert netting_contract_proxy1.deposit(50, sender=key0) is True
+    assert netting_contract_proxy1.deposit(50, sender=key1) is True
+    assert tester_state.block.number > 0
+    assert netting_contract_proxy1.opened(sender=key0) > 0
+
+    transfer_amount = 10
+    direct_transfer = channel0.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
+    direct_transfer.sign(privatekey0, address0)
+    direct_transfer_data = str(direct_transfer.packed().data)
+
+    netting_contract_proxy1.closeSingleTransfer(direct_transfer_data, sender=key0)
+
+    block_number = tester_state.block.number
+
+    assert netting_contract_proxy1.closed(sender=key0) == block_number
+    assert netting_contract_proxy1.closingAddress(sender=key0) == encode_hex(address0)
+
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+
+    netting_contract_proxy1.settle(sender=key0)
+    assert netting_contract_proxy1.settled() > 0
+
+    # try to open a new channel should fail
+    with pytest.raises(TransactionFailed):
+        channel_manager.newChannel(address1, settle_timeout, sender=key0)
+
+    assert netting_contract_proxy1.isSettled()
+    assert len(channel_manager.getChannelsParticipants()) == 2
+
+    # delete the channel
+    channel_manager.deleteChannel(address0, netting_contract_proxy1.address)
+
+    assert len(channel_manager.getChannelsParticipants()) == 0
+
+    # should be possible to open a channel again
+    netting_channel_address2_hex = channel_manager.newChannel(
+        address1,
+        settle_timeout,
+        sender=key0,
+    )
+
+    # should fail if settleTimeout is too low
+    with pytest.raises(TransactionFailed):
+        channel_manager.newChannel(address1, 5)
+
+    # cannot have two channels at the same time
+    with pytest.raises(TransactionFailed):
+        channel_manager.newChannel(address1, settle_timeout, sender=key0)
+
+    # should trow if there is no channel for the given address
+    with pytest.raises(TransactionFailed):
+        channel_manager.getChannelWith(inexisting_address)
+
+    assert len(channel_manager.getChannelsParticipants()) == 2
+
+    netting_contract_proxy2 = ABIContract(
+        tester_state,
+        netting_channel_translator,
+        netting_channel_address2_hex,
+    )
+
+    # should fail since it shouldn't be possible to provide the old transfers again
+    with pytest.raises(TransactionFailed):
+        netting_contract_proxy2.closeSingleTransfer(direct_transfer_data, sender=key0)
