@@ -1,6 +1,6 @@
 pragma solidity ^0.4.0;
 
-import "Token.sol";
+import "./Token.sol";
 
 library NettingChannelLibrary {
     struct Lock

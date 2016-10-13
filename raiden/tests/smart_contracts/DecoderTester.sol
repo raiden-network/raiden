@@ -1,6 +1,6 @@
 pragma solidity ^0.4.0;
 
-import "NettingChannelLibrary.sol";
+import "raiden/NettingChannelLibrary.sol";
 
 contract DecoderTester {
     using NettingChannelLibrary for NettingChannelLibrary.Data;

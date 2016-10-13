@@ -1,6 +1,6 @@
 pragma solidity ^0.4.0;
 
-import "ChannelManagerContract.sol";
+import "./ChannelManagerContract.sol";
 
 contract Registry {
     mapping(address => address) public registry;

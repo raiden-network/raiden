@@ -7,6 +7,7 @@ from ethereum import tester, slogging
 from ethereum.utils import remove_0x_head
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def strip_0x(value):
@@ -35,7 +36,8 @@ def dump(contract_paths):
             None,
             path=path,
             language='solidity',
-            libraries=libraries
+            libraries=libraries,
+            extra_args="raiden={}".format(os.path.join(root_dir, "smart_contracts"))
         )
         state.mine(number_of_blocks=1)
         libraries[os.path.split(path)[-1].split('.')[0]] = contract.address.encode('hex')
@@ -56,7 +58,6 @@ if __name__ == '__main__':
 
 
 def test_stuff():
-    root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     dump([
         os.path.join(root_dir, "smart_contracts", "NettingChannelLibrary.sol"),
         os.path.join(os.path.dirname(os.path.abspath(__file__)), "DecoderTester.sol")

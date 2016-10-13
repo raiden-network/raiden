@@ -1,7 +1,7 @@
 pragma solidity ^0.4.0;
 
-import "Token.sol";
-import "NettingChannelContract.sol";
+import "./Token.sol";
+import "./NettingChannelContract.sol";
 
 library ChannelManagerLibrary {
     // TODO: experiment with a sorted data structure

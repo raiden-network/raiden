@@ -1,6 +1,6 @@
 pragma solidity ^0.4.0;
 
-import "NettingChannelLibrary.sol";
+import "./NettingChannelLibrary.sol";
 
 contract NettingChannelContract {
     using NettingChannelLibrary for NettingChannelLibrary.Data;
