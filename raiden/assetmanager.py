@@ -207,10 +207,10 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
             # from amplification, the protocol will ignore messages that were
             # already registered and sent it only until a first Ack is
             # received.
-            # self.raiden.send_async(
-            #     channel.partner_state.address,
-            #     revealsecret_message,
-            # )
+            self.raiden.send_async(
+                channel.partner_state.address,
+                revealsecret_message,
+            )
 
     def handle_secret(self, identifier, secret):
         """ Unlock locks, register the secret, and send Secret messages as
@@ -267,6 +267,9 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         our_secret_message = Secret(identifier, secret, self.asset_address)
         self.raiden.sign(our_secret_message)
 
+        revealsecret_message = RevealSecret(secret)
+        self.raiden.sign(revealsecret_message)
+
         for channel in channels_list:
             # critical read/write section
             # - the `release_lock` might raise if the `balance_proof` changes
@@ -304,11 +307,12 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
                         channel.withdraw_lock(secret)
                         channels_to_remove.append(channel)
                     else:
+                        # assume our partner dont know the secret and reveal it
                         channel.register_secret(secret)
-                        self.raiden.send_async(channel.partner_state.address, our_secret_message)
+                        self.raiden.send_async(channel.partner_state.address, revealsecret_message)
                 else:
                     channel.register_secret(secret)
-                    self.raiden.send_async(channel.partner_state.address, our_secret_message)
+                    self.raiden.send_async(channel.partner_state.address, revealsecret_message)
             # /critical read/write section
 
         for channel in channels_to_remove:
