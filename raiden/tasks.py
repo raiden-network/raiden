@@ -506,7 +506,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                 return
 
             if isinstance(response, RefundTransfer):
-                if response.lock.amount != transfer.amount:
+                if response.lock.amount != transfer.lock.amount:
                     log.info(
                         'Partner %s sent an refund message with an invalid amount',
                         pex(next_hop),
@@ -545,9 +545,8 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         from_channel = assetmanager.partneraddress_channel[from_address]
 
         refund_transfer = from_channel.create_refundtransfer_for(transfer)
-        from_channel.register_transfer(refund_transfer)
-
         raiden.sign(refund_transfer)
+        from_channel.register_transfer(refund_transfer)
         raiden.send_async(from_address, refund_transfer)
 
         log.debug(
@@ -596,14 +595,14 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
 
                 return response
 
+            if isinstance(response, RefundTransfer):
+                return response
+
             if response.target != raiden.address or response.sender != next_hop:
                 log.error('Invalid message supplied to the task. %s', repr(response))
                 continue
 
-            if isinstance(response, RefundTransfer):
-                return response
-
-            log.error('Partner sent an invalid message. %s', repr(response))
+            log.error('Partner sent an invalid message. {}'.format(repr(response)))
 
         return None
 

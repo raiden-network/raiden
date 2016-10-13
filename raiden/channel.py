@@ -770,17 +770,17 @@ class Channel(object):
             # we won't be able to claim the asset
             if not transfer.lock.expiration - block_number < self.settle_timeout:
                 log.error(
-                    "Transfer expiration doesn't allow for corret settlement.",
+                    "Transfer expiration doesn't allow for correct settlement.",
                     lock_expiration=transfer.lock.expiration,
                     current_block=block_number,
                     settle_timeout=self.settle_timeout,
                 )
 
-                raise ValueError("Transfer expiration doesn't allow for corret settlement.")
+                raise ValueError("Transfer expiration doesn't allow for correct settlement.")
 
             if not transfer.lock.expiration - block_number > self.reveal_timeout:
                 log.error(
-                    'Expiration smaller too small.',
+                    'Expiration smaller than the minimum required.',
                     lock_expiration=transfer.lock.expiration,
                     current_block=block_number,
                     reveal_timeout=self.reveal_timeout,
@@ -943,7 +943,7 @@ class Channel(object):
 
         if expiration - self.reveal_timeout < block_number:
             log.debug(
-                'Expiration smaller than the minimum requried.',
+                'Expiration smaller than the minimum required.',
                 expiration=expiration,
                 block_number=block_number,
                 reveal_timeout=self.reveal_timeout,

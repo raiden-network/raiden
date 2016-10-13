@@ -333,18 +333,18 @@ class RaidenAPI(object):
         asset_address_bin = safe_address_decode(asset_address)
         target_bin = safe_address_decode(target)
 
-        asset_manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
-
         if not isaddress(asset_address_bin) or asset_address_bin not in self.assets:
             raise InvalidAddress('asset address is not valid.')
 
         if not isaddress(target_bin):
             raise InvalidAddress('target address is not valid.')
 
+        asset_manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
+
         if not asset_manager.has_path(self.raiden.address, target_bin):
             raise NoPathError('No path to address found')
 
-        transfer_manager = self.raiden.managers_by_asset_address[asset_address_bin].transfermanager
+        transfer_manager = asset_manager.transfermanager
         async_result = transfer_manager.transfer_async(amount, target_bin, identifier=identifier, callback=callback)
         return async_result
 
