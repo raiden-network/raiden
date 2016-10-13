@@ -1,15 +1,33 @@
 # -*- coding: utf8 -*-
 import logging
+import random
+from collections import namedtuple
 
 import gevent
-import random
 from gevent.event import AsyncResult
 from ethereum import slogging
 
-from raiden.tasks import StartMediatedTransferTask, MediateTransferTask, EndMediatedTransferTask
+from raiden.tasks import (
+    StartMediatedTransferTask,
+    MediateTransferTask,
+    EndMediatedTransferTask,
+    ExchangeTask,
+)
 from raiden.utils import pex, sha3
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+Exchange = namedtuple('Exchange', (
+    'from_asset',
+    'from_amount',
+    'from_nodeaddress',  # the node' address of the owner of the `from_asset`
+    'to_asset',
+    'to_amount',
+    'to_nodeaddress',  # the node' address of the owner of the `to_asset`
+))
+ExchangeKey = namedtuple('ExchangeKey', (
+    'from_asset',
+    'from_amount',
+))
 
 
 class TransferManager(object):
@@ -19,15 +37,37 @@ class TransferManager(object):
         self.assetmanager = assetmanager
 
         self.transfertasks = dict()
+        self.exchanges = dict()  #: mapping for pending exchanges
         self.endtask_transfer_mapping = dict()
 
         self.on_task_completed_callbacks = list()
         self.on_result_callbacks = list()
 
+    # TODO: Move registration to raiden_service.py:Raiden. This is used to
+    # dispatch messages by hashlock and to expose callbacks to applications
+    # built on top of raiden, since hashlocks can be shared among assets this
+    # should be moved to an upper layer.
     def register_task_for_hashlock(self, task, hashlock):
+        """ Register the task to receive messages based on hashlock.
+
+        Registration is required otherwise the task won't receive any messages
+        from the protocol, un-registering is done by the `on_hashlock_result`
+        function.
+
+        Note:
+            Messages are dispatched solely on the hashlock value (being part of
+            the message, eg. SecretRequest, or calculated from the message
+            content, eg.  RevealSecret), this means the sender needs to be
+            checked for the received messages.
+        """
         self.transfertasks[hashlock] = task
 
     def on_hashlock_result(self, hashlock, success):
+        """ Set the result for a transfer based on hashlock.
+
+        This function will also call the registered callbacks and de-register
+        the task.
+        """
         task = self.transfertasks[hashlock]
         del self.transfertasks[hashlock]
 
@@ -42,17 +82,18 @@ class TransferManager(object):
             self.on_task_completed_callbacks.remove(callback)
 
         if task in self.endtask_transfer_mapping:
-            transfer = self.endtask_transfer_mapping[task]
-            for callback in self.on_result_callbacks:
-                gevent.spawn(
-                    callback(
-                        transfer.asset,
-                        transfer.recipient,
-                        transfer.initiator,
-                        transfer.transferred_amount,
-                        hashlock
+            if task in self.endtask_transfer_mapping:
+                transfer = self.endtask_transfer_mapping[task]
+                for callback in self.on_result_callbacks:
+                    gevent.spawn(
+                        callback(
+                            transfer.asset,
+                            transfer.recipient,
+                            transfer.initiator,
+                            transfer.transferred_amount,
+                            hashlock
+                        )
                     )
-                )
             del self.endtask_transfer_mapping[task]
 
     def register_callback_for_result(self, callback):
@@ -66,13 +107,13 @@ class TransferManager(object):
             - The asset address
             - A random 8 byte number for uniqueness
         """
-        hash = sha3("{}{}{}{}".format(
+        hash_ = sha3("{}{}{}{}".format(
             self.assetmanager.raiden.address,
             target,
             self.assetmanager.asset_address,
             random.randint(0, 18446744073709551614L)
         ))
-        return int(hash[0:8].encode('hex'), 16)
+        return int(hash_[0:8].encode('hex'), 16)
 
     def transfer_async(self, amount, target, identifier=None, callback=None):
         """ Transfer `amount` between this node and `target`.
@@ -86,68 +127,172 @@ class TransferManager(object):
         """
 
         # Create a default identifier value
-        if not identifier:
+        if identifier is None:
             identifier = self.create_default_identifier(target)
 
-        if target in self.assetmanager.partneraddress_channel:
-            channel = self.assetmanager.partneraddress_channel[target]
-            direct_transfer = channel.create_directtransfer(
+        direct_channel = self.assetmanager.partneraddress_channel.get(target)
+
+        if direct_channel:
+            async_result = self._direct_or_mediated_transfer(
                 amount,
                 identifier,
+                direct_channel,
+                callback,
             )
-            self.assetmanager.raiden.sign(direct_transfer)
-            channel.register_transfer(direct_transfer)
-            if callback:
-                channel.on_task_completed_callbacks.append(callback)
-
-            return self.assetmanager.raiden.protocol.send_async(
-                target,
-                direct_transfer,
-            )
+            return async_result
 
         else:
-            result = AsyncResult()
-            task = StartMediatedTransferTask(
-                self,
+            async_result = self._mediated_transfer(
                 amount,
                 identifier,
                 target,
-                result,
+                callback,
             )
-            task.start()
+
+            return async_result
+
+    def _direct_or_mediated_transfer(self, amount, identifier, direct_channel, callback):
+        """ Check the direct channel and if possible use it, otherwise started
+        a mediated transfer.
+        """
+
+        if not direct_channel.isopen:
+            log.info(
+                'DIRECT CHANNEL %s > %s is close',
+                pex(direct_channel.our_state.address),
+                pex(direct_channel.partner_state.address),
+            )
+
+            async_result = self._mediated_transfer(
+                amount,
+                identifier,
+                direct_channel.partner_state.address,
+                callback,
+            )
+            return async_result
+
+        elif amount > direct_channel.distributable:
+            log.info(
+                'DIRECT CHANNEL %s > %s doesnt have enough funds [%s]',
+                pex(direct_channel.our_state.address),
+                pex(direct_channel.partner_state.address),
+                amount,
+            )
+
+            async_result = self._mediated_transfer(
+                amount,
+                identifier,
+                direct_channel.partner_state.address,
+                callback,
+            )
+            return async_result
+
+        else:
+            direct_transfer = direct_channel.create_directtransfer(amount, identifier)
+            self.assetmanager.raiden.sign(direct_transfer)
+            direct_channel.register_transfer(direct_transfer)
 
             if callback:
-                self.on_task_completed_callbacks.append(callback)
+                direct_channel.on_task_completed_callbacks.append(callback)
 
-            return result
+            async_result = self.assetmanager.raiden.protocol.send_async(
+                direct_channel.partner_state.address,
+                direct_transfer,
+            )
+            return async_result
+
+    def _mediated_transfer(self, amount, identifier, target, callback):
+        asunc_result = AsyncResult()
+        task = StartMediatedTransferTask(
+            self.assetmanager.raiden,
+            self.assetmanager.asset_address,
+            amount,
+            identifier,
+            target,
+            asunc_result,
+        )
+        task.start()
+
+        if callback:
+            self.on_task_completed_callbacks.append(callback)
+
+        return asunc_result
 
     def on_mediatedtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
             raise RuntimeError('Received message for inexisting channel.')
 
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'MEDIATED TRANSFER RECEIVED node:%s %s > %s hashlock:%s [%s]',
-                pex(self.assetmanager.raiden.address),
-                pex(transfer.sender),
-                pex(self.assetmanager.raiden.address),
-                pex(transfer.lock.hashlock),
-                repr(transfer),
-            )
+        raiden = self.assetmanager.raiden
+        asset_address = self.assetmanager.asset_address
 
         channel = self.assetmanager.get_channel_by_partner_address(transfer.sender)
         channel.register_transfer(transfer)  # raises if the transfer is invalid
 
-        if transfer.target == self.assetmanager.raiden.address:
-            secret_request_task = EndMediatedTransferTask(
-                self,
-                transfer,
+        exchange_key = ExchangeKey(transfer.asset, transfer.lock.amount)
+        if exchange_key in self.exchanges:
+            exchange = self.exchanges[exchange_key]
+
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'EXCHANGE TRANSFER RECEIVED node:%s %s > %s hashlock:%s'
+                    ' from_asset:%s from_amount:%s to_asset:%s to_amount:%s [%s]',
+                    pex(self.assetmanager.raiden.address),
+                    pex(transfer.sender),
+                    pex(self.assetmanager.raiden.address),
+                    pex(transfer.lock.hashlock),
+                    pex(exchange.from_asset),
+                    exchange.from_amount,
+                    pex(exchange.to_asset),
+                    exchange.to_amount,
+                    repr(transfer),
+                )
+
+            exchange_task = ExchangeTask(
+                raiden,
+                from_mediated_transfer=transfer,
+                to_asset=exchange.to_asset,
+                to_amount=exchange.to_amount,
+                target=exchange.from_nodeaddress,
             )
-            secret_request_task.start()
+            exchange_task.start()
+
+        elif transfer.target == self.assetmanager.raiden.address:
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'MEDIATED TRANSFER RECEIVED node:%s %s > %s hashlock:%s [%s]',
+                    pex(self.assetmanager.raiden.address),
+                    pex(transfer.sender),
+                    pex(self.assetmanager.raiden.address),
+                    pex(transfer.lock.hashlock),
+                    repr(transfer),
+                )
+
+            found = self.assetmanager.raiden.message_for_task(transfer, transfer.lock.hashlock)
+
+            # assumes that the registered task(s) tooks care of the message
+            # (used for exchanges)
+            if not found:
+                secret_request_task = EndMediatedTransferTask(
+                    raiden,
+                    asset_address,
+                    transfer,
+                )
+                secret_request_task.start()
 
         else:
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'TRANSFER TO BE MEDIATED RECEIVED node:%s %s > %s hashlock:%s [%s]',
+                    pex(self.assetmanager.raiden.address),
+                    pex(transfer.sender),
+                    pex(self.assetmanager.raiden.address),
+                    pex(transfer.lock.hashlock),
+                    repr(transfer),
+                )
+
             transfer_task = MediateTransferTask(
-                self,
+                raiden,
+                asset_address,
                 transfer,
                 0,  # TODO: calculate the fee
             )

@@ -9,11 +9,12 @@ from pyethapp.jsonrpc import address_decoder
 from secp256k1 import PrivateKey
 
 from raiden.assetmanager import AssetManager
+from raiden.transfermanager import Exchange, ExchangeKey
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
 from raiden.channelgraph import ChannelGraph
-from raiden.tasks import AlarmTask, LogListenerTask
+from raiden.tasks import AlarmTask, LogListenerTask, StartExchangeTask
 from raiden.encoding import messages
-from raiden.messages import SignedMessage
+from raiden.messages import Secret, SignedMessage
 from raiden.raiden_protocol import RaidenProtocol
 from raiden.utils import privatekey_to_address, isaddress, pex, GLOBAL_CTX
 
@@ -348,6 +349,51 @@ class RaidenAPI(object):
         netting_channel.deposit(self.raiden.address, amount)
 
         return netting_channel
+
+    def exchange(self, from_asset, from_amount, to_asset, to_amount, target_address):
+        from_asset_bin = safe_address_decode(from_asset)
+        to_asset_bin = safe_address_decode(to_asset)
+        target_bin = safe_address_decode(target_address)
+
+        from_asset_manager = self.raiden.get_manager_by_asset_address(from_asset_bin)
+        if not from_asset_manager:
+            log.error(
+                'no asset manager for %s',
+                from_asset,
+            )
+            return
+
+        to_asset_manager = self.raiden.get_manager_by_asset_address(from_asset_bin)
+        if not to_asset_manager:
+            log.error(
+                'no asset manager for %s',
+                to_asset,
+            )
+            return
+
+        task = StartExchangeTask(
+            self.raiden,
+            from_asset_bin,
+            from_amount,
+            to_asset_bin,
+            to_amount,
+            target_bin,
+        )
+        task.start()
+        return task
+
+    def expect_exchange(self, from_asset, from_amount, to_asset, to_amount, target_address):
+        exchange = Exchange(
+            from_asset,
+            from_amount,
+            target_address,
+            to_asset,
+            to_amount,
+            self.raiden.address,
+        )
+
+        asset_manager = self.raiden.get_manager_by_asset_address(from_asset)
+        asset_manager.transfermanager.exchanges[ExchangeKey(from_asset, from_amount)] = exchange
 
     def transfer_and_wait(self, asset_address, amount, target, identifier=None,
                           callback=None, timeout=None):
