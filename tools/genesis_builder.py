@@ -7,11 +7,16 @@ CLUSTER_NAME = 'raiden'
 
 GENESIS_STUB = {
     'config': {
-        'homesteadBlock': 1
+        'homesteadBlock': 1,
+        'engine': {
+            'Ethash': {
+                'durationLimit': '0x05',
+            }
+        }
     },
     'nonce': '0x0000000000000042',
     'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'difficulty': '0x40000',
+    'difficulty': '0x4',
     'coinbase': '0x0000000000000000000000000000000000000000',
     'timestamp': '0x00',
     'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',

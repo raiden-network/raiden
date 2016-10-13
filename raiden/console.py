@@ -2,6 +2,7 @@
 import cStringIO
 import json
 import sys
+import time
 from collections import defaultdict
 from logging import StreamHandler, Formatter
 
@@ -13,12 +14,12 @@ from ethereum._solidity import compile_file
 from ethereum.utils import denoms
 from gevent.event import Event
 from IPython.lib.inputhook import inputhook_manager
+from pyethapp.utils import bcolors as bc
+from pyethapp.jsonrpc import address_encoder
+from pyethapp.console_service import GeventInputHook, SigINTHandler
 
 from raiden.messages import Ping
 from raiden.utils import events, get_contract_path
-
-from pyethapp.utils import bcolors as bc
-from pyethapp.console_service import GeventInputHook, SigINTHandler
 
 # ipython needs to accept "--gui gevent" option
 IPython.core.shellapp.InteractiveShellApp.gui.values += ('gevent',)
@@ -35,7 +36,8 @@ def print_usage():
     print("\tuse `{}denoms{}` for ether calculations".format(bc.HEADER, bc.OKBLUE))
     print("\tuse `{}lastlog(n){}` to see n lines of log-output. [default 10] ".format(
         bc.HEADER, bc.OKBLUE))
-    print("\tuse `{}lasterr(n){}` to see n lines of stderr. [default 1]".format(bc.HEADER, bc.OKBLUE))
+    print("\tuse `{}lasterr(n){}` to see n lines of stderr. [default 1]".format(
+        bc.HEADER, bc.OKBLUE))
     print("\tuse `{}help(<topic>){}` for help on a specific topic.".format(bc.HEADER, bc.OKBLUE))
     print("\ttype `{}usage(){}` to see this help again.".format(bc.HEADER, bc.OKBLUE))
     print("\n" + bc.ENDC)
@@ -168,7 +170,8 @@ class ConsoleTools(object):
             decimals (int): decimal places.
             timeout (int): timeout in seconds for creation.
             gasprice (int): gasprice for the creation transaction.
-            auto_register (boolean): if True(default), automatically register the asset with raiden.
+            auto_register (boolean): if True(default), automatically register
+                the asset with raiden.
         Returns:
             token_address: the hex encoded address of the new token/asset.
         """
@@ -325,3 +328,27 @@ class ConsoleTools(object):
         # Get the netting_channel instance
         netting_channel = self._chain.netting_channel(netcontract_address)
         return events.netting_channel_events(self._chain.client, netting_channel)
+
+    def wait_for_contract(self, contract_address, timeout=None):
+        start_time = time.time()
+        result = self._raiden.chain.client.call(
+            'eth_getCode',
+            address_encoder(contract_address),
+            'latest',
+        )
+
+        current_time = time.time()
+        while result == '0x':
+            if timeout and start_time + timeout > current_time:
+                return False
+
+            result = self._raiden.chain.client.call(
+                'eth_getCode',
+                address_encoder(contract_address),
+                'latest',
+            )
+            gevent.sleep(0.5)
+
+            current_time = time.time()
+
+        return result != '0x'
