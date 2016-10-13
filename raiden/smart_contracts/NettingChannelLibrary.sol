@@ -62,6 +62,14 @@ library NettingChannelLibrary {
         _;
     }
 
+    modifier inNonceRange(Data storage self, bytes message) {
+        uint64 nonce;
+        nonce = getNonce(message);
+        if (nonce < self.opened * (2**32) || nonce > (self.opened + 1) * (2**32))
+            throw;
+        _;
+    }
+
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
@@ -200,6 +208,16 @@ library NettingChannelLibrary {
         bytes first_encoded,
         bytes second_encoded)
     {
+        uint64 nonce;
+        nonce = getNonce(firstEncoded);
+        // check if nonce is valid. 
+        // TODO should be in modifier, but "Stack too deep" error
+        if (nonce < self.opened * (2**32) || nonce > (self.opened + 1) * (2**32))
+            throw;
+        nonce = getNonce(secondEncoded);
+        if (nonce < self.opened * (2**32) || nonce > (self.opened + 1) * (2**32))
+            throw;
+
         bytes memory first_raw;
         bytes memory second_raw;
         address first_address;
@@ -567,7 +585,14 @@ library NettingChannelLibrary {
         }
     }
 
-    function signatureSplit(bytes signature) private returns (bytes32 r, bytes32 s, uint8 v) {
+    function getNonce(bytes message) private returns (uint64 nonce) {
+        // dont care about the length of message since nonce is always in fixed position
+        assembly {
+            nonce := mload(add(message, 12))
+        }
+    }
+
+    function signature_split(bytes signature) private returns (bytes32 r, bytes32 s, uint8 v) {
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.

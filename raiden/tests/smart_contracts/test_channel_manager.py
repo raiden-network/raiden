@@ -8,6 +8,7 @@ from raiden.encoding.signing import GLOBAL_CTX
 from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
 from secp256k1 import PrivateKey
 
+from raiden.tests.utils.tester import channel_from_nettingcontract
 from raiden.tests.utils.tester import new_channelmanager
 
 
@@ -140,42 +141,40 @@ def test_channelmanager(tester_state, tester_token, tester_events,
 
 def test_deleteChannel(tester_state, tester_token, tester_events,
                        tester_channelmanager_library_address, settle_timeout,
-                       netting_channel_abi, private_keys, tester_channels):
+                       netting_channel_abi, private_keys, tester_channel_manager):
     # pylint: disable=too-many-locals,too-many-statements
 
-    priv_key_raw, _, _, channel0, _ = tester_channels[0]
+    key0, key1, channel_manager, netting_contract_proxy1, channel = tester_channel_manager[0]
 
     privatekey0 = PrivateKey(private_keys[0], ctx=GLOBAL_CTX, raw=True)
-    key0 = private_keys[0]
-    key1 = private_keys[1]
+    # key0 = private_keys[0]
+    # key1 = private_keys[1]
     address0 = privatekey_to_address(key0)
     address1 = privatekey_to_address(key1)
     inexisting_address = sha3('this_does_not_exist')[:20]
 
-    assert key0 == priv_key_raw
+    # channelmanager_path = get_contract_path('ChannelManagerContract.sol')
+    # channel_manager = tester_state.abi_contract(
+        # None,
+        # path=channelmanager_path,
+        # language='solidity',
+        # constructor_parameters=[tester_token.address],
+        # contract_name='ChannelManagerContract',
+        # log_listener=tester_events.append,
+        # libraries={
+            # 'ChannelManagerLibrary': tester_channelmanager_library_address.encode('hex'),
+        # }
+    # )
 
-    channelmanager_path = get_contract_path('ChannelManagerContract.sol')
-    channel_manager = tester_state.abi_contract(
-        None,
-        path=channelmanager_path,
-        language='solidity',
-        constructor_parameters=[tester_token.address],
-        contract_name='ChannelManagerContract',
-        log_listener=tester_events.append,
-        libraries={
-            'ChannelManagerLibrary': tester_channelmanager_library_address.encode('hex'),
-        }
-    )
+    # assert len(channel_manager.getChannelsParticipants()) == 0, 'newly deployed contract must be empty'
 
-    assert len(channel_manager.getChannelsParticipants()) == 0, 'newly deployed contract must be empty'
+    # netting_channel_translator = ContractTranslator(netting_channel_abi)
 
-    netting_channel_translator = ContractTranslator(netting_channel_abi)
-
-    netting_channel_address1_hex = channel_manager.newChannel(
-        address1,
-        settle_timeout,
-        sender=key0,
-    )
+    # netting_channel_address1_hex = channel_manager.newChannel(
+        # address1,
+        # settle_timeout,
+        # sender=key0,
+    # )
 
     # should fail if settleTimeout is too low
     with pytest.raises(TransactionFailed):
@@ -191,11 +190,18 @@ def test_deleteChannel(tester_state, tester_token, tester_events,
 
     assert len(channel_manager.getChannelsParticipants()) == 2
 
-    netting_contract_proxy1 = ABIContract(
-        tester_state,
-        netting_channel_translator,
-        netting_channel_address1_hex,
-    )
+    # netting_contract_proxy1 = ABIContract(
+        # tester_state,
+        # netting_channel_translator,
+        # netting_channel_address1_hex,
+    # )
+
+    # channel = channel_from_nettingcontract(
+        # key0,
+        # netting_contract_proxy1,
+        # external_state,
+        # netting_channel_address1_hex,
+    # )
 
     assert netting_contract_proxy1.settleTimeout() == settle_timeout
 
@@ -208,13 +214,18 @@ def test_deleteChannel(tester_state, tester_token, tester_events,
     assert netting_contract_proxy1.opened(sender=key0) > 0
 
     transfer_amount = 10
-    direct_transfer = channel0.create_directtransfer(
+    direct_transfer = channel.create_directtransfer(
         transfer_amount,
         1  # TODO: fill in identifier
     )
     direct_transfer.sign(privatekey0, address0)
     direct_transfer_data = str(direct_transfer.packed().data)
 
+    print(direct_transfer.nonce)
+    should_be_nonce = netting_contract_proxy1.opened() * (2**32)
+    should_be_nonce_plus_one = (netting_contract_proxy1.opened() + 1) * (2**32)
+    assert should_be_nonce <= direct_transfer.nonce
+    assert should_be_nonce_plus_one > direct_transfer.nonce
     netting_contract_proxy1.closeSingleTransfer(direct_transfer_data, sender=key0)
 
     block_number = tester_state.block.number

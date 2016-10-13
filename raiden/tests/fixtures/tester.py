@@ -4,11 +4,14 @@ import ethereum.db
 import ethereum.blocks
 import ethereum.config
 from ethereum import tester
+from ethereum.tester import ABIContract, ContractTranslator
 from ethereum.utils import int_to_addr, zpad
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
+from secp256k1 import PrivateKey
 
 
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
+from raiden.encoding.signing import GLOBAL_CTX
 from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.tests.utils.tester import (
@@ -287,5 +290,62 @@ def tester_channels(tester_state, tester_nettingcontracts):
         result.append(
             (first_key, second_key, nettingcontract, first_channel, second_channel)
         )
+
+    return result
+
+
+@pytest.fixture
+def tester_channel_manager(tester_state, tester_nettingcontracts, tester_token, private_keys,
+                           netting_channel_abi, settle_timeout, tester_events,
+                           tester_channelmanager_library_address):
+
+    result = list()
+    key0 = private_keys[0]
+    key1 = private_keys[1]
+    address1 = privatekey_to_address(key1)
+
+    channelmanager_path = get_contract_path('ChannelManagerContract.sol')
+    channel_manager = tester_state.abi_contract(
+        None,
+        path=channelmanager_path,
+        language='solidity',
+        constructor_parameters=[tester_token.address],
+        contract_name='ChannelManagerContract',
+        log_listener=tester_events.append,
+        libraries={
+            'ChannelManagerLibrary': tester_channelmanager_library_address.encode('hex'),
+        }
+    )
+
+    assert len(channel_manager.getChannelsParticipants()) == 0, 'newly deployed contract must be empty'
+
+    netting_channel_translator = ContractTranslator(netting_channel_abi)
+
+    netting_channel_address1_hex = channel_manager.newChannel(
+        address1,
+        settle_timeout,
+        sender=key0,
+    )
+
+    netting_contract_proxy1 = ABIContract(
+        tester_state,
+        netting_channel_translator,
+        netting_channel_address1_hex,
+    )
+
+    external_state = ChannelExternalStateTester(
+        tester_state,
+        key0,
+        netting_channel_address1_hex,
+    )
+
+    channel = channel_from_nettingcontract(
+        key0,
+        netting_contract_proxy1,
+        external_state,
+        DEFAULT_REVEAL_TIMEOUT,
+    )
+
+    result.append((key0, key1, channel_manager, netting_contract_proxy1, channel))
 
     return result
