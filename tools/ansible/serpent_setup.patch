@@ -1,0 +1,18 @@
+diff --git a/setup.py b/setup.py
+index ad08aca..88d1cc9 100644
+--- a/setup.py
++++ b/setup.py
+@@ -4,9 +4,10 @@ import os
+ from distutils.sysconfig import get_config_vars
+ 
+ (opt,) = get_config_vars('OPT')
+-os.environ['OPT'] = " ".join(
+-    flag for flag in opt.split() if flag != '-Wstrict-prototypes'
+-)
++if opt is not None:
++    os.environ['OPT'] = " ".join(
++        flag for flag in opt.split() if flag != '-Wstrict-prototypes'
++    )
+ 
+ setup(
+     # Name of this package
