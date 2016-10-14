@@ -1,7 +1,9 @@
 # -*- coding: utf8 -*-
+import os
+
 from ethereum import _solidity
 from ethereum.abi import event_id, normalize_name
-from raiden.utils import get_contract_path
+from raiden.utils import get_contract_path, get_test_contract_path, get_project_root
 
 __all__ = (
     'REGISTRY_ABI',
@@ -76,12 +78,20 @@ registry_compiled = _solidity.compile_contract(
     'Registry',
     combined='abi',
 )
+
+decoder_tester_compiled = _solidity.compile_contract(
+    get_test_contract_path('DecoderTester.sol'),
+    'DecoderTester',
+    combined='abi',
+    extra_args="raiden={}".format(os.path.join(get_project_root(), "smart_contracts"))
+)
 # pylint: enable=invalid-name
 
 HUMAN_TOKEN_ABI = human_token_compiled['abi']
 CHANNEL_MANAGER_ABI = channel_manager_compiled['abi']
 NETTING_CHANNEL_ABI = netting_channel_compiled['abi']
 REGISTRY_ABI = registry_compiled['abi']
+DECODER_TESTER_ABI = decoder_tester_compiled['abi']
 
 ASSETADDED_EVENT = get_event(REGISTRY_ABI, 'AssetAdded')
 ASSETADDED_EVENTID = event_id(*get_eventname_types(ASSETADDED_EVENT))

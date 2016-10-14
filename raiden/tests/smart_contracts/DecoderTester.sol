@@ -6,6 +6,9 @@ contract DecoderTester {
     using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
 
+    // temporary, just to check if we can query a contract attribute from tests
+    uint256 public foo;
+
     modifier settleTimeoutNotTooLow(uint t) {
         if (t < 6) throw;
         _;
@@ -27,6 +30,7 @@ contract DecoderTester {
 
         data.token = Token(assetAddress);
         data.settleTimeout = timeout;
+        foo = 19;
     }
 
     function testCloseSingleTransfer(

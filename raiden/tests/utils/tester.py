@@ -7,6 +7,7 @@ from raiden.blockchain.abi import (
     NETTING_CHANNEL_ABI,
     HUMAN_TOKEN_ABI,
     REGISTRY_ABI,
+    DECODER_TESTER_ABI,
 )
 from raiden.channel import Channel, ChannelEndState
 from raiden.utils import privatekey_to_address
@@ -159,3 +160,26 @@ def new_nettingcontract(our_key, partner_key, tester_state, log_listener,
     )
 
     return nettingchannel
+
+
+def new_decodertester(our_key, partner_key, tester_state, log_listener,
+                      channelmanager, settle_timeout):
+
+    channel_address0_hex = channelmanager.newChannel(
+        privatekey_to_address(partner_key),
+        settle_timeout,
+        sender=our_key,
+    )
+    tester_state.mine(number_of_blocks=1)
+
+    decodertester_translator = tester.ContractTranslator(DECODER_TESTER_ABI)
+
+    decodertester = tester.ABIContract(
+        tester_state,
+        decodertester_translator,
+        channel_address0_hex,
+        log_listener=log_listener,
+        default_key=INVALID_KEY,
+    )
+
+    return decodertester

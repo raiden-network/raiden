@@ -1,64 +1,57 @@
 #!/usr/bin/env python
-import os
+from __future__ import print_function
 import sys
-import pytest
-import json
-from ethereum import tester, slogging
-from ethereum.utils import remove_0x_head
+import os
 
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+from ethereum import tester, slogging
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
+
+from raiden.utils import privatekey_to_address
+from raiden.tests.utils.tester import (
+    new_channelmanager,
+    new_decodertester,
+)
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-def strip_0x(value):
-    if isinstance(value, basestring):
-        return remove_0x_head(value)
-    return value
+def test_decode_singletransfer(
+        private_keys,
+        settle_timeout,
+        tester_state,
+        tester_token,
+        tester_events,
+        tester_registry):
 
+    slogging.configure(':INFO,eth.vm:TRACE')
 
-def dump(contract_paths):
-    """Create a state dump after deploying all solidity contracts from `contract_paths`
-    including only the deployed accounts.
+    start_block = tester_state.block.number
+    privatekey0 = private_keys[0]
+    privatekey1 = private_keys[1]
+    address0 = privatekey_to_address(privatekey0)
+    address1 = privatekey_to_address(privatekey1)
+    unknow_key = tester.k3
 
-    Note: if you have library dependencies, all prior contracts are supplied as
-    `--libraries` argument to `solc`, so make sure the order is right.
-    Args:
-        contract_paths (list): list of absolute paths to solidity files.
-    Returns:
-        dump (dict): dictionary containing account state of contracts to be used in genesis['alloc']
-    """
-    state = tester.state(num_accounts=1)
-    state.block.number = 1158001
-    deployed = []
-    libraries = dict()
-    for path in contract_paths:
-        contract = state.abi_contract(
-            None,
-            path=path,
-            language='solidity',
-            libraries=libraries,
-            extra_args="raiden={}".format(os.path.join(root_dir, "smart_contracts"))
-        )
-        state.mine(number_of_blocks=1)
-        libraries[os.path.split(path)[-1].split('.')[0]] = contract.address.encode('hex')
-        deployed.append(contract.address.encode('hex'))
+    channel_manager = new_channelmanager(
+        privatekey0,
+        tester_state,
+        tester_events.append,
+        tester_registry,
+        tester_token,
+    )
 
-    alloc = dict()
-    for account in deployed:
-        alloc[account] = {key: strip_0x(value)
-                          for key, value in state.block.account_to_dict(account).items()}
-    return alloc
+    dtester = new_decodertester(
+        privatekey0,
+        privatekey1,
+        tester_state,
+        tester_events.append,
+        channel_manager,
+        settle_timeout,
+    )
 
-
-if __name__ == '__main__':
-    if len(sys.argv) < 2 or '-h' in sys.argv:
-        print "Usage:\n\ttester_dump.py <solidity_contract_path>..."
-    else:
-        print json.dumps(dump(sys.argv[1:]))
-
-
-def test_stuff():
-    dump([
-        os.path.join(root_dir, "smart_contracts", "NettingChannelLibrary.sol"),
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "DecoderTester.sol")
-    ])
+    # vmtrace is at stderr, so let's see where the faulty vm trace starts
+    eprint("\n\n\n<---------------------->\n\n\n")
+    assert dtester.foo(sender=privatekey0) == 19
+    # dtester.testCloseSingleTransfer(sender=privatekey0)
