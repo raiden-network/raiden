@@ -71,7 +71,7 @@ library NettingChannelLibrary {
     }
 
     modifier ChannelSettled(Data storage self) {
-        if (self.settled == 0) throw;
+        if (!isSettled(self)) throw;
         _;
     }
 
