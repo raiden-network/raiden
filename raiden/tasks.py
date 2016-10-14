@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 import logging
 import random
 import time
@@ -437,7 +437,9 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
             pex(self.address)
         )
 
-    def _run(self):  # pylint: disable=method-hidden,too-many-locals,too-many-branches,too-many-statements
+    def _run(self):
+        # pylint: disable=method-hidden,too-many-locals,too-many-branches,too-many-statements
+
         fee = self.fee
         transfer = self.originating_transfer
 
@@ -547,6 +549,7 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
         refund_transfer = from_channel.create_refundtransfer_for(transfer)
         raiden.sign(refund_transfer)
         from_channel.register_transfer(refund_transfer)
+
         raiden.send_async(from_address, refund_transfer)
 
         log.debug(
@@ -596,13 +599,13 @@ class MediateTransferTask(Task):  # pylint: disable=too-many-instance-attributes
                 return response
 
             if isinstance(response, RefundTransfer):
+                if response.sender != next_hop:
+                    log.error('Invalid message supplied to the task. %s', repr(response))
+                    continue
+
                 return response
 
-            if response.target != raiden.address or response.sender != next_hop:
-                log.error('Invalid message supplied to the task. %s', repr(response))
-                continue
-
-            log.error('Partner sent an invalid message. {}'.format(repr(response)))
+            log.error('Partner sent an invalid message. %s', repr(response))
 
         return None
 
