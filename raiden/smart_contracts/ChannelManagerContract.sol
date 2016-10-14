@@ -121,6 +121,7 @@ contract ChannelManagerContract {
     function deleteChannel(address partner, address channelAddress) {
         data.deleteChannel(partner, channelAddress);
         ChannelDeleted(channelAddress, partner, msg.sender);
+        NettingChannelContract(channelAddress).kill();
     }
 
     function () { throw; }

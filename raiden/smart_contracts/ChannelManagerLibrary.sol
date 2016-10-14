@@ -128,7 +128,5 @@ library ChannelManagerLibrary {
 
         self.nodeChannels[msg.sender] = ourChannels;
         self.nodeChannels[partner] = partnerChannels;
-
-        // TODO: maybe call some suicide function on the channel
     }
 }
