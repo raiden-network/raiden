@@ -199,7 +199,7 @@ class LocksrootRejected(SignedMessage):
 
         if size > 1200:  # RaidenProtocol.max_message_size:
             msg = (
-                'cannot encode all the secrets, the resulting packed would be '
+                'cannot encode all the secrets, the resulting packed would be'
                 ' too large and ignored'
             )
             log.error(msg)
