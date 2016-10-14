@@ -196,14 +196,14 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             bool: True if a correspoding task is found, False otherwise.
         """
         # allow multiple managers to register for the hashlock (used for exchanges)
-        found = False
+        found = 0
 
         for asset_manager in self.managers_by_asset_address.values():
             task = asset_manager.transfermanager.transfertasks.get(hashlock)
 
             if task is not None:
                 task.on_response(message)
-                found = True
+                found += 1
 
         return found
 
