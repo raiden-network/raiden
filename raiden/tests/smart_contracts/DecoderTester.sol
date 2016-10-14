@@ -41,8 +41,8 @@ contract DecoderTester {
         uint256 expected_amount,
         bytes32 expected_locksroot,
         bytes32 expected_secret
-    ) returns (bool) {
-        data.closeSingleTransfer(msg.sender, signed_transfer);
+    ) constant returns (bool) {
+        /* data.closeSingleTransfer(msg.sender, signed_transfer); */
         return true;
     }
 

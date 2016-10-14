@@ -1,20 +1,45 @@
-#!/usr/bin/env python
-from __future__ import print_function
-import sys
+# -*- coding: utf8 -*-
 import os
 
-from ethereum import tester, slogging
+from secp256k1 import PrivateKey
+from ethereum import tester
+from raiden.utils import sha3, privatekey_to_address
+from raiden.messages import DirectTransfer
+from raiden.encoding.signing import GLOBAL_CTX
 
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-from raiden.utils import privatekey_to_address
-from raiden.tests.utils.tester import (
-    new_channelmanager,
-    new_decodertester,
-)
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+PRIVKEY = 'x' * 32
+ADDRESS = privatekey_to_address(PRIVKEY)
+HASH = sha3(PRIVKEY)
+
+
+def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
+    state = tester.state(num_accounts=1)
+    nettingchannel_lib = state.abi_contract(
+        None,
+        path=os.path.join(root_dir, "smart_contracts", "NettingChannelLibrary.sol"),
+        language='solidity'
+    )
+    state.mine(number_of_blocks=1)
+
+    decode_tester = state.abi_contract(
+        None,
+        path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "DecoderTester.sol"),
+        language='solidity',
+        libraries={
+            'NettingChannelLibrary': nettingchannel_lib.address.encode('hex')
+        },
+        constructor_parameters=(
+            asset_address,
+            address1,
+            address2,
+            settle_timeout
+        ),
+        extra_args="raiden={}".format(os.path.join(root_dir, "smart_contracts"))
+    )
+    state.mine(number_of_blocks=1)
+
+    return decode_tester
 
 
 def test_decode_singletransfer(
@@ -25,33 +50,23 @@ def test_decode_singletransfer(
         tester_events,
         tester_registry):
 
-    slogging.configure(':INFO,eth.vm:TRACE')
-
-    start_block = tester_state.block.number
     privatekey0 = private_keys[0]
     privatekey1 = private_keys[1]
     address0 = privatekey_to_address(privatekey0)
     address1 = privatekey_to_address(privatekey1)
-    unknow_key = tester.k3
 
-    channel_manager = new_channelmanager(
-        privatekey0,
-        tester_state,
-        tester_events.append,
-        tester_registry,
-        tester_token,
+    dtester = deploy_decoder_tester(tester_token.address, address0, address1, settle_timeout)
+
+    locksroot = HASH
+
+    message = DirectTransfer(
+        identifier=1,
+        nonce=2,
+        asset=tester_token.address,
+        transferred_amount=1,
+        recipient=address1,
+        locksroot=locksroot
     )
 
-    dtester = new_decodertester(
-        privatekey0,
-        privatekey1,
-        tester_state,
-        tester_events.append,
-        channel_manager,
-        settle_timeout,
-    )
-
-    # vmtrace is at stderr, so let's see where the faulty vm trace starts
-    eprint("\n\n\n<---------------------->\n\n\n")
-    assert dtester.foo(sender=privatekey0) == 19
-    # dtester.testCloseSingleTransfer(sender=privatekey0)
+    message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    assert dtester.testCloseSingleTransfer() is True
