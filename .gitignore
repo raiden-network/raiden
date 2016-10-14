@@ -1,5 +1,6 @@
 # ignore private keys
 *.pem
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -45,6 +46,9 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *,cover
+
+# Pyenv
+.python-version
 
 # Translations
 *.mo
