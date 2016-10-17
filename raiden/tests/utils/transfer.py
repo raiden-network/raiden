@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import gevent
+from gevent.event import AsyncResult
 
 from raiden.utils import sha3
 from raiden.mtree import merkleroot
@@ -68,11 +69,13 @@ def direct_transfer(initiator_app, target_app, asset, amount, identifier=None):
     )
 
 
-def mediated_transfer(initiator_app, target_app, asset, amount, identifier=None):  # pylint: disable=too-many-arguments
+def mediated_transfer(initiator_app, target_app, asset, amount, identifier=None):
     """ Nice to read shortcut to make a MediatedTransfer.
 
     The secret will be revealed and the apps will be synchronized.
     """
+    # pylint: disable=too-many-arguments
+
     assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
     has_channel = initiator_app.raiden.address in assetmanager.partneraddress_channel
 
@@ -83,14 +86,17 @@ def mediated_transfer(initiator_app, target_app, asset, amount, identifier=None)
         # function here completely skips the `transfer_async()` call.
         if not identifier:
             identifier = transfermanager.create_default_identifier(target_app.raiden.address)
+
+        result = AsyncResult()
         task = StartMediatedTransferTask(
             transfermanager,
             amount,
             identifier,
             target_app.raiden.address,
+            result,
         )
         task.start()
-        task.join()
+        result.wait()
     else:
         initiator_app.raiden.api.transfer(
             asset,
@@ -100,7 +106,7 @@ def mediated_transfer(initiator_app, target_app, asset, amount, identifier=None)
         )
 
 
-def pending_mediated_transfer(app_chain, asset, amount, identifier):
+def pending_mediated_transfer(app_chain, asset, amount, identifier, expiration):
     """ Nice to read shortcut to make a MediatedTransfer were the secret is
     _not_ revealed.
 
@@ -110,13 +116,14 @@ def pending_mediated_transfer(app_chain, asset, amount, identifier):
     Returns:
         The secret used to generate the MediatedTransfer
     """
+    # pylint: disable=too-many-locals
+
     if len(app_chain) < 2:
         raise ValueError('Cannot make a MediatedTransfer with less than two apps')
 
     fee = 0
     secret = None
     hashlock = None
-    expiration = app_chain[0].raiden.chain.block_number() + 5  # XXX:
     initiator_app = app_chain[0]
     target_app = app_chain[0]
 
@@ -126,7 +133,9 @@ def pending_mediated_transfer(app_chain, asset, amount, identifier):
 
         # use the initiator channel to generate a secret
         if secret is None:
-            secret = sha3(from_channel.external_state.netting_channel.address + str(from_channel.our_state.nonce))
+            address = from_channel.external_state.netting_channel.address
+            nonce = str(from_channel.our_state.nonce)
+            secret = sha3(address + nonce)
             hashlock = sha3(secret)
 
         transfer_ = from_channel.create_mediatedtransfer(
@@ -149,10 +158,10 @@ def claim_lock(app_chain, asset, secret):
     """ Unlock a pending transfer. """
     for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
         channel_ = channel(from_, to_, asset)
-        channel_.claim_lock(secret)
+        withdraw_or_unlock(channel_, secret)
 
         channel_ = channel(to_, from_, asset)
-        channel_.claim_lock(secret)
+        withdraw_or_unlock(channel_, secret)
 
 
 def assert_identifier_correct(initiator_app, asset, target, expected_id):
@@ -161,13 +170,26 @@ def assert_identifier_correct(initiator_app, asset, target, expected_id):
     assert got_id == expected_id
 
 
-def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1, balance1, outstanding_locks1):  # pylint: disable=too-many-arguments
+def withdraw_or_unlock(channel_, secret):
+    hashlock = sha3(secret)
+
+    if channel_.our_state.balance_proof.is_pending(hashlock):
+        channel_.withdraw_lock(secret)
+
+    if channel_.partner_state.balance_proof.is_pending(hashlock):
+        channel_.release_lock(secret)
+
+
+def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1,
+                            balance1, outstanding_locks1):
     """ Assert the values of two synched channels.
 
     Note:
         This assert does not work if for a intermediate state, were one message
         hasn't being delivered yet or has been completely lost.
     """
+    # pylint: disable=too-many-arguments
+
     total_asset = channel0.contract_balance + channel1.contract_balance
     assert total_asset == channel0.balance + channel1.balance
 
@@ -187,18 +209,30 @@ def assert_mirror(channel0, channel1):
     """ Assert that `channel0` has a correct `partner_state` to represent
     `channel1` and vice-versa.
     """
-    assert channel0.our_state.balance_proof.merkleroot_for_unclaimed() == channel1.partner_state.balance_proof.merkleroot_for_unclaimed()
+    unclaimed0 = channel0.our_state.balance_proof.merkleroot_for_unclaimed()
+    unclaimed1 = channel1.partner_state.balance_proof.merkleroot_for_unclaimed()
+    assert unclaimed0 == unclaimed1
+
     assert channel0.our_state.locked() == channel1.partner_state.locked()
     assert channel0.our_state.transferred_amount == channel1.partner_state.transferred_amount
-    assert channel0.our_state.balance(channel0.partner_state) == channel1.partner_state.balance(channel1.our_state)
+
+    balance0 = channel0.our_state.balance(channel0.partner_state)
+    balance1 = channel1.partner_state.balance(channel1.our_state)
+    assert balance0 == balance1
 
     assert channel0.distributable == channel0.our_state.distributable(channel0.partner_state)
     assert channel0.distributable == channel1.partner_state.distributable(channel1.our_state)
 
-    assert channel1.our_state.balance_proof.merkleroot_for_unclaimed() == channel0.partner_state.balance_proof.merkleroot_for_unclaimed()
+    unclaimed1 = channel1.our_state.balance_proof.merkleroot_for_unclaimed()
+    unclaimed0 = channel0.partner_state.balance_proof.merkleroot_for_unclaimed()
+    assert unclaimed1 == unclaimed0
+
     assert channel1.our_state.locked() == channel0.partner_state.locked()
     assert channel1.our_state.transferred_amount == channel0.partner_state.transferred_amount
-    assert channel1.our_state.balance(channel1.partner_state) == channel0.partner_state.balance(channel0.our_state)
+
+    balance1 = channel1.our_state.balance(channel1.partner_state)
+    balance0 = channel0.partner_state.balance(channel0.our_state)
+    assert balance1 == balance0
 
     assert channel1.distributable == channel1.our_state.distributable(channel1.partner_state)
     assert channel1.distributable == channel0.partner_state.distributable(channel0.our_state)

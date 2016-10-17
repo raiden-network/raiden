@@ -42,12 +42,14 @@ MEDIATEDTRANSFER_CMDID = 7
 REFUNDTRANSFER_CMDID = 8
 TRANSFERTIMEOUT_CMDID = 9
 CONFIRMTRANSFER_CMDID = 10
+REVEALSECRET_CMDID = 11
 
 ACK = to_bigendian(ACK_CMDID)
 PING = to_bigendian(PING_CMDID)
 LOCKSROOT_REJECTED = to_bigendian(LOCKSROOT_REJECTED_CMDID)
 SECRETREQUEST = to_bigendian(SECRETREQUEST_CMDID)
 SECRET = to_bigendian(SECRET_CMDID)
+REVEALSECRET = to_bigendian(REVEALSECRET_CMDID)
 DIRECTTRANSFER = to_bigendian(DIRECTTRANSFER_CMDID)
 LOCKEDTRANSFER = to_bigendian(LOCKEDTRANSFER_CMDID)
 MEDIATEDTRANSFER = to_bigendian(MEDIATEDTRANSFER_CMDID)
@@ -126,7 +128,8 @@ SecretRequest = namedbuffer(
         pad(3),                # [1:4]
         identifier,            # [4:12]
         hashlock,              # [12:46]
-        signature,             # [46:111]
+        amount,
+        signature,
     ]
 )
 
@@ -137,7 +140,18 @@ Secret = namedbuffer(
         pad(3),         # [1:4]
         identifier,     # [4:12]
         secret,         # [12:44]
-        signature,      # [44:109]
+        asset,
+        signature,
+    ]
+)
+
+RevealSecret = namedbuffer(
+    'reveal_secret',
+    [
+        cmdid(REVEALSECRET),  # [0:1]
+        pad(3),               # [1:4]
+        secret,               # [4:36]
+        signature,
     ]
 )
 
@@ -251,6 +265,7 @@ CMDID_MESSAGE = {
     LOCKSROOT_REJECTED: LocksrootRejected,
     SECRETREQUEST: SecretRequest,
     SECRET: Secret,
+    REVEALSECRET: RevealSecret,
     DIRECTTRANSFER: DirectTransfer,
     LOCKEDTRANSFER: LockedTransfer,
     MEDIATEDTRANSFER: MediatedTransfer,
@@ -283,7 +298,8 @@ def wrap_and_validate(data):
         return
 
     assert message_type.fields_spec[-1].name == 'signature', 'signature is not the last field'
-    message_data = message.data[:-signature.size_bytes]  # XXX: this slice must be from the end of the buffer
+    # this slice must be from the end of the buffer
+    message_data = message.data[:-signature.size_bytes]
     message_signature = message.data[-signature.size_bytes:]
 
     try:

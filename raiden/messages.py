@@ -91,7 +91,8 @@ class SignedMessage(Message):
         field = packed.fields_spec[-1]
         assert field.name == 'signature', 'signature is not the last field'
 
-        message_data = packed.data[:-field.size_bytes]  # XXX: this slice must be from the end of the buffer
+        # this slice must be from the end of the buffer
+        message_data = packed.data[:-field.size_bytes]
         signature = signing.sign(message_data, private_key)
 
         packed.data[-field.size_bytes:] = signature
@@ -122,6 +123,7 @@ class Ack(Message):
     cmdid = messages.ACK
 
     def __init__(self, sender, echo):
+        super(Ack, self).__init__()
         self.sender = sender
         self.echo = echo
 
@@ -174,7 +176,9 @@ class LocksrootRejected(SignedMessage):
     @staticmethod
     def unpack(packed):
         rejected = LocksrootRejected(packed.echo)
-        rejected.signature = packed.data[-signature_field.size_bytes:]  # XXX: this slice must be from the end of the buffer
+
+        # this slice must be from the end of the buffer
+        rejected.signature = packed.data[-signature_field.size_bytes:]
 
         # LocksrootRejected.size includes the signature size
         start = LocksrootRejectedNamedbuffer.size - signature_field.size_bytes
@@ -194,8 +198,12 @@ class LocksrootRejected(SignedMessage):
         size = LocksrootRejectedNamedbuffer.size + len(self.secrets) * secret_field.size_bytes
 
         if size > 1200:  # RaidenProtocol.max_message_size:
-            log.error('cannot encode all the secrets, the resulting packed would be too large and ignored')
-            raise RuntimeError('cannot encode all the secrets, the resulting packed would be too large and ignored')
+            msg = (
+                'cannot encode all the secrets, the resulting packed would be'
+                ' too large and ignored'
+            )
+            log.error(msg)
+            raise RuntimeError(msg)
 
         data = bytearray(size)
         data[0] = self.cmdid
@@ -221,43 +229,54 @@ class SecretRequest(SignedMessage):
     """ Requests the secret which unlocks a hashlock. """
     cmdid = messages.SECRETREQUEST
 
-    def __init__(self, identifier, hashlock):
+    def __init__(self, identifier, hashlock, amount):
         super(SecretRequest, self).__init__()
         self.identifier = identifier
         self.hashlock = hashlock
+        self.amount = amount
 
     def __repr__(self):
-        return '<{} [hashlock:{}]>'.format(
+        return '<{} [hashlock:{} amount:{}]>'.format(
             self.__class__.__name__,
             pex(self.hashlock),
+            self.amount,
         )
 
     @staticmethod
     def unpack(packed):
-        secret_request = SecretRequest(packed.identifier, packed.hashlock)
+        secret_request = SecretRequest(packed.identifier, packed.hashlock, packed.amount)
         secret_request.signature = packed.signature
         return secret_request
 
     def pack(self, packed):
         packed.identifier = self.identifier
         packed.hashlock = self.hashlock
+        packed.amount = self.amount
         packed.signature = self.signature
 
 
 class Secret(SignedMessage):
-    """ Provides the secret to a hashlock. """
+    """ Message used to do state changes on a partner Raiden Channel.
+
+    Locksroot changes need to be synchronized among both participants, the
+    protocol is for only the side unlocking to send the Secret message allowing
+    the other party to withdraw.
+    """
     cmdid = messages.SECRET
 
-    def __init__(self, identifier, secret):
+    def __init__(self, identifier, secret, asset):
         super(Secret, self).__init__()
         self.identifier = identifier
         self.secret = secret
+        self.asset = asset
         self._hashlock = None
 
     def __repr__(self):
-        return '<{} [hashlock:{} hash:{}]>'.format(
+        return '<{} [sender:{} hashlock:{} asset:{} hash:{}]>'.format(
             self.__class__.__name__,
+            pex(self.sender),
             pex(self.hashlock),
+            pex(self.asset),
             pex(self.hash),
         )
 
@@ -269,12 +288,51 @@ class Secret(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        secret = Secret(packed.identifier, packed.secret)
+        secret = Secret(packed.identifier, packed.secret, packed.asset)
         secret.signature = packed.signature
         return secret
 
     def pack(self, packed):
         packed.identifier = self.identifier
+        packed.secret = self.secret
+        packed.asset = self.asset
+        packed.signature = self.signature
+
+
+class RevealSecret(SignedMessage):
+    """ Message used to reveal a secret to party know to have interest in it.
+
+    This message is not sufficient for state changes in the raiden Channel, the
+    reason is that a node participating in split transfer or in both mediated
+    transfer for an exchange might can reveal the secret to it's partners, but
+    that must not update the internal channel state.
+    """
+    cmdid = messages.REVEALSECRET
+
+    def __init__(self, secret):
+        super(RevealSecret, self).__init__()
+        self.secret = secret
+        self._hashlock = None
+
+    def __repr__(self):
+        return '<{} [hashlock:{}]>'.format(
+            self.__class__.__name__,
+            pex(self.hashlock),
+        )
+
+    @property
+    def hashlock(self):
+        if self._hashlock is None:
+            self._hashlock = sha3(self.secret)
+        return self._hashlock
+
+    @staticmethod
+    def unpack(packed):
+        reveal_secret = RevealSecret(packed.secret)
+        reveal_secret.signature = packed.signature
+        return reveal_secret
+
+    def pack(self, packed):
         packed.secret = self.secret
         packed.signature = self.signature
 
@@ -681,6 +739,7 @@ CMDID_TO_CLASS = {
     messages.LOCKSROOT_REJECTED: LocksrootRejected,
     messages.SECRETREQUEST: SecretRequest,
     messages.SECRET: Secret,
+    messages.REVEALSECRET: RevealSecret,
     messages.DIRECTTRANSFER: DirectTransfer,
     # LockedTransfer is not intended to be sent across the wire, it is a
     # "marker" for messages with locks

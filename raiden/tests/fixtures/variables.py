@@ -2,7 +2,7 @@
 import pytest
 from ethereum.utils import sha3
 
-from raiden.raiden_service import DEFAULT_SETTLE_TIMEOUT
+from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
 from raiden.tasks import DEFAULT_EVENTS_POLL_TIMEOUT
 from raiden.network.rpc.client import DEFAULT_POLL_TIMEOUT
 from raiden.network.transport import UDPTransport
@@ -19,6 +19,12 @@ DEFAULT_DEPOSIT = 200
 def settle_timeout():
     """ NettingChannel default settle timeout. """
     return DEFAULT_SETTLE_TIMEOUT
+
+
+@pytest.fixture
+def reveal_timeout():
+    """ NettingChannel default settle timeout. """
+    return DEFAULT_REVEAL_TIMEOUT
 
 
 @pytest.fixture
