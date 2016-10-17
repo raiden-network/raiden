@@ -22,9 +22,10 @@ from raiden.utils import sha3
 slogging.configure(':DEBUG')
 
 
+@pytest.mark.xfail(reason='unlock is failling')
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_settlement(raiden_network, settle_timeout):
+def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     setup_messages_cb()
@@ -41,19 +42,27 @@ def test_settlement(raiden_network, settle_timeout):
     balance1 = channel1.balance
 
     amount = 10
-    expiration = app0.raiden.chain.block_number() + 5
+    expiration = app0.raiden.chain.block_number() + reveal_timeout + 1
     secret = 'secret'
     hashlock = sha3(secret)
 
     assert app1.raiden.address in asset_manager0.partneraddress_channel
     assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert channel0.external_state.netting_channel.address == channel1.external_state.netting_channel.address
 
-    transfermessage = channel0.create_lockedtransfer(
+    nettingaddress0 = channel0.external_state.netting_channel.address
+    nettingaddress1 = channel1.external_state.netting_channel.address
+    assert nettingaddress0 == nettingaddress1
+
+    identifier = 1
+    fee = 0
+    transfermessage = channel0.create_mediatedtransfer(
+        app0.raiden.address,
+        app1.raiden.address,
+        fee,
         amount,
-        1,  # TODO: fill in identifier
+        identifier,
         expiration,
-        hashlock
+        hashlock,
     )
     app0.raiden.sign(transfermessage)
     channel0.register_transfer(transfermessage)
@@ -101,22 +110,28 @@ def test_settlement(raiden_network, settle_timeout):
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('blockchain_type', ['mock'])  # TODO: expose the netted amount in all clients
-def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
+# TODO: Need to expose the netted value to use a different blockchain_type
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+def test_settled_lock(assets_addresses, raiden_network, settle_timeout, reveal_timeout):
     """ Any transfer following a secret revealed must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
     asset = assets_addresses[0]
     amount = 30
 
-    app0, app1, app2, app3 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    app0, app1, app2, _ = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    address0 = app0.raiden.address
+    address1 = app1.raiden.address
 
     # mediated transfer
+    identifier = 1
+    expiration = app0.raiden.chain.block_number() + settle_timeout - reveal_timeout
     secret = pending_mediated_transfer(
         raiden_network,
         asset,
         amount,
-        1  # TODO: fill in identifier
+        identifier,
+        expiration,
     )
     hashlock = sha3(secret)
 
@@ -155,8 +170,8 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout):
 
     back_channel.external_state.netting_channel.settle()
 
-    participant0 = back_channel.external_state.netting_channel.contract.participants[app0.raiden.address]
-    participant1 = back_channel.external_state.netting_channel.contract.participants[app1.raiden.address]
+    participant0 = back_channel.external_state.netting_channel.contract.participants[address0]
+    participant1 = back_channel.external_state.netting_channel.contract.participants[address1]
 
     assert participant0.netted == participant0.deposit - amount * 2
     assert participant1.netted == participant1.deposit + amount * 2

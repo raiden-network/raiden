@@ -12,6 +12,8 @@ from raiden.tests.utils.transfer import assert_synched_channels, channel
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 slogging.configure(':DEBUG')
 
+# pylint: disable=too-many-locals,too-many-statements
+
 
 def test_end_state():
     asset_address = make_address()
@@ -137,7 +139,7 @@ def test_end_state():
     assert state1.balance_proof.merkleroot_for_unclaimed() == ''
     assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
-    state2.claim_lock(state1, lock_secret)
+    state2.release_lock(state1, lock_secret)
 
     assert state1.contract_balance == balance1 + 10
     assert state2.contract_balance == balance2
@@ -157,8 +159,9 @@ def test_end_state():
     assert state2.balance_proof.merkleroot_for_unclaimed() == ''
 
 
-def test_channel():
+def test_python_channel():
     class NettingChannelMock(object):
+        # pylint: disable=no-self-use
         def opened(self):
             return 1
 
@@ -192,56 +195,56 @@ def test_channel():
         netting_channel,
     )
 
-    channel = Channel(
+    test_channel = Channel(
         our_state, partner_state, external_state,
         asset_address, reveal_timeout, settle_timeout,
     )
 
-    assert channel.contract_balance == our_state.contract_balance
-    assert channel.balance == our_state.balance(partner_state)
-    assert channel.transferred_amount == our_state.transferred_amount
-    assert channel.distributable == our_state.distributable(partner_state)
-    assert channel.outstanding == our_state.locked()
-    assert channel.outstanding == 0
-    assert channel.locked == partner_state.locked()
-    assert channel.our_state.locked() == 0
-    assert channel.partner_state.locked() == 0
+    assert test_channel.contract_balance == our_state.contract_balance
+    assert test_channel.balance == our_state.balance(partner_state)
+    assert test_channel.transferred_amount == our_state.transferred_amount
+    assert test_channel.distributable == our_state.distributable(partner_state)
+    assert test_channel.outstanding == our_state.locked()
+    assert test_channel.outstanding == 0
+    assert test_channel.locked == partner_state.locked()
+    assert test_channel.our_state.locked() == 0
+    assert test_channel.partner_state.locked() == 0
 
     with pytest.raises(ValueError):
-        channel.create_directtransfer(
+        test_channel.create_directtransfer(
             -10,
             1  # TODO: fill in identifier
         )
 
     with pytest.raises(ValueError):
-        channel.create_directtransfer(
+        test_channel.create_directtransfer(
             balance1 + 10,
             1  # TODO: fill in identifier
         )
 
     amount1 = 10
-    directtransfer = channel.create_directtransfer(
+    directtransfer = test_channel.create_directtransfer(
         amount1,
         1  # TODO: fill in identifier
     )
     directtransfer.sign(privkey1, address1)
-    channel.register_transfer(directtransfer)
+    test_channel.register_transfer(directtransfer)
 
-    assert channel.contract_balance == balance1
-    assert channel.balance == balance1 - amount1
-    assert channel.transferred_amount == amount1
-    assert channel.distributable == balance1 - amount1
-    assert channel.outstanding == 0
-    assert channel.locked == 0
-    assert channel.our_state.locked() == 0
-    assert channel.partner_state.locked() == 0
+    assert test_channel.contract_balance == balance1
+    assert test_channel.balance == balance1 - amount1
+    assert test_channel.transferred_amount == amount1
+    assert test_channel.distributable == balance1 - amount1
+    assert test_channel.outstanding == 0
+    assert test_channel.locked == 0
+    assert test_channel.our_state.locked() == 0
+    assert test_channel.partner_state.locked() == 0
 
     secret = sha3('test_channel')
     hashlock = sha3(secret)
     amount2 = 10
     fee = 0
     expiration = settle_timeout - 5
-    mediatedtransfer = channel.create_mediatedtransfer(
+    mediatedtransfer = test_channel.create_mediatedtransfer(
         address1,
         address2,
         fee,
@@ -252,27 +255,27 @@ def test_channel():
     )
     mediatedtransfer.sign(privkey1, address1)
 
-    channel.register_transfer(mediatedtransfer)
+    test_channel.register_transfer(mediatedtransfer)
 
-    assert channel.contract_balance == balance1
-    assert channel.balance == balance1 - amount1
-    assert channel.transferred_amount == amount1
-    assert channel.distributable == balance1 - amount1 - amount2
-    assert channel.outstanding == 0
-    assert channel.locked == amount2
-    assert channel.our_state.locked() == 0
-    assert channel.partner_state.locked() == amount2
+    assert test_channel.contract_balance == balance1
+    assert test_channel.balance == balance1 - amount1
+    assert test_channel.transferred_amount == amount1
+    assert test_channel.distributable == balance1 - amount1 - amount2
+    assert test_channel.outstanding == 0
+    assert test_channel.locked == amount2
+    assert test_channel.our_state.locked() == 0
+    assert test_channel.partner_state.locked() == amount2
 
-    channel.claim_lock(secret)
+    test_channel.release_lock(secret)
 
-    assert channel.contract_balance == balance1
-    assert channel.balance == balance1 - amount1 - amount2
-    assert channel.transferred_amount == amount1 + amount2
-    assert channel.distributable == balance1 - amount1 - amount2
-    assert channel.outstanding == 0
-    assert channel.locked == 0
-    assert channel.our_state.locked() == 0
-    assert channel.partner_state.locked() == 0
+    assert test_channel.contract_balance == balance1
+    assert test_channel.balance == balance1 - amount1 - amount2
+    assert test_channel.transferred_amount == amount1 + amount2
+    assert test_channel.distributable == balance1 - amount1 - amount2
+    assert test_channel.outstanding == 0
+    assert test_channel.locked == 0
+    assert test_channel.our_state.locked() == 0
+    assert test_channel.partner_state.locked() == 0
 
 
 # The following tests need more than one raiden app with different keys to test
@@ -309,7 +312,8 @@ def test_setup(raiden_network, deposit, assets_addresses):
 @pytest.mark.parametrize('deposit', [2 ** 30])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_transfers', [100])
-def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: disable=too-many-locals
+def test_interwoven_transfers(number_of_transfers, raiden_network,
+                              settle_timeout):
     """ Can keep doing transaction even if not all secrets have been released. """
     def log_state():
         unclaimed = [
@@ -339,10 +343,6 @@ def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: d
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
 
-    # to use a real blockchain is used instead of the mock implementation this
-    # needs to be fixed
-    expiration = app0.raiden.chain.block_number() + 5
-
     unclaimed_locks = []
     transfers_list = []
     transfers_claimed = []
@@ -355,6 +355,7 @@ def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: d
     distributed_amount = 0
 
     for i, (amount, secret) in enumerate(zip(transfers_amount, transfers_secret)):
+        expiration = app0.raiden.chain.block_number() + settle_timeout - 1
         locked_transfer = channel0.create_lockedtransfer(
             amount=amount,
             identifier=1,  # TODO: fill in identifier
@@ -389,8 +390,8 @@ def test_interwoven_transfers(number_of_transfers, raiden_network):  # pylint: d
             secret = transfers_secret[i - 1]
 
             # synchronized clamining
-            channel0.claim_lock(secret)
-            channel1.claim_lock(secret)
+            channel0.release_lock(secret)
+            channel1.withdraw_lock(secret)
 
             # update test state
             claimed_amount += transfer.lock.amount
@@ -425,10 +426,17 @@ def test_transfer(raiden_network, assets_addresses):
     # check agreement on addresses
     address0 = channel0.our_state.address
     address1 = channel1.our_state.address
+
+    app0_asset = app0.raiden.managers_by_asset_address.keys()[0]
+    app1_asset = app1.raiden.managers_by_asset_address.keys()[0]
+
+    app0_partners = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()
+    app1_partners = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()
+
     assert channel0.asset_address == channel1.asset_address
-    assert app0.raiden.managers_by_asset_address.keys()[0] == app1.raiden.managers_by_asset_address.keys()[0]
-    assert app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()[0] == app1.raiden.address
-    assert app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()[0] == app0.raiden.address
+    assert app0_asset == app1_asset
+    assert app1.raiden.address in app0_partners
+    assert app0.raiden.address in app1_partners
 
     netting_address = channel0.external_state.netting_channel.address
     netting_channel = app0.raiden.chain.netting_channel(netting_address)
@@ -470,7 +478,7 @@ def test_transfer(raiden_network, assets_addresses):
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_locked_transfer(raiden_network):
+def test_locked_transfer(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
@@ -482,7 +490,7 @@ def test_locked_transfer(raiden_network):
     amount = 10
 
     # reveal_timeout <= expiration < contract.lock_time
-    expiration = app0.raiden.chain.block_number() + 5
+    expiration = app0.raiden.chain.block_number() + settle_timeout - 1
 
     secret = 'secret'
     hashlock = sha3(secret)
@@ -504,8 +512,8 @@ def test_locked_transfer(raiden_network):
         channel1, balance1, [locked_transfer.lock],
     )
 
-    channel0.claim_lock(secret)
-    channel1.claim_lock(secret)
+    channel0.release_lock(secret)
+    channel1.withdraw_lock(secret)
 
     # upon revelation of the secret both balances are updated
     assert_synched_channels(
@@ -516,7 +524,7 @@ def test_locked_transfer(raiden_network):
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_register_invalid_transfer(raiden_network):
+def test_register_invalid_transfer(raiden_network, settle_timeout):
     """ Regression test for registration of invalid transfer.
 
     The bug occurred if a transfer with an invalid allowance but a valid secret
@@ -533,7 +541,7 @@ def test_register_invalid_transfer(raiden_network):
     balance1 = channel1.balance
 
     amount = 10
-    expiration = app0.raiden.chain.block_number() + 5
+    expiration = app0.raiden.chain.block_number() + settle_timeout - 1
 
     secret = 'secret'
     hashlock = sha3(secret)

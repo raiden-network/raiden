@@ -1,12 +1,12 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 import logging
 from collections import namedtuple
 from itertools import chain
 
 import gevent
+from gevent.event import Event
 from ethereum import slogging
 from ethereum.utils import encode_hex
-from gevent.event import Event
 
 from raiden.messages import (
     DirectTransfer,
@@ -181,19 +181,25 @@ class BalanceProof(object):
         if hashlock is None:
             hashlock = sha3(secret)
 
-        if not self.is_pending(hashlock):
-            raise ValueError('secret does not unlock any pending lock.')
+        if not self.is_known(hashlock):
+            raise ValueError('secret does not correspond to any known lock.')
 
-        pendinglock = self.hashlock_pendinglocks[hashlock]
-        del self.hashlock_pendinglocks[hashlock]
+        if self.is_pending(hashlock):
+            pendinglock = self.hashlock_pendinglocks[hashlock]
+            del self.hashlock_pendinglocks[hashlock]
 
-        self.hashlock_unclaimedlocks[hashlock] = UnlockPartialProof(
-            pendinglock.lock,
-            pendinglock.lockhashed,
-            secret,
-        )
+            self.hashlock_unclaimedlocks[hashlock] = UnlockPartialProof(
+                pendinglock.lock,
+                pendinglock.lockhashed,
+                secret,
+            )
+        elif log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'SECRET REGISTERED MORE THAN ONCE hashlock:%s',
+                pex(hashlock),
+            )
 
-    def claim_lock_by_secret(self, secret, hashlock=None):
+    def release_lock_by_secret(self, secret, hashlock=None):
         if hashlock is None:
             hashlock = sha3(secret)
 
@@ -246,7 +252,6 @@ class BalanceProof(object):
         lock_encoded = bytes(lock.as_bytes)
         lock_hash = sha3(lock_encoded)
         merkle_proof = [lock_hash]
-        # Why is the return value not used here?
         merkleroot(merkletree, merkle_proof)
 
         return UnlockProof(
@@ -313,14 +318,14 @@ class ChannelEndState(object):
         if isinstance(exclude, Lock):
             raise ValueError('exclude must be a Lock')
 
-        temporary_tree = list(self.balance_proof.merkletree)
+        merkletree = self.balance_proof.unclaimed_merkletree()
 
-        if exclude.hashlock not in temporary_tree:
+        if exclude.hashlock not in merkletree:
             raise ValueError('unknown lock `exclude`', exclude=exclude)
 
         exclude_hash = sha3(exclude.as_bytes)
-        temporary_tree.remove(exclude_hash)
-        root = merkleroot(temporary_tree)
+        merkletree.remove(exclude_hash)
+        root = merkleroot(merkletree)
 
         return root
 
@@ -357,7 +362,7 @@ class ChannelEndState(object):
         """
         self.balance_proof.register_secret(secret)
 
-    def claim_lock(self, partner, secret):
+    def release_lock(self, partner, secret):
         """ Update the balance by claiming a lock.
 
         This method needs to be called when the `sender` of the lock sends a
@@ -372,7 +377,7 @@ class ChannelEndState(object):
                 (or `hashlock` if given).
         """
         # Start of the critical read/write section
-        lock = self.balance_proof.claim_lock_by_secret(secret)
+        lock = self.balance_proof.release_lock_by_secret(secret)
         amount = lock.amount
         partner.transferred_amount += amount
         # end of the critical read/write section
@@ -463,6 +468,9 @@ class ChannelExternalState(object):
             return True
 
         return False
+
+    def close(self, our_address, first_transfer, second_transfer):
+        return self.netting_channel.close(our_address, first_transfer, second_transfer)
 
     def update_transfer(self, our_address, transfer):
         return self.netting_channel.update_transfer(our_address, transfer)
@@ -597,13 +605,37 @@ class Channel(object):
         save the secret in case that a proof needs to be created. This method
         can be used for any of the ends of the channel.
 
+        Note:
+            When a secret is revealed a message could be in-transit containing
+            the older lockroot, for this reason the recipient cannot update
+            it's locksroot at the moment a secret was revealed.
+
+            The protocol is to register the secret so that it can compute a
+            proof of balance, if necessary, forward the secret to the sender
+            and wait for the update from it. It's the sender duty to order the
+            current in-transit (and possible the transfers in queue) transfers
+            and the secret/locksroot update.
+
+            The channel and it's queue must be changed in sync, a transfer must
+            not be created and while we update the balance_proof.
+
         Args:
             secret: The secret that releases a locked transfer.
         """
         hashlock = sha3(secret)
 
-        # receiving a secret (releasing our funds)
-        if self.our_state.balance_proof.is_known(hashlock):
+        our_known = self.our_state.balance_proof.is_known(hashlock)
+        partner_known = self.partner_state.balance_proof.is_known(hashlock)
+
+        if not our_known and not partner_known:
+            msg = 'Secret doesnt correspond to a registered hashlock. hashlock:{} asset:{}'.format(
+                pex(hashlock),
+                pex(self.asset_address),
+            )
+
+            raise ValueError(msg)
+
+        if our_known:
             lock = self.our_state.balance_proof.get_lock_by_hashlock(hashlock)
 
             if log.isEnabledFor(logging.DEBUG):
@@ -619,8 +651,7 @@ class Channel(object):
 
             self.our_state.register_secret(secret)
 
-        # sending a secret (updating the mirror)
-        elif self.partner_state.balance_proof.is_known(hashlock):
+        if partner_known:
             lock = self.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
 
             if log.isEnabledFor(logging.DEBUG):
@@ -636,50 +667,71 @@ class Channel(object):
 
             self.partner_state.register_secret(secret)
 
-        else:
-            raise ValueError('The secret doesnt unlock any hashlock')
+    def release_lock(self, secret):
+        """ Release a lock for a transfer that was initiated from this node.
 
-    def claim_lock(self, secret):
+        Only the sender of the mediated transfer can release a lock, the
+        receiver might know the secret but it needs to wait for a message from
+        the initiator. This is because the sender needs to coordinate states
+        updates (the hashlock for the transfers that are in transit and/or in
+        queue need to be in sync with the state known by the partner).
+
+        Note:
+            Releasing a lock should always be accompained by at least one
+            Secret message to the partner node.
+
+            The node should also release the locks for the refund transfer.
+        """
         hashlock = sha3(secret)
 
-        # receiving a secret (releasing our funds)
-        if self.our_state.balance_proof.is_known(hashlock):
-            lock = self.our_state.balance_proof.get_lock_by_hashlock(hashlock)
+        if not self.partner_state.balance_proof.is_known(hashlock):
+            raise ValueError('The secret doesnt unlock any hashlock. hashlock:{} asset:{}'.format(
+                pex(hashlock),
+                pex(self.asset_address),
+            ))
 
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'ASSET UNLOCKED node:%s %s > %s asset:%s hashlock:%s lockhash:%s amount:%s',
-                    pex(self.our_state.address),
-                    pex(self.our_state.address),
-                    pex(self.partner_state.address),
-                    pex(self.asset_address),
-                    pex(hashlock),
-                    pex(sha3(lock.as_bytes)),
-                    lock.amount,
-                )
+        lock = self.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
 
-            self.our_state.claim_lock(self.partner_state, secret)
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'ASSET UNLOCKED %s > %s asset:%s hashlock:%s lockhash:%s amount:%s',
+                pex(self.our_state.address),
+                pex(self.partner_state.address),
+                pex(self.asset_address),
+                pex(hashlock),
+                pex(sha3(lock.as_bytes)),
+                lock.amount,
+            )
 
-        # sending a secret (updating the mirror)
-        elif self.partner_state.balance_proof.is_known(hashlock):
-            lock = self.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
+        self.partner_state.release_lock(self.our_state, secret)
 
-            if log.isEnabledFor(logging.DEBUG):
-                log.debug(
-                    'ASSET UNLOCKED node:%s %s > %s asset:%s hashlock:%s lockhash:%s amount:%s',
-                    pex(self.our_state.address),
-                    pex(self.partner_state.address),
-                    pex(self.our_state.address),
-                    pex(self.asset_address),
-                    pex(hashlock),
-                    pex(sha3(lock.as_bytes)),
-                    lock.amount,
-                )
+    def withdraw_lock(self, secret):
+        """ A lock was released by the sender, withdraw it's funds and update
+        the state.
+        """
+        hashlock = sha3(secret)
 
-            self.partner_state.claim_lock(self.our_state, secret)
+        if not self.our_state.balance_proof.is_known(hashlock):
+            msg = 'The secret doesnt withdraw any hashlock. hashlock:{} asset:{}'.format(
+                pex(hashlock),
+                pex(self.asset_address),
+            )
+            raise ValueError(msg)
 
-        else:
-            raise ValueError('The secret doesnt unlock any hashlock')
+        lock = self.our_state.balance_proof.get_lock_by_hashlock(hashlock)
+
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'ASSET WITHDRAWED %s < %s asset:%s hashlock:%s lockhash:%s amount:%s',
+                pex(self.our_state.address),
+                pex(self.partner_state.address),
+                pex(self.asset_address),
+                pex(hashlock),
+                pex(sha3(lock.as_bytes)),
+                lock.amount,
+            )
+
+        self.our_state.release_lock(self.partner_state, secret)
 
     def register_transfer(self, transfer):
         """ Register a signed transfer, updating the channel's state accordingly. """
@@ -926,30 +978,34 @@ class Channel(object):
         This message needs to be signed and registered with the channel before sent.
         """
         if not self.isopen:
-            raise ValueError('The channel is closed')
+            raise ValueError('The channel is closed.')
 
         block_number = self.external_state.get_block_number()
+        timeout = expiration - block_number
 
-        # expiration is not sufficient for guarantee settling
-        if expiration - block_number >= self.settle_timeout:
+        # the lock timeout cannot be larger than the settle timeout (otherwise
+        # the smart contract cannot check the locks)
+        if timeout >= self.settle_timeout:
             log.debug(
-                "Transfer expiration doesn't allow for corret settlement.",
+                'Lock expiration is larger than settle timeout.',
                 expiration=expiration,
                 block_number=block_number,
                 settle_timeout=self.settle_timeout,
             )
 
-            raise ValueError('Invalid expiration')
+            raise ValueError('Invalid expiration.')
 
-        if expiration - self.reveal_timeout < block_number:
+        # the expiration cannot be lower than the reveal timeout (otherwise we
+        # dont have enough time to listen for the ChannelSecretRevealed event)
+        if timeout <= self.reveal_timeout:
             log.debug(
-                'Expiration smaller than the minimum required.',
+                'Lock expiration is lower than reveal timeout.',
                 expiration=expiration,
                 block_number=block_number,
                 reveal_timeout=self.reveal_timeout,
             )
 
-            raise ValueError('Invalid expiration')
+            raise ValueError('Invalid expiration.')
 
         from_ = self.our_state
         to_ = self.partner_state

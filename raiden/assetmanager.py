@@ -9,14 +9,14 @@ from ethereum.utils import sha3
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.blockchain.abi import NETTING_CHANNEL_ABI
 from raiden.transfermanager import TransferManager
-from raiden.messages import Secret
+from raiden.messages import Secret, RevealSecret
 from raiden.tasks import LogListenerTask
 from raiden.utils import isaddress, pex
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class AssetManager(object):
+class AssetManager(object):  # pylint: disable=too-many-instance-attributes
     """ Manages netting contracts for a given asset. """
 
     def __init__(self, raiden, asset_address, channel_manager_address, channel_graph):
@@ -32,7 +32,12 @@ class AssetManager(object):
 
         self.partneraddress_channel = dict()  #: maps the partner address to the channel instance
         self.address_channel = dict()  #: maps the channel address to the channel instance
-        self.hashlock_channel = defaultdict(list)  #: channels that are waiting on the conditional lock
+
+        # This is a map from a hashlock to a list of channels, the same
+        # hashlock can be used in more than one AssetManager (for exchanges), a
+        # channel should be removed from this list only when the lock is
+        # released/withdrawed but not when the secret is registered.
+        self.hashlock_channel = defaultdict(list)  #: channels waiting on the conditional lock
 
         self.asset_address = asset_address
         self.channel_manager_address = channel_manager_address
@@ -89,6 +94,8 @@ class AssetManager(object):
             ValueError: If raiden.address is not one of the participants in the
                 netting channel.
         """
+        # pylint: disable=too-many-locals
+
         translator = ContractTranslator(NETTING_CHANNEL_ABI)
 
         # Race condition:
@@ -181,59 +188,135 @@ class AssetManager(object):
         if channel not in channels_registered:
             channels_registered.append(channel)
 
-    def handle_secret(self, identifier, secret):
-        """ Handle a secret that could be received from a Secret message or a
-        ChannelSecretRevealed event.
+    def register_secret(self, secret):
+        """ Register the secret with the interested channels.
+
+        Note:
+            The channel needs to be registered with
+            `register_channel_for_hashlock`.
         """
         hashlock = sha3(secret)
-        channels_reveal = self.hashlock_channel[hashlock]
+        revealsecret_message = RevealSecret(secret)
+        self.raiden.sign(revealsecret_message)
 
-        secret_message = Secret(identifier, secret)
-        self.raiden.sign(secret_message)
+        channels_list = self.hashlock_channel[hashlock]
+        for channel in channels_list:
+            channel.register_secret(secret)
 
-        while channels_reveal:
-            reveal_to = channels_reveal.pop()
+            # This will potentially be executed multiple times and could suffer
+            # from amplification, the protocol will ignore messages that were
+            # already registered and sent it only until a first Ack is
+            # received.
+            # self.raiden.send_async(
+            #     channel.partner_state.address,
+            #     revealsecret_message,
+            # )
 
-            # When a secret is revealed a message could be in-transit
-            # containing the older lockroot, for this reason the recipient
-            # cannot update it's locksroot at the moment a secret was revealed.
-            #
-            # The protocol is to register the secret so that it can compute a
-            # proof of balance, if necessary, forward the secret to the sender
-            # and wait for the update from it. It's the sender duty to order
-            # the current in-transit (and possible the transfers in queue)
-            # transfers and the secret/locksroot update.
-            #
-            # The channel and it's queue must be changed in sync, a transfer
-            # must not be created and while we update the balance_proof.
+    def handle_secret(self, identifier, secret):
+        """ Unlock locks, register the secret, and send Secret messages as
+        necessary.
 
+        This function will:
+            - Unlock the locks created by this node and send a Secret message to
+            the corresponding partner so that she can withdraw the asset.
+            - Register the secret for the locks received and reveal the secret
+            to the senders
+
+        Note:
+            The channel needs to be registered with
+            `register_channel_for_hashlock`.
+        """
+        # handling the secret needs to:
+        # - unlock the asset for all `forward_channel` (the current one
+        #   and the ones that failed with a refund)
+        # - send a message to each of the forward nodes allowing them
+        #   to withdraw the asset
+        # - register the secret for the `originating_channel` so that a
+        #   proof can be made, if necessary
+        # - reveal the secret to the `sender` node (otherwise we
+        #   cannot withdraw the asset)
+        hashlock = sha3(secret)
+        self._secret(identifier, secret, None, hashlock)
+
+    def handle_secretmessage(self, partner_secret_message):
+        """ Unlock locks, register the secret, and send Secret messages as
+        necessary.
+
+        This function will:
+            - Withdraw the lock from sender.
+            - Unlock the locks created by this node and send a Secret message to
+            the corresponding partner so that she can withdraw the asset.
+            - Register the secret for the locks received and reveal the secret
+            to the senders
+
+        Note:
+            The channel needs to be registered with
+            `register_channel_for_hashlock`.
+        """
+        secret = partner_secret_message.secret
+        identifier = partner_secret_message.identifier
+        hashlock = sha3(secret)
+        self._secret(identifier, secret, partner_secret_message, hashlock)
+
+    def _secret(self, identifier, secret, partner_secret_message, hashlock):
+        channels_list = self.hashlock_channel[hashlock]
+        channels_to_remove = list()
+
+        # Dont use the partner_secret_message.asset since it might not match with the
+        # current asset manager
+        our_secret_message = Secret(identifier, secret, self.asset_address)
+        self.raiden.sign(our_secret_message)
+
+        for channel in channels_list:
             # critical read/write section
-            # (relying on the GIL and non-blocking apis instead of an explicit
-            # lock).
+            # - the `release_lock` might raise if the `balance_proof` changes
+            #   after the check
+            # - a message created before the lock is release must be added in
+            #   the message queue before `our_secret_message`
+            # We are relying on the GIL and non-blocking apis instead of an
+            # explicit lock.
 
-            # we are the sender, so we can claim the lock/update the locksroot
-            # and add the update message into the end of the message queue, all
-            # the messages will remain consistent (including the messages
-            # in-transit and the ones that are already in the queue)
-            if reveal_to.partner_state.balance_proof.is_pending(hashlock):
-                reveal_to.claim_lock(secret)
-                self.raiden.send_async(reveal_to.partner_state.address, secret_message)
+            if channel.partner_state.balance_proof.is_unclaimed(hashlock):
+                # we are the sender, so we can release the lock once the secret
+                # is known and add the update message into the end of the
+                # message queue, all the messages will remain consistent
+                # (including the messages in-transit and the ones that are
+                # already in the queue)
+                channel.release_lock(secret)
 
-            # we are the recipient, register the secret so that a balance proof
-            # can be generate and reveal the secret to the sender. the asset
-            # will be claimed once the secret is received from the sender in
-            # the MediatedTransferTask
-            elif reveal_to.our_state.balance_proof.is_pending(hashlock):
-                reveal_to.register_secret(secret)
-                self.raiden.send_async(reveal_to.partner_state.address, secret_message)
+                # notify our partner that our state is updated and it can
+                # withdraw the asset
+                self.raiden.send_async(channel.partner_state.address, our_secret_message)
 
-            else:
-                log.error('No corresponding hashlock for the given secret.')
+                channels_to_remove.append(channel)
+
+            # we are the recipient, we can only withdraw the asset if a secret
+            # message is received from the correct sender and asset address, so
+            # withdraw if a valid message is received otherwise register the
+            # secret and reveal the secret to channel patner.
+            if channel.our_state.balance_proof.is_unclaimed(hashlock):
+                # partner_secret_message might be None
+                if partner_secret_message:
+                    valid_sender = partner_secret_message.sender == channel.partner_state.address
+                    valid_asset = partner_secret_message.asset == channel.asset_address
+
+                    if valid_sender and valid_asset:
+                        channel.withdraw_lock(secret)
+                        channels_to_remove.append(channel)
+                    else:
+                        channel.register_secret(secret)
+                        self.raiden.send_async(channel.partner_state.address, our_secret_message)
+                else:
+                    channel.register_secret(secret)
+                    self.raiden.send_async(channel.partner_state.address, our_secret_message)
             # /critical read/write section
 
-        # delete the list it wont ever be used again (unless we have a sha3
-        # collision)
-        del self.hashlock_channel[hashlock]
+        for channel in channels_to_remove:
+            channels_list.remove(channel)
+
+        # delete the list from defaultdict, it wont be used again
+        if len(channels_list) == 0:
+            del self.hashlock_channel[hashlock]
 
     def channel_isactive(self, partner_address):
         """ True if the channel with `partner_address` is open. """
@@ -248,6 +331,14 @@ class AssetManager(object):
             self.raiden.address,
             target,
         )
+
+        # XXX: consider using multiple channels for a single transfer. Useful
+        # for cases were the `amount` is larger than what is available
+        # individually in any of the channels.
+        #
+        # One possible approach is to _not_ filter these channels based on the
+        # distributable amount, but to sort them based on available balance and
+        # let the task use as many as required to finish the transfer.
 
         for path in available_paths:
             assert path[0] == self.raiden.address
@@ -282,7 +373,9 @@ class AssetManager(object):
             # the settlement period, otherwise the secret could be revealed
             # after channel is settled and he would lose the asset, or before
             # the minimum required.
-            if lock_timeout and not channel.reveal_timeout <= lock_timeout < channel.settle_timeout:
+            valid_timeout = channel.reveal_timeout <= lock_timeout < channel.settle_timeout
+
+            if lock_timeout and not valid_timeout:
                 if log.isEnabledFor(logging.INFO):
                     log.info(
                         'lock_expiration is too large, channel/path cannot be used',
