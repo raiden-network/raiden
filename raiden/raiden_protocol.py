@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 import logging
+from collections import namedtuple
 
 import gevent
 from gevent.queue import Queue
@@ -10,6 +11,11 @@ from raiden.messages import decode, Ack, SignedMessage
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+
+# - ack_result available for code that wants to block on message acknowledgment
+# - receiver_address used to tie back the echohash to the receiver (mainly for
+#   logging purposes)
+WaitAck = namedtuple('WaitAck', ('ack_result', 'receiver_address'))
 
 
 class NotifyingQueue(Event):
@@ -59,50 +65,53 @@ class RaidenProtocol(object):
         self.address_queue = dict()
         self.address_greenlet = dict()
 
+        # TODO: remove old ACKs from the dict to free memory
         # The Ack for a processed message, used to avoid re-processing a know
         # message
-        self.msghash_acks = dict()
+        self.echohash_acks = dict()
 
-        # Maps the message hash to the event set when a message is acknowledge
-        self.msghash_asyncresult = dict()
+        # Maps the echo hash `sha3(message + address)` to a WaitAck tuple
+        self.echohash_asyncresult = dict()
 
     def stop(self):
         for greenlet in self.address_greenlet.itervalues():
             greenlet.kill()
 
-        for ack_result in self.msghash_asyncresult.itervalues():
-            ack_result.set(False)
+        for waitack in self.echohash_asyncresult.itervalues():
+            waitack.ack_result.set(False)
 
         self.address_queue = dict()
         self.address_greenlet = dict()
-        self.msghash_acks = dict()
-        self.msghash_asyncresult = dict()
+        self.echohash_acks = dict()
+        self.echohash_asyncresult = dict()
 
-    def _send_queued_messages(self, receiver_address):
+    def _send_queued_messages(self, receiver_address, queue_name):
         # Note: this task can be killed at any time
 
-        queue = self.address_queue[receiver_address]
+        queue = self.address_queue[(receiver_address, queue_name)]
         host_port = self.discovery.get(receiver_address)
 
         while queue.wait():
             # avoid to reserialize the message and calculate it's hash
-            message, messagedata, messagehash = queue.get()
+            message, messagedata, echohash = queue.get()
 
-            ack_result = self.msghash_asyncresult[messagehash]
+            waitack = self.echohash_asyncresult[echohash]
 
             if log.isEnabledFor(logging.INFO):
                 log.info(
-                    'SENDING %s -> %s msghash:%s %s',
+                    'SENDING %s -> %s echohash:%s %s',
                     pex(self.raiden.address),
                     pex(receiver_address),
-                    pex(messagehash),
+                    pex(echohash),
                     message,
                 )
 
             self.transport.send(self.raiden, host_port, messagedata)
 
             retries_left = self.max_retries
-            while ack_result.wait(timeout=self.try_interval) is None:  # ack_result can be False
+
+            # ack_result can be False
+            while waitack.ack_result.wait(timeout=self.try_interval) is None:
                 retries_left -= 1
                 # TODO: fix the graph
                 # if retries_left < 1:
@@ -116,35 +125,38 @@ class RaidenProtocol(object):
 
                 if log.isEnabledFor(logging.INFO):
                     log.info(
-                        'SENDING %s -> %s msghash:%s %s',
+                        'SENDING %s -> %s echohash:%s %s',
                         pex(self.raiden.address),
                         pex(receiver_address),
-                        pex(messagehash),
+                        pex(echohash),
                         message,
                     )
 
                 self.transport.send(self.raiden, host_port, messagedata)
 
-    def _send(self, receiver_address, message, messagedata, messagehash):
-        if receiver_address not in self.address_queue:
+    def _send(self, receiver_address, queue_name, message, messagedata, echohash):
+        key = (receiver_address, queue_name)
+        if key not in self.address_queue:
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'new queue created for %s > %s',
+                    'new queue created for (%s, %s) > %s',
                     pex(self.raiden.address),
+                    pex(queue_name),
                     pex(receiver_address),
                 )
 
-            self.address_queue[receiver_address] = NotifyingQueue()
+            self.address_queue[key] = NotifyingQueue()
             self.address_greenlet[receiver_address] = gevent.spawn(
                 self._send_queued_messages,
                 receiver_address,
+                queue_name,
             )
 
-        self.address_queue[receiver_address].put(
-            (message, messagedata, messagehash),
-        )
+        # XXX: consider changing to a echohash only queue and storing the
+        # message data in echohash_asyncresult
+        self.address_queue[key].put((message, messagedata, echohash))
 
-    def _send_ack(self, host_port, messagedata, messagehash):  # pylint: disable=unused-argument
+    def _send_ack(self, host_port, messagedata):
         # ACK should not go into the queue
         self.transport.send(
             self.raiden,
@@ -163,11 +175,26 @@ class RaidenProtocol(object):
             raise ValueError('message size exceeds the maximum {}'.format(self.max_message_size))
 
         messagedata = message.encode()
-        messagehash = sha3(messagedata + receiver_address)
-        ack_result = AsyncResult()
-        self.msghash_asyncresult[messagehash] = ack_result
 
-        self._send(receiver_address, message, messagedata, messagehash)
+        # Adding the receiver address into the echohash to avoid collisions
+        # among different receivers (Messages that are not unique per receiver
+        # can result in hash colision, eg. Secret message sent to more than one
+        # node, this hash collision has the undeseried effect of aborting
+        # message resubmission once a single node replied with an Ack)
+        echohash = sha3(messagedata + receiver_address)
+
+        # Don't add the same message twice into the queue
+        if echohash not in self.echohash_asyncresult:
+            ack_result = AsyncResult()
+            self.echohash_asyncresult[echohash] = WaitAck(ack_result, receiver_address)
+
+            # state changes are local to each channel/asset
+            queue_name = getattr(message, 'asset', '')
+
+            self._send(receiver_address, queue_name, message, messagedata, echohash)
+        else:
+            waitack = self.echohash_asyncresult[echohash]
+            ack_result = waitack.ack_result
 
         return ack_result
 
@@ -185,20 +212,17 @@ class RaidenProtocol(object):
 
         host_port = self.discovery.get(receiver_address)
         messagedata = message.encode()
-        messagehash = sha3(messagedata)
 
         if log.isEnabledFor(logging.INFO):
             log.info(
-                'SENDING ACK %s > %s : [%s] [echo=%s] %s',
+                'SENDING ACK %s > %s %s',
                 pex(self.raiden.address),
                 pex(receiver_address),
-                pex(messagehash),
-                pex(message.echo),
                 message,
             )
 
-        self.msghash_acks[message.echo] = (host_port, messagedata, messagehash)
-        self._send_ack(*self.msghash_acks[message.echo])
+        self.echohash_acks[message.echo] = (host_port, messagedata)
+        self._send_ack(*self.echohash_acks[message.echo])
 
     def receive(self, data):
         # ignore large packets
@@ -206,34 +230,36 @@ class RaidenProtocol(object):
             log.error('receive packet larger than maximum size', length=len(data))
             return
 
-        msghash = sha3(data + self.raiden.address)
+        echohash = sha3(data + self.raiden.address)
 
         # check if we handled this message already, if so repeat Ack
-        if msghash in self.msghash_acks:
-            return self._send_ack(*self.msghash_acks[msghash])
+        if echohash in self.echohash_acks:
+            return self._send_ack(*self.echohash_acks[echohash])
 
         # We ignore the sending endpoint as this can not be known w/ UDP
         message = decode(data)
 
         if isinstance(message, Ack):
-            ack_result = self.msghash_asyncresult[message.echo]
+            waitack = self.echohash_asyncresult[message.echo]
 
-            if ack_result.ready():
+            if waitack.ack_result.ready():
                 if log.isEnabledFor(logging.INFO):
                     log.info(
-                        'DUPLICATED ACK RECEIVED node:%s [echo=%s]',
+                        'DUPLICATED ACK RECEIVED node:%s receiver:%s echohash:%s',
                         pex(self.raiden.address),
-                        pex(message.echo)
+                        pex(waitack.receiver_address),
+                        pex(message.echo),
                     )
             else:
                 if log.isEnabledFor(logging.INFO):
                     log.info(
-                        'ACK RECEIVED node:%s [echo=%s]',
+                        'ACK RECEIVED node:%s receiver:%s echohash:%s',
                         pex(self.raiden.address),
+                        pex(waitack.receiver_address),
                         pex(message.echo)
                     )
 
-                ack_result.set(True)
+                waitack.ack_result.set(True)
 
         elif message is not None:
             # all messages require an Ack, to send it back an address is required
@@ -241,19 +267,19 @@ class RaidenProtocol(object):
 
             if log.isEnabledFor(logging.INFO):
                 log.info(
-                    'MESSAGE RECEIVED node:%s msghash:%s %s',
+                    'MESSAGE RECEIVED node:%s echohash:%s %s',
                     pex(self.raiden.address),
-                    pex(msghash),
+                    pex(echohash),
                     message,
                 )
 
             # this might exit with an exception
-            self.raiden.on_message(message, msghash)
+            self.raiden.on_message(message, echohash)
 
             # only send the Ack if the message was handled without exceptions
             ack = Ack(
                 self.raiden.address,
-                msghash,
+                echohash,
             )
 
             self.send_ack(

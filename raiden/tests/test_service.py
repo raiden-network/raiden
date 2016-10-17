@@ -59,18 +59,14 @@ def test_ping_dropped_message(raiden_network):
 
     assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
 
-    # try failing Ack
     messages = setup_messages_cb()
     assert not messages
 
     UnreliableTransport.network.counter = 2  # first message sent, 2nd dropped
-    ping = Ping(nonce=0)
+    ping = Ping(nonce=1)
     app0.raiden.sign(ping)
     app0.raiden.protocol.send_and_wait(app1.raiden.address, ping)
     gevent.sleep(1)
-
-    for message in messages:
-        print decode(message)
 
     assert len(messages) == 4  # Ping, Ack(dropped), Ping, Ack
     for i in [0, 2]:
