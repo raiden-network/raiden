@@ -6,11 +6,18 @@ contract DecoderTester {
     using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
 
-    // temporary, just to check if we can query a contract attribute from tests
-    uint256 public foo;
+
+    bool public decoding_complete;
 
     modifier settleTimeoutNotTooLow(uint t) {
         if (t < 6) throw;
+        _;
+    }
+
+    modifier after_decoding() {
+        if (!decoding_complete) {
+            throw;
+        }
         _;
     }
 
@@ -30,20 +37,35 @@ contract DecoderTester {
 
         data.token = Token(assetAddress);
         data.settleTimeout = timeout;
-        foo = 19;
     }
 
-    function testCloseSingleTransfer(
-        bytes signed_transfer,
-        uint64 expected_nonce,
-        address expected_address,
-        address expected_recipient,
-        uint256 expected_amount,
-        bytes32 expected_locksroot,
-        bytes32 expected_secret
-    ) constant returns (bool) {
-        /* data.closeSingleTransfer(msg.sender, signed_transfer); */
+    function testDecodeDirectTransfer(bytes signed_transfer) returns (bool) {
+        data.closeSingleTransfer(msg.sender, signed_transfer);
+        decoding_complete = true;
         return true;
     }
 
+    function decodedNonce() after_decoding constant returns (uint64) {
+        return data.participants[0].nonce;
+    }
+
+    function decodedAsset() after_decoding constant returns (address) {
+        return data.participants[0].asset;
+    }
+
+    function decodedRecipient() after_decoding constant returns (address) {
+        return data.participants[0].recipient;
+    }
+
+    function decodedAmount() after_decoding constant returns (uint256) {
+        return data.participants[0].transferredAmount;
+    }
+
+    function decodedLocksroot() after_decoding constant returns (bytes32) {
+        return data.participants[0].locksroot;
+    }
+
+    function decodedSecret() after_decoding constant returns (bytes32) {
+        return data.participants[0].secret;
+    }
 }

@@ -1,8 +1,9 @@
 # -*- coding: utf8 -*-
 import os
+import binascii
 
 from secp256k1 import PrivateKey
-from ethereum import tester
+from ethereum import tester, slogging
 from raiden.utils import sha3, privatekey_to_address
 from raiden.messages import DirectTransfer
 from raiden.encoding.signing import GLOBAL_CTX
@@ -15,13 +16,14 @@ HASH = sha3(PRIVKEY)
 
 def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
     state = tester.state(num_accounts=1)
+    # make sure we are on HOMESTEAD
+    state.block.number = 1150001
     nettingchannel_lib = state.abi_contract(
         None,
         path=os.path.join(root_dir, "smart_contracts", "NettingChannelLibrary.sol"),
         language='solidity'
     )
     state.mine(number_of_blocks=1)
-
     decode_tester = state.abi_contract(
         None,
         path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "DecoderTester.sol"),
@@ -30,6 +32,9 @@ def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
             'NettingChannelLibrary': nettingchannel_lib.address.encode('hex')
         },
         constructor_parameters=(
+            # asset_address.encode('hex'),
+            # address1.encode('hex'),
+            # address2.encode('hex'),
             asset_address,
             address1,
             address2,
@@ -42,7 +47,7 @@ def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
     return decode_tester
 
 
-def test_decode_singletransfer(
+def test_decode_direct_transfer(
         private_keys,
         settle_timeout,
         tester_state,
@@ -50,7 +55,7 @@ def test_decode_singletransfer(
         tester_events,
         tester_registry):
 
-    privatekey0 = private_keys[0]
+    privatekey0 = tester.DEFAULT_KEY
     privatekey1 = private_keys[1]
     address0 = privatekey_to_address(privatekey0)
     address1 = privatekey_to_address(privatekey1)
@@ -63,10 +68,17 @@ def test_decode_singletransfer(
         identifier=1,
         nonce=2,
         asset=tester_token.address,
-        transferred_amount=1,
+        transferred_amount=1337,
         recipient=address1,
         locksroot=locksroot
     )
 
     message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
-    assert dtester.testCloseSingleTransfer() is True
+
+    assert dtester.testDecodeDirectTransfer(message.encode()) is True
+    assert dtester.decodedNonce() == 2
+
+    assert dtester.decodedAsset() == tester_token.address.encode('hex')
+    assert dtester.decodedRecipient() == address1.encode('hex')
+    assert dtester.decodedAmount() == 1337
+    assert dtester.decodedLocksroot() == locksroot
