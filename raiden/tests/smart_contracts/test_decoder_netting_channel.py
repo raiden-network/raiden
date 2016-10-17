@@ -28,9 +28,6 @@ def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
             'NettingChannelLibrary': nettingchannel_lib.address.encode('hex')
         },
         constructor_parameters=(
-            # asset_address.encode('hex'),
-            # address1.encode('hex'),
-            # address2.encode('hex'),
             asset_address,
             address1,
             address2,
