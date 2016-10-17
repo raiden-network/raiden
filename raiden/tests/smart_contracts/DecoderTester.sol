@@ -39,7 +39,7 @@ contract DecoderTester {
         data.settleTimeout = timeout;
     }
 
-    function testDecodeDirectTransfer(bytes signed_transfer) returns (bool) {
+    function testDecodeTransfer(bytes signed_transfer) returns (bool) {
         data.closeSingleTransfer(msg.sender, signed_transfer);
         decoding_complete = true;
         return true;
@@ -67,5 +67,9 @@ contract DecoderTester {
 
     function decodedSecret() after_decoding constant returns (bytes32) {
         return data.participants[0].secret;
+    }
+
+    function decodedExpiration() after_decoding constant returns (uint256) {
+        return data.participants[0].expiration;
     }
 }

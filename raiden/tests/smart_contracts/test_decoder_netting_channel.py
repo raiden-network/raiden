@@ -1,11 +1,10 @@
 # -*- coding: utf8 -*-
 import os
-import binascii
 
 from secp256k1 import PrivateKey
-from ethereum import tester, slogging
+from ethereum import tester
 from raiden.utils import sha3, privatekey_to_address
-from raiden.messages import DirectTransfer
+from raiden.messages import DirectTransfer, MediatedTransfer, Lock
 from raiden.encoding.signing import GLOBAL_CTX
 
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -75,9 +74,52 @@ def test_decode_direct_transfer(
 
     message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
 
-    assert dtester.testDecodeDirectTransfer(message.encode()) is True
+    assert dtester.testDecodeTransfer(message.encode()) is True
     assert dtester.decodedNonce() == 2
+    assert dtester.decodedAsset() == tester_token.address.encode('hex')
+    assert dtester.decodedRecipient() == address1.encode('hex')
+    assert dtester.decodedAmount() == 1337
+    assert dtester.decodedLocksroot() == locksroot
 
+
+def test_decode_mediated_transfer(
+        private_keys,
+        settle_timeout,
+        tester_state,
+        tester_token,
+        tester_events,
+        tester_registry):
+
+    privatekey0 = tester.DEFAULT_KEY
+    privatekey1 = private_keys[1]
+    address0 = privatekey_to_address(privatekey0)
+    address1 = privatekey_to_address(privatekey1)
+    address2 = privatekey_to_address(private_keys[2])
+
+    dtester = deploy_decoder_tester(tester_token.address, address0, address1, settle_timeout)
+
+    locksroot = sha3("Sikorka")
+    amount = 1337
+    expiration = 5
+    lock = Lock(amount, expiration, locksroot)
+
+    message = MediatedTransfer(
+        identifier=313151,
+        nonce=88924902,
+        asset=tester_token.address,
+        transferred_amount=amount,
+        recipient=address1,
+        locksroot=locksroot,
+        lock=lock,
+        target=address2,
+        initiator=address0
+    )
+
+    message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+
+    assert dtester.testDecodeTransfer(message.encode()) is True
+    assert dtester.decodedNonce() == 88924902
+    assert dtester.decodedExpiration() == 5
     assert dtester.decodedAsset() == tester_token.address.encode('hex')
     assert dtester.decodedRecipient() == address1.encode('hex')
     assert dtester.decodedAmount() == 1337
