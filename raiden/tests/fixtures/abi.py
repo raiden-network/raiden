@@ -6,7 +6,6 @@ from raiden.blockchain.abi import (
     CHANNEL_MANAGER_ABI,
     NETTING_CHANNEL_ABI,
     REGISTRY_ABI,
-    DECODER_TESTER_ABI,
 )
 
 
@@ -28,8 +27,3 @@ def channel_manager_abi():
 @pytest.fixture(scope='session')
 def netting_channel_abi():
     return NETTING_CHANNEL_ABI
-
-
-@pytest.fixture(scope='session')
-def decoder_test_abi():
-    return DECODER_TESTER_ABI
