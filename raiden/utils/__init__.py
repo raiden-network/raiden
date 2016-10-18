@@ -129,13 +129,3 @@ def get_contract_path(contract_name):
         contract_name
     )
     return os.path.realpath(contract_path)
-
-
-def get_test_contract_path(contract_name):
-    contract_path = os.path.join(
-        get_project_root(),
-        'tests',
-        'smart_contracts',
-        contract_name
-    )
-    return os.path.realpath(contract_path)

@@ -1,14 +1,13 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 import os
 
 from secp256k1 import PrivateKey
 from ethereum import tester
-from raiden.utils import sha3, privatekey_to_address
+from raiden.utils import sha3, privatekey_to_address, get_project_root
 from raiden.messages import DirectTransfer, Lock, MediatedTransfer, RefundTransfer
 from raiden.encoding.messages import wrap_and_validate
 from raiden.encoding.signing import GLOBAL_CTX, address_from_key
-
-root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from raiden.tests.utils.tests import get_test_contract_path
 
 
 def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
@@ -17,13 +16,13 @@ def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
     state.block.number = 1150001
     nettingchannel_lib = state.abi_contract(
         None,
-        path=os.path.join(root_dir, "smart_contracts", "NettingChannelLibrary.sol"),
+        path=os.path.join(get_project_root(), "smart_contracts", "NettingChannelLibrary.sol"),
         language='solidity'
     )
     state.mine(number_of_blocks=1)
     decode_tester = state.abi_contract(
         None,
-        path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "DecoderTester.sol"),
+        path=get_test_contract_path("DecoderTester.sol"),
         language='solidity',
         libraries={
             'NettingChannelLibrary': nettingchannel_lib.address.encode('hex')
@@ -34,7 +33,7 @@ def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
             address2,
             settle_timeout
         ),
-        extra_args="raiden={}".format(os.path.join(root_dir, "smart_contracts"))
+        extra_args="raiden={}".format(os.path.join(get_project_root(), "smart_contracts"))
     )
     state.mine(number_of_blocks=1)
 
