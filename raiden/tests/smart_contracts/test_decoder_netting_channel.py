@@ -5,7 +5,8 @@ from secp256k1 import PrivateKey
 from ethereum import tester
 from raiden.utils import sha3, privatekey_to_address
 from raiden.messages import DirectTransfer, Lock, MediatedTransfer, RefundTransfer
-from raiden.encoding.signing import GLOBAL_CTX
+from raiden.encoding.messages import wrap_and_validate
+from raiden.encoding.signing import GLOBAL_CTX, address_from_key
 
 root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -67,6 +68,9 @@ def test_decode_direct_transfer(
     )
 
     message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    _, publickey = wrap_and_validate(message.encode())
+    recovered_address = address_from_key(publickey)
+    assert recovered_address == address0
 
     assert dtester.testDecodeTransfer(message.encode()) is True
     assert dtester.decodedNonce() == 2
@@ -110,6 +114,9 @@ def test_decode_mediated_transfer(
     )
 
     message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    _, publickey = wrap_and_validate(message.encode())
+    recovered_address = address_from_key(publickey)
+    assert recovered_address == address0
 
     assert dtester.testDecodeTransfer(message.encode()) is True
     assert dtester.decodedNonce() == 88924902
@@ -151,6 +158,9 @@ def test_decode_refund_transfer(
     )
 
     message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    _, publickey = wrap_and_validate(message.encode())
+    recovered_address = address_from_key(publickey)
+    assert recovered_address == address0
 
     assert dtester.testDecodeTransfer(message.encode()) is True
     assert dtester.decodedNonce() == 4242452
