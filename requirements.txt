@@ -1,5 +1,6 @@
 pytest
 pysha3
+pycparser==2.13 # Temporary: Pin version to avoid a pycparser error: https://github.com/eliben/pycparser/issues/151
 pyethapp>=1.5.0
 ipython<5.0.0
 gevent==1.1.0
