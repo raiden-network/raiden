@@ -1045,7 +1045,7 @@ class Channel(object):
         Args:
             transfer_initiator (address): The node that requested the transfer.
             transfer_target (address): The final destination node of the transfer
-            amount (float): How much of an asset is being transfered.
+            amount (float): How much of an asset is being transferred.
             expiration (int): The maximum block number until the transfer
                 message can be received.
         """
