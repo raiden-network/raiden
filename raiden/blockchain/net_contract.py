@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 """
 A pure python implementation of a contract responsable to open a channel.
 """

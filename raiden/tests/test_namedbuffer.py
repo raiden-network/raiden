@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 
 from raiden.encoding.format import Field, namedbuffer
 from raiden.encoding.encoders import integer

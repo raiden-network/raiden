@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 import pytest
 
 from raiden.mtree import merkleroot, check_proof, get_proof, NoHash32Error

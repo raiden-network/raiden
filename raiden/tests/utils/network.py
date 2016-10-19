@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 """ Utilities to set-up a Raiden network. """
 from __future__ import print_function, division
 
