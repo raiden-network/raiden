@@ -268,7 +268,7 @@ class BaseMediatedTransferTask(Task):
 
         yield TIMEOUT
 
-    def _wait_for_unlock_or_close(self, raiden, assetmanager, channel, transfer):
+    def _wait_for_unlock_or_close(self, raiden, assetmanager, channel, mediated_transfer):  # noqa
         """ Wait for a Secret message from our partner to update the local
         state, if the Secret message is not sent within time the channel will
         be closed.
@@ -277,8 +277,14 @@ class BaseMediatedTransferTask(Task):
             Must be called only once the secret is knonw.
             Must call `on_hashlock_result` after this function returns.
         """
-        block_to_close = transfer.lock.expiration - raiden.config['reveal_timeout']
-        hashlock = transfer.lock.hashlock
+
+        if not isinstance(mediated_transfer, MediatedTransfer):
+            raise ValueError('MediatedTransfer expected.')
+
+        block_to_close = mediated_transfer.lock.expiration - raiden.config['reveal_timeout']
+        hashlock = mediated_transfer.lock.hashlock
+        identifier = mediated_transfer.identifier
+        asset = mediated_transfer.asset
 
         while channel.our_state.balance_proof.is_unclaimed(hashlock):
             current_block = raiden.chain.block_number()
@@ -308,10 +314,23 @@ class BaseMediatedTransferTask(Task):
                 pass
             else:
                 if isinstance(response, Secret):
-                    assetmanager.handle_secretmessage(response)
+                    if response.identifier == identifier and response.asset == asset:
+                        assetmanager.handle_secretmessage(response)
+                    else:
+                        assetmanager.handle_secret(identifier, response.secret)
+
+                        if log.isEnabledFor(logging.ERROR):
+                            log.error(
+                                'Invalid Secret message received, expected message'
+                                ' for asset=%s identifier=%s received=%s',
+                                asset,
+                                identifier,
+                                response,
+                            )
                 elif isinstance(response, RevealSecret):
-                    assetmanager.handle_secret(response.secret)
-                else:
+                    assetmanager.handle_secret(identifier, response.secret)
+
+                elif log.isEnabledFor(logging.ERROR):
                     log.error(
                         'Invalid message ignoring. %s %s',
                         repr(response),
@@ -831,11 +850,12 @@ class StartExchangeTask(BaseMediatedTransferTask):
     revealing the secret once the exchange can be complete.
     """
 
-    def __init__(self, raiden, from_asset, from_amount, to_asset, to_amount, target):
+    def __init__(self, identifier, raiden, from_asset, from_amount, to_asset, to_amount, target):
         # pylint: disable=too-many-arguments
 
         super(StartExchangeTask, self).__init__()
 
+        self.identifier = identifier
         self.raiden = raiden
         self.from_asset = from_asset
         self.from_amount = from_amount
@@ -852,6 +872,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
         )
 
     def _run(self):  # pylint: disable=method-hidden,too-many-locals
+        identifier = self.identifier
         raiden = self.raiden
         from_asset = self.from_asset
         from_amount = self.from_amount
@@ -890,13 +911,14 @@ class StartExchangeTask(BaseMediatedTransferTask):
                 target,
                 fee,
                 from_amount,
+                identifier,
                 lock_expiration,
                 hashlock,
             )
             raiden.sign(from_mediated_transfer)
             from_channel.register_transfer(from_mediated_transfer)
 
-            # wait for the SecretRequest and MediateTransfer
+            # wait for the SecretRequest and MediatedTransfer
             to_mediated_transfer = self.send_and_wait_valid_state(
                 raiden,
                 path,
@@ -927,8 +949,8 @@ class StartExchangeTask(BaseMediatedTransferTask):
                 )
 
                 # now the secret can be revealed forward (`from_hop`)
-                from_assetmanager.handle_secret(secret)
-                to_assetmanager.handle_secret(secret)
+                from_assetmanager.handle_secret(identifier, secret)
+                to_assetmanager.handle_secret(identifier, secret)
 
                 self._wait_for_unlock_or_close(
                     raiden,

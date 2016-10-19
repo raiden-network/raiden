@@ -17,6 +17,7 @@ from raiden.utils import pex, sha3
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 Exchange = namedtuple('Exchange', (
+    'identifier',
     'from_asset',
     'from_amount',
     'from_nodeaddress',  # the node' address of the owner of the `from_asset`
