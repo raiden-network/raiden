@@ -10,9 +10,9 @@ This is work in progress.
 
 ## Installation
 
-`python setup.py install`
+Please follow the [installation instructions in the wiki](https://github.com/raiden-network/raiden/wiki/Raiden-PoC%E2%80%900#system-dependencies).
 
-### On macOS
+### macOS specifics
 First install the system-dependecies for a successful build of the Python packages:
 
 1. `brew install pkg-config libffi automake`
