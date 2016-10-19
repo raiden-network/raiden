@@ -564,6 +564,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
         fee = self.fee
         originating_transfer = self.originating_transfer
 
+        raiden = self.raiden
         assetmanager = raiden.get_manager_by_asset_address(self.asset_address)
         transfermanager = assetmanager.transfermanager
         from_address = originating_transfer.sender

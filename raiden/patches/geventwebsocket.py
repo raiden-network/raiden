@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 import json
@@ -6,12 +7,14 @@ from geventwebsocket.protocols.wamp import WampProtocol as WampProtocolBase
 from geventwebsocket.resource import Resource as ResourceBase
 
 
-
 #  monkey patch: gevent-websocket to support 'extra' argument
-class Resource(ResourceBase):
+class Resource(ResourceBase):  # pylint: disable=too-few-public-methods
+
     def __init__(self, apps=None, extra=None):
         super(Resource, self).__init__(apps)
-        assert type(extra) is dict or None
+
+        assert isinstance(extra, (dict, type(None)))
+
         if extra is not None:
             self.extra = extra
 
@@ -24,21 +27,22 @@ class Resource(ResourceBase):
             raise Exception("No apps defined")
 
         if is_websocket_call:
-            ws = environ['wsgi.websocket']
+            websocket = environ['wsgi.websocket']
             extra = self.extra
             # here the WebSocketApplication objects get constructed
-            current_app = current_app(ws, extra)
-            current_app.ws = ws  # TODO: needed?
+            current_app = current_app(websocket, extra)
+            current_app.ws = websocket  # TODO: needed?
             current_app.handle()
             # Always return something, calling WSGI middleware may rely on it
             return []
         else:
             return current_app(environ, start_response)
 
+
 class WampProtocol(WampProtocolBase):
 
     def __init__(self, *args, **kwargs):
-        super(WampProtocol,self).__init__(*args, **kwargs)
+        super(WampProtocol, self).__init__(*args, **kwargs)
 
     def on_message(self, message):
         # FIX: handle when ws is already closed (message is None)

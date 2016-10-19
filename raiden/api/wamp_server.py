@@ -1,5 +1,5 @@
+# -*- coding: utf-8 -*-
 import os
-import json
 import types
 import inspect
 
@@ -21,7 +21,7 @@ from raiden.raiden_service import (
 
 def register_pubsub_with_callback(func=None):
     if isinstance(func, types.FunctionType):
-        func._callback_pubsub = func.__name__ + "_status"
+        func._callback_pubsub = func.__name__ + '_status'  # pylint: disable=protected-access
     return func
 
 
@@ -39,8 +39,8 @@ class WebSocketAPI(WebSocketApplication):
 
     def register_pubsub(self, topic):
         assert isinstance(topic, str)
-        self.protocol.register_pubsub(
-            "http://localhost:{}/raiden#{}".format(self.port, topic))
+        url = 'http://localhost:{}/raiden#{}'.format(self.port, topic)
+        self.protocol.register_pubsub(url)  # pylint: disable=no-member
         print 'Publish URI created: /raiden#{}'.format(topic)
 
     def on_open(self):
@@ -50,18 +50,20 @@ class WebSocketAPI(WebSocketApplication):
         # this is the place where the event topics are defined that don't correspond to
         # a callback event
 
-        self.protocol.register_object(
-            "http://localhost:{}/raiden#".format(self.port), self)
+        url = "http://localhost:{}/raiden#".format(self.port), self
+        self.protocol.register_object(url)  # pylint: disable=no-member
 
         for topic in self.event_topics:
             self.register_pubsub(topic)
+
         # register all functions in self decorated with @register_callback_pubsub
         # the uri will be the method name suffixed with '_status'
         # e.g. topic for 'transfer()' status will be '#transfer_status'
         for k in inspect.getmembers(self, inspect.ismethod):
             if '_callback_pubsub' in k[1].__dict__:
-                self.register_pubsub(k[1]._callback_pubsub)
-        print "WAMP registration complete\n"
+                self.register_pubsub(k[1]._callback_pubsub)  # pylint: disable=protected-access
+
+        print 'WAMP registration complete\n'
 
     def on_message(self, message):
         # FIXME: handle client reload/reconnect
@@ -71,7 +73,7 @@ class WebSocketAPI(WebSocketApplication):
             return
         super(WebSocketAPI, self).on_message(message)
 
-    def on_close(self, reason):
+    def on_close(self, reason):  # pylint: disable=unused-argument,arguments-differ
         print "closed"
 
     # application:
@@ -80,13 +82,18 @@ class WebSocketAPI(WebSocketApplication):
         topic name guidelines:
         'transfer_callb' - for inititated transfers (used in webui-JS)
         """
+        # pylint: disable=redefined-builtin, invalid-name
+
         data = [id, status, reason]
+
         # 7 - 'publish'
         message = [7, "http://localhost:{}/raiden#{}".format(self.port, topic), data]
         self.publish(message)
         return True
 
     def callback_with_exception(self, id, topic, reason=None):
+        # pylint: disable=redefined-builtin, invalid-name
+
         if not reason:
             reason = 'UNKNOWN'
         self.status_callback(None, False, id, topic, reason=reason)
@@ -97,8 +104,8 @@ class WebSocketAPI(WebSocketApplication):
             7 - 'WAMP publish'
         """
         print message
-        assert type(message) is list and len(message) == 3
-        self.protocol.pubsub_action(message)
+        assert isinstance(message, list) and len(message) == 3
+        self.protocol.pubsub_action(message)  # pylint: disable=no-member
 
     # refactor to API
     @export_rpc
@@ -110,15 +117,17 @@ class WebSocketAPI(WebSocketApplication):
     def get_address(self):
         return self.address
 
-    def print_callback(_, status):
+    def print_callback(self, status):  # pylint: disable=no-self-use
         print status
 
-
-    @register_pubsub_with_callback
+    @register_pubsub_with_callback  # noqa
     @export_rpc
     def transfer(self, asset_address, amount, target, callback_id):
-        """ wraps around the APIs transfer() method to introduce additional PubSub and callback features
-            To get access to the raw API method, this method would have to be renamed
+        """
+        Wraps around the APIs transfer() method to introduce additional
+        PubSub and callback features.
+
+        To get access to the raw API method, this method would have to be renamed
         """
         # TODO: check all possible errors and pass them to the WAMP-Protocol
         publish_topic = 'transfer_status'
@@ -161,7 +170,7 @@ class WebSocketAPI(WebSocketApplication):
             self.callback_with_exception(callback_id, publish_topic, reason='UNKNOWN')
             raise
 
-    def _dispatch_additional_instance_methods(self, instance):
+    def _dispatch_additional_instance_methods(self, instance):  # pylint: disable=invalid-name
         """ dispatches all methods from the api that aren't already defined in WebSocketAPI"""
         # self_methods = set([attr for attr in dir(self) if is_method(self, attr)])
         self_methods = [k[0] for k in inspect.getmembers(self, inspect.ismethod)
@@ -171,8 +180,9 @@ class WebSocketAPI(WebSocketApplication):
                             if '_callback_pubsub' in k[1].__dict__]
         methods_difference = list(set(instance_methods) - set(self_methods))
         map(export_rpc, methods_difference)
-        self.protocol.register_object(
-            "http://localhost:{}/raiden#".format(self.port), instance)  # XXX check for name collisions
+
+        url = 'http://localhost:{}/raiden#'.format(self.port)
+        self.protocol.register_object(url, instance)  # XXX check for name collisions
 
 
 class WAMPRouter(object):
@@ -185,10 +195,9 @@ class WAMPRouter(object):
         self.port = port
         self.events = events or []  # XXX check syntax
 
-    def make_static_application(self, basepath, staticdir):
+    def make_static_application(self, basepath, staticdir):  # pylint: disable=no-self-use
         def content_type(path):
-            """Guess mime-type
-            """
+            """Guess mime-type. """
 
             if path.endswith(".css"):
                 return "text/css"
@@ -201,7 +210,7 @@ class WAMPRouter(object):
             else:
                 return "application/octet-stream"
 
-        def not_found(environ, start_response):
+        def not_found(environ, start_response):  # pylint: disable=unused-argument
             start_response('404 Not Found', [('content-type', 'text/html')])
             return ["""<html><h1>Page not Found</h1><p>
                        That page is unknown. Return to
@@ -223,7 +232,7 @@ class WAMPRouter(object):
             return not_found(environ, start_response)
         return app
 
-    def serve_index(self, environ, start_response):
+    def serve_index(self, environ, start_response):  # pylint: disable=unused-argument
         path = os.path.join(self.path, 'webui/index.html')
         start_response("200 OK", [("Content-Type", "text/html")])
         return open(path).readlines()
@@ -231,23 +240,30 @@ class WAMPRouter(object):
     def run(self):
         static_path = os.path.join(self.path, 'webui')  # XXX naming
 
-        routes = [('^/static/', self.make_static_application('/static/', static_path)),
-                  ('^/$', self.serve_index),
-                  ('^/ws$', WebSocketAPI)
-                  ]
+        routes = [
+            ('^/static/', self.make_static_application('/static/', static_path)),
+            ('^/$', self.serve_index),
+            ('^/ws$', WebSocketAPI)
+        ]
 
-        data = {'raiden': self.raiden,
-                'port': self.port,
-                'events': self.events
-                }
+        data = {
+            'raiden': self.raiden,
+            'port': self.port,
+            'events': self.events
+        }
+
         resource = Resource(routes, extra=data)
 
-        server = WebSocketServer(("", self.port), resource, debug=True)
+        host_port = ('', self.port)
+        server = WebSocketServer(
+            host_port,
+            resource,
+            debug=True,
+        )
         server.serve_forever()
 
-    def stop():
+    def stop(self):
         raise NotImplementedError()
 
-"""
-Tuple index out of range when the receivers address is shorter than 40(?) chars
-"""
+
+# Tuple index out of range when the receivers address is shorter than 40(?) chars
