@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 import logging
 from collections import namedtuple
 from itertools import chain
@@ -487,6 +488,10 @@ class Channel(object):
 
     def __init__(self, our_state, partner_state, external_state,
                  asset_address, reveal_timeout, settle_timeout):
+
+        if settle_timeout <= reveal_timeout:
+            # reveal_timeout should be a fraction of the settle_timeout
+            raise ValueError('reveal_timeout can not be larger-or-equal to settle_timeout')
 
         self.our_state = our_state
         self.partner_state = partner_state

@@ -195,6 +195,16 @@ def test_python_channel():
         netting_channel,
     )
 
+    # do not allow a reveal timeout larger than the settle timeout
+    with pytest.raises(ValueError):
+        large_reveal_timeout = 50
+        small_settle_timeout = 49
+
+        test_channel = Channel(
+            our_state, partner_state, external_state, asset_address,
+            large_reveal_timeout, small_settle_timeout,
+        )
+
     test_channel = Channel(
         our_state, partner_state, external_state,
         asset_address, reveal_timeout, settle_timeout,

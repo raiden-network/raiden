@@ -676,6 +676,7 @@ class RaidenEventHandler(object):
         participant1 = address_decoder(event['participant1'])
         participant2 = address_decoder(event['participant2'])
 
+        # update our global network graph for routing
         asset_manager.channelgraph.add_path(
             participant1,
             participant2,
@@ -684,17 +685,22 @@ class RaidenEventHandler(object):
         if participant1 == self.raiden.address or participant2 == self.raiden.address:
             netting_channel_address_bin = address_decoder(event['nettingChannel'])
 
-            asset_manager.register_channel_by_address(
-                netting_channel_address_bin,
-                self.raiden.config['reveal_timeout'],
-            )
-
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'New channel created',
-                    channel_address=event['nettingChannel'],
-                    manager_address=pex(manager_address_bin),
+            try:
+                asset_manager.register_channel_by_address(
+                    netting_channel_address_bin,
+                    self.raiden.config['reveal_timeout'],
                 )
+            except ValueError:
+                # This can happen if the new channel's settle_timeout is
+                # smaller than raiden.config['reveal_timeout']
+                log.exception('Channel registration failed.')
+            else:
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'New channel created',
+                        channel_address=event['nettingChannel'],
+                        manager_address=pex(manager_address_bin),
+                    )
         else:
             log.info('ignoring new channel, this is node is not a participant.')
 
