@@ -315,8 +315,7 @@ class ChannelManagerMock(object):
 
 
 class NettingChannelMock(object):
-    def __init__(self, asset_address, peer1, peer2, settle_timeout,
-                 address=None):
+    def __init__(self, asset_address, peer1, peer2, settle_timeout, address=None):
         # pylint: disable=too-many-arguments
 
         self.address = address or make_address()

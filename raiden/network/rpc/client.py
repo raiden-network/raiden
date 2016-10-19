@@ -291,8 +291,13 @@ class Filter(object):
 
 
 class Asset(object):
-    def __init__(self, jsonrpc_client, asset_address, startgas=GAS_LIMIT,
-                 gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def __init__(
+            self,
+            jsonrpc_client,
+            asset_address,
+            startgas=GAS_LIMIT,
+            gasprice=GAS_PRICE,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
         result = jsonrpc_client.call(
@@ -428,8 +433,13 @@ class Registry(object):
 
 
 class ChannelManager(object):
-    def __init__(self, jsonrpc_client, manager_address, startgas=GAS_LIMIT,
-                 gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def __init__(
+            self,
+            jsonrpc_client,
+            manager_address,
+            startgas=GAS_LIMIT,
+            gasprice=GAS_PRICE,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
         result = jsonrpc_client.call(
@@ -550,8 +560,13 @@ class ChannelManager(object):
 
 
 class NettingChannel(object):
-    def __init__(self, jsonrpc_client, channel_address, startgas=GAS_LIMIT,
-                 gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def __init__(
+            self,
+            jsonrpc_client,
+            channel_address,
+            startgas=GAS_LIMIT,
+            gasprice=GAS_PRICE,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
         result = jsonrpc_client.call(

@@ -142,39 +142,6 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     assert netting_channel_02.detail(peer0_address)['our_balance'] == 70
     assert netting_channel_02.detail(peer2_address)['our_balance'] == 130
 
-    # TODO:
-    # we need to allow the settlement of the channel even if no transfers were
-    # made
-    # peer1_last_sent_transfer = None
-    # peer2_last_sent_transfer = None
-    # netting_channel_01.close(
-    #     peer0_address,
-    #     peer1_last_sent_transfer,
-    #     peer2_last_sent_transfer,
-    # )
-
-    # with pytest.raises(Exception):
-    #     blockchain_service0.close(
-    #         asset_address,
-    #         netting_address_02,
-    #         peer0_address,
-    #         peer1_last_sent_transfers,
-    #     )
-
-    # assert netting_channel_01.isopen() is False
-    # assert netting_channel_02.isopen() is True
-
-    # app2.raiden.chain.asset(asset_address).approve(netting_address_02, 21)
-    # app2.raiden.chain.netting_channel(netting_address_02).deposit(peer2_address, 21)
-
-    # assert netting_channel_01.isopen() is False
-    # assert netting_channel_02.isopen() is True
-
-    # netting_channel_01.update_transfer(peer1_address, peer2_last_sent_transfer)
-
-    # assert netting_channel_01.isopen() is False
-    # assert netting_channel_02.isopen() is True
-
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
