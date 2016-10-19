@@ -28,6 +28,21 @@ def _getitem_from_frame(f_locals, key, default=None):
         return default
 
 
+def to_dict(dictish):
+    """
+    Given something that closely resembles a dictionary, we attempt
+    to coerce it into a propery dictionary.
+    """
+    if hasattr(dictish, 'iterkeys'):
+        method = dictish.iterkeys
+    elif hasattr(dictish, 'keys'):
+        method = dictish.keys
+    else:
+        raise ValueError(dictish)
+
+    return dict((k, dictish[k]) for k in method())
+
+
 def get_lines_from_file(filename, lineno, context_lines, loader=None, module_name=None):
     """
     Returns context_lines before and after lineno from file.
