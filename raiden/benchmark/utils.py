@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 
 def print_serialization(pstats):  # pylint: disable=too-many-locals
@@ -16,7 +17,7 @@ def print_serialization(pstats):  # pylint: disable=too-many-locals
             # total calls count recursion
             # total time is the time for the function itself (excluding subcalls)
             # accumulated_time is the time of the function plus the subcalls
-            primitive_calls, total_calls, total_time, acc_time, callers = data  # pylint: disable=unused-variable
+            primitive_calls, total_calls, total_time, acc_time, _ = data
 
             if primitive_calls != total_calls:
                 calls = '{}/{}'.format(total_calls, primitive_calls)

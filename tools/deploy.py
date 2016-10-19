@@ -12,7 +12,12 @@ from raiden.network.rpc.client import patch_send_transaction
 
 
 # ordered list of solidity files to deploy for the raiden registry
-RAIDEN_CONTRACT_FILES = ['Token.sol', 'NettingChannelLibrary.sol', 'ChannelManagerLibrary.sol', 'Registry.sol']
+RAIDEN_CONTRACT_FILES = [
+    'Token.sol',
+    'NettingChannelLibrary.sol',
+    'ChannelManagerLibrary.sol',
+    'Registry.sol',
+]
 DISCOVERY_CONTRACT_FILES = ['EndpointRegistry.sol']
 
 

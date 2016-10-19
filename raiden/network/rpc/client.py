@@ -67,7 +67,13 @@ def patch_send_transaction(client, nonce_offset=0):
         This is necessary to support other remotes that don't support pyethapp's extended specs.
         @see https://github.com/ethereum/pyethapp/blob/develop/pyethapp/rpc_client.py#L359
         """
-        nonce = int(client.call('eth_getTransactionCount', encode_hex(sender), 'pending'), 16) + nonce_offset
+        pending_transactions_hex = client.call(
+            'eth_getTransactionCount',
+            encode_hex(sender),
+            'pending',
+        )
+        pending_transactions = int(pending_transactions_hex, 16)
+        nonce = pending_transactions + nonce_offset
 
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
         assert hasattr(client, 'privkey') and client.privkey
@@ -285,8 +291,10 @@ class Filter(object):
 
 
 class Asset(object):
-    def __init__(self, jsonrpc_client, asset_address, startgas=GAS_LIMIT,  # pylint: disable=too-many-arguments
+    def __init__(self, jsonrpc_client, asset_address, startgas=GAS_LIMIT,
                  gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
+        # pylint: disable=too-many-arguments
+
         result = jsonrpc_client.call(
             'eth_getCode',
             address_encoder(asset_address),
@@ -340,8 +348,10 @@ class Asset(object):
 
 
 class Registry(object):
-    def __init__(self, jsonrpc_client, registry_address, startgas=GAS_LIMIT,  # pylint: disable=too-many-arguments
+    def __init__(self, jsonrpc_client, registry_address, startgas=GAS_LIMIT,
                  gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
+        # pylint: disable=too-many-arguments
+
         result = jsonrpc_client.call(
             'eth_getCode',
             address_encoder(registry_address),
@@ -418,8 +428,10 @@ class Registry(object):
 
 
 class ChannelManager(object):
-    def __init__(self, jsonrpc_client, manager_address, startgas=GAS_LIMIT,  # pylint: disable=too-many-arguments
+    def __init__(self, jsonrpc_client, manager_address, startgas=GAS_LIMIT,
                  gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
+        # pylint: disable=too-many-arguments
+
         result = jsonrpc_client.call(
             'eth_getCode',
             address_encoder(manager_address),
@@ -538,8 +550,10 @@ class ChannelManager(object):
 
 
 class NettingChannel(object):
-    def __init__(self, jsonrpc_client, channel_address, startgas=GAS_LIMIT,  # pylint: disable=too-many-arguments
+    def __init__(self, jsonrpc_client, channel_address, startgas=GAS_LIMIT,
                  gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
+        # pylint: disable=too-many-arguments
+
         result = jsonrpc_client.call(
             'eth_getCode',
             address_encoder(channel_address),
@@ -671,7 +685,12 @@ class NettingChannel(object):
             )
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
-            log.info('close called', contract=pex(self.address), first_transfer=first_transfer, second_transfer=second_transfer)
+            log.info(
+                'close called',
+                contract=pex(self.address),
+                first_transfer=first_transfer,
+                second_transfer=second_transfer,
+            )
 
         elif first_transfer:
             first_encoded = first_transfer.encode()
@@ -712,10 +731,12 @@ class NettingChannel(object):
             )
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
             log.info('update_transfer called', contract=pex(self.address), transfer=transfer)
-            # TODO: check if the ChannelSecretRevealed event was emitted and if it wasn't raise an error
+            # TODO: check if the ChannelSecretRevealed event was emitted and if
+            # it wasn't raise an error
 
     def unlock(self, our_address, unlock_proofs):
-        unlock_proofs = list(unlock_proofs)  # force a list to get the length (could be a generator)
+        # force a list to get the length (could be a generator)
+        unlock_proofs = list(unlock_proofs)
         log.info(
             '%s locks to unlock',
             len(unlock_proofs),
@@ -736,11 +757,17 @@ class NettingChannel(object):
                 gasprice=self.gasprice,
             )
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-            # TODO: check if the ChannelSecretRevealed event was emitted and if it wasn't raise an error
+            # TODO: check if the ChannelSecretRevealed event was emitted and if
+            # it wasn't raise an error
 
             # if log.getEffectiveLevel() >= logging.INFO:  # only decode the lock if need to
             lock = messages.Lock.from_bytes(locked_encoded)
-            log.info('unlock called', contract=pex(self.address), lock=lock, secret=encode_hex(secret))
+            log.info(
+                'unlock called',
+                contract=pex(self.address),
+                lock=lock,
+                secret=encode_hex(secret),
+            )
 
     def settle(self):
         transaction_hash = self.proxy.settle.transact(
