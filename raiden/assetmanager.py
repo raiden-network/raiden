@@ -76,8 +76,11 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
                 node to see a secret.
 
         Raises:
-            ValueError: If raiden.address is not one of the participants in the
+            ValueError:
+                - If raiden.address is not one of the participants in the
                 netting channel.
+                - If the contract's settle_timeout is smaller than the
+                reveal_timeout.
         """
         netting_channel = self.raiden.chain.netting_channel(netting_channel_address_bin)
         self.register_channel(netting_channel, reveal_timeout)
@@ -91,8 +94,11 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
                 node to see a secret.
 
         Raises:
-            ValueError: If raiden.address is not one of the participants in the
+            ValueError:
+                - If raiden.address is not one of the participants in the
                 netting channel.
+                - If the contract's settle_timeout is smaller than the
+                reveal_timeout.
         """
         # pylint: disable=too-many-locals
 
@@ -373,14 +379,14 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
                     )
                 continue
 
-            # Our partner won't accept a locked transfer that can expire after
-            # the settlement period, otherwise the secret could be revealed
-            # after channel is settled and he would lose the asset, or before
-            # the minimum required.
-            valid_timeout = channel.reveal_timeout <= lock_timeout < channel.settle_timeout
+            if lock_timeout:
+                # Our partner won't accept a locked transfer that can expire after
+                # the settlement period, otherwise the secret could be revealed
+                # after channel is settled and he would lose the asset, or before
+                # the minimum required.
+                valid_timeout = channel.reveal_timeout <= lock_timeout < channel.settle_timeout
 
-            if lock_timeout and not valid_timeout:
-                if log.isEnabledFor(logging.INFO):
+                if not valid_timeout and log.isEnabledFor(logging.INFO):
                     log.info(
                         'lock_expiration is too large, channel/path cannot be used',
                         lock_timeout=lock_timeout,
@@ -389,6 +395,8 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
                         nodeid=pex(path[0]),
                         partner=pex(path[1]),
                     )
-                continue
+
+                if not valid_timeout:
+                    continue
 
             yield (path, channel)

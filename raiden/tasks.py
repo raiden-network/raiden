@@ -424,7 +424,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
             transfermanager.register_task_for_hashlock(self, hashlock)
             assetmanager.register_channel_for_hashlock(forward_channel, hashlock)
 
-            lock_timeout = forward_channel.settle_timeout - raiden.config['reveal_timeout']
+            lock_timeout = forward_channel.settle_timeout - forward_channel.reveal_timeout
             lock_expiration = raiden.chain.block_number() + lock_timeout
 
             mediated_transfer = forward_channel.create_mediatedtransfer(
@@ -558,11 +558,11 @@ class MediateTransferTask(BaseMediatedTransferTask):
             pex(self.asset_address),
         )
 
-    def _run(self):  # pylint: disable=method-hidden,too-many-locals
+    def _run(self):  # noqa
+        # pylint: disable=method-hidden,too-many-locals,too-many-branches,too-many-statements
         raiden = self.raiden
         fee = self.fee
         originating_transfer = self.originating_transfer
-        hashlock = originating_transfer.lock.hashlock
 
         assetmanager = raiden.get_manager_by_asset_address(self.asset_address)
         transfermanager = assetmanager.transfermanager
@@ -573,14 +573,10 @@ class MediateTransferTask(BaseMediatedTransferTask):
         transfermanager.register_task_for_hashlock(self, hashlock)
         assetmanager.register_channel_for_hashlock(originating_channel, hashlock)
 
-        lock_expiration = originating_transfer.lock.expiration - raiden.config['reveal_timeout']
-        lock_timeout = lock_expiration - raiden.chain.block_number()
-
         # there are no guarantees that the next_hop will follow the same route
         routes = assetmanager.get_best_routes(
             originating_transfer.lock.amount,
             originating_transfer.target,
-            lock_timeout,
         )
 
         if log.isEnabledFor(logging.DEBUG):
@@ -591,14 +587,83 @@ class MediateTransferTask(BaseMediatedTransferTask):
                 pex(originating_transfer.target),
             )
 
+        maximum_expiration = (
+            originating_channel.settle_timeout +
+            raiden.chain.block_number() -
+            2  # decrement as a safety measure to avoid limit errors
+        )
+
+        # Ignore locks that expire after settle_timeout
+        if originating_transfer.lock.expiration > maximum_expiration:
+            if log.isEnabledFor(logging.ERROR):
+                log.debug(
+                    'lock_expiration is too larger, ignore the mediated transfer',
+                    initiator=pex(originating_transfer.initiator),
+                    node=pex(self.address),
+                    target=pex(originating_transfer.target),
+                )
+
+            # Notes:
+            # - The node didn't send a transfer forward, so it can not lose
+            #   asset.
+            # - It's quiting early, so it wont claim the lock if the secret is
+            #   revealed.
+            # - The previous_node knowns the settle_timeout because this value
+            #   is in the smart contract.
+            # - It's not sending a RefundTransfer to the previous_node, so it
+            #   will force a retry with a new path/different hashlock, this
+            #   could make the bad behaving node lose it's fees but it will
+            #   also increase latency.
+            return
+
         for path, forward_channel in routes:
+            current_block_number = raiden.chain.block_number()
+
+            # Dont forward the mediated transfer to the next_hop if we cannot
+            # decrease the expiration by `reveal_timeout`, this is time
+            # required to learn the secret through the blockchain that needs to
+            # consider DoS attacks.
+            lock_timeout = originating_transfer.lock.expiration - current_block_number
+            if lock_timeout < forward_channel.reveal_timeout:
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'transfer.lock_expiration is smaller than'
+                        ' reveal_timeout, channel/path cannot be used',
+                        lock_timeout=originating_transfer.lock.expiration,
+                        reveal_timeout=forward_channel.reveal_timeout,
+                        settle_timeout=forward_channel.settle_timeout,
+                        nodeid=pex(path[0]),
+                        partner=pex(path[1]),
+                    )
+                continue
+
+            new_lock_timeout = lock_timeout - forward_channel.reveal_timeout
+
+            # Our partner won't accept a locked transfer that can expire after
+            # the settlement period, otherwise the secret could be revealed
+            # after channel is settled and asset would be lost, in that case
+            # decrease the expiration by an amount larger than reveal_timeout.
+            if new_lock_timeout > forward_channel.settle_timeout:
+                new_lock_timeout = forward_channel.settle_timeout - 2  # arbitrary decrement
+
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug(
+                        'lock_expiration would be too large, decrement more so'
+                        ' that the channel/path can be used',
+                        lock_timeout=lock_timeout,
+                        new_lock_timeout=new_lock_timeout,
+                        nodeid=pex(path[0]),
+                        partner=pex(path[1]),
+                    )
+
+            new_lock_expiration = current_block_number + new_lock_timeout
             mediated_transfer = forward_channel.create_mediatedtransfer(
                 originating_transfer.initiator,
                 originating_transfer.target,
                 fee,
                 originating_transfer.lock.amount,
                 originating_transfer.identifier,
-                lock_expiration,
+                new_lock_expiration,
                 hashlock,
             )
             raiden.sign(mediated_transfer)
@@ -607,12 +672,12 @@ class MediateTransferTask(BaseMediatedTransferTask):
                 log.debug(
                     'MEDIATED TRANSFER NEW PATH path:%s hashlock:%s',
                     lpex(path),
-                    pex(originating_transfer.lock.hashlock),
+                    pex(hashlock),
                 )
 
             assetmanager.register_channel_for_hashlock(
                 forward_channel,
-                originating_transfer.lock.hashlock,
+                hashlock,
             )
             forward_channel.register_transfer(mediated_transfer)
 
@@ -680,7 +745,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
                 'REFUND MEDIATED TRANSFER from=%s node:%s hashlock:%s',
                 pex(from_address),
                 pex(raiden.address),
-                pex(originating_transfer.lock.hashlock),
+                pex(hashlock),
             )
 
         refund_transfer = originating_channel.create_refundtransfer_for(
