@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 from ethereum.slogging import getLogger
 from ethereum.utils import big_endian_to_int
 
