@@ -1,4 +1,5 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
+
 from ethereum import _solidity
 from ethereum.abi import event_id, normalize_name
 from raiden.utils import get_contract_path
@@ -76,6 +77,7 @@ registry_compiled = _solidity.compile_contract(
     'Registry',
     combined='abi',
 )
+
 # pylint: enable=invalid-name
 
 HUMAN_TOKEN_ABI = human_token_compiled['abi']

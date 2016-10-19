@@ -1,6 +1,6 @@
 pragma solidity ^0.4.0;
 
-import "Token.sol";
+import "./Token.sol";
 
 library NettingChannelLibrary {
     struct Lock
@@ -492,7 +492,7 @@ library NettingChannelLibrary {
     }
 
     function assignRefundTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 188) {
+        if (message.length != 196) {
             throw;
         }
 
@@ -508,15 +508,15 @@ library NettingChannelLibrary {
         assembly {
             // cmdid [0:1]
             // pad [1:4]
-            nonce := mload(add(message, 12))        // nonce [4:12]
+            nonce := mload(add(message, 12))                // nonce [4:12]
             // identifier [12:20]
-            expiration := mload(add(message, 28))   // expiration [20:28]
-            asset := mload(add(message, 48))        // asset [28:48]
-            recipient := mload(add(message, 68))    // recipient [48:68]
-            locksroot := mload(add(message, 92))    // locksroot [68:100]
-            transferredAmount := mload(add(message, 132)) // transferred_amount [100:132]
-            lockAmount := mload(add(message, 164))  // amount [132:164]
-            hashlock := mload(add(message, 196))    // hashlock [164:196]
+            expiration := mload(add(message, 28))           // expiration [20:28]
+            asset := mload(add(message, 48))                // asset [28:48]
+            recipient := mload(add(message, 68))            // recipient [48:68]
+            locksroot := mload(add(message, 100))           // locksroot [68:100]
+            transferredAmount := mload(add(message, 132))   // transferred_amount [100:132]
+            lockAmount := mload(add(message, 164))          // amount [132:164]
+            hashlock := mload(add(message, 196))            // hashlock [164:196]
         }
 
         participant.nonce = nonce;
