@@ -382,8 +382,14 @@ class RaidenAPI(object):
         task.start()
         return task
 
-    def expect_exchange(self, identifier, from_asset, from_amount, to_asset,
-                        to_amount, target_address):
+    def expect_exchange(
+            self,
+            identifier,
+            from_asset,
+            from_amount,
+            to_asset,
+            to_amount,
+            target_address):
 
         exchange = Exchange(
             identifier,
