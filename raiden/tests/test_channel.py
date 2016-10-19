@@ -15,6 +15,33 @@ slogging.configure(':DEBUG')
 # pylint: disable=too-many-locals,too-many-statements
 
 
+class NettingChannelMock(object):
+    # pylint: disable=no-self-use
+    def opened(self):
+        return 1
+
+    def closed(self):
+        return 0
+
+    def settled(self):
+        return 0
+
+
+def make_external_state():
+    block_alarm = list()
+    channel_for_hashlock = list()
+    netting_channel = NettingChannelMock()
+
+    external_state = ChannelExternalState(
+        block_alarm.append,
+        lambda *args: channel_for_hashlock.append(args),
+        lambda: 1,
+        netting_channel,
+    )
+
+    return external_state
+
+
 def test_end_state():
     asset_address = make_address()
     privkey1, address1 = make_privkey_address()
@@ -159,18 +186,45 @@ def test_end_state():
     assert state2.balance_proof.merkleroot_for_unclaimed() == ''
 
 
+def test_invalid_timeouts():
+    asset_address = make_address()
+    reveal_timeout = 5
+    settle_timeout = 15
+
+    address1 = make_address()
+    address2 = make_address()
+    balance1 = 10
+    balance2 = 10
+
+    our_state = ChannelEndState(address1, balance1)
+    partner_state = ChannelEndState(address2, balance2)
+    external_state = make_external_state()
+
+    # do not allow a reveal timeout larger than the settle timeout
+    with pytest.raises(ValueError):
+        large_reveal_timeout = 50
+        small_settle_timeout = 49
+
+        Channel(
+            our_state, partner_state, external_state, asset_address,
+            large_reveal_timeout, small_settle_timeout,
+        )
+
+    for invalid_value in (-1, 0, 1.1, 1.0, 'a', [], {}):
+        with pytest.raises(ValueError):
+            Channel(
+                our_state, partner_state, external_state, asset_address,
+                invalid_value, settle_timeout,
+            )
+
+        with pytest.raises(ValueError):
+            Channel(
+                our_state, partner_state, external_state, asset_address,
+                reveal_timeout, invalid_value,
+            )
+
+
 def test_python_channel():
-    class NettingChannelMock(object):
-        # pylint: disable=no-self-use
-        def opened(self):
-            return 1
-
-        def closed(self):
-            return 0
-
-        def settled(self):
-            return 0
-
     asset_address = make_address()
     privkey1, address1 = make_privkey_address()
     address2 = make_address()
@@ -183,27 +237,7 @@ def test_python_channel():
 
     our_state = ChannelEndState(address1, balance1)
     partner_state = ChannelEndState(address2, balance2)
-
-    block_alarm = list()
-    channel_for_hashlock = list()
-    netting_channel = NettingChannelMock()
-
-    external_state = ChannelExternalState(
-        block_alarm.append,
-        lambda *args: channel_for_hashlock.append(args),
-        lambda: 1,
-        netting_channel,
-    )
-
-    # do not allow a reveal timeout larger than the settle timeout
-    with pytest.raises(ValueError):
-        large_reveal_timeout = 50
-        small_settle_timeout = 49
-
-        test_channel = Channel(
-            our_state, partner_state, external_state, asset_address,
-            large_reveal_timeout, small_settle_timeout,
-        )
+    external_state = make_external_state()
 
     test_channel = Channel(
         our_state, partner_state, external_state,

@@ -493,6 +493,23 @@ class Channel(object):
             # reveal_timeout should be a fraction of the settle_timeout
             raise ValueError('reveal_timeout can not be larger-or-equal to settle_timeout')
 
+        if reveal_timeout < 1:
+            # For a mediated transfer to work the expiration needs to decrease
+            # at each hop, this is what forces the next hop to reveal the
+            # secret before the previous transfer expires.
+            #
+            # This should include the *worst case* for a block with a revealed
+            # secret to propagate until this node can learn about the it /plus/
+            # the *worst case* for a transaction from this node that unlock the
+            # previous transfer to be mined.
+            raise ValueError('reveal_timeout must be at least 1')
+
+        if not isinstance(settle_timeout, (int, long)):
+            raise ValueError('settle_timeout must be integral')
+
+        if not isinstance(reveal_timeout, (int, long)):
+            raise ValueError('reveal_timeout must be integral')
+
         self.our_state = our_state
         self.partner_state = partner_state
 
