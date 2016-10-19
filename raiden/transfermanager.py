@@ -153,13 +153,13 @@ class TransferManager(object):
             return async_result
 
     def _direct_or_mediated_transfer(self, amount, identifier, direct_channel, callback):
-        """ Check the direct channel and if possible use it, otherwise started
-        a mediated transfer.
+        """ Check the direct channel and if possible use it, otherwise start a
+        mediated transfer.
         """
 
         if not direct_channel.isopen:
             log.info(
-                'DIRECT CHANNEL %s > %s is close',
+                'DIRECT CHANNEL %s > %s is closed',
                 pex(direct_channel.our_state.address),
                 pex(direct_channel.partner_state.address),
             )

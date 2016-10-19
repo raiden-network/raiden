@@ -274,7 +274,7 @@ class BaseMediatedTransferTask(Task):
         be closed.
 
         Note:
-            Must be called only once the secret is knonw.
+            Must be called only once the secret is known.
             Must call `on_hashlock_result` after this function returns.
         """
 
@@ -344,7 +344,7 @@ class BaseMediatedTransferTask(Task):
         can be done through B and C will wait for/send a timeout, for that
         reason B must not unregister the hashlock from the transfermanager
         until the lock has expired, otherwise the revealed secret wouldnt be
-        catched.
+        caught.
         """
         # pylint: disable=no-self-use
 
@@ -470,22 +470,21 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
                         secret,
                     )
 
-                    # call the callbacks and de-register the task
+                    # call the callbacks and unregister the task
                     transfermanager.on_hashlock_result(hashlock, True)
 
                     # the transfer is done when the lock is unlocked and the Secret
                     # message is sent (doesn't imply the other nodes in the chain
-                    # have unlocked/withdrawed)
+                    # have unlocked/withdrawn)
                     self.done_result.set(True)
 
                     return
 
-                # someone down the line timedout / couldn't proceed, try next
-                # path, remove the hashlock from
+                # someone down the line timed out / couldn't proceed, try next
+                # path, stop listening for messages for the current hashlock
                 else:
                     # the initiator can unregister right away because it knowns
                     # no one else can reveal the secret
-                    # stop listening for messages with the hashlock
                     transfermanager.on_hashlock_result(hashlock, False)
                     del assetmanager.hashlock_channel[hashlock]
                     break
@@ -727,7 +726,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
 
 
 class EndMediatedTransferTask(BaseMediatedTransferTask):
-    """ Task that request a secret for a registered transfer. """
+    """ Task that requests a secret for a registered transfer. """
 
     def __init__(self, raiden, asset_address, originating_transfer):
         super(EndMediatedTransferTask, self).__init__()
@@ -928,7 +927,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             )
 
             if to_mediated_transfer is None:
-                # the initiator can deregister right away since it knows the
+                # the initiator can unregister right away since it knows the
                 # secret wont be revealed
                 from_transfermanager.on_hashlock_result(hashlock, False)
                 del from_assetmanager.hashlock_channel[hashlock]
@@ -962,12 +961,17 @@ class StartExchangeTask(BaseMediatedTransferTask):
                 from_transfermanager.on_hashlock_result(hashlock, True)
                 self.done_result.set(True)
 
-    def send_and_wait_valid_state(self, raiden, path, from_asset_transfer,  # noqa
-                                  to_asset, to_amount):
+    def send_and_wait_valid_state(  # noqa
+            self,
+            raiden,
+            path,
+            from_asset_transfer,
+            to_asset,
+            to_amount):
         """ Start the exchange by sending the first mediated transfer to the
-        taker and wait for mediated transfer for the exchagend asset.
+        taker and wait for mediated transfer for the exchanged asset.
 
-        This method will validate the messages received, discards the invalid
+        This method will validate the messages received, discard the invalid
         ones, and wait until a valid state is reached. The valid state is
         reached when a mediated transfer for `to_asset` with `to_amount` tokens
         and a SecretRequest from the taker are received.
@@ -975,7 +979,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
         Returns:
             None: when the timeout was reached.
             MediatedTransfer: when a valid state is reached.
-            RefundTransfer/TransferTimeout: when a invalid state is reached by
+            RefundTransfer/TransferTimeout: when an invalid state is reached by
                 our partner.
         """
         # pylint: disable=too-many-arguments
@@ -1167,7 +1171,7 @@ class ExchangeTask(BaseMediatedTransferTask):
                 )
 
             # Using assetmanager to register the interest because it outlives
-            # this task, the secret handling will happend only _once_
+            # this task, the secret handling will happen only _once_
             to_assetmanager.register_channel_for_hashlock(
                 to_channel,
                 hashlock,

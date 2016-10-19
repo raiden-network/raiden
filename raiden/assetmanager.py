@@ -307,7 +307,7 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
                         channel.withdraw_lock(secret)
                         channels_to_remove.append(channel)
                     else:
-                        # assume our partner dont know the secret and reveal it
+                        # assume our partner does not know the secret and reveal it
                         channel.register_secret(secret)
                         self.raiden.send_async(channel.partner_state.address, revealsecret_message)
                 else:
