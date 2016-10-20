@@ -418,6 +418,8 @@ library NettingChannelLibrary {
 
         if (!self.token.transfer(node1.nodeAddress, node1.netted)) throw;
         if (!self.token.transfer(node2.nodeAddress, node2.netted)) throw;
+        
+        kill(self);
     }
 
     function getTransferRawAddress(bytes memory signed_transfer) private returns (bytes memory, address) {

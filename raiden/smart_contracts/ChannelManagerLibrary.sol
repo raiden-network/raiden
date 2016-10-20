@@ -67,9 +67,14 @@ library ChannelManagerLibrary {
         address channel_address;
         uint i;
 
-        address[] storage existing_channels = self.node_channels[msg.sender];
-        for (i = 0; i < existing_channels.length; i++) {
-            if (NettingChannelContract(existing_channels[i]).partner(msg.sender) == partner) {
+        address[] storage existingChannels = self.nodeChannels[msg.sender];
+        for (i = 0; i < existingChannels.length; i++) {
+            if (!contractExists(self, existingChannels[i])) {
+                // delete all channels that has been settled
+                // settled contracts will commit suicide and thus not exist on their address
+                deleteChannel(self, partner, existingChannels[i]);
+            } else if (NettingChannelContract(existingChannels[i]).partner(msg.sender) == partner) {
+                // throw if an open contract exists that is not settled
                 throw;
             }
         }
@@ -92,9 +97,7 @@ library ChannelManagerLibrary {
     /// @dev Remove channel after it's been settled
     /// @param channelAddress (address) address of the channel to be closed
     /// @param partner (address) address of the partner
-    function deleteChannel(Data storage self, address partner, address channelAddress) {
-        // make sure that channel is closed
-        if (!NettingChannelContract(channelAddress).isSettled()) throw;
+    function deleteChannel(Data storage self, address partner, address channelAddress) private {
 
         address[] ourChannels = self.nodeChannels[msg.sender];
         address[] partnerChannels = self.nodeChannels[partner];
@@ -128,5 +131,13 @@ library ChannelManagerLibrary {
 
         self.nodeChannels[msg.sender] = ourChannels;
         self.nodeChannels[partner] = partnerChannels;
+    }
+
+    function contractExists(Data storage self, address _addr) returns (bool) {
+        uint size;
+        assembly {
+            size := extcodesize(_addr)
+        }
+        if (size > 0) return true;
     }
 }

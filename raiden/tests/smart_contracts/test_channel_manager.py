@@ -116,6 +116,9 @@ def test_channelmanager(tester_state, tester_token, tester_events,
     )
     assert len(previous_events) + 1 == len(tester_events), 'ChannelNew event must be fired.'
 
+    assert channel_manager.contractExists(netting_channel_address1_hex)
+    assert channel_manager.contractExists(netting_channel_address2_hex)
+
     assert channel_manager.getChannelWith(address1) == netting_channel_address1_hex
     assert channel_manager.getChannelWith(address2) == netting_channel_address2_hex
 
@@ -172,27 +175,15 @@ def test_deleteChannel(tester_state, tester_channelmanager, tester_channels, set
 
     # delete the channel needs to update the manager's state
     number_of_channels = len(tester_channelmanager.getChannelsAddresses(sender=privatekey0_raw))
+    assert tester_channelmanager.contractExists(nettingchannel.address, sender=privatekey0_raw)
 
     nettingchannel.settle(sender=privatekey0_raw)
 
     tester_state.mine(1)
 
-    # try to open a new channel should fail
-    with pytest.raises(TransactionFailed):
-        tester_channelmanager.newChannel(
-            address1,
-            settle_timeout,
-            sender=privatekey0_raw,
-        )
-
-    tester_channelmanager.deleteChannel(
-        address1,
-        nettingchannel.address,
-        sender=privatekey0_raw,
-    )
-    assert len(tester_channelmanager.getChannelsAddresses(sender=privatekey0_raw)) == number_of_channels - 1
-
     # now a single new channel can be open
+    # if channel with address is settled a new can be opened
+    # old entry will be deleted when calling newChannel
     netting_channel_address1_hex = tester_channelmanager.newChannel(
         address1,
         settle_timeout,
