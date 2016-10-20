@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 from ethereum.utils import sha3, encode_hex, denoms
 
 from raiden.utils import privatekey_to_address

@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 
 from gevent import monkey
@@ -17,10 +17,10 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 @click.option(
-        '--scenario',
-        help='path to scenario.json',
-        type=click.File()
-        )
+    '--scenario',
+    help='path to scenario.json',
+    type=click.File()
+)
 @options
 @click.command()
 @click.pass_context
@@ -31,10 +31,10 @@ def run(ctx, scenario, **kwargs):
         script = json.load(scenario)
 
         tools = ConsoleTools(
-                app.raiden,
-                app.discovery,
-                app.config['settle_timeout'],
-                app.config['reveal_timeout'],
+            app.raiden,
+            app.discovery,
+            app.config['settle_timeout'],
+            app.config['reveal_timeout'],
         )
 
         transfers_by_channel = {}
