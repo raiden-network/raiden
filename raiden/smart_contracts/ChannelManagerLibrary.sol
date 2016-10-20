@@ -133,6 +133,10 @@ library ChannelManagerLibrary {
         self.nodeChannels[partner] = partnerChannels;
     }
 
+    /// @notice contractExists(address) to check if a contract is deployed at given address
+    /// @dev Check if a channel is deployed at address
+    /// @param _addr (address) the address to check for a deployed contract
+    /// @return (bool) true if contract exists, false if not
     function contractExists(Data storage self, address _addr) returns (bool) {
         uint size;
         assembly {
