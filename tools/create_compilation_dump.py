@@ -151,6 +151,7 @@ def find_dependencies(contract_file):
         for line in f.readlines():
             if line.startswith("import"):
                 dependency = line.split()[1].split('"')[1]
+                dependency = dependency.rsplit('/', 1)[-1]
                 if dependency not in dependencies:
                     dependencies.extend(find_dependencies(get_contract_path(dependency)))
                 dependencies.append(dependency)
