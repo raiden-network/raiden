@@ -5,8 +5,9 @@ from raiden.mtree import merkleroot, check_proof, get_proof, NoHash32Error
 from raiden.utils import keccak
 
 
-def test_empy():
-    assert merkleroot('') == ''
+def test_empty():
+    assert merkleroot([]) == ''
+    assert merkleroot(['']) == ''
 
 
 def test_multiple_empty():
