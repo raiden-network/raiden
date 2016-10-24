@@ -1,22 +1,24 @@
-.. Raiden documentation master file, created by
-   sphinx-quickstart2 on Mon Oct 24 10:55:13 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
-Welcome to Raiden's documentation!
+Raiden network Documentation
 ==================================
 
-Contents:
 
 .. toctree::
    :maxdepth: 2
 
 
+This is the documentation of the  `Raiden Network <http://raiden.network/>`_. You can  find the sourcecode in  `our Github Repository <https://github.com/raiden-network/raiden>`_.
 
-Indices and tables
-==================
 
+
+
+Contents
+==============
+
+* :doc:`overview_and_guide`
+* :doc:`api`
+* :doc:`codebase`
+* :doc:`specification`
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
+
 
