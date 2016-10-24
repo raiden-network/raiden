@@ -16,26 +16,7 @@ class NoHash32Error(Exception):
     pass
 
 
-def merkleroot(elements, proof=None, first=True):
-    """
-    Args:
-        elements (List[str]): List of hashes that make the merkletree.
-        proof (list): Empty or with the element for which a proof shall be
-            built, proof will be in proof.
-
-            The proof contains all elements between `element` and `root`.
-            If on all of [element] + proof is recursively hash_pair applied one
-            gets the root.
-
-    Returns:
-        str: The root element of the merkle tree.
-    """
-    if first:
-        elements = build_lst(elements)
-
-    if not elements:
-        return ''
-
+def _merkleroot(elements, proof=None):
     proof = proof or [None]
     searching = proof.pop()
     assert searching is None or searching in elements
@@ -58,11 +39,32 @@ def merkleroot(elements, proof=None, first=True):
             proof.append(hash_)
 
     if len(out) > 1:
-        return merkleroot(out, proof, False)
+        return _merkleroot(out, proof)
 
     if searching:
         proof.pop()  # pop root
     return out[0]
+
+
+def merkleroot(elements, proof=None):
+    """
+    Args:
+        elements (List[str]): List of hashes that make the merkletree.
+        proof (list): Empty or list with a single element for which a proof shall be
+            built. The resulting proof will be in proof, i.e. the list
+            is modified in place.
+
+            The proof contains all elements between `element` and `root`.
+            If on all of [element] + proof is recursively hash_pair applied one
+            gets the root.
+
+    Returns:
+        str: The root element of the merkle tree.
+    """
+    elements = build_lst(elements)
+    if not elements:
+        return ''
+    return _merkleroot(elements, proof=proof)
 
 
 def build_lst(elements):
