@@ -13,3 +13,4 @@ ethereum-serpent
 u-msgpack-python
 repoze.lru
 gevent-websocket==0.9.4
+sphinx
