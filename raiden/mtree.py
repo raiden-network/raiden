@@ -82,8 +82,9 @@ def build_lst(elements):
 
 
 def check_proof(proof, root, hash_):
-    while len(proof):
-        hash_ = hash_pair(hash_, proof.pop(0))
+    for x in proof:
+        hash_ = hash_pair(hash_, x)
+
     return hash_ == root
 
 
