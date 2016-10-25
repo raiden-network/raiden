@@ -16,7 +16,7 @@ Contents
 
 * :doc:`overview_and_guide`
 * :doc:`api`
-* :doc:`codebase`
+* :doc:`Raiden Codebase <build/generated/raiden>`
 * :doc:`specification`
 * :ref:`genindex`
 * :ref:`modindex`

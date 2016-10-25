@@ -9,7 +9,7 @@ Raiden's Codebase Documentation
 
 
 Asset Manager
-==========
+==============
 .. automodule:: raiden.assetmanager
     :members:
     :undoc-members:

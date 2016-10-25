@@ -1,8 +1,5 @@
-Raiden System Overview and User Guide
+Raiden Specification
 ===============================================
-
-
-Contents:
 
 .. toctree::
    :maxdepth: 2
@@ -10,5 +7,5 @@ Contents:
 
 
 Introduction
-=========
+=============
 TODO
