@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 from ethereum.slogging import getLogger
 from ethereum.utils import big_endian_to_int
 
@@ -401,7 +401,7 @@ class Lock(MessageHashable):
     """ Describes a locked `amount`.
 
     Args:
-        amount: Amount of the asset being transfered.
+        amount: Amount of the asset being transferred.
         expiration: Highest block_number until which the transfer can be settled
         hashlock: Hashed secret `sha3(secret)` used to register the transfer,
             the real `secret` is necessary to release the locked amount.

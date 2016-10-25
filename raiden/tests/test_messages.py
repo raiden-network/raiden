@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 from raiden.messages import Ping, Ack, decode, Lock, MediatedTransfer
 from raiden.utils import make_privkey_address, sha3
 

@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 import os
 import sys
 import string
@@ -118,7 +118,14 @@ def privatekey_to_address(private_key_bin):
     return publickey_to_address(pubkey)
 
 
+def get_project_root():
+    return os.path.dirname(raiden.__file__)
+
+
 def get_contract_path(contract_name):
-    project_directory = os.path.dirname(raiden.__file__)
-    contract_path = os.path.join(project_directory, 'smart_contracts', contract_name)
+    contract_path = os.path.join(
+        get_project_root(),
+        'smart_contracts',
+        contract_name
+    )
     return os.path.realpath(contract_path)

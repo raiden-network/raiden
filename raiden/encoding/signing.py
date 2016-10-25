@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 from secp256k1 import PublicKey, ALL_FLAGS
 
 from raiden.utils import sha3, GLOBAL_CTX

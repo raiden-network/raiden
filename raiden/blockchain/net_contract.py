@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 """
 A pure python implementation of a contract responsable to open a channel.
 """
@@ -111,7 +111,7 @@ class NettingChannelContract(object):
         - The message signature, proving authenticity of the message.
         - The increasing counter `nonce`, identifying the order of the
         transfers.
-        - The partner's total amount transfered, determining each balance.
+        - The partner's total amount transferred, determining each balance.
         - The merkle root of the locked transfers tree.
         - Possibly a `Lock` structure describing a new locked transfer.
 
@@ -121,7 +121,7 @@ class NettingChannelContract(object):
 
         - Signatures need to be from a key recognized by the contract.
         - `Nonce`s are unique and increasing to identify the transfer order.
-        - Negative transfers are invalid, and the transfered amount is always
+        - Negative transfers are invalid, and the transferred amount is always
         increasing.
         - Maintain a correct merkle root with all non-expired locked transfer.
         - A valid timeout for `Lock`ed transfers.
@@ -144,7 +144,7 @@ class NettingChannelContract(object):
     ===============
 
     Direct transfers require only the exchange of a single signed message
-    containing the current `nonce`, with an up-to-date amount transfered and
+    containing the current `nonce`, with an up-to-date amount transferred and
     merkle proof.
 
     Mediated Transfer
@@ -174,9 +174,9 @@ class NettingChannelContract(object):
     An evil participant can reduce it's spending in two ways:
 
         1. Tampered messages: Send a transfer signed with a lower
-        `amount_transfered`.
+        `amount_transferred`.
         2. Older messages: Send a valid but older message, which has a lower
-        `amount_transfered`.
+        `amount_transferred`.
 
     To detect these tatics:
 
@@ -420,17 +420,17 @@ class NettingChannelContract(object):
 
         tampered = False
         if transfer and state.transfer:
-            # A message is tampered if `value_transfered` was raised without raising
+            # A message is tampered if `value_transferred` was raised without raising
             # the `nonce`.
             # Only need to compare against transfer_from_self because that is
             # the only variable in uniquiely controlled by the closer.
             tampered = (
                 (
                     state.transfer_from_self.nonce < transfer.nonce and
-                    state.transfer_from_self.value_transfered > transfer.value_transfered
+                    state.transfer_from_self.value_transferred > transfer.value_transferred
                 ) or (
                     state.transfer_from_self.nonce == transfer.nonce and
-                    state.transfer_from_self.value_transfered != transfer.value_transfered
+                    state.transfer_from_self.value_transferred != transfer.value_transferred
                 )
             )
 
