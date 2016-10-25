@@ -4,14 +4,12 @@ import ethereum.db
 import ethereum.blocks
 import ethereum.config
 from ethereum import tester
-from ethereum.tester import ABIContract, ContractTranslator
 from ethereum.utils import int_to_addr, zpad
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 from secp256k1 import PrivateKey
 
 
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
-from raiden.encoding.signing import GLOBAL_CTX
 from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.tests.utils.tester import (

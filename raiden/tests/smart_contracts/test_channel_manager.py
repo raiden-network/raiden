@@ -8,7 +8,6 @@ from raiden.encoding.signing import GLOBAL_CTX
 from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
 from secp256k1 import PrivateKey
 
-from raiden.tests.utils.tester import channel_from_nettingcontract
 from raiden.tests.utils.tester import new_channelmanager
 
 
