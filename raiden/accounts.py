@@ -34,46 +34,60 @@ def find_keystoredir():
     return keystore_path
 
 
-def get_accounts():
-    """Find all the accounts the user has locally and return their addresses
+class AccountManager:
 
-    :return dict: A dictionary with the addresses of the accounts of the user
-                  as the key and the filenames as the value
-    """
-    keystore_path = find_keystoredir()
-    if keystore_path is None:
-        # can't find a data directory in the system
-        return {}
+    def __init__(self):
+        self.accounts = {}
 
-    acc_dict = {}
-    for f in os.listdir(keystore_path):
-        fullpath = os.path.join(keystore_path, f)
-        if os.path.isfile(fullpath):
-            with open(fullpath) as data_file:
-                data = json.load(data_file)
-            acc_dict[str(data['address'])] = str(fullpath)
+    def get_accounts(self):
+        """Find all the accounts the user has locally and return their addresses
 
-    return acc_dict
+        :return dict: A dictionary with the addresses of the accounts of the user
+                      as the key and the filenames as the value
+        """
+        if self.accounts:
+            return self.accounts
 
+        keystore_path = find_keystoredir()
+        if keystore_path is None:
+            # can't find a data directory in the system
+            return {}
 
-def get_privkey(address):
-    """Find the keystore file for an account, unlock it and get the private key
+        acc_dict = {}
+        for f in os.listdir(keystore_path):
+            fullpath = os.path.join(keystore_path, f)
+            if os.path.isfile(fullpath):
+                with open(fullpath) as data_file:
+                    data = json.load(data_file)
+                    acc_dict[str(data['address'])] = str(fullpath)
 
-    :param str address: The Ethereum address for which to find the keyfile in the system
-    :return str: The private key associated with the address
-    """
+        self.accounts = acc_dict
+        return acc_dict
 
-    if address.startswith('0x'):
-        address = address[2:]
+    def address_in_keystore(self, address):
+        if address is not None and address.startswith('0x'):
+            address = address[2:]
 
-    accounts = get_accounts()
-    if address not in accounts:
-        raise ValueError("Keystore file not found for %s" % address)
+        accounts = self.get_accounts()
+        return address in accounts
 
-    with open(accounts[address]) as data_file:
-        data = json.load(data_file)
+    def get_privkey(self, address):
+        """Find the keystore file for an account, unlock it and get the private key
 
-    # Since file was found prompt for a password
-    password = getpass.getpass("Enter the password to unlock %s: " % address)
-    acc = Account(data, password, accounts[address])
-    return acc.privkey
+        :param str address: The Ethereum address for which to find the keyfile in the system
+        :return str: The private key associated with the address
+        """
+
+        if address.startswith('0x'):
+            address = address[2:]
+
+        if not self.address_in_keystore(address):
+            raise ValueError("Keystore file not found for %s" % address)
+
+        with open(self.accounts[address]) as data_file:
+            data = json.load(data_file)
+
+        # Since file was found prompt for a password
+        password = getpass.getpass("Enter the password to unlock %s: " % address)
+        acc = Account(data, password, self.accounts[address])
+        return acc.privkey

@@ -52,7 +52,9 @@ class Console(BaseService):
     name = 'console'
 
     def __init__(self, app):
+        print('1')
         super(Console, self).__init__(app)
+        print('2')
         self.interrupt = Event()
         self.console_locals = {}
         if app.start_console:
@@ -75,20 +77,22 @@ class Console(BaseService):
             def __init__(self, app):
                 self.app = app
 
-        self.console_locals = dict(_raiden=Raiden(self.app),
-                                   raiden=self.app.raiden,
-                                   chain=self.app.raiden.chain,
-                                   discovery=self.app.discovery,
-                                   tools=ConsoleTools(self.app.raiden,
-                                                      self.app.discovery,
-                                                      self.app.config['settle_timeout'],
-                                                      self.app.config['reveal_timeout'],
-                                                      ),
-                                   denoms=denoms,
-                                   true=True,
-                                   false=False,
-                                   usage=print_usage,
-                                   )
+        self.console_locals = dict(
+            _raiden=Raiden(self.app),
+            raiden=self.app.raiden,
+            chain=self.app.raiden.chain,
+            discovery=self.app.discovery,
+            tools=ConsoleTools(
+                self.app.raiden,
+                self.app.discovery,
+                self.app.config['settle_timeout'],
+                self.app.config['reveal_timeout'],
+            ),
+            denoms=denoms,
+            true=True,
+            false=False,
+            usage=print_usage,
+        )
 
     def _run(self):
         self.interrupt.wait()
@@ -151,14 +155,15 @@ class ConsoleTools(object):
         self._ping_nonces = defaultdict(int)
         self.deposit = self._raiden.api.deposit
 
-    def create_token(self,
-                     initial_alloc=10 ** 6,
-                     name='raidentester',
-                     symbol='RDT',
-                     decimals=2,
-                     timeout=60,
-                     gasprice=denoms.shannon * 20,
-                     auto_register=True):
+    def create_token(
+            self,
+            initial_alloc=10 ** 6,
+            name='raidentester',
+            symbol='RDT',
+            decimals=2,
+            timeout=60,
+            gasprice=denoms.shannon * 20,
+            auto_register=True):
         """Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).
         Per default it will be registered with 'raiden'.
