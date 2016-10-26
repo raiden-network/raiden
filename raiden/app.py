@@ -6,7 +6,7 @@ import gevent
 import click
 import gevent.monkey
 from ethereum import slogging
-from ethereum.utils import decode_hex
+from ethereum.utils import encode_hex, decode_hex
 
 from raiden.raiden_service import RaidenService, DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
 from raiden.network.discovery import ContractDiscovery
@@ -14,6 +14,7 @@ from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import BlockChainService
 from raiden.console import Console
 from raiden.utils import pex, split_endpoint
+from raiden.accounts import AccountManager
 
 gevent.monkey.patch_all()
 
@@ -59,12 +60,11 @@ class App(object):  # pylint: disable=too-few-public-methods
 
 _options = [
     click.option(
-        '--privatekey',
-        help='Asks for the hex encoded ethereum private key.\n'
-        'WARNING: do not give the privatekey on the commandline, instead wait for the prompt!',
+        '--address',
+        help=('The ethereum address you would like raiden to use and for which '
+              'a keystore file exists in your local system'),
+        default=None,
         type=str,
-        prompt=True,
-        hide_input=True,
     ),
     click.option(
         '--eth_rpc_endpoint',
@@ -116,8 +116,13 @@ def options(func):
 
 @options
 @click.command()
-def app(privatekey, eth_rpc_endpoint, registry_contract_address,
-        discovery_contract_address, listen_address, logging, logfile):
+def app(address,
+        eth_rpc_endpoint,
+        registry_contract_address,
+        discovery_contract_address,
+        listen_address,
+        logging,
+        logfile):
 
     slogging.configure(logging, log_file=logfile)
 
@@ -127,7 +132,29 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
     config = App.default_config.copy()
     config['host'] = listen_host
     config['port'] = listen_port
-    config['privatekey_hex'] = privatekey
+
+    accmgr = AccountManager()
+    if not accmgr.address_in_keystore(address):
+        addresses = list(accmgr.accounts.keys())
+        formatted_addresses = ["[{}] - 0x{}".format(str(idx), addr) for idx, addr in enumerate(addresses)]
+
+        usrinput = -1
+        while usrinput < 0 or usrinput > len(addresses) - 1:
+            usrinput = raw_input(
+                "The following accounts were found in your machine:\n\n{}"
+                "\nSelect one of them by index to continue: ".format(
+                    "\n".join(formatted_addresses))
+            )
+            try:
+                usrinput = int(usrinput)
+            except:
+                usrinput = -1
+
+        print("You chose account: 0x{}".format(addresses[usrinput]))
+        address = addresses[usrinput]
+
+    privatekey = accmgr.get_privkey(address)
+    config['privatekey_hex'] = encode_hex(privatekey)
 
     endpoint = eth_rpc_endpoint
 
@@ -144,7 +171,7 @@ def app(privatekey, eth_rpc_endpoint, registry_contract_address,
         rpc_host, rpc_port = split_endpoint(endpoint)
 
     blockchain_service = BlockChainService(
-        decode_hex(privatekey),
+        privatekey,
         decode_hex(registry_contract_address),
         host=rpc_host,
         port=rpc_port,
