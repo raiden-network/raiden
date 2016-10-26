@@ -71,7 +71,7 @@ library NettingChannelLibrary {
     }
 
     modifier ChannelSettled(Data storage self) {
-        if (!isSettled(self)) throw;
+        if (self.settled == 0) throw;
         _;
     }
 
@@ -167,7 +167,9 @@ library NettingChannelLibrary {
         balance2 = node2.balance;
     }
 
-    function closeSingleTransfer(Data storage self, address caller_address, bytes signed_transfer) {
+    function closeSingleTransfer(Data storage self, address callerAddress, bytes signed_transfer)
+        inNonceRange(self, signed_transfer)
+    {
         bytes memory transfer_raw;
         address transfer_address;
 
