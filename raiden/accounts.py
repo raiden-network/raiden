@@ -36,8 +36,9 @@ def find_keystoredir():
 
 class AccountManager:
 
-    def __init__(self):
+    def __init__(self, keystore_path=None):
         self.accounts = {}
+        self.keystore_path = keystore_path
 
     def get_accounts(self):
         """Find all the accounts the user has locally and return their addresses
@@ -48,14 +49,15 @@ class AccountManager:
         if self.accounts:
             return self.accounts
 
-        keystore_path = find_keystoredir()
-        if keystore_path is None:
+        if self.keystore_path is None:
+            self.keystore_path = find_keystoredir()
+        if self.keystore_path is None:
             # can't find a data directory in the system
             return {}
 
         acc_dict = {}
-        for f in os.listdir(keystore_path):
-            fullpath = os.path.join(keystore_path, f)
+        for f in os.listdir(self.keystore_path):
+            fullpath = os.path.join(self.keystore_path, f)
             if os.path.isfile(fullpath):
                 with open(fullpath) as data_file:
                     data = json.load(data_file)
