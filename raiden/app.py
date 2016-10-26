@@ -67,6 +67,13 @@ _options = [
         type=str,
     ),
     click.option(
+        '--keystore-path',
+        help=('The ethereum address you would like raiden to use and for which '
+              'a keystore file exists in your local system'),
+        default=None,
+        type=click.Path(exists=True),
+    ),
+    click.option(
         '--eth_rpc_endpoint',
         help='"host:port" address of ethereum JSON-RPC server.\n'
         'Also accepts a protocol prefix (http:// or https://) with optional port',
@@ -117,6 +124,7 @@ def options(func):
 @options
 @click.command()
 def app(address,
+        keystore_path,
         eth_rpc_endpoint,
         registry_contract_address,
         discovery_contract_address,
@@ -133,7 +141,7 @@ def app(address,
     config['host'] = listen_host
     config['port'] = listen_port
 
-    accmgr = AccountManager()
+    accmgr = AccountManager(keystore_path)
     if not accmgr.address_in_keystore(address):
         addresses = list(accmgr.accounts.keys())
         formatted_addresses = ["[{:3d}] - 0x{}".format(idx, addr) for idx, addr in enumerate(addresses)]
