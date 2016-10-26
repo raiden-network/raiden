@@ -136,22 +136,22 @@ def app(address,
     accmgr = AccountManager()
     if not accmgr.address_in_keystore(address):
         addresses = list(accmgr.accounts.keys())
-        formatted_addresses = ["[{}] - 0x{}".format(str(idx), addr) for idx, addr in enumerate(addresses)]
+        formatted_addresses = ["[{:3d}] - 0x{}".format(idx, addr) for idx, addr in enumerate(addresses)]
 
-        usrinput = -1
-        while usrinput < 0 or usrinput > len(addresses) - 1:
-            usrinput = raw_input(
+        should_prompt = True
+        while should_prompt:
+            idx = click.prompt(
                 "The following accounts were found in your machine:\n\n{}"
                 "\nSelect one of them by index to continue: ".format(
-                    "\n".join(formatted_addresses))
+                    "\n".join(formatted_addresses)),
+                type=int
             )
-            try:
-                usrinput = int(usrinput)
-            except:
-                usrinput = -1
+            if idx >= 0 and idx < len(addresses):
+                should_prompt = False
+            else:
+                print("\nError: Provided index '{}' is out of bounds\n".format(idx))
 
-        print("You chose account: 0x{}".format(addresses[usrinput]))
-        address = addresses[usrinput]
+        address = addresses[idx]
 
     privatekey = accmgr.get_privkey(address)
     config['privatekey_hex'] = encode_hex(privatekey)
