@@ -73,10 +73,13 @@ class AccountManager:
         accounts = self.get_accounts()
         return address in accounts
 
-    def get_privkey(self, address):
+    def get_privkey(self, address, password=None):
         """Find the keystore file for an account, unlock it and get the private key
 
         :param str address: The Ethereum address for which to find the keyfile in the system
+        :param str password: Mostly for testing purposes. A password can be provided
+                             as the function argument here. If it's not then the
+                             user is interactively queried for one.
         :return str: The private key associated with the address
         """
 
@@ -89,7 +92,8 @@ class AccountManager:
         with open(self.accounts[address]) as data_file:
             data = json.load(data_file)
 
-        # Since file was found prompt for a password
-        password = getpass.getpass("Enter the password to unlock %s: " % address)
+        # Since file was found prompt for a password if not already given
+        if password is None:
+            password = getpass.getpass("Enter the password to unlock %s: " % address)
         acc = Account(data, password, self.accounts[address])
         return acc.privkey
