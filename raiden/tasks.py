@@ -588,16 +588,16 @@ class MediateTransferTask(BaseMediatedTransferTask):
             )
 
         maximum_expiration = (
-            originating_channel.settle_timeout +
-            raiden.chain.block_number() -
-            2  # decrement as a safety measure to avoid limit errors
+            originating_channel.settle_timeout
+            + raiden.chain.block_number()
+            - 2  # decrement as a safety measure to avoid limit errors
         )
 
         # Ignore locks that expire after settle_timeout
         if originating_transfer.lock.expiration > maximum_expiration:
             if log.isEnabledFor(logging.ERROR):
                 log.debug(
-                    'lock_expiration is too larger, ignore the mediated transfer',
+                    'lock_expiration is too large, ignore the mediated transfer',
                     initiator=pex(originating_transfer.initiator),
                     node=pex(self.address),
                     target=pex(originating_transfer.target),

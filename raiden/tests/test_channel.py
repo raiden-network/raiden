@@ -206,21 +206,33 @@ def test_invalid_timeouts():
         small_settle_timeout = 49
 
         Channel(
-            our_state, partner_state, external_state, asset_address,
-            large_reveal_timeout, small_settle_timeout,
+            our_state,
+            partner_state,
+            external_state,
+            asset_address,
+            large_reveal_timeout,
+            small_settle_timeout,
         )
 
     for invalid_value in (-1, 0, 1.1, 1.0, 'a', [], {}):
         with pytest.raises(ValueError):
             Channel(
-                our_state, partner_state, external_state, asset_address,
-                invalid_value, settle_timeout,
+                our_state,
+                partner_state,
+                external_state,
+                asset_address,
+                invalid_value,
+                settle_timeout,
             )
 
         with pytest.raises(ValueError):
             Channel(
-                our_state, partner_state, external_state, asset_address,
-                reveal_timeout, invalid_value,
+                our_state,
+                partner_state,
+                external_state,
+                asset_address,
+                reveal_timeout,
+                invalid_value,
             )
 
 

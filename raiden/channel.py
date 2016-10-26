@@ -490,18 +490,28 @@ class Channel(object):
                  asset_address, reveal_timeout, settle_timeout):
 
         if settle_timeout <= reveal_timeout:
-            # reveal_timeout should be a fraction of the settle_timeout
+            # reveal_timeout must be a fraction of the settle_timeout
             raise ValueError('reveal_timeout can not be larger-or-equal to settle_timeout')
 
-        if reveal_timeout < 1:
-            # For a mediated transfer to work the expiration needs to decrease
-            # at each hop, this is what forces the next hop to reveal the
-            # secret before the previous transfer expires.
+        if reveal_timeout < 3:
+            # To guarantee that assets won't be lost the expiration needs to
+            # decrease at each hop, this is what forces the next hop to reveal
+            # the secret with enough time for this node to unlock the lock with
+            # the previous.
             #
-            # This should include the *worst case* for a block with a revealed
-            # secret to propagate until this node can learn about the it /plus/
-            # the *worst case* for a transaction from this node that unlock the
-            # previous transfer to be mined.
+            # This /should be/ at least:
+            #
+            #   reveal_timeout = blocks_to_learn + blocks_to_mine * 2
+            #
+            # Where:
+            #
+            # - `blocks_to_learn` is the estimated worst case for a given block
+            # to propagate to the full network. This is the time to learn a
+            # secret revealed throught the blockchain.
+            # - `blocks_to_mine * 2` is the estimated worst case for a given
+            # transfer to be included in a block. This is the time to close a
+            # channel and then to unlock a lock on chain.
+            #
             raise ValueError('reveal_timeout must be at least 1')
 
         if not isinstance(settle_timeout, (int, long)):
