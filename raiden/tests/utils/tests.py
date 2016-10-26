@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 import gc
-import gevent
 import os
+
+import gevent
 
 from raiden.utils import get_project_root
 
@@ -27,3 +28,4 @@ def cleanup_tasks():
         if isinstance(running_task, gevent.Greenlet)
     ]
     gevent.killall(tasks)
+    gevent.hub.reinit()
