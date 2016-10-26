@@ -2,6 +2,7 @@
 import os
 import sys
 import json
+import getpass
 
 from pyethapp.accounts import Account
 
@@ -44,29 +45,35 @@ def get_accounts():
         # can't find a data directory in the system
         return {}
 
-    # TODO: f.rsplit() should be changed to actually read account from the
-    # file itself since the name of the file may have been renamed to whatever
-    accounts = [(f.rsplit('--', 1)[-1], f) for f in os.listdir(keystore_path)
-                if os.path.isfile(os.path.join(keystore_path, f))]
     acc_dict = {}
-    for acc, f in accounts:
-        acc_dict[acc] = f
+    for f in os.listdir(keystore_path):
+        fullpath = os.path.join(keystore_path, f)
+        if os.path.isfile(fullpath):
+            with open(fullpath) as data_file:
+                data = json.load(data_file)
+            acc_dict[str(data['address'])] = str(fullpath)
+
     return acc_dict
 
 
-def unlock_account(address):
-    """Find the keystore file for an account and unlock it
+def get_privkey(address):
+    """Find the keystore file for an account, unlock it and get the private key
 
     :param str address: The Ethereum address for which to find the keyfile in the system
+    :return str: The private key associated with the address
     """
-    address = address.lstip('0x')
+
+    if address.startswith('0x'):
+        address = address[2:]
 
     accounts = get_accounts()
     if address not in accounts:
-        # Address not found
-        return None
+        raise ValueError("Keystore file not found for %s" % address)
 
-    password = 1
-    with open(accounts['address']) as data_file:
+    with open(accounts[address]) as data_file:
         data = json.load(data_file)
-    acc = Account(data, password)
+
+    # Since file was found prompt for a password
+    password = getpass.getpass("Enter the password to unlock %s: " % address)
+    acc = Account(data, password, accounts[address])
+    return acc.privkey
