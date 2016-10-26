@@ -380,10 +380,12 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
                 continue
 
             if lock_timeout:
-                # Our partner won't accept a locked transfer that can expire after
-                # the settlement period, otherwise the secret could be revealed
-                # after channel is settled and he would lose the asset, or before
-                # the minimum required.
+                # Our partner wont accept a lock timeout that:
+                # - is larger than the settle timeout, otherwise the lock's
+                # secret could be release /after/ the channel is settled.
+                # - is smaller than the reveal timeout, because that is the
+                # minimum number of blocks required by the partner to learn the
+                # secret.
                 valid_timeout = channel.reveal_timeout <= lock_timeout < channel.settle_timeout
 
                 if not valid_timeout and log.isEnabledFor(logging.INFO):
@@ -396,6 +398,7 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
                         partner=pex(path[1]),
                     )
 
+                # do not try the route since we know the transfer will be rejected.
                 if not valid_timeout:
                     continue
 
