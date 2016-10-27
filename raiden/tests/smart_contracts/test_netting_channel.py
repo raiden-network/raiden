@@ -531,7 +531,6 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == 0
 
 
-@pytest.mark.xfail()
 def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, tester_events):
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
@@ -642,7 +641,6 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     # - add locked amounts and assert that they are respected
 
 
-@pytest.mark.xfail()
 def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels, tester_events):
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
@@ -682,7 +680,10 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
     channel1.register_transfer(mediated_transfer0)
 
     transfer_amount = 13
-    direct_transfer1 = channel1.create_directtransfer(transfer_amount)
+    direct_transfer1 = channel1.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
     direct_transfer1.sign(privatekey1, address1)
     direct_transfer1_data = str(direct_transfer1.packed().data)
 
