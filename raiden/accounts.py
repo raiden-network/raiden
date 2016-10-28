@@ -34,44 +34,27 @@ def find_keystoredir():
     return keystore_path
 
 
-class AccountManager:
+class AccountManager(object):
 
     def __init__(self, keystore_path=None):
-        self.accounts = {}
         self.keystore_path = keystore_path
-
-    def get_accounts(self):
-        """Find all the accounts the user has locally and return their addresses
-
-        :return dict: A dictionary with the addresses of the accounts of the user
-                      as the key and the filenames as the value
-        """
-        if self.accounts:
-            return self.accounts
-
+        self.accounts = {}
         if self.keystore_path is None:
             self.keystore_path = find_keystoredir()
-        if self.keystore_path is None:
-            # can't find a data directory in the system
-            return {}
+        if self.keystore_path is not None:
 
-        acc_dict = {}
-        for f in os.listdir(self.keystore_path):
-            fullpath = os.path.join(self.keystore_path, f)
-            if os.path.isfile(fullpath):
-                with open(fullpath) as data_file:
-                    data = json.load(data_file)
-                    acc_dict[str(data['address'])] = str(fullpath)
-
-        self.accounts = acc_dict
-        return acc_dict
+            for f in os.listdir(self.keystore_path):
+                fullpath = os.path.join(self.keystore_path, f)
+                if os.path.isfile(fullpath):
+                    with open(fullpath) as data_file:
+                        data = json.load(data_file)
+                        self.accounts[str(data['address'])] = str(fullpath)
 
     def address_in_keystore(self, address):
         if address is not None and address.startswith('0x'):
             address = address[2:]
 
-        accounts = self.get_accounts()
-        return address in accounts
+        return address in self.accounts
 
     def get_privkey(self, address, password=None):
         """Find the keystore file for an account, unlock it and get the private key
