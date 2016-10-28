@@ -113,15 +113,21 @@ class RaidenProtocol(object):
             # ack_result can be False
             while waitack.ack_result.wait(timeout=self.try_interval) is None:
                 retries_left -= 1
-                # TODO: fix the graph
-                # if retries_left < 1:
-                #     if log.isEnabledFor(logging.ERROR):
-                #         log.error(
-                #                'DEACTIVATED MSG resents %s %s',
-                #                pex(receiver_address),
-                #                message,
-                #         )
-                #         return
+
+                # TODO: The graph should be updated and the node should be marked
+                #       as temporarily unreachable, so that get_best_routes don't
+                #       try this route when looking for a path.
+                # XXX: How should it be marked available again?
+
+                if retries_left < 1:
+                    if log.isEnabledFor(logging.ERROR):
+                        log.error(
+                               'DEACTIVATED MSG resents %s %s',
+                               pex(receiver_address),
+                               message,
+                        )
+                    waitack.ack_result.set(False)
+                    break
 
                 if log.isEnabledFor(logging.INFO):
                     log.info(
