@@ -122,9 +122,9 @@ class RaidenProtocol(object):
                 if retries_left < 1:
                     if log.isEnabledFor(logging.ERROR):
                         log.error(
-                               'DEACTIVATED MSG resents %s %s',
-                               pex(receiver_address),
-                               message,
+                            'DEACTIVATED MSG resents %s %s',
+                            pex(receiver_address),
+                            message,
                         )
                     waitack.ack_result.set(False)
                     break
