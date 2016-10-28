@@ -1,4 +1,5 @@
 pytest
+pytest-timeout
 pysha3
 pyethapp>=1.5.0
 ipython<5.0.0
