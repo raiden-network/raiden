@@ -6,7 +6,7 @@ contract Registry {
     mapping(address => address) public registry;
     address[] public assets;
 
-    event AssetAdded(address assetAddress, address channelManagerAddress);
+    event AssetAdded(address asset_address, address channel_manager_address);
 
     modifier addressExists(address _address) {
         if (registry[_address] == 0x0)
@@ -20,29 +20,29 @@ contract Registry {
         _;
     }
 
-    function addAsset(address assetAddress)
-        doesNotExist(assetAddress)
+    function addAsset(address asset_address)
+        doesNotExist(asset_address)
         returns (address)
     {
-        address managerAddress;
+        address manager_address;
         ChannelManagerContract manager;
 
-        managerAddress = new ChannelManagerContract(assetAddress);
+        manager_address = new ChannelManagerContract(asset_address);
 
-        registry[assetAddress] = managerAddress;
-        assets.push(assetAddress);
+        registry[asset_address] = manager_address;
+        assets.push(asset_address);
 
-        AssetAdded(assetAddress, managerAddress);
+        AssetAdded(asset_address, manager_address);
 
-        return managerAddress;
+        return manager_address;
     }
 
-    function channelManagerByAsset(address assetAddress)
-        addressExists(assetAddress)
+    function channelManagerByAsset(address asset_address)
+        addressExists(asset_address)
         constant
         returns (address)
     {
-        return registry[assetAddress];
+        return registry[asset_address];
     }
 
     function assetAddresses()

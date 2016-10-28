@@ -11,14 +11,14 @@ contract ChannelManagerContract {
     ChannelManagerLibrary.Data data;
 
     event ChannelNew(
-        address nettingChannel,
+        address netting_channel,
         address participant1,
         address participant2,
-        uint settleTimeout
+        uint settle_timeout
     );
 
-    function ChannelManagerContract(address tokenAddress) {
-        data.token = Token(tokenAddress);
+    function ChannelManagerContract(address token_address) {
+        data.token = Token(token_address);
     }
 
     // XXX: move this to the library, if possible
@@ -105,17 +105,17 @@ contract ChannelManagerContract {
         return data.token;
     }
 
-    function getChannelsForNode(address nodeAddress) constant returns (address[]) {
-        return data.nodeChannels[nodeAddress];
+    function getChannelsForNode(address node_address) constant returns (address[]) {
+        return data.node_channels[node_address];
     }
 
     function getChannelWith(address partner) constant returns (address) {
         return data.getChannelWith(partner);
     }
 
-    function newChannel(address partner, uint settleTimeout) returns (address channel) {
-        channel = data.newChannel(partner, settleTimeout);
-        ChannelNew(channel, msg.sender, partner, settleTimeout);
+    function newChannel(address partner, uint settle_timeout) returns (address channel) {
+        channel = data.newChannel(partner, settle_timeout);
+        ChannelNew(channel, msg.sender, partner, settle_timeout);
     }
 
     function () { throw; }

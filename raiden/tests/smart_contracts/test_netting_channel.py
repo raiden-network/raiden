@@ -166,10 +166,10 @@ def test_channelnewbalance_event(private_keys, settle_timeout, tester_state,
     newbalance_event = tester_events[-1]
     assert newbalance_event == {
         '_event_type': 'ChannelNewBalance',
-        'assetAddress': encode_hex(tester_token.address),
+        'asset_address': encode_hex(tester_token.address),
         'participant': encode_hex(address0),
         'balance': deposit_amount,
-        'blockNumber': block_number,
+        'block_number': block_number,
     }
 
     previous_events = list(tester_events)
@@ -189,10 +189,10 @@ def test_channelnewbalance_event(private_keys, settle_timeout, tester_state,
     newbalance_event = tester_events[-1]
     assert newbalance_event == {
         '_event_type': 'ChannelNewBalance',
-        'assetAddress': encode_hex(tester_token.address),
+        'asset_address': encode_hex(tester_token.address),
         'participant': encode_hex(address1),
         'balance': deposit_amount,
-        'blockNumber': block_number,
+        'block_number': block_number,
     }
 
 
@@ -222,8 +222,8 @@ def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
     close_event = tester_events[-1]
     assert close_event == {
         '_event_type': 'ChannelClosed',
-        'closingAddress': encode_hex(address0),
-        'blockNumber': block_number,
+        'closing_address': encode_hex(address0),
+        'block_number': block_number,
     }
 
     assert nettingchannel.closed() == block_number
@@ -254,7 +254,7 @@ def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
     settle_event = tester_events[-1]
     assert settle_event == {
         '_event_type': 'ChannelSettled',
-        'blockNumber': block_number,
+        'block_number': block_number,
     }
 
     assert tester_token.balanceOf(address0, sender=privatekey0) == initial_balance0 + deposit
@@ -295,8 +295,8 @@ def test_closesingle_settle(deposit, settle_timeout, tester_channels,
     close_event = tester_events[-1]
     assert close_event == {
         '_event_type': 'ChannelClosed',
-        'closingAddress': encode_hex(address0),
-        'blockNumber': block_number,
+        'closing_address': encode_hex(address0),
+        'block_number': block_number,
     }
 
     assert nettingchannel.closed(sender=privatekey0_raw) == block_number
@@ -329,7 +329,7 @@ def test_closesingle_settle(deposit, settle_timeout, tester_channels,
     settle_event = tester_events[-1]
     assert settle_event == {
         '_event_type': 'ChannelSettled',
-        'blockNumber': block_number,
+        'block_number': block_number,
     }
 
     assert tester_token.balanceOf(address0, sender=privatekey0_raw) == initial_balance0 + deposit - transfer_amount  # noqa
@@ -384,8 +384,8 @@ def test_close_settle(deposit, settle_timeout, tester_state, tester_channels,
     close_event = tester_events[-1]
     assert close_event == {
         '_event_type': 'ChannelClosed',
-        'closingAddress': encode_hex(address0),
-        'blockNumber': block_number,
+        'closing_address': encode_hex(address0),
+        'block_number': block_number,
     }
 
     assert nettingchannel.closed(sender=privatekey0_raw) == block_number
@@ -418,7 +418,7 @@ def test_close_settle(deposit, settle_timeout, tester_state, tester_channels,
     settle_event = tester_events[-1]
     assert settle_event == {
         '_event_type': 'ChannelSettled',
-        'blockNumber': block_number,
+        'block_number': block_number,
     }
 
     assert tester_token.balanceOf(address0, sender=privatekey0_raw) == initial_balance0 + deposit - transfer_amount0 + transfer_amount1  # noqa
@@ -490,8 +490,8 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
     close_event = tester_events[-1]
     assert close_event == {
         '_event_type': 'ChannelClosed',
-        'closingAddress': encode_hex(address0),
-        'blockNumber': block_number,
+        'closing_address': encode_hex(address0),
+        'block_number': block_number,
     }
     assert nettingchannel.closed(sender=privatekey0_raw) == block_number
     assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address0)
@@ -523,7 +523,7 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
     settle_event = tester_events[-1]
     assert settle_event == {
         '_event_type': 'ChannelSettled',
-        'blockNumber': block_number,
+        'block_number': block_number,
     }
 
     assert tester_token.balanceOf(address0, sender=privatekey0_raw) == initial_balance0 + deposit  # noqa

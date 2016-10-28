@@ -6,9 +6,9 @@ contract NettingChannelContract {
     using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
 
-    event ChannelNewBalance(address assetAddress, address participant, uint balance, uint blockNumber);
-    event ChannelClosed(address closingAddress, uint blockNumber);
-    event ChannelSettled(uint blockNumber);
+    event ChannelNewBalance(address asset_address, address participant, uint balance, uint block_number);
+    event ChannelClosed(address closing_address, uint block_number);
+    event ChannelSettled(uint block_number);
     event ChannelSecretRevealed(bytes32 secret);
 
     modifier settleTimeoutNotTooLow(uint t) {
@@ -17,7 +17,7 @@ contract NettingChannelContract {
     }
 
     function NettingChannelContract(
-        address assetAddress,
+        address asset_address,
         address participant1,
         address participant2,
         uint timeout)
@@ -27,11 +27,11 @@ contract NettingChannelContract {
             throw;
         }
 
-        data.participants[0].nodeAddress = participant1;
-        data.participants[1].nodeAddress = participant2;
+        data.participants[0].node_address = participant1;
+        data.participants[1].node_address = participant2;
 
-        data.token = Token(assetAddress);
-        data.settleTimeout = timeout;
+        data.token = Token(asset_address);
+        data.settle_timeout = timeout;
     }
 
     function deposit(uint256 amount) returns (bool) {
@@ -51,7 +51,14 @@ contract NettingChannelContract {
         return data.partner(one_address);
     }
 
-    function addressAndBalance() constant returns (address participant1, uint balance1, address participant2, uint balance2) {
+    function addressAndBalance()
+        constant
+        returns (
+        address participant1,
+        uint balance1,
+        address participant2,
+        uint balance2)
+    {
         return data.addressAndBalance();
     }
 
@@ -60,8 +67,8 @@ contract NettingChannelContract {
         ChannelClosed(msg.sender, data.closed);
     }
 
-    function close(bytes firstEncoded, bytes secondEncoded) {
-        data.close(msg.sender, firstEncoded, secondEncoded);
+    function close(bytes first_encoded, bytes second_encoded) {
+        data.close(msg.sender, first_encoded, second_encoded);
         ChannelClosed(msg.sender, data.closed);
     }
 
@@ -69,8 +76,8 @@ contract NettingChannelContract {
         data.updateTransfer(msg.sender, signed_transfer);
     }
 
-    function unlock(bytes lockedEncoded, bytes merkleProof, bytes32 secret) {
-        data.unlock(msg.sender, lockedEncoded, merkleProof, secret);
+    function unlock(bytes locked_encoded, bytes merkle_proof, bytes32 secret) {
+        data.unlock(msg.sender, locked_encoded, merkle_proof, secret);
         ChannelSecretRevealed(secret);
     }
 
@@ -80,7 +87,7 @@ contract NettingChannelContract {
     }
 
     function settleTimeout() constant returns (uint) {
-        return data.settleTimeout;
+        return data.settle_timeout;
     }
 
     function assetAddress() constant returns (address) {
@@ -100,7 +107,7 @@ contract NettingChannelContract {
     }
 
     function closingAddress() constant returns (address) {
-        return data.closingAddress;
+        return data.closing_address;
     }
 
     function () { throw; }

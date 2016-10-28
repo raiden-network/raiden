@@ -12,12 +12,12 @@ library NettingChannelLibrary {
 
     struct Participant
     {
-        address nodeAddress;
+        address node_address;
         uint256 balance;
         uint256 netted;
-        uint256 transferredAmount;
+        uint256 transferred_amount;
         uint256 amount;
-        bytes merkleProof;
+        bytes merkle_proof;
         bytes32 hashlock;
         bytes32 secret;
         uint256 expiration;
@@ -29,11 +29,11 @@ library NettingChannelLibrary {
     }
 
     struct Data {
-        uint settleTimeout;
+        uint settle_timeout;
         uint opened;
         uint closed;
         uint settled;
-        address closingAddress;
+        address closing_address;
         Token token;
         Participant[2] participants;
     }
@@ -45,19 +45,19 @@ library NettingChannelLibrary {
     }
 
     modifier stillTimeout(Data storage self) {
-        if (self.closed + self.settleTimeout < block.number)
+        if (self.closed + self.settle_timeout < block.number)
             throw;
         _;
     }
 
     modifier timeoutOver(Data storage self) {
-        if (self.closed + self.settleTimeout > block.number)
+        if (self.closed + self.settle_timeout > block.number)
             throw;
         _;
     }
 
     modifier notClosingAddress(Data storage self) {
-        if (msg.sender == self.closingAddress)
+        if (msg.sender == self.closing_address)
             throw;
         _;
     }
@@ -65,33 +65,40 @@ library NettingChannelLibrary {
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
-    /// @param callerAddress (address) the address of the invoker of the function
-    /// @param channelAddress (address) the address of the channel
+    /// @param caller_address (address) the address of the invoker of the function
+    /// @param channel_address (address) the address of the channel
     /// @param amount (uint) the amount to be deposited to the address
     /// @return success (bool) if the transfer was successful
     /// @return balance (uint256) the new balance of the invoker
-    function deposit(Data storage self, address callerAddress, address channelAddress, uint256 amount) returns (bool success, uint256 balance) {
+    function deposit(
+        Data storage self,
+        address caller_address,
+        address channel_address,
+        uint256 amount
+    )
+        returns (bool success, uint256 balance)
+    {
         uint index;
 
         if (self.closed != 0) {
             throw;
         }
 
-        if (self.token.balanceOf(callerAddress) < amount) {
+        if (self.token.balanceOf(caller_address) < amount) {
             throw;
         }
 
         Participant storage participant = self.participants[0];
-        if (participant.nodeAddress != callerAddress) {
+        if (participant.node_address != caller_address) {
             participant = self.participants[1];
-            if (participant.nodeAddress != callerAddress) {
+            if (participant.node_address != caller_address) {
                 throw;
             }
         }
 
         success = self.token.transferFrom(
-            callerAddress,
-            channelAddress,
+            caller_address,
+            channel_address,
             amount
         );
 
@@ -112,36 +119,44 @@ library NettingChannelLibrary {
 
     /// @notice partner() to get the partner or other participant of the channel
     /// @dev Get the other participating party of the channel
-    /// @return partnerAddress (address) the partner of the calling party
+    /// @return (address) the partner of the calling party
     function partner(Data storage self, address one_address) constant returns (address) {
         Participant[2] storage participants = self.participants;
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
 
-        if (one_address == node1.nodeAddress) {
-            return node2.nodeAddress;
+        if (one_address == node1.node_address) {
+            return node2.node_address;
         }
 
-        if (one_address == node2.nodeAddress) {
-            return node1.nodeAddress;
+        if (one_address == node2.node_address) {
+            return node1.node_address;
         }
 
         return 0x0;
     }
 
-    function addressAndBalance(Data storage self) constant returns (address participant1, uint balance1, address participant2, uint balance2) {
+    function addressAndBalance(Data storage self)
+        constant
+        returns
+    (
+        address participant1,
+        uint balance1,
+        address participant2,
+        uint balance2
+    ) {
         Participant[2] participants = self.participants;
         Participant node1 = participants[0];
         Participant node2 = participants[1];
 
         // return by name
-        participant1 = node1.nodeAddress;
+        participant1 = node1.node_address;
         balance1 = node1.balance;
-        participant2 = node2.nodeAddress;
+        participant2 = node2.node_address;
         balance2 = node2.balance;
     }
 
-    function closeSingleTransfer(Data storage self, address callerAddress, bytes signed_transfer) {
+    function closeSingleTransfer(Data storage self, address caller_address, bytes signed_transfer) {
         bytes memory transfer_raw;
         address transfer_address;
 
@@ -157,31 +172,36 @@ library NettingChannelLibrary {
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
 
-        if (callerAddress != node1.nodeAddress && callerAddress != node2.nodeAddress) {
+        if (caller_address != node1.node_address && caller_address != node2.node_address) {
             throw;
         }
 
         (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
 
-        if (node1.nodeAddress == transfer_address) {
+        if (node1.node_address == transfer_address) {
             Participant storage sender = node1;
-        } else if (node2.nodeAddress == transfer_address) {
+        } else if (node2.node_address == transfer_address) {
             sender = node2;
         } else {
             throw;
         }
 
-        decode_and_assign(sender, transfer_raw);
+        decodeAndAssign(sender, transfer_raw);
 
-        self.closingAddress = callerAddress;
+        self.closing_address = caller_address;
         self.closed = block.number;
     }
 
     /// @notice close(bytes, bytes) to close a channel between to parties
     /// @dev Close the channel between two parties
-    /// @param firstEncoded (bytes) the last sent transfer of the msg.sender
-    /// @param secondEncoded (bytes) the last sent transfer of the msg.sender
-    function close(Data storage self, address callerAddress, bytes firstEncoded, bytes secondEncoded) {
+    /// @param first_encoded (bytes) the last sent transfer of the msg.sender
+    /// @param second_encoded (bytes) the last sent transfer of the msg.sender
+    function close(
+        Data storage self,
+        address caller_address,
+        bytes first_encoded,
+        bytes second_encoded
+    ) {
         bytes memory first_raw;
         bytes memory second_raw;
         address first_address;
@@ -192,12 +212,12 @@ library NettingChannelLibrary {
             throw;
         }
 
-        if (firstEncoded.length <= 65 || secondEncoded.length <= 65) {
+        if (first_encoded.length <= 65 || second_encoded.length <= 65) {
             throw;
         }
 
-        (first_raw, first_address) = getTransferRawAddress(firstEncoded);
-        (second_raw, second_address) = getTransferRawAddress(secondEncoded);
+        (first_raw, first_address) = getTransferRawAddress(first_encoded);
+        (second_raw, second_address) = getTransferRawAddress(second_encoded);
 
         if (first_address == second_address) {
             throw;
@@ -207,36 +227,36 @@ library NettingChannelLibrary {
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
 
-        if (callerAddress != node1.nodeAddress && callerAddress != node2.nodeAddress) {
+        if (caller_address != node1.node_address && caller_address != node2.node_address) {
             throw;
         }
 
-        if (node1.nodeAddress == first_address) {
+        if (node1.node_address == first_address) {
             Participant storage first_sender = node1;
-        } else if (node2.nodeAddress == first_address) {
+        } else if (node2.node_address == first_address) {
             first_sender = node2;
         } else {
             throw;
         }
 
-        if (node1.nodeAddress == second_address) {
+        if (node1.node_address == second_address) {
             Participant storage second_sender = node1;
-        } else if (node2.nodeAddress == second_address) {
+        } else if (node2.node_address == second_address) {
             second_sender = node2;
         } else {
             throw;
         }
 
-        decode_and_assign(first_sender, first_raw);
-        decode_and_assign(second_sender, second_raw);
+        decodeAndAssign(first_sender, first_raw);
+        decodeAndAssign(second_sender, second_raw);
 
-        self.closingAddress = callerAddress;
+        self.closing_address = caller_address;
         self.closed = block.number;
     }
 
     /// @notice updateTransfer(bytes) to update last known transfer
     /// @dev Allow the partner to update the last known transfer
-    function updateTransfer(Data storage self, address callerAddress, bytes signed_transfer)
+    function updateTransfer(Data storage self, address caller_address, bytes signed_transfer)
         notSettledButClosed(self)
         stillTimeout(self)
         notClosingAddress(self)
@@ -248,7 +268,7 @@ library NettingChannelLibrary {
         (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
 
         // transfer address must be from counter party
-        if (self.closingAddress != transfer_address) {
+        if (self.closing_address != transfer_address) {
             throw;
         }
 
@@ -256,9 +276,9 @@ library NettingChannelLibrary {
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
 
-        if (node1.nodeAddress == transfer_address) {
+        if (node1.node_address == transfer_address) {
             Participant storage sender = node1;
-        } else if (node2.nodeAddress == transfer_address) {
+        } else if (node2.node_address == transfer_address) {
             sender = node2;
         } else {
             throw;
@@ -272,7 +292,7 @@ library NettingChannelLibrary {
             throw;
         }
 
-        decode_and_assign(sender, transfer_raw);
+        decodeAndAssign(sender, transfer_raw);
 
         // TODO check if tampered and penalize
         // TODO check if outdated and penalize
@@ -280,25 +300,25 @@ library NettingChannelLibrary {
 
     /// @notice unlock(bytes, bytes, bytes32) to unlock a locked transfer
     /// @dev Unlock a locked transfer
-    /// @param lockedEncoded (bytes) the lock
-    /// @param merkleProof (bytes) the merkle proof
+    /// @param locked_encoded (bytes) the lock
+    /// @param merkle_proof (bytes) the merkle proof
     /// @param secret (bytes32) the secret
     function unlock(
         Data storage self,
-        address callerAddress,
-        bytes lockedEncoded,
-        bytes merkleProof,
+        address caller_address,
+        bytes locked_encoded,
+        bytes merkle_proof,
         bytes32 secret)
         notSettledButClosed(self)
     {
-        uint partnerId;
+        uint partner_id;
         uint64 expiration;
         uint amount;
         bytes32 hashlock;
         bytes32 h;
         bytes32 el;
 
-        (expiration, amount, hashlock) = decodeLock(lockedEncoded);
+        (expiration, amount, hashlock) = decodeLock(locked_encoded);
 
         if (expiration < block.number)
             throw;
@@ -308,9 +328,9 @@ library NettingChannelLibrary {
 
         Participant[2] storage participants = self.participants;
         Participant storage participant = participants[0];
-        if (participant.nodeAddress != callerAddress) {
+        if (participant.node_address != caller_address) {
             participant = participants[1];
-            if (participant.nodeAddress != callerAddress) {
+            if (participant.node_address != caller_address) {
                 throw;
             }
         }
@@ -319,10 +339,10 @@ library NettingChannelLibrary {
             throw;
         }
 
-        h = sha3(lockedEncoded);
-        for (uint i = 32; i <= merkleProof.length; i += 32) {
+        h = sha3(locked_encoded);
+        for (uint i = 32; i <= merkle_proof.length; i += 32) {
             assembly {
-                el := mload(add(merkleProof, i))
+                el := mload(add(merkle_proof, i))
             }
 
             if (h < el) {
@@ -341,20 +361,20 @@ library NettingChannelLibrary {
     /// @notice settle() to settle the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
     /// @return participants (Participant[2]) the participants with netted balances
-    function settle(Data storage self, address callerAddress)
+    function settle(Data storage self, address caller_address)
         notSettledButClosed(self)
         timeoutOver(self)
     {
-        uint totalNetted;
-        uint totalDeposit;
+        uint total_netted;
+        uint total_deposit;
         uint k;
 
         Participant[2] storage participants = self.participants;
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
 
-        node1.netted = node1.balance + node2.transferredAmount - node1.transferredAmount;
-        node2.netted = node2.balance + node1.transferredAmount - node2.transferredAmount;
+        node1.netted = node1.balance + node2.transferred_amount - node1.transferred_amount;
+        node2.netted = node2.balance + node1.transferred_amount - node2.transferred_amount;
 
         for (k = 0; k < node1.unlocked.length; k++) {
             node1.netted += node1.unlocked[k].amount;
@@ -368,15 +388,15 @@ library NettingChannelLibrary {
 
         self.settled = block.number;
 
-        totalNetted = node1.netted + node2.netted;
-        totalDeposit = node1.balance + node2.balance;
+        total_netted = node1.netted + node2.netted;
+        total_deposit = node1.balance + node2.balance;
 
-        if (totalNetted != totalDeposit) {
+        if (total_netted != total_deposit) {
             throw;
         }
 
-        self.token.transfer(node1.nodeAddress, node1.netted);
-        self.token.transfer(node2.nodeAddress, node2.netted);
+        self.token.transfer(node1.node_address, node1.netted);
+        self.token.transfer(node2.node_address, node2.netted);
     }
 
     function getTransferRawAddress(bytes memory signed_transfer) private returns (bytes memory, address) {
@@ -393,13 +413,13 @@ library NettingChannelLibrary {
         transfer_raw = slice(signed_transfer, 0, signature_start);
 
         transfer_hash = sha3(transfer_raw);
-        var (r, s, v) = signature_split(signature);
+        var (r, s, v) = signatureSplit(signature);
         transfer_address = ecrecover(transfer_hash, v, r, s);
 
         return (transfer_raw, transfer_address);
     }
 
-    function decode_and_assign(Participant storage sender, bytes transfer_raw) private {
+    function decodeAndAssign(Participant storage sender, bytes transfer_raw) private {
         // all checks must be done by now
         uint cmdid;
 
@@ -433,26 +453,26 @@ library NettingChannelLibrary {
         uint64 nonce;
         address asset;
         address recipient;
-        uint256 transferredAmount;
+        uint256 transferred_amount;
         bytes32 locksroot;
         bytes32 secret;
 
         assembly {
             // cmdid [0:1]
             // pad [1:4]
-            nonce := mload(add(message, 12))             // nonce [4:12]
+            nonce := mload(add(message, 12))              // nonce [4:12]
             // identifier [12:20]
-            asset := mload(add(message, 40))             // asset [20:40]
-            recipient := mload(add(message, 60))         // recipient [40:60]
-            transferredAmount := mload(add(message, 92)) // transferred_amount [60:92]
-            locksroot := mload(add(message, 124))        // optional_locksroot [92:124]
-            secret := mload(add(message, 156))           // optional_secret [124:156]
+            asset := mload(add(message, 40))              // asset [20:40]
+            recipient := mload(add(message, 60))          // recipient [40:60]
+            transferred_amount := mload(add(message, 92)) // transferred_amount [60:92]
+            locksroot := mload(add(message, 124))         // optional_locksroot [92:124]
+            secret := mload(add(message, 156))            // optional_secret [124:156]
         }
 
         participant.nonce = nonce;
         participant.asset = asset;
         participant.recipient = recipient;
-        participant.transferredAmount = transferredAmount;
+        participant.transferred_amount = transferred_amount;
         participant.locksroot = locksroot;
         participant.secret = secret;
     }
@@ -468,24 +488,24 @@ library NettingChannelLibrary {
         address recipient;
         bytes32 locksroot;
         bytes32 hashlock;
-        uint256 transferredAmount;
-        uint256 lockAmount;
+        uint256 transferred_amount;
+        uint256 lock_amount;
 
         assembly {
             // cmdid [0:1]
             // pad [1:4]
-            nonce := mload(add(message, 12))              // nonce [4:12]
+            nonce := mload(add(message, 12))               // nonce [4:12]
             // identifier [12:20]
-            expiration := mload(add(message, 28))         // expiration [20:28]
-            asset := mload(add(message, 48))              // asset [28:48]
-            recipient := mload(add(message, 68))          // recipient [48:68]
+            expiration := mload(add(message, 28))          // expiration [20:28]
+            asset := mload(add(message, 48))               // asset [28:48]
+            recipient := mload(add(message, 68))           // recipient [48:68]
             // target [68:88]
             // initiator [88:108]
-            locksroot := mload(add(message, 140))         // locksroot [108:140]
-            hashlock := mload(add(message, 172))          // hashlock [140:172]
-            transferredAmount := mload(add(message, 204)) // transferred_amount[172:204]
-            lockAmount := mload(add(message, 236))        // amount [204:236]
-            // fee := mload(add(message, 268))            // fee [236:268]
+            locksroot := mload(add(message, 140))          // locksroot [108:140]
+            hashlock := mload(add(message, 172))           // hashlock [140:172]
+            transferred_amount := mload(add(message, 204)) // transferred_amount[172:204]
+            lock_amount := mload(add(message, 236))        // amount [204:236]
+            // fee := mload(add(message, 268))             // fee [236:268]
         }
 
         participant.nonce = nonce;
@@ -494,8 +514,8 @@ library NettingChannelLibrary {
         participant.recipient = recipient;
         participant.locksroot = locksroot;
         participant.hashlock = hashlock;
-        participant.transferredAmount = transferredAmount;
-        participant.amount = lockAmount;
+        participant.transferred_amount = transferred_amount;
+        participant.amount = lock_amount;
     }
 
     function assignRefundTransfer(Participant storage participant, bytes memory message) private {
@@ -508,8 +528,8 @@ library NettingChannelLibrary {
         address asset;
         address recipient;
         bytes32 locksroot;
-        uint256 transferredAmount;
-        uint256 lockAmount;
+        uint256 transferred_amount;
+        uint256 lock_amount;
         bytes32 hashlock;
 
         assembly {
@@ -521,8 +541,8 @@ library NettingChannelLibrary {
             asset := mload(add(message, 48))                // asset [28:48]
             recipient := mload(add(message, 68))            // recipient [48:68]
             locksroot := mload(add(message, 100))           // locksroot [68:100]
-            transferredAmount := mload(add(message, 132))   // transferred_amount [100:132]
-            lockAmount := mload(add(message, 164))          // amount [132:164]
+            transferred_amount := mload(add(message, 132))  // transferred_amount [100:132]
+            lock_amount := mload(add(message, 164))         // amount [132:164]
             hashlock := mload(add(message, 196))            // hashlock [164:196]
         }
 
@@ -531,8 +551,8 @@ library NettingChannelLibrary {
         participant.asset = asset;
         participant.recipient = recipient;
         participant.locksroot = locksroot;
-        participant.transferredAmount = transferredAmount;
-        participant.amount = lockAmount;
+        participant.transferred_amount = transferred_amount;
+        participant.amount = lock_amount;
         participant.hashlock = hashlock;
     }
 
@@ -549,7 +569,7 @@ library NettingChannelLibrary {
         }
     }
 
-    function signature_split(bytes signature) private returns (bytes32 r, bytes32 s, uint8 v) {
+    function signatureSplit(bytes signature) private returns (bytes32 r, bytes32 s, uint8 v) {
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
