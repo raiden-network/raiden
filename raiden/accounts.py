@@ -10,10 +10,12 @@ from pyethapp.accounts import Account
 def find_datadir():
     home = os.path.expanduser("~")
     datadir = None
-    if sys.platform.startswith('linux'):
+    if sys.platform.startswith('linux') or sys.platform.startswith('FreeBSD'):
         datadir = os.path.join(home, '.ethereum')
     elif sys.platform == 'darwin':
         datadir = os.path.join(home, 'Library', 'Ethereum')
+    elif sys.platform == 'win32' or sys.platform == 'cygwin':  # NOTE: Not really sure about cygwin here
+        datadir = os.path.join(home, 'AppData', 'Roaming', 'Ethereum')
     else:
         raise RuntimeError('Unsupported Operating System')
 
