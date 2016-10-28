@@ -795,7 +795,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
     assert len(unlock_proofs) == 1
 
     channel1.external_state.update_transfer(channel1.our_state.address, transfer)
-    channel1.external_state.unlock(channel1.our_state.address, unlock_proofs)
+    channel0.external_state.unlock(channel0.our_state.address, unlock_proofs)
 
     # already unlock, shoud fail
     with pytest.raises(TransactionFailed):
@@ -805,5 +805,5 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
             proof.lock_encoded,
             ''.join(proof.merkle_proof),
             proof.secret,
-            sender=privatekey1,
+            sender=privatekey0_raw,
         )
