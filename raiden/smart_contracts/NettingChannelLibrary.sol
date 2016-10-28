@@ -56,6 +56,12 @@ library NettingChannelLibrary {
         _;
     }
 
+    modifier notClosingAddress(Data storage self) {
+        if (msg.sender == self.closingAddress)
+            throw;
+        _;
+    }
+
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
@@ -233,6 +239,7 @@ library NettingChannelLibrary {
     function updateTransfer(Data storage self, address callerAddress, bytes signed_transfer)
         notSettledButClosed(self)
         stillTimeout(self)
+        notClosingAddress(self)
     {
         uint64 nonce;
         bytes memory transfer_raw;
@@ -240,8 +247,8 @@ library NettingChannelLibrary {
 
         (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
 
-        // participant that called close cannot update
-        if (self.closingAddress == transfer_address) {
+        // transfer address must be from counter party
+        if (self.closingAddress != transfer_address) {
             throw;
         }
 
