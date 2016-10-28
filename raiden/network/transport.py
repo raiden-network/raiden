@@ -109,7 +109,7 @@ class DummyTransport(object):
 
 
 class UnreliableTransport(DummyTransport):
-    """ A transport that simulates random loses of UDP messages. """
+    """ A transport that simulates random losses of UDP messages. """
 
     droprate = 2  # drop every Nth message
 
