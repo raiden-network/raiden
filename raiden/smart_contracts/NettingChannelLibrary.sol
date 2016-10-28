@@ -56,8 +56,8 @@ library NettingChannelLibrary {
         _;
     }
 
-    modifier notClosingAddress(Data storage self) {
-        if (msg.sender == self.closing_address)
+    modifier notClosingAddress(Data storage self, address caller) {
+        if (caller == self.closing_address)
             throw;
         _;
     }
@@ -257,7 +257,7 @@ library NettingChannelLibrary {
     function updateTransfer(Data storage self, address caller_address, bytes signed_transfer)
         notSettledButClosed(self)
         stillTimeout(self)
-        notClosingAddress(self)
+        notClosingAddress(self, caller_address)
     {
         uint64 nonce;
         bytes memory transfer_raw;
