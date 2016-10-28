@@ -8,14 +8,18 @@ from pyethapp.accounts import Account
 
 
 def find_datadir():
-    home = os.path.expanduser("~")
+    home = os.path.expanduser('~')
+    if home == '~':  # Could not expand user path
+        return None
     datadir = None
-    if sys.platform.startswith('linux') or sys.platform.startswith('FreeBSD'):
-        datadir = os.path.join(home, '.ethereum')
-    elif sys.platform == 'darwin':
+
+    if sys.platform == 'darwin':
         datadir = os.path.join(home, 'Library', 'Ethereum')
-    elif sys.platform == 'win32' or sys.platform == 'cygwin':  # NOTE: Not really sure about cygwin here
+    # NOTE: Not really sure about cygwin here
+    elif sys.platform == 'win32' or sys.platform == 'cygwin':
         datadir = os.path.join(home, 'AppData', 'Roaming', 'Ethereum')
+    elif os.name == 'posix':
+        datadir = os.path.join(home, '.ethereum')
     else:
         raise RuntimeError('Unsupported Operating System')
 
