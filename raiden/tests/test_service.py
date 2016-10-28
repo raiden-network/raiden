@@ -29,6 +29,32 @@ def test_ping(raiden_network):
     assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
 
 
+@pytest.mark.timeout(3)
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('transport_class', [UnreliableTransport])
+def test_ping_unreachable(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    UnreliableTransport.droprate = 1  # drop everything to force disabling of re-sends
+    RaidenProtocol.try_interval = 0.1  # for fast tests
+    RaidenProtocol.repeat_messages = True
+
+    messages = setup_messages_cb()
+    UnreliableTransport.network.counter = 0
+
+    ping = Ping(nonce=0)
+    app0.raiden.sign(ping)
+    app0.raiden.protocol.send_and_wait(app1.raiden.address, ping)
+    gevent.sleep(2)
+
+    assert len(messages) == 5  # 5 dropped Pings
+    for i, message in enumerate(messages):
+        assert decode(message) == ping
+
+    RaidenProtocol.repeat_messages = False
+
+
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
