@@ -33,10 +33,10 @@ def test_channelnew_event(settle_timeout, tester_state, tester_events,
     last_event = tester_events[-1]
     assert last_event == {
         '_event_type': 'ChannelNew',
-        'nettingChannel': netting_channel_address1_hex,
+        'netting_channel': netting_channel_address1_hex,
         'participant1': encode_hex(address0),
         'participant2': encode_hex(address1),
-        'settleTimeout': settle_timeout,
+        'settle_timeout': settle_timeout,
     }
 
 
@@ -79,8 +79,8 @@ def test_channelmanager(tester_state, tester_token, tester_events,
         '_event_type': 'ChannelNew',
         'participant1': address0.encode('hex'),
         'participant2': address1.encode('hex'),
-        'nettingChannel': netting_channel_address1_hex,
-        'settleTimeout': settle_timeout,
+        'netting_channel': netting_channel_address1_hex,
+        'settle_timeout': settle_timeout,
     }
 
     # should fail if settleTimeout is too low
@@ -130,8 +130,8 @@ def test_channelmanager(tester_state, tester_token, tester_events,
         '_event_type': 'ChannelNew',
         'participant1': address0.encode('hex'),
         'participant2': address2.encode('hex'),
-        'nettingChannel': netting_channel_address2_hex,
-        'settleTimeout': settle_timeout,
+        'netting_channel': netting_channel_address2_hex,
+        'settle_timeout': settle_timeout,
     }
 
     # uncomment private in function to run test

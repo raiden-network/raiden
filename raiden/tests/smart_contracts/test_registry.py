@@ -37,9 +37,9 @@ def test_registry(tester_registry, tester_events):
     assert len(tester_events) == 2
 
     assert tester_events[0]['_event_type'] == 'AssetAdded'
-    assert tester_events[0]['assetAddress'] == asset_address1.encode('hex')
-    assert tester_events[0]['channelManagerAddress'] == contract_address1
+    assert tester_events[0]['asset_address'] == asset_address1.encode('hex')
+    assert tester_events[0]['channel_manager_address'] == contract_address1
 
     assert tester_events[1]['_event_type'] == 'AssetAdded'
-    assert tester_events[1]['assetAddress'] == asset_address2.encode('hex')
-    assert tester_events[1]['channelManagerAddress'] == contract_address2
+    assert tester_events[1]['asset_address'] == asset_address2.encode('hex')
+    assert tester_events[1]['channel_manager_address'] == contract_address2

@@ -9,9 +9,9 @@ contract EndpointRegistry{
     event AddressRegistered(address indexed eth_address, string socket);
 
     // Mapping of Ethereum Addresses => SocketEndpoints
-    mapping (address => string) addressToSocket;
+    mapping (address => string) address_to_socket;
     // Mapping of SocketEndpoints => Ethereum Addresses
-    mapping (string => address) socketToAddress;
+    mapping (string => address) socket_to_address;
     // list of all the Registered Addresses , still not used.
     address[] eth_addresses;
 
@@ -30,7 +30,7 @@ contract EndpointRegistry{
     */
     function registerEndpoint(string socket) noEmptyString(socket)
     {
-        string old_socket = addressToSocket[msg.sender];
+        string old_socket = address_to_socket[msg.sender];
 
         // Compare if the new socket matches the old one, if it does just return
         if (equals(old_socket, socket)) {
@@ -38,9 +38,9 @@ contract EndpointRegistry{
         }
 
         // Put the ethereum address 0 in front of the old_socket,old_socket:0x0
-        socketToAddress[old_socket] = address(0);
-        addressToSocket[msg.sender] = socket;
-        socketToAddress[socket] = msg.sender;
+        socket_to_address[old_socket] = address(0);
+        address_to_socket[msg.sender] = socket;
+        socket_to_address[socket] = msg.sender;
         AddressRegistered(msg.sender, socket);
     }
 
@@ -52,7 +52,7 @@ contract EndpointRegistry{
     */
     function findEndpointByAddress(address eth_address) constant returns (string socket)
     {
-        return addressToSocket[eth_address];
+        return address_to_socket[eth_address];
     }
 
     /*
@@ -63,7 +63,7 @@ contract EndpointRegistry{
     */
     function findAddressByEndpoint(string socket) constant returns (address eth_address)
     {
-        return socketToAddress[socket];
+        return socket_to_address[socket];
     }
 
     function equals(string a, string b) internal constant returns (bool result)
