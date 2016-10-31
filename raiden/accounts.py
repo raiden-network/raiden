@@ -23,7 +23,7 @@ def find_datadir():
     else:
         raise RuntimeError('Unsupported Operating System')
 
-    if os.path.isdir(datadir) is False:
+    if not os.path.isdir(datadir):
         return None
     return datadir
 
