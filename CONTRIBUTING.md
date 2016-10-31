@@ -4,11 +4,18 @@ Welcome! This guide serves as the guideline to contributing to the Raiden Networ
 codebase. It's here to help you understand what developmenr practises we use here
 and what are the requirements for a Pull Request to be opened against Raiden.
 
+- [Contributing](#contributing)
+    - [Creating an Issue](#creating-an-issue)
+    - [Creating a Pull Request](#creating-a-pull-request)
+- [Development Guidelines](#development-guidelines)
+    - [Coding Style](#coding-style)
+    - [Workflow](#workflow)
+
 
 ## Contributing
 
 You can contribute to the development with two basic methods. You can either open
-an Issue or if you have the capabilities open a Pull Request.
+an Issue or if you have programming abilities open a Pull Request.
 
 ### Creating an Issue
 
@@ -36,7 +43,7 @@ If the PR adds a new feature and it's very long, consider breaking into smaller 
 In order for a Pull Request to get merged into the main repository you should have one
 approved review from one of the core developers of Raiden and also all Continuous integration tests should be passing and the CI build should be green.
 
-## Development Guideline
+## Development Guidelines
 
 In this section we are going to describe the coding rules for contributing to the raiden repository. All code you write should strive to comply with these rules.
 
@@ -80,6 +87,7 @@ def function_with_many_args(
 ** Breaking function calls when line is above 99 characters **
 
 Much like in the above example the following should be avoided
+
 ```python
 
 function_call_with_many_arguments(argument1, argument2, argument3, argument4, argument5, argument6, argument7)
@@ -127,3 +135,13 @@ manager = Manager()
 balance_holder = AccountBalanceHolder()
 service = RaidenService()
 ```
+
+### Workflow
+
+When developing a feature, or a bug fix you should always start by writting a **test** for it, or by modifying
+existing tests to test for your feature. Once you see that test failing you should implement the feature and confirm
+that all your new tests pass.
+
+Afterwards you should open a Pull Request from your fork or feature branch against master. You will be given feedback from
+the core developers of raiden and you should try to incorporate that feedback into your branch. Once you do so and all tests
+pass your feature/fix will be merged.
