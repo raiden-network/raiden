@@ -26,11 +26,11 @@ def test_get_accounts():
 
 def test_get_account_in_keystore():
     account_manager = AccountManager(test_keystore)
-    assert True is account_manager.address_in_keystore('0d5a0e4fece4b84365b9b8dba6e6d41348c73645')
-    assert True is account_manager.address_in_keystore('0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645')
-    assert True is account_manager.address_in_keystore('3593403033d18b82f7b4a0f18e1ed24623d23b20')
-    assert True is account_manager.address_in_keystore('0x3593403033d18b82f7b4a0f18e1ed24623d23b20')
-    assert False is account_manager.address_in_keystore('a05934d3033d18b82f7b4adf18e1ed24e3d23b19')
+    assert account_manager.address_in_keystore('0d5a0e4fece4b84365b9b8dba6e6d41348c73645')
+    assert account_manager.address_in_keystore('0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645')
+    assert account_manager.address_in_keystore('3593403033d18b82f7b4a0f18e1ed24623d23b20')
+    assert account_manager.address_in_keystore('0x3593403033d18b82f7b4a0f18e1ed24623d23b20')
+    assert not account_manager.address_in_keystore('a05934d3033d18b82f7b4adf18e1ed24e3d23b19')
 
 
 def test_get_privkey():
