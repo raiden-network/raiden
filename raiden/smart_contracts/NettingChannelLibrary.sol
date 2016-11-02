@@ -65,7 +65,7 @@ library NettingChannelLibrary {
     modifier inNonceRange(Data storage self, bytes message) {
         uint64 nonce;
         nonce = getNonce(message);
-        if (nonce < self.opened * (2**32) || nonce > (self.opened + 1) * (2**32))
+        if (nonce < self.opened * (2**32) || nonce >= (self.opened + 1) * (2**32))
             throw;
         _;
     }
@@ -219,10 +219,10 @@ library NettingChannelLibrary {
         nonce = getNonce(firstEncoded);
         // check if nonce is valid. 
         // TODO should be in modifier, but "Stack too deep" error
-        if (nonce < self.opened * (2**32) || nonce > (self.opened + 1) * (2**32))
+        if (nonce < self.opened * (2**32) || nonce >= (self.opened + 1) * (2**32))
             throw;
         nonce = getNonce(secondEncoded);
-        if (nonce < self.opened * (2**32) || nonce > (self.opened + 1) * (2**32))
+        if (nonce < self.opened * (2**32) || nonce >= (self.opened + 1) * (2**32))
             throw;
 
         bytes memory first_raw;

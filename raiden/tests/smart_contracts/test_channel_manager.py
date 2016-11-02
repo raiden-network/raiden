@@ -162,8 +162,7 @@ def test_deleteChannel(tester_state, tester_channelmanager, tester_channels, set
 
     should_be_nonce = nettingchannel.opened(sender=privatekey0_raw) * (2**32)
     should_be_nonce_plus_one = (nettingchannel.opened(sender=privatekey0_raw) + 1) * (2**32)
-    assert should_be_nonce <= direct_transfer.nonce
-    assert should_be_nonce_plus_one > direct_transfer.nonce
+    assert should_be_nonce <= direct_transfer.nonce < should_be_nonce_plus_one
 
     # settle the channel should not change the channel manager state
     nettingchannel.closeSingleTransfer(
