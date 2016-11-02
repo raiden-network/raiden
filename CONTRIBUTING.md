@@ -1,7 +1,7 @@
 # Raiden Development Guide
 
 Welcome! This guide serves as the guideline to contributing to the Raiden Network
-codebase. It's here to help you understand what developmenr practises we use here
+codebase. It's here to help you understand what development practises we use here
 and what are the requirements for a Pull Request to be opened against Raiden.
 
 - [Contributing](#contributing)
@@ -14,7 +14,7 @@ and what are the requirements for a Pull Request to be opened against Raiden.
 
 ## Contributing
 
-You can contribute to the development with two basic methods. You can either open
+There are two ways you can contribute to the development. You can either open
 an Issue or if you have programming abilities open a Pull Request.
 
 ### Creating an Issue
@@ -38,16 +38,18 @@ If you have some coding abilities and would like to contribute to the actual cod
 All PRs should be:
 - Self-contained
 - As short as possible and address a single issue or even a part of an issue.
-If the PR adds a new feature and it's very long, consider breaking into smaller ones.
+  Consider breaking long PRs into smaller ones.
 
 In order for a Pull Request to get merged into the main repository you should have one
-approved review from one of the core developers of Raiden and also all Continuous integration tests should be passing and the CI build should be green.
+approved review from one of the core developers of Raiden and also all Continuous Integration tests should be passing and the CI build should be green.
 
 ## Development Guidelines
 
 In this section we are going to describe the coding rules for contributing to the raiden repository. All code you write should strive to comply with these rules.
 
 ### Coding Style
+
+#### Python
 
 Raiden is written in Python and we follow the official Python style guide [PEP8](https://www.python.org/dev/peps/pep-0008/). It is highly
 recommended to use the [flake8](https://pypi.python.org/pypi/flake8) tool in order to automatically determine any and all style violations. The customizeable part of flake can be seen in the [configuration file](setup.cfg). For all the rest which are not
@@ -135,6 +137,64 @@ manager = Manager()
 balance_holder = AccountBalanceHolder()
 service = RaidenService()
 ```
+
+#### Solidity
+
+For solidity we generally follow the style guide as shown in the [solidity documentation](http://solidity.readthedocs.io/en/develop/style-guide.html)
+with a few notable exceptions:
+
+** Variable Names **
+
+All variable name should be in snake case, just like in python. Function names on the other hand should be mixedCase.
+MixedCase is essentially like CamelCase but with the initial letter being a small letter.
+This helps us to easily determine which function calls are smart contract calls in the python code side.
+
+```js
+function iDoSomething(uint awesome_argument) {
+	doSomethingElse();
+}
+```
+
+** Modifiers in long function declarations **
+
+
+This is how the solidity documentation suggests it:
+
+```js
+function thisFunctionNameIsReallyLong(
+    address x,
+    address y,
+    address z,
+)
+    public
+    onlyowner
+    priced
+    returns (address)
+{
+    doSomething();
+}
+```
+
+This is the minor modification we make in order to make the code more readable when quickly skimming through it.
+The thinking here is to easily spot the start of the function's block when skimming and not have the modifiers
+appearing as if they are a block on their own due to the hanging parentheses.
+
+```js
+function thisFunctionNameIsReallyLong(
+    address x,
+    address y,
+    address z)
+
+    public
+    onlyowner
+    priced
+    returns (address)
+{
+    doSomething();
+}
+```
+
+
 
 ### Workflow
 
