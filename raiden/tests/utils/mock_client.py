@@ -211,8 +211,8 @@ class RegistryMock(object):
 
         data = {
             '_event_type': 'AssetAdded',
-            'assetAddress': asset_address,
-            'channelManagerAddress': manager.address,
+            'asset_address': asset_address,
+            'channel_manager_address': manager.address,
         }
         event = ethereum_event(ASSETADDED_EVENTID, ASSETADDED_EVENT, data, self.address)
 
@@ -286,10 +286,10 @@ class ChannelManagerMock(object):
 
         data = {
             '_event_type': 'ChannelNew',
-            'nettingChannel': channel.address,
+            'netting_channel': channel.address,
             'participant1': peer1,
             'participant2': peer2,
-            'settleTimeout': settle_timeout,
+            'settle_timeout': settle_timeout,
         }
         event = ethereum_event(CHANNELNEW_EVENTID, CHANNELNEW_EVENT, data, self.address)
 
@@ -349,10 +349,10 @@ class NettingChannelMock(object):
         our_data = self.contract.participants[our_address]
         data = {
             '_event_type': 'ChannelNewBalance',
-            'assetAddress': self.contract.asset_address,
+            'asset_address': self.contract.asset_address,
             'participant': our_address,
             'balance': our_data.deposit,
-            'blockNumber': BlockChainServiceMock.block_number(),
+            'block_number': BlockChainServiceMock.block_number(),
         }
         event = ethereum_event(CHANNELNEWBALANCE_EVENTID, CHANNELNEWBALANCE_EVENT, data, self.address)
 
@@ -405,8 +405,8 @@ class NettingChannelMock(object):
 
         data = {
             '_event_type': 'ChannelClosed',
-            'closingAddress': our_address,
-            'blockNumber': BlockChainServiceMock.block_number(),
+            'closing_address': our_address,
+            'block_number': BlockChainServiceMock.block_number(),
         }
         event = ethereum_event(CHANNELCLOSED_EVENTID, CHANNELCLOSED_EVENT, data, self.address)
 
@@ -461,7 +461,7 @@ class NettingChannelMock(object):
 
         data = {
             '_event_type': 'ChannelSettled',
-            'blockNumber': BlockChainServiceMock.block_number(),
+            'block_number': BlockChainServiceMock.block_number(),
         }
         event = ethereum_event(CHANNELSETTLED_EVENTID, CHANNELSETTLED_EVENT, data, self.address)
 
