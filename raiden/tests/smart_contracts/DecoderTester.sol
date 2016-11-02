@@ -22,7 +22,7 @@ contract DecoderTester {
     }
 
     function DecoderTester(
-        address assetAddress,
+        address asset_address,
         address participant1,
         address participant2,
         uint timeout)
@@ -32,11 +32,11 @@ contract DecoderTester {
             throw;
         }
 
-        data.participants[0].nodeAddress = participant1;
-        data.participants[1].nodeAddress = participant2;
+        data.participants[0].node_address = participant1;
+        data.participants[1].node_address = participant2;
 
-        data.token = Token(assetAddress);
-        data.settleTimeout = timeout;
+        data.token = Token(asset_address);
+        data.settle_timeout = timeout;
     }
 
     function testDecodeTransfer(bytes signed_transfer) returns (bool) {
@@ -58,7 +58,7 @@ contract DecoderTester {
     }
 
     function decodedAmount() after_decoding constant returns (uint256) {
-        return data.participants[0].transferredAmount;
+        return data.participants[0].transferred_amount;
     }
 
     function decodedLocksroot() after_decoding constant returns (bytes32) {
