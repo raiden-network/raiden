@@ -32,7 +32,7 @@ class Discovery(object):
         try:
             return self.nodeid_hostport[nodeid]
         except KeyError:
-            raise KeyError('Unknow address {}'.format(pex(nodeid)))
+            raise KeyError('Unknown address {}'.format(pex(nodeid)))
 
     def nodeid_by_host_port(self, host_port):
         for nodeid, value_hostport in self.nodeid_hostport.items():
@@ -45,7 +45,12 @@ class ContractDiscovery(Discovery):
     """On chain smart contract raiden node discovery: allows to register endpoints (host, port) for
     your ethereum-/raiden-address and looking up endpoints for other ethereum-/raiden-addressess.
     """
-    def __init__(self, blockchainservice, discovery_contract_address, poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def __init__(
+            self,
+            blockchainservice,
+            discovery_contract_address,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
+
         self.chain = blockchainservice
         self.poll_timeout = poll_timeout
 

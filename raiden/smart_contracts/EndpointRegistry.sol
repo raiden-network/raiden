@@ -1,6 +1,7 @@
 /*
-This contract is a registry which maps the Ethereum Address to their endpoint i.e sockets.
-The Ethereum address registers his address in this registry.
+ * This contract is a registry which maps the Ethereum Address to their
+ *  endpoint i.e sockets.
+ * The Ethereum address registers his address in this registry.
 */
 
 pragma solidity ^0.4.0;
@@ -24,10 +25,10 @@ contract EndpointRegistry{
     }
 
     /*
-    @notice Registers the Ethereum Address to the Endpoint socket.
-    @dev Registers the Ethereum Address to the Endpoint socket.
-    @param string of socket in this format "127.0.0.1:40001"
-    */
+     * @notice Registers the Ethereum Address to the Endpoint socket.
+     * @dev Registers the Ethereum Address to the Endpoint socket.
+     * @param string of socket in this format "127.0.0.1:40001"
+     */
     function registerEndpoint(string socket) noEmptyString(socket)
     {
         string old_socket = address_to_socket[msg.sender];
@@ -45,22 +46,22 @@ contract EndpointRegistry{
     }
 
     /*
-    @notice Finds the socket if given an Ethereum Address
-    @dev Finds the socket if given an Ethereum Address
-    @param An eth_address which is a 20 byte Ethereum Address
-    @return A socket which the current Ethereum Address is using.
-    */
+     * @notice Finds the socket if given an Ethereum Address
+     * @dev Finds the socket if given an Ethereum Address
+     * @param An eth_address which is a 20 byte Ethereum Address
+     * @return A socket which the current Ethereum Address is using.
+     */
     function findEndpointByAddress(address eth_address) constant returns (string socket)
     {
         return address_to_socket[eth_address];
     }
 
     /*
-    @notice Finds Ethreum Address if given an existing socket address
-    @dev Finds Ethreum Address if given an existing socket address
-    @param string of socket in this format "127.0.0.1:40001"
-    @return An ethereum address
-    */
+     * @notice Finds Ethreum Address if given an existing socket address
+     * @dev Finds Ethreum Address if given an existing socket address
+     * @param string of socket in this format "127.0.0.1:40001"
+     * @return An ethereum address
+     */
     function findAddressByEndpoint(string socket) constant returns (address eth_address)
     {
         return socket_to_address[socket];
