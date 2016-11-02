@@ -61,8 +61,7 @@ library ChannelManagerLibrary {
     function newChannel(
         Data storage self,
         address partner,
-        uint settle_timeout
-    )
+        uint settle_timeout)
         returns (address)
     {
         address channel_address;

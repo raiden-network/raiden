@@ -74,8 +74,7 @@ library NettingChannelLibrary {
         Data storage self,
         address caller_address,
         address channel_address,
-        uint256 amount
-    )
+        uint256 amount)
         returns (bool success, uint256 balance)
     {
         uint index;
@@ -138,13 +137,12 @@ library NettingChannelLibrary {
 
     function addressAndBalance(Data storage self)
         constant
-        returns
-    (
+        returns(
         address participant1,
         uint balance1,
         address participant2,
-        uint balance2
-    ) {
+        uint balance2)
+    {
         Participant[2] participants = self.participants;
         Participant node1 = participants[0];
         Participant node2 = participants[1];
@@ -200,8 +198,8 @@ library NettingChannelLibrary {
         Data storage self,
         address caller_address,
         bytes first_encoded,
-        bytes second_encoded
-    ) {
+        bytes second_encoded)
+    {
         bytes memory first_raw;
         bytes memory second_raw;
         address first_address;
