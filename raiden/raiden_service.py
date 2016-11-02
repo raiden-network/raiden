@@ -683,7 +683,7 @@ class RaidenEventHandler(object):
         )
 
         if participant1 == self.raiden.address or participant2 == self.raiden.address:
-            netting_channel_address_bin = address_decoder(event['nettingChannel'])
+            netting_channel_address_bin = address_decoder(event['netting_channel'])
 
             try:
                 asset_manager.register_channel_by_address(
@@ -698,7 +698,7 @@ class RaidenEventHandler(object):
                 if log.isEnabledFor(logging.INFO):
                     log.info(
                         'New channel created',
-                        channel_address=event['nettingChannel'],
+                        channel_address=event['netting_channel'],
                         manager_address=pex(manager_address_bin),
                     )
         else:
@@ -712,7 +712,7 @@ class RaidenEventHandler(object):
                 event=event,
             )
 
-        asset_address_bin = address_decoder(event['assetAddress'])
+        asset_address_bin = address_decoder(event['asset_address'])
         participant_address_bin = address_decoder(event['participant'])
 
         # should not raise, all three addresses need to be registered
@@ -724,11 +724,11 @@ class RaidenEventHandler(object):
             channel_state.update_contract_balance(event['balance'])
 
         if channel.external_state.opened_block == 0:
-            channel.external_state.set_opened(event['blockNumber'])
+            channel.external_state.set_opened(event['block_number'])
 
     def event_channelclosed(self, netting_contract_address_bin, event):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.set_closed(event['blockNumber'])
+        channel.external_state.set_closed(event['block_number'])
 
     def event_channelsettled(self, netting_contract_address_bin, event):
         if log.isEnabledFor(logging.DEBUG):
@@ -739,7 +739,7 @@ class RaidenEventHandler(object):
             )
 
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.set_settled(event['blockNumber'])
+        channel.external_state.set_settled(event['block_number'])
 
     def event_channelsecretrevealed(self, netting_contract_address_bin, event):
         # pylint: disable=unused-argument
