@@ -75,6 +75,11 @@ library NettingChannelLibrary {
         _;
     }
 
+    modifier notClosingAddress(Data storage self) {
+        if (msg.sender == self.closingAddress)
+            throw;
+        _;
+    }
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
@@ -288,6 +293,10 @@ library NettingChannelLibrary {
         bytes memory transfer_raw;
         address transfer_address;
 
+        nonce = getNonce(signed_transfer);
+        if (nonce < self.opened * (2**32) || nonce >= (self.opened + 1) * (2**32))
+            throw;
+
         (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
 
         // transfer address must be from counter party
@@ -305,10 +314,6 @@ library NettingChannelLibrary {
             sender = node2;
         } else {
             throw;
-        }
-
-        assembly {
-            nonce := mload(add(transfer_raw, 12))  // skip cmdid and padding
         }
 
         if (nonce < sender.nonce || nonce == sender.nonce) {
