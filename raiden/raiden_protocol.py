@@ -73,7 +73,7 @@ class RaidenProtocol(object):
         # Maps the echo hash `sha3(message + address)` to a WaitAck tuple
         self.echohash_asyncresult = dict()
 
-    def stop(self):
+    def stop_async(self):
         for greenlet in self.address_greenlet.itervalues():
             greenlet.kill()
 
@@ -84,6 +84,10 @@ class RaidenProtocol(object):
         self.address_greenlet = dict()
         self.echohash_acks = dict()
         self.echohash_asyncresult = dict()
+
+    def stop_and_wait(self):
+        self.stop_async()
+        gevent.wait(self.address_greenlet.itervalues())
 
     def _send_queued_messages(self, receiver_address, queue_name):
         # Note: this task can be killed at any time
