@@ -53,7 +53,14 @@ def assets_addresses(asset_amount, number_of_assets, blockchain_services):
 
 
 @pytest.fixture
-def blockchain_services(request, private_keys, poll_timeout, blockchain_backend, blockchain_type, tester_blockgas_limit):
+def blockchain_services(
+        request,
+        private_keys,
+        poll_timeout,
+        blockchain_backend,
+        blockchain_type,
+        tester_blockgas_limit):
+
     verbose = request.config.option.verbose
 
     if blockchain_type in ('geth',):

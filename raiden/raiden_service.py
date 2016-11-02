@@ -118,7 +118,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             if channel is not None:
                 return channel
 
-        raise ValueError('unknow channel {}'.format(encode_hex(netting_channel_address_bin)))
+        raise ValueError('unknown channel {}'.format(encode_hex(netting_channel_address_bin)))
 
     def sign(self, message):
         """ Sign message inplace. """
@@ -194,7 +194,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         The corresponding task is found by matching the hashlock.
 
         Return:
-            bool: True if a correspoding task is found, False otherwise.
+            bool: True if a corresponding task is found, False otherwise.
         """
         # allow multiple managers to register for the hashlock (used for exchanges)
         found = 0
@@ -530,10 +530,10 @@ class RaidenAPI(object):
 
 
 class RaidenMessageHandler(object):
-    """ Class responsable to handle the protocol messages.
+    """ Class responsible to handle the protocol messages.
 
     Note:
-        This class is not intented to be used standalone, use RaidenService
+        This class is not intended to be used standalone, use RaidenService
         instead.
     """
     def __init__(self, raiden):
@@ -625,10 +625,10 @@ class RaidenMessageHandler(object):
 
 
 class RaidenEventHandler(object):
-    """ Class responsable to handle all the blockchain events.
+    """ Class responsible to handle all the blockchain events.
 
     Note:
-        This class is not intented to be used standalone, use RaidenService
+        This class is not intended to be used standalone, use RaidenService
         instead.
     """
 

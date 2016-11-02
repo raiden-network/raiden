@@ -49,7 +49,7 @@ class RaidenProtocol(object):
     previous answer is resent.
 
     Repeat sending messages until an acknowledgment is received or the maximum
-    number of retries is hitted.
+    number of retries is hit.
     """
 
     try_interval = 1.
@@ -66,7 +66,7 @@ class RaidenProtocol(object):
         self.address_greenlet = dict()
 
         # TODO: remove old ACKs from the dict to free memory
-        # The Ack for a processed message, used to avoid re-processing a know
+        # The Ack for a processed message, used to avoid re-processing a known
         # message
         self.echohash_acks = dict()
 
@@ -92,7 +92,7 @@ class RaidenProtocol(object):
         host_port = self.discovery.get(receiver_address)
 
         while queue.wait():
-            # avoid to reserialize the message and calculate it's hash
+            # avoid reserializing the message and calculate it's hash
             message, messagedata, echohash = queue.get()
 
             waitack = self.echohash_asyncresult[echohash]
@@ -183,9 +183,10 @@ class RaidenProtocol(object):
         messagedata = message.encode()
 
         # Adding the receiver address into the echohash to avoid collisions
-        # among different receivers (Messages that are not unique per receiver
+        # among different receivers.
+        # (Messages that are not unique per receiver
         # can result in hash colision, eg. Secret message sent to more than one
-        # node, this hash collision has the undeseried effect of aborting
+        # node, this hash collision has the undesired effect of aborting
         # message resubmission once a single node replied with an Ack)
         echohash = sha3(messagedata + receiver_address)
 

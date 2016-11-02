@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module contains the classes responsable to implement the network
+This module contains the classes responsible to implement the network
 communication.
 """
 import gevent
@@ -35,7 +35,7 @@ class UDPTransport(object):
         Args:
             sender (address): The address of the running node.
             host_port (Tuple[(str, int)]): Tuple with the host name and port number.
-            bytes_ (bytes): The bytes that are going to be sent throught the wire.
+            bytes_ (bytes): The bytes that are going to be sent through the wire.
         """
         self.server.sendto(bytes_, host_port)
 
