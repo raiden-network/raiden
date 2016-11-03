@@ -12,9 +12,11 @@ import time
 import random
 from ethereum import slogging
 
+from ethereum.utils import decode_hex
 from raiden.console import ConsoleTools
-from raiden.app import app as orig_app
-from raiden.app import options
+from raiden.app import App
+from raiden.network.rpc.client import BlockChainService
+from raiden.network.discovery import ContractDiscovery
 from raiden.utils import split_endpoint
 
 
@@ -23,35 +25,77 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 @click.option(  # noqa
-    '--external_listen_address',
-    default='',
+    '--privatekey',
     type=str,
 )
 @click.option(  # noqa
+    '--registry_contract_address',
+    type=str,
+)
+@click.option(  # noqa
+    '--discovery_contract_address',
+    type=str,
+)
+@click.option(  # noqa
+    '--listen_address',
+    type=str,
+)
+@click.option(  # noqa
+    '--logging',
+    default=':INFO',
+    type=str,
+)
+@click.option(  # noqa
+    '--logfile',
+    default=None,
+    type=str
+)
+@click.option(  # noqa
     '--scenario',
-    help='path to scenario.json',
     type=click.File()
 )
 @click.option(  # noqa
     '--stage_prefix',
-    help='prefix of temporary stage files',
     type=str
 )
-@options
 @click.command()
-@click.pass_context  # pylint: disable=too-many-locals
-def run(ctx, external_listen_address, scenario, stage_prefix, **kwargs):  # pylint: disable=unused-argument
-    if not external_listen_address:
-        external_listen_address = kwargs['listen_address']
+def run(privatekey,
+        registry_contract_address,
+        discovery_contract_address,
+        listen_address,
+        logging,
+        logfile,
+        scenario,
+        stage_prefix):  # pylint: disable=unused-argument
 
-    ctx.params.pop('external_listen_address')
-    ctx.params.pop('scenario')
-    ctx.params.pop('stage_prefix')
-    app = ctx.invoke(orig_app, **kwargs)
+    # TODO: only enabled logging on "initiators"
+    slogging.configure(logging, log_file=logfile)
+
+    (listen_host, listen_port) = split_endpoint(listen_address)
+
+    config = App.default_config.copy()
+    config['host'] = listen_host
+    config['port'] = listen_port
+    config['privatekey_hex'] = privatekey
+
+    blockchain_service = BlockChainService(
+        decode_hex(privatekey),
+        decode_hex(registry_contract_address),
+        host="127.0.0.1",
+        port="8545",
+    )
+
+    discovery = ContractDiscovery(
+        blockchain_service,
+        decode_hex(discovery_contract_address)
+    )
+
+    app = App(config, blockchain_service, discovery)
 
     app.discovery.register(
         app.raiden.address,
-        *split_endpoint(external_listen_address)
+        listen_host,
+        listen_port,
     )
 
     app.raiden.register_registry(app.raiden.chain.default_registry)
