@@ -59,7 +59,7 @@ def channels_per_node():
 @pytest.fixture
 def poll_timeout():
     """ Timeout in seconds for polling a cluster. Used for geth. """
-    return DEFAULT_POLL_TIMEOUT
+    return DEFAULT_POLL_TIMEOUT * 10
 
 
 @pytest.fixture
