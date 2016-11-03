@@ -67,13 +67,13 @@ library ChannelManagerLibrary {
         address channel_address;
         uint i;
 
-        address[] storage existingChannels = self.nodeChannels[msg.sender];
-        for (i = 0; i < existingChannels.length; i++) {
-            if (!contractExists(self, existingChannels[i])) {
+        address[] storage existing_channels = self.node_channels[msg.sender];
+        for (i = 0; i < existing_channels.length; i++) {
+            if (!contractExists(self, existing_channels[i])) {
                 // delete all channels that has been settled
                 // settled contracts will commit suicide and thus not exist on their address
-                deleteChannel(self, partner, existingChannels[i]);
-            } else if (NettingChannelContract(existingChannels[i]).partner(msg.sender) == partner) {
+                deleteChannel(self, partner, existing_channels[i]);
+            } else if (NettingChannelContract(existing_channels[i]).partner(msg.sender) == partner) {
                 // throw if an open contract exists that is not settled
                 throw;
             }
@@ -95,42 +95,42 @@ library ChannelManagerLibrary {
 
     /// @notice deleteChannel(address) to remove a channel after it's been settled
     /// @dev Remove channel after it's been settled
-    /// @param channelAddress (address) address of the channel to be closed
+    /// @param channel_address (address) address of the channel to be closed
     /// @param partner (address) address of the partner
-    function deleteChannel(Data storage self, address partner, address channelAddress) private {
+    function deleteChannel(Data storage self, address partner, address channel_address) private {
 
-        address[] ourChannels = self.nodeChannels[msg.sender];
-        address[] partnerChannels = self.nodeChannels[partner];
+        address[] our_channels = self.node_channels[msg.sender];
+        address[] partner_channels = self.node_channels[partner];
 
         // remove element from sender
-        for (uint i = 0; i < ourChannels.length; ++i) {
-            if (ourChannels[i] == channelAddress) {
-                ourChannels[i] = ourChannels[ourChannels.length -1];
-                ourChannels.length--;
+        for (uint i = 0; i < our_channels.length; ++i) {
+            if (our_channels[i] == channel_address) {
+                our_channels[i] = our_channels[our_channels.length -1];
+                our_channels.length--;
                 break;
             }
         }
 
         // remove element from partner
-        for (uint j = 0; j < partnerChannels.length; ++j) {
-            if (partnerChannels[j] == channelAddress) {
-                partnerChannels[j] = partnerChannels[partnerChannels.length -1];
-                partnerChannels.length--;
+        for (uint j = 0; j < partner_channels.length; ++j) {
+            if (partner_channels[j] == channel_address) {
+                partner_channels[j] = partner_channels[partner_channels.length -1];
+                partner_channels.length--;
                 break;
             }
         }
 
         // remove address from all_channels
         for (uint k = 0; k < self.all_channels.length; ++k) {
-            if (self.all_channels[k] == channelAddress) {
+            if (self.all_channels[k] == channel_address) {
                 self.all_channels[k] == self.all_channels[self.all_channels.length -1];
                 self.all_channels.length--;
                 break;
             }
         }
 
-        self.nodeChannels[msg.sender] = ourChannels;
-        self.nodeChannels[partner] = partnerChannels;
+        self.node_channels[msg.sender] = our_channels;
+        self.node_channels[partner] = partner_channels;
     }
 
     /// @notice contractExists(address) to check if a contract is deployed at given address

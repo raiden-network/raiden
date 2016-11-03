@@ -75,11 +75,6 @@ library NettingChannelLibrary {
         _;
     }
 
-    modifier notClosingAddress(Data storage self) {
-        if (msg.sender == self.closingAddress)
-            throw;
-        _;
-    }
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
@@ -172,7 +167,7 @@ library NettingChannelLibrary {
         balance2 = node2.balance;
     }
 
-    function closeSingleTransfer(Data storage self, address callerAddress, bytes signed_transfer)
+    function closeSingleTransfer(Data storage self, address caller_address, bytes signed_transfer)
         inNonceRange(self, signed_transfer)
     {
         bytes memory transfer_raw;
@@ -221,12 +216,12 @@ library NettingChannelLibrary {
         bytes second_encoded)
     {
         uint64 nonce;
-        nonce = getNonce(firstEncoded);
+        nonce = getNonce(first_encoded);
         // check if nonce is valid. 
         // TODO should be in modifier, but "Stack too deep" error
         if (nonce < self.opened * (2**32) || nonce >= (self.opened + 1) * (2**32))
             throw;
-        nonce = getNonce(secondEncoded);
+        nonce = getNonce(second_encoded);
         if (nonce < self.opened * (2**32) || nonce >= (self.opened + 1) * (2**32))
             throw;
 
@@ -423,8 +418,8 @@ library NettingChannelLibrary {
             throw;
         }
 
-        if (!self.token.transfer(node1.nodeAddress, node1.netted)) throw;
-        if (!self.token.transfer(node2.nodeAddress, node2.netted)) throw;
+        if (!self.token.transfer(node1.node_address, node1.netted)) throw;
+        if (!self.token.transfer(node2.node_address, node2.netted)) throw;
         
         kill(self);
     }
@@ -606,7 +601,7 @@ library NettingChannelLibrary {
         }
     }
 
-    function signature_split(bytes signature) private returns (bytes32 r, bytes32 s, uint8 v) {
+    function signatureSplit(bytes signature) private returns (bytes32 r, bytes32 s, uint8 v) {
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
