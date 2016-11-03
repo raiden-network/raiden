@@ -34,18 +34,18 @@ library ChannelManagerLibrary {
     /// @dev Get the channel of two parties
     /// @param partner (address) the address of the partner
     /// @return channel (address) the address of the NettingChannelContract of the two parties.
-    function getChannelWith(Data storage self, address partner)
+    function getChannelWith(Data storage self, address caller_address, address partner)
         constant
         returns (address)
     {
         uint i;
-        address[] our_channels = self.node_channels[msg.sender];
+        address[] our_channels = self.node_channels[caller_address];
         address channel;
 
         for (i = 0; i < our_channels.length; ++i) {
             channel = our_channels[i];
 
-            if (NettingChannelContract(channel).partner(msg.sender) == partner) {
+            if (NettingChannelContract(channel).partner(caller_address) == partner) {
                 return channel;
             }
         }
@@ -60,6 +60,7 @@ library ChannelManagerLibrary {
     /// @return (address) the address of the NettingChannelContract.
     function newChannel(
         Data storage self,
+        address caller_address,
         address partner,
         uint settle_timeout)
         returns (address)
@@ -67,13 +68,13 @@ library ChannelManagerLibrary {
         address channel_address;
         uint i;
 
-        address[] storage existing_channels = self.node_channels[msg.sender];
+        address[] storage existing_channels = self.node_channels[caller_address];
         for (i = 0; i < existing_channels.length; i++) {
             if (!contractExists(self, existing_channels[i])) {
                 // delete all channels that has been settled
                 // settled contracts will commit suicide and thus not exist on their address
-                deleteChannel(self, partner, existing_channels[i]);
-            } else if (NettingChannelContract(existing_channels[i]).partner(msg.sender) == partner) {
+                deleteChannel(self, caller_address, partner, existing_channels[i]);
+            } else if (NettingChannelContract(existing_channels[i]).partner(caller_address) == partner) {
                 // throw if an open contract exists that is not settled
                 throw;
             }
@@ -81,12 +82,12 @@ library ChannelManagerLibrary {
 
         channel_address = new NettingChannelContract(
             self.token,
-            msg.sender,
+            caller_address,
             partner,
             settle_timeout
         );
 
-        self.node_channels[msg.sender].push(channel_address);
+        self.node_channels[caller_address].push(channel_address);
         self.node_channels[partner].push(channel_address);
         self.all_channels.push(channel_address);
 
@@ -97,9 +98,10 @@ library ChannelManagerLibrary {
     /// @dev Remove channel after it's been settled
     /// @param channel_address (address) address of the channel to be closed
     /// @param partner (address) address of the partner
-    function deleteChannel(Data storage self, address partner, address channel_address) private {
-
-        address[] our_channels = self.node_channels[msg.sender];
+    function deleteChannel(Data storage self, address caller_address, address partner, address channel_address) 
+        private
+    {
+        address[] our_channels = self.node_channels[caller_address];
         address[] partner_channels = self.node_channels[partner];
 
         // remove element from sender
@@ -129,7 +131,7 @@ library ChannelManagerLibrary {
             }
         }
 
-        self.node_channels[msg.sender] = our_channels;
+        self.node_channels[caller_address] = our_channels;
         self.node_channels[partner] = partner_channels;
     }
 
