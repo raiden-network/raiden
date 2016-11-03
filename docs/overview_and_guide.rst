@@ -43,4 +43,5 @@ It's advised to create a `virtualenv <http://docs.python-guide.org/en/latest/dev
 
 After you have done that you can proceed to install the dependencies::
 
+    pip install --upgrade -r requirements.txt
     python setup.py develop
