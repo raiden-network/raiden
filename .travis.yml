@@ -19,7 +19,9 @@ env:
     - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth'
 
 cache:
+  pip: true
   directories:
+    - $HOME/.cache/pip
     - $HOME/.ethash
     - $HOME/.bin
 
