@@ -12,9 +12,11 @@ env:
     - SOLC_URL='https://github.com/brainbot-com/solidity-static/releases/download/v0.4.2/solc'
     - SOLC_VERSION='0.4.2'
   matrix:
-    - TEST_KIND='integration'
-    - TEST_KIND='unit'
-    - TEST_KIND='smart_contracts'
+    - TEST_TYPE='unit'
+    - TEST_TYPE='smart_contracts'
+
+    - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=tester'
+    - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth'
 
 cache:
   directories:
@@ -35,7 +37,7 @@ before_script:
   - ./.travis/make_dag.sh
 
 script:
-  - coverage run -m py.test ./raiden/tests/$TEST_KIND
+  - coverage run -m py.test $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 
 after_success:
   - coveralls
