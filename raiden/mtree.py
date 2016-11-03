@@ -62,28 +62,22 @@ class Merkletree(object):
         return self._layers[-1][0]
 
     def make_proof(self, element):
+        """ The proof contains all elements between `element` and `root`.
+            If on all of [element] + proof is recursively hash_pair applied one
+            gets the root.
+        """
         return merkleproof_from_layers(self._layers, self._layers[0].index(element))
 
 
-def merkleroot(elements, proof=None):
+def merkleroot(elements):
     """
     Args:
         elements (List[str]): List of hashes that make the merkletree.
-        proof (list): Empty or list with a single element for which a proof shall be
-            built. The resulting proof will be in proof, i.e. the list
-            is modified in place.
-
-            The proof contains all elements between `element` and `root`.
-            If on all of [element] + proof is recursively hash_pair applied one
-            gets the root.
 
     Returns:
         str: The root element of the merkle tree.
     """
-    tree = Merkletree(elements)
-    if proof:
-        proof[:] = tree.make_proof(proof[0])
-    return tree.merkleroot
+    return Merkletree(elements).merkleroot
 
 
 
