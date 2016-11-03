@@ -3,6 +3,10 @@ sudo: required
 dist: trusty
 python:
 - '2.7'
+env:
+- TEST_KIND='integration'
+- TEST_KIND='unit'
+- TEST_KIND='smart_contracts'
 cache:
   directories:
       - ~/.ethash
@@ -26,6 +30,6 @@ notifications:
   webhooks:
     - secure: "IXBsyQtH29Vkh+Pe2exrbE3L8FJMQFqJ8ZRxkACts7cQtB8Iz1vyjWg9nYE9ZuCj/JWEeMZd/09JvwwKUj8ZEzwj59gFwVQFwTAxJbiDLRsn7WpdI5Q2fQ9ZPZIAbPo/mJejeHC+z3d5UgY72hbhqWuPJAa4ApWWKE5mPFUIr9uxgs01ReWs/y5HaPawQkSQAKVWWsS5R52Oyr9CYQNbfqfWcoLvzdiIZpsBi2r4ZK3NGrBZPGo4b+PkDkWjuBhMJ0FVABFCJT/bT2ORFsmsCDwZ4I3vOrKtJGDybmwONZqr0ymfYo1lbcUp0mE0zJ0ApyRtLqEFiTzaQqenlAZmBAtpDZVvpxFuDwZgFxafpNutO3Aj3Xbfe+aaooPfHA7SoxmxG/3gWY+OyaME8EDePfBHM0c1gGsNHmbPLt8k0lmwYKlNTFtFFyRAbL3700j19utkGroOK6CUYbed9YD96UehQTj7HN8rpLTZzSMh39c1JHVyqxsUZKkhQgY4GPgx2RAIiCVrwc6wN3Ebtwft0hA2UhvDodsc/qBAyz/YnSp2oKZKagLy5747torZybtNOGKCaV2fT3mSTxV2UNwPJ/N94dlTquJNx3StHT0IqD3Kfo5HYKJKHeri6lttTDul3rjAs1xxB2aAMutsyg7dRbBMmuKlK9gAtoS3UKthQdk="
 script:
-- coverage run --source raiden setup.py test
+- coverage run -m py.test ./raiden/tests/$TEST_KIND
 after_success:
 - coveralls
