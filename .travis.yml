@@ -41,7 +41,7 @@ before_script:
   - ./.travis/make_dag.sh
 
 script:
-  - coverage run -m py.test $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
+  - coverage run -m py.test -vvvvvv -s $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 
 after_success:
   - coveralls
