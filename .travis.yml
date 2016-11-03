@@ -32,6 +32,8 @@ before_install:
   - ./.travis/download_solc.sh
 
 install:
+  - pip install -U pip
+  - pip install wheel
   - pip install -r requirements.txt
   - pip install coveralls
 
