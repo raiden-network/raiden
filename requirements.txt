@@ -1,4 +1,4 @@
-pytest
+pytest>=2.8.0
 pytest-timeout
 pytest-random
 pysha3
