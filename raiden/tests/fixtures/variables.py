@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import os
+
 import pytest
 from ethereum.utils import sha3
 
@@ -59,6 +61,10 @@ def channels_per_node():
 @pytest.fixture
 def poll_timeout():
     """ Timeout in seconds for polling a cluster. Used for geth. """
+    # docker travis timeouts too often with the a timeout of 60
+    if 'TRAVIS' in os.environ:
+        return 180
+
     return DEFAULT_POLL_TIMEOUT
 
 
