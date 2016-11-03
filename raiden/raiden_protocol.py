@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import time
 from collections import namedtuple
 
 import gevent
@@ -72,6 +73,10 @@ class RaidenProtocol(object):
 
         # Maps the echo hash `sha3(message + address)` to a WaitAck tuple
         self.echohash_asyncresult = dict()
+
+        # Maps an address to timestamp representing last time any kind of messsage
+        # was received for that address
+        self.last_received_time = dict()
 
     def stop_async(self):
         for greenlet in self.address_greenlet.itervalues():
@@ -249,6 +254,8 @@ class RaidenProtocol(object):
 
         # We ignore the sending endpoint as this can not be known w/ UDP
         message = decode(data)
+        # note down the time we got a message from the address
+        self.last_received_time[message.sender] = time.time()
 
         if isinstance(message, Ack):
             waitack = self.echohash_asyncresult[message.echo]

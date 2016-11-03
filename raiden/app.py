@@ -110,6 +110,15 @@ _options = [
         default=None,
         type=str,
     ),
+    click.option(
+        '--max-unresponsive-time',
+        help=(
+            'Max time in seconds for which an address can send no packets and '
+            'still be considered healthy'
+        ),
+        default=10,
+        type=int,
+    ),
 ]
 
 
@@ -130,7 +139,8 @@ def app(address,
         discovery_contract_address,
         listen_address,
         logging,
-        logfile):
+        logfile,
+        max_unresponsive_time):
 
     slogging.configure(logging, log_file=logfile)
 
@@ -140,6 +150,7 @@ def app(address,
     config = App.default_config.copy()
     config['host'] = listen_host
     config['port'] = listen_port
+    config['max_unresponsive_time'] = max_unresponsive_time
 
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:
