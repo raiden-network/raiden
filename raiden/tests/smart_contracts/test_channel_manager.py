@@ -141,8 +141,7 @@ def test_channelmanager(tester_state, tester_token, tester_events,
     }
 
 
-def test_deleteChannel(tester_state, tester_channelmanager, tester_channels, settle_timeout,
-                       netting_channel_abi):
+def test_deleteChannel(tester_state, tester_channelmanager, tester_channels, settle_timeout, netting_channel_abi):
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, _ = tester_channels[0]
 
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)

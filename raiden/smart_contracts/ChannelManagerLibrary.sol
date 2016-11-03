@@ -105,7 +105,7 @@ library ChannelManagerLibrary {
         // remove element from sender
         for (uint i = 0; i < our_channels.length; ++i) {
             if (our_channels[i] == channel_address) {
-                our_channels[i] = our_channels[our_channels.length -1];
+                our_channels[i] = our_channels[our_channels.length - 1];
                 our_channels.length--;
                 break;
             }
@@ -114,7 +114,7 @@ library ChannelManagerLibrary {
         // remove element from partner
         for (uint j = 0; j < partner_channels.length; ++j) {
             if (partner_channels[j] == channel_address) {
-                partner_channels[j] = partner_channels[partner_channels.length -1];
+                partner_channels[j] = partner_channels[partner_channels.length - 1];
                 partner_channels.length--;
                 break;
             }
@@ -123,7 +123,7 @@ library ChannelManagerLibrary {
         // remove address from all_channels
         for (uint k = 0; k < self.all_channels.length; ++k) {
             if (self.all_channels[k] == channel_address) {
-                self.all_channels[k] == self.all_channels[self.all_channels.length -1];
+                self.all_channels[k] == self.all_channels[self.all_channels.length - 1];
                 self.all_channels.length--;
                 break;
             }
