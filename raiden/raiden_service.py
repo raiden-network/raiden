@@ -681,7 +681,7 @@ class RaidenEventHandler(object):
             log.error('Unknown event %s', repr(event))
 
     def event_assetadded(self, registry_address_bin, event):  # pylint: disable=unused-argument
-        manager_address_bin = address_decoder(event['channelManagerAddress'])
+        manager_address_bin = address_decoder(event['channel_manager_address'])
         manager = self.raiden.chain.manager(manager_address_bin)
         self.raiden.register_channel_manager(manager)
 
