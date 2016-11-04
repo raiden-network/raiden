@@ -67,12 +67,6 @@ _options = [
         type=str,
     ),
     click.option(
-        '--password',
-        help=('The password used to unlock the account address'),
-        default=None,
-        type=str,
-    ),
-    click.option(
         '--keystore-path',
         help=('The ethereum address you would like raiden to use and for which '
               'a keystore file exists in your local system'),
@@ -130,7 +124,6 @@ def options(func):
 @options
 @click.command()
 def app(address,
-        password,
         keystore_path,
         eth_rpc_endpoint,
         registry_contract_address,
@@ -168,7 +161,7 @@ def app(address,
 
         address = addresses[idx]
 
-    privatekey = accmgr.get_privkey(address, password=password)
+    privatekey = accmgr.get_privkey(address)
     config['privatekey_hex'] = encode_hex(privatekey)
 
     endpoint = eth_rpc_endpoint
