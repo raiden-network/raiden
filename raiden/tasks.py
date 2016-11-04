@@ -134,6 +134,65 @@ class LogListenerTask(Task):
         self.stop_event.set(True)
 
 
+class HealthcheckTask(Task):
+    """ Task for checking if all of our open channels are healthy """
+
+    # TODO: Make send_ping_time default configurable
+    def __init__(self, protocol, sleep_time, send_ping_time=60, max_unresponsive_time=120):
+        """ Initialize a HealthcheckTask that will monitor open channels for
+             responsiveness.
+
+             :param RaidenProtocol protocol: The Raiden protocol object which
+                                             will allows us to query the  queues
+                                             and send out a Ping if needed.
+             :param int sleep_time: Time in seconds between each healthcheck task
+             :param int send_ping_time: Time in seconds after not having received
+                                        a message from an address at which to send
+                                        a Ping.
+             :param int max_unresponsive_time: Time in seconds after not having received
+                                               a message from an address at which it
+                                               should be deleted.
+         """
+        super(HealthcheckTask, self).__init__()
+
+        self.protocol = protocol
+
+        self.stop_event = AsyncResult()
+        self.sleep_time = sleep_time
+        self.send_ping_time = send_ping_time
+        self.max_unresponsive_time = max_unresponsive_time
+
+    def _run(self):  # pylint: disable=method-hidden
+        stop = None
+
+        while stop is None:
+            for key, queue in self.protocol.address_queue:
+                receiver_address = key[0]
+                try:
+                    queue.peek(block=False, timeout=None)
+                except:  # If peek raises the Empty Exception
+                    elapsed_time = self.protocol.last_received_time[receiver_address] - time.time()
+                    if (
+                            receiver_address not in self.protocol.last_received_time or
+                            elapsed_time > self.send_ping_time
+                    ):
+                        # TODO: Send ping
+                        pass
+                    elif elapsed_time > self.max_unresponsive_time:
+                        # TODO: Remove address from graph
+                        pass
+
+            self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
+            stop = self.stop_event.wait(self.timeout)
+
+    def stop_and_wait(self):
+        self.stop_event.set(True)
+        gevent.wait(self)
+
+    def stop_async(self):
+        self.stop_event.set(True)
+
+
 class AlarmTask(Task):
     """ Task to notify when a block is mined. """
 
