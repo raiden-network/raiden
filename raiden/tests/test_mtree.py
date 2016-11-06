@@ -39,8 +39,8 @@ def test_one():
     hash_0 = 'a' * 32
 
     merkle_tree = [hash_0]
-    merkle_proof = [hash_0]  # modified in place
-    merkle_root = merkleroot(merkle_tree, merkle_proof)
+    merkle_proof = get_proof(merkle_tree, hash_0)
+    merkle_root = merkleroot(merkle_tree)
 
     assert merkle_proof == []
     assert merkle_root == hash_0
@@ -53,15 +53,15 @@ def test_two():
 
     merkle_tree = [hash_0, hash_1]
 
-    merkle_proof = [hash_0]  # modified in place
-    merkle_root = merkleroot(merkle_tree, merkle_proof)
+    merkle_proof = get_proof(merkle_tree, hash_0)
+    merkle_root = merkleroot(merkle_tree)
 
     assert merkle_proof == [hash_1]
     assert merkle_root == keccak(hash_0 + hash_1)
     assert check_proof(merkle_proof, merkle_root, hash_0)
 
-    merkle_proof = [hash_1]  # modified in place
-    merkle_root = merkleroot(merkle_tree, merkle_proof)
+    merkle_proof = get_proof(merkle_tree, hash_1)
+    merkle_root = merkleroot(merkle_tree)
 
     assert merkle_proof == [hash_0]
     assert merkle_root == keccak(hash_0 + hash_1)
@@ -85,22 +85,22 @@ def test_three():
     assert keccak(hash_0 + hash_1) == hash_01
     calculated_root = keccak(hash_2 + hash_01)
 
-    merkle_proof = [hash_0]  # modified in place
-    merkle_root = merkleroot(merkle_tree, merkle_proof)
+    merkle_proof = get_proof(merkle_tree, hash_0)
+    merkle_root = merkleroot(merkle_tree)
 
     assert merkle_proof == [hash_1, hash_2]
     assert merkle_root == calculated_root
     assert check_proof(merkle_proof, merkle_root, hash_0)
 
-    merkle_proof = [hash_1]  # modified in place
-    merkle_root = merkleroot(merkle_tree, merkle_proof)
+    merkle_proof = get_proof(merkle_tree, hash_1)
+    merkle_root = merkleroot(merkle_tree)
 
     assert merkle_proof == [hash_0, hash_2]
     assert merkle_root == calculated_root
     assert check_proof(merkle_proof, merkle_root, hash_1)
 
-    merkle_proof = [hash_2]  # modified in place
-    merkle_root = merkleroot(merkle_tree, merkle_proof)
+    merkle_proof = get_proof(merkle_tree, hash_2)
+    merkle_root = merkleroot(merkle_tree)
 
     # with an odd number of values, the last value wont appear by itself in the
     # proof since it isn't hashed with another value
@@ -115,8 +115,8 @@ def test_get_proof():
 
     merkle_tree = [hash_0, hash_1]
 
-    merkle_proof = [hash_0]  # modified in place
-    merkle_root = merkleroot(merkle_tree, merkle_proof)
+    merkle_proof = get_proof(merkle_tree, hash_0)
+    merkle_root = merkleroot(merkle_tree)
     assert check_proof(merkle_proof, merkle_root, hash_0)
 
     second_merkle_proof = get_proof(merkle_tree, hash_0, merkle_root)
@@ -132,8 +132,8 @@ def test_many(tree_up_to=10):
         ]
 
         for value in merkle_tree:
-            merkle_proof = [value]
-            merkle_root = merkleroot(merkle_tree, merkle_proof)
+            merkle_proof = get_proof(merkle_tree, value)
+            merkle_root = merkleroot(merkle_tree)
             second_proof = get_proof(merkle_tree, value, merkle_root)
 
             assert check_proof(merkle_proof, merkle_root, value) is True

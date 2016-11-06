@@ -126,7 +126,11 @@ class LogListenerTask(Task):
             self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
             stop = self.stop_event.wait(self.timeout)
 
-    def stop(self):
+    def stop_and_wait(self):
+        self.stop_event.set(True)
+        gevent.wait(self)
+
+    def stop_async(self):
         self.stop_event.set(True)
 
 
@@ -204,7 +208,11 @@ class AlarmTask(Task):
             stop = self.stop_event.wait(sleep_time)
             last_loop = time.time()
 
-    def stop(self):
+    def stop_and_wait(self):
+        self.stop_event.set(True)
+        gevent.wait(self)
+
+    def stop_async(self):
         self.stop_event.set(True)
 
 

@@ -2,6 +2,7 @@
 import logging
 import itertools
 
+import gevent
 from ethereum import slogging
 from ethereum.abi import ContractTranslator
 from ethereum.utils import encode_hex
@@ -276,9 +277,24 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
     def stop(self):
         for listener in self.event_listeners:
-            listener.stop_event.set(True)
+            listener.stop_async()
             self.chain.uninstall_filter(listener.filter_.filter_id_raw)
-        self.protocol.stop()
+
+        for asset_manager in self.managers_by_asset_address.itervalues():
+            for task in asset_manager.transfermanager.transfertasks.itervalues():
+                task.kill()
+
+        self.alarm.stop_async()
+        self.protocol.stop_async()
+
+        wait_for = [self.alarm]
+        wait_for.extend(self.event_listeners)
+        wait_for.extend(self.protocol.address_greenlet.itervalues())
+
+        for asset_manager in self.managers_by_asset_address.itervalues():
+            wait_for.extend(asset_manager.transfermanager.transfertasks.itervalues())
+
+        gevent.wait(wait_for)
 
 
 class RaidenAPI(object):
@@ -665,7 +681,7 @@ class RaidenEventHandler(object):
             log.error('Unknown event %s', repr(event))
 
     def event_assetadded(self, registry_address_bin, event):  # pylint: disable=unused-argument
-        manager_address_bin = address_decoder(event['channelManagerAddress'])
+        manager_address_bin = address_decoder(event['channel_manager_address'])
         manager = self.raiden.chain.manager(manager_address_bin)
         self.raiden.register_channel_manager(manager)
 

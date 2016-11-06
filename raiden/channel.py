@@ -15,7 +15,7 @@ from raiden.messages import (
     LockedTransfer,
     TransferTimeout,
 )
-from raiden.mtree import merkleroot
+from raiden.mtree import merkleroot, get_proof
 from raiden.utils import sha3, pex, lpex
 from raiden.tasks import REMOVE_CALLBACK
 
@@ -252,8 +252,7 @@ class BalanceProof(object):
         # forcing bytes because ethereum.abi doesnt work with bytearray
         lock_encoded = bytes(lock.as_bytes)
         lock_hash = sha3(lock_encoded)
-        merkle_proof = [lock_hash]
-        merkleroot(merkletree, merkle_proof)
+        merkle_proof = get_proof(merkletree, lock_hash)
 
         return UnlockProof(
             merkle_proof,
