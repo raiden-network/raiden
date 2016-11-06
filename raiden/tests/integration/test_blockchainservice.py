@@ -100,7 +100,9 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     for channel in channel_list:
         assert sorted(channel) in expected_channels
 
-    assert sorted(manager0.channels_by_participant(peer0_address)) == sorted([netting_address_01, netting_address_02])
+    result0 = sorted(manager0.channels_by_participant(peer0_address))
+    result1 = sorted([netting_address_01, netting_address_02])
+    assert result0 == result1
     assert manager0.channels_by_participant(peer1_address) == [netting_address_01]
     assert manager0.channels_by_participant(peer2_address) == [netting_address_02]
 
@@ -139,34 +141,6 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
 
     assert netting_channel_02.detail(peer0_address)['our_balance'] == 70
     assert netting_channel_02.detail(peer2_address)['our_balance'] == 130
-
-    # TODO:
-    # we need to allow the settlement of the channel even if no transfers were
-    # made
-    # peer1_last_sent_transfer = None
-    # peer2_last_sent_transfer = None
-    # netting_channel_01.close(
-    #     peer0_address,
-    #     peer1_last_sent_transfer,
-    #     peer2_last_sent_transfer,
-    # )
-
-    # with pytest.raises(Exception):
-    #     blockchain_service0.close(asset_address, netting_address_02, peer0_address, peer1_last_sent_transfers)
-
-    # assert netting_channel_01.isopen() is False
-    # assert netting_channel_02.isopen() is True
-
-    # app2.raiden.chain.asset(asset_address).approve(netting_address_02, 21)
-    # app2.raiden.chain.netting_channel(netting_address_02).deposit(peer2_address, 21)
-
-    # assert netting_channel_01.isopen() is False
-    # assert netting_channel_02.isopen() is True
-
-    # netting_channel_01.update_transfer(peer1_address, peer2_last_sent_transfer)
-
-    # assert netting_channel_01.isopen() is False
-    # assert netting_channel_02.isopen() is True
 
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
@@ -242,7 +216,9 @@ def test_blockchain(blockchain_backend, private_keys, number_of_nodes, poll_time
     )
     assert len(log_list) == 1
 
-    channel_manager_address_encoded = registry_proxy.channelManagerByAsset.call(token_proxy.address)
+    channel_manager_address_encoded = registry_proxy.channelManagerByAsset.call(
+        token_proxy.address,
+    )
     channel_manager_address = channel_manager_address_encoded.decode('hex')
 
     log = log_list[0]

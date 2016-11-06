@@ -22,7 +22,11 @@ def test_registry(tester_registry, tester_events):
     with pytest.raises(tester.TransactionFailed):
         tester_registry.addAsset(asset_address1, sender=privatekey0)
 
-    channel_manager_address = tester_registry.channelManagerByAsset(asset_address1, sender=privatekey0)
+    channel_manager_address = tester_registry.channelManagerByAsset(
+        asset_address1,
+        sender=privatekey0,
+    )
+
     assert channel_manager_address == contract_address1
 
     with pytest.raises(tester.TransactionFailed):

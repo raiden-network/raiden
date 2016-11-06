@@ -315,8 +315,9 @@ class ChannelManagerMock(object):
 
 
 class NettingChannelMock(object):
-    def __init__(self, asset_address, peer1, peer2, settle_timeout,  # pylint: disable=too-many-arguments
-                 address=None):
+    def __init__(self, asset_address, peer1, peer2, settle_timeout, address=None):
+        # pylint: disable=too-many-arguments
+
         self.address = address or make_address()
 
         self.contract = NettingChannelContract(
@@ -354,7 +355,12 @@ class NettingChannelMock(object):
             'balance': our_data.deposit,
             'block_number': BlockChainServiceMock.block_number(),
         }
-        event = ethereum_event(CHANNELNEWBALANCE_EVENTID, CHANNELNEWBALANCE_EVENT, data, self.address)
+        event = ethereum_event(
+            CHANNELNEWBALANCE_EVENTID,
+            CHANNELNEWBALANCE_EVENT,
+            data,
+            self.address,
+        )
 
         for filter_ in BlockChainServiceMock.filters[self.address]:
             filter_.event(event)
@@ -448,7 +454,12 @@ class NettingChannelMock(object):
                 '_event_type': 'ChannelSecretRevealed',
                 'secret': secret,
             }
-            event = ethereum_event(CHANNELSECRETREVEALED_EVENTID, CHANNELSECRETREVEALED_EVENT, data, self.address)
+            event = ethereum_event(
+                CHANNELSECRETREVEALED_EVENTID,
+                CHANNELSECRETREVEALED_EVENT,
+                data,
+                self.address,
+            )
 
             for filter_ in BlockChainServiceMock.filters[self.address]:
                 filter_.event(event)

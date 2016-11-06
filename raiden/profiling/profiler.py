@@ -5,14 +5,12 @@ import contextlib
 import sys
 import threading
 import time
-import weakref
 from collections import OrderedDict, namedtuple
 from itertools import chain, izip_longest
-from UserDict import UserDict
 
 import greenlet
 
-from stack import get_trace_info, get_trace_from_frame
+from raiden.profiling.stack import get_trace_info, get_trace_from_frame
 
 
 # TODO:
@@ -45,7 +43,7 @@ _state = None
 # PEP-0418
 #        perf_counter = It does include time elapsed during sleep and is system-wide.
 try:
-    clock = time.perf_counter
+    clock = time.perf_counter  # pylint: disable=no-member
 except:
     clock = time.clock
 
@@ -280,7 +278,7 @@ def thread_profiler(frame, event, arg):
 
     now = clock()  # measure once and reuse it
 
-    current_greenlet = greenlet.getcurrent()
+    current_greenlet = greenlet.getcurrent()  # pylint: disable=no-member
     current_state = ensure_thread_state(current_greenlet, frame)
 
     if _state.last != current_state:
@@ -336,13 +334,13 @@ def start_profiler():
     _state = GlobalState()
 
     frame = sys._getframe(0)
-    current_greenlet = greenlet.getcurrent()
+    current_greenlet = greenlet.getcurrent()  # pylint: disable=no-member
 
     thread_state = ensure_thread_state(current_greenlet, frame)
     _state.last = thread_state
 
     # this needs to be instantiate before the handler is installed
-    greenlet.settrace(greenlet_profiler)
+    greenlet.settrace(greenlet_profiler)  # pylint: disable=no-member
     sys.setprofile(thread_profiler)
     threading.setprofile(thread_profiler)
 
@@ -354,7 +352,7 @@ def stop_profiler():
     # measurements in the end
     sys.setprofile(None)
     threading.setprofile(None)
-    greenlet.settrace(None)
+    greenlet.settrace(None)  # pylint: disable=no-member
 
 
 @contextlib.contextmanager
@@ -461,7 +459,6 @@ def merge_threadstates(*threadstates):
 
         return (module and function) or runtime_id
 
-    calltrees = [thread_state.calltree for thread_state in threadstates]
     tree = [
         (1, {}, [state.calltree for state in threadstates])
     ]

@@ -144,7 +144,10 @@ def app(address,
     accmgr = AccountManager(keystore_path)
     if not accmgr.address_in_keystore(address):
         addresses = list(accmgr.accounts.keys())
-        formatted_addresses = ["[{:3d}] - 0x{}".format(idx, addr) for idx, addr in enumerate(addresses)]
+        formatted_addresses = [
+            '[{:3d}] - 0x{}'.format(idx, addr)
+            for idx, addr in enumerate(addresses)
+        ]
 
         should_prompt = True
         while should_prompt:

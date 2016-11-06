@@ -586,7 +586,9 @@ class MediatedTransfer(LockedTransfer):
         self.initiator = initiator
 
     def __repr__(self):
-        return '<{} [asset:{} nonce:{} transferred_amount:{} lock_amount:{} hash:{} locksroot:{}]>'.format(
+        representation = (
+            '<{} [asset:{} nonce:{} transferred_amount:{} lock_amount:{} hash:{} locksroot:{}]>'
+        ).format(
             self.__class__.__name__,
             pex(self.asset),
             self.nonce,
@@ -595,6 +597,8 @@ class MediatedTransfer(LockedTransfer):
             pex(self.hash),
             pex(self.locksroot),
         )
+
+        return representation
 
     @staticmethod
     def unpack(packed):

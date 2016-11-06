@@ -23,7 +23,9 @@ class integer(object):  # pylint: disable=invalid-name
             raise ValueError('value is not an integer')
 
         if self.minimum > value or self.maximum < value:
-            msg = '{} is outside the valide range [{},{}]'.format(value, self.minimum, self.maximum)
+            msg = (
+                '{} is outside the valide range [{},{}]'
+            ).format(value, self.minimum, self.maximum)
             raise ValueError(msg)
 
     if PY2:

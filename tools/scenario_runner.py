@@ -1,30 +1,33 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-from gevent import monkey
-monkey.patch_all()
-
 import signal
-import gevent
-import click
 import json
+
+import click
+import gevent
+from gevent import monkey
 from ethereum import slogging
+
 from raiden.console import ConsoleTools
 from raiden.app import app as orig_app
 from raiden.app import options
 
+
+monkey.patch_all()
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-@click.option(
+@click.option(  # noqa
     '--scenario',
     help='path to scenario.json',
     type=click.File()
 )
 @options
 @click.command()
-@click.pass_context
-def run(ctx, scenario, **kwargs):
+@click.pass_context  # pylint: disable=too-many-locals
+def run(ctx, scenario, **kwargs):  # pylint: disable=unused-argument
     ctx.params.pop('scenario')
     app = ctx.invoke(orig_app)
     if scenario:
@@ -92,4 +95,4 @@ def run(ctx, scenario, **kwargs):
 
 
 if __name__ == '__main__':
-    run()
+    run()  # pylint: disable=no-value-for-parameter

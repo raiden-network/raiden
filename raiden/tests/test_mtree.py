@@ -29,7 +29,10 @@ def test_duplicates():
     hash_1 = keccak('y')
 
     assert merkleroot([hash_0, hash_0]) == hash_0, 'duplicates should be removed'
-    assert merkleroot([hash_0, hash_1, hash_0]) == merkleroot([hash_0, hash_1]), 'duplicates should be removed'
+
+    result0 = merkleroot([hash_0, hash_1, hash_0])
+    result1 = merkleroot([hash_0, hash_1])
+    assert result0 == result1, 'duplicates should be removed'
 
 
 def test_one():
@@ -75,7 +78,10 @@ def test_three():
 
     merkle_tree = [hash_0, hash_1, hash_2]
 
-    hash_01 = b'me\xef\x9c\xa9=5\x16\xa4\xd3\x8a\xb7\xd9\x89\xc2\xb5\x00\xe2\xfc\x89\xcc\xdc\xf8x\xf9\xc4m\xaa\xf6\xad\r['
+    hash_01 = (
+        b'me\xef\x9c\xa9=5\x16\xa4\xd3\x8a\xb7\xd9\x89\xc2\xb5\x00'
+        b'\xe2\xfc\x89\xcc\xdc\xf8x\xf9\xc4m\xaa\xf6\xad\r['
+    )
     assert keccak(hash_0 + hash_1) == hash_01
     calculated_root = keccak(hash_2 + hash_01)
 

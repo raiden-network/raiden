@@ -63,7 +63,8 @@ def test_channelmanager(tester_state, tester_token, tester_events,
         }
     )
 
-    assert len(channel_manager.getChannelsParticipants()) == 0, 'newly deployed contract must be empty'
+    participants_count = len(channel_manager.getChannelsParticipants())
+    assert participants_count == 0, 'newly deployed contract must be empty'
 
     netting_channel_translator = ContractTranslator(netting_channel_abi)
 

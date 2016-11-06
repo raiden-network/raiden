@@ -28,6 +28,21 @@ def _getitem_from_frame(f_locals, key, default=None):
         return default
 
 
+def to_dict(dictish):
+    """
+    Given something that closely resembles a dictionary, we attempt
+    to coerce it into a propery dictionary.
+    """
+    if hasattr(dictish, 'iterkeys'):
+        method = dictish.iterkeys
+    elif hasattr(dictish, 'keys'):
+        method = dictish.keys
+    else:
+        raise ValueError(dictish)
+
+    return dict((k, dictish[k]) for k in method())
+
+
 def get_lines_from_file(filename, lineno, context_lines, loader=None, module_name=None):
     """
     Returns context_lines before and after lineno from file.
@@ -39,20 +54,6 @@ def get_lines_from_file(filename, lineno, context_lines, loader=None, module_nam
         try:
             source = loader.get_source(module_name)
         except ImportError:
-            # Traceback (most recent call last):
-            #   File "/Users/dcramer/Development/django-sentry/sentry/client/handlers.py", line 31, in emit
-            #     get_client().create_from_record(record, request=request)
-            #   File "/Users/dcramer/Development/django-sentry/sentry/client/base.py", line 325, in create_from_record
-            #     data['__sentry__']['frames'] = varmap(shorten, get_stack_info(stack))
-            #   File "/Users/dcramer/Development/django-sentry/sentry/utils/stacks.py", line 112, in get_stack_info
-            #     pre_context_lineno, pre_context, context_line, post_context = get_lines_from_file(filename, lineno, 7, loader, module_name) # noqa
-            #   File "/Users/dcramer/Development/django-sentry/sentry/utils/stacks.py", line 24, in get_lines_from_file
-            #     source = loader.get_source(module_name)
-            #   File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/pkgutil.py", line 287, in get_source # noqa
-            #     fullname = self._fix_name(fullname)
-            #   File "/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/pkgutil.py", line 262, in _fix_nam: # noqa
-            #     "module %s" % (self.fullname, fullname))
-            # ImportError: Loader for module cProfile cannot handle module __main__
             source = None
         if source is not None:
             source = source.splitlines()
@@ -113,7 +114,8 @@ def get_stack_info(frame):
     loader = _getitem_from_frame(f_globals, '__loader__')
 
     if lineno is not None and abs_path:
-        pre_context, context_line, post_context = get_lines_from_file(abs_path, lineno - 1, 5, loader, module_name)
+        line_data = get_lines_from_file(abs_path, lineno - 1, 5, loader, module_name)
+        pre_context, context_line, post_context = line_data
 
         frame_result.update({
             'pre_context': pre_context,

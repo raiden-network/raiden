@@ -117,7 +117,11 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
 
             length = len(value)
             if length > field.size_bytes:
-                raise ValueError('value with length {length} for {attr} is to big'.format(length=length, attr=name))
+                msg = 'value with length {length} for {attr} is too big'.format(
+                    length=length,
+                    attr=name,
+                )
+                raise ValueError(msg)
             elif length < field.size_bytes:
                 pad_size = field.size_bytes - length
                 pad_value = b'\x00' * pad_size

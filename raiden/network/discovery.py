@@ -45,11 +45,14 @@ class ContractDiscovery(Discovery):
     """On chain smart contract raiden node discovery: allows to register endpoints (host, port) for
     your ethereum-/raiden-address and looking up endpoints for other ethereum-/raiden-addressess.
     """
+
     def __init__(
             self,
             blockchainservice,
             discovery_contract_address,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
+
+        super(ContractDiscovery, self).__init__()
 
         self.chain = blockchainservice
         self.poll_timeout = poll_timeout
