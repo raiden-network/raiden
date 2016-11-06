@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-import pytest
 import logging
+
+import pytest
 from ethereum.utils import sha3
 from ethereum import slogging
 
 from raiden.app import DEFAULT_SETTLE_TIMEOUT
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.messages import setup_messages_cb
-from raiden.tests.utils.network import create_network
+from raiden.tests.utils.network import create_apps, create_network_channels
 from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
 from raiden.api.wamp_server import WAMPRouter
 
@@ -24,6 +25,8 @@ from raiden.api.wamp_server import WAMPRouter
 def test_webui():  # pylint: disable=too-many-locals
     num_assets = 3
     num_nodes = 10
+    verbose = 0
+    settle_timeout = DEFAULT_SETTLE_TIMEOUT
 
     assets_addresses = [
         sha3('webui:asset:{}'.format(number))[:20]
@@ -44,16 +47,26 @@ def test_webui():  # pylint: disable=too-many-locals
 
     channels_per_node = 2
     deposit = 100
-    app_list = create_network(
-        private_keys,
+
+    blockchain_services = [
+        BlockChainServiceMock(privkey, MOCK_REGISTRY_ADDRESS)
+        for privkey in private_keys
+    ]
+
+    app_list = create_apps(
+        blockchain_services,
+        UDPTransport,
+        verbose,
+    )
+
+    create_network_channels(
+        app_list,
         assets_addresses,
-        MOCK_REGISTRY_ADDRESS,
         channels_per_node,
         deposit,
-        DEFAULT_SETTLE_TIMEOUT,
-        UDPTransport,
-        BlockChainServiceMock
+        settle_timeout,
     )
+
     app0 = app_list[0]
 
     addresses = [
@@ -80,10 +93,14 @@ def test_webui():  # pylint: disable=too-many-locals
     BlockChainServiceMock.reset()
 
 
-if __name__ == '__main__':
+def main():
     slogging.configure(':DEBUG')
     logging.basicConfig(level=logging.DEBUG)
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     test_webui()
+
+
+if __name__ == '__main__':
+    main()

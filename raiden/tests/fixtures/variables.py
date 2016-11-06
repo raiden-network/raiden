@@ -82,6 +82,11 @@ def privatekey_seed():
 
 
 @pytest.fixture
+def cached_genesis(blockchain_type):
+    return blockchain_type != 'mock'
+
+
+@pytest.fixture
 def asset_amount(number_of_nodes, deposit):
     total_per_node = 3 * (deposit + 1)
     total_asset = total_per_node * number_of_nodes

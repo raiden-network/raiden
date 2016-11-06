@@ -17,20 +17,27 @@ def test_registry(tester_registry, tester_events):
     unregistered_address = sha3('mainz')[:20]
 
     contract_address1 = tester_registry.addAsset(asset_address1, sender=privatekey0)
-    contract_address2 = tester_registry.addAsset(asset_address2, sender=privatekey0)
+    channel_manager_address1 = tester_registry.channelManagerByAsset(
+        asset_address1,
+        sender=privatekey0,
+    )
+    assert channel_manager_address1 == contract_address1
 
     with pytest.raises(tester.TransactionFailed):
         tester_registry.addAsset(asset_address1, sender=privatekey0)
 
-    channel_manager_address = tester_registry.channelManagerByAsset(
-        asset_address1,
+    contract_address2 = tester_registry.addAsset(asset_address2, sender=privatekey0)
+    channel_manager_address2 = tester_registry.channelManagerByAsset(
+        asset_address2,
         sender=privatekey0,
     )
-
-    assert channel_manager_address == contract_address1
+    assert channel_manager_address2 == contract_address2
 
     with pytest.raises(tester.TransactionFailed):
-        tester_registry.channelManagerByAsset(unregistered_address, sender=privatekey0)
+        tester_registry.channelManagerByAsset(
+            unregistered_address,
+            sender=privatekey0,
+        )
 
     addresses = tester_registry.assetAddresses(sender=privatekey0)
 

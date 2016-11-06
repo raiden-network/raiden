@@ -160,9 +160,81 @@ def network_with_minimum_channels(apps, channels_per_node):
             yield curr_app, least_connect
 
 
-def create_network(blockchain_services, assets_addresses, channels_per_node,
-                   deposit, settle_timeout, transport_class, verbosity):
-    """ Initialize a raiden test network.
+def create_network_channels(
+        raiden_apps,
+        assets_addresses,
+        channels_per_node,
+        deposit,
+        settle_timeout):
+
+    num_nodes = len(raiden_apps)
+
+    if num_nodes < 2:
+        raise ValueError('cannot create a network with less than two nodes')
+
+    if channels_per_node is not CHAIN and channels_per_node > num_nodes:
+        raise ValueError("Can't create more channels than nodes")
+
+    for asset in assets_addresses:
+        if channels_per_node == CHAIN:
+            app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
+        else:
+            app_channels = list(network_with_minimum_channels(raiden_apps, channels_per_node))
+
+        setup_channels(
+            asset,
+            app_channels,
+            deposit,
+            settle_timeout,
+        )
+
+
+def create_sequential_channels(
+        raiden_apps,
+        assets_addresses,
+        channels_per_node,
+        deposit,
+        settle_timeout):
+    """ Create a fully connected network with `num_nodes`, the nodes are
+    connect sequentially.
+
+    Returns:
+        A list of apps of size `num_nodes`, with the property that every
+        sequential pair in the list has an open channel with `deposit` for each
+        participant.
+    """
+
+    num_nodes = len(raiden_apps)
+
+    if num_nodes < 2:
+        raise ValueError('cannot create a network with less than two nodes')
+
+    if channels_per_node not in (0, 1, 2, CHAIN):
+        raise ValueError('can only create networks with 0, 1, 2 or CHAIN channels')
+
+    if channels_per_node == 0:
+        app_channels = list()
+
+    if channels_per_node == 1:
+        every_two = iter(raiden_apps)
+        app_channels = list(zip(every_two, every_two))
+
+    if channels_per_node == 2:
+        app_channels = list(zip(raiden_apps, raiden_apps[1:] + [raiden_apps[0]]))
+
+    if channels_per_node == CHAIN:
+        app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
+
+    setup_channels(
+        assets_addresses,
+        app_channels,
+        deposit,
+        settle_timeout,
+    )
+
+
+def create_apps(blockchain_services, transport_class, verbosity):
+    """ Create the apps.
 
     Note:
         The generated network will use two subnets, 127.0.0.10 and 127.0.0.11,
@@ -173,33 +245,26 @@ def create_network(blockchain_services, assets_addresses, channels_per_node,
             ifconfig lo:1 127.0.0.11
     """
     # pylint: disable=too-many-locals
-
-    num_nodes = len(blockchain_services)
-
-    if channels_per_node is not CHAIN and channels_per_node > num_nodes:
-        raise ValueError("Can't create more channels than nodes")
-
     half_of_nodes = len(blockchain_services) // 2
     discovery = Discovery()
 
     apps = []
     for idx, blockchain in enumerate(blockchain_services):
+        port = INITIAL_PORT + idx
         private_key = blockchain.private_key
+        nodeid = privatekey_to_address(private_key)
 
-        # TODO: check if the loopback interfaces exists
+        if verbosity > 7:
+            blockchain.set_verbosity(1)
+
         # split the nodes into two different networks
         if idx > half_of_nodes:
+            # TODO: check if the loopback interfaces exists
             host = '127.0.0.11'
         else:
             host = '127.0.0.10'
 
-        nodeid = privatekey_to_address(private_key)
-        port = INITIAL_PORT + idx
-
         discovery.register(nodeid, host, port)
-
-        if verbosity > 7:
-            blockchain.set_verbose()
 
         app = create_app(
             private_key,
@@ -210,92 +275,5 @@ def create_network(blockchain_services, assets_addresses, channels_per_node,
             host=host,
         )
         apps.append(app)
-
-    for asset in assets_addresses:
-        if channels_per_node == CHAIN:
-            app_channels = list(zip(apps[:-1], apps[1:]))
-        else:
-            app_channels = list(network_with_minimum_channels(apps, channels_per_node))
-
-        setup_channels(
-            asset,
-            app_channels,
-            deposit,
-            settle_timeout,
-        )
-
-    for app in apps:
-        app.raiden.register_registry(app.raiden.chain.default_registry)
-
-    return apps
-
-
-def create_sequential_network(blockchain_services, asset_address,
-                              channels_per_node, deposit, settle_timeout,
-                              transport_class, verbosity):
-    """ Create a fully connected network with `num_nodes`, the nodes are
-    connect sequentially.
-
-    Returns:
-        A list of apps of size `num_nodes`, with the property that every
-        sequential pair in the list has an open channel with `deposit` for each
-        participant.
-    """
-    # pylint: disable=too-many-locals
-
-    host = '127.0.0.1'
-    num_nodes = len(blockchain_services)
-
-    if num_nodes < 2:
-        raise ValueError('cannot create a network with less than two nodes')
-
-    if channels_per_node not in (0, 1, 2, CHAIN):
-        raise ValueError('can only create networks with 0, 1, 2 or CHAIN channels')
-
-    discovery = Discovery()
-
-    apps = []
-    for idx, blockchain in enumerate(blockchain_services):
-        port = INITIAL_PORT + idx
-        private_key = blockchain.private_key
-        nodeid = privatekey_to_address(private_key)
-
-        discovery.register(nodeid, host, port)
-
-        if verbosity > 7:
-            blockchain.set_verbose()
-
-        app = create_app(
-            private_key,
-            blockchain,
-            discovery,
-            transport_class,
-            port=port,
-            host=host,
-        )
-        apps.append(app)
-
-    if channels_per_node == 0:
-        app_channels = list()
-
-    if channels_per_node == 1:
-        every_two = iter(apps)
-        app_channels = list(zip(every_two, every_two))
-
-    if channels_per_node == 2:
-        app_channels = list(zip(apps, apps[1:] + [apps[0]]))
-
-    if channels_per_node == CHAIN:
-        app_channels = list(zip(apps[:-1], apps[1:]))
-
-    setup_channels(
-        asset_address,
-        app_channels,
-        deposit,
-        settle_timeout,
-    )
-
-    for app in apps:
-        app.raiden.register_registry(app.raiden.chain.default_registry)
 
     return apps

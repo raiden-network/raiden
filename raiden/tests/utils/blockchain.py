@@ -3,10 +3,11 @@ from __future__ import print_function, division
 
 import json
 import os
-import sys
-import time
-import termios
+import shutil
 import subprocess
+import sys
+import termios
+import time
 
 import gevent
 from devp2p.crypto import privtopub
@@ -24,6 +25,20 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 DEFAULT_BALANCE = denoms.turing * 1
 DEFAULT_BALANCE_BIN = str(denoms.turing * 1)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
+
+GENESIS_STUB = {
+    'config': {
+        'homesteadBlock': 0,
+    },
+    'nonce': '0x0000000000000042',
+    'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
+    'difficulty': '0x1',
+    'coinbase': '0x0000000000000000000000000000000000000000',
+    'timestamp': '0x00',
+    'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
+    'extraData': 'raiden',
+    'gasLimit': GAS_LIMIT_HEX,
+}
 
 
 def wait_until_block(chain, block):
@@ -105,15 +120,39 @@ def geth_create_account(datadir, privkey):
     assert create.returncode == 0
 
 
-def geth_init_datadir(genesis, datadir):
-    """Initialize a clients datadir with our custom genesis block.
+def geth_bare_genesis(genesis_path, private_keys):
+    """Creates a bare genesis inside `datadir`.
+
     Args:
         datadir (str): the datadir in which the blockchain is initialized.
+
+    Returns:
+        str: The path to the genisis file.
     """
-    genesis_path = os.path.join(datadir, 'custom_genesis.json')
+    account_addresses = [
+        privatekey_to_address(key)
+        for key in set(private_keys)
+    ]
+
+    alloc = {
+        address_encoder(address): {
+            'balance': DEFAULT_BALANCE_BIN,
+        }
+        for address in account_addresses
+    }
+    genesis = GENESIS_STUB.copy()
+    genesis['alloc'] = alloc
 
     with open(genesis_path, 'w') as handler:
         json.dump(genesis, handler)
+
+
+def geth_init_datadir(datadir, genesis_path):
+    """Initialize a clients datadir with our custom genesis block.
+
+    Args:
+        datadir (str): the datadir in which the blockchain is initialized.
+    """
 
     subprocess.call(['geth', '--datadir', datadir, 'init', genesis_path])
 
@@ -159,40 +198,18 @@ def geth_wait_and_check(privatekeys):
             raise ValueError('account is with a balance of 0')
 
 
-def geth_create_blockchain(private_keys, geth_private_keys, p2p_base_port,
-                           base_datadir, verbosity):
-    # pylint: disable=too-many-locals,too-many-statements
+def geth_create_blockchain(
+        private_keys,
+        geth_private_keys,
+        p2p_base_port,
+        base_datadir,
+        verbosity,
+        genesis_path=None):
+    # pylint: disable=too-many-locals,too-many-statements,too-many-arguments
 
     # TODO: handle better the errors cases:
     # - cant bind, port in use
     start_rpcport = 4000
-
-    account_addresses = [
-        privatekey_to_address(key)
-        for key in set(private_keys)
-    ]
-
-    alloc = {
-        address_encoder(address): {
-            'balance': DEFAULT_BALANCE_BIN,
-        }
-        for address in account_addresses
-    }
-
-    genesis = {
-        'config': {
-            'homesteadBlock': 0,
-        },
-        'nonce': '0x0000000000000042',
-        'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-        'difficulty': '0x40',
-        'coinbase': '0x0000000000000000000000000000000000000000',
-        'timestamp': '0x00',
-        'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-        'extraData': 'raiden',
-        'gasLimit': GAS_LIMIT_HEX,
-        'alloc': alloc,
-    }
 
     nodes_configuration = []
     for pos, key in enumerate(geth_private_keys):
@@ -222,7 +239,14 @@ def geth_create_blockchain(private_keys, geth_private_keys, p2p_base_port,
         nodedir = os.path.join(base_datadir, config['nodekeyhex'])
 
         os.makedirs(nodedir)
-        geth_init_datadir(genesis, nodedir)
+        node_genesis_path = os.path.join(nodedir, 'custom_genesis.json')
+
+        if genesis_path is None:
+            geth_bare_genesis(node_genesis_path, private_keys)
+        else:
+            shutil.copy(genesis_path, node_genesis_path)
+
+        geth_init_datadir(nodedir, node_genesis_path)
 
         if 'minerthreads' in config:
             geth_create_account(nodedir, private_keys[i])

@@ -5,9 +5,10 @@ import string
 import random
 
 import secp256k1
-from Crypto.Hash import keccak as keccaklib
 from secp256k1 import PrivateKey
+from Crypto.Hash import keccak as keccaklib
 from ethereum.utils import sha3
+from ethereum.utils import remove_0x_head
 
 import raiden
 
@@ -129,3 +130,9 @@ def get_contract_path(contract_name):
         contract_name
     )
     return os.path.realpath(contract_path)
+
+
+def safe_lstrip_hex(val):
+    if isinstance(val, basestring):
+        return remove_0x_head(val)
+    return val

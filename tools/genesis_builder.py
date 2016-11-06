@@ -2,27 +2,9 @@
 from ethereum.utils import sha3, encode_hex, denoms
 
 from raiden.utils import privatekey_to_address
+from raiden.tests.utils.blockchain import GENESIS_STUB
 
 CLUSTER_NAME = 'raiden'
-
-GENESIS_STUB = {
-    'config': {
-        'homesteadBlock': 1,
-        'engine': {
-            'Ethash': {
-                'durationLimit': '0x05',
-            }
-        }
-    },
-    'nonce': '0x0000000000000042',
-    'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'difficulty': '0x4',
-    'coinbase': '0x0000000000000000000000000000000000000000',
-    'timestamp': '0x00',
-    'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'extraData': CLUSTER_NAME,
-    'gasLimit': '0xfffffffff'
-}
 
 
 def generate_accounts(seeds):
@@ -44,6 +26,7 @@ def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
     :return: genesis dict
     """
     genesis = GENESIS_STUB.copy()
+    genesis['extraData'] = CLUSTER_NAME
     genesis['alloc'] = {
         account: {
             'balance': str(initial_alloc)

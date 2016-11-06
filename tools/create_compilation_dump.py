@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8
+from __future__ import print_function
+
 import json
 
 from ethereum import tester
-from ethereum.utils import remove_0x_head
 from ethereum import slogging
-
-from raiden.utils import privatekey_to_address, get_contract_path
+from raiden.utils import privatekey_to_address, get_contract_path, safe_lstrip_hex
 
 slogging.configure(":INFO")
-
-log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+log = slogging.getLogger(__name__)
 
 TARGETS = dict(
     registry='Registry.sol',
@@ -92,10 +91,12 @@ def deploy_all(token_groups=None):
         )
     )
 
-    dump = dict()
-    for account in deployed.values():
-        dump.update({account: state.block.account_to_dict(account)})
-    cleanup(dump)
+    genesis_alloc = dict()
+    for account_address in deployed.itervalues():
+        genesis_alloc[account_address] = account_alloc = dict()
+
+        for key, value in state.block.account_to_dict(account_address).iteritems():
+            account_alloc[key] = safe_lstrip_hex(value)
 
     raiden_flags = (
         '--registry_contract_address {Registry}'
@@ -107,7 +108,7 @@ def deploy_all(token_groups=None):
         token_groups=tokens,
     )
     blockchain_config['contract_addresses'] = deployed
-    return (dump, blockchain_config)
+    return (genesis_alloc, blockchain_config)
 
 
 def create_and_distribute_token(state,
@@ -204,22 +205,12 @@ def find_dependencies(contract_file):
     return cleaned
 
 
-def cleanup(dump):
-    def strip_hex(val):
-        if isinstance(val, basestring):
-            return remove_0x_head(val)
-        return val
-
-    for alloc in dump.values():
-        for key, value in alloc.items():
-            alloc[key] = strip_hex(value)
-
-
 def main():
     pretty = False
     dump, blockchain_config = deploy_all()
-    print json.dumps(dump, indent=2 if pretty else None)
-    print json.dumps(blockchain_config, indent=2 if pretty else None)
+
+    print(json.dumps(dump, indent=2 if pretty else None))
+    print(json.dumps(blockchain_config, indent=2 if pretty else None))
 
 
 if __name__ == '__main__':

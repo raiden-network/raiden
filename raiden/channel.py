@@ -442,6 +442,9 @@ class ChannelExternalState(object):
         for callback in self.callbacks_settled:
             callback(block_number)
 
+    def query_settled(self):
+        return self.netting_channel.settled()
+
     def callback_on_opened(self, callback):
         if self._opened_block != 0:
             callback(self._opened_block)
@@ -603,7 +606,18 @@ class Channel(object):
     def blockalarm_for_settle(self, block_number):
         def _settle():
             for _ in range(3):
+                # do not call settle if already settled, the settle_event might
+                # not be set if the LogListener is lagging behind.
+                settled_block = self.external_state.query_settled()
+                if settled_block != 0:
+                    self.external_state.set_settled(settled_block)
+                    log.info('channel automatically settled')
+                    return
+
                 try:
+                    # TODO: to remove unecessary JSON-RPC calls, change to an
+                    # async version of settle and stop polling if the
+                    # settle_event was set
                     self.external_state.settle()
                 except:
                     log.exception('Timedout while calling settle')
