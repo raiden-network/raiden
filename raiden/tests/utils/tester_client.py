@@ -214,6 +214,9 @@ class BlockChainServiceTesterMock(object):
         self.address_registry = dict()
         self.asset_manager = dict()
 
+    def set_verbosity(self, level):
+        pass
+
     def block_number(self):
         return self.tester_state.block.number
 

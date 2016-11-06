@@ -22,7 +22,7 @@ from raiden.utils import sha3
 slogging.configure(':DEBUG')
 
 
-@pytest.mark.xfail(reason='unlock is failling')
+@pytest.mark.xfail(reson='issue #198')
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_settlement(raiden_network, settle_timeout, reveal_timeout):
@@ -73,8 +73,15 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
         channel1, balance1, [transfermessage.lock],
     )
 
-    # Bob learns the secret, but Alice did not send a signed updated balance to
-    # reflect this Bob wants to settle
+    # At this point we are assuming the following:
+    #
+    #    A -> B MediatedTransfer
+    #    B -> A SecretRequest
+    #    A -> B RevealSecret
+    #    - protocol didn't continue
+    #
+    # So, B knowns the secret but don't have an updated balance proof, so B
+    # will call settle.
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
     lock = channel1.our_state.balance_proof.get_lock_by_hashlock(hashlock)
@@ -90,12 +97,16 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert unlock_proof.lock_encoded == transfermessage.lock.as_bytes
     assert unlock_proof.secret == secret
 
+    # a ChannelClose event will be generate, this will be polled by both apps
+    # and each must start a task for calling settle
     channel0.external_state.netting_channel.close(
         app0.raiden.address,
         transfermessage,
         None,
     )
 
+    # unlock will not be called by Channel.channel_closed because we did not
+    # register the secret
     channel0.external_state.netting_channel.unlock(
         app0.raiden.address,
         [unlock_proof],
@@ -104,7 +115,10 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     settle_expiration = chain0.block_number() + settle_timeout
     wait_until_block(chain0, settle_expiration)
 
-    channel0.external_state.netting_channel.settle()
+    # settle must be called by the apps triggered by the ChannelClose event,
+    # and the channels must update it's state based on the ChannelSettled event
+    assert channel0.external_state.settled_block != 0
+    assert channel1.external_state.settled_block != 0
 
 
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])

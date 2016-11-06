@@ -5,8 +5,9 @@ from ethereum import slogging
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.network import (
     CHAIN,
-    create_network,
-    create_sequential_network,
+    create_apps,
+    create_network_channels,
+    create_sequential_channels,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -27,8 +28,16 @@ def _raiden_cleanup(request, raiden_apps):
 
 
 @pytest.fixture
-def raiden_chain(request, assets_addresses, channels_per_node, deposit,
-                 settle_timeout, blockchain_services, transport_class):
+def raiden_chain(
+        request,
+        assets_addresses,
+        channels_per_node,
+        deposit,
+        settle_timeout,
+        blockchain_services,
+        transport_class,
+        cached_genesis):
+
     if len(assets_addresses) > 1:
         raise ValueError('raiden_chain only works with a single asset')
 
@@ -39,15 +48,23 @@ def raiden_chain(request, assets_addresses, channels_per_node, deposit,
 
     verbosity = request.config.option.verbose
 
-    raiden_apps = create_sequential_network(
+    raiden_apps = create_apps(
         blockchain_services,
-        assets_addresses[0],
-        channels_per_node,
-        deposit,
-        settle_timeout,
         transport_class,
         verbosity,
     )
+
+    if not cached_genesis:
+        create_sequential_channels(
+            raiden_apps,
+            assets_addresses[0],
+            channels_per_node,
+            deposit,
+            settle_timeout,
+        )
+
+    for app in raiden_apps:
+        app.raiden.register_registry(app.raiden.chain.default_registry)
 
     _raiden_cleanup(request, raiden_apps)
 
@@ -55,20 +72,35 @@ def raiden_chain(request, assets_addresses, channels_per_node, deposit,
 
 
 @pytest.fixture
-def raiden_network(request, assets_addresses, channels_per_node, deposit,
-                   settle_timeout, blockchain_services, transport_class):
-
-    verbosity = request.config.option.verbose
-
-    raiden_apps = create_network(
-        blockchain_services,
+def raiden_network(
+        request,
         assets_addresses,
         channels_per_node,
         deposit,
         settle_timeout,
+        blockchain_services,
+        transport_class,
+        cached_genesis):
+
+    verbosity = request.config.option.verbose
+
+    raiden_apps = create_apps(
+        blockchain_services,
         transport_class,
         verbosity,
     )
+
+    if not cached_genesis:
+        create_network_channels(
+            raiden_apps,
+            assets_addresses,
+            channels_per_node,
+            deposit,
+            settle_timeout,
+        )
+
+    for app in raiden_apps:
+        app.raiden.register_registry(app.raiden.chain.default_registry)
 
     _raiden_cleanup(request, raiden_apps)
 

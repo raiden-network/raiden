@@ -142,6 +142,10 @@ class BlockChainService(object):
         self.poll_timeout = poll_timeout
         self.default_registry = self.registry(registry_address)
 
+    def set_verbosity(self, level):
+        if level:
+            self.client.print_communication = True
+
     def block_number(self):
         return self.client.blocknumber()
 
@@ -488,6 +492,7 @@ class Registry(object):
         log.info(
             'add_asset called',
             asset_address=pex(asset_address),
+            registry_address=pex(self.address),
             channel_manager_address=pex(channel_manager_address_bin),
         )
 

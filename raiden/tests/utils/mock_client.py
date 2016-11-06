@@ -126,6 +126,9 @@ class BlockChainServiceMock(object):
     def block_number(cls):
         return cls.block_number_
 
+    def set_verbosity(self, level):
+        pass
+
     def asset(self, asset_address):
         return self.address_asset[asset_address]
 
