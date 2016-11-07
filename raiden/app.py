@@ -142,6 +142,9 @@ def app(address,
     config['port'] = listen_port
 
     accmgr = AccountManager(keystore_path)
+    if not accmgr.accounts:
+        raise RuntimeError('No Ethereum accounts found in the user\'s system')
+
     if not accmgr.address_in_keystore(address):
         addresses = list(accmgr.accounts.keys())
         formatted_addresses = [
