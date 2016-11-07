@@ -41,14 +41,12 @@ if [ ! -x $HOME/.bin/solc-${SOLC_VERSION} ]; then
     curl -L $SOLC_URL > $HOME/.bin/solc-${SOLC_VERSION}
     chmod 775 $HOME/.bin/solc-${SOLC_VERSION}
 
-    if [ -e $HOME/.bin/solc ]; then
-        warn "force removing $HOME/.bin/solc"
-        rm -f $HOME/.bin/solc
-    fi
-
-    ln -s $HOME/.bin/solc-${SOLC_VERSION} $HOME/.bin/solc
-
     success "solc ${SOLC_VERSION} installed"
 else
     info 'using cached solc'
 fi
+
+# always recreate the symlink since we dont know if it's poiting to a different
+# version
+[ -h $HOME/.bin/solc ] && unlink $HOME/.bin/solc
+ln -s $HOME/.bin/solc-${SOLC_VERSION} $HOME/.bin/solc

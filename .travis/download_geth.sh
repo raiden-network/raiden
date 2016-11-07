@@ -46,14 +46,12 @@ if [ ! -x $HOME/.bin/geth-${GETH_VERSION} ]; then
     cd geth*/
     install -m 755 geth $HOME/.bin/geth-${GETH_VERSION}
 
-    if [ -e $HOME/.bin/geth ]; then
-        warn "force removing $HOME/.bin/geth"
-        rm -f $HOME/.bin/geth
-    fi
-
-    ln -s $HOME/.bin/geth-${GETH_VERSION} $HOME/.bin/geth
-
     success "geth ${GETH_VERSION} installed"
 else
     info 'using cached geth'
 fi
+
+# always recreate the symlink since we dont know if it's poiting to a different
+# version
+[ -h $HOME/.bin/geth ] && unlink $HOME/.bin/geth
+ln -s $HOME/.bin/geth-${GETH_VERSION} $HOME/.bin/geth
