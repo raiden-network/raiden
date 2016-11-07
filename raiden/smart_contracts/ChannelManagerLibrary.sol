@@ -36,21 +36,22 @@ library ChannelManagerLibrary {
     /// @return channel (address) the address of the NettingChannelContract of the two parties.
     function getChannelWith(Data storage self, address caller_address, address partner)
         constant
-        returns (address)
+        returns (address, bool, uint, uint)
     {
         uint i;
+        uint j;
         address[] our_channels = self.node_channels[caller_address];
-        address channel;
+        address[] partner_channels = self.node_channels[partner];
 
         for (i = 0; i < our_channels.length; ++i) {
-            channel = our_channels[i];
+            for (j = 0; j < partner_channels.length; ++j) {
+                if (our_channels[i] == partner_channels[j]) {
+                    return (partner_channels[j], true, i, j);
+                }
 
-            if (NettingChannelContract(channel).partner(caller_address) == partner) {
-                return channel;
             }
         }
-
-        throw;
+        return (0x0, false, 0, 0);
     }
 
     /// @notice newChannel(address, uint) to create a new payment channel between two parties
@@ -66,18 +67,18 @@ library ChannelManagerLibrary {
         returns (address)
     {
         address channel_address;
-        uint i;
+        bool has_channel;
+        uint i_index;
+        uint j_index;
 
-        address[] storage existing_channels = self.node_channels[caller_address];
-        for (i = 0; i < existing_channels.length; i++) {
-            if (!contractExists(self, existing_channels[i])) {
-                // delete all channels that has been settled
-                // settled contracts will commit suicide and thus not exist on their address
-                deleteChannel(self, caller_address, partner, existing_channels[i]);
-            } else if (NettingChannelContract(existing_channels[i]).partner(caller_address) == partner) {
-                // throw if an open contract exists that is not settled
-                throw;
-            }
+        (channel_address, has_channel, i_index, j_index) = getChannelWith(self, caller_address, partner);
+        if (!has_channel) {
+            // do nothing, continue to create a new channel
+        } else if (!contractExists(self, channel_address)) {
+            deleteChannel(self, caller_address, partner, channel_address, i_index, j_index);
+        } else {
+            // throw if an open contract exists that is not settled
+            throw;
         }
 
         channel_address = new NettingChannelContract(
@@ -98,29 +99,24 @@ library ChannelManagerLibrary {
     /// @dev Remove channel after it's been settled
     /// @param channel_address (address) address of the channel to be closed
     /// @param partner (address) address of the partner
-    function deleteChannel(Data storage self, address caller_address, address partner, address channel_address) 
+    function deleteChannel(
+        Data storage self,
+        address caller_address,
+        address partner,
+        address channel_address,
+        uint i_index,
+        uint j_index)
         private
     {
         address[] our_channels = self.node_channels[caller_address];
         address[] partner_channels = self.node_channels[partner];
 
-        // remove element from sender
-        for (uint i = 0; i < our_channels.length; ++i) {
-            if (our_channels[i] == channel_address) {
-                our_channels[i] = our_channels[our_channels.length - 1];
-                our_channels.length--;
-                break;
-            }
-        }
-
-        // remove element from partner
-        for (uint j = 0; j < partner_channels.length; ++j) {
-            if (partner_channels[j] == channel_address) {
-                partner_channels[j] = partner_channels[partner_channels.length - 1];
-                partner_channels.length--;
-                break;
-            }
-        }
+        // move last element of array to i_index pos
+        our_channels[i_index] = our_channels[our_channels.length - 1];
+        our_channels.length--;
+        // move last element of array to j_index pos
+        partner_channels[j_index] = partner_channels[partner_channels.length - 1];
+        partner_channels.length--;
 
         // remove address from all_channels
         for (uint k = 0; k < self.all_channels.length; ++k) {

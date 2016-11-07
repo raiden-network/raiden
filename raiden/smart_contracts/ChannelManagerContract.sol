@@ -109,7 +109,7 @@ contract ChannelManagerContract {
         return data.node_channels[node_address];
     }
 
-    function getChannelWith(address partner) constant returns (address) {
+    function getChannelWith(address partner) constant returns (address, bool, uint, uint) {
         return data.getChannelWith(msg.sender, partner);
     }
 

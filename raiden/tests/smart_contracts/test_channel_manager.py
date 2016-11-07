@@ -95,8 +95,7 @@ def test_channelmanager(tester_state, tester_token, tester_events,
         channel_manager.newChannel(address1, settle_timeout)
 
     # should trow if there is no channel for the given address
-    with pytest.raises(TransactionFailed):
-        channel_manager.getChannelWith(inexisting_address)
+    assert not channel_manager.getChannelWith(inexisting_address)[1]
 
     assert len(channel_manager.getChannelsParticipants()) == 2
 
@@ -118,8 +117,10 @@ def test_channelmanager(tester_state, tester_token, tester_events,
     assert channel_manager.contractExists(netting_channel_address1_hex)
     assert channel_manager.contractExists(netting_channel_address2_hex)
 
-    assert channel_manager.getChannelWith(address1) == netting_channel_address1_hex
-    assert channel_manager.getChannelWith(address2) == netting_channel_address2_hex
+    assert channel_manager.getChannelWith(address1)[0] == netting_channel_address1_hex
+    assert channel_manager.getChannelWith(address1)[1]
+    assert channel_manager.getChannelWith(address2)[0] == netting_channel_address2_hex
+    assert channel_manager.getChannelWith(address2)[1]
 
     msg_sender_channels = channel_manager.nettingContractsByAddress(tester.DEFAULT_ACCOUNT)
     address1_channels = channel_manager.nettingContractsByAddress(address1)
@@ -148,6 +149,7 @@ def test_deleteChannel(tester_state, tester_channelmanager, tester_channels, set
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
     address0 = privatekey_to_address(privatekey0_raw)
     address1 = privatekey_to_address(privatekey1_raw)
+    address2 = tester.a2
 
     # We need to close the channel before it can be deleted, to do so we need
     # one transfer to call closeSingleTransfer(0
@@ -196,15 +198,24 @@ def test_deleteChannel(tester_state, tester_channelmanager, tester_channels, set
         netting_channel_address1_hex,
     )
 
+    # transfer not in nonce range
     with pytest.raises(TransactionFailed):
         netting_contract_proxy1.closeSingleTransfer(
             direct_transfer_data,
             sender=privatekey0_raw,
         )
 
+    # channel already exists
     with pytest.raises(TransactionFailed):
         tester_channelmanager.newChannel(
             address1,
             settle_timeout,
             sender=privatekey0_raw,
         )
+
+    # opening a new channel that did not exist before
+    netting_channel_address2_hex = tester_channelmanager.newChannel(
+        address2,
+        settle_timeout,
+        sender=privatekey0_raw,
+    )
