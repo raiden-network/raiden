@@ -6,7 +6,6 @@ import ethereum.config
 from ethereum import tester
 from ethereum.utils import int_to_addr, zpad
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
-from secp256k1 import PrivateKey
 
 
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
