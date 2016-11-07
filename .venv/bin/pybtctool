@@ -1,4 +1,0 @@
-#!/home/czepluch/Dropbox/prgrms/ethereum/raiden/.venv/bin/python
-# EASY-INSTALL-SCRIPT: 'bitcoin==1.1.42','pybtctool'
-__requires__ = 'bitcoin==1.1.42'
-__import__('pkg_resources').run_script('bitcoin==1.1.42', 'pybtctool')
