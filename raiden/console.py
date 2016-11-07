@@ -152,7 +152,6 @@ class ConsoleTools(object):
         self._discovery = discovery
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
-        self._ping_nonces = defaultdict(int)
         self.deposit = self._raiden.api.deposit
 
     def create_token(
@@ -228,8 +227,8 @@ class ConsoleTools(object):
             print("Error: peer {} not found in discovery".format(peer))
             return
 
-        nonce = self._ping_nonces[peer]
-        self._ping_nonces[peer] += 1
+        nonce = self._raiden.protocol.ping_nonces[peer]
+        self._raiden.protocol.ping_nonces[peer] += 1
         msg = Ping(nonce)
         self._raiden.sign(msg)
         return self._raiden.protocol.send_and_wait(peer.decode('hex'), msg)

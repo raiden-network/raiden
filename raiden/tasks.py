@@ -176,8 +176,7 @@ class HealthcheckTask(Task):
                             receiver_address not in self.protocol.last_received_time or
                             elapsed_time > self.send_ping_time
                     ):
-                        # TODO: Send ping
-                        pass
+                        self.protocol.send_ping(receiver_address)
                     elif elapsed_time > self.max_unresponsive_time:
                         # TODO: Remove address from graph
                         pass

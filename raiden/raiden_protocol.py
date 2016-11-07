@@ -2,13 +2,14 @@
 import logging
 import time
 from collections import namedtuple
+from collections import defaultdict
 
 import gevent
 from gevent.queue import Queue
 from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
-from raiden.messages import decode, Ack, SignedMessage
+from raiden.messages import decode, Ack, Ping, SignedMessage
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -77,6 +78,8 @@ class RaidenProtocol(object):
         # Maps an address to timestamp representing last time any kind of messsage
         # was received for that address
         self.last_received_time = dict()
+
+        self._ping_nonces = defaultdict(int)
 
     def stop_async(self):
         for greenlet in self.address_greenlet.itervalues():
@@ -239,6 +242,30 @@ class RaidenProtocol(object):
 
         self.echohash_acks[message.echo] = (host_port, messagedata)
         self._send_ack(*self.echohash_acks[message.echo])
+
+    def send_ping(self, receiver_address):
+        if not isaddress(receiver_address):
+            raise ValueError('Invalid address {}'.format(pex(receiver_address)))
+
+        nonce = self._ping_nonces[receiver_address]
+        self._ping_nonces[receiver_address] += 1
+
+        message = Ping(nonce)
+        self._raiden.sign(message)
+
+        if log.isEnabledFor(logging.INFO):
+            log.info(
+                'SENDING PING %s > %s %s',
+                pex(self.raiden.address),
+                pex(receiver_address)
+            )
+
+        # Just like ACK, a PING message is sent directly. No need for queuing
+        self.transport.send(
+            self.raiden,
+            self.discovery.get(receiver_address),
+            message.encode()
+        )
 
     def receive(self, data):
         # ignore large packets
