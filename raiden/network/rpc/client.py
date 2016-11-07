@@ -495,13 +495,13 @@ class ChannelManager(object):
         netting_channel_address_encoded = self.proxy.getChannelWith.call(
             other,
             startgas=self.startgas,
-        )[0]  # getChannelWith return several argument, first argument is address
+        )
 
-        if not netting_channel_address_encoded:
+        if not netting_channel_address_encoded[1]:
             log.error('netting_channel_address failed', peer1=pex(peer1), peer2=pex(peer2))
             raise RuntimeError('netting_channel_address failed')
 
-        netting_channel_address_bin = address_decoder(netting_channel_address_encoded)
+        netting_channel_address_bin = address_decoder(netting_channel_address_encoded[0])
 
         log.info(
             'new_netting_channel called',
