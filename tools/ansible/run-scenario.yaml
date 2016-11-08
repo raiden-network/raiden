@@ -138,8 +138,13 @@
         cmd: "killall geth"
       ignore_errors: True
 
-    # - name: TODO sync results files
-    #  sync:
+    - name: sync results files
+      fetch:
+        src: "{{ ansible_ec2_public_ipv4 }}-{{ item }}.json"
+        dest: "results/"
+        flat: yes
+      with_items:
+        - "{{ raiden_ports }}"
 
 - hosts: tag_Name_Scenario
   name: terminate
