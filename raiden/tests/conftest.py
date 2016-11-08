@@ -4,6 +4,10 @@ import gevent
 import gevent.monkey
 from ethereum import slogging
 from ethereum.keys import PBKDF2_CONSTANTS
+from ethereum import processblock
+from ethereum import tester
+
+from raiden.network.rpc.client import GAS_LIMIT
 
 from raiden.tests.fixtures import (
     token_abi,
@@ -146,3 +150,19 @@ def enable_greenlet_debugger(request):
     if request.config.option.usepdb:
         from pyethapp.utils import enable_greenlet_debugger
         enable_greenlet_debugger()
+
+
+@pytest.fixture(scope='session', autouse=True)
+def monkey_patch_tester():
+    original_apply_transaction = processblock.apply_transaction
+
+    def apply_transaction(block, transaction):
+        start_gas = block.gas_used
+        result = original_apply_transaction(block, transaction)
+        end_gas = block.gas_used
+
+        assert end_gas - start_gas <= GAS_LIMIT
+
+        return result
+
+    tester.processblock.apply_transaction = apply_transaction
