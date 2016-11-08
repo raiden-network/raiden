@@ -46,50 +46,23 @@ class ContractDiscovery(Discovery):
     your ethereum-/raiden-address and looking up endpoints for other ethereum-/raiden-addressess.
     """
 
-    def __init__(
-            self,
-            blockchainservice,
-            discovery_contract_address,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
-
+    def __init__(self, node_address, discovery_proxy):
         super(ContractDiscovery, self).__init__()
 
-        self.chain = blockchainservice
-        self.poll_timeout = poll_timeout
+        self.node_address = node_address
+        self.discovery_proxy = discovery_proxy
 
-        self.discovery_proxy = self.chain.client.new_abi_contract(
-            DISCOVERY_CONTRACT_ABI,
-            discovery_contract_address.encode('hex'),
-        )
-
-    def register(self, nodeid, host, port):
-        if nodeid != self.chain.node_address:
+    def register(self, node_address, host, port):
+        if node_address != self.node_address:
             raise ValueError('You can only register your own endpoint.')
 
-        transaction_hash = self.discovery_proxy.registerEndpoint.transact(
-            host_port_to_endpoint(host, port),
-        )
+        endpoint = host_port_to_endpoint(host, port)
+        self.discovery_proxy.register_endpoint(endpoint)
 
-        self.chain.client.poll(
-            transaction_hash.decode('hex'),
-            timeout=self.poll_timeout,
-        )
-
-    def get(self, nodeid):
-        # check whether to encode or decode nodeid
-        endpoint = self.discovery_proxy.findEndpointByAddress.call(nodeid.encode('hex'))
-
-        if endpoint is '':
-            raise KeyError('Unknow address {}'.format(pex(nodeid)))
-
-        return split_endpoint(endpoint)
+    def get(self, node_address):
+        return self.discovery_proxy.endpoint_by_address(node_address)
 
     def nodeid_by_host_port(self, host_port):
         host, port = host_port
         endpoint = host_port_to_endpoint(host, port)
-        address = self.discovery_proxy.findAddressByEndpoint.call(endpoint)
-
-        if set(address) == {'0'}:  # the 0 address means nothing found
-            return None
-
-        return address.decode('hex')
+        return self.discovery_proxy.address_by_endpoint(endpoint)

@@ -66,6 +66,12 @@ channel_manager_compiled = _solidity.compile_contract(
     combined='abi',
 )
 
+endpoint_registry_compiled = _solidity.compile_contract(
+    get_contract_path('EndpointRegistry.sol'),
+    'EndpointRegistry',
+    combined='abi',
+)
+
 netting_channel_compiled = _solidity.compile_contract(
     get_contract_path('NettingChannelContract.sol'),
     'NettingChannelContract',
@@ -84,6 +90,7 @@ HUMAN_TOKEN_ABI = human_token_compiled['abi']
 CHANNEL_MANAGER_ABI = channel_manager_compiled['abi']
 NETTING_CHANNEL_ABI = netting_channel_compiled['abi']
 REGISTRY_ABI = registry_compiled['abi']
+ENDPOINT_REGISTRY_ABI = endpoint_registry_compiled['abi']
 
 ASSETADDED_EVENT = get_event(REGISTRY_ABI, 'AssetAdded')
 ASSETADDED_EVENTID = event_id(*get_eventname_types(ASSETADDED_EVENT))

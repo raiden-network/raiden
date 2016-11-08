@@ -9,7 +9,13 @@ from pyethapp.jsonrpc import address_decoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
 from raiden import messages
-from raiden.utils import pex, isaddress, privatekey_to_address, get_contract_path
+from raiden.utils import (
+    get_contract_path,
+    isaddress,
+    pex,
+    privatekey_to_address,
+    split_endpoint,
+)
 from raiden.blockchain.abi import (
     ASSETADDED_EVENTID,
     CHANNEL_MANAGER_ABI,
@@ -18,6 +24,7 @@ from raiden.blockchain.abi import (
     CHANNELSECRETREVEALED_EVENTID,
     CHANNELCLOSED_EVENTID,
     CHANNELSETTLED_EVENTID,
+    ENDPOINT_REGISTRY_ABI,
     HUMAN_TOKEN_ABI,
     NETTING_CHANNEL_ABI,
     REGISTRY_ABI,
@@ -202,6 +209,7 @@ class BlockChainServiceTesterMock(object):
         self.default_registry = default_registry
 
         self.address_asset = dict()
+        self.address_discovery = dict()
         self.address_manager = dict()
         self.address_contract = dict()
         self.address_registry = dict()
@@ -224,6 +232,16 @@ class BlockChainServiceTesterMock(object):
             )
 
         return self.address_asset[asset_address]
+
+    def discovery(self, discovery_address):
+        if discovery_address not in self.address_discovery:
+            self.address_discovery[discovery_address] = DiscoveryTesterMock(
+                self.tester_state,
+                self.private_key,
+                discovery_address,
+            )
+
+        return self.address_discovery[discovery_address]
 
     def netting_channel(self, netting_channel_address):
         """ Return a proxy to interact with a NettingChannelContract. """
@@ -303,6 +321,44 @@ class BlockChainServiceTesterMock(object):
         self.default_registry.add_asset(token_address)  # pylint: disable=no-member
 
         return token_address
+
+
+class DiscoveryTesterMock(object):
+    def __init__(self, tester_state, private_key, address):
+        if len(tester_state.block.get_code(address)) == 0:
+            raise Exception('Contract code empty')
+
+        self.address = address
+        self.tester_state = tester_state
+        self.private_key = private_key
+
+        self.proxy = tester.ABIContract(
+            tester_state,
+            ENDPOINT_REGISTRY_ABI,
+            address,
+            default_key=private_key,
+        )
+
+    def register_endpoint(self, endpoint):
+        self.proxy.registerEndpoint(endpoint)
+        self.tester_state.mine(number_of_blocks=1)
+
+    def endpoint_by_address(self, node_address_bin):
+        node_address_hex = node_address_bin.encode('hex')
+        endpoint = self.proxy.findEndpointByAddress(node_address_hex)
+
+        if endpoint is '':
+            raise KeyError('Unknow address {}'.format(pex(node_address_bin)))
+
+        return split_endpoint(endpoint)
+
+    def address_by_endpoint(self, endpoint):
+        address = self.proxy.findAddressByEndpoint(endpoint)
+
+        if set(address) == {'0'}:  # the 0 address means nothing found
+            return None
+
+        return address.decode('hex')
 
 
 class AssetTesterMock(object):
