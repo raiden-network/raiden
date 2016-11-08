@@ -1,31 +1,53 @@
-language: python
-sudo: required
 dist: trusty
+sudo: false
+
+language: python
 python:
-- '2.7'
+  - '2.7'
+
+env:
+  global:
+    - GETH_URL='https://github.com/ethereum/go-ethereum/releases/download/v1.4.18/geth-linux-amd64-1.4.18-ef9265d0.tar.gz'
+    - GETH_VERSION='1.4.18'
+    - SOLC_URL='https://github.com/brainbot-com/solidity-static/releases/download/v0.4.4/solc'
+    - SOLC_VERSION='0.4.4'
+  matrix:
+    - TEST_TYPE='unit'
+    - TEST_TYPE='smart_contracts'
+
+    - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=tester'
+    - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth'
+
 cache:
+  pip: true
   directories:
-      - ~/.ethash
-      - ~/.bin
+    - $HOME/.cache/pip
+    - $HOME/.ethash
+    - $HOME/.bin
+
 before_install:
-- sudo add-apt-repository -y ppa:ethereum/ethereum
-- sudo apt-get update
-- sudo apt-get install -y ethereum
-- mkdir -p ~/.ethash
-- geth makedag 0 ~/.ethash
-- mkdir -p ~/.bin
-- curl -L https://github.com/brainbot-com/solidity-static/releases/download/v0.4.2/solc > ~/.bin/solc
-- chmod +x ~/.bin/solc
-- export PATH=$PATH:~/.bin
+  - mkdir -p $HOME/.bin
+  - export PATH=$PATH:$HOME/.bin
+  - ./.travis/download_geth.sh
+  - ./.travis/download_solc.sh
+
 install:
-- pip install -r requirements.txt
-- pip install coveralls
+  - pip install -U pip
+  - pip install wheel
+  - pip install -r requirements.txt
+  - pip install coveralls
+
+before_script:
+  - ./.travis/make_dag.sh
+
+script:
+  - coverage run -m py.test -vvvvvv -s $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
+
+after_success:
+  - coveralls
+
 notifications:
   slack:
     secure: Q8/IZikyfs/tzB6UsAgdQ9PAXQUeU5SN6uBRayvFX/gqVoLhB0uQLNXgHoM8x/mnR6w3voVtpNtEqIsCEbxhVqk5ckybVup4pt7vGH9ssElTffhu09TwbfUZpDCUUUMXjBbELAaO9ArOI0h0QLu5yR54eJtX3/EjcP1vUye/urn24YarAwLeV3lSEIQsWpaCAMM0WpRrKcYKb09bWI+uzSumZclUEV3oal84cTEFiZ5YAcUOVB89pfjg4gyl2nIk93v58UeDdxrFBtuGs4AjDpP3xDiPgFlRPgD9xZM4VD99+osVlKi9xJ5jly4c6sg5t5HvU6UXbkYjHZN6EV8n+RYxxR4c3/EL7OkD3PxUBqNyN0YjAkQbXOrmc7MndNJyAx3X+btgC9FbyzB9KALlzb+BWNMBXyZC/IFWiu3TtESz9f7wIxmkLyGwkzw7NvJBKmwqQRXLFnkL61AQESTA8X0U1Ibwy6tt8UK6UqkrU6NELMGd/F3wppLBgKCWJDWqgppG3Da2ZaP829KlmwioSWK/ZrqESRLysJ1bk8XPMlBF4SwVFIxBrWDM33QYjKTzifSEItfxP9y0PnQ0fMzdLgbXRMF3ubmbBE0PZdxibY9K+cueP0aKtkswSP+KUfpKtHmV2LKgtsRXEgM1AnTOoQJ2kQ4KszT6sljIvncxVx8=
   webhooks:
     - secure: "IXBsyQtH29Vkh+Pe2exrbE3L8FJMQFqJ8ZRxkACts7cQtB8Iz1vyjWg9nYE9ZuCj/JWEeMZd/09JvwwKUj8ZEzwj59gFwVQFwTAxJbiDLRsn7WpdI5Q2fQ9ZPZIAbPo/mJejeHC+z3d5UgY72hbhqWuPJAa4ApWWKE5mPFUIr9uxgs01ReWs/y5HaPawQkSQAKVWWsS5R52Oyr9CYQNbfqfWcoLvzdiIZpsBi2r4ZK3NGrBZPGo4b+PkDkWjuBhMJ0FVABFCJT/bT2ORFsmsCDwZ4I3vOrKtJGDybmwONZqr0ymfYo1lbcUp0mE0zJ0ApyRtLqEFiTzaQqenlAZmBAtpDZVvpxFuDwZgFxafpNutO3Aj3Xbfe+aaooPfHA7SoxmxG/3gWY+OyaME8EDePfBHM0c1gGsNHmbPLt8k0lmwYKlNTFtFFyRAbL3700j19utkGroOK6CUYbed9YD96UehQTj7HN8rpLTZzSMh39c1JHVyqxsUZKkhQgY4GPgx2RAIiCVrwc6wN3Ebtwft0hA2UhvDodsc/qBAyz/YnSp2oKZKagLy5747torZybtNOGKCaV2fT3mSTxV2UNwPJ/N94dlTquJNx3StHT0IqD3Kfo5HYKJKHeri6lttTDul3rjAs1xxB2aAMutsyg7dRbBMmuKlK9gAtoS3UKthQdk="
-script:
-- coverage run --source raiden setup.py test
-after_success:
-- coveralls
