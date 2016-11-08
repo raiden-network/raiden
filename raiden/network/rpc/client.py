@@ -308,8 +308,9 @@ class Filter(object):
 
 
 class Discovery(object):
-    """On chain smart contract raiden node discovery: allows to register endpoints (host, port) for
-    your ethereum-/raiden-address and looking up endpoints for other ethereum-/raiden-addressess.
+    """On chain smart contract raiden node discovery: allows registering
+    endpoints (host, port) for your ethereum-/raiden-address and looking up
+    endpoints for other ethereum-/raiden-addressess.
     """
 
     def __init__(
@@ -327,7 +328,7 @@ class Discovery(object):
         )
 
         if result == '0x':
-            raise ValueError('Disocvery address {} does not contain code'.format(
+            raise ValueError('Discovery address {} does not contain code'.format(
                 address_encoder(discovery_address),
             ))
 
@@ -345,7 +346,7 @@ class Discovery(object):
 
     def register_endpoint(self, node_address, endpoint):
         if node_address != self.client.sender:
-            raise ValueError('node_address doesnt match this node address')
+            raise ValueError("node_address doesnt match this node's address")
 
         transaction_hash = self.proxy.registerEndpoint.transact(endpoint)
 
@@ -359,7 +360,7 @@ class Discovery(object):
         endpoint = self.proxy.findEndpointByAddress.call(node_address_hex)
 
         if endpoint is '':
-            raise KeyError('Unknow address {}'.format(pex(node_address_bin)))
+            raise KeyError('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
 

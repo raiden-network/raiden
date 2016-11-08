@@ -33,7 +33,7 @@ class Discovery(object):
 class ContractDiscovery(Discovery):
     """ Raiden node discovery.
 
-    Allows to registering and lookup by endpoint (host, port) for node_address.
+    Allows registering and looking up by endpoint (host, port) for node_address.
     """
 
     def __init__(self, node_address, discovery_proxy):
