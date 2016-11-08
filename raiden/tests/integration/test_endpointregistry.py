@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from ethereum import _solidity
-
 from raiden.utils import make_address, get_contract_path, privatekey_to_address
 from raiden.network.discovery import ContractDiscovery
 
