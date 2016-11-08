@@ -4,6 +4,7 @@ import ethereum.db
 import ethereum.blocks
 import ethereum.config
 from ethereum import tester
+from ethereum import processblock
 from ethereum.utils import int_to_addr, zpad
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 
@@ -19,6 +20,25 @@ from raiden.tests.utils.tester import (
     new_nettingcontract,
 )
 from raiden.tests.utils.tester_client import ChannelExternalStateTester
+from raiden.network.rpc.client import GAS_LIMIT
+
+
+def monkey_patch_tester():
+    original_apply_transaction = processblock.apply_transaction
+
+    def apply_transaction(block, transaction):
+        start_gas = block.gas_used
+        result = original_apply_transaction(block, transaction)
+        end_gas = block.gas_used
+
+        assert end_gas - start_gas <= GAS_LIMIT
+
+        return result
+
+    tester.processblock.apply_transaction = apply_transaction
+
+
+monkey_patch_tester()
 
 
 @pytest.fixture
