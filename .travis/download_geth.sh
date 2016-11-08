@@ -1,35 +1,42 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 set -e
 
 fail() {
-    red=`tput setaf 1`
-    reset=`tput sgr0`
+    if [[ $- == *i* ]]; then
+       red=`tput setaf 1`
+       reset=`tput sgr0`
 
-    echo "${red}==> ${@}${reset}"
-
+       echo "${red}==> ${@}${reset}"
+    fi
     exit 1
 }
 
 info() {
-    blue=`tput setaf 4`
-    reset=`tput sgr0`
+    if [[ $- == *i* ]]; then
+        blue=`tput setaf 4`
+        reset=`tput sgr0`
 
-    echo "${blue}${@}${reset}"
+        echo "${blue}${@}${reset}"
+    fi
 }
 
 success() {
-    green=`tput setaf 2`
-    reset=`tput sgr0`
+    if [[ $- == *i* ]]; then
+        green=`tput setaf 2`
+        reset=`tput sgr0`
+        echo "${green}${@}${reset}"
+    fi
 
-    echo "${green}${@}${reset}"
 }
 
 warn() {
-    yellow=`tput setaf 3`
-    reset=`tput sgr0`
+    if [[ $- == *i* ]]; then
+        yellow=`tput setaf 3`
+        reset=`tput sgr0`
 
-    echo "${yellow}${@}${reset}"
+        echo "${yellow}${@}${reset}"
+    fi
 }
 
 [ -z "${GETH_URL}" ] && fail 'missing GETH_URL'
