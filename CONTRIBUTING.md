@@ -205,3 +205,29 @@ that all your new tests pass.
 Afterwards you should open a Pull Request from your fork or feature branch against master. You will be given feedback from
 the core developers of raiden and you should try to incorporate that feedback into your branch. Once you do so and all tests
 pass your feature/fix will be merged.
+
+#### Contributing to other people's PRs
+
+If you are a core developer of Raiden with write privileges to the repository then you can add commits or rebase to master
+any Pull Request by other people.
+
+Let us take [this](https://github.com/raiden-network/raiden/pull/221) PR as an example. The contributor has everything ready
+and all is looking good apart from a minor glitch. You can wait until he fixes it himself but you can always help him by
+contributing to his branch's PR:
+
+```
+git remote add hackaugusto git@github.com:hackaugusto/raiden.git
+git fetch hackaugusto
+git checkout travis_build
+```
+
+Right now you are working on the contributor's Pull Request. **Make sure** to coordinate to avoid any conflicts and always warn people
+beforehand if you are to work on their branch. Once you are done:
+
+```
+git commit -m "your additions"
+git push hackaugusto travis_build
+```
+
+Congratulations, you have added to someone else's PR!
+
