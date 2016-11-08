@@ -14,7 +14,6 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
-    split_endpoint,
 )
 from raiden.blockchain.abi import (
     ASSETADDED_EVENTID,
@@ -339,7 +338,10 @@ class DiscoveryTesterMock(object):
             default_key=private_key,
         )
 
-    def register_endpoint(self, endpoint):
+    def register_endpoint(self, node_address, endpoint):
+        if node_address != privatekey_to_address(self.private_key):
+            raise ValueError('node_address doesnt match this node address')
+
         self.proxy.registerEndpoint(endpoint)
         self.tester_state.mine(number_of_blocks=1)
 
@@ -350,7 +352,7 @@ class DiscoveryTesterMock(object):
         if endpoint is '':
             raise KeyError('Unknow address {}'.format(pex(node_address_bin)))
 
-        return split_endpoint(endpoint)
+        return endpoint
 
     def address_by_endpoint(self, endpoint):
         address = self.proxy.findAddressByEndpoint(endpoint)
