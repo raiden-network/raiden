@@ -6,7 +6,7 @@ from ethereum.utils import encode_hex
 from ethereum.abi import encode_abi, encode_single
 
 from raiden import messages
-from raiden.utils import isaddress, make_address
+from raiden.utils import isaddress, make_address, pex
 from raiden.blockchain.net_contract import NettingChannelContract
 from raiden.blockchain.abi import (
     ASSETADDED_EVENT,
@@ -92,6 +92,7 @@ class BlockChainServiceMock(object):
         # for uint in the smart contract
         cls.block_number_ = 1
         cls.address_asset = dict()
+        cls.address_discovery = dict()
         cls.address_manager = dict()
         cls.address_contract = dict()
         cls.address_registry = dict()
@@ -128,6 +129,9 @@ class BlockChainServiceMock(object):
     def asset(self, asset_address):
         return self.address_asset[asset_address]
 
+    def discovery(self, discovery_address):
+        return self.address_discovery[discovery_address]
+
     def netting_channel(self, netting_channel_address):
         return self.address_contract[netting_channel_address]
 
@@ -148,6 +152,15 @@ class BlockChainServiceMock(object):
         self.default_registry.add_asset(new_address)
         return new_address
 
+    def deploy_contract(self, contract_name, contract_file, constructor_parameters=None):
+        if contract_name == 'EndpointRegistry':
+            registry = DiscoveryMock()
+            BlockChainServiceMock.address_discovery[registry.address] = registry
+            return registry.address
+
+        else:
+            raise RuntimeError('Mock deploy of {} not implemented'.format(contract_name))
+
 
 class FilterMock(object):
     def __init__(self, topics, filter_id_raw):
@@ -166,6 +179,26 @@ class FilterMock(object):
 
     def uninstall(self):
         self.events = list()
+
+
+class DiscoveryMock(object):
+    def __init__(self, address=None):
+        self.address = address or make_address()
+        self.address_endpoint = dict()
+        self.endpoint_address = dict()
+
+    def register_endpoint(self, node_address, endpoint):
+        self.address_endpoint[node_address] = endpoint
+        self.endpoint_address[endpoint] = node_address
+
+    def endpoint_by_address(self, address):
+        try:
+            return self.address_endpoint[address]
+        except KeyError:
+            raise KeyError('Unknown address {}'.format(pex(address)))
+
+    def address_by_endpoint(self, endpoint):
+        return self.endpoint_address.get(endpoint)
 
 
 class AssetMock(object):

@@ -1,21 +1,10 @@
 # -*- coding: utf-8 -*-
-from ethereum import _solidity
-
 from raiden.utils import (
     host_port_to_endpoint,
     isaddress,
     pex,
     split_endpoint,
-    get_contract_path,
 )
-from raiden.network.rpc.client import DEFAULT_POLL_TIMEOUT
-
-discovery_contract_compiled = _solidity.compile_contract(
-    get_contract_path('EndpointRegistry.sol'),
-    'EndpointRegistry',
-    combined='abi',
-)
-DISCOVERY_CONTRACT_ABI = discovery_contract_compiled['abi']
 
 
 class Discovery(object):
@@ -42,8 +31,9 @@ class Discovery(object):
 
 
 class ContractDiscovery(Discovery):
-    """On chain smart contract raiden node discovery: allows to register endpoints (host, port) for
-    your ethereum-/raiden-address and looking up endpoints for other ethereum-/raiden-addressess.
+    """ Raiden node discovery.
+
+    Allows to registering and lookup by endpoint (host, port) for node_address.
     """
 
     def __init__(self, node_address, discovery_proxy):
@@ -57,10 +47,12 @@ class ContractDiscovery(Discovery):
             raise ValueError('You can only register your own endpoint.')
 
         endpoint = host_port_to_endpoint(host, port)
-        self.discovery_proxy.register_endpoint(endpoint)
+        self.discovery_proxy.register_endpoint(node_address, endpoint)
 
     def get(self, node_address):
-        return self.discovery_proxy.endpoint_by_address(node_address)
+        endpoint = self.discovery_proxy.endpoint_by_address(node_address)
+        host_port = split_endpoint(endpoint)
+        return host_port
 
     def nodeid_by_host_port(self, host_port):
         host, port = host_port

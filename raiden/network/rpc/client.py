@@ -14,7 +14,6 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
-    split_endpoint,
 )
 from raiden.blockchain.abi import (
     ASSETADDED_EVENTID,
@@ -344,7 +343,10 @@ class Discovery(object):
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
-    def register_endpoint(self, endpoint):
+    def register_endpoint(self, node_address, endpoint):
+        if node_address != self.client.sender:
+            raise ValueError('node_address doesnt match this node address')
+
         transaction_hash = self.proxy.registerEndpoint.transact(endpoint)
 
         self.client.poll(
@@ -359,7 +361,7 @@ class Discovery(object):
         if endpoint is '':
             raise KeyError('Unknow address {}'.format(pex(node_address_bin)))
 
-        return split_endpoint(endpoint)
+        return endpoint
 
     def address_by_endpoint(self, endpoint):
         address = self.proxy.findAddressByEndpoint.call(endpoint)
