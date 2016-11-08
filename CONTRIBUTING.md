@@ -47,6 +47,18 @@ approved review from one of the core developers of Raiden and also all Continuou
 
 In this section we are going to describe the coding rules for contributing to the raiden repository. All code you write should strive to comply with these rules.
 
+### Commiting Rules
+
+For an exchaustive guide read [this](http://chris.beams.io/posts/git-commit/) guide. It's all really good advise. Some rules that
+you should always follow though are:
+
+- A commit title not exceeding 50 characters
+- A blank line after the title (optional if there is no description)
+- A description of what the commit did (optional if the commit is really small)
+
+Why are these rules important? All tools that consume git repos and show you information treat the first 80 characters as a title.
+Even Github itself does this. And the git history looks really nice and neat if these simple rules are followed.
+
 ### Coding Style
 
 #### Python
