@@ -177,18 +177,27 @@ def run(privatekey,
             gevent.signal(signal.SIGUSR2, event.set)
             event.wait()
 
+        transfer_results = {'total_time': 0, 'timestamps': []}
+
         def transfer(token_address, amount_per_transfer, total_transfers, peer, is_async):
             def transfer_():
                 log.warning("Making {} transfers to {}".format(total_transfers, peer))
                 initial_time = time.time()
-                for _ in xrange(total_transfers):
+                times = [0] * total_transfers
+                for index in xrange(total_transfers):
                     app.raiden.api.transfer(
                         token_address.decode('hex'),
                         amount_per_transfer,
                         peer,
                     )
+                    times[index] = time.time()
+
+                transfer_results['total_time'] = time.time() - initial_time
+                transfer_results['timestamps'] = times
+
                 log.warning("Making {} transfers took {}".format(
-                    total_transfers, time.time() - initial_time))
+                    total_transfers, transfer_results['total_time']))
+                log.warning("Times: {}".format(times))
 
             if is_async:
                 return gevent.spawn(transfer_)
@@ -199,27 +208,43 @@ def run(privatekey,
         # keep it simple and just send to the single target on my thread.
         if len(transfers_by_peer) > 1:
             greenlets = []
-            for peer, amount in transfers_by_peer.items():
-                greenlet = transfer(token_address, 1, amount, peer, True)
+            for peer_, amount in transfers_by_peer.items():
+                greenlet = transfer(token_address, 1, amount, peer_, True)
                 if greenlet is not None:
                     greenlets.append(greenlet)
 
             gevent.joinall(greenlets)
 
         elif len(transfers_by_peer) == 1:
-            for peer, amount in transfers_by_peer.items():
-                transfer(token_address, 1, amount, peer, False)
+            for peer_, amount in transfers_by_peer.items():
+                transfer(token_address, 1, amount, peer_, False)
 
         log.warning("Waiting for termination")
 
         open('{}.stage2'.format(stage_prefix), 'a').close()
+        log.warning("Waiting for transfers to finish, will write results...")
+        event = gevent.event.Event()
+        gevent.signal(signal.SIGUSR2, event.set)
+        event.wait()
+
+        results = tools.channel_stats_for(token_address, peer)
+        if transfer_results['total_time'] != 0:
+            results['total_time'] = transfer_results['total_time']
+        if len(transfer_results['timestamps']) > 0:
+            results['timestamps'] = transfer_results['timestamps']
+        results['channel'] = repr(results['channel'])  # FIXME
+
+        log.warning("Results: {}".format(results))
+
+        with open('{}.json'.format(stage_prefix), 'w') as fp:
+            json.dump(results, fp, indent=2)
+
+        open('{}.stage3'.format(stage_prefix), 'a').close()
         event = gevent.event.Event()
         gevent.signal(signal.SIGQUIT, event.set)
         gevent.signal(signal.SIGTERM, event.set)
         gevent.signal(signal.SIGINT, event.set)
         event.wait()
-
-        log.warning("Results: {}".format(tools.channel_stats_for(token_address, peer)))
 
     else:
         log.warning("No scenario file supplied, doing nothing!")
