@@ -143,11 +143,20 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     assert netting_channel_02.detail(peer2_address)['our_balance'] == 130
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_blockchain(blockchain_backend, private_keys, number_of_nodes, poll_timeout):
+def test_blockchain(
+        blockchain_type,
+        blockchain_backend,  # required to start the geth backend
+        private_keys,
+        poll_timeout):
     # pylint: disable=too-many-locals
+
+    # this test is for interaction with a blockchain using json-rpc, so it
+    # doesnt make sense to execute it against mock or tester
+    if blockchain_type not in ('geth',):
+        return
+
     addresses = [
         privatekey_to_address(priv)
         for priv in private_keys
