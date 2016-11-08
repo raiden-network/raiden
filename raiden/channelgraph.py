@@ -86,4 +86,5 @@ class ChannelGraph(object):
         self.graph.add_edge(from_, to_)
 
     def remove_path(self, from_, to_):
-        raise NotImplementedError()
+        """ Remove an edge from the network. """
+        self.graph.remove_edge(from_, to_)

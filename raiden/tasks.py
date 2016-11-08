@@ -138,13 +138,15 @@ class HealthcheckTask(Task):
     """ Task for checking if all of our open channels are healthy """
 
     # TODO: Make send_ping_time default configurable
-    def __init__(self, protocol, sleep_time, send_ping_time=60, max_unresponsive_time=120):
+    def __init__(self, protocol, graph, sleep_time, send_ping_time=60, max_unresponsive_time=120):
         """ Initialize a HealthcheckTask that will monitor open channels for
              responsiveness.
 
              :param RaidenProtocol protocol: The Raiden protocol object which
                                              will allows us to query the  queues
                                              and send out a Ping if needed.
+             :param ChannelGraph graph: The Graph of all open channels which will
+                                        allows us to remove unhealthy nodes
              :param int sleep_time: Time in seconds between each healthcheck task
              :param int send_ping_time: Time in seconds after not having received
                                         a message from an address at which to send
@@ -156,6 +158,7 @@ class HealthcheckTask(Task):
         super(HealthcheckTask, self).__init__()
 
         self.protocol = protocol
+        self.graph = graph
 
         self.stop_event = AsyncResult()
         self.sleep_time = sleep_time
@@ -178,8 +181,10 @@ class HealthcheckTask(Task):
                     ):
                         self.protocol.send_ping(receiver_address)
                     elif elapsed_time > self.max_unresponsive_time:
-                        # TODO: Remove address from graph
-                        pass
+                        self.graph.remove_path(
+                            self.protocol.raiden.address,
+                            receiver_address
+                        )
 
             self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
             stop = self.stop_event.wait(self.timeout)
