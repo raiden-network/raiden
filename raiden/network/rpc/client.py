@@ -9,19 +9,25 @@ from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 
 from raiden import messages
-from raiden.utils import get_contract_path, pex, isaddress, privatekey_to_address
+from raiden.utils import (
+    get_contract_path,
+    isaddress,
+    pex,
+    privatekey_to_address,
+    split_endpoint,
+)
 from raiden.blockchain.abi import (
-    HUMAN_TOKEN_ABI,
-    CHANNEL_MANAGER_ABI,
-    NETTING_CHANNEL_ABI,
-    REGISTRY_ABI,
-
     ASSETADDED_EVENTID,
-    CHANNELNEWBALANCE_EVENTID,
     CHANNELCLOSED_EVENTID,
+    CHANNEL_MANAGER_ABI,
+    CHANNELNEWBALANCE_EVENTID,
     CHANNELNEW_EVENTID,
     CHANNELSECRETREVEALED_EVENTID,
     CHANNELSETTLED_EVENTID,
+    ENDPOINT_REGISTRY_ABI,
+    HUMAN_TOKEN_ABI,
+    NETTING_CHANNEL_ABI,
+    REGISTRY_ABI,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -115,6 +121,7 @@ class BlockChainService(object):
             **kwargs):
 
         self.address_asset = dict()
+        self.address_discovery = dict()
         self.address_manager = dict()
         self.address_contract = dict()
         self.address_registry = dict()
@@ -159,6 +166,17 @@ class BlockChainService(object):
             )
 
         return self.address_asset[asset_address]
+
+    def discovery(self, discovery_address):
+        """ Return a proxy to interact with the discovery. """
+        if discovery_address not in self.address_discovery:
+            self.address_discovery[discovery_address] = Discovery(
+                self.client,
+                discovery_address,
+                poll_timeout=self.poll_timeout,
+            )
+
+        return self.address_discovery[discovery_address]
 
     def netting_channel(self, netting_channel_address):
         """ Return a proxy to interact with a NettingChannelContract. """
@@ -288,6 +306,68 @@ class Filter(object):
             'eth_uninstallFilter',
             self.filter_id_raw,
         )
+
+
+class Discovery(object):
+    """On chain smart contract raiden node discovery: allows to register endpoints (host, port) for
+    your ethereum-/raiden-address and looking up endpoints for other ethereum-/raiden-addressess.
+    """
+
+    def __init__(
+            self,
+            jsonrpc_client,
+            discovery_address,
+            startgas=GAS_LIMIT,
+            gasprice=GAS_PRICE,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
+
+        result = jsonrpc_client.call(
+            'eth_getCode',
+            address_encoder(discovery_address),
+            'latest',
+        )
+
+        if result == '0x':
+            raise ValueError('Disocvery address {} does not contain code'.format(
+                address_encoder(discovery_address),
+            ))
+
+        proxy = jsonrpc_client.new_abi_contract(
+            ENDPOINT_REGISTRY_ABI,
+            address_encoder(discovery_address),
+        )
+
+        self.address = discovery_address
+        self.proxy = proxy
+        self.client = jsonrpc_client
+        self.startgas = startgas
+        self.gasprice = gasprice
+        self.poll_timeout = poll_timeout
+
+    def register_endpoint(self, endpoint):
+        transaction_hash = self.proxy.registerEndpoint.transact(endpoint)
+
+        self.client.poll(
+            transaction_hash.decode('hex'),
+            timeout=self.poll_timeout,
+        )
+
+    def endpoint_by_address(self, node_address_bin):
+        node_address_hex = node_address_bin.encode('hex')
+        endpoint = self.proxy.findEndpointByAddress.call(node_address_hex)
+
+        if endpoint is '':
+            raise KeyError('Unknow address {}'.format(pex(node_address_bin)))
+
+        return split_endpoint(endpoint)
+
+    def address_by_endpoint(self, endpoint):
+        address = self.proxy.findAddressByEndpoint.call(endpoint)
+
+        if set(address) == {'0'}:  # the 0 address means nothing found
+            return None
+
+        return address.decode('hex')
 
 
 class Asset(object):
