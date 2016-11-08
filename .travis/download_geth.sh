@@ -51,7 +51,7 @@ else
     info 'using cached geth'
 fi
 
-# always recreate the symlink since we dont know if it's poiting to a different
+# always recreate the symlink since we dont know if it's pointing to a different
 # version
 [ -h $HOME/.bin/geth ] && unlink $HOME/.bin/geth
 ln -s $HOME/.bin/geth-${GETH_VERSION} $HOME/.bin/geth

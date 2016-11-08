@@ -46,7 +46,7 @@ else
     info 'using cached solc'
 fi
 
-# always recreate the symlink since we dont know if it's poiting to a different
+# always recreate the symlink since we dont know if it's pointing to a different
 # version
 [ -h $HOME/.bin/solc ] && unlink $HOME/.bin/solc
 ln -s $HOME/.bin/solc-${SOLC_VERSION} $HOME/.bin/solc

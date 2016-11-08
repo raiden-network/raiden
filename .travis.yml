@@ -9,8 +9,8 @@ env:
   global:
     - GETH_URL='https://github.com/ethereum/go-ethereum/releases/download/v1.4.18/geth-linux-amd64-1.4.18-ef9265d0.tar.gz'
     - GETH_VERSION='1.4.18'
-    - SOLC_URL='https://github.com/brainbot-com/solidity-static/releases/download/v0.4.2/solc'
-    - SOLC_VERSION='0.4.2'
+    - SOLC_URL='https://github.com/brainbot-com/solidity-static/releases/download/v0.4.4/solc'
+    - SOLC_VERSION='0.4.4'
   matrix:
     - TEST_TYPE='unit'
     - TEST_TYPE='smart_contracts'

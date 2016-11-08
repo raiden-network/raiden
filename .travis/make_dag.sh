@@ -4,9 +4,6 @@ set -e
 
 mkdir -p $HOME/.ethash
 
-if [ ! -s $HOME/.ethash/full-R23-0000000000000000 ]; then
-    geth makedag 0 $HOME/.ethash
-else
-    echo 'Using cached dag'
-    ls $HOME/.ethash
-fi
+# this will generate the DAG once, travis is configured to cache it and
+# subsequent calls will not regenerate
+geth makedag 0 $HOME/.ethash
