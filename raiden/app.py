@@ -62,14 +62,14 @@ _options = [
     click.option(
         '--address',
         help=('The ethereum address you would like raiden to use and for which '
-              'a keystore file exists in your local system'),
+              'a keystore file exists in your local system.'),
         default=None,
         type=str,
     ),
     click.option(
         '--keystore-path',
-        help=('The ethereum address you would like raiden to use and for which '
-              'a keystore file exists in your local system'),
+        help=('If you have a non-standard path for the ethereum keystore directory'
+              ' provide it using this argument.'),
         default=None,
         type=click.Path(exists=True),
     ),
@@ -142,6 +142,9 @@ def app(address,
     config['port'] = listen_port
 
     accmgr = AccountManager(keystore_path)
+    if not accmgr.accounts:
+        raise RuntimeError('No Ethereum accounts found in the user\'s system')
+
     if not accmgr.address_in_keystore(address):
         addresses = list(accmgr.accounts.keys())
         formatted_addresses = [
