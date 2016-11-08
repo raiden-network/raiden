@@ -3,35 +3,23 @@ import pytest
 
 from ethereum import _solidity
 
-from raiden.utils import make_address, get_contract_path
+from raiden.utils import make_address, get_contract_path, privatekey_to_address
 from raiden.network.discovery import ContractDiscovery
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('poll_timeout', [80])
-def test_endpointregistry(blockchain_services, poll_timeout):
+def test_endpointregistry(private_keys, blockchain_services, poll_timeout):
     chain = blockchain_services[0]
-    my_address = chain.node_address
+    my_address = privatekey_to_address(private_keys[0])
 
-    # deploy discovery contract
-    discovery_contract_path = get_contract_path('EndpointRegistry.sol')
-    discovery_contracts = _solidity.compile_file(discovery_contract_path, libraries=dict())
-
-    endpoinregistry_proxy = chain.client.deploy_solidity_contract(
-        my_address,
+    endpointregistry_address = chain.deploy_contract(
         'EndpointRegistry',
-        discovery_contracts,
-        dict(),
-        tuple(),
-        timeout=poll_timeout,
+        get_contract_path('EndpointRegistry.sol'),
     )
+    discovery_proxy = chain.discovery(endpointregistry_address)
 
-    endpointregistry_address = endpoinregistry_proxy.address
-    contract_discovery = ContractDiscovery(
-        chain,
-        endpointregistry_address,
-    )
+    contract_discovery = ContractDiscovery(my_address, discovery_proxy)
 
     unregistered_address = make_address()
 
