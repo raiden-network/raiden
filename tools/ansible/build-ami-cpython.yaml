@@ -1,0 +1,216 @@
+- hosts: localhost
+  name: init
+  connection: local
+  gather_facts: False
+  roles:
+    - build-ami
+  tags:
+    - init
+
+  tasks:
+    - name: Provision a set of instances
+      local_action:
+        module: ec2
+        # this allows to refer to them later via 'hosts: key_raiden'
+        key_name: raiden
+        region: "{{ region }}"
+        group: raiden
+        instance_type: "{{ instance_type }}"
+        image: "{{ ami_id }}"
+        wait: true
+        count: 1
+        instance_tags:
+          Name: Build
+      register: ec2
+
+    - name: Add all instance public IPs to host group
+      add_host: hostname={{ item.public_ip }} groups=tag_Name_Build
+      with_items: "{{ ec2.instances }}"
+
+    - name: Wait for SSH to come up
+      wait_for: host={{ item.public_ip }} port=22 delay=60 timeout=320 state=started
+      with_items: "{{ ec2.instances }}"
+
+- hosts: tag_Name_Build
+  name: install geth
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - build-ami
+  tags:
+    - install_geth
+
+  tasks:
+    - name: add ethereum ppa
+      shell: add-apt-repository ppa:ethereum/ethereum -y
+      become: yes
+
+    - name: install geth, solc, daemon
+      apt: name="{{ item }}" update_cache=yes
+      become: yes
+      with_items:
+        - geth
+        - daemon
+        - solc
+
+- hosts: tag_Name_Build
+  name: make DAG
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - build-ami
+  tags:
+    - dag
+  vars:
+    - dag: "{{ ansible_env.HOME }}/.ethash"
+
+  tasks:
+    - name: create '~/.ethash' directory
+      file:
+        path: "{{ dag }}"
+        state: directory
+
+    - name: make DAG
+      shell:
+        chdir: "{{ dag }}"
+        creates: "{{ dag }}/full-R23-0000000000000000"
+        cmd: "geth makedag 1 {{ dag }}"
+
+- hosts: tag_Name_Build
+  name: install raiden
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - build-ami
+  tags:
+    - install_raiden
+  vars:
+    - venv: "{{ ansible_env.HOME }}/raidenvenv"
+
+  tasks:
+    - name: add py27 ppa
+      shell:
+        cmd: add-apt-repository ppa:fkrull/deadsnakes-python2.7 -y
+      become: yes
+
+    - name: install raiden system dependencies
+      apt: name="{{ item }}" update_cache=yes
+      become: yes
+      with_items:
+        - git-core
+        - python2.7
+        - python-pip
+        - python-dev
+        - python-virtualenv
+        - build-essential
+        - automake
+        - pkg-config
+        - libtool
+        - libffi-dev
+        - libgmp-dev
+        - libssl-dev
+
+    - name: clone raiden
+      git:
+        repo: "https://github.com/utzig/raiden"
+        update: yes
+        version: "orchestration"
+        dest: "{{ raiden_dir }}"
+
+    - name: update setuptools
+      pip:
+        name: setuptools
+        virtualenv: "{{ venv }}"
+        virtualenv_python: "/usr/bin/python"
+        state: forcereinstall
+
+    - name: install raiden
+      pip:
+        name: "."
+        extra_args: -e
+        virtualenv: "{{ venv }}"
+        virtualenv_python: "/usr/bin/python"
+        chdir: "{{ raiden_dir }}"
+
+- hosts: tag_Name_Build
+  name: add sysctl tcp time wait options
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - build-ami
+  tags:
+    - update_sysctl
+  tasks:
+    - name: add sysctl
+      copy:
+        src: "99-tcp-timewait.conf"
+        dest: "/etc/sysctl.d/99-tcp-timewait.conf"
+        owner: "root"
+        group: "root"
+      become: yes
+
+- hosts: tag_Name_Build
+  name: store ami
+  remote_user: "{{ remote_user }}"
+  gather_facts: False
+  roles:
+    - build-ami
+    - scenario
+  tags:
+    - store_ami
+
+  tasks:
+    - include: roles/common/tasks/scenario_ami_id_from_name.yaml
+
+    - name: delete previously created AMI
+      local_action:
+        module: ec2_ami
+        state: absent
+        image_id: "{{ scenario_ami_id }}"
+        region: "{{ region }}"
+        wait: yes
+        wait_timeout: 600
+      register: deleted
+      when: scenario_ami_id is defined
+
+    - name: wait some time because AWS does not realize deletion immediately
+      pause:
+        minutes: 3
+      when: deleted.changed
+
+    # Collect instance id: http://stackoverflow.com/a/27307254
+    - action: ec2_facts
+
+    - name: store ami
+      local_action:
+        module: ec2_ami
+        region: "{{ region }}"
+        instance_id: "{{ ansible_ec2_instance_id }}"
+        name: "{{ scenario_ami_name }}"
+        wait: yes
+        wait_timeout: 600
+        device_mapping:
+          - device_name: "/dev/sdb"
+            no_device: yes
+      when: cleanup is not defined
+
+- hosts: tag_Name_Build
+  name: terminate
+  remote_user: "{{ remote_user }}"
+  gather_facts: False
+  roles:
+    - build-ami
+  tags:
+    - terminate
+
+  tasks:
+    # Collect instance id: http://stackoverflow.com/a/27307254
+    - action: ec2_facts
+
+    - name: shutdown all ec2.instances
+      local_action:
+        module: ec2
+        region: "{{ region }}"
+        state: absent
+        instance_ids: "{{ ansible_ec2_instance_id }}"
+      when: keep is not defined
