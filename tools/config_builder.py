@@ -138,7 +138,7 @@ def build_scenario(ctx, hosts, nodes_per_host, nodes_per_transfer):
             "name": str(asset_num),
             "channels": addresses[index : index + nodes_per_transfer],
             "transfers_with_amount": {
-                addresses[index + nodes_per_transfer - 1]: 1000,
+                addresses[index + nodes_per_transfer - 1]: 3000,
             }
         }
         assets.append(data_for_asset)
