@@ -166,6 +166,23 @@
         chdir: "{{ raiden_dir }}"
 
 - hosts: tag_Name_Build
+  name: add sysctl tcp time wait options
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - build-ami
+  tags:
+    - update_sysctl
+  tasks:
+    - name: add sysctl
+      copy:
+        src: "99-tcp-timewait.conf"
+        dest: "/etc/sysctl.d/99-tcp-timewait.conf"
+        owner: "root"
+        group: "root"
+      become: yes
+
+- hosts: tag_Name_Build
   name: store ami
   remote_user: "{{ remote_user }}"
   gather_facts: False
