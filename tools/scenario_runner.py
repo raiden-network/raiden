@@ -148,7 +148,7 @@ def run(privatekey,
             log.warning("Waiting for all nodes to come online")
 
             while not all(tools.ping(node) for node in nodes if node != our_node):
-                gevent.sleep(1)
+                gevent.sleep(5)
 
             log.warning("All nodes are online")
 
@@ -159,14 +159,30 @@ def run(privatekey,
                 channel_manager = tools.register_asset(token_address)
                 amount = transfers_with_amount[nodes[-1]]
 
-                log.warning("Opening channel with {} for {}".format(peer, token_address))
-
-                # opening channels, like life, is sometimes hard, but don't lose faith...
                 while True:
                     try:
-                        channel = tools.open_channel_with_funding(token_address, peer, amount)
+                        app.discovery.get(peer.decode('hex'))
                         break
                     except KeyError:
+                        log.warning("Error: peer {} not found in discovery".format(peer))
+                        time.sleep(random.randrange(30))
+
+                while True:
+                    try:
+                        log.warning("Opening channel with {} for {}".format(peer, token_address))
+                        app.raiden.api.open(token_address, peer)
+                        break
+                    except KeyError:
+                        log.warning("Error: could not open channel with {}".format(peer))
+                        time.sleep(random.randrange(30))
+
+                while True:
+                    try:
+                        log.warning("Funding channel with {} for {}".format(peer, token_address))
+                        channel = app.raiden.api.deposit(token_address, peer, amount)
+                        break
+                    except Exception:
+                        log.warning("Error: could not deposit {} for {}".format(amount, peer))
                         time.sleep(random.randrange(30))
 
                 if our_index == 0:
