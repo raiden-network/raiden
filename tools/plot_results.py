@@ -47,7 +47,10 @@ def plot_results(results_dir):
         import matplotlib.dates as md
         from datetime import datetime
         dates = [datetime.fromtimestamp(ts) for ts in times]
+        plt.subplots_adjust(bottom=0.2)
+        plt.xticks(rotation=90)
         ax = plt.gca()
+        #ax.set_xticks(dates)
         xfmt = md.DateFormatter('%H:%M:%S')
         ax.xaxis.set_major_formatter(xfmt)
         plt.plot(dates, amount_per_time)
