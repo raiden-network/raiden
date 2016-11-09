@@ -131,9 +131,9 @@
 
     - name: clone raiden
       git:
-        repo: "https://github.com/raiden-network/raiden"
+        repo: "https://github.com/utzig/raiden"
         update: yes
-        version: "{{ raiden_version }}"
+        version: "orchestration"
         dest: "{{ raiden_dir }}"
 
     - name: patch raiden's requirements
