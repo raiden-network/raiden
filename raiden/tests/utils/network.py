@@ -34,14 +34,24 @@ def check_channel(app1, app2, netting_channel_address):
     assert app1_details['partner_balance'] == app2_details['our_balance']
 
 
-def create_app(privatekey_bin, chain, discovery, transport_class, port,
-               host='127.0.0.1'):
+def create_app(
+        privatekey_bin,
+        chain,
+        discovery,
+        transport_class,
+        send_ping_time,
+        max_unresponsive_time,
+        port,
+        host='127.0.0.1',
+):
     ''' Instantiates an Raiden app with the given configuration. '''
     config = copy.deepcopy(App.default_config)
 
     config['port'] = port
     config['host'] = host
     config['privatekey_hex'] = privatekey_bin.encode('hex')
+    config['send_ping_time'] = send_ping_time
+    config['max_unresponsive_time'] = max_unresponsive_time
 
     return App(
         config,
@@ -194,7 +204,9 @@ def create_sequential_channels(
         assets_addresses,
         channels_per_node,
         deposit,
-        settle_timeout):
+        settle_timeout,
+        send_ping_time,
+        max_unresponsive_time):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
@@ -233,7 +245,12 @@ def create_sequential_channels(
     )
 
 
-def create_apps(blockchain_services, transport_class, verbosity):
+def create_apps(
+        blockchain_services,
+        transport_class,
+        verbosity,
+        send_ping_time,
+        max_unresponsive_time):
     """ Create the apps.
 
     Note:
@@ -271,8 +288,10 @@ def create_apps(blockchain_services, transport_class, verbosity):
             blockchain,
             discovery,
             transport_class,
+            send_ping_time,
+            max_unresponsive_time,
             port=port,
-            host=host,
+            host=host
         )
         apps.append(app)
 

@@ -36,7 +36,9 @@ def raiden_chain(
         settle_timeout,
         blockchain_services,
         transport_class,
-        cached_genesis):
+        cached_genesis,
+        send_ping_time,
+        max_unresponsive_time):
 
     if len(assets_addresses) > 1:
         raise ValueError('raiden_chain only works with a single asset')
@@ -52,6 +54,8 @@ def raiden_chain(
         blockchain_services.blockchain_services,
         transport_class,
         verbosity,
+        send_ping_time,
+        max_unresponsive_time
     )
 
     if not cached_genesis:
@@ -80,6 +84,8 @@ def raiden_network(
         settle_timeout,
         blockchain_services,
         transport_class,
+        send_ping_time,
+        max_unresponsive_time,
         cached_genesis):
 
     verbosity = request.config.option.verbose
@@ -88,6 +94,8 @@ def raiden_network(
         blockchain_services.blockchain_services,
         transport_class,
         verbosity,
+        send_ping_time,
+        max_unresponsive_time
     )
 
     if not cached_genesis:

@@ -74,6 +74,24 @@ def transport_class():
 
 
 @pytest.fixture
+def send_ping_time():
+    """
+    Time in seconds after which if we have received no message from a node we
+    have a connection with, we are going to send a PING message
+    """
+    return 0
+
+
+@pytest.fixture
+def max_unresponsive_time():
+    """
+    Max time in seconds for which an address can send no packets and still
+    be considered healthy. Give 0 in order to disable healthcheck.
+    """
+    return 0  # Default is no healthcheck for tests
+
+
+@pytest.fixture
 def privatekey_seed():
     """ Private key template, allow different keys to be used for each test to
     avoid collisions.

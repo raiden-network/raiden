@@ -114,9 +114,18 @@ _options = [
         '--max-unresponsive-time',
         help=(
             'Max time in seconds for which an address can send no packets and '
-            'still be considered healthy'
+            'still be considered healthy. Give 0 in order to disable healthcheck.'
         ),
-        default=10,
+        default=120,
+        type=int,
+    ),
+    click.option(
+        '--send-ping-time',
+        help=(
+            'Time in seconds after which if we have received no message from a '
+            'node we have a connection with, we are going to send a PING message'
+        ),
+        default=60,
         type=int,
     ),
 ]
@@ -140,7 +149,8 @@ def app(address,
         listen_address,
         logging,
         logfile,
-        max_unresponsive_time):
+        max_unresponsive_time,
+        send_ping_time):
 
     slogging.configure(logging, log_file=logfile)
 
@@ -151,6 +161,7 @@ def app(address,
     config['host'] = listen_host
     config['port'] = listen_port
     config['max_unresponsive_time'] = max_unresponsive_time
+    config['send_ping_time'] = send_ping_time
 
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:

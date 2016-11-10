@@ -163,6 +163,7 @@ class RaidenProtocol(object):
                     pex(receiver_address),
                 )
 
+            self.last_received_time[receiver_address] = time.time()
             self.address_queue[key] = NotifyingQueue()
             self.address_greenlet[receiver_address] = gevent.spawn(
                 self._send_queued_messages,
@@ -251,11 +252,11 @@ class RaidenProtocol(object):
         self._ping_nonces[receiver_address] += 1
 
         message = Ping(nonce)
-        self._raiden.sign(message)
+        self.raiden.sign(message)
 
         if log.isEnabledFor(logging.INFO):
             log.info(
-                'SENDING PING %s > %s %s',
+                'SENDING PING %s > %s',
                 pex(self.raiden.address),
                 pex(receiver_address)
             )

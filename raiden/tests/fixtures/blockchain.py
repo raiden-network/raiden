@@ -112,6 +112,8 @@ def cached_genesis(request, blockchain_type):
         blockchain_services,
         request.getfixturevalue('transport_class'),
         request.config.option.verbose,
+        request.getfixturevalue('send_ping_time'),
+        request.getfixturevalue('max_unresponsive_time'),
     )
 
     if 'raiden_network' in request.fixturenames:

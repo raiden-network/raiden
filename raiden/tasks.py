@@ -32,6 +32,7 @@ __all__ = (
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 REMOVE_CALLBACK = object()
 DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
+DEFAULT_HEALTHCHECK_POLL_TIMEOUT = 1
 ESTIMATED_BLOCK_TIME = 7
 TIMEOUT = object()
 
@@ -137,8 +138,13 @@ class LogListenerTask(Task):
 class HealthcheckTask(Task):
     """ Task for checking if all of our open channels are healthy """
 
-    # TODO: Make send_ping_time default configurable
-    def __init__(self, protocol, graph, sleep_time, send_ping_time=60, max_unresponsive_time=120):
+    def __init__(
+            self,
+            protocol,
+            graph,
+            send_ping_time,
+            max_unresponsive_time,
+            sleep_time=DEFAULT_HEALTHCHECK_POLL_TIMEOUT):
         """ Initialize a HealthcheckTask that will monitor open channels for
              responsiveness.
 
@@ -167,24 +173,22 @@ class HealthcheckTask(Task):
 
     def _run(self):  # pylint: disable=method-hidden
         stop = None
-
         while stop is None:
-            for key, queue in self.protocol.address_queue:
+            for key, queue in self.protocol.address_queue.items():
                 receiver_address = key[0]
                 try:
                     queue.peek(block=False, timeout=None)
                 except:  # If peek raises the Empty Exception
-                    elapsed_time = self.protocol.last_received_time[receiver_address] - time.time()
-                    if (
-                            receiver_address not in self.protocol.last_received_time or
-                            elapsed_time > self.send_ping_time
-                    ):
+                    elapsed_time = time.time() - self.protocol.last_received_time[receiver_address]
+                    if elapsed_time > self.send_ping_time:
                         self.protocol.send_ping(receiver_address)
                     elif elapsed_time > self.max_unresponsive_time:
-                        self.graph.remove_path(
-                            self.protocol.raiden.address,
-                            receiver_address
-                        )
+                        pass
+                        # TODO
+                        # self.graph.remove_path(
+                        #     self.protocol.raiden.address,
+                        #     receiver_address
+                        # )
 
             self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
             stop = self.stop_event.wait(self.timeout)
