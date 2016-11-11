@@ -36,6 +36,8 @@ from raiden.tests.fixtures.tester import (
 )
 
 from raiden.tests.fixtures.variables import (
+    send_ping_time,
+    max_unresponsive_time,
     settle_timeout,
     reveal_timeout,
     events_poll_timeout,
@@ -83,6 +85,8 @@ __all__ = (
     'tester_nettingcontracts',
     'tester_channels',
 
+    'send_ping_time',
+    'max_unresponsive_time',
     'settle_timeout',
     'reveal_timeout',
     'events_poll_timeout',
