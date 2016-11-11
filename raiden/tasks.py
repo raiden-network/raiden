@@ -175,10 +175,10 @@ class HealthcheckTask(Task):
             for key, queue in self.protocol.address_queue.iteritems():
                 receiver_address = key[0]
                 asset_address = key[1]
-                try:
-                    queue.peek(block=False, timeout=None)
-                except:  # If peek raises the Empty Exception
-                    elapsed_time = time.time() - self.protocol.last_received_time[receiver_address]
+                if queue.empty():
+                    elapsed_time = (
+                        time.time() - self.protocol.last_received_time[receiver_address]
+                    )
                     if elapsed_time > self.max_unresponsive_time:
                         # remove the node from the graph
                         asset_manager = self.raiden.get_manager_by_asset_address(

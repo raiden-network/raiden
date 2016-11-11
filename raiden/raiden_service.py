@@ -93,7 +93,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         alarm = AlarmTask(chain)
         alarm.start()
-        if config['max_unresponsive_time'] != 0:
+        if config['max_unresponsive_time'] >= 0:
             self.healthcheck = HealthcheckTask(
                 self,
                 config['send_ping_time'],

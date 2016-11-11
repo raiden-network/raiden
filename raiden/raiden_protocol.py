@@ -32,6 +32,9 @@ class NotifyingQueue(Event):
         self._queue.put(item)
         self.set()
 
+    def empty(self):
+        return self._queue.empty()
+
     def get(self, block=True, timeout=None):
         """ Removes and returns an item from the queue. """
         value = self._queue.get(block, timeout)
