@@ -244,7 +244,45 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('send_ping_time', [3])
-@pytest.mark.parametrize('max_unresponsive_time', [120])
+@pytest.mark.parametrize('max_unresponsive_time', [6])
+def test_healthcheck_with_normal_peer(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    messages = setup_messages_cb()
+
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+
+    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
+
+    amount = 10
+    app0.raiden.api.transfer(
+        asset_manager0.asset_address,
+        amount,
+        target=app1.raiden.address,
+    )
+
+    gevent.sleep(5)
+    assert asset_manager0.channelgraph.has_path(
+        app0.raiden.address,
+        app1.raiden.address
+    )
+
+    # At this point we should have sent a direct transfer and got back the ack
+    # and gotten at least 1 ping - ack for a normal healthcheck
+    # for msg in messages:
+    #     print(decode(msg))
+    assert len(messages) >= 4  # DirectTransfer, Ack, Ping, Ack
+    assert isinstance(decode(messages[0]), DirectTransfer)
+    assert isinstance(decode(messages[1]), Ack)
+    assert isinstance(decode(messages[2]), Ping)
+    assert isinstance(decode(messages[3]), Ack)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('send_ping_time', [3])
+@pytest.mark.parametrize('max_unresponsive_time', [6])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
 def test_healthcheck_with_bad_peer(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking

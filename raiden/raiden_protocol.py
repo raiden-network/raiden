@@ -261,11 +261,15 @@ class RaidenProtocol(object):
                 pex(receiver_address)
             )
 
+        message_data = message.encode()
+        echohash = sha3(message_data + receiver_address)
+        if echohash not in self.echohash_asyncresult:
+            self.echohash_asyncresult[echohash] = WaitAck(AsyncResult(), receiver_address)
         # Just like ACK, a PING message is sent directly. No need for queuing
         self.transport.send(
             self.raiden,
             self.discovery.get(receiver_address),
-            message.encode()
+            message_data
         )
 
     def receive(self, data):
