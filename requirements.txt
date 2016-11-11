@@ -1,13 +1,13 @@
-pytest>=2.8.0
+pytest>=3.0.4
 pytest-timeout
 pytest-random
 pysha3
 pyethapp>=1.5.0
 ipython<5.0.0
-gevent==1.1.0
+gevent>=1.1.2
 rlp>=0.4.3
 secp256k1==0.12.1
-pycryptodome>=3.3.1
+pycryptodome>=3.4.3
 miniupnpc
 networkx
 ethereum>=1.3.2
