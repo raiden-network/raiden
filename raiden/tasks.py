@@ -140,19 +140,16 @@ class HealthcheckTask(Task):
 
     def __init__(
             self,
-            protocol,
-            graph,
+            raiden,
             send_ping_time,
             max_unresponsive_time,
             sleep_time=DEFAULT_HEALTHCHECK_POLL_TIMEOUT):
         """ Initialize a HealthcheckTask that will monitor open channels for
              responsiveness.
 
-             :param RaidenProtocol protocol: The Raiden protocol object which
-                                             will allows us to query the  queues
-                                             and send out a Ping if needed.
-             :param ChannelGraph graph: The Graph of all open channels which will
-                                        allows us to remove unhealthy nodes
+             :param raiden RaidenService: The Raiden service which will give us
+                                          access to the protocol object and to
+                                          the asset manager
              :param int sleep_time: Time in seconds between each healthcheck task
              :param int send_ping_time: Time in seconds after not having received
                                         a message from an address at which to send
@@ -163,8 +160,8 @@ class HealthcheckTask(Task):
          """
         super(HealthcheckTask, self).__init__()
 
-        self.protocol = protocol
-        self.graph = graph
+        self.protocol = raiden.protocol
+        self.raiden = raiden
 
         self.stop_event = AsyncResult()
         self.sleep_time = sleep_time
@@ -174,21 +171,30 @@ class HealthcheckTask(Task):
     def _run(self):  # pylint: disable=method-hidden
         stop = None
         while stop is None:
-            for key, queue in self.protocol.address_queue.items():
+            keys_to_remove = []
+            for key, queue in self.protocol.address_queue.iteritems():
                 receiver_address = key[0]
+                asset_address = key[1]
                 try:
                     queue.peek(block=False, timeout=None)
                 except:  # If peek raises the Empty Exception
                     elapsed_time = time.time() - self.protocol.last_received_time[receiver_address]
-                    if elapsed_time > self.send_ping_time:
+                    if elapsed_time > self.max_unresponsive_time:
+                        # remove the node from the graph
+                        asset_manager = self.raiden.get_manager_by_asset_address(
+                            asset_address
+                        )
+                        asset_manager.channelgraph.remove_path(
+                            self.protocol.raiden.address,
+                            receiver_address
+                        )
+                        # remove the node from the queue
+                        keys_to_remove.append(key)
+                    elif elapsed_time > self.send_ping_time:
                         self.protocol.send_ping(receiver_address)
-                    elif elapsed_time > self.max_unresponsive_time:
-                        pass
-                        # TODO
-                        # self.graph.remove_path(
-                        #     self.protocol.raiden.address,
-                        #     receiver_address
-                        # )
+
+            for key in keys_to_remove:
+                self.protocol.address_queue.pop(key)
 
             self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
             stop = self.stop_event.wait(self.timeout)

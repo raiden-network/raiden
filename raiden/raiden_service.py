@@ -95,8 +95,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         alarm.start()
         if config['max_unresponsive_time'] != 0:
             self.healthcheck = HealthcheckTask(
-                self.protocol,
-                None,  # TODO: properly provide the channel graph
+                self,
                 config['send_ping_time'],
                 config['max_unresponsive_time']
             )

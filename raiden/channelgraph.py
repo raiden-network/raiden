@@ -76,7 +76,7 @@ class ChannelGraph(object):
         ]
 
     def has_path(self, source, target):
-        """ Return True if there is a path connectin source and target, False
+        """ Return True if there is a path connecting source and target, False
         otherwise.
         """
         return networkx.has_path(self.graph, source, target)

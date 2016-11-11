@@ -246,7 +246,7 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
 @pytest.mark.parametrize('send_ping_time', [3])
 @pytest.mark.parametrize('max_unresponsive_time', [120])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
-def test_healthcheck(raiden_network):
+def test_healthcheck_with_bad_peer(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
     UnreliableTransport.droprate = 10  # Let's allow some messages to go through
     UnreliableTransport.network.counter = 1
@@ -266,7 +266,12 @@ def test_healthcheck(raiden_network):
     )
 
     gevent.sleep(2)
-    # At this point we should have send a direct transfer and got back the ack
+    assert asset_manager0.channelgraph.has_path(
+        app0.raiden.address,
+        app1.raiden.address
+    )
+
+    # At this point we should have sent a direct transfer and got back the ack
     assert len(messages) == 2  # DirectTransfer, Ack
     assert isinstance(decode(messages[0]), DirectTransfer)
     assert isinstance(decode(messages[1]), Ack)
@@ -280,3 +285,14 @@ def test_healthcheck(raiden_network):
     assert len(messages) >= 3
     for msg in messages[2:]:
         assert isinstance(decode(msg), Ping)
+
+    gevent.sleep(2)
+    # By now our peer has not replied and must have been removed from the graph
+    assert not asset_manager0.channelgraph.has_path(
+        app0.raiden.address,
+        app1.raiden.address
+    )
+    final_messages_num = len(messages)
+    # Let's make sure no new pings are sent afterwards
+    gevent.sleep(2)
+    assert len(messages) == final_messages_num
