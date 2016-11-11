@@ -213,25 +213,23 @@ class ConsoleTools(object):
         self._raiden.register_channel_manager(channel_manager)
         return channel_manager
 
-    def ping(self, peer):
+    def ping(self, peer, timeout=0):
         """See, if a peer is discoverable and up.
-        Args:
-            peer (string): the hex-encoded (ethereum) address of the peer.
-        Returns:
-            success (boolean): True if ping succeeded, False otherwise.
+
+            :peer string: the hex-encoded (ethereum) address of the peer.
+            :timeout int: The number of seconds to wait for the peer to acknowledge
+                          our ping
+            :return boolean: True if ping succeeded, False otherwise (timeout)
         """
         # Check, if peer is discoverable
         try:
             self._discovery.get(peer.decode('hex'))
         except KeyError:
             print("Error: peer {} not found in discovery".format(peer))
-            return
+            return False
 
-        nonce = self._raiden.protocol.ping_nonces[peer]
-        self._raiden.protocol.ping_nonces[peer] += 1
-        msg = Ping(nonce)
-        self._raiden.sign(msg)
-        return self._raiden.protocol.send_and_wait(peer.decode('hex'), msg)
+        async_result = self._raiden.protocol.send_ping(peer.decode('hex'))
+        return async_result.wait(timeout) is not None
 
     def open_channel_with_funding(self, token_address, peer, amount,
                                   settle_timeout=None,
