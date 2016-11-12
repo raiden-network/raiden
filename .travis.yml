@@ -16,10 +16,7 @@ env:
     - TEST_TYPE='smart_contracts'
 
     - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=tester'
-    # Temporarily remove --blockchain-type=geth tests from the CI since
-    # they take too much time. Around 40 mins to complete and they are
-    # a bottleneck to our workflow
-    # - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth'
+    - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
 
 cache:
   pip: true
