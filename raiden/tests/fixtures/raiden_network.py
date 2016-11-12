@@ -49,7 +49,7 @@ def raiden_chain(
     verbosity = request.config.option.verbose
 
     raiden_apps = create_apps(
-        blockchain_services,
+        blockchain_services.blockchain_services,
         transport_class,
         verbosity,
     )
@@ -85,7 +85,7 @@ def raiden_network(
     verbosity = request.config.option.verbose
 
     raiden_apps = create_apps(
-        blockchain_services,
+        blockchain_services.blockchain_services,
         transport_class,
         verbosity,
     )
