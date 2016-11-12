@@ -199,6 +199,7 @@ def geth_wait_and_check(privatekeys):
 
 
 def geth_create_blockchain(
+        deploy_key,
         private_keys,
         geth_private_keys,
         p2p_base_port,
@@ -234,6 +235,9 @@ def geth_create_blockchain(
 
         nodes_configuration.append(config)
 
+    all_keys = list(private_keys)
+    all_keys.append(deploy_key)  # needs to be at the end because of the minerthreads keys
+
     cmds = []
     for i, config in enumerate(nodes_configuration):
         nodedir = os.path.join(base_datadir, config['nodekeyhex'])
@@ -242,7 +246,7 @@ def geth_create_blockchain(
         node_genesis_path = os.path.join(nodedir, 'custom_genesis.json')
 
         if genesis_path is None:
-            geth_bare_genesis(node_genesis_path, private_keys)
+            geth_bare_genesis(node_genesis_path, all_keys)
         else:
             shutil.copy(genesis_path, node_genesis_path)
 

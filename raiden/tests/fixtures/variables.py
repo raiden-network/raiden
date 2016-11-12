@@ -82,11 +82,6 @@ def privatekey_seed():
 
 
 @pytest.fixture
-def cached_genesis(blockchain_type):
-    return blockchain_type != 'mock'
-
-
-@pytest.fixture
 def asset_amount(number_of_nodes, deposit):
     total_per_node = 3 * (deposit + 1)
     total_asset = total_per_node * number_of_nodes
@@ -105,6 +100,11 @@ def private_keys(number_of_nodes, privatekey_seed):
     assert len(set(result)) == number_of_nodes, '`privatekey_seed` generate repeated keys'
 
     return result
+
+
+@pytest.fixture
+def deploy_key(privatekey_seed):
+    return sha3(privatekey_seed.format('deploykey'))
 
 
 @pytest.fixture

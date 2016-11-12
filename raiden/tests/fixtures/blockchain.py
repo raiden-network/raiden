@@ -3,6 +3,7 @@ from __future__ import division
 
 import json
 import os
+from collections import namedtuple
 
 import pytest
 from ethereum import slogging
@@ -29,6 +30,10 @@ from raiden.tests.utils.network import (
     create_sequential_channels,
 )
 
+BlockchainServices = namedtuple(
+    'BlockchainServices',
+    ('deploy_service', 'blockchain_services'),
+)
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 __all__ = (
@@ -47,22 +52,20 @@ def genesis_path_from_testfunction(request):
     return str(genesis_path)  # makedir returns a py.path.LocalPath object
 
 
-def _assets_addresses(asset_amount, number_of_assets, blockchain_services):
-    chain = blockchain_services[0]
-
+def _assets_addresses(asset_amount, number_of_assets, deploy_service, blockchain_services):
     result = list()
     for _ in range(number_of_assets):
-        asset_address = chain.deploy_and_register_asset(
+        asset_address = deploy_service.deploy_and_register_asset(
             contract_name='HumanStandardToken',
             contract_file='HumanStandardToken.sol',
             constructor_parameters=(asset_amount, 'raiden', 2, 'Rd'),
         )
         result.append(asset_address)
 
-        # only the creator of the token starts with a balance, transfer from
-        # the creator to the other nodes
-        for transfer_to in blockchain_services[1:]:
-            chain.asset(asset_address).transfer(
+        # only the creator of the token starts with a balance (deploy_service),
+        # transfer from the creator to the other nodes
+        for transfer_to in blockchain_services:
+            deploy_service.asset(asset_address).transfer(
                 privatekey_to_address(transfer_to.private_key),
                 asset_amount // len(blockchain_services),
             )
@@ -70,7 +73,8 @@ def _assets_addresses(asset_amount, number_of_assets, blockchain_services):
     return result
 
 
-def make_genesis_from_fixtures(request):
+@pytest.fixture
+def cached_genesis(request, blockchain_type):
     '''
     Deploy all contracts the required by the fixtures into a tester and then
     serialize the accounts into a genesis block.
@@ -79,9 +83,18 @@ def make_genesis_from_fixtures(request):
         dict: A dictionary representing the genesis block.
     '''
 
+    if not request.config.option.blockchain_cache:
+        return
+
+    # cannot cache for mock blockchain
+    if blockchain_type == 'mock':
+        return
+
     # this will create the tester _and_ deploy the Registry
+    deploy_key = request.getfixturevalue('deploy_key')
     private_keys = request.getfixturevalue('private_keys')
-    blockchain_services = _tester_services(
+    deploy_service, blockchain_services = _tester_services(
+        deploy_key,
         private_keys,
         request.getfixturevalue('tester_blockgas_limit'),
     )
@@ -91,6 +104,7 @@ def make_genesis_from_fixtures(request):
     asset_contract_addresses = _assets_addresses(
         request.getfixturevalue('asset_amount'),
         request.getfixturevalue('number_of_assets'),
+        deploy_service,
         blockchain_services,
     )
 
@@ -118,9 +132,7 @@ def make_genesis_from_fixtures(request):
             request.getfixturevalue('settle_timeout'),
         )
 
-    else:
-        # what is the fixture name?
-        raise Exception('unknow network type')
+    # else: a test that is not creating channels
 
     for app in raiden_apps:
         app.stop()
@@ -132,10 +144,15 @@ def make_genesis_from_fixtures(request):
 
     genesis_alloc = dict()
     for account_address in tester.block.state.to_dict():
-        genesis_alloc[account_address] = account_alloc = dict()
+        account_alloc = tester.block.account_to_dict(account_address)
 
-        for key, value in tester.block.account_to_dict(account_address).iteritems():
-            account_alloc[key] = safe_lstrip_hex(value)
+        # code must be hex encoded without 0x prefix
+        account_alloc['code'] = safe_lstrip_hex(account_alloc.get('code', ''))
+
+        # account_to_dict returns accounts with nonce=0
+        account_alloc['nonce'] = tester.block.get_nonce(account_address)
+
+        genesis_alloc[account_address] = account_alloc
 
     account_addresses = [
         privatekey_to_address(key)
@@ -146,7 +163,7 @@ def make_genesis_from_fixtures(request):
         genesis_alloc[address]['balance'] = DEFAULT_BALANCE_BIN
 
     alloc = {
-        address_encoder(address_maybe_bin): data
+        safe_lstrip_hex(address_encoder(address_maybe_bin)): data
         for address_maybe_bin, data in genesis_alloc.iteritems()
     }
 
@@ -169,21 +186,17 @@ def assets_addresses(
         blockchain_services,
         cached_genesis):
 
-    genesis_path = genesis_path_from_testfunction(request)
-
-    if cached_genesis and os.path.exists(genesis_path):
-        with open(genesis_path) as handler:
-            genesis = json.load(handler)
-
+    if cached_genesis:
         assets_addresses = [
             address_decoder(asset_address)
-            for asset_address in genesis['config']['assetAddresses']
+            for asset_address in cached_genesis['config']['assetAddresses']
         ]
     else:
         assets_addresses = _assets_addresses(
             asset_amount,
             number_of_assets,
-            blockchain_services,
+            blockchain_services.deploy_service,
+            blockchain_services.blockchain_services,
         )
 
     return assets_addresses
@@ -192,6 +205,7 @@ def assets_addresses(
 @pytest.fixture
 def blockchain_services(
         request,
+        deploy_key,
         private_keys,
         poll_timeout,
         blockchain_backend,  # This fixture is required because it will start
@@ -203,17 +217,16 @@ def blockchain_services(
     verbose = request.config.option.verbose
 
     if blockchain_type in ('geth',):
-        genesis_path = genesis_path_from_testfunction(request)
+
         registry_address = None
+        if cached_genesis:
+            registry_address = cached_genesis['config'].get('defaultRegistryAddress')
 
-        if cached_genesis and os.path.exists(genesis_path):
-
-            with open(genesis_path) as handler:
-                genesis = json.load(handler)
-
-            registry_address = address_decoder(genesis['config']['defaultRegistryAddress'])
+            if registry_address:
+                registry_address = address_decoder(registry_address)
 
         return _jsonrpc_services(
+            deploy_key,
             private_keys,
             verbose,
             poll_timeout,
@@ -222,12 +235,14 @@ def blockchain_services(
 
     if blockchain_type == 'tester':
         return _tester_services(
+            deploy_key,
             private_keys,
             tester_blockgas_limit,
         )
 
     if blockchain_type == 'mock':
         return _mock_services(
+            deploy_key,
             private_keys,
             request,
         )
@@ -238,6 +253,7 @@ def blockchain_services(
 @pytest.fixture
 def blockchain_backend(
         request,
+        deploy_key,
         private_keys,
         blockchain_private_keys,
         blockchain_p2p_base_port,
@@ -246,18 +262,17 @@ def blockchain_backend(
         cached_genesis):
 
     genesis_path = None
-    if cached_genesis and blockchain_type in ('geth', ):
+    if cached_genesis:
         genesis_path = genesis_path_from_testfunction(request)
 
-        if not os.path.exists(genesis_path):
-            genesis = make_genesis_from_fixtures(request)
-
-            with open(genesis_path, 'w') as handler:
-                json.dump(genesis, handler)
-
     if blockchain_type == 'geth':
+        if genesis_path and not os.path.exists(genesis_path):
+            with open(genesis_path, 'w') as handler:
+                json.dump(cached_genesis, handler)
+
         return _geth_blockchain(
             request,
+            deploy_key,
             private_keys,
             blockchain_private_keys,
             blockchain_p2p_base_port,
@@ -277,6 +292,7 @@ def blockchain_backend(
 
 def _geth_blockchain(
         request,
+        deploy_key,
         private_keys,
         cluster_private_keys,
         p2p_base_port,
@@ -287,6 +303,7 @@ def _geth_blockchain(
     verbosity = request.config.option.verbose
 
     geth_processes = geth_create_blockchain(
+        deploy_key,
         private_keys,
         cluster_private_keys,
         p2p_base_port,
@@ -305,24 +322,27 @@ def _geth_blockchain(
     return geth_processes
 
 
-def _jsonrpc_services(private_keys, verbose, poll_timeout, registry_address=None):
-    print_communication = True
+def _jsonrpc_services(
+        deploy_key,
+        private_keys,
+        verbose,
+        poll_timeout,
+        registry_address=None):
 
-    privatekey = private_keys[0]
-    address = privatekey_to_address(privatekey)
-    jsonrpc_client = JSONRPCClient(
-        host='0.0.0.0',
-        privkey=privatekey,
-        print_communication=print_communication,
-    )
-    patch_send_transaction(jsonrpc_client)
+    host = '0.0.0.0'
+    deploy_client = JSONRPCClient(host=host, privkey=deploy_key)
 
+    # we cannot instantiate BlockChainService without a registry, so first
+    # deploy it directly with a JSONRPCClient
     if registry_address is None:
+        address = privatekey_to_address(deploy_key)
+        patch_send_transaction(deploy_client)
+
         registry_path = get_contract_path('Registry.sol')
         registry_contracts = compile_file(registry_path, libraries=dict())
 
         log.info('Deploying registry contract')
-        registry_proxy = jsonrpc_client.deploy_solidity_contract(
+        registry_proxy = deploy_client.deploy_solidity_contract(
             address,
             'Registry',
             registry_contracts,
@@ -332,20 +352,27 @@ def _jsonrpc_services(private_keys, verbose, poll_timeout, registry_address=None
         )
         registry_address = registry_proxy.address
 
+    deploy_blockchain = BlockChainService(
+        deploy_key,
+        registry_address,
+        host,
+        deploy_client.port,
+    )
+
     blockchain_services = list()
     for privkey in private_keys:
         blockchain = BlockChainService(
             privkey,
             registry_address,
-            '0.0.0.0',
-            jsonrpc_client.port,
+            host,
+            deploy_client.port,
         )
         blockchain_services.append(blockchain)
 
-    return blockchain_services
+    return BlockchainServices(deploy_blockchain, blockchain_services)
 
 
-def _mock_services(private_keys, request):
+def _mock_services(deploy_key, private_keys, request):
     # make sure we are getting and leaving a clean state, just in case the
     # BlockChainServiceMock wasn't instantiate through the proper fixture.
 
@@ -355,6 +382,8 @@ def _mock_services(private_keys, request):
 
     BlockChainServiceMock.reset()
 
+    deploy_blockchain = BlockChainServiceMock(deploy_key, MOCK_REGISTRY_ADDRESS)
+
     blockchain_services = list()
     for privkey in private_keys:
         blockchain = BlockChainServiceMock(
@@ -363,22 +392,29 @@ def _mock_services(private_keys, request):
         )
         blockchain_services.append(blockchain)
 
-    return blockchain_services
+    return BlockchainServices(deploy_blockchain, blockchain_services)
 
 
-def _tester_services(private_keys, tester_blockgas_limit):
+def _tester_services(deploy_key, private_keys, tester_blockgas_limit):
     # calling the fixture directly because we don't want to force all
     # blockchain_services to instantiate a state
     tester = tester_state(
+        deploy_key,
         private_keys,
         tester_blockgas_limit,
     )
 
     tester_registry_address = tester_deploy_contract(
         tester,
-        private_keys[0],
+        deploy_key,
         contract_name='Registry',
         contract_file='Registry.sol',
+    )
+
+    deploy_blockchain = BlockChainServiceTesterMock(
+        deploy_key,
+        tester,
+        tester_registry_address,
     )
 
     blockchain_services = list()
@@ -390,4 +426,4 @@ def _tester_services(private_keys, tester_blockgas_limit):
         )
         blockchain_services.append(blockchain)
 
-    return blockchain_services
+    return BlockchainServices(deploy_blockchain, blockchain_services)

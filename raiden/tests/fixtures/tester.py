@@ -39,7 +39,7 @@ def tester_events():
 
 
 @pytest.fixture
-def tester_state(private_keys, tester_blockgas_limit):
+def tester_state(deploy_key, private_keys, tester_blockgas_limit):
     tester_state = tester.state()
 
     # special addresses 1 to 5
@@ -48,7 +48,7 @@ def tester_state(private_keys, tester_blockgas_limit):
         for i in range(1, 5)
     }
 
-    for privkey in private_keys:
+    for privkey in [deploy_key] + private_keys:
         address = privatekey_to_address(privkey)
         alloc[address] = {
             'balance': DEFAULT_BALANCE,

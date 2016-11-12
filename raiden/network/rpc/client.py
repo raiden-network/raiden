@@ -41,19 +41,12 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 # Coding standard for this module:
 #
-# We have addtional Mock implementation that are quite usefull for testing
-# purposes, since all implementations need to work with the same code bases
-# their interfaces must match exactly, so be sure to reflect the change from
-# one into another. [tests/utils/*_client.py]
-#
-# The Json RPC implementation is based upon the pyethapp.rpc_client, this
-# client exposes object proxies for calling a contract as a usual python
-# object, for this module it was opted to expose a _synchronous_ interface to
-# the user by default, this interface should send the transaction, poll for
-# it's execution and if possible check if it was sucessfully executed, if not
-# report an error. Also, it was chosen to use an explicit coding, not reallying
-# on the `constant` modifier for `call`s and explicity passing the available
-# gas for the transaction and it's value.
+# - Be sure to reflect changes to this module in the test
+#   implementations. [tests/utils/*_client.py]
+# - Expose a synchronous interface by default
+#   - poll for the transaction hash
+#   - check if the proper events were emited
+#   - use `call` and `transact` to interact with pyethapp.rpc_client proxies
 
 
 def patch_send_transaction(client, nonce_offset=0):
@@ -573,7 +566,7 @@ class ChannelManager(object):
             other,
             settle_timeout,
             startgas=self.startgas,
-            gasprice=self.gasprice * 2,
+            gasprice=self.gasprice,
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
@@ -690,6 +683,12 @@ class NettingChannel(object):
     def detail(self, our_address):
         data = self.proxy.addressAndBalance.call(startgas=self.startgas)
         settle_timeout = self.proxy.settleTimeout.call(startgas=self.startgas)
+
+        if data == '':
+            raise RuntimeError('addressAndBalance call failed.')
+
+        if settle_timeout == '':
+            raise RuntimeError('settleTimeout call failed.')
 
         if address_decoder(data[0]) == our_address:
             return {

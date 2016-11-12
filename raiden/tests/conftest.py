@@ -16,6 +16,7 @@ from raiden.tests.fixtures import (
     netting_channel_abi,
 
     assets_addresses,
+    cached_genesis,
     blockchain_services,
     blockchain_backend,
 
@@ -48,6 +49,7 @@ from raiden.tests.fixtures import (
     privatekey_seed,
     asset_amount,
     private_keys,
+    deploy_key,
     blockchain_type,
     blockchain_number_of_nodes,
     blockchain_key_seed,
@@ -62,6 +64,7 @@ __all__ = (
     'netting_channel_abi',
 
     'assets_addresses',
+    'cached_genesis',
     'blockchain_services',
     'blockchain_backend',
 
@@ -94,6 +97,7 @@ __all__ = (
     'privatekey_seed',
     'asset_amount',
     'private_keys',
+    'deploy_key',
     'blockchain_type',
     'blockchain_number_of_nodes',
     'blockchain_key_seed',
@@ -115,6 +119,12 @@ def pytest_addoption(parser):
         '--blockchain-type',
         choices=['geth', 'tester', 'mock'],
         default='geth',
+    )
+
+    parser.addoption(
+        '--blockchain-cache',
+        action='store_true',
+        default=False,
     )
 
     parser.addoption(

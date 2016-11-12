@@ -9,6 +9,7 @@ from raiden.tests.fixtures.abi import (
 
 from raiden.tests.fixtures.blockchain import (
     assets_addresses,
+    cached_genesis,
     blockchain_services,
     blockchain_backend,
 )
@@ -45,6 +46,7 @@ from raiden.tests.fixtures.variables import (
     poll_timeout,
     transport_class,
     privatekey_seed,
+    deploy_key,
     asset_amount,
     private_keys,
     blockchain_type,
@@ -91,8 +93,10 @@ __all__ = (
     'poll_timeout',
     'transport_class',
     'privatekey_seed',
+    'cached_genesis',
     'asset_amount',
     'private_keys',
+    'deploy_key',
     'blockchain_type',
     'blockchain_number_of_nodes',
     'blockchain_key_seed',
