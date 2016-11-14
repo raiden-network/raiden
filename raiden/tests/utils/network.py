@@ -204,9 +204,7 @@ def create_sequential_channels(
         assets_addresses,
         channels_per_node,
         deposit,
-        settle_timeout,
-        send_ping_time,
-        max_unresponsive_time):
+        settle_timeout):
     """ Create a fully connected network with `num_nodes`, the nodes are
     connect sequentially.
 
