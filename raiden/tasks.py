@@ -9,6 +9,8 @@ from gevent.event import AsyncResult
 from gevent.queue import Empty, Queue
 from gevent.timeout import Timeout
 
+from random import randint
+
 from ethereum import slogging
 from ethereum.utils import sha3
 
@@ -179,6 +181,8 @@ class HealthcheckTask(Task):
                     elapsed_time = (
                         time.time() - self.protocol.last_received_time[receiver_address]
                     )
+                    # Add a randomized delay in the loop to not clog the network
+                    gevent.sleep(randint(0, int(0.2 * self.send_ping_time)))
                     if elapsed_time > self.max_unresponsive_time:
                         # remove the node from the graph
                         asset_manager = self.raiden.get_manager_by_asset_address(
@@ -670,9 +674,9 @@ class MediateTransferTask(BaseMediatedTransferTask):
             )
 
         maximum_expiration = (
-            originating_channel.settle_timeout
-            + raiden.chain.block_number()
-            - 2  # decrement as a safety measure to avoid limit errors
+            originating_channel.settle_timeout +
+            raiden.chain.block_number() -
+            2  # decrement as a safety measure to avoid limit errors
         )
 
         # Ignore locks that expire after settle_timeout

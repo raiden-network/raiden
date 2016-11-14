@@ -3,7 +3,6 @@ import cStringIO
 import json
 import sys
 import time
-from collections import defaultdict
 from logging import StreamHandler, Formatter
 
 import gevent
@@ -18,7 +17,6 @@ from pyethapp.utils import bcolors as bc
 from pyethapp.jsonrpc import address_encoder
 from pyethapp.console_service import GeventInputHook, SigINTHandler
 
-from raiden.messages import Ping
 from raiden.utils import events, get_contract_path
 
 # ipython needs to accept "--gui gevent" option
@@ -214,12 +212,14 @@ class ConsoleTools(object):
         return channel_manager
 
     def ping(self, peer, timeout=0):
-        """See, if a peer is discoverable and up.
-
-            :peer string: the hex-encoded (ethereum) address of the peer.
-            :timeout int: The number of seconds to wait for the peer to acknowledge
-                          our ping
-            :return boolean: True if ping succeeded, False otherwise (timeout)
+        """
+        See, if a peer is discoverable and up.
+           Args:
+                peer (string): the hex-encoded (ethereum) address of the peer.
+                timeout (int): The number of seconds to wait for the peer to
+                               acknowledge our ping
+        Returns:
+            success (boolean): True if ping succeeded, False otherwise.
         """
         # Check, if peer is discoverable
         try:
