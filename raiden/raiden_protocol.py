@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 import logging
+import time
 from collections import namedtuple
+from collections import defaultdict
 
 import gevent
 from gevent.queue import Queue
 from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
-from raiden.messages import decode, Ack, SignedMessage
+from raiden.messages import decode, Ack, Ping, SignedMessage
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -29,6 +31,9 @@ class NotifyingQueue(Event):
         """ Add new item to the queue. """
         self._queue.put(item)
         self.set()
+
+    def empty(self):
+        return self._queue.empty()
 
     def get(self, block=True, timeout=None):
         """ Removes and returns an item from the queue. """
@@ -72,6 +77,12 @@ class RaidenProtocol(object):
 
         # Maps the echo hash `sha3(message + address)` to a WaitAck tuple
         self.echohash_asyncresult = dict()
+
+        # Maps an address to timestamp representing last time any kind of messsage
+        # was received for that address
+        self.last_received_time = dict()
+
+        self._ping_nonces = defaultdict(int)
 
     def stop_async(self):
         for greenlet in self.address_greenlet.itervalues():
@@ -155,6 +166,7 @@ class RaidenProtocol(object):
                     pex(receiver_address),
                 )
 
+            self.last_received_time[receiver_address] = time.time()
             self.address_queue[key] = NotifyingQueue()
             self.address_greenlet[receiver_address] = gevent.spawn(
                 self._send_queued_messages,
@@ -235,6 +247,36 @@ class RaidenProtocol(object):
         self.echohash_acks[message.echo] = (host_port, messagedata)
         self._send_ack(*self.echohash_acks[message.echo])
 
+    def send_ping(self, receiver_address):
+        if not isaddress(receiver_address):
+            raise ValueError('Invalid address {}'.format(pex(receiver_address)))
+
+        nonce = self._ping_nonces[receiver_address]
+        self._ping_nonces[receiver_address] += 1
+
+        message = Ping(nonce)
+        self.raiden.sign(message)
+
+        if log.isEnabledFor(logging.INFO):
+            log.info(
+                'SENDING PING %s > %s',
+                pex(self.raiden.address),
+                pex(receiver_address)
+            )
+
+        message_data = message.encode()
+        echohash = sha3(message_data + receiver_address)
+        async_result = AsyncResult()
+        if echohash not in self.echohash_asyncresult:
+            self.echohash_asyncresult[echohash] = WaitAck(async_result, receiver_address)
+        # Just like ACK, a PING message is sent directly. No need for queuing
+        self.transport.send(
+            self.raiden,
+            self.discovery.get(receiver_address),
+            message_data
+        )
+        return async_result
+
     def receive(self, data):
         # ignore large packets
         if len(data) > self.max_message_size:
@@ -249,6 +291,8 @@ class RaidenProtocol(object):
 
         # We ignore the sending endpoint as this can not be known w/ UDP
         message = decode(data)
+        # note down the time we got a message from the address
+        self.last_received_time[message.sender] = time.time()
 
         if isinstance(message, Ack):
             waitack = self.echohash_asyncresult[message.echo]

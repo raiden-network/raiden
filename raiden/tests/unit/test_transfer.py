@@ -5,7 +5,9 @@ import gevent
 import pytest
 from ethereum import slogging
 
-from raiden.messages import decode, Ack, DirectTransfer, RefundTransfer
+from raiden.messages import decode, Ack, DirectTransfer, Ping, RefundTransfer
+from raiden.network.transport import UnreliableTransport
+from raiden.tasks import DEFAULT_HEALTHCHECK_POLL_TIMEOUT
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
 from raiden.tests.utils.network import CHAIN
@@ -237,3 +239,101 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
 
     app2_messages = mlogger.get_node_messages(pex(app2.raiden.address), only='sent')
     assert isinstance(app2_messages[-1], RefundTransfer)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('send_ping_time', [3])
+@pytest.mark.parametrize('max_unresponsive_time', [6])
+def test_healthcheck_with_normal_peer(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    messages = setup_messages_cb()
+
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+
+    max_unresponsive_time = app0.raiden.config['max_unresponsive_time']
+
+    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
+
+    amount = 10
+    app0.raiden.api.transfer(
+        asset_manager0.asset_address,
+        amount,
+        target=app1.raiden.address,
+    )
+
+    gevent.sleep(max_unresponsive_time)
+    assert asset_manager0.channelgraph.has_path(
+        app0.raiden.address,
+        app1.raiden.address
+    )
+
+    # At this point we should have sent a direct transfer and got back the ack
+    # and gotten at least 1 ping - ack for a normal healthcheck
+    assert len(messages) >= 4  # DirectTransfer, Ack, Ping, Ack
+    assert isinstance(decode(messages[0]), DirectTransfer)
+    assert isinstance(decode(messages[1]), Ack)
+    assert isinstance(decode(messages[2]), Ping)
+    assert isinstance(decode(messages[3]), Ack)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('send_ping_time', [3])
+@pytest.mark.parametrize('max_unresponsive_time', [6])
+@pytest.mark.parametrize('transport_class', [UnreliableTransport])
+def test_healthcheck_with_bad_peer(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    UnreliableTransport.droprate = 10  # Let's allow some messages to go through
+    UnreliableTransport.network.counter = 1
+    messages = setup_messages_cb()
+
+    send_ping_time = app0.raiden.config['send_ping_time']
+    max_unresponsive_time = app0.raiden.config['max_unresponsive_time']
+
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+
+    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
+
+    amount = 10
+    app0.raiden.api.transfer(
+        asset_manager0.asset_address,
+        amount,
+        target=app1.raiden.address,
+    )
+
+    gevent.sleep(2)
+    assert asset_manager0.channelgraph.has_path(
+        app0.raiden.address,
+        app1.raiden.address
+    )
+
+    # At this point we should have sent a direct transfer and got back the ack
+    assert len(messages) == 2  # DirectTransfer, Ack
+    assert isinstance(decode(messages[0]), DirectTransfer)
+    assert isinstance(decode(messages[1]), Ack)
+
+    # now let's make things interesting and drop every message
+    UnreliableTransport.droprate = 1
+    UnreliableTransport.network.counter = 0
+    gevent.sleep(send_ping_time)
+
+    # At least 1 ping should have been sent by now but gotten no response
+    assert len(messages) >= 3
+    for msg in messages[2:]:
+        assert isinstance(decode(msg), Ping)
+
+    gevent.sleep(max_unresponsive_time - send_ping_time)
+    # By now our peer has not replied and must have been removed from the graph
+    assert not asset_manager0.channelgraph.has_path(
+        app0.raiden.address,
+        app1.raiden.address
+    )
+    final_messages_num = len(messages)
+    # Let's make sure no new pings are sent afterwards
+    gevent.sleep(2)
+    assert len(messages) == final_messages_num

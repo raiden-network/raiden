@@ -9,6 +9,8 @@ from gevent.event import AsyncResult
 from gevent.queue import Empty, Queue
 from gevent.timeout import Timeout
 
+from random import randint
+
 from ethereum import slogging
 from ethereum.utils import sha3
 
@@ -32,6 +34,7 @@ __all__ = (
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 REMOVE_CALLBACK = object()
 DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
+DEFAULT_HEALTHCHECK_POLL_TIMEOUT = 1
 ESTIMATED_BLOCK_TIME = 7
 TIMEOUT = object()
 
@@ -122,6 +125,80 @@ class LogListenerTask(Task):
                         self.callback(originating_contract, event)
                     except:  # pylint: disable=bare-except
                         log.exception('unexpected exception on log listener')
+
+            self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
+            stop = self.stop_event.wait(self.timeout)
+
+    def stop_and_wait(self):
+        self.stop_event.set(True)
+        gevent.wait(self)
+
+    def stop_async(self):
+        self.stop_event.set(True)
+
+
+class HealthcheckTask(Task):
+    """ Task for checking if all of our open channels are healthy """
+
+    def __init__(
+            self,
+            raiden,
+            send_ping_time,
+            max_unresponsive_time,
+            sleep_time=DEFAULT_HEALTHCHECK_POLL_TIMEOUT):
+        """ Initialize a HealthcheckTask that will monitor open channels for
+             responsiveness.
+
+             :param raiden RaidenService: The Raiden service which will give us
+                                          access to the protocol object and to
+                                          the asset manager
+             :param int sleep_time: Time in seconds between each healthcheck task
+             :param int send_ping_time: Time in seconds after not having received
+                                        a message from an address at which to send
+                                        a Ping.
+             :param int max_unresponsive_time: Time in seconds after not having received
+                                               a message from an address at which it
+                                               should be deleted.
+         """
+        super(HealthcheckTask, self).__init__()
+
+        self.protocol = raiden.protocol
+        self.raiden = raiden
+
+        self.stop_event = AsyncResult()
+        self.sleep_time = sleep_time
+        self.send_ping_time = send_ping_time
+        self.max_unresponsive_time = max_unresponsive_time
+
+    def _run(self):  # pylint: disable=method-hidden
+        stop = None
+        while stop is None:
+            keys_to_remove = []
+            for key, queue in self.protocol.address_queue.iteritems():
+                receiver_address = key[0]
+                asset_address = key[1]
+                if queue.empty():
+                    elapsed_time = (
+                        time.time() - self.protocol.last_received_time[receiver_address]
+                    )
+                    # Add a randomized delay in the loop to not clog the network
+                    gevent.sleep(randint(0, int(0.2 * self.send_ping_time)))
+                    if elapsed_time > self.max_unresponsive_time:
+                        # remove the node from the graph
+                        asset_manager = self.raiden.get_manager_by_asset_address(
+                            asset_address
+                        )
+                        asset_manager.channelgraph.remove_path(
+                            self.protocol.raiden.address,
+                            receiver_address
+                        )
+                        # remove the node from the queue
+                        keys_to_remove.append(key)
+                    elif elapsed_time > self.send_ping_time:
+                        self.protocol.send_ping(receiver_address)
+
+            for key in keys_to_remove:
+                self.protocol.address_queue.pop(key)
 
             self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
             stop = self.stop_event.wait(self.timeout)
@@ -597,9 +674,9 @@ class MediateTransferTask(BaseMediatedTransferTask):
             )
 
         maximum_expiration = (
-            originating_channel.settle_timeout
-            + raiden.chain.block_number()
-            - 2  # decrement as a safety measure to avoid limit errors
+            originating_channel.settle_timeout +
+            raiden.chain.block_number() -
+            2  # decrement as a safety measure to avoid limit errors
         )
 
         # Ignore locks that expire after settle_timeout

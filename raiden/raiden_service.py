@@ -13,7 +13,7 @@ from raiden.assetmanager import AssetManager
 from raiden.transfermanager import Exchange, ExchangeKey
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
 from raiden.channelgraph import ChannelGraph
-from raiden.tasks import AlarmTask, LogListenerTask, StartExchangeTask
+from raiden.tasks import AlarmTask, LogListenerTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.raiden_protocol import RaidenProtocol
@@ -93,6 +93,15 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         alarm = AlarmTask(chain)
         alarm.start()
+        if config['max_unresponsive_time'] > 0:
+            self.healthcheck = HealthcheckTask(
+                self,
+                config['send_ping_time'],
+                config['max_unresponsive_time']
+            )
+            self.healthcheck.start()
+        else:
+            self.healthcheck = None
 
         self.api = RaidenAPI(self)
         self.alarm = alarm
@@ -284,10 +293,13 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             for task in asset_manager.transfermanager.transfertasks.itervalues():
                 task.kill()
 
+        wait_for = [self.alarm]
         self.alarm.stop_async()
+        if self.healthcheck is not None:
+            self.healthcheck.stop_async()
+            wait_for.append(self.healthcheck)
         self.protocol.stop_async()
 
-        wait_for = [self.alarm]
         wait_for.extend(self.event_listeners)
         wait_for.extend(self.protocol.address_greenlet.itervalues())
 

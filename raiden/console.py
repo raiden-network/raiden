@@ -3,7 +3,6 @@ import cStringIO
 import json
 import sys
 import time
-from collections import defaultdict
 from logging import StreamHandler, Formatter
 
 import gevent
@@ -18,7 +17,6 @@ from pyethapp.utils import bcolors as bc
 from pyethapp.jsonrpc import address_encoder
 from pyethapp.console_service import GeventInputHook, SigINTHandler
 
-from raiden.messages import Ping
 from raiden.utils import events, get_contract_path
 
 # ipython needs to accept "--gui gevent" option
@@ -152,7 +150,6 @@ class ConsoleTools(object):
         self._discovery = discovery
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
-        self._ping_nonces = defaultdict(int)
         self.deposit = self._raiden.api.deposit
 
     def create_token(
@@ -214,10 +211,13 @@ class ConsoleTools(object):
         self._raiden.register_channel_manager(channel_manager)
         return channel_manager
 
-    def ping(self, peer):
-        """See, if a peer is discoverable and up.
-        Args:
-            peer (string): the hex-encoded (ethereum) address of the peer.
+    def ping(self, peer, timeout=0):
+        """
+        See, if a peer is discoverable and up.
+           Args:
+                peer (string): the hex-encoded (ethereum) address of the peer.
+                timeout (int): The number of seconds to wait for the peer to
+                               acknowledge our ping
         Returns:
             success (boolean): True if ping succeeded, False otherwise.
         """
@@ -226,13 +226,10 @@ class ConsoleTools(object):
             self._discovery.get(peer.decode('hex'))
         except KeyError:
             print("Error: peer {} not found in discovery".format(peer))
-            return
+            return False
 
-        nonce = self._ping_nonces[peer]
-        self._ping_nonces[peer] += 1
-        msg = Ping(nonce)
-        self._raiden.sign(msg)
-        return self._raiden.protocol.send_and_wait(peer.decode('hex'), msg)
+        async_result = self._raiden.protocol.send_ping(peer.decode('hex'))
+        return async_result.wait(timeout) is not None
 
     def open_channel_with_funding(self, token_address, peer, amount,
                                   settle_timeout=None,
