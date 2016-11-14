@@ -80,8 +80,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     #    A -> B RevealSecret
     #    - protocol didn't continue
     #
-    # So, B knowns the secret but don't have an updated balance proof, so B
-    # will call settle.
+    # B knowns the secret but doesn't have an updated balance proof, B needs to
+    # call settle.
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
     lock = channel1.our_state.balance_proof.get_lock_by_hashlock(hashlock)
@@ -97,7 +97,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert unlock_proof.lock_encoded == transfermessage.lock.as_bytes
     assert unlock_proof.secret == secret
 
-    # a ChannelClose event will be generate, this will be polled by both apps
+    # a ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
     channel0.external_state.netting_channel.close(
         app0.raiden.address,

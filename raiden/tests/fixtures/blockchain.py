@@ -75,13 +75,13 @@ def _assets_addresses(asset_amount, number_of_assets, deploy_service, blockchain
 
 @pytest.fixture
 def cached_genesis(request, blockchain_type):
-    '''
-    Deploy all contracts the required by the fixtures into a tester and then
-    serialize the accounts into a genesis block.
+    """
+    Deploy all contracts that are required by the fixtures into a tester and
+    then serialize the accounts into a genesis block.
 
     Returns:
         dict: A dictionary representing the genesis block.
-    '''
+    """
 
     if not request.config.option.blockchain_cache:
         return
