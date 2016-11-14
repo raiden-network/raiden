@@ -233,8 +233,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         assetadded = registry.assetadded_filter()
 
-        all_manager_addresses = registry.manager_addresses()
-
         task_name = 'Registry {}'.format(pex(registry.address))
         asset_listener = LogListenerTask(
             task_name,
@@ -246,10 +244,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.event_listeners.append(asset_listener)
 
         self.registries.append(registry)
-
-        for manager_address in all_manager_addresses:
-            channel_manager = self.chain.manager(manager_address)
-            self.register_channel_manager(channel_manager)
 
     def register_channel_manager(self, channel_manager):
         """ Discover and register the channels for the given asset. """

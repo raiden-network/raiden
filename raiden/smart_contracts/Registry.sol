@@ -4,7 +4,6 @@ import "./ChannelManagerContract.sol";
 
 contract Registry {
     mapping(address => address) public registry;
-    address[] public assets;
 
     event AssetAdded(address asset_address, address channel_manager_address);
 
@@ -30,7 +29,6 @@ contract Registry {
         manager_address = new ChannelManagerContract(asset_address);
 
         registry[asset_address] = manager_address;
-        assets.push(asset_address);
 
         AssetAdded(asset_address, manager_address);
 
@@ -45,13 +43,16 @@ contract Registry {
         return registry[asset_address];
     }
 
+    /*
     function assetAddresses()
         constant
         returns (address[])
     {
         return assets;
     }
+    */
 
+    /*
     function channelManagerAddresses()
         constant
         returns (address[])
@@ -69,6 +70,7 @@ contract Registry {
 
         return result;
     }
+    */
 
     function () { throw; }
 }

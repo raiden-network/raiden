@@ -39,12 +39,6 @@ def test_registry(tester_registry, tester_events):
             sender=privatekey0,
         )
 
-    addresses = tester_registry.assetAddresses(sender=privatekey0)
-
-    assert len(addresses) == 2
-    assert addresses[0] == asset_address1.encode('hex')
-    assert addresses[1] == asset_address2.encode('hex')
-
     assert len(tester_events) == 2
 
     assert tester_events[0]['_event_type'] == 'AssetAdded'

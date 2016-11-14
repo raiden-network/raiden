@@ -422,13 +422,13 @@ class RegistryTesterMock(object):
         self.registry_proxy.addAsset(asset_address)
         self.tester_state.mine(number_of_blocks=1)
 
-    def asset_addresses(self):
-        result = [
-            address.decode('hex')
-            for address in self.registry_proxy.assetAddresses()
-        ]
-        self.tester_state.mine(number_of_blocks=1)
-        return result
+    # def asset_addresses(self):
+        # result = [
+            # address.decode('hex')
+            # for address in self.registry_proxy.assetAddresses()
+        # ]
+        # self.tester_state.mine(number_of_blocks=1)
+        # return result
 
     def manager_addresses(self):
         result = [

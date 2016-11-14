@@ -83,11 +83,11 @@ def patch_send_transaction(client, nonce_offset=0):
         client.send_transaction = send_transaction
 
 
-def new_filter(jsonrpc_client, contract_address, topics):
+def new_filter(jsonrpc_client, contract_address, topics, from_block="latest", to_block="latest"):
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     json_data = {
-        'fromBlock': '',
-        'toBlock': '',
+        'fromBlock': from_block,
+        'toBlock': to_block,
         'address': address_encoder(normalize_address(contract_address)),
         'topics': [topic_encoder(topic) for topic in topics],
     }
@@ -490,11 +490,11 @@ class Registry(object):
             channel_manager_address=pex(channel_manager_address_bin),
         )
 
-    def asset_addresses(self):
-        return [
-            address_decoder(address)
-            for address in self.proxy.assetAddresses.call(startgas=self.startgas)
-        ]
+    # def asset_addresses(self):
+        # return [
+            # address_decoder(address)
+            # for address in self.proxy.assetAddresses.call(startgas=self.startgas)
+        # ]
 
     def manager_addresses(self):
         return [
@@ -506,7 +506,7 @@ class Registry(object):
         topics = [ASSETADDED_EVENTID]
 
         registry_address_bin = self.proxy.address
-        filter_id_raw = new_filter(self.client, registry_address_bin, topics)
+        filter_id_raw = new_filter(self.client, registry_address_bin, topics, 0)  # start at block 0
 
         return Filter(
             self.client,
