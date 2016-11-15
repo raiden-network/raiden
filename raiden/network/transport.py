@@ -3,6 +3,8 @@
 This module contains the classes responsible to implement the network
 communication.
 """
+import time
+
 import gevent
 from gevent.server import DatagramServer
 from ethereum import slogging
@@ -13,15 +15,64 @@ from raiden.utils import pex, sha3
 log = slogging.get_logger('raiden.network.transport')  # pylint: disable=invalid-name
 
 
+class DummyPolicy(object):
+    """Dummy implementation for the throttling policy that always
+    returns a wait_time of 0.
+    """
+    def __init__(self):
+        pass
+
+    def consume(self, tokens):
+        return 0.
+
+
+class TokenBucket(object):
+    """Implementation of the token bucket throttling algorithm.
+    """
+
+    def __init__(self, capacity=10., fill_rate=10.):
+        self.capacity = float(capacity)
+        self.fill_rate = fill_rate
+        self.tokens = float(capacity)
+        self.timestamp = time.time()
+
+    def consume(self, tokens):
+        """Consume tokens.
+        Args:
+            tokens (float): number of transport tokens to consume
+        Returns:
+            wait_time (float): waiting time for the consumer
+        """
+        wait_time = 0.
+        self.tokens -= tokens
+        if self.tokens < 0:
+            self._get_tokens()
+        if self.tokens < 0:
+            wait_time = -self.tokens / self.fill_rate
+        return wait_time
+
+    def _get_tokens(self):
+        now = time.time()
+        self.tokens += self.fill_rate * (now - self.timestamp)
+        if self.tokens > self.capacity:
+            self.tokens = self.capacity
+        self.timestamp = now
+
+
 class UDPTransport(object):
     """ Node communication using the UDP protocol. """
 
-    def __init__(self, host, port, protocol=None):
+    def __init__(self,
+                 host,
+                 port,
+                 protocol=None,
+                 throttle_policy=DummyPolicy()):
         self.protocol = protocol
         self.server = DatagramServer((host, port), handle=self.receive)
         self.server.start()
         self.host = self.server.server_host
         self.port = self.server.server_port
+        self.throttle_policy = throttle_policy
 
     def receive(self, data, host_port):  # pylint: disable=unused-argument
         self.protocol.receive(data)
@@ -37,6 +88,7 @@ class UDPTransport(object):
             host_port (Tuple[(str, int)]): Tuple with the host name and port number.
             bytes_ (bytes): The bytes that are going to be sent through the wire.
         """
+        gevent.sleep(self.throttle_policy.consume(1))
         self.server.sendto(bytes_, host_port)
 
         # enable debugging using the DummyNetwork callbacks
@@ -85,14 +137,20 @@ class DummyTransport(object):
     network = DummyNetwork()
     on_recv_cbs = []  # debugging
 
-    def __init__(self, host, port, protocol=None):
+    def __init__(self,
+                 host,
+                 port,
+                 protocol=None,
+                 throttle_policy=DummyPolicy()):
         self.host = host
         self.port = port
         self.protocol = protocol
 
         self.network.register(self, host, port)
+        self.throttle_policy = throttle_policy
 
     def send(self, sender, host_port, bytes_):
+        gevent.sleep(self.throttle_policy.consume(1))
         self.network.send(sender, host_port, bytes_)
 
     @classmethod
@@ -114,6 +172,8 @@ class UnreliableTransport(DummyTransport):
     droprate = 2  # drop every Nth message
 
     def send(self, sender, host_port, bytes_):
+        # even dropped packages have to go through throttle_policy
+        gevent.sleep(self.throttle_policy.consume(1))
         drop = bool(self.network.counter % self.droprate == 0)
 
         if not drop:
