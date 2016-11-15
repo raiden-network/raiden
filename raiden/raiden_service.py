@@ -12,7 +12,7 @@ from secp256k1 import PrivateKey
 from raiden.assetmanager import AssetManager
 from raiden.transfermanager import Exchange, ExchangeKey
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
-from raiden.channelgraph import ChannelGraph
+from raiden.network.channelgraph import ChannelGraph
 from raiden.tasks import AlarmTask, LogListenerTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
