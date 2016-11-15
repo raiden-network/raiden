@@ -13,6 +13,7 @@ from raiden.raiden_service import (
     InvalidAddress,
     InvalidAmount
 )
+from raiden.api.wamp_server import WebSocketAPI
 
 
 # monkey patch: gevent-websocket to support 'extra' argument
@@ -241,12 +242,12 @@ class WebUI(object):
         return app
 
     def serve_index(self, environ, start_response):
-        path = os.path.join(self.path, 'api/webui/index.html')
+        path = os.path.join(self.path, 'static/index.html')
         start_response("200 OK", [("Content-Type", "text/html")])
         return open(path).readlines()
 
     def run(self):
-        static_path = os.path.join(self.path, 'api/webui')
+        static_path = os.path.join(self.path, 'static')
 
         routes = [('^/static/', self.make_static_application('/static/', static_path)),
                   ('^/$', self.serve_index),
@@ -261,5 +262,86 @@ class WebUI(object):
         server = WebSocketServer(("", self.port), resource, debug=True)
         server.serve_forever()
 
-    def stop():
+    def stop(self):
+        raise NotImplementedError()
+
+
+class WAMPRouter(object):
+    """ Wrapping class to start ws/http server
+    """
+    def __init__(self, raiden, port, events=None):
+        self.path = os.path.dirname(__file__)
+        assert isinstance(raiden, RaidenService)
+        self.raiden = raiden
+        self.port = port
+        self.events = events or []  # XXX check syntax
+
+    def make_static_application(self, basepath, staticdir):  # pylint: disable=no-self-use
+        def content_type(path):
+            """Guess mime-type. """
+
+            if path.endswith(".css"):
+                return "text/css"
+            elif path.endswith(".html"):
+                return "text/html"
+            elif path.endswith(".jpg"):
+                return "image/jpeg"
+            elif path.endswith(".js"):
+                return "text/javascript"
+            else:
+                return "application/octet-stream"
+
+        def not_found(environ, start_response):  # pylint: disable=unused-argument
+            start_response('404 Not Found', [('content-type', 'text/html')])
+            return ["""<html><h1>Page not Found</h1><p>
+                       That page is unknown. Return to
+                       the <a href="/">home page</a></p>
+                       </html>""", ]
+
+        def app(environ, start_response):
+            path = environ['PATH_INFO']
+            if path.startswith(basepath):
+                path = path[len(basepath):]
+                path = os.path.join(staticdir, path)
+                if os.path.exists(path):
+                    h = open(path, 'r')
+                    content = h.read()
+                    h.close()
+                    headers = [('Content-Type', content_type(path))]
+                    start_response("200 OK", headers)
+                    return [content, ]
+            return not_found(environ, start_response)
+        return app
+
+    def serve_index(self, environ, start_response):  # pylint: disable=unused-argument
+        path = os.path.join(self.path, 'static/index.html')
+        start_response("200 OK", [("Content-Type", "text/html")])
+        return open(path).readlines()
+
+    def run(self):
+        static_path = os.path.join(self.path, 'static')  # XXX naming
+
+        routes = [
+            ('^/static/', self.make_static_application('/static/', static_path)),
+            ('^/$', self.serve_index),
+            ('^/ws$', WebSocketAPI)
+        ]
+
+        data = {
+            'raiden': self.raiden,
+            'port': self.port,
+            'events': self.events
+        }
+
+        resource = Resource(routes, extra=data)
+
+        host_port = ('', self.port)
+        server = WebSocketServer(
+            host_port,
+            resource,
+            debug=True,
+        )
+        server.serve_forever()
+
+    def stop(self):
         raise NotImplementedError()

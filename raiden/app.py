@@ -12,7 +12,7 @@ from raiden.raiden_service import RaidenService, DEFAULT_REVEAL_TIMEOUT, DEFAULT
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.transport import UDPTransport
 from raiden.network.rpc.client import BlockChainService
-from raiden.console import Console
+from raiden.ui.console import Console
 from raiden.utils import pex, split_endpoint
 from raiden.accounts import AccountManager
 

@@ -1,22 +1,47 @@
 # -*- coding: utf-8 -*-
-import os
 import types
 import inspect
+import json
 
-from geventwebsocket.server import WebSocketServer
 from geventwebsocket.resource import WebSocketApplication
 from geventwebsocket.protocols.wamp import export_rpc
-
-from raiden.patches.geventwebsocket import Resource
-from raiden.patches.geventwebsocket import WampProtocol
+from geventwebsocket.protocols.wamp import WampProtocol as WampProtocolBase
 
 from raiden.raiden_service import (
     RaidenAPI,
-    RaidenService,
     NoPathError,
     InvalidAddress,
     InvalidAmount
 )
+
+
+class WampProtocol(WampProtocolBase):
+
+    def __init__(self, *args, **kwargs):
+        super(WampProtocol, self).__init__(*args, **kwargs)
+
+    def on_message(self, message):
+        # FIX: handle when ws is already closed (message is None)
+        if message is None:
+            return
+
+        data = json.loads(message)
+
+        if not isinstance(data, list):
+            raise Exception('incoming data is no list')
+
+        if data[0] == self.MSG_PREFIX and len(data) == 3:
+            prefix, uri = data[1:3]
+            self.prefixes.add(prefix, uri)
+
+        elif data[0] == self.MSG_CALL and len(data) >= 3:
+            return self.rpc_call(data)
+
+        elif data[0] in (self.MSG_SUBSCRIBE, self.MSG_UNSUBSCRIBE,
+                         self.MSG_PUBLISH):
+            return self.pubsub_action(data)
+        else:
+            raise Exception("Unknown call")
 
 
 def register_pubsub_with_callback(func=None):
@@ -183,87 +208,6 @@ class WebSocketAPI(WebSocketApplication):
 
         url = 'http://localhost:{}/raiden#'.format(self.port)
         self.protocol.register_object(url, instance)  # XXX check for name collisions
-
-
-class WAMPRouter(object):
-    """ Wrapping class to start ws/http server
-    """
-    def __init__(self, raiden, port, events=None):
-        self.path = os.path.dirname(__file__)
-        assert isinstance(raiden, RaidenService)
-        self.raiden = raiden
-        self.port = port
-        self.events = events or []  # XXX check syntax
-
-    def make_static_application(self, basepath, staticdir):  # pylint: disable=no-self-use
-        def content_type(path):
-            """Guess mime-type. """
-
-            if path.endswith(".css"):
-                return "text/css"
-            elif path.endswith(".html"):
-                return "text/html"
-            elif path.endswith(".jpg"):
-                return "image/jpeg"
-            elif path.endswith(".js"):
-                return "text/javascript"
-            else:
-                return "application/octet-stream"
-
-        def not_found(environ, start_response):  # pylint: disable=unused-argument
-            start_response('404 Not Found', [('content-type', 'text/html')])
-            return ["""<html><h1>Page not Found</h1><p>
-                       That page is unknown. Return to
-                       the <a href="/">home page</a></p>
-                       </html>""", ]
-
-        def app(environ, start_response):
-            path = environ['PATH_INFO']
-            if path.startswith(basepath):
-                path = path[len(basepath):]
-                path = os.path.join(staticdir, path)
-                if os.path.exists(path):
-                    h = open(path, 'r')
-                    content = h.read()
-                    h.close()
-                    headers = [('Content-Type', content_type(path))]
-                    start_response("200 OK", headers)
-                    return [content, ]
-            return not_found(environ, start_response)
-        return app
-
-    def serve_index(self, environ, start_response):  # pylint: disable=unused-argument
-        path = os.path.join(self.path, 'webui/index.html')
-        start_response("200 OK", [("Content-Type", "text/html")])
-        return open(path).readlines()
-
-    def run(self):
-        static_path = os.path.join(self.path, 'webui')  # XXX naming
-
-        routes = [
-            ('^/static/', self.make_static_application('/static/', static_path)),
-            ('^/$', self.serve_index),
-            ('^/ws$', WebSocketAPI)
-        ]
-
-        data = {
-            'raiden': self.raiden,
-            'port': self.port,
-            'events': self.events
-        }
-
-        resource = Resource(routes, extra=data)
-
-        host_port = ('', self.port)
-        server = WebSocketServer(
-            host_port,
-            resource,
-            debug=True,
-        )
-        server.serve_forever()
-
-    def stop(self):
-        raise NotImplementedError()
 
 
 # Tuple index out of range when the receivers address is shorter than 40(?) chars
