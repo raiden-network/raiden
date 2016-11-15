@@ -14,7 +14,7 @@ from raiden.tests.utils.mock_client import (
 )
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import create_network
-from raiden.benchmark.utils import (
+from raiden.tests.benchmark.utils import (
     print_serialization,
     print_slow_function,
     print_slow_path,

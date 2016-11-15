@@ -13,7 +13,7 @@ from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import create_network
 from raiden.utils import sha3
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
-from raiden.benchmark.utils import (
+from raiden.tests.benchmark.utils import (
     print_serialization,
     print_slow_function,
     print_slow_path,
