@@ -32,16 +32,15 @@ before_install:
   - ./.travis/download_solc.sh
 
 install:
-  - pip install -U pip
-  - pip install wheel
+  - pip install -U pip wheel coveralls
+  - pip install pytest-travis-fold
   - pip install -r requirements.txt
-  - pip install coveralls
 
 before_script:
   - ./.travis/make_dag.sh
 
 script:
-  - coverage run -m py.test -vvvvvv --log-config='raiden:DEBUG' --random -s $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
+  - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 
 after_success:
   - coveralls
