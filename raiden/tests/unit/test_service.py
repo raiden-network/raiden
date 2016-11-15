@@ -5,8 +5,7 @@ from ethereum import slogging
 
 from raiden.utils import sha3
 from raiden.messages import Ping, Ack, decode
-from raiden.network.transport import UnreliableTransport, UDPTransport
-from raiden.raiden_protocol import RaidenProtocol
+from raiden.network.transport import UnreliableTransport, UDPTransport, RaidenProtocol
 from raiden.tests.utils.messages import setup_messages_cb
 
 slogging.configure(':DEBUG')
