@@ -7,7 +7,7 @@ import gevent
 from gevent.server import DatagramServer
 from ethereum import slogging
 
-from raiden.raiden_service import RaidenProtocol
+from raiden.network.protocol import RaidenProtocol
 from raiden.utils import pex, sha3
 
 log = slogging.get_logger('raiden.network.transport')  # pylint: disable=invalid-name

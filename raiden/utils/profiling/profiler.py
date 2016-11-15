@@ -10,7 +10,7 @@ from itertools import chain, izip_longest
 
 import greenlet
 
-from raiden.profiling.stack import get_trace_info, get_trace_from_frame
+from raiden.utils.profiling.stack import get_trace_info, get_trace_from_frame
 
 
 # TODO:

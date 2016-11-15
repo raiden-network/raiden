@@ -10,7 +10,7 @@ from raiden.network.transport import UDPTransport
 from raiden.tests.utils.messages import setup_messages_cb
 from raiden.tests.utils.network import create_apps, create_network_channels
 from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
-from raiden.api.wamp_server import WAMPRouter
+from raiden.ui.web import WAMPRouter
 
 
 # Start:
