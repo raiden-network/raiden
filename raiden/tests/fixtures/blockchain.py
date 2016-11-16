@@ -212,6 +212,7 @@ def blockchain_services(
         poll_timeout,
         blockchain_backend,  # This fixture is required because it will start
                              # the geth subprocesses
+        blockchain_rpc_ports,
         blockchain_type,
         tester_blockgas_limit,
         cached_genesis):
@@ -232,6 +233,7 @@ def blockchain_services(
             private_keys,
             verbose,
             poll_timeout,
+            blockchain_rpc_ports[0],
             registry_address,
         )
 
@@ -258,7 +260,8 @@ def blockchain_backend(
         deploy_key,
         private_keys,
         blockchain_private_keys,
-        blockchain_p2p_base_port,
+        blockchain_p2p_ports,
+        blockchain_rpc_ports,
         tmpdir,
         blockchain_type,
         cached_genesis):
@@ -277,7 +280,8 @@ def blockchain_backend(
             deploy_key,
             private_keys,
             blockchain_private_keys,
-            blockchain_p2p_base_port,
+            blockchain_p2p_ports,
+            blockchain_rpc_ports,
             tmpdir,
             genesis_path,
         )
@@ -297,7 +301,8 @@ def _geth_blockchain(
         deploy_key,
         private_keys,
         cluster_private_keys,
-        p2p_base_port,
+        blockchain_p2p_ports,
+        blockchain_rpc_ports,
         tmpdir,
         genesis_path):
 
@@ -308,7 +313,8 @@ def _geth_blockchain(
         deploy_key,
         private_keys,
         cluster_private_keys,
-        p2p_base_port,
+        blockchain_rpc_ports,
+        blockchain_p2p_ports,
         str(tmpdir),
         verbosity,
         genesis_path,
@@ -329,10 +335,15 @@ def _jsonrpc_services(
         private_keys,
         verbose,
         poll_timeout,
+        rpc_port,
         registry_address=None):
 
     host = '0.0.0.0'
-    deploy_client = JSONRPCClient(host=host, privkey=deploy_key)
+    deploy_client = JSONRPCClient(
+        host=host,
+        port=rpc_port,
+        privkey=deploy_key,
+    )
 
     # we cannot instantiate BlockChainService without a registry, so first
     # deploy it directly with a JSONRPCClient

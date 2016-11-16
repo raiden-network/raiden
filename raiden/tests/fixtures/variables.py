@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+from itertools import count
 
 import pytest
 from ethereum.utils import sha3
@@ -158,9 +159,29 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
     ]
 
 
-# TODO: return a base port that is not random and guaranteed to be used
-# only once (avoid that a badly cleaned test interfere with the next).
+@pytest.fixture(scope='session')
+def port_generator():
+    """ count generator used to get a unique port number. """
+    return count(29870)
+
+
 @pytest.fixture
-def blockchain_p2p_base_port():
-    """ Default P2P base port. """
-    return 29870
+def blockchain_rpc_ports(blockchain_number_of_nodes, port_generator):
+    """ A list of unique port numbers to be used by the blockchain nodes for
+    the json-rpc interface.
+    """
+    return [
+        next(port_generator)
+        for _ in range(blockchain_number_of_nodes)
+    ]
+
+
+@pytest.fixture
+def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
+    """ A list of unique port numbers to be used by the blockchain nodes for
+    the p2p protocol.
+    """
+    return [
+        next(port_generator)
+        for _ in range(blockchain_number_of_nodes)
+    ]

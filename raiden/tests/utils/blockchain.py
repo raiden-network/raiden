@@ -157,13 +157,15 @@ def geth_init_datadir(datadir, genesis_path):
     subprocess.call(['geth', '--datadir', datadir, 'init', genesis_path])
 
 
-def geth_wait_and_check(privatekeys):
+def geth_wait_and_check(privatekeys, rpc_ports):
     """ Wait until the geth cluster is ready. """
     address = address_encoder(privatekey_to_address(privatekeys[0]))
     jsonrpc_running = False
     tries = 5
+    rpc_port = rpc_ports[0]
     jsonrpc_client = JSONRPCClient(
         host='0.0.0.0',
+        port=rpc_port,
         privkey=privatekeys[0],
         print_communication=False,
     )
@@ -183,6 +185,7 @@ def geth_wait_and_check(privatekeys):
         address = address_encoder(privatekey_to_address(key))
         jsonrpc_client = JSONRPCClient(
             host='0.0.0.0',
+            port=rpc_port,
             privkey=key,
             print_communication=False,
         )
@@ -202,18 +205,15 @@ def geth_create_blockchain(
         deploy_key,
         private_keys,
         geth_private_keys,
-        p2p_base_port,
+        rpc_ports,
+        p2p_ports,
         base_datadir,
         verbosity,
         genesis_path=None):
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments
 
-    # TODO: handle better the errors cases:
-    # - cant bind, port in use
-    start_rpcport = 4000
-
     nodes_configuration = []
-    for pos, key in enumerate(geth_private_keys):
+    for pos, (key, p2p_port, rpc_port) in enumerate(zip(geth_private_keys, p2p_ports, rpc_ports)):
         config = dict()
 
         # make the first node miner
@@ -225,8 +225,8 @@ def geth_create_blockchain(
         config['nodekeyhex'] = encode_hex(key)
         config['pub'] = encode_hex(privtopub(key))
         config['address'] = privatekey_to_address(key)
-        config['port'] = p2p_base_port + pos
-        config['rpcport'] = start_rpcport + pos
+        config['port'] = p2p_port
+        config['rpcport'] = rpc_port
         config['enode'] = 'enode://{pub}@127.0.0.1:{port}'.format(
             pub=config['pub'],
             port=config['port'],
@@ -276,7 +276,7 @@ def geth_create_blockchain(
         processes_list.append(process)
         assert process.returncode is None
 
-    geth_wait_and_check(private_keys)
+    geth_wait_and_check(private_keys, rpc_ports)
 
     # reenter echo mode (disabled by geth pasphrase prompt)
     if isinstance(sys.stdin, file):

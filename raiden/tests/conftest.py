@@ -56,7 +56,9 @@ from raiden.tests.fixtures import (
     blockchain_number_of_nodes,
     blockchain_key_seed,
     blockchain_private_keys,
-    blockchain_p2p_base_port,
+    port_generator,
+    blockchain_rpc_ports,
+    blockchain_p2p_ports,
 )
 
 __all__ = (
@@ -106,7 +108,9 @@ __all__ = (
     'blockchain_number_of_nodes',
     'blockchain_key_seed',
     'blockchain_private_keys',
-    'blockchain_p2p_base_port',
+    'port_generator',
+    'blockchain_rpc_ports',
+    'blockchain_p2p_ports',
 
     'pytest_addoption',
     'logging_level',
