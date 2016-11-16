@@ -12,7 +12,6 @@ from secp256k1 import PrivateKey
 from raiden.assetmanager import AssetManager
 from raiden.transfermanager import Exchange, ExchangeKey, UnknownAddress
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
-from raiden.network.channelgraph import ChannelGraph
 from raiden.tasks import AlarmTask, LogListenerTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
@@ -265,8 +264,8 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         channel_listener.start()
         self.event_listeners.append(channel_listener)
 
-        asset_address_bin = channel_manager.asset_address()
-        channel_manager_address_bin = channel_manager.address
+        # asset_address_bin = channel_manager.asset_address()
+        # channel_manager_address_bin = channel_manager.address
         # edges = channel_manager.channels_addresses()
         # channel_graph = ChannelGraph(edges)
 
@@ -721,7 +720,7 @@ class RaidenEventHandler(object):
             self,
             asset_address_bin,
             channel_manager_address_bin,
-            asset_manager.channelgraph,
+            manager.channelgraph,
         )
 
         self.managers_by_asset_address[asset_address_bin] = asset_manager

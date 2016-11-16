@@ -17,12 +17,20 @@ from raiden.tests.utils.network import CHAIN
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_timeout, assets_addresses, tester_state):
+def test_event_new_channel(
+        raiden_chain,
+        deposit,
+        settle_timeout,
+        events_poll_timeout,
+        assets_addresses,
+        tester_state,
+    ):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     tester_state.mine(1)
     # old way
     # asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
+    print app0.raiden.registries
 
     asset_address = assets_addresses[0]
     assert app0.raiden.managers_by_asset_address.keys()
