@@ -150,6 +150,7 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
 def test_blockchain(
         blockchain_type,
         blockchain_backend,  # required to start the geth backend
+        blockchain_rpc_ports,
         private_keys,
         poll_timeout):
     # pylint: disable=too-many-locals
@@ -169,6 +170,7 @@ def test_blockchain(
     total_asset = 100
 
     jsonrpc_client = JSONRPCClient(
+        port=blockchain_rpc_ports[0],
         privkey=privatekey,
         print_communication=False,
     )
