@@ -13,7 +13,7 @@ from raiden.utils import privatekey_to_address, get_contract_path
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
 
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(120)
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [0])
