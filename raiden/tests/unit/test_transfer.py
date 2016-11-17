@@ -4,14 +4,15 @@ from __future__ import print_function
 import gevent
 import pytest
 from ethereum import slogging
+from secp256k1 import PrivateKey
 
+from raiden.encoding.signing import GLOBAL_CTX
 from raiden.messages import decode, Ack, DirectTransfer, Ping, RefundTransfer
 from raiden.network.transport import UnreliableTransport
-from raiden.tasks import DEFAULT_HEALTHCHECK_POLL_TIMEOUT
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
 from raiden.tests.utils.network import CHAIN
-from raiden.utils import pex, sha3
+from raiden.utils import pex, sha3, privatekey_to_address
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
@@ -87,6 +88,59 @@ def test_transfer(raiden_network):
     a1_recv_messages = mlogger.get_node_messages(a1_address, only='recv')
     assert len(a1_recv_messages) == 1
     assert isinstance(a1_recv_messages[0], DirectTransfer)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [3])
+def test_receive_unknown(raiden_network, private_keys):
+    app0, app1, app2 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    a0_address = pex(app0.raiden.address)
+
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+
+    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+
+    balance0 = channel0.balance
+    balance1 = channel1.balance
+
+    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
+
+    amount = 10
+    app0.raiden.api.transfer(
+        asset_manager0.asset_address,
+        amount,
+        target=app1.raiden.address,
+    )
+    gevent.sleep(1)
+
+    assert_synched_channels(
+        channel0, balance0 - amount, [],
+        channel1, balance1 + amount, []
+    )
+
+    other_key = PrivateKey(private_keys[2], ctx=GLOBAL_CTX, raw=True)
+    other_address = privatekey_to_address(other_key.private_key)
+    direct_transfer = DirectTransfer(
+        identifier=1,
+        nonce=1,
+        asset=asset_manager0.asset_address,
+        transferred_amount=10,
+        recipient=a0_address,
+        locksroot=channel0.our_state.balance_proof.merkleroot_for_unclaimed()
+    )
+    direct_transfer.sign(other_key, other_address)
+    direct_transfer_data = str(direct_transfer.packed().data)
+    app1.raiden.protocol.transport.send(
+        app2.raiden,
+        (app2.raiden.protocol.transport.host, app2.raiden.protocol.transport.port),
+        direct_transfer_data
+    )
+    # Give it some time to see if the unknown sender causes an error in the logic
+    gevent.sleep(3)
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])

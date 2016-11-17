@@ -31,6 +31,9 @@ ExchangeKey = namedtuple('ExchangeKey', (
 ))
 
 
+class UnknownAddress(Exception):
+    pass
+
 class TransferManager(object):
     """ Manages all transfers done through this node. """
 
@@ -301,7 +304,13 @@ class TransferManager(object):
 
     def on_directtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
-            raise RuntimeError('Received message for inexisting channel.')
+            # Log a warning and don't process further
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received direct transfer message from unknown sender %s',
+                    pex(transfer.sender),
+                )
+            raise UnknownAddress
 
         channel = self.assetmanager.partneraddress_channel[transfer.sender]
         channel.register_transfer(transfer)
