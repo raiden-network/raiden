@@ -10,6 +10,7 @@ from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
 from raiden.messages import decode, Ack, Ping, SignedMessage
+from raiden.transfermanager import UnknownAddress
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -329,7 +330,11 @@ class RaidenProtocol(object):
                 )
 
             # this might exit with an exception
-            self.raiden.on_message(message, echohash)
+            try:
+                self.raiden.on_message(message, echohash)
+            except UnknownAddress:
+                # Do not send ACK for these cases
+                return
 
             # only send the Ack if the message was handled without exceptions
             ack = Ack(
