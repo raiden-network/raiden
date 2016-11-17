@@ -34,6 +34,7 @@ ExchangeKey = namedtuple('ExchangeKey', (
 class UnknownAddress(Exception):
     pass
 
+
 class TransferManager(object):
     """ Manages all transfers done through this node. """
 
@@ -122,7 +123,7 @@ class TransferManager(object):
     def transfer_async(self, amount, target, identifier=None, callback=None):
         """ Transfer `amount` between this node and `target`.
 
-        This method will start a asyncronous transfer, the transfer might fail
+        This method will start an asyncronous transfer, the transfer might fail
         or succeed depending on a couple of factors:
             - Existence of a path that can be used, through the usage of direct
             or intermediary channels.
@@ -224,7 +225,7 @@ class TransferManager(object):
 
     def on_mediatedtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
-            raise RuntimeError('Received message for inexisting channel.')
+            raise RuntimeError('Received message for non-existing channel.')
 
         raiden = self.assetmanager.raiden
         asset_address = self.assetmanager.asset_address

@@ -124,7 +124,7 @@ class UnreliableTransport(DummyTransport):
             self.network.track_send(sender, host_port, bytes_)
 
             log.debug(
-                'dropped packed',
+                'dropped packet',
                 counter=self.network.counter,
                 data=format(pex(sha3(bytes_)))
             )
