@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import gevent
 import rlp
-import time
 from ethereum import slogging
 from ethereum import _solidity
 from ethereum.transactions import Transaction
@@ -104,8 +103,6 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes,unused-argument
 
-    BLOCKNUMBER_CACHE_TTL = 2.
-
     def __init__(
             self,
             privatekey_bin,
@@ -137,19 +134,13 @@ class BlockChainService(object):
         self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
         self.default_registry = self.registry(registry_address)
-        self.cached_block_number = (None, None)
 
     def set_verbosity(self, level):
         if level:
             self.client.print_communication = True
 
     def block_number(self):
-        number, last_time = self.cached_block_number
-        time_now = time.time()
-        if last_time is None or time_now - last_time > self.BLOCKNUMBER_CACHE_TTL:
-            number = self.client.blocknumber()
-            self.cached_block_number = (number, time_now)
-        return number
+        return self.client.blocknumber()
 
     def next_block(self):
         target_block_number = self.block_number() + 1
@@ -275,28 +266,15 @@ class BlockChainService(object):
 
 
 class Filter(object):
-
-    CHANGES_CACHE_TTL = 2.
-    # XXX: limited to having a single object per filter_id
-    _last_filter_calls = {}
-
     def __init__(self, jsonrpc_client, filter_id_raw):
         self.filter_id_raw = filter_id_raw
         self.client = jsonrpc_client
-        self._last_filter_calls[self.filter_id_raw] = None
 
     def changes(self):
-        time_now = time.time()
-        last_time = self._last_filter_calls[self.filter_id_raw]
-        if last_time is not None and time_now - last_time < self.CHANGES_CACHE_TTL:
-            return []
-
         filter_changes = self.client.call(
             'eth_getFilterChanges',
             self.filter_id_raw,
         )
-
-        self._last_filter_calls[self.filter_id_raw] = time_now
 
         # geth could return None
         if filter_changes is None:
