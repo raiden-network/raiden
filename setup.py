@@ -51,11 +51,14 @@ setup(
     url='https://github.com/heikoheiko/raiden',
     packages=[
         'raiden',
-        'raiden.encoding',
-        'raiden.utils',
+        'raiden.api',
         'raiden.blockchain',
+        'raiden.encoding',
         'raiden.network',
         'raiden.network.rpc',
+        'raiden.ui',
+        'raiden.utils',
+        'raiden.utils.profiling',
     ],
     include_package_data=True,
     license='BSD',
@@ -74,6 +77,6 @@ setup(
     tests_require=test_requirements,
     entry_points='''
     [console_scripts]
-    raiden=raiden.app:run
+    raiden=raiden.__main__:main
     '''
 )
