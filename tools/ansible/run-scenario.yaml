@@ -79,10 +79,8 @@
 
     - name: remove stage files
       file:
-        path: "{{ user_home }}/raiden-{{ item }}.stage*"
+        path: "{{ user_home }}/raiden-*.stage*"
         state: absent
-      with_items:
-        - "{{ raiden_ports }}"
       ignore_errors: yes
 
     - name: update repository if asked (set `-e force_pull=True`)
@@ -138,7 +136,7 @@
         cmd: "killall geth"
       ignore_errors: True
 
-    - name: sync results files
+    - name: fetch results files
       fetch:
         src: "{{ ansible_ec2_public_ipv4 }}-{{ item }}.json"
         dest: "results/"
