@@ -25,7 +25,7 @@ Obtain the `raiden.pem` file and place it into `keys/raiden.pem`, then `chmod 60
 
 ## Playbooks
 
-### build-ami.yaml
+### build-ami-cpython.yaml / build-ami-pypy.yaml
 
 This playbook 
 - launches a new ubuntu instance: `-t init`
@@ -36,11 +36,11 @@ This playbook
 
 #### Usage
 
-    ansible-playbook build-ami.yaml
+    ansible-playbook build-ami-{version}.yaml
     # termination can be prevented by defining `keep=True`
-    ansible-playbook build-ami.yaml -e "keep=True"
+    ansible-playbook build-ami-{version}.yaml -e "keep=True"
     # to make sure, all amis are deleted, call
-    ansible-playbook build-ami.yaml -e "cleanup=True" -t store_ami
+    ansible-playbook build-ami-{version}.yaml -e "cleanup=True" -t store_ami
     
 
 #### Parameters
@@ -56,17 +56,18 @@ This playbook will
 - prepare `geth` configurations (
     - `genesis` with `<raiden_per_node>` * `<number_of_nodes>` prefunded accounts
     - `static-bootnodes` for the collected IPs)
-- `init`ialize `geth` on all nodes
 - create scenario folders for each `<raiden_per_node>` on all nodes containing 
     - `privatekey` + `contract_flags`
-    - *#FIXME* `peers`
-    - *#FIXME* `scenario_config`
+    - `scenario_config` (`scenario.json`)
 - start `geth` on all nodes
 - *#FIXME* create assets from `scenario_config`
 
 ### run-scenario.yaml
 
 This playbook
+
+- `init`ialize `geth` on all nodes
+- updates raiden repository if `force_pull` is set to True
 - **#FIXME**
 
 # DEV-notes: 

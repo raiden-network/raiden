@@ -42,15 +42,16 @@
 
   tasks:
     - name: add ethereum ppa
-      shell: sudo add-apt-repository ppa:ethereum/ethereum -y
+      shell: add-apt-repository ppa:ethereum/ethereum -y
+      become: yes
 
     - name: install geth, solc, daemon
       apt: name="{{ item }}" update_cache=yes
-      sudo: yes
+      become: yes
       with_items:
         - geth
-        - solc
         - daemon
+        - solc
 
 - hosts: tag_Name_Build
   name: make DAG
@@ -62,7 +63,6 @@
     - dag
   vars:
     - dag: "{{ ansible_env.HOME }}/.ethash"
-
 
   tasks:
     - name: create '~/.ethash' directory
@@ -91,17 +91,24 @@
     - name: add py27 ppa
       shell:
         cmd: add-apt-repository ppa:fkrull/deadsnakes-python2.7 -y
-      sudo: yes
+      become: yes
+
+    - name: add pypy ppa
+      shell:
+        cmd: add-apt-repository ppa:pypy/ppa -y
+      become: yes
 
     - name: install raiden system dependencies
       apt: name="{{ item }}" update_cache=yes
-      sudo: yes
+      become: yes
       with_items:
         - git-core
         - python2.7
         - python-pip
         - python-dev
         - python-virtualenv
+        - pypy
+        - pypy-dev
         - build-essential
         - automake
         - pkg-config
@@ -110,25 +117,70 @@
         - libgmp-dev
         - libssl-dev
 
+    - name: clone serpent
+      git:
+        repo: "https://github.com/ethereum/serpent"
+        update: yes
+        dest: "/home/ubuntu/serpent"
+
+    - name: patch serpent for pypy
+      patch: >
+        src=serpent_setup.patch
+        basedir=/home/ubuntu/serpent
+        strip=1
+
     - name: clone raiden
       git:
-        repo: "https://github.com/raiden-network/raiden"
+        repo: "https://github.com/utzig/raiden"
         update: yes
-        version: "{{ raiden_version }}"
+        version: "orchestration"
         dest: "{{ raiden_dir }}"
+
+    - name: patch raiden's requirements
+      patch: >
+        src=raiden_requirements.patch
+        basedir={{ raiden_dir }}
+        strip=1
 
     - name: update setuptools
       pip:
         name: setuptools
         virtualenv: "{{ venv }}"
+        virtualenv_python: "/usr/bin/pypy"
         state: forcereinstall
+
+    - name: install serpent
+      pip:
+        name: "."
+        extra_args: -e
+        virtualenv: "{{ venv }}"
+        virtualenv_python: "/usr/bin/pypy"
+        chdir: "/home/ubuntu/serpent"
 
     - name: install raiden
       pip:
         name: "."
         extra_args: -e
         virtualenv: "{{ venv }}"
+        virtualenv_python: "/usr/bin/pypy"
         chdir: "{{ raiden_dir }}"
+
+- hosts: tag_Name_Build
+  name: add sysctl tcp time wait options
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - build-ami
+  tags:
+    - update_sysctl
+  tasks:
+    - name: add sysctl
+      copy:
+        src: "99-tcp-timewait.conf"
+        dest: "/etc/sysctl.d/99-tcp-timewait.conf"
+        owner: "root"
+        group: "root"
+      become: yes
 
 - hosts: tag_Name_Build
   name: store ami

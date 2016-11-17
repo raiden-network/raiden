@@ -102,43 +102,47 @@ def accounts(ctx, hosts, nodes_per_host):
     default=1,
     type=int
 )
+@click.argument(
+    'nodes_per_transfer',
+    default=2,
+    type=int
+)
 @cli.command()
 @click.pass_context
-def build_scenario(ctx, hosts, nodes_per_host):
+def build_scenario(ctx, hosts, nodes_per_host, nodes_per_transfer):
     # pylint: disable=too-many-locals
 
     pretty = ctx.obj['pretty']
     node_list = build_node_list(hosts, nodes_per_host)
     accounts = generate_accounts(node_list)  # pylint: disable=redefined-outer-name
 
+    if nodes_per_transfer < 2:
+        nodes_per_transfer = 2
+
     addresses = []
-    for data in accounts.values():
-        value = data.get('address')
-
-        if value:
-            addresses.append(value)
-
-    random.shuffle(addresses)
+    for node, data in sorted(accounts.items()):
+        for k, v in data.items():
+            if k == 'address':
+                addresses.append(v)
 
     scenario = dict()
     scenario['assets'] = assets = list()
 
-    # TODO: this builds a simple test scenario connecting each
-    #       node to some other node one-by-one (for odd number,
-    #       ignores last one)...
-    total_assets = len(addresses) // 2
+    # NOTE: this builds a simple ring scenario connecting the nodes
+    #       in groups of `node_per_transfer`. The setup assumes
+    #       unidirectional transfer from the first node to the last.
+    total_assets = len(addresses) // nodes_per_transfer
     index = 0
     for asset_num in range(total_assets):
         data_for_asset = {
             "name": str(asset_num),
-            "channels": [addresses[index], addresses[index + 1]],
+            "channels": addresses[index : index + nodes_per_transfer],
             "transfers_with_amount": {
-                addresses[index]: 100,
-                addresses[index + 1]: 100,
+                addresses[index + nodes_per_transfer - 1]: 3000,
             }
         }
         assets.append(data_for_asset)
-        index += 2
+        index += nodes_per_transfer
 
     print json.dumps(scenario, indent=2 if pretty else None)
 

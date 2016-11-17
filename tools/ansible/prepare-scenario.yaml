@@ -94,7 +94,7 @@
     - name: create scenario.json
       shell:
         chdir: "../"
-        cmd: "python config_builder.py build_scenario {{ raiden_per_node }} {{ node_ips | join(' ') }}"
+        cmd: "python config_builder.py build_scenario 3 {{ raiden_per_node }} {{ node_ips | join(' ') }}"
       register: out
 
     - name: jsonify
