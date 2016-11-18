@@ -251,7 +251,7 @@ def blockchain_services(
             request,
         )
 
-    raise ValueError('unknow cluster type {}'.format(blockchain_type))
+    raise ValueError('unknown cluster type {}'.format(blockchain_type))
 
 
 @pytest.fixture
