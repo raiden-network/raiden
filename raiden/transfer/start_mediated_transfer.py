@@ -25,9 +25,7 @@ from raiden.transfer.state_change import (
 
 
 def cancel_current_transfer(next_state):
-    """ Discard current secret/hashlock, set the current route as canceled
-    transfer and clear current state.
-    """
+    """ Discards the current secret and clear current state. """
     new_secret = NewSecret(next_state.transfer.identifier)
 
     next_state.routes.canceled_routes.append(next_state.route)
@@ -45,7 +43,7 @@ def cancel_current_transfer(next_state):
 
 
 class InitMediatedTransfer(StateChange):
-    """ A new mediated transfer was requested.
+    """ Initiate a new mediated transfer.
 
     Args:
         target: The mediated transfer target.
@@ -60,11 +58,13 @@ class InitMediatedTransfer(StateChange):
 
 
 class NewSecret(StateChange):
+    """ Request a new secret. """
     def __init__(self, transfer_id):
         self.transfer_id = transfer_id
 
 
 class SecretRequest(StateChange):
+    """ A SecretRequest message received. """
     def __init__(self, transfer_id, amount, hashlock, identifier, sender):
         self.transfer_id = transfer_id
         self.amount = amount
@@ -74,9 +74,7 @@ class SecretRequest(StateChange):
 
 
 class StartMediatedTransferState(State):
-    """ State representation of a mediated transfre. This object should never
-    be modified in-place.
-    """
+    """ State representation of a mediated transfer. """
     def __init__(self, our_address, transfer, target, block_number, network_timeout):
         self.our_address = our_address
         self.transfer = transfer
@@ -96,9 +94,7 @@ class StartMediatedTransferState(State):
 
 
 def state_transition(current_state, state_change):
-    """ Transition logic for a mediated transfer started by this node, this
-    function needs to be referentially transparent.
-    """
+    """ State machine for a node starting a mediated transfer. """
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
     state_initialize = current_state is None

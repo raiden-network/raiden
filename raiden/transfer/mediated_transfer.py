@@ -31,9 +31,9 @@ def try_next_route(next_state):
         route = next_state.routes.available_routes.pop()
         reveal_expiration = route.reveal_timeout + next_state.block_number
 
-        # Dont use this route if we cannot decrease the expiration by
-        # `reveal_timeout`, this is time required to learn the secret
-        # through the blockchain that needs to consider DoS attacks.
+        # `reveal_timeout` is the number of blocks configured as a safe guard
+        # against DoS attacks to the ethereum, a node must only forward a
+        # mediated transfer if it can guarantee this timeout.
         under_reveal_expiration = next_state.originating_transfer.expiration <= reveal_expiration
 
         if route.capacity < next_state.transfer.amount or under_reveal_expiration:
@@ -42,9 +42,7 @@ def try_next_route(next_state):
             try_route = route
             break
 
-    # No available route has sufficient capacity for the current
-    # transfer, refund the transfer so that the previous hop can try a
-    # new route.
+    # No route found, refund the previous hop so that it can try a new route.
     if try_route is None:
         refund = RefundTransfer(
             next_state.transfer.identifier,
@@ -68,8 +66,8 @@ def try_next_route(next_state):
         )
         new_lock_timeout = lock_timeout - try_route.reveal_timeout
 
-        # A timeout larger than settle_timeout will be rejected, this
-        # /needs/ to be validated in state_initialize.
+        # A timeout larger than settle_timeout will be rejected. This /needs/
+        # to be validated in state_initialize.
         if new_lock_timeout > try_route.settle_timeout:
             new_lock_timeout = try_route.settle_timeout - try_route.reveal_timeout
 
@@ -118,9 +116,7 @@ class InitMediatedTransfer(StateChange):
 
 
 class MediatedTransferState(State):
-    """ State representation of a mediated transfre. This object should never
-    be modified in-place.
-    """
+    """ All state required for a mediated transfer state.  """
     def __init__(self,
                  our_address,
                  transfer,

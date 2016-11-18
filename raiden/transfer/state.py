@@ -4,9 +4,7 @@ from raiden.transfer.architecture import State
 
 
 class MediatedTransferState(State):
-    """ State representation of a transfer. This object should never be
-    modified in-place.
-    """
+    """ State of a transfer.  """
     def __init__(self, amount, token, identifier):
         self.amount = amount
         self.token = token
