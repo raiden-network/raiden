@@ -91,38 +91,15 @@ def test_transfer(raiden_network):
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
-@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_unknown(raiden_network, private_keys):
-    app0, app1, app2 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
 
     a0_address = pex(app0.raiden.address)
-
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
 
-    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
-
-    balance0 = channel0.balance
-    balance1 = channel1.balance
-
-    assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
-
-    amount = 10
-    app0.raiden.api.transfer(
-        asset_manager0.asset_address,
-        amount,
-        target=app1.raiden.address,
-    )
-    gevent.sleep(1)
-
-    assert_synched_channels(
-        channel0, balance0 - amount, [],
-        channel1, balance1 + amount, []
-    )
-
-    other_key = PrivateKey(private_keys[2], ctx=GLOBAL_CTX, raw=True)
+    other_key = PrivateKey(sha3("rainyweather"), ctx=GLOBAL_CTX, raw=True)
     other_address = privatekey_to_address(other_key.private_key)
     direct_transfer = DirectTransfer(
         identifier=1,
@@ -130,17 +107,13 @@ def test_receive_unknown(raiden_network, private_keys):
         asset=asset_manager0.asset_address,
         transferred_amount=10,
         recipient=a0_address,
-        locksroot=channel0.our_state.balance_proof.merkleroot_for_unclaimed()
+        locksroot=sha3("muchrain")
     )
     direct_transfer.sign(other_key, other_address)
     direct_transfer_data = str(direct_transfer.packed().data)
-    app1.raiden.protocol.transport.send(
-        app2.raiden,
-        (app2.raiden.protocol.transport.host, app2.raiden.protocol.transport.port),
-        direct_transfer_data
-    )
+    app0.raiden.protocol.receive(direct_transfer_data)
     # Give it some time to see if the unknown sender causes an error in the logic
-    gevent.sleep(3)
+    gevent.sleep(2)
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])

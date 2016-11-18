@@ -179,9 +179,6 @@ def create_network_channels(
 
     num_nodes = len(raiden_apps)
 
-    if num_nodes < 2:
-        raise ValueError('cannot create a network with less than two nodes')
-
     if channels_per_node is not CHAIN and channels_per_node > num_nodes:
         raise ValueError("Can't create more channels than nodes")
 
