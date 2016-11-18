@@ -27,10 +27,8 @@ def test_event_new_channel(
     ):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
-    tester_state.mine(1)
     # old way
     # asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
-    print app0.raiden.registries
 
     asset_address = assets_addresses[0]
     assert app0.raiden.managers_by_asset_address.keys()

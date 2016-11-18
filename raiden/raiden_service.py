@@ -252,8 +252,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         # contract and then start polling.
         channelnew = channel_manager.channelnew_filter()
 
-        # all_netting_contracts = channel_manager.channels_by_participant(self.address)
-
         task_name = 'ChannelManager {}'.format(pex(channel_manager.address))
         channel_listener = LogListenerTask(
             task_name,
@@ -263,26 +261,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         )
         channel_listener.start()
         self.event_listeners.append(channel_listener)
-
-        # asset_address_bin = channel_manager.asset_address()
-        # channel_manager_address_bin = channel_manager.address
-        # edges = channel_manager.channels_addresses()
-        # channel_graph = ChannelGraph(edges)
-
-        # asset_manager = AssetManager(
-            # self,
-            # asset_address_bin,
-            # channel_manager_address_bin,
-            # channel_graph,
-        # )
-        # self.managers_by_asset_address[asset_address_bin] = asset_manager
-        # self.managers_by_address[channel_manager_address_bin] = asset_manager
-
-        # for netting_contract_address in all_netting_contracts:
-            # asset_manager.register_channel_by_address(
-                # netting_contract_address,
-                # self.config['reveal_timeout'],
-            # )
 
     def stop(self):
         for listener in self.event_listeners:
@@ -697,34 +675,31 @@ class RaidenEventHandler(object):
     def event_assetadded(self, registry_address_bin, event):  # pylint: disable=unused-argument
         manager_address_bin = address_decoder(event['channel_manager_address'])
         manager = self.raiden.chain.manager(manager_address_bin)
+        self.managers_by_asset_address[event['asset_address']] = manager
+        self.managers_by_address[manager_address_bin] = manager
         self.raiden.register_channel_manager(manager)
 
     def event_channelnew(self, manager_address_bin, event):  # pylint: disable=unused-argument
         # should not raise, filters are installed only for registered managers
-        # asset_manager = self.raiden.get_manager_by_address(manager_address_bin)
-        manager = self.raiden.chain.manager(manager_address_bin)
+        asset_manager = self.raiden.get_manager_by_address(manager_address_bin)
+        # self.managers_by_asset_address[event['asset_address']] = asset_manager
 
-        asset_address_bin = manager.asset_address()
-        channel_manager_address_bin = manager.address
 
         participant1 = address_decoder(event['participant1'])
         participant2 = address_decoder(event['participant2'])
 
         # update our global network graph for routing
-        manager.channelgraph.add_path(
+        asset_manager.channelgraph.add_path(
             participant1,
             participant2,
         )
 
-        asset_manager = AssetManager(
-            self,
-            asset_address_bin,
-            channel_manager_address_bin,
-            manager.channelgraph,
-        )
-
-        self.managers_by_asset_address[asset_address_bin] = asset_manager
-        self.managers_by_address[channel_manager_address_bin] = asset_manager
+        # asset_manager = AssetManager(
+            # self,
+            # asset_address_bin,
+            # channel_manager_address_bin,
+            # manager.channelgraph,
+        # )
 
         if participant1 == self.raiden.address or participant2 == self.raiden.address:
             netting_channel_address_bin = address_decoder(event['netting_channel'])
