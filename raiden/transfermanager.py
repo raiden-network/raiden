@@ -225,7 +225,14 @@ class TransferManager(object):
 
     def on_mediatedtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
-            raise RuntimeError('Received message for non-existing channel.')
+            # Log a warning and don't process further
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received mediated transfer message from unknown channel.'
+                    'Sender: %s',
+                    pex(transfer.sender),
+                )
+            raise UnknownAddress
 
         raiden = self.assetmanager.raiden
         asset_address = self.assetmanager.asset_address

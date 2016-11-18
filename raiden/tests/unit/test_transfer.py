@@ -7,7 +7,9 @@ from ethereum import slogging
 from secp256k1 import PrivateKey
 
 from raiden.encoding.signing import GLOBAL_CTX
-from raiden.messages import decode, Ack, DirectTransfer, Ping, RefundTransfer
+from raiden.messages import (
+    decode, Ack, DirectTransfer, Lock, Ping, RefundTransfer, MediatedTransfer
+)
 from raiden.network.transport import UnreliableTransport
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
@@ -88,32 +90,6 @@ def test_transfer(raiden_network):
     a1_recv_messages = mlogger.get_node_messages(a1_address, only='recv')
     assert len(a1_recv_messages) == 1
     assert isinstance(a1_recv_messages[0], DirectTransfer)
-
-
-@pytest.mark.parametrize('blockchain_type', ['mock'])
-@pytest.mark.parametrize('number_of_nodes', [1])
-@pytest.mark.parametrize('channels_per_node', [0])
-def test_receive_unknown(raiden_network, private_keys):
-    app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
-
-    a0_address = pex(app0.raiden.address)
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-
-    other_key = PrivateKey(sha3("rainyweather"), ctx=GLOBAL_CTX, raw=True)
-    other_address = privatekey_to_address(other_key.private_key)
-    direct_transfer = DirectTransfer(
-        identifier=1,
-        nonce=1,
-        asset=asset_manager0.asset_address,
-        transferred_amount=10,
-        recipient=a0_address,
-        locksroot=sha3("muchrain")
-    )
-    direct_transfer.sign(other_key, other_address)
-    direct_transfer_data = str(direct_transfer.packed().data)
-    app0.raiden.protocol.receive(direct_transfer_data)
-    # Give it some time to see if the unknown sender causes an error in the logic
-    gevent.sleep(2)
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -364,3 +340,61 @@ def test_healthcheck_with_bad_peer(raiden_network):
     # Let's make sure no new pings are sent afterwards
     gevent.sleep(2)
     assert len(messages) == final_messages_num
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+def test_receive_directtransfer_unknown(raiden_network, private_keys):
+    app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
+
+    a0_address = pex(app0.raiden.address)
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+
+    other_key = PrivateKey(sha3("rainyweather"), ctx=GLOBAL_CTX, raw=True)
+    other_address = privatekey_to_address(other_key.private_key)
+    direct_transfer = DirectTransfer(
+        identifier=1,
+        nonce=1,
+        asset=asset_manager0.asset_address,
+        transferred_amount=10,
+        recipient=a0_address,
+        locksroot=sha3("muchrain")
+    )
+    direct_transfer.sign(other_key, other_address)
+    direct_transfer_data = str(direct_transfer.packed().data)
+    app0.raiden.protocol.receive(direct_transfer_data)
+    # Give it some time to see if the unknown sender causes an error in the logic
+    gevent.sleep(2)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+def test_receive_mediatedtransfer_unknown(raiden_network, private_keys):
+    app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
+
+    a0_address = pex(app0.raiden.address)
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+
+    other_key = PrivateKey(sha3("rainstopped"), ctx=GLOBAL_CTX, raw=True)
+    other_address = privatekey_to_address(other_key.private_key)
+    amount = 10
+    locksroot = sha3("muchsunny")
+    mediated_transfer = MediatedTransfer(
+        identifier=1,
+        nonce=1,
+        asset=asset_manager0.asset_address,
+        transferred_amount=amount,
+        recipient=a0_address,
+        locksroot=locksroot,
+        lock=Lock(amount, 1, locksroot),
+        target=privatekey_to_address(sha3("cloudsagain")),
+        initiator=other_address,
+        fee=0
+    )
+    mediated_transfer.sign(other_key, other_address)
+    mediated_transfer_data = str(mediated_transfer.packed().data)
+    app0.raiden.protocol.receive(mediated_transfer_data)
+    # Give it some time to see if the unknown sender causes an error in the logic
+    gevent.sleep(2)
