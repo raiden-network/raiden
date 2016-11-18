@@ -9,7 +9,7 @@ import pytest
 from ethereum import slogging
 from ethereum._solidity import compile_file
 from pyethapp.rpc_client import JSONRPCClient
-from pyethapp.jsonrpc import address_decoder, address_encoder
+from pyethapp.jsonrpc import address_decoder, address_encoder, default_gasprice
 
 from raiden.utils import privatekey_to_address, get_contract_path, safe_lstrip_hex
 from raiden.tests.fixtures.tester import tester_state
@@ -361,6 +361,7 @@ def _jsonrpc_services(
             registry_contracts,
             dict(),
             tuple(),
+            gasprice=default_gasprice,
             timeout=poll_timeout,
         )
         registry_address = registry_proxy.address

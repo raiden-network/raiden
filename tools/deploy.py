@@ -5,8 +5,9 @@ import os
 import json
 
 from ethereum._solidity import compile_contract
-from ethereum.utils import denoms, decode_hex
+from ethereum.utils import decode_hex
 from pyethapp.rpc_client import JSONRPCClient
+from pyethapp.jsonrpc import default_gasprice
 from raiden.utils import get_contract_path
 from raiden.network.rpc.client import patch_send_transaction
 
@@ -44,7 +45,7 @@ def deploy_files(contract_files, client):
             compiled_contracts,
             libraries,
             '',
-            gasprice=denoms.shannon * 20
+            gasprice=default_gasprice
         )
         libraries[name] = proxy.address
     return {name: addr.encode('hex') for name, addr in libraries.items()}
