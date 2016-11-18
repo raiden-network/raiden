@@ -6,6 +6,7 @@ from ethereum import _solidity
 from ethereum._solidity import compile_file
 from ethereum.utils import denoms
 from pyethapp.rpc_client import JSONRPCClient
+from pyethapp.jsonrpc import default_gasprice
 
 from raiden.network.rpc.client import decode_topic, patch_send_transaction
 from raiden.utils import privatekey_to_address, get_contract_path
@@ -184,6 +185,7 @@ def test_blockchain(
         humantoken_contracts,
         dict(),
         (total_asset, 'raiden', 2, 'Rd'),
+        gasprice=default_gasprice,
         timeout=poll_timeout,
     )
 
@@ -195,6 +197,7 @@ def test_blockchain(
         registry_contracts,
         dict(),
         tuple(),
+        gasprice=default_gasprice,
         timeout=poll_timeout,
     )
 

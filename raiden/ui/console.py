@@ -16,7 +16,7 @@ from ethereum.utils import denoms
 from gevent.event import Event
 from IPython.lib.inputhook import inputhook_manager
 from pyethapp.utils import bcolors as bc
-from pyethapp.jsonrpc import address_encoder
+from pyethapp.jsonrpc import address_encoder, default_gasprice
 from pyethapp.console_service import GeventInputHook, SigINTHandler
 
 from raiden.utils import events, get_contract_path
@@ -161,7 +161,7 @@ class ConsoleTools(object):
             symbol='RDT',
             decimals=2,
             timeout=60,
-            gasprice=denoms.shannon * 20,
+            gasprice=default_gasprice,
             auto_register=True):
         """Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).

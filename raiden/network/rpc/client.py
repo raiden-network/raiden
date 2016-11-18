@@ -5,7 +5,7 @@ from ethereum import slogging
 from ethereum import _solidity
 from ethereum.transactions import Transaction
 from ethereum.utils import denoms, int_to_big_endian, encode_hex, normalize_address
-from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder
+from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder, default_gasprice
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 
 from raiden import messages
@@ -248,6 +248,7 @@ class BlockChainService(object):
             contracts,
             dict(),
             constructor_parameters,
+            gasprice=default_gasprice,
             timeout=self.poll_timeout,
         )
         return proxy.address
