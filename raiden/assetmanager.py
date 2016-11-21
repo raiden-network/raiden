@@ -211,7 +211,7 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
 
             # This will potentially be executed multiple times and could suffer
             # from amplification, the protocol will ignore messages that were
-            # already registered and sent it only until a first Ack is
+            # already registered and send it only until a first Ack is
             # received.
             self.raiden.send_async(
                 channel.partner_state.address,

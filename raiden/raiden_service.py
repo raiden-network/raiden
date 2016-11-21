@@ -193,7 +193,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             except:  # pylint: disable=bare-except
                 # Only channels that care about the given secret can be
                 # registered and channels that have claimed the lock must
-                # be removed, so an excpetion should not happen at this
+                # be removed, so an exception should not happen at this
                 # point, nevertheless handle it because we dont want a
                 # error in a channel to mess the state from others.
                 log.error('programming error')
@@ -218,8 +218,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             # Log a warning and don't process further
             if log.isEnabledFor(logging.WARN):
                 log.warn(
-                    'Received hashlock message from unknown channel.'
+                    'Received %s hashlock message from unknown channel.'
                     'Sender: %s',
+                    message.__class__.__name__,
                     pex(message.sender),
                 )
             raise UnknownAddress
@@ -615,6 +616,8 @@ class RaidenMessageHandler(object):
         log.info('ping received')
 
     def message_confirmtransfer(self, message):
+        # TODO: Whenever this is implemented, don't forget to edit the
+        # corresponding test in test_transfer.py
         pass
 
     def message_revealsecret(self, message):
