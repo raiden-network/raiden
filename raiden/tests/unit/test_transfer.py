@@ -8,7 +8,14 @@ from secp256k1 import PrivateKey
 
 from raiden.encoding.signing import GLOBAL_CTX
 from raiden.messages import (
-    decode, Ack, DirectTransfer, Lock, Ping, RefundTransfer, MediatedTransfer
+    Ack,
+    decode,
+    DirectTransfer,
+    Lock,
+    MediatedTransfer,
+    Ping,
+    RefundTransfer,
+    TransferTimeout
 )
 from raiden.network.transport import UnreliableTransport
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
@@ -396,5 +403,42 @@ def test_receive_mediatedtransfer_unknown(raiden_network, private_keys):
     mediated_transfer.sign(other_key, other_address)
     mediated_transfer_data = str(mediated_transfer.packed().data)
     app0.raiden.protocol.receive(mediated_transfer_data)
+    # Give it some time to see if the unknown sender causes an error in the logic
+    gevent.sleep(2)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+def test_receive_hashlocktransfer_unknown(raiden_network, private_keys):
+    app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
+
+    a0_address = pex(app0.raiden.address)
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+
+    other_key = PrivateKey(sha3("rainstopped"), ctx=GLOBAL_CTX, raw=True)
+    other_address = privatekey_to_address(other_key.private_key)
+    amount = 10
+    a_hash = sha3("foo")
+    lock = Lock(amount, 1, a_hash)
+    refund_transfer = RefundTransfer(
+        identifier=1,
+        nonce=1,
+        asset=asset_manager0.asset_address,
+        transferred_amount=amount,
+        recipient=a0_address,
+        locksroot=a_hash,
+        lock=lock
+    )
+    refund_transfer.sign(other_key, other_address)
+    refund_transfer_data = str(refund_transfer.packed().data)
+    app0.raiden.protocol.receive(refund_transfer_data)
+    # Give it some time to see if the unknown sender causes an error in the logic
+    gevent.sleep(2)
+
+    transfer_timeout = TransferTimeout(a_hash, a_hash)
+    transfer_timeout.sign(other_key, other_address)
+    transfer_timeout_data = str(transfer_timeout.packed().data)
+    app0.raiden.protocol.receive(transfer_timeout_data)
     # Give it some time to see if the unknown sender causes an error in the logic
     gevent.sleep(2)
