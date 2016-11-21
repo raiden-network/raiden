@@ -22,9 +22,11 @@ def test_throttle_policy_ping(monkeypatch, raiden_network):
     assert isinstance(app0.raiden.protocol.transport.throttle_policy, DummyPolicy)
 
     for app in (app0, app1):
-        monkeypatch.setattr(app.raiden.protocol.transport,
-                            'throttle_policy',
-                            TokenBucket(capacity=2, fill_rate=2))
+        monkeypatch.setattr(
+            app.raiden.protocol.transport,
+            'throttle_policy',
+            TokenBucket(capacity=2, fill_rate=2)
+        )
 
     # monkey patching successful
     assert app0.raiden.protocol.transport.throttle_policy.capacity == 2.

@@ -62,11 +62,13 @@ class TokenBucket(object):
 class UDPTransport(object):
     """ Node communication using the UDP protocol. """
 
-    def __init__(self,
-                 host,
-                 port,
-                 protocol=None,
-                 throttle_policy=DummyPolicy()):
+    def __init__(
+            self,
+            host,
+            port,
+            protocol=None,
+            throttle_policy=DummyPolicy()):
+
         self.protocol = protocol
         self.server = DatagramServer((host, port), handle=self.receive)
         self.server.start()
@@ -137,11 +139,13 @@ class DummyTransport(object):
     network = DummyNetwork()
     on_recv_cbs = []  # debugging
 
-    def __init__(self,
-                 host,
-                 port,
-                 protocol=None,
-                 throttle_policy=DummyPolicy()):
+    def __init__(
+            self,
+            host,
+            port,
+            protocol=None,
+            throttle_policy=DummyPolicy()):
+
         self.host = host
         self.port = port
         self.protocol = protocol
