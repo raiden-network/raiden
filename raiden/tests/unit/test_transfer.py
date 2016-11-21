@@ -9,12 +9,16 @@ from secp256k1 import PrivateKey
 from raiden.encoding.signing import GLOBAL_CTX
 from raiden.messages import (
     Ack,
+    ConfirmTransfer,
     decode,
     DirectTransfer,
     Lock,
     MediatedTransfer,
     Ping,
     RefundTransfer,
+    RevealSecret,
+    Secret,
+    SecretRequest,
     TransferTimeout
 )
 from raiden.network.transport import UnreliableTransport
@@ -25,6 +29,14 @@ from raiden.utils import pex, sha3, privatekey_to_address
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
+
+
+def sign_and_send(message, key, address, app):
+    message.sign(key, address)
+    message_data = str(message.packed().data)
+    app.raiden.protocol.receive(message_data)
+    # Give it some time to see if the unknown sender causes an error in the logic
+    gevent.sleep(3)
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -368,11 +380,7 @@ def test_receive_directtransfer_unknown(raiden_network, private_keys):
         recipient=a0_address,
         locksroot=sha3("muchrain")
     )
-    direct_transfer.sign(other_key, other_address)
-    direct_transfer_data = str(direct_transfer.packed().data)
-    app0.raiden.protocol.receive(direct_transfer_data)
-    # Give it some time to see if the unknown sender causes an error in the logic
-    gevent.sleep(2)
+    sign_and_send(direct_transfer, other_key, other_address, app0)
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -400,11 +408,7 @@ def test_receive_mediatedtransfer_unknown(raiden_network, private_keys):
         initiator=other_address,
         fee=0
     )
-    mediated_transfer.sign(other_key, other_address)
-    mediated_transfer_data = str(mediated_transfer.packed().data)
-    app0.raiden.protocol.receive(mediated_transfer_data)
-    # Give it some time to see if the unknown sender causes an error in the logic
-    gevent.sleep(2)
+    sign_and_send(mediated_transfer, other_key, other_address, app0)
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -430,15 +434,22 @@ def test_receive_hashlocktransfer_unknown(raiden_network, private_keys):
         locksroot=a_hash,
         lock=lock
     )
-    refund_transfer.sign(other_key, other_address)
-    refund_transfer_data = str(refund_transfer.packed().data)
-    app0.raiden.protocol.receive(refund_transfer_data)
-    # Give it some time to see if the unknown sender causes an error in the logic
-    gevent.sleep(2)
+    sign_and_send(refund_transfer, other_key, other_address, app0)
 
     transfer_timeout = TransferTimeout(a_hash, a_hash)
-    transfer_timeout.sign(other_key, other_address)
-    transfer_timeout_data = str(transfer_timeout.packed().data)
-    app0.raiden.protocol.receive(transfer_timeout_data)
-    # Give it some time to see if the unknown sender causes an error in the logic
-    gevent.sleep(2)
+    sign_and_send(transfer_timeout, other_key, other_address, app0)
+
+    secret = Secret(1, a_hash, asset_manager0.asset_address)
+    sign_and_send(secret, other_key, other_address, app0)
+
+    secret_request = SecretRequest(1, a_hash, 1)
+    sign_and_send(secret_request, other_key, other_address, app0)
+
+    reveal_secret = RevealSecret(a_hash)
+    sign_and_send(reveal_secret, other_key, other_address, app0)
+
+    # Whenever processing of ConfirmTransfer is implemented test it here
+    # too by removing the expectation of an exception
+    with pytest.raises(KeyError):
+        confirm_transfer = ConfirmTransfer(a_hash)
+        sign_and_send(confirm_transfer, other_key, other_address, app0)
