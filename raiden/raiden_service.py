@@ -10,7 +10,7 @@ from pyethapp.jsonrpc import address_decoder
 from secp256k1 import PrivateKey
 
 from raiden.assetmanager import AssetManager
-from raiden.transfermanager import Exchange, ExchangeKey
+from raiden.transfermanager import Exchange, ExchangeKey, UnknownAddress
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
 from raiden.network.channelgraph import ChannelGraph
 from raiden.tasks import AlarmTask, LogListenerTask, StartExchangeTask, HealthcheckTask
@@ -204,19 +204,25 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         The corresponding task is found by matching the hashlock.
 
         Return:
-            bool: True if a corresponding task is found, False otherwise.
+            Nothing if a corresponding task is found,raise Exception otherwise
         """
-        # allow multiple managers to register for the hashlock (used for exchanges)
-        found = 0
-
+        found = False
         for asset_manager in self.managers_by_asset_address.values():
             task = asset_manager.transfermanager.transfertasks.get(hashlock)
 
             if task is not None:
                 task.on_response(message)
-                found += 1
+                found = True
 
-        return found
+        if not found:
+            # Log a warning and don't process further
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received hashlock message from unknown channel.'
+                    'Sender: %s',
+                    pex(message.sender),
+                )
+            raise UnknownAddress
 
     def register_registry(self, registry):
         """ Register the registry and intialize all the related assets and

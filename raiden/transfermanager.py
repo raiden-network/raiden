@@ -279,11 +279,14 @@ class TransferManager(object):
                     repr(transfer),
                 )
 
-            found = self.assetmanager.raiden.message_for_task(transfer, transfer.lock.hashlock)
-
-            # assumes that the registered task(s) tooks care of the message
-            # (used for exchanges)
-            if not found:
+            try:
+                self.assetmanager.raiden.message_for_task(
+                    transfer,
+                    transfer.lock.hashlock
+                )
+            except UnknownAddress:
+                # assumes that the registered task(s) tooks care of the message
+                # (used for exchanges)
                 secret_request_task = EndMediatedTransferTask(
                     raiden,
                     asset_address,
