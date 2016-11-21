@@ -366,8 +366,6 @@ def test_healthcheck_with_bad_peer(raiden_network):
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_directtransfer_unknown(raiden_network, private_keys):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
-
-    a0_address = pex(app0.raiden.address)
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
 
     other_key = PrivateKey(sha3("rainyweather"), ctx=GLOBAL_CTX, raw=True)
@@ -377,7 +375,7 @@ def test_receive_directtransfer_unknown(raiden_network, private_keys):
         nonce=1,
         asset=asset_manager0.asset_address,
         transferred_amount=10,
-        recipient=a0_address,
+        recipient=app0.raiden.address,
         locksroot=sha3("muchrain")
     )
     sign_and_send(direct_transfer, other_key, other_address, app0)
@@ -388,8 +386,6 @@ def test_receive_directtransfer_unknown(raiden_network, private_keys):
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_mediatedtransfer_unknown(raiden_network, private_keys):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
-
-    a0_address = pex(app0.raiden.address)
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
 
     other_key = PrivateKey(sha3("rainstopped"), ctx=GLOBAL_CTX, raw=True)
@@ -401,7 +397,7 @@ def test_receive_mediatedtransfer_unknown(raiden_network, private_keys):
         nonce=1,
         asset=asset_manager0.asset_address,
         transferred_amount=amount,
-        recipient=a0_address,
+        recipient=app0.raiden.address,
         locksroot=locksroot,
         lock=Lock(amount, 1, locksroot),
         target=privatekey_to_address(sha3("cloudsagain")),
@@ -417,7 +413,6 @@ def test_receive_mediatedtransfer_unknown(raiden_network, private_keys):
 def test_receive_hashlocktransfer_unknown(raiden_network, private_keys):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
 
-    a0_address = pex(app0.raiden.address)
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
 
     other_key = PrivateKey(sha3("rainstopped"), ctx=GLOBAL_CTX, raw=True)
@@ -430,7 +425,7 @@ def test_receive_hashlocktransfer_unknown(raiden_network, private_keys):
         nonce=1,
         asset=asset_manager0.asset_address,
         transferred_amount=amount,
-        recipient=a0_address,
+        recipient=app0.raiden.address,
         locksroot=a_hash,
         lock=lock
     )
