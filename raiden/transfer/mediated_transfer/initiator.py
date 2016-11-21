@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 from copy import deepcopy
 
-from raiden.transfer.architecture import (
-    State,
-    StateChange,
-    Iteration,
-)
-from raiden.transfer.state import RoutesState
-from raiden.transfer.transition import update_route
+from raiden.transfer.architecture import Iteration
+from raiden.transfer.state import InitiatorState, RoutesState
+from raiden.transfer.mediated_transfer.transition import update_route
 from raiden.transfer.state_change import (
     Blocknumber,
     CancelMediatedTransfer,
+    CancelTimeout,
     GetRoutes,
+    InitInitiator,
     MediatedTransferMessageSend,
+    NewSecret,
     RefundTransfer,
     RevealSecret,
     Route,
     Secret,
+    SecretRequestReceived,
     Timeout,
     UnlockLock,
 )
@@ -42,90 +42,49 @@ def cancel_current_transfer(next_state):
     return iteration
 
 
-class InitMediatedTransfer(StateChange):
-    """ Initiate a new mediated transfer.
-
-    Args:
-        target: The mediated transfer target.
-        transfer: A state object containing the transfer details.
-        block_number: The current block number.
-    """
-    def __init__(self, our_address, transfer, block_number, config):
-        self.our_address = our_address
-        self.transfer = transfer
-        self.block_number = block_number
-        self.config = config
-
-
-class NewSecret(StateChange):
-    """ Request a new secret. """
-    def __init__(self, transfer_id):
-        self.transfer_id = transfer_id
-
-
-class SecretRequest(StateChange):
-    """ A SecretRequest message received. """
-    def __init__(self, transfer_id, amount, hashlock, identifier, sender):
-        self.transfer_id = transfer_id
-        self.amount = amount
-        self.hashlock = hashlock
-        self.identifier = identifier
-        self.sender = sender
-
-
-class StartMediatedTransferState(State):
-    """ State representation of a mediated transfer. """
-    def __init__(self, our_address, transfer, target, block_number, network_timeout):
-        self.our_address = our_address
-        self.transfer = transfer
-        self.target = target
-        self.block_number = block_number
-        self.network_timeout = network_timeout
-
-        self.secret = None  #: the secret used to lock the current transfer
-        self.hashlock = None  #: the corresponding hashlock for the current secret
-
-        self.message = None  #: current message in-transit
-        self.route = None  #: current route being used
-        self.secretrequest = None
-        self.revealsecret = None
-
-        self.routes = None
-
-
 def state_transition(current_state, state_change):
     """ State machine for a node starting a mediated transfer. """
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
-    state_initialize = current_state is None
-    state_wait_routes = current_state.routes is None
-    state_send_transfer = current_state.secretrequest is None
-    state_target_reply = current_state.secretrequest is not None
-    state_finalize = current_state.revealsecret is not None
+    state_uninitialized = True
+    state_wait_routes = False
+    state_send_transfer = False
+    state_wait_secretrequest = False
+    state_wait_unlock = False
+
+    if current_state is not None:
+        state_uninitialized = False
+        state_wait_routes = current_state.routes is None
+        state_send_transfer = current_state.secretrequest is None
+        state_wait_secretrequest = current_state.secretrequest is not None
+        state_wait_unlock = current_state.revealsecret is not None
 
     iteration = Iteration(current_state, list())
     next_state = deepcopy(current_state)
 
+    if not state_uninitialized:
+        if isinstance(state_change, Blocknumber):
+            next_state.block_number = state_change.block_number
+
+        elif isinstance(state_change, Route):
+            update_route(next_state, state_change)
+
     # Init state and request routes
-    if state_initialize:
-        if isinstance(state_change, InitMediatedTransfer):
+    if state_uninitialized:
+        if isinstance(state_change, InitInitiator):
             our_address = state_change.our_address
-            target = state_change.target
             transfer = state_change.transfer
             block_number = state_change.block_number
-            network_timeout = state_change.config['network_timeout']
 
-            next_state = StartMediatedTransferState(
+            next_state = InitiatorState(
                 our_address,
                 transfer,
-                target,
                 block_number,
-                network_timeout,
             )
 
             get_routes = GetRoutes(
                 transfer.identifier,
-                target,
+                transfer.target,
                 transfer.token,
             )
 
@@ -155,9 +114,6 @@ def state_transition(current_state, state_change):
             next_state.secret = state_change.secret
             next_state.hashlock = state_change.hashlock
 
-            # Note: to implement multiple routes for a mediated transfer we
-            # need an transfer identifier scheme that allows for
-            # sub-identifiers.
             try_route = None
             while next_state.routes.available_routes:
                 route = next_state.routes.available_routes.pop()
@@ -177,37 +133,36 @@ def state_transition(current_state, state_change):
                 iteration = Iteration(None, [cancel])
 
             else:
-                network_timeout = next_state.network_timeout
                 lock_timeout = try_route.settle_timeout - try_route.reveal_timeout
                 lock_expiration = next_state.block_number + lock_timeout
                 message_id = len(next_state.canceled_transfers)
 
+                # This message is implicitely expirable
                 message = MediatedTransferMessageSend(
-                    next_state.transfer.id,
+                    next_state.transfer.identifier,
                     message_id,
                     next_state.transfer.token,
                     next_state.transfer.amount,
                     lock_expiration,
-                    network_timeout,
                     next_state.hashlock,
-                    next_state.target,
-                    try_route.next_hop,
+                    next_state.transfer.target,
+                    try_route.node_address,
                 )
                 next_state.message = message
 
                 iteration = Iteration(next_state, [message])
 
-    # target received the mediated transfer, check the transfer and reveal the
+    # Target received the mediated transfer, check the transfer and reveal the
     # secret
-    elif state_target_reply:
+    elif state_wait_secretrequest:
 
-        if isinstance(state_change, SecretRequest):
+        if isinstance(state_change, SecretRequestReceived):
             valid_secretrequest = (
                 state_change.transfer_id == next_state.transfer.id and
                 state_change.amount == next_state.transfer.amount and
                 state_change.hashlock == next_state.hashlock and
                 state_change.identifier == next_state.transfer.identifier and
-                state_change.sender == next_state.target
+                state_change.sender == next_state.transfer.target
             )
 
             invalid_secretrequest = not valid_secretrequest
@@ -217,8 +172,9 @@ def state_transition(current_state, state_change):
 
         refund_transfer = (
             isinstance(state_change, RefundTransfer) and
-            state_change.sender == next_state.route.next_hop
+            state_change.sender == next_state.route.node_address
         )
+        timeout = isinstance(state_change, Timeout)
 
         if valid_secretrequest:
             reveal_secret = RevealSecret(
@@ -227,38 +183,34 @@ def state_transition(current_state, state_change):
                 next_state.transfer.target,
                 next_state.our_address,
             )
-            next_state.revealsecret = reveal_secret
-            iteration = Iteration(next_state, [reveal_secret])
+            cancel_timeout = CancelTimeout(
+                next_state.transfer.id,
+                next_state.route.node_address,
+            )
 
-        elif invalid_secretrequest or refund_transfer:
+            next_state.revealsecret = reveal_secret
+            iteration = Iteration(next_state, [reveal_secret, cancel_timeout])
+
+        elif invalid_secretrequest or refund_transfer or timeout:
             return cancel_current_transfer(next_state)
 
-    # next_hop learned the secret, unlock the token locally and allow
-    # send the withdraw message to next_hop
-    elif state_finalize:
+    # next hop learned the secret, unlock the token locally and allow
+    # send the withdraw message to next hop
+    elif state_wait_unlock:
         secret_reveal = (
             isinstance(state_change, RevealSecret) and
-            state_change.sender == next_state.route.next_hop
+            state_change.sender == next_state.route.node_address
         )
 
         if secret_reveal:
             unlock_lock = UnlockLock(
-                next_state.transfer.id,
+                next_state.transfer.identifier,
+                next_state.route.node_address,
                 next_state.transfer.token,
                 next_state.secret,
                 next_state.hashlock,
             )
 
             iteration = Iteration(None, [unlock_lock])
-
-    else:
-        if isinstance(state_change, Blocknumber):
-            next_state.block_number = state_change.block_number
-
-        elif isinstance(state_change, Timeout):
-            cancel_current_transfer(next_state)
-
-        elif isinstance(state_change, Route):
-            update_route(next_state, state_change)
 
     return iteration
