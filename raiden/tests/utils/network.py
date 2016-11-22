@@ -7,6 +7,7 @@ from ethereum import slogging
 
 from raiden.app import App, INITIAL_PORT
 from raiden.network.discovery import Discovery
+from raiden.network.transport import DummyPolicy
 from raiden.utils import privatekey_to_address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -53,12 +54,14 @@ def create_app(
     config['send_ping_time'] = send_ping_time
     config['max_unresponsive_time'] = max_unresponsive_time
 
-    return App(
+    app = App(
         config,
         chain,
         discovery,
         transport_class,
     )
+    app.raiden.protocol.transport.throttle_policy = DummyPolicy()
+    return app
 
 
 def setup_channels(asset_address, app_pairs, deposit, settle_timeout):
