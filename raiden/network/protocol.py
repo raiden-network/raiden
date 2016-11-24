@@ -11,6 +11,7 @@ from ethereum import slogging
 
 from raiden.messages import decode, Ack, Ping, SignedMessage
 from raiden.transfermanager import UnknownAddress
+from raiden.channel import InvalidNonce
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -332,7 +333,7 @@ class RaidenProtocol(object):
             # this might exit with an exception
             try:
                 self.raiden.on_message(message, echohash)
-            except UnknownAddress:
+            except (UnknownAddress, InvalidNonce):
                 # Do not send ACK for these cases
                 return
 

@@ -224,7 +224,7 @@ class BalanceProof(object):
 
             return unclaimedlock.lock
 
-        raise ValueError('Unknow hashlock')
+        raise ValueError('Unknown hashlock')
 
     def get_known_unlocks(self):
         """ Generate unlocking proofs for the known secrets. """
@@ -805,8 +805,8 @@ class Channel(object):
         """ Validates and register a signed transfer, updating the channel's state accordingly.
 
         Note:
-            The transfer must be register before it is sent, not on
-            acknowledgement. That is necessary for to reasons:
+            The transfer must be registered before it is sent, not on
+            acknowledgement. That is necessary for two reasons:
 
             - Guarantee that the transfer is valid.
             - Avoiding sending a new transaction without funds.
@@ -823,7 +823,7 @@ class Channel(object):
             raise ValueError('Asset address mismatch')
 
         if transfer.recipient != to_state.address:
-            raise ValueError('Unknow recipient')
+            raise ValueError('Unknown recipient')
 
         if transfer.sender != from_state.address:
             raise ValueError('Unsigned transfer')
@@ -832,10 +832,18 @@ class Channel(object):
         # fail either we are out of sync, a message out of order, or it's an
         # forged transfer
         if transfer.nonce < 1 or transfer.nonce != from_state.nonce:
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received out of order transfer from %s. Expected '
+                    'nonce: %s but got nonce: %s',
+                    pex(transfer.sender),
+                    from_state.nonce,
+                    transfer.nonce,
+                )
             raise InvalidNonce(transfer)
 
         # if the locksroot is out-of-sync (because a transfer was created while
-        # a Secret was in trafic) the balance _will_ be wrong, so first check
+        # a Secret was in traffic) the balance _will_ be wrong, so first check
         # the locksroot and then the balance
         if isinstance(transfer, LockedTransfer):
             block_number = self.external_state.get_block_number()
