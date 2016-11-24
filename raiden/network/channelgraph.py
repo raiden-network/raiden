@@ -61,7 +61,7 @@ class ChannelGraph(object):
         """ Searchs for all nodes that are `num_hops` away.
 
         Returns:
-            list of paths: A list of all shortest paths that have length lenght
+            list of paths: A list of all shortest paths that have length
             `num_hops + 1`
         """
         # return a dictionary keyed by targets

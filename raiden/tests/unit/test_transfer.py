@@ -30,6 +30,8 @@ from raiden.utils import pex, sha3, privatekey_to_address
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
 
+HASH = sha3("muchcodingsuchwow")
+
 
 def sign_and_send(message, key, address, app):
     message.sign(key, address)
@@ -37,6 +39,45 @@ def sign_and_send(message, key, address, app):
     app.raiden.protocol.receive(message_data)
     # Give it some time to see if the unknown sender causes an error in the logic
     gevent.sleep(3)
+
+
+class MediatedTransferTestHelper:
+
+    def __init__(self, raiden_network, asset_manager):
+        self.raiden_network = raiden_network
+        self.asset_manager = asset_manager
+        self.asset_address = asset_manager.asset_address
+        self.ams_by_address = dict(
+            (app.raiden.address, app.raiden.managers_by_asset_address)
+            for app in self.raiden_network
+        )
+
+    def get_channel(self, from_, to_):
+        return self.ams_by_address[from_][self.asset_address].partneraddress_channel[to_]
+
+    def get_paths_of_length(self, initiator_address, num_hops):
+        """
+        Search for paths of length=num_of_hops starting from initiator_address
+        """
+        paths_length = self.asset_manager.channelgraph.get_paths_of_length(
+            initiator_address,
+            num_hops,
+        )
+        assert len(paths_length)
+        for path in paths_length:
+            assert len(path) == num_hops + 1
+            assert path[0] == initiator_address
+        return paths_length[0]
+
+    def assert_path_in_shortest_paths(self, path, initiator_address, num_hops):
+        _, _, charlie_address = path
+        shortest_paths = list(self.asset_manager.channelgraph.get_shortest_paths(
+            initiator_address,
+            charlie_address,
+        ))
+        assert path in shortest_paths
+        assert min(len(path) for path in shortest_paths) == num_hops + 1
+
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -115,52 +156,23 @@ def test_transfer(raiden_network):
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('number_of_nodes', [10])
 def test_mediated_transfer(raiden_network):
-
-    def get_channel(from_, to_):
-        return ams_by_address[from_][asset_address].partneraddress_channel[to_]
-
     alice_app = raiden_network[0]
     setup_messages_cb()
 
     asset_manager = alice_app.raiden.managers_by_asset_address.values()[0]
     asset_address = asset_manager.asset_address
+    mt_helper = MediatedTransferTestHelper(raiden_network, asset_manager)
 
-    # search for a path of length=2 A > B > C
-    num_hops = 2
     initiator_address = alice_app.raiden.address
-
-    paths_length_2 = asset_manager.channelgraph.get_paths_of_length(
-        initiator_address,
-        num_hops,
-    )
-
-    assert len(paths_length_2)
-    for path in paths_length_2:
-        assert len(path) == num_hops + 1
-        assert path[0] == initiator_address
-
-    path = paths_length_2[0]
-
+    path = mt_helper.get_paths_of_length(initiator_address, 2)
+    mt_helper.assert_path_in_shortest_paths(path, initiator_address, 2)
     alice_address, bob_address, charlie_address = path
 
-    shortest_paths = list(asset_manager.channelgraph.get_shortest_paths(
-        initiator_address,
-        charlie_address,
-    ))
-
-    assert path in shortest_paths
-    assert min(len(path) for path in shortest_paths) == num_hops + 1
-
-    ams_by_address = dict(
-        (app.raiden.address, app.raiden.managers_by_asset_address)
-        for app in raiden_network
-    )
-
     # channels (alice <-> bob <-> charlie)
-    channel_ab = get_channel(alice_address, bob_address)
-    channel_ba = get_channel(bob_address, alice_address)
-    channel_bc = get_channel(bob_address, charlie_address)
-    channel_cb = get_channel(charlie_address, bob_address)
+    channel_ab = mt_helper.get_channel(alice_address, bob_address)
+    channel_ba = mt_helper.get_channel(bob_address, alice_address)
+    channel_bc = mt_helper.get_channel(bob_address, charlie_address)
+    channel_cb = mt_helper.get_channel(charlie_address, bob_address)
 
     initial_balance_ab = channel_ab.balance
     initial_balance_ba = channel_ba.balance
@@ -489,7 +501,50 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
         asset=asset_manager0.asset_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
-        locksroot=sha3("muchrain")
+        locksroot=HASH,
     )
     app0_key = PrivateKey(private_keys[0])
     sign_and_send(direct_transfer, app0_key, app0.raiden.address, app1)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [5])
+@pytest.mark.parametrize('channels_per_node', [2])
+def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
+    alice_app = raiden_network[0]
+    setup_messages_cb()
+
+    asset_manager = alice_app.raiden.managers_by_asset_address.values()[0]
+    asset_address = asset_manager.asset_address
+
+    mt_helper = MediatedTransferTestHelper(raiden_network, asset_manager)
+    initiator_address = alice_app.raiden.address
+    path = mt_helper.get_paths_of_length(initiator_address, 2)
+
+    alice_address, bob_address, charlie_address = path
+    amount = 10
+    alice_app.raiden.api.transfer(
+        asset_address,
+        amount,
+        charlie_address,
+    )
+    gevent.sleep(1.)
+
+    # and now send one more mediated transfer with the same nonce, simulating
+    # an out-of-order/resent message that arrives late
+    locksroot = HASH
+    lock = Lock(amount, 1, locksroot)
+    mediated_transfer = MediatedTransfer(
+        identifier=asset_manager.transfermanager.create_default_identifier(charlie_address),
+        nonce=1,
+        asset=asset_address,
+        transferred_amount=amount,
+        recipient=bob_address,
+        locksroot=locksroot,
+        lock=lock,
+        target=charlie_address,
+        initiator=initiator_address,
+        fee=0
+    )
+    alice_key = PrivateKey(private_keys[0])
+    sign_and_send(mediated_transfer, alice_key, alice_address, raiden_network[1])
