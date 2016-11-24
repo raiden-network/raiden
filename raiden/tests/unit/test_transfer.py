@@ -78,6 +78,12 @@ class MediatedTransferTestHelper:
         assert path in shortest_paths
         assert min(len(path) for path in shortest_paths) == num_hops + 1
 
+    def get_app_from_address(self, address):
+        for app in self.raiden_network:
+            if address == app.raiden.address:
+                return app
+        return None
+
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -547,4 +553,5 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
         fee=0
     )
     alice_key = PrivateKey(private_keys[0])
-    sign_and_send(mediated_transfer, alice_key, alice_address, raiden_network[1])
+    bob_app = mt_helper.get_app_from_address(bob_address)
+    sign_and_send(mediated_transfer, alice_key, alice_address, bob_app)
