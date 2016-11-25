@@ -35,6 +35,12 @@ class UnknownAddress(Exception):
     pass
 
 
+class UnknownAssetAddress(Exception):
+    def __init__(self, address):
+        # self.asset_address = '0x' + address.encode('hex')
+        self.asset_address = address
+
+
 class TransferManager(object):
     """ Manages all transfers done through this node. """
 
