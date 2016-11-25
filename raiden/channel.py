@@ -18,6 +18,7 @@ from raiden.messages import (
 from raiden.mtree import merkleroot, get_proof
 from raiden.utils import sha3, pex, lpex
 from raiden.tasks import REMOVE_CALLBACK
+from raiden.transfermanager import UnknownAddress
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -767,7 +768,7 @@ class Channel(object):
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
-                'ASSET WITHDRAWED %s < %s asset:%s hashlock:%s lockhash:%s amount:%s',
+                'ASSET WITHDRAWN %s < %s asset:%s hashlock:%s lockhash:%s amount:%s',
                 pex(self.our_state.address),
                 pex(self.partner_state.address),
                 pex(self.asset_address),
@@ -799,7 +800,14 @@ class Channel(object):
             self.received_transfers.append(transfer)
 
         else:
-            raise ValueError('Invalid address')
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received a transfer from %s with recipient %s who is not '
+                    'a part of the channel',
+                    pex(transfer.sender),
+                    pex(transfer.recipient),
+                )
+            raise UnknownAddress(transfer)
 
     def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa pylint: disable=too-many-branches
         """ Validates and register a signed transfer, updating the channel's state accordingly.
