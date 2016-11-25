@@ -636,12 +636,55 @@ def test_receive_directtransfer_wrongasset(raiden_network, private_keys):
         channel1, balance1 + amount, []
     )
 
-    # and now send one more direct transfer with the same nonce, simulating
-    # an out-of-order/resent message that arrives late
+    # and now send one more direct transfer with a mistaken asset address
     direct_transfer = DirectTransfer(
         identifier=asset_manager0.transfermanager.create_default_identifier(app1.raiden.address),
-        nonce=1,
+        nonce=2,
         asset=HASH[0:20],
+        transferred_amount=10,
+        recipient=app1.raiden.address,
+        locksroot=HASH,
+    )
+    app0_key = PrivateKey(private_keys[0])
+    sign_and_send(direct_transfer, app0_key, app0.raiden.address, app1)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [1])
+def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+
+    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+
+    balance0 = channel0.balance
+    balance1 = channel1.balance
+
+    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
+
+    amount = 10
+    app0.raiden.api.transfer(
+        asset_manager0.asset_address,
+        amount,
+        target=app1.raiden.address,
+    )
+    gevent.sleep(1)
+
+    assert_synched_channels(
+        channel0, balance0 - amount, [],
+        channel1, balance1 + amount, []
+    )
+
+    # and now send one more direct transfer with the recipient not set correctly
+    direct_transfer = DirectTransfer(
+        identifier=asset_manager0.transfermanager.create_default_identifier(app1.raiden.address),
+        nonce=2,
+        asset=asset_manager0.asset_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
         locksroot=HASH,

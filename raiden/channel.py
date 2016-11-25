@@ -45,7 +45,13 @@ class InvalidSecret(Exception):
 
 
 class InvalidLocksRoot(Exception):
-    pass
+    def __init__(self, expected_locksroot, got_locksroot):
+        Exception.__init__(
+            self,
+            'Locksroot mismatch. Expected {} but got {}'.format(
+                pex(expected_locksroot),
+                pex(got_locksroot)
+            ))
 
 
 class InvalidLockTime(Exception):
@@ -156,10 +162,7 @@ class BalanceProof(object):
         unclaimed_locksroot = self.merkleroot_for_unclaimed()
 
         if direct_transfer.locksroot != unclaimed_locksroot:
-            raise ValueError('locksroot mismatch expected:{} sent:{}'.format(
-                pex(unclaimed_locksroot),
-                pex(direct_transfer.locksroot),
-            ))
+            raise InvalidLocksRoot(unclaimed_locksroot, direct_transfer.locksroot)
 
         self.transfer = direct_transfer
         self.hashlock_unlockedlocks = dict()
@@ -876,7 +879,7 @@ class Channel(object):
                         received_locksroot=pex(transfer.locksroot),
                     )
 
-                raise InvalidLocksRoot(transfer)
+                raise InvalidLocksRoot(expected_locksroot, transfer.locksroot)
 
             # As a receiver: If the lock expiration is larger than the settling
             # time a secret could be revealed after the channel is settled and

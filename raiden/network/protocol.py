@@ -11,7 +11,7 @@ from ethereum import slogging
 
 from raiden.messages import decode, Ack, Ping, SignedMessage
 from raiden.transfermanager import UnknownAddress, UnknownAssetAddress
-from raiden.channel import InvalidNonce
+from raiden.channel import InvalidLocksRoot, InvalidNonce
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -336,13 +336,9 @@ class RaidenProtocol(object):
             except (UnknownAddress, InvalidNonce):
                 # Do not send ACK for these cases
                 return
-            except UnknownAssetAddress as e:
+            except (UnknownAssetAddress, InvalidLocksRoot) as e:
                 if log.isEnabledFor(logging.WARN):
-                    log.warn(
-                        'Message with unknown asset address %s received from %s',
-                        pex(e.asset_address),
-                        pex(message.sender)
-                    )
+                    log.warn(str(e))
                 return
 
             # only send the Ack if the message was handled without exceptions
