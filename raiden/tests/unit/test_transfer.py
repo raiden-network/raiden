@@ -555,3 +555,51 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     alice_key = PrivateKey(private_keys[0])
     bob_app = mt_helper.get_app_from_address(bob_address)
     sign_and_send(mediated_transfer, alice_key, alice_address, bob_app)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [5])
+@pytest.mark.parametrize('channels_per_node', [2])
+def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
+    alice_app = raiden_network[0]
+    setup_messages_cb()
+
+    asset_manager = alice_app.raiden.managers_by_asset_address.values()[0]
+    asset_address = asset_manager.asset_address
+
+    mt_helper = MediatedTransferTestHelper(raiden_network, asset_manager)
+    initiator_address = alice_app.raiden.address
+    path = mt_helper.get_paths_of_length(initiator_address, 2)
+
+    alice_address, bob_address, charlie_address = path
+    amount = 10
+    alice_app.raiden.api.transfer(
+        asset_address,
+        amount,
+        charlie_address,
+    )
+    gevent.sleep(1.)
+
+    # and now send one more mediated transfer with the same nonce, simulating
+    # an out-of-order/resent message that arrives late
+    locksroot = HASH
+    lock = Lock(amount, 1, locksroot)
+    mediated_transfer = MediatedTransfer(
+        identifier=asset_manager.transfermanager.create_default_identifier(charlie_address),
+        nonce=1,
+        asset=asset_address,
+        transferred_amount=amount,
+        recipient=bob_address,
+        locksroot=locksroot,
+        lock=lock,
+        target=charlie_address,
+        initiator=initiator_address,
+        fee=0
+    )
+    alice_key = PrivateKey(private_keys[0])
+    target_app = None
+    for app in raiden_network:
+        if app.raiden.address not in path:
+            target_app = app
+            break
+    sign_and_send(mediated_transfer, alice_key, alice_address, target_app)
