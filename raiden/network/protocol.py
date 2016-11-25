@@ -10,7 +10,7 @@ from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
 from raiden.messages import decode, Ack, Ping, SignedMessage
-from raiden.transfermanager import UnknownAddress
+from raiden.transfermanager import UnknownAddress, UnknownAssetAddress
 from raiden.channel import InvalidNonce
 from raiden.utils import isaddress, sha3, pex
 
@@ -335,6 +335,14 @@ class RaidenProtocol(object):
                 self.raiden.on_message(message, echohash)
             except (UnknownAddress, InvalidNonce):
                 # Do not send ACK for these cases
+                return
+            except UnknownAssetAddress as e:
+                if log.isEnabledFor(logging.WARN):
+                    log.warn(
+                        'Message with unknown asset address %s received from %s',
+                        pex(e.asset_address),
+                        pex(message.sender)
+                    )
                 return
 
             # only send the Ack if the message was handled without exceptions

@@ -10,7 +10,12 @@ from pyethapp.jsonrpc import address_decoder
 from secp256k1 import PrivateKey
 
 from raiden.assetmanager import AssetManager
-from raiden.transfermanager import Exchange, ExchangeKey, UnknownAddress
+from raiden.transfermanager import (
+    Exchange,
+    ExchangeKey,
+    UnknownAddress,
+    UnknownAssetAddress
+)
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
 from raiden.network.channelgraph import ChannelGraph
 from raiden.tasks import AlarmTask, LogListenerTask, StartExchangeTask, HealthcheckTask
@@ -116,7 +121,10 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
     def get_manager_by_asset_address(self, asset_address_bin):
         """ Return the manager for the given `asset_address_bin`.  """
-        return self.managers_by_asset_address[asset_address_bin]
+        try:
+            return self.managers_by_asset_address[asset_address_bin]
+        except KeyError:
+            raise UnknownAssetAddress(asset_address_bin)
 
     def get_manager_by_address(self, manager_address_bin):
         return self.managers_by_address[manager_address_bin]
@@ -390,19 +398,13 @@ class RaidenAPI(object):
         to_asset_bin = safe_address_decode(to_asset)
         target_bin = safe_address_decode(target_address)
 
-        from_asset_manager = self.raiden.get_manager_by_asset_address(from_asset_bin)
-        if not from_asset_manager:
+        try:
+            self.raiden.get_manager_by_asset_address(from_asset_bin)
+            self.raiden.get_manager_by_asset_address(from_asset_bin)
+        except UnknownAssetAddress as e:
             log.error(
                 'no asset manager for %s',
-                from_asset,
-            )
-            return
-
-        to_asset_manager = self.raiden.get_manager_by_asset_address(from_asset_bin)
-        if not to_asset_manager:
-            log.error(
-                'no asset manager for %s',
-                to_asset,
+                e.asset_address,
             )
             return
 
@@ -455,8 +457,13 @@ class RaidenAPI(object):
 
     transfer = transfer_and_wait  # expose a synchronous interface to the user
 
-    def transfer_async(self, asset_address, amount, target, identifier=None,
-                       callback=None):
+    def transfer_async(
+            self,
+            asset_address,
+            amount,
+            target,
+            identifier=None,
+            callback=None):
         # pylint: disable=too-many-arguments
 
         if not isinstance(amount, (int, long)):
@@ -475,7 +482,6 @@ class RaidenAPI(object):
             raise InvalidAddress('target address is not valid.')
 
         asset_manager = self.raiden.get_manager_by_asset_address(asset_address_bin)
-
         if not asset_manager.has_path(self.raiden.address, target_bin):
             raise NoPathError('No path to address found')
 
