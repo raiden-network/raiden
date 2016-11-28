@@ -36,7 +36,7 @@ class UnknownAddress(Exception):
 
 
 class UnknownAssetAddress(Exception):
-    def __init__(self, address, sender):
+    def __init__(self, address):
         Exception.__init__(
             self,
             'Message with unknown asset address {} received'.format(pex(address))

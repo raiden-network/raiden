@@ -680,7 +680,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
         channel1, balance1 + amount, []
     )
 
-    # and now send one more direct transfer with the recipient not set correctly
+    # and now send one more direct transfer with the locksoot not set correctly
     direct_transfer = DirectTransfer(
         identifier=asset_manager0.transfermanager.create_default_identifier(app1.raiden.address),
         nonce=2,
