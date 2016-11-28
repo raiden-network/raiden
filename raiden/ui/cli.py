@@ -46,13 +46,13 @@ OPTIONS = [
     click.option(
         '--registry_contract_address',
         help='hex encoded address of the registry contract.',
-        default='07d153249abe665be6ca49999952c7023abb5169',  # testnet default
+        default='32c5dab9b099a5b6c0e626c1862c07b30f58d76a',  # testnet default
         type=str,
     ),
     click.option(
         '--discovery_contract_address',
         help='hex encoded address of the discovery contract.',
-        default='1376c0c3e876ed042df42320d8a554a51c8c8a87',  # testnet default
+        default='79ab17cc105e820368e695dfa547604651d02cbb',  # testnet default
         type=str,
     ),
     click.option(
