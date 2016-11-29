@@ -63,6 +63,11 @@ contract NettingChannelContract {
         return data.addressAndBalance();
     }
 
+    function closeWithoutTransfer() {
+        data.closeSingleTransfer(msg.sender);
+        ChannelClosed(msg.sender, data.closed);
+    }
+
     function closeSingleTransfer(bytes signed_transfer) {
         data.closeSingleTransfer(msg.sender, signed_transfer);
         ChannelClosed(msg.sender, data.closed);

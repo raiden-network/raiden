@@ -192,7 +192,28 @@ library NettingChannelLibrary {
         self.closed = block.number;
     }
 
-    /// @notice close(bytes, bytes) to close a channel between to parties
+
+    /// @notice close a channel between two parties without a raiden transfer
+    ///         Cases where this may need to happen is:
+    ///         - Alice deposits but Bob doesn't, then Alice must be able to
+    ///           close the channel and reclaim her deposit.
+    /// @param  caller_address The address of the participant trying to close
+    function closeWithoutTransfer(Data storage self, address caller_address) {
+
+        if (self.settled > 0 || self.closed > 0) {
+            throw;
+        }
+
+        Participant[2] storage participants = self.participants;
+        Participant storage node1 = participants[0];
+        Participant storage node2 = participants[1];
+
+        if (caller_address != node1.node_address && caller_address != node2.node_address) {
+            throw;
+        }
+    }
+
+    /// @notice close(bytes, bytes) to close a channel between two parties
     /// @dev Close the channel between two parties
     /// @param first_encoded (bytes) the last sent transfer of the msg.sender
     /// @param second_encoded (bytes) the last sent transfer of the msg.sender
