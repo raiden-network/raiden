@@ -29,6 +29,8 @@ from raiden.blockchain.abi import (
     REGISTRY_ABI,
 )
 
+import testrpc
+
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 FILTER_ID_GENERATOR = count()
 
@@ -159,11 +161,14 @@ class ChannelExternalStateTester(object):
 
 
 class FilterTesterMock(object):
-    def __init__(self, contract_address, topics, filter_id_raw):
+    def __init__(self, contract_address, topics, filter_id_raw, from_block, to_block, state):
         self.filter_id_raw = filter_id_raw
         self.contract_address = contract_address
         self.topics = topics
         self.events = list()
+        self.from_block = from_block
+        self.to_block = to_block
+        self.block = state.block.number
 
     def changes(self):
         events = self.events
@@ -171,13 +176,25 @@ class FilterTesterMock(object):
         return events
 
     def event(self, event):
+        for block in state.blocks:
+            event_generator = filters.process_block(
+                block,
+                self.from_block,
+                self.to_block,
+                self.contract_address,
+                self.topics,
+            )
+            for i in event_generator:
+                print(i)
+                self.events.append(i)
+
         # TODO: implement OR
-        if event.topics == self.topics and event.address == self.contract_address:
-            self.events.append({
-                'topics': event.topics,
-                'data': event.data,
-                'address': event.address,
-            })
+        # if event.topics == self.topics and event.address == self.contract_address:
+            # self.events.append({
+                # 'topics': event.topics,
+                # 'data': event.data,
+                # 'address': event.address,
+            # })
 
             # HACK: trigger all the listeners to update the app's states. An
             # alternative implemenation would to use `raiden.event_listeners`
@@ -437,7 +454,7 @@ class RegistryTesterMock(object):
 
     def assetadded_filter(self):
         topics = [ASSETADDED_EVENTID]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR), 0, "latest", self.tester_state)
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
 
@@ -517,7 +534,7 @@ class ChannelManagerTesterMock(object):
 
     def channelnew_filter(self):
         topics = [CHANNELNEW_EVENTID]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR), 0, "latest", self.tester_state)
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
 

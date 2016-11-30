@@ -29,6 +29,7 @@ def test_event_new_channel(
 
     # old way
     # asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
+    assert tester_state.blocks[0].transaction_list == []
 
     asset_address = assets_addresses[0]
     assert app0.raiden.managers_by_asset_address.keys()
