@@ -39,7 +39,7 @@ install_requires = list(set(
 
 test_requirements = []
 
-version = '0.0.1'  # preserve format, this is read from __init__.py
+version = '0.0.2'  # preserve format, this is read from __init__.py
 
 setup(
     name='raiden',
