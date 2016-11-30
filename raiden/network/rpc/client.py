@@ -41,12 +41,19 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 # Coding standard for this module:
 #
-# - Be sure to reflect changes to this module in the test
-#   implementations. [tests/utils/*_client.py]
-# - Expose a synchronous interface by default
-#   - poll for the transaction hash
-#   - check if the proper events were emited
-#   - use `call` and `transact` to interact with pyethapp.rpc_client proxies
+# We have addtional Mock implementation that are quite usefull for testing
+# purposes, since all implementations need to work with the same code bases
+# their interfaces must match exactly, so be sure to reflect the change from
+# one into another. [tests/utils/*_client.py]
+#
+# The Json RPC implementation is based upon the pyethapp.rpc_client, this
+# client exposes object proxies for calling a contract as a usual python
+# object, for this module it was opted to expose a _synchronous_ interface to
+# the user by default, this interface should send the transaction, poll for
+# it's execution and if possible check if it was sucessfully executed, if not
+# report an error. Also, it was chosen to use an explicit coding, not reallying
+# on the `constant` modifier for `call`s and explicity passing the available
+# gas for the transaction and it's value.
 
 
 def patch_send_transaction(client, nonce_offset=0):
@@ -83,11 +90,11 @@ def patch_send_transaction(client, nonce_offset=0):
         client.send_transaction = send_transaction
 
 
-def new_filter(jsonrpc_client, contract_address, topics):
+def new_filter(jsonrpc_client, contract_address, topics, from_block="latest", to_block="latest"):
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     json_data = {
-        'fromBlock': '',
-        'toBlock': '',
+        'fromBlock': from_block,
+        'toBlock': to_block,
         'address': address_encoder(normalize_address(contract_address)),
         'topics': [topic_encoder(topic) for topic in topics],
     }
@@ -134,10 +141,6 @@ class BlockChainService(object):
         self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
         self.default_registry = self.registry(registry_address)
-
-    def set_verbosity(self, level):
-        if level:
-            self.client.print_communication = True
 
     def block_number(self):
         return self.client.blocknumber()
@@ -486,15 +489,14 @@ class Registry(object):
         log.info(
             'add_asset called',
             asset_address=pex(asset_address),
-            registry_address=pex(self.address),
             channel_manager_address=pex(channel_manager_address_bin),
         )
 
-    def asset_addresses(self):
-        return [
-            address_decoder(address)
-            for address in self.proxy.assetAddresses.call(startgas=self.startgas)
-        ]
+    # def asset_addresses(self):
+        # return [
+            # address_decoder(address)
+            # for address in self.proxy.assetAddresses.call(startgas=self.startgas)
+        # ]
 
     def manager_addresses(self):
         return [
@@ -506,7 +508,7 @@ class Registry(object):
         topics = [ASSETADDED_EVENTID]
 
         registry_address_bin = self.proxy.address
-        filter_id_raw = new_filter(self.client, registry_address_bin, topics)
+        filter_id_raw = new_filter(self.client, registry_address_bin, topics, 0)  # start at block 0
 
         return Filter(
             self.client,
@@ -567,7 +569,7 @@ class ChannelManager(object):
             other,
             settle_timeout,
             startgas=self.startgas,
-            gasprice=self.gasprice,
+            gasprice=self.gasprice * 2,
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
@@ -594,19 +596,19 @@ class ChannelManager(object):
 
         return netting_channel_address_bin
 
-    def channels_addresses(self):
-        # for simplicity the smart contract return a shallow list where every
-        # second item forms a tuple
-        channel_flat_encoded = self.proxy.getChannelsParticipants.call(startgas=self.startgas)
+    # def channels_addresses(self):
+        # # for simplicity the smart contract return a shallow list where every
+        # # second item forms a tuple
+        # channel_flat_encoded = self.proxy.getChannelsParticipants.call(startgas=self.startgas)
 
-        channel_flat = [
-            address_decoder(channel)
-            for channel in channel_flat_encoded
-        ]
+        # channel_flat = [
+            # address_decoder(channel)
+            # for channel in channel_flat_encoded
+        # ]
 
-        # [a,b,c,d] -> [(a,b),(c,d)]
-        channel_iter = iter(channel_flat)
-        return zip(channel_iter, channel_iter)
+        # # [a,b,c,d] -> [(a,b),(c,d)]
+        # channel_iter = iter(channel_flat)
+        # return zip(channel_iter, channel_iter)
 
     def channels_by_participant(self, participant_address):  # pylint: disable=invalid-name
         """ Return a list of channel address that `participant_address` is a participant. """
@@ -633,7 +635,7 @@ class ChannelManager(object):
         topics = [CHANNELNEW_EVENTID]
 
         channel_manager_address_bin = self.proxy.address
-        filter_id_raw = new_filter(self.client, channel_manager_address_bin, topics)
+        filter_id_raw = new_filter(self.client, channel_manager_address_bin, topics, 0)
 
         return Filter(
             self.client,
@@ -684,12 +686,6 @@ class NettingChannel(object):
     def detail(self, our_address):
         data = self.proxy.addressAndBalance.call(startgas=self.startgas)
         settle_timeout = self.proxy.settleTimeout.call(startgas=self.startgas)
-
-        if data == '':
-            raise RuntimeError('addressAndBalance call failed.')
-
-        if settle_timeout == '':
-            raise RuntimeError('settleTimeout call failed.')
 
         if address_decoder(data[0]) == our_address:
             return {

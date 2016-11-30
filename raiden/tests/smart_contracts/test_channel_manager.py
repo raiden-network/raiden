@@ -63,7 +63,7 @@ def test_channelmanager(tester_state, tester_token, tester_events,
         }
     )
 
-    participants_count = len(channel_manager.getChannelsParticipants())
+    participants_count = channel_manager.getChannelsParticipants()
     assert participants_count == 0, 'newly deployed contract must be empty'
 
     netting_channel_translator = ContractTranslator(netting_channel_abi)
@@ -96,7 +96,7 @@ def test_channelmanager(tester_state, tester_token, tester_events,
     with pytest.raises(TransactionFailed):
         channel_manager.getChannelWith(inexisting_address)
 
-    assert len(channel_manager.getChannelsParticipants()) == 2
+    assert channel_manager.getChannelsParticipants() == 1
 
     netting_contract_proxy1 = ABIContract(
         tester_state,
@@ -120,11 +120,11 @@ def test_channelmanager(tester_state, tester_token, tester_events,
     address1_channels = channel_manager.nettingContractsByAddress(address1)
     inexisting_channels = channel_manager.nettingContractsByAddress(inexisting_address)
 
-    assert len(msg_sender_channels) == 2
-    assert len(address1_channels) == 1
-    assert len(inexisting_channels) == 0
+    assert msg_sender_channels == 2
+    assert address1_channels == 1
+    assert inexisting_channels == 0
 
-    assert len(channel_manager.getChannelsParticipants()) == 4
+    assert channel_manager.getChannelsParticipants() == 2
 
     channelnew_event = tester_events[-1]
     assert channelnew_event == {
