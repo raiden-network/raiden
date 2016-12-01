@@ -156,6 +156,9 @@ library NettingChannelLibrary {
         balance2 = node2.balance;
     }
 
+    /// @notice Close a channel between two parties that was used only unidirectionally
+    /// @param caller_address The address of the participant closing the channel
+    /// @param signed_transfer The transfer to close the channel with.
     function closeSingleTransfer(Data storage self, address caller_address, bytes signed_transfer) {
         bytes memory transfer_raw;
         address transfer_address;
@@ -193,13 +196,13 @@ library NettingChannelLibrary {
     }
 
 
-    /// @notice close a channel between two parties without a raiden transfer
-    ///         Cases where this may need to happen is:
-    ///         - Alice deposits but Bob doesn't, then Alice must be able to
-    ///           close the channel and reclaim her deposit.
-    ///         - Neither Alice or Bob have made any deposits
-    ///         - Generally any case where you want to simply close the channel
-    ///           without adding an extra transfer to it
+    /// @notice Close a channel between two parties that had no transfer occur.
+    ///         Cases where this may need to happen is when Alice opens a
+    ///         channel with Bob and:
+    ///         - Nobody put a deposit in. The channel is unused.
+    ///         - Alice put a deposit and no transfers were made.
+    ///         - Alice put a deposit, BoB also did but no transfers were made.
+    ///         - Bob put a deposit and no transfers were made
     /// @param caller_address The address of the participant trying to close
     function closeWithoutTransfer(Data storage self, address caller_address) {
 
@@ -219,10 +222,10 @@ library NettingChannelLibrary {
         self.closed = block.number;
     }
 
-    /// @notice close(bytes, bytes) to close a channel between two parties
-    /// @dev Close the channel between two parties
-    /// @param first_encoded (bytes) the last sent transfer of the msg.sender
-    /// @param second_encoded (bytes) the last sent transfer of the msg.sender
+    /// @notice Close a channel between two parties that was used bidirectionally
+    /// @param caller_address The address of the participant closing the channel
+    /// @param first_encoded the last transfer of the first participant
+    /// @param second_encoded the last transfer of the second participant
     function close(
         Data storage self,
         address caller_address,
@@ -281,8 +284,11 @@ library NettingChannelLibrary {
         self.closed = block.number;
     }
 
-    /// @notice updateTransfer(bytes) to update last known transfer
-    /// @dev Allow the partner to update the last known transfer
+    /// @notice updateTransfer Updates (disputes) the state after closing.
+    /// @param caller_address The counterparty to the channel. The participant
+    ///                       that did not close the channel.
+    /// @param signed_transfer The transfer the counterparty believes is the
+    ///                        valid state and wants to dispute with.
     function updateTransfer(Data storage self, address caller_address, bytes signed_transfer)
         notSettledButClosed(self)
         stillTimeout(self)
