@@ -15,7 +15,7 @@ echo "Bumping the version"
 
 bumpversion patch
 
-git push --set-upstream origin $RELEASE_BRANCH
+git push --set-upstream git@github.com:raiden-network/raiden.git $RELEASE_BRANCH
 
 echo "Querying your github user"
 
