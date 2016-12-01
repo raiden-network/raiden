@@ -27,3 +27,24 @@ Netting Channel Library: [0x5208baa313256c0e703c96b06c896875b823cc11](https://te
 Channel Manager Library: [0x196da534e3860398f2d9c27cb93fb4bac69715eb](https://testnet.etherscan.io/address/0x196da534e3860398f2d9c27cb93fb4bac69715eb)
 Registry Contract: [0x32c5dab9b099a5b6c0e626c1862c07b30f58d76a](https://testnet.etherscan.io/address/0x32c5dab9b099a5b6c0e626c1862c07b30f58d76a)
 Discovery Contract: [0x79ab17cc105e820368e695dfa547604651d02cbb](https://testnet.etherscan.io/address/0x79ab17cc105e820368e695dfa547604651d02cbb)
+
+### Versions and releases
+
+Currently we aim to create proof of concept releases weekly, not based on a certain
+feature level. All proof of concept releases will have version numbers in the
+`0.0.x` range (so `PoC-1` = `0.0.1`).
+
+#### Developer notice:
+
+To create a proof of concept release, install [`bumpversion`](https://github.com/peritus/bumpversion)
+and call
+
+```
+prepare_poc_release.sh
+```
+
+This will bump the version and create a commit on a new branch `poc_release_{version}`,
+which will be pushed to the upstream repository and create a PR.
+
+From there, follow the steps from the script (i.e. merge PR and tag the result
+on the master branch, which will trigger the pypi release.
