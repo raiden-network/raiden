@@ -64,7 +64,7 @@ contract NettingChannelContract {
     }
 
     function closeWithoutTransfer() {
-        data.closeSingleTransfer(msg.sender);
+        data.closeWithoutTransfer(msg.sender);
         ChannelClosed(msg.sender, data.closed);
     }
 

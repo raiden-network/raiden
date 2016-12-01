@@ -196,10 +196,13 @@ def test_channelnewbalance_event(private_keys, settle_timeout, tester_state,
     }
 
 
-@pytest.mark.xfail(reason='to be implemented')
-def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
-                                     tester_events, tester_nettingcontracts,
-                                     tester_token):
+def test_closewithouttransfer_settle(
+        deposit,
+        settle_timeout,
+        tester_state,
+        tester_events,
+        tester_nettingcontracts,
+        tester_token):
 
     privatekey0, privatekey1, nettingchannel = tester_nettingcontracts[0]
     address0 = privatekey_to_address(privatekey0)
@@ -210,11 +213,10 @@ def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
     initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
 
     with pytest.raises(TransactionFailed):
-        nettingchannel.closeWithoutTransfers(sender=unknow_key)
+        nettingchannel.closeWithoutTransfer(sender=unknow_key)
 
-    # this method needs to be implemented, the name could be changed
     previous_events = list(tester_events)
-    nettingchannel.closeWithoutTransfers(sender=privatekey0)
+    nettingchannel.closeWithoutTransfer(sender=privatekey0)
     assert len(previous_events) + 1 == len(tester_events)
 
     block_number = tester_state.block.number
@@ -226,8 +228,8 @@ def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
         'block_number': block_number,
     }
 
-    assert nettingchannel.closed() == block_number
-    assert nettingchannel.closingAddress() == encode_hex(address0)
+    assert nettingchannel.closed(sender=privatekey0) == block_number
+    assert nettingchannel.closingAddress(sender=privatekey0) == encode_hex(address0)
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
@@ -239,6 +241,7 @@ def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
 
     transfer0_event = tester_events[-3]
     assert transfer0_event == {
+        '_event_type': 'Transfer',
         '_from': nettingchannel.address,
         '_to': encode_hex(address0),
         '_value': deposit,
@@ -246,6 +249,7 @@ def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
 
     transfer1_event = tester_events[-2]
     assert transfer1_event == {
+        '_event_type': 'Transfer',
         '_from': nettingchannel.address,
         '_to': encode_hex(address1),
         '_value': deposit,
@@ -262,8 +266,13 @@ def test_closewithouttransfer_settle(deposit, settle_timeout, tester_state,
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1) == 0
 
 
-def test_closesingle_settle(deposit, settle_timeout, tester_channels,
-                            tester_state, tester_events, tester_token):
+def test_closesingle_settle(
+        deposit,
+        settle_timeout,
+        tester_channels,
+        tester_state,
+        tester_events,
+        tester_token):
 
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
 

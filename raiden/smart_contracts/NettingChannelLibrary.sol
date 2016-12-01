@@ -197,7 +197,7 @@ library NettingChannelLibrary {
     ///         Cases where this may need to happen is:
     ///         - Alice deposits but Bob doesn't, then Alice must be able to
     ///           close the channel and reclaim her deposit.
-    /// @param  caller_address The address of the participant trying to close
+    /// @param caller_address The address of the participant trying to close
     function closeWithoutTransfer(Data storage self, address caller_address) {
 
         if (self.settled > 0 || self.closed > 0) {
@@ -211,6 +211,9 @@ library NettingChannelLibrary {
         if (caller_address != node1.node_address && caller_address != node2.node_address) {
             throw;
         }
+
+        self.closing_address = caller_address;
+        self.closed = block.number;
     }
 
     /// @notice close(bytes, bytes) to close a channel between two parties
