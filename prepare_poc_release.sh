@@ -53,4 +53,4 @@ echo "Since approving PRs is not supported yet, you have to proceed manually fro
 echo "1) Get $PR_URL approved & merged"
 echo "2) 'git checkout master && git pull --rebase'"
 echo "3) 'git tag v$NEW_VERSION'"
-echo "4) 'git push --tags'
+echo "4) 'git push --tags'"
