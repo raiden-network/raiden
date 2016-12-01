@@ -346,8 +346,13 @@ def test_closesingle_settle(
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == 0
 
 
-def test_close_settle(deposit, settle_timeout, tester_state, tester_channels,
-                      tester_events, tester_token):
+def test_close_settle(
+        deposit,
+        settle_timeout,
+        tester_state,
+        tester_channels,
+        tester_events,
+        tester_token):
 
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)

@@ -197,6 +197,9 @@ library NettingChannelLibrary {
     ///         Cases where this may need to happen is:
     ///         - Alice deposits but Bob doesn't, then Alice must be able to
     ///           close the channel and reclaim her deposit.
+    ///         - Neither Alice or Bob have made any deposits
+    ///         - Generally any case where you want to simply close the channel
+    ///           without adding an extra transfer to it
     /// @param caller_address The address of the participant trying to close
     function closeWithoutTransfer(Data storage self, address caller_address) {
 

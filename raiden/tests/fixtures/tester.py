@@ -203,8 +203,12 @@ def tester_registry(tester_state, tester_registry_address, tester_events):
 
 
 @pytest.fixture
-def tester_channelmanager(private_keys, tester_state, tester_events,
-                          tester_registry, tester_token):
+def tester_channelmanager(
+        private_keys,
+        tester_state,
+        tester_events,
+        tester_registry,
+        tester_token):
     privatekey0 = private_keys[0]
     channel_manager = new_channelmanager(
         privatekey0,
@@ -217,9 +221,15 @@ def tester_channelmanager(private_keys, tester_state, tester_events,
 
 
 @pytest.fixture
-def tester_nettingcontracts(deposit, private_keys, settle_timeout,
-                            tester_state, tester_events, tester_channelmanager,
-                            tester_token):
+def tester_nettingcontracts(
+        deposit,
+        both_participants_deposit,
+        private_keys,
+        settle_timeout,
+        tester_state,
+        tester_events,
+        tester_channelmanager,
+        tester_token):
     raiden_chain = zip(private_keys[:-1], private_keys[1:])
 
     result = list()
@@ -248,10 +258,16 @@ def tester_nettingcontracts(deposit, private_keys, settle_timeout,
         )
 
         assert tester_token.approve(nettingcontract.address, deposit, sender=first_key) is True
-        assert tester_token.approve(nettingcontract.address, deposit, sender=second_key) is True
+        if both_participants_deposit:
+            assert tester_token.approve(
+                nettingcontract.address,
+                deposit,
+                sender=second_key
+            ) is True
 
         assert nettingcontract.deposit(deposit, sender=first_key) is True
-        assert nettingcontract.deposit(deposit, sender=second_key) is True
+        if both_participants_deposit:
+            assert nettingcontract.deposit(deposit, sender=second_key) is True
 
     return result
 
