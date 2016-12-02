@@ -266,6 +266,68 @@ def test_closewithouttransfer_settle(
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1) == 0
 
 
+@pytest.mark.parametrize('both_participants_deposit', [False])
+@pytest.mark.parametrize('deposit', [100])
+def test_closewithouttransfer_badalice(
+        deposit,
+        settle_timeout,
+        tester_state,
+        tester_events,
+        tester_channels,
+        tester_token):
+    privatekeyA_raw, privatekeyB_raw, nettingchannel, channelAB, channelBA = tester_channels[0]
+    privatekeyA = PrivateKey(privatekeyA_raw, ctx=GLOBAL_CTX, raw=True)
+    privatekeyB = PrivateKey(privatekeyB_raw, ctx=GLOBAL_CTX, raw=True)
+    addressA = privatekey_to_address(privatekeyA_raw)
+    addressB = privatekey_to_address(privatekeyB_raw)
+
+    initial_balanceA = tester_token.balanceOf(addressA, sender=privatekeyA_raw)
+    initial_balanceB = tester_token.balanceOf(addressB, sender=privatekeyB_raw)
+
+    transfer_amount = 50
+    AB_Transfer0 = channelAB.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
+    AB_Transfer0.sign(privatekeyA, addressA)
+    channelAB.register_transfer(AB_Transfer0)
+    channelBA.register_transfer(AB_Transfer0)
+
+    transfer_amount = 40
+    BA_Transfer0 = channelBA.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
+    BA_Transfer0.sign(privatekeyB, addressB)
+    channelAB.register_transfer(BA_Transfer0)
+    channelBA.register_transfer(BA_Transfer0)
+
+    transfer_amount = 90
+    AB_Transfer1 = channelAB.create_directtransfer(
+        transfer_amount,
+        1  # TODO: fill in identifier
+    )
+    AB_Transfer1.sign(privatekeyA, addressA)
+    channelAB.register_transfer(AB_Transfer1)
+    channelBA.register_transfer(AB_Transfer1)
+    AB_Transfer1_data = str(AB_Transfer1.packed().data)
+
+    nettingchannel.closeWithoutTransfer(sender=privatekeyA_raw)
+
+    nettingchannel.updateTransfer(
+        AB_Transfer1_data,
+        sender=privatekeyB_raw,
+    )
+
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    nettingchannel.settle(sender=privatekeyB_raw)
+    tester_state.mine(number_of_blocks=2)
+
+    assert tester_token.balanceOf(nettingchannel.address, sender=privatekeyA_raw) == 0
+    assert tester_token.balanceOf(addressB, sender=privatekeyA_raw) == initial_balanceB + 100
+    assert tester_token.balanceOf(addressA, sender=privatekeyA_raw) == initial_balanceA + deposit - 100
+
+
 def test_closesingle_settle(
         deposit,
         settle_timeout,

@@ -85,7 +85,6 @@ class MediatedTransferTestHelper:
         return None
 
 
-
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_transfer(raiden_network):
