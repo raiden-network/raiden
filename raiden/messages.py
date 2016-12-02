@@ -415,7 +415,7 @@ class Lock(MessageHashable):
         if amount < 0:
             raise ValueError('amount {} needs to be positive'.format(amount))
 
-        if amount > 2 ** 256:
+        if amount >= 2 ** 256:
             raise ValueError('amount {} is too large'.format(amount))
 
         assert ishash(hashlock)
@@ -562,13 +562,13 @@ class MediatedTransfer(LockedTransfer):
     def __init__(self, identifier, nonce, asset, transferred_amount, recipient,
                  locksroot, lock, target, initiator, fee=0):
 
-        if nonce > 2 ** 64:
+        if nonce >= 2 ** 64:
             raise ValueError('nonce is too large')
 
-        if fee > 2 ** 256:
+        if fee >= 2 ** 256:
             raise ValueError('fee is too large')
 
-        if transferred_amount > 2 ** 256:
+        if transferred_amount >= 2 ** 256:
             raise ValueError('transferred_amount is too large')
 
         super(MediatedTransfer, self).__init__(
