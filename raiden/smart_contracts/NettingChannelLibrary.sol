@@ -56,9 +56,22 @@ library NettingChannelLibrary {
         _;
     }
 
-    modifier notClosingAddress(Data storage self) {
-        if (msg.sender == self.closing_address)
+    modifier notClosingAddress(Data storage self, address caller_address) {
+        if (caller_address == self.closing_address)
             throw;
+        _;
+    }
+
+    modifier inNonceRange(Data storage self, bytes message) {
+        uint64 nonce;
+        nonce = getNonce(message);
+        if (nonce < self.opened * (2 ** 32) || nonce >= (self.opened + 1) * (2 ** 32))
+            throw;
+        _;
+    }
+
+    modifier ChannelSettled(Data storage self) {
+        if (self.settled == 0) throw;
         _;
     }
 
@@ -154,7 +167,9 @@ library NettingChannelLibrary {
         balance2 = node2.balance;
     }
 
-    function closeSingleTransfer(Data storage self, address caller_address, bytes signed_transfer) {
+    function closeSingleTransfer(Data storage self, address caller_address, bytes signed_transfer)
+        inNonceRange(self, signed_transfer)
+    {
         bytes memory transfer_raw;
         address transfer_address;
 
@@ -200,6 +215,16 @@ library NettingChannelLibrary {
         bytes first_encoded,
         bytes second_encoded)
     {
+        uint64 nonce;
+        nonce = getNonce(first_encoded);
+        // check if nonce is valid. 
+        // TODO should be in modifier, but "Stack too deep" error
+        if (nonce < self.opened * (2 ** 32) || nonce >= (self.opened + 1) * (2 ** 32))
+            throw;
+        nonce = getNonce(second_encoded);
+        if (nonce < self.opened * (2**32) || nonce >= (self.opened + 1) * (2 ** 32))
+            throw;
+
         bytes memory first_raw;
         bytes memory second_raw;
         address first_address;
@@ -257,11 +282,15 @@ library NettingChannelLibrary {
     function updateTransfer(Data storage self, address caller_address, bytes signed_transfer)
         notSettledButClosed(self)
         stillTimeout(self)
-        notClosingAddress(self)
+        notClosingAddress(self, caller_address)
     {
         uint64 nonce;
         bytes memory transfer_raw;
         address transfer_address;
+
+        nonce = getNonce(signed_transfer);
+        if (nonce < self.opened * (2 ** 32) || nonce >= (self.opened + 1) * (2 ** 32))
+            throw;
 
         (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
 
@@ -280,10 +309,6 @@ library NettingChannelLibrary {
             sender = node2;
         } else {
             throw;
-        }
-
-        assembly {
-            nonce := mload(add(transfer_raw, 12))  // skip cmdid and padding
         }
 
         if (nonce < sender.nonce || nonce == sender.nonce) {
@@ -393,8 +418,10 @@ library NettingChannelLibrary {
             throw;
         }
 
-        self.token.transfer(node1.node_address, node1.netted);
-        self.token.transfer(node2.node_address, node2.netted);
+        if (!self.token.transfer(node1.node_address, node1.netted)) throw;
+        if (!self.token.transfer(node2.node_address, node2.netted)) throw;
+
+        kill(self);
     }
 
     function getTransferRawAddress(bytes memory signed_transfer) private returns (bytes memory, address) {
@@ -567,6 +594,13 @@ library NettingChannelLibrary {
         }
     }
 
+    function getNonce(bytes message) private returns (uint64 nonce) {
+        // dont care about the length of message since nonce is always in fixed position
+        assembly {
+            nonce := mload(add(message, 12))
+        }
+    }
+
     function signatureSplit(bytes signature) private returns (bytes32 r, bytes32 s, uint8 v) {
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
@@ -597,5 +631,9 @@ library NettingChannelLibrary {
         for (uint i = start; i < end; i ++) { //python style slice
             n[i-start] = a[i];
         }
+    }
+
+    function kill(Data storage self) ChannelSettled(self) {
+        selfdestruct(0x00000000000000000000);
     }
 }

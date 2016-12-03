@@ -86,6 +86,10 @@ contract NettingChannelContract {
         ChannelSettled(data.settled);
     }
 
+    function kill() {
+        data.kill();
+    }
+
     function settleTimeout() constant returns (uint) {
         return data.settle_timeout;
     }

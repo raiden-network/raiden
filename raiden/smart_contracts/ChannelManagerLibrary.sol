@@ -34,23 +34,24 @@ library ChannelManagerLibrary {
     /// @dev Get the channel of two parties
     /// @param partner (address) the address of the partner
     /// @return channel (address) the address of the NettingChannelContract of the two parties.
-    function getChannelWith(Data storage self, address partner)
+    function getChannelWith(Data storage self, address caller_address, address partner)
         constant
-        returns (address)
+        returns (address, bool, uint, uint)
     {
         uint i;
-        address[] our_channels = self.node_channels[msg.sender];
-        address channel;
+        uint j;
+        address[] our_channels = self.node_channels[caller_address];
+        address[] partner_channels = self.node_channels[partner];
 
         for (i = 0; i < our_channels.length; ++i) {
-            channel = our_channels[i];
+            for (j = 0; j < partner_channels.length; ++j) {
+                if (our_channels[i] == partner_channels[j]) {
+                    return (partner_channels[j], true, i, j);
+                }
 
-            if (NettingChannelContract(channel).partner(msg.sender) == partner) {
-                return channel;
             }
         }
-
-        throw;
+        return (0x0, false, 0, 0);
     }
 
     /// @notice newChannel(address, uint) to create a new payment channel between two parties
@@ -60,31 +61,85 @@ library ChannelManagerLibrary {
     /// @return (address) the address of the NettingChannelContract.
     function newChannel(
         Data storage self,
+        address caller_address,
         address partner,
         uint settle_timeout)
         returns (address)
     {
         address channel_address;
-        uint i;
+        bool has_channel;
+        uint i_index;
+        uint j_index;
 
-        address[] storage existing_channels = self.node_channels[msg.sender];
-        for (i = 0; i < existing_channels.length; i++) {
-            if (NettingChannelContract(existing_channels[i]).partner(msg.sender) == partner) {
-                throw;
-            }
+        (channel_address, has_channel, i_index, j_index) = getChannelWith(self, caller_address, partner);
+        if (!has_channel) {
+            // do nothing, continue to create a new channel
+        } else if (!contractExists(self, channel_address)) {
+            deleteChannel(self, caller_address, partner, channel_address, i_index, j_index);
+        } else {
+            // throw if an open contract exists that is not settled
+            throw;
         }
 
         channel_address = new NettingChannelContract(
             self.token,
-            msg.sender,
+            caller_address,
             partner,
             settle_timeout
         );
 
-        self.node_channels[msg.sender].push(channel_address);
+        self.node_channels[caller_address].push(channel_address);
         self.node_channels[partner].push(channel_address);
         self.all_channels.push(channel_address);
 
         return channel_address;
+    }
+
+    /// @notice deleteChannel(address) to remove a channel after it's been settled
+    /// @dev Remove channel after it's been settled
+    /// @param channel_address (address) address of the channel to be closed
+    /// @param partner (address) address of the partner
+    function deleteChannel(
+        Data storage self,
+        address caller_address,
+        address partner,
+        address channel_address,
+        uint i_index,
+        uint j_index)
+        private
+    {
+        address[] our_channels = self.node_channels[caller_address];
+        address[] partner_channels = self.node_channels[partner];
+
+        // move last element of array to i_index pos
+        our_channels[i_index] = our_channels[our_channels.length - 1];
+        our_channels.length--;
+        // move last element of array to j_index pos
+        partner_channels[j_index] = partner_channels[partner_channels.length - 1];
+        partner_channels.length--;
+
+        // remove address from all_channels
+        for (uint k = 0; k < self.all_channels.length; ++k) {
+            if (self.all_channels[k] == channel_address) {
+                self.all_channels[k] == self.all_channels[self.all_channels.length - 1];
+                self.all_channels.length--;
+                break;
+            }
+        }
+
+        self.node_channels[caller_address] = our_channels;
+        self.node_channels[partner] = partner_channels;
+    }
+
+    /// @notice contractExists(address) to check if a contract is deployed at given address
+    /// @dev Check if a channel is deployed at address
+    /// @param _addr (address) the address to check for a deployed contract
+    /// @return (bool) true if contract exists, false if not
+    function contractExists(Data storage self, address _addr) returns (bool) {
+        uint size;
+        assembly {
+            size := extcodesize(_addr)
+        }
+        if (size > 0) return true;
     }
 }

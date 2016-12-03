@@ -109,13 +109,17 @@ contract ChannelManagerContract {
         return data.node_channels[node_address];
     }
 
-    function getChannelWith(address partner) constant returns (address) {
-        return data.getChannelWith(partner);
+    function getChannelWith(address partner) constant returns (address, bool, uint, uint) {
+        return data.getChannelWith(msg.sender, partner);
     }
 
     function newChannel(address partner, uint settle_timeout) returns (address channel) {
-        channel = data.newChannel(partner, settle_timeout);
+        channel = data.newChannel(msg.sender, partner, settle_timeout);
         ChannelNew(channel, msg.sender, partner, settle_timeout);
+    }
+
+    function contractExists(address channel) returns (bool) {
+        return data.contractExists(channel);
     }
 
     function () { throw; }
