@@ -284,31 +284,11 @@ library NettingChannelLibrary {
         self.closed = block.number;
     }
 
-    /// @notice updateTransfer Updates (disputes) the state after closing.
-    /// @param caller_address The counterparty to the channel. The participant
-    ///                       that did not close the channel.
-    /// @param signed_transfer The transfer the counterparty believes is the
-    ///                        valid state and wants to dispute with.
-    function updateTransfer(Data storage self, address caller_address, bytes signed_transfer)
-        notSettledButClosed(self)
-        stillTimeout(self)
-        notClosingAddress(self, caller_address)
-    {
-        uint64 nonce;
+
+    function processTransfer(Participant storage node1, Participant storage node2, bytes transfer) internal {
         bytes memory transfer_raw;
         address transfer_address;
-
-        (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
-
-        // transfer address must be from counter party
-        if (self.closing_address != transfer_address) {
-            throw;
-        }
-
-        Participant[2] storage participants = self.participants;
-        Participant storage node1 = participants[0];
-        Participant storage node2 = participants[1];
-
+        (transfer_raw, transfer_address) = getTransferRawAddress(transfer);
         if (node1.node_address == transfer_address) {
             Participant storage sender = node1;
         } else if (node2.node_address == transfer_address) {
@@ -317,15 +297,47 @@ library NettingChannelLibrary {
             throw;
         }
 
+        uint64 nonce;
         assembly {
-            nonce := mload(add(transfer_raw, 12))  // skip cmdid and padding
+            nonce := mload(add(transfer, 12))  // skip cmdid and padding
         }
-
         if (nonce < sender.nonce || nonce == sender.nonce) {
             throw;
         }
-
         decodeAndAssign(sender, transfer_raw);
+    }
+
+    /// @notice updateTransfer Updates (disputes) the state after closing.
+    /// @param caller_address The counterparty to the channel. The participant
+    ///                       that did not close the channel.
+    /// @param first_transfer The transfer the counterparty believes is the
+    ///                        valid state for the first participant.
+    /// @param second_transfer The transfer the counterparty believes is the
+    ///                        valid state for the second participant.
+    function updateTransfer(
+        Data storage self,
+        address caller_address,
+        bytes first_transfer,
+        bytes second_transfer
+    )
+        notSettledButClosed(self)
+        stillTimeout(self)
+        notClosingAddress(self, caller_address)
+    {
+        // transfer address must be from counter party
+        if (self.closing_address == caller_address) {
+            throw;
+        }
+
+        Participant[2] storage participants = self.participants;
+        Participant storage node1 = participants[0];
+        Participant storage node2 = participants[1];
+
+        processTransfer(node1, node2, first_transfer);
+
+        if (second_transfer.length !=0) {
+            processTransfer(node1, node2, second_transfer);
+        }
 
         // TODO check if tampered and penalize
         // TODO check if outdated and penalize

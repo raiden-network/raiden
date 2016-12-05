@@ -389,7 +389,7 @@ class NettingChannelContract(object):
             raise Exception('Invalid netted value')
 
     def update_transfer(self, ctx, transfer_encoded):
-        """" Used by the partner to inform the latest know transfer.
+        """" Used by the partner to inform the latest known transfer.
 
         Args:
             ctx:

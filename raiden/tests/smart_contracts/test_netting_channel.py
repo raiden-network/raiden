@@ -301,6 +301,7 @@ def test_closewithouttransfer_badalice(
     BA_Transfer0.sign(privatekeyB, addressB)
     channelAB.register_transfer(BA_Transfer0)
     channelBA.register_transfer(BA_Transfer0)
+    BA_Transfer0_data = str(BA_Transfer0.packed().data)
 
     transfer_amount = 90
     AB_Transfer1 = channelAB.create_directtransfer(
@@ -316,6 +317,7 @@ def test_closewithouttransfer_badalice(
 
     nettingchannel.updateTransfer(
         AB_Transfer1_data,
+        BA_Transfer0_data,
         sender=privatekeyB_raw,
     )
 
@@ -673,6 +675,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(
             second_direct_transfer0_data,
+            "",
             sender=privatekey0_raw,
         )
 
@@ -686,6 +689,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(
             third_direct_transfer0_data,
+            "",
             sender=privatekey0_raw,
         )
 
@@ -693,11 +697,13 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(
             first_direct_transfer0_data,
+            "",
             sender=privatekey1_raw,
         )
 
     nettingchannel.updateTransfer(
         third_direct_transfer0_data,
+        "",
         sender=privatekey1_raw,
     )
 
@@ -714,6 +720,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(
             fourth_direct_transfer0_data,
+            "",
             sender=privatekey1_raw,
         )
 
@@ -781,6 +788,7 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
 
     nettingchannel.updateTransfer(
         mediated_transfer0_data,
+        "",
         sender=privatekey1_raw,
     )
 
