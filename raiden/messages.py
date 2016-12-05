@@ -300,7 +300,7 @@ class Secret(SignedMessage):
 
 
 class RevealSecret(SignedMessage):
-    """ Message used to reveal a secret to party know to have interest in it.
+    """Message used to reveal a secret to party known to have interest in it.
 
     This message is not sufficient for state changes in the raiden Channel, the
     reason is that a node participating in split transfer or in both mediated
