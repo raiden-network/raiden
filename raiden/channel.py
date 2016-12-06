@@ -548,6 +548,32 @@ class Channel(object):
         self.on_task_completed_callbacks = list()  # XXX naming
 
     @property
+    def status(self):
+        status = None
+        if self.isopen:
+            status = 'open'
+            return status
+        else:
+            if self.external_state.settled_block != 0:
+                status = 'settled'
+                if self.external_state.closed_block != 0:
+                    status = 'closed'
+                return status
+        raise Exception('invalid state')
+
+    @property
+    def partner_address(self):
+        return self.partner_state.address
+
+    @property
+    def channel_address(self):
+        return self.external_state.netting_channel.address
+
+    @property
+    def deposit(self):
+        return self.our_state.contract_balance
+
+    @property
     def isopen(self):
         return self.external_state.isopen()
 
@@ -984,7 +1010,8 @@ class Channel(object):
                         transfer.recipient,
                         transfer.sender,  # 'initiator' is sender here
                         transfer.transferred_amount,
-                        None  # no hashlock in DirectTransfer
+                        None,  # no hashlock in DirectTransfer
+                        transfer.identifier
                     )
 
             # if we are the sender, call the 'success' callback

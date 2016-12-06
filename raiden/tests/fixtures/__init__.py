@@ -7,6 +7,7 @@ from raiden.tests.fixtures.abi import (
     netting_channel_abi,
 )
 
+
 from raiden.tests.fixtures.blockchain import (
     tokens_addresses,
     cached_genesis,
