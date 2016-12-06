@@ -13,3 +13,6 @@ ethereum-serpent
 repoze.lru
 gevent-websocket==0.9.4
 cachetools>=2.0.0,<3.0.0
+sphinx
+bumpversion
+Flask>=0.11.1
