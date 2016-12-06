@@ -393,8 +393,12 @@ library NettingChannelLibrary {
             throw;
         }
 
-        self.token.transfer(node1.node_address, node1.netted);
-        self.token.transfer(node2.node_address, node2.netted);
+        if (!self.token.transfer(node1.node_address, node1.netted)) {
+            throw;
+        }
+        if (!self.token.transfer(node2.node_address, node2.netted)) {
+            throw;
+        }
     }
 
     function getTransferRawAddress(bytes memory signed_transfer) private returns (bytes memory, address) {
