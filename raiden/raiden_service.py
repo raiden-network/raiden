@@ -24,6 +24,7 @@ from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
 from raiden.utils import privatekey_to_address, isaddress, pex, GLOBAL_CTX
+from raiden.api.dispatch import expose
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -334,14 +335,33 @@ class RaidenAPI(object):
         self.raiden = raiden
 
     @property
+    @expose('/api/address/', ['GET'], async=False)
     def address(self):
         return self.raiden.address
 
+
     @property
+    @expose('/api/assets/', ['GET'], async=False)
     def assets(self):
         """ Return a list of the assets registered with the default registry. """
         return self.raiden.chain.default_registry.asset_addresses()
 
+    @expose('/api/channel/<address:asset_address/<address:partner_address>',
+            ['GET'],
+            async=False)
+    def get_balance(self, asset_address, partner_address):
+        pass
+
+    @expose('/api/transfer/<address:asset_address/<address:partner_address>',
+            ['GET'],
+            async=False)
+    def get_completed_transfers(self, asset_address=None, partner_address=None):
+        pass
+
+
+    @expose('/api/channel/open/<address:asset_address>/<address:partner_address>/<int:settle_timeout>/<int:reveal_timeout',
+            ['POST'],
+            async=False ) # TODO should be async, add callback
     def open(self, asset_address, partner_address,
              settle_timeout=None, reveal_timeout=None):
         """ Open a channel with the peer at `partner_address`
@@ -369,6 +389,9 @@ class RaidenAPI(object):
 
         return netting_channel
 
+    @expose('/api/channel/deposit/<address:asset_address/<address:partner_address>/<int>amount',
+            ['POST'],
+            async=False)  # TODO should be async, add callback
     def deposit(self, asset_address, partner_address, amount):
         """ Deposit `amount` in the channel with the peer at `partner_address` and the
         given `asset_address` in order to be able to do transfers.
@@ -444,6 +467,9 @@ class RaidenAPI(object):
         asset_manager = self.raiden.get_manager_by_asset_address(from_asset)
         asset_manager.transfermanager.exchanges[ExchangeKey(from_asset, from_amount)] = exchange
 
+    @expose('/api/sync/transfer/<address:asset_address>/<int:amount>/<address:target>/',
+            ['POST'],
+            async=False)
     def transfer_and_wait(self, asset_address, amount, target, identifier=None,
                           callback=None, timeout=None):
         """ Do a transfer with `target` with the given `amount` of `asset_address`. """
@@ -460,6 +486,10 @@ class RaidenAPI(object):
 
     transfer = transfer_and_wait  # expose a synchronous interface to the user
 
+
+    @expose('/api/transfer/<address:asset_address>/<int:amount>/<address:target>/',
+            ['POST'],
+            async=True)
     def transfer_async(
             self,
             asset_address,
@@ -468,6 +498,8 @@ class RaidenAPI(object):
             identifier=None,
             callback=None):
         # pylint: disable=too-many-arguments
+
+        #TODO identifier is obsolete (CHECKME)
 
         if not isinstance(amount, (int, long)):
             raise InvalidAmount('Amount not a number')
@@ -497,6 +529,9 @@ class RaidenAPI(object):
         )
         return async_result
 
+    @expose('/api/channel/close/<address:asset_address/<address:partner_address>',
+            ['POST'],
+            async=False) # TODO should be async, add callback
     def close(self, asset_address, partner_address):
         """ Close a channel opened with `partner_address` for the given `asset_address`. """
         asset_address_bin = safe_address_decode(asset_address)
@@ -526,6 +561,9 @@ class RaidenAPI(object):
             second_transfer,
         )
 
+    @expose('/api/channel/settle/<address:asset_address/<address:partner_address>',
+            ['POST'],
+            async=False)  # TODO should be async, add callback
     def settle(self, asset_address, partner_address):
         """ Settle a closed channel with `partner_address` for the given `asset_address`. """
         asset_address_bin = safe_address_decode(asset_address)
