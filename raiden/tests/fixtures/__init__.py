@@ -7,6 +7,12 @@ from raiden.tests.fixtures.abi import (
     netting_channel_abi,
 )
 
+from raiden.tests.fixtures.api import (
+    flask_app,
+    flask_client,
+    socketio
+)
+
 from raiden.tests.fixtures.blockchain import (
     assets_addresses,
     cached_genesis,
@@ -114,4 +120,7 @@ __all__ = (
     'blockchain_rpc_ports',
     'blockchain_p2p_ports',
     'raiden_udp_ports',
+    'flask-app',
+    'flask-client',
+    'socketio'
 )
