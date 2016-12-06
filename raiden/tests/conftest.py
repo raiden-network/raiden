@@ -61,6 +61,9 @@ from raiden.tests.fixtures import (
     blockchain_rpc_ports,
     blockchain_p2p_ports,
     raiden_udp_ports,
+    flask_app,
+    flask_client,
+    socketio
 )
 
 __all__ = (
