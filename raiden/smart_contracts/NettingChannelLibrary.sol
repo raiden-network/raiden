@@ -245,15 +245,12 @@ library NettingChannelLibrary {
     /// @notice updateTransfer Updates (disputes) the state after closing.
     /// @param caller_address The counterparty to the channel. The participant
     ///                       that did not close the channel.
-    /// @param first_transfer The transfer the counterparty believes is the
+    /// @param their_transfer The transfer the counterparty believes is the
     ///                        valid state for the first participant.
-    /// @param second_transfer The transfer the counterparty believes is the
-    ///                        valid state for the second participant.
     function updateTransfer(
         Data storage self,
         address caller_address,
-        bytes first_transfer,
-        bytes second_transfer
+        bytes their_transfer
     )
         notSettledButClosed(self)
         stillTimeout(self)
@@ -268,11 +265,7 @@ library NettingChannelLibrary {
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
 
-        processTransfer(node1, node2, first_transfer);
-
-        if (second_transfer.length !=0) {
-            processTransfer(node1, node2, second_transfer);
-        }
+        processTransfer(node1, node2, their_transfer);
 
         // TODO check if tampered and penalize
         // TODO check if outdated and penalize
@@ -372,19 +365,36 @@ library NettingChannelLibrary {
         }
 
         self.settled = block.number;
-
         total_netted = node1.netted + node2.netted;
         total_deposit = node1.balance + node2.balance;
 
-        if (total_netted != total_deposit) {
-            throw;
+        Participant memory closing_party;
+        Participant memory other_party;
+
+        if (node1.node_address == self.closing_address) {
+            closing_party = node1;
+            other_party = node2;
+        } else {
+            closing_party = node2;
+            other_party = node1;
         }
 
-        if (!self.token.transfer(node1.node_address, node1.netted)) {
-            throw;
+
+        // first pay out to the party that did not close the channel
+        uint amount = total_deposit < other_party.netted
+            ? total_deposit
+            : other_party.netted;
+        if (amount > 0) {
+            if (!self.token.transfer(other_party.node_address, amount)) {
+                throw;
+            }
         }
-        if (!self.token.transfer(node2.node_address, node2.netted)) {
-            throw;
+        // then payout whatever can be paid out to the closing party
+        amount = self.token.balanceOf(address(this));
+        if (amount > 0) {
+            if (!self.token.transfer(closing_party.node_address, amount)) {
+                throw;
+            }
         }
     }
 

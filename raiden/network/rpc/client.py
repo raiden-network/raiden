@@ -823,16 +823,12 @@ class NettingChannel(object):
             # TODO: allow to close nevertheless
             raise ValueError('channel wasnt used')
 
-    def update_transfer(self, our_address, first_transfer, second_transfer=None):
-        if first_transfer is not None:
-            first_transfer_encoded = first_transfer.encode()
-            second_transfer_encoded = ""
-            if second_transfer is not None:
-                second_transfer_encoded = second_transfer.encode()
+    def update_transfer(self, our_address, their_transfer):
+        if their_transfer is not None:
+            their_transfer_encoded = their_transfer.encode()
 
             transaction_hash = self.proxy.updateTransfer.transact(
-                first_transfer_encoded,
-                second_transfer_encoded,
+                their_transfer_encoded,
                 startgas=self.startgas,
                 gasprice=self.gasprice,
             )
@@ -840,8 +836,7 @@ class NettingChannel(object):
             log.info(
                 'update_transfer called',
                 contract=pex(self.address),
-                first_transfer=first_transfer,
-                second_transfer=second_transfer
+                their_transfer=their_transfer,
             )
             # TODO: check if the ChannelSecretRevealed event was emitted and if
             # it wasn't raise an error

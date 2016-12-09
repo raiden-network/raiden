@@ -78,9 +78,8 @@ contract NettingChannelContract {
         ChannelClosed(msg.sender, data.closed);
     }
 
-    function updateTransfer(bytes signed_transfer) {
-        data.updateTransfer(msg.sender, signed_transfer);
-        TransferUpdated(msg.sender, block.number);
+    function updateTransfer(bytes theirs_encoded) {
+        data.updateTransfer(msg.sender, theirs_encoded);
     }
 
     function unlock(bytes locked_encoded, bytes merkle_proof, bytes32 secret) {
