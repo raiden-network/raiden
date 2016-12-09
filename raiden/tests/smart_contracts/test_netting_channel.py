@@ -788,12 +788,10 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
             sender=privatekey1_raw,
         )
 
-    # transfer = channel1.partner_state.balance_proof.transfer
     unlock_proofs = list(channel1.our_state.balance_proof.get_known_unlocks())
 
     assert len(unlock_proofs) == 1
 
-    # channel1.external_state.update_transfer(channel1.our_state.address, transfer)
     channel1.external_state.unlock(channel1.our_state.address, unlock_proofs)
 
     # already unlock, shoud fail
