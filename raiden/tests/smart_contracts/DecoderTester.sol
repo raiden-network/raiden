@@ -40,7 +40,7 @@ contract DecoderTester {
     }
 
     function testDecodeTransfer(bytes signed_transfer) returns (bool) {
-        data.closeSingleTransfer(msg.sender, signed_transfer);
+        data.close(msg.sender, signed_transfer, "");
         decoding_complete = true;
         return true;
     }
