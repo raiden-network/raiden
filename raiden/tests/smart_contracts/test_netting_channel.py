@@ -628,7 +628,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     transfer1_event = tester_events[-1]
     assert transfer1_event == {
         '_event_type': 'TransferUpdated',
-        'closing_address': address1.encode('hex'),
+        'node_address': address1.encode('hex'),
         'block_number': tester_state.block.number,
     }
 
