@@ -156,138 +156,71 @@ library NettingChannelLibrary {
         balance2 = node2.balance;
     }
 
-    /// @notice Close a channel between two parties that was used only unidirectionally
-    /// @param caller_address The address of the participant closing the channel
-    /// @param signed_transfer The transfer to close the channel with.
-    function closeSingleTransfer(Data storage self, address caller_address, bytes signed_transfer) {
-        bytes memory transfer_raw;
-        address transfer_address;
-
-        if (self.settled > 0 || self.closed > 0) {
-            throw;
-        }
-
-        if (signed_transfer.length <= 65) {
-            throw;
-        }
-
-        Participant[2] storage participants = self.participants;
-        Participant storage node1 = participants[0];
-        Participant storage node2 = participants[1];
-
-        if (caller_address != node1.node_address && caller_address != node2.node_address) {
-            throw;
-        }
-
-        (transfer_raw, transfer_address) = getTransferRawAddress(signed_transfer);
-
-        if (node1.node_address == transfer_address) {
-            Participant storage sender = node1;
-        } else if (node2.node_address == transfer_address) {
-            sender = node2;
-        } else {
-            throw;
-        }
-
-        decodeAndAssign(sender, transfer_raw);
-
-        self.closing_address = caller_address;
-        self.closed = block.number;
-    }
-
-
-    /// @notice Close a channel between two parties that had no transfer occur.
-    ///         Cases where this may need to happen is when Alice opens a
-    ///         channel with Bob and:
-    ///         - Nobody put a deposit in. The channel is unused.
-    ///         - Alice put a deposit and no transfers were made.
-    ///         - Alice put a deposit, BoB also did but no transfers were made.
-    ///         - Bob put a deposit and no transfers were made
-    /// @param caller_address The address of the participant trying to close
-    function closeWithoutTransfer(Data storage self, address caller_address) {
-
-        if (self.settled > 0 || self.closed > 0) {
-            throw;
-        }
-
-        Participant[2] storage participants = self.participants;
-        Participant storage node1 = participants[0];
-        Participant storage node2 = participants[1];
-
-        if (caller_address != node1.node_address && caller_address != node2.node_address) {
-            throw;
-        }
-
-        self.closing_address = caller_address;
-        self.closed = block.number;
-    }
-
     /// @notice Close a channel between two parties that was used bidirectionally
     /// @param caller_address The address of the participant closing the channel
-    /// @param first_encoded the last transfer of the first participant
-    /// @param second_encoded the last transfer of the second participant
+    /// @param their_transfer The latest known transfer of the other participant
+    ///                       to the channel. Can also be empty, in which case
+    //                        we are attempting to close a channel without any
+    //                        transfers.
+    /// @param our_transfer Optionally provide the caller's own latest transfer
+    ///                     as a courtesy to the other party in order to save
+    ///                     them a blockchain transaction. Can also be empty.
     function close(
         Data storage self,
         address caller_address,
-        bytes first_encoded,
-        bytes second_encoded)
+        bytes their_transfer,
+        bytes our_transfer)
     {
-        bytes memory first_raw;
-        bytes memory second_raw;
-        address first_address;
-        address second_address;
-        bytes32 transfer_sender;
-
+        // the channel can't be closed multiple times
         if (self.settled > 0 || self.closed > 0) {
-            throw;
-        }
-
-        if (first_encoded.length <= 65 || second_encoded.length <= 65) {
-            throw;
-        }
-
-        (first_raw, first_address) = getTransferRawAddress(first_encoded);
-        (second_raw, second_address) = getTransferRawAddress(second_encoded);
-
-        if (first_address == second_address) {
             throw;
         }
 
         Participant[2] storage participants = self.participants;
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
+        address their_sender;
 
-        if (caller_address != node1.node_address && caller_address != node2.node_address) {
+        //only a channel participant can close the channel
+        if (node1.node_address != caller_address && node2.node_address != caller_address) {
             throw;
         }
 
-        if (node1.node_address == first_address) {
-            Participant storage first_sender = node1;
-        } else if (node2.node_address == first_address) {
-            first_sender = node2;
-        } else {
-            throw;
-        }
-
-        if (node1.node_address == second_address) {
-            Participant storage second_sender = node1;
-        } else if (node2.node_address == second_address) {
-            second_sender = node2;
-        } else {
-            throw;
-        }
-
-        decodeAndAssign(first_sender, first_raw);
-        decodeAndAssign(second_sender, second_raw);
-
+        // keep the information of the closing party
         self.closing_address = caller_address;
         self.closed = block.number;
+        // if no transfer from the other participant was given then we are
+        // attempting to close a channel without a transfer
+        if (their_transfer.length == 0) {
+            return;
+        }
+
+        // else we are closing a channel that has received transfers
+        their_sender = processTransfer(node1, node2, their_transfer);
+        if (their_sender == caller_address) {
+            // the sender of "their" transaction can't be ourselves
+            throw;
+        }
+
+        if (our_transfer.length != 0) {
+            address our_sender;
+            // we also provided a courtesy update of our own latest transfer
+            our_sender = processTransfer(node1, node2, our_transfer);
+            if (our_sender != caller_address) {
+                // we have to be the sender of our own transaction
+                throw;
+            }
+        }
     }
 
-
-    function processTransfer(Participant storage node1, Participant storage node2, bytes transfer) internal {
+    function processTransfer(Participant storage node1, Participant storage node2, bytes transfer) internal  returns (address) {
         bytes memory transfer_raw;
         address transfer_address;
+
+        if (transfer.length <= 65) {
+            throw;
+        }
+
         (transfer_raw, transfer_address) = getTransferRawAddress(transfer);
         if (node1.node_address == transfer_address) {
             Participant storage sender = node1;
@@ -305,6 +238,8 @@ library NettingChannelLibrary {
             throw;
         }
         decodeAndAssign(sender, transfer_raw);
+
+        return sender.node_address;
     }
 
     /// @notice updateTransfer Updates (disputes) the state after closing.

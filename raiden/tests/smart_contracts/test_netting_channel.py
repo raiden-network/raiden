@@ -360,7 +360,7 @@ def test_closesingle_settle(
         nettingchannel.closeSingleTransfer(sender=unknow_key)
 
     previous_events = list(tester_events)
-    nettingchannel.closeSingleTransfer(direct_transfer_data, sender=privatekey0_raw)
+    nettingchannel.closeSingleTransfer(direct_transfer_data, sender=privatekey1_raw)
     assert len(previous_events) + 1 == len(tester_events)
 
     block_number = tester_state.block.number
@@ -368,12 +368,12 @@ def test_closesingle_settle(
     close_event = tester_events[-1]
     assert close_event == {
         '_event_type': 'ChannelClosed',
-        'closing_address': encode_hex(address0),
+        'closing_address': encode_hex(address1),
         'block_number': block_number,
     }
 
     assert nettingchannel.closed(sender=privatekey0_raw) == block_number
-    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address0)
+    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address1)
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
@@ -423,7 +423,7 @@ def test_close_settle(
     privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
     address0 = privatekey_to_address(privatekey0_raw)
     address1 = privatekey_to_address(privatekey1_raw)
-    unknow_key = tester.k3
+    unknown_key = tester.k3
 
     initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0_raw)
     initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
@@ -442,18 +442,26 @@ def test_close_settle(
     )
     direct_transfer1.sign(privatekey1, address1)
 
+    # random people can't close the channel
     with pytest.raises(TransactionFailed):
         nettingchannel.close(
             str(direct_transfer0.packed().data),
             str(direct_transfer1.packed().data),
-            sender=unknow_key,
+            sender=unknown_key,
+        )
+    # the closing party should be the one that provides the first transfer
+    with pytest.raises(TransactionFailed):
+        nettingchannel.close(
+            str(direct_transfer0.packed().data),
+            str(direct_transfer1.packed().data),
+            sender=privatekey0_raw,
         )
 
     previous_events = list(tester_events)
     nettingchannel.close(
         str(direct_transfer0.packed().data),
         str(direct_transfer1.packed().data),
-        sender=privatekey0_raw,
+        sender=privatekey1_raw,
     )
     assert len(previous_events) + 1 == len(tester_events)
 
@@ -462,12 +470,12 @@ def test_close_settle(
     close_event = tester_events[-1]
     assert close_event == {
         '_event_type': 'ChannelClosed',
-        'closing_address': encode_hex(address0),
+        'closing_address': encode_hex(address1),
         'block_number': block_number,
     }
 
     assert nettingchannel.closed(sender=privatekey0_raw) == block_number
-    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address0)
+    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address1)
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
@@ -513,7 +521,7 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
     privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
     address0 = privatekey_to_address(privatekey0_raw)
     address1 = privatekey_to_address(privatekey1_raw)
-    unknow_key = tester.k3
+    unknown_key = tester.k3
 
     initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0_raw)
     initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
@@ -552,14 +560,14 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
         nettingchannel.close(
             str(mediated_transfer0.packed().data),
             str(mediated_transfer1.packed().data),
-            sender=unknow_key,
+            sender=unknown_key,
         )
 
     previous_events = list(tester_events)
     nettingchannel.close(
         str(mediated_transfer0.packed().data),
         str(mediated_transfer1.packed().data),
-        sender=privatekey0_raw,
+        sender=privatekey1_raw,
     )
     assert len(previous_events) + 1 == len(tester_events)
 
@@ -568,11 +576,11 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
     close_event = tester_events[-1]
     assert close_event == {
         '_event_type': 'ChannelClosed',
-        'closing_address': encode_hex(address0),
+        'closing_address': encode_hex(address1),
         'block_number': block_number,
     }
     assert nettingchannel.closed(sender=privatekey0_raw) == block_number
-    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address0)
+    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address1)
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
@@ -682,7 +690,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     nettingchannel.close(
         second_direct_transfer0_data,
         direct_transfer1_data,
-        sender=privatekey0_raw,
+        sender=privatekey1_raw,
     )
 
     # who closes the channel cannot call updateTransfer
@@ -690,7 +698,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
         nettingchannel.updateTransfer(
             third_direct_transfer0_data,
             "",
-            sender=privatekey0_raw,
+            sender=privatekey1_raw,
         )
 
     # nonce too low
@@ -698,13 +706,13 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
         nettingchannel.updateTransfer(
             first_direct_transfer0_data,
             "",
-            sender=privatekey1_raw,
+            sender=privatekey0_raw,
         )
 
     nettingchannel.updateTransfer(
         third_direct_transfer0_data,
         "",
-        sender=privatekey1_raw,
+        sender=privatekey0_raw,
     )
 
     transfer1_event = tester_events[-1]
@@ -721,7 +729,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
         nettingchannel.updateTransfer(
             fourth_direct_transfer0_data,
             "",
-            sender=privatekey1_raw,
+            sender=privatekey0_raw,
         )
 
     # TODO:
@@ -783,13 +791,13 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
     nettingchannel.close(
         direct_transfer0_data,
         direct_transfer1_data,
-        sender=privatekey0_raw,
+        sender=privatekey1_raw,
     )
 
     nettingchannel.updateTransfer(
         mediated_transfer0_data,
         "",
-        sender=privatekey1_raw,
+        sender=privatekey0_raw,
     )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
