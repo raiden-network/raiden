@@ -319,7 +319,8 @@ library NettingChannelLibrary {
         bytes32 el;
 
         (expiration, amount, hashlock) = decodeLock(locked_encoded);
-        if (self.locks[sha3(locked_encoded)]) {
+
+        if (self.locks[hashlock]) {
             throw;
         }
 
@@ -361,7 +362,7 @@ library NettingChannelLibrary {
             throw;
 
         participant.unlocked.push(Lock(expiration, amount, hashlock));
-        self.locks[sha3(locked_encoded)] = true;
+        self.locks[hashlock] = true;
     }
 
     /// @notice settle() to settle the balance between the two parties
