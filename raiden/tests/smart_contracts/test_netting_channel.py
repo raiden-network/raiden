@@ -716,7 +716,6 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
     # - add locked amounts and assert that they are respected
 
 
-@pytest.mark.xfail()
 def test_unlock(tester_token, tester_channels, tester_events, tester_state):
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
@@ -789,13 +788,13 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
             sender=privatekey1_raw,
         )
 
-    transfer = channel1.partner_state.balance_proof.transfer
+    # transfer = channel1.partner_state.balance_proof.transfer
     unlock_proofs = list(channel1.our_state.balance_proof.get_known_unlocks())
 
     assert len(unlock_proofs) == 1
 
-    channel1.external_state.update_transfer(channel1.our_state.address, transfer)
-    channel0.external_state.unlock(channel0.our_state.address, unlock_proofs)
+    # channel1.external_state.update_transfer(channel1.our_state.address, transfer)
+    channel1.external_state.unlock(channel1.our_state.address, unlock_proofs)
 
     # already unlock, shoud fail
     with pytest.raises(TransactionFailed):

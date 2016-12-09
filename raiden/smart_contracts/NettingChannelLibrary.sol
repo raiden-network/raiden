@@ -36,7 +36,9 @@ library NettingChannelLibrary {
         address closing_address;
         Token token;
         Participant[2] participants;
+        mapping(bytes32 => bool) locks;
     }
+
 
     modifier notSettledButClosed(Data storage self) {
         if (self.settled > 0 || self.closed == 0)
@@ -317,6 +319,11 @@ library NettingChannelLibrary {
         bytes32 el;
 
         (expiration, amount, hashlock) = decodeLock(locked_encoded);
+        if (self.locks[sha3(locked_encoded)]) {
+            throw;
+        }
+
+        (expiration, amount, hashlock) = decodeLock(locked_encoded);
 
         if (expiration < block.number)
             throw;
@@ -326,7 +333,7 @@ library NettingChannelLibrary {
 
         Participant[2] storage participants = self.participants;
         Participant storage participant = participants[0];
-        if (participant.node_address != caller_address) {
+        if (participant.node_address == caller_address) {
             participant = participants[1];
             if (participant.node_address != caller_address) {
                 throw;
@@ -354,6 +361,7 @@ library NettingChannelLibrary {
             throw;
 
         participant.unlocked.push(Lock(expiration, amount, hashlock));
+        self.locks[sha3(locked_encoded)] = true;
     }
 
     /// @notice settle() to settle the balance between the two parties
