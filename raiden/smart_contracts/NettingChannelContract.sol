@@ -8,6 +8,7 @@ contract NettingChannelContract {
 
     event ChannelNewBalance(address asset_address, address participant, uint balance, uint block_number);
     event ChannelClosed(address closing_address, uint block_number);
+    event TransferUpdated(address node_address, uint block_number);
     event ChannelSettled(uint block_number);
     event ChannelSecretRevealed(bytes32 secret);
 
@@ -74,6 +75,7 @@ contract NettingChannelContract {
 
     function updateTransfer(bytes signed_transfer) {
         data.updateTransfer(msg.sender, signed_transfer);
+        TransferUpdated(msg.sender, block.number);
     }
 
     function unlock(bytes locked_encoded, bytes merkle_proof, bytes32 secret) {

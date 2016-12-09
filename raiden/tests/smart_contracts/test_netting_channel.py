@@ -625,6 +625,13 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
         sender=privatekey1_raw,
     )
 
+    transfer1_event = tester_events[-1]
+    assert transfer1_event == {
+        '_event_type': 'TransferUpdated',
+        'node_address': address1.encode('hex'),
+        'block_number': tester_state.block.number,
+    }
+
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
     # settle time passed
