@@ -234,7 +234,7 @@ library NettingChannelLibrary {
         assembly {
             nonce := mload(add(transfer, 12))  // skip cmdid and padding
         }
-        if (nonce < sender.nonce || nonce == sender.nonce) {
+        if (nonce <= sender.nonce) {
             throw;
         }
         decodeAndAssign(sender, transfer_raw);
