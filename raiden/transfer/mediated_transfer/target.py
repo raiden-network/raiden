@@ -3,11 +3,10 @@ from copy import deepcopy
 
 from raiden.utils import sha3
 from raiden.transfer.architecture import Iteration
-from raiden.transfer.state import TargetState
+from raiden.transfer.mediated_transfer.state import TargetState
 from raiden.transfer.state_change import (
     Blocknumber,
     InitTarget,
-    RegisterSecret,
     RevealSecret,
     Secret,
     SecretRequestMessageSend,
@@ -66,10 +65,6 @@ def state_transition(current_state, state_change):
         if secret_reveal:
             next_state.secret = state_change.secret
 
-            register = RegisterSecret(
-                state_change.originating_transfer.transfer.identifier,
-                state_change.secret,
-            )
             reveal = RevealSecret(
                 next_state.originating_transfer.identifier,
                 next_state.secret,
@@ -77,7 +72,7 @@ def state_transition(current_state, state_change):
                 next_state.our_address,
             )
 
-            iteration = Iteration(next_state, [register, reveal])
+            iteration = Iteration(next_state, [reveal])
 
     elif state_wait_withdraw:
         valid_secret = (
