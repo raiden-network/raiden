@@ -165,6 +165,8 @@ library NettingChannelLibrary {
     /// @param our_transfer Optionally provide the caller's own latest transfer
     ///                     as a courtesy to the other party in order to save
     ///                     them a blockchain transaction. Can also be empty.
+    ///                     If `their_transfer` argument is empty then this
+    ///                     parameter will be ignored.
     function close(
         Data storage self,
         address caller_address,
