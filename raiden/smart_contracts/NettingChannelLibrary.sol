@@ -390,7 +390,9 @@ library NettingChannelLibrary {
             }
         }
         // then payout whatever can be paid out to the closing party
-        amount = self.token.balanceOf(address(this));
+        amount = closing_party.netted < self.token.balanceOf(address(this))
+            ? closing_party.netted
+            : self.token.balanceOf(address(this));
         if (amount > 0) {
             if (!self.token.transfer(closing_party.node_address, amount)) {
                 throw;
