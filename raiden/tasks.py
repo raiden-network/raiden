@@ -606,8 +606,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
 
         maximum_expiration = (
             originating_channel.settle_timeout +
-            raiden.get_block_number() -
-            2  # decrement as a safety measure to avoid limit errors
+            raiden.get_block_number()
         )
 
         # Ignore locks that expire after settle_timeout
@@ -661,7 +660,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
             # after channel is settled and asset would be lost, in that case
             # decrease the expiration by an amount larger than reveal_timeout.
             if new_lock_timeout > forward_channel.settle_timeout:
-                new_lock_timeout = forward_channel.settle_timeout - 2  # arbitrary decrement
+                new_lock_timeout = forward_channel.settle_timeout
 
                 if log.isEnabledFor(logging.DEBUG):
                     log.debug(
@@ -673,7 +672,13 @@ class MediateTransferTask(BaseMediatedTransferTask):
                         partner=pex(path[1]),
                     )
 
-            new_lock_expiration = current_block_number + new_lock_timeout
+            new_lock_expiration = (
+                current_block_number +
+                new_lock_timeout -
+                # FIXME: decrement to avoid boundary errors (ensure that
+                # less-than is used instead of less-than-equal)
+                2
+            )
             mediated_transfer = forward_channel.create_mediatedtransfer(
                 originating_transfer.initiator,
                 originating_transfer.target,
