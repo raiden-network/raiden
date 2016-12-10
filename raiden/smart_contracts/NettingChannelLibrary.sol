@@ -324,8 +324,6 @@ library NettingChannelLibrary {
             throw;
         }
 
-        (expiration, amount, hashlock) = decodeLock(locked_encoded);
-
         if (expiration < block.number)
             throw;
 
