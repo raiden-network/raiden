@@ -10,17 +10,14 @@ from raiden.encoding.signing import GLOBAL_CTX, address_from_key
 from raiden.tests.utils.tests import get_test_contract_path
 
 
-def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
-    state = tester.state(num_accounts=1)
-    # make sure we are on HOMESTEAD
-    state.block.number = 1150001
-    nettingchannel_lib = state.abi_contract(
+def deploy_decoder_tester(tester_state, asset_address, address1, address2, settle_timeout):
+    nettingchannel_lib = tester_state.abi_contract(
         None,
         path=os.path.join(get_project_root(), "smart_contracts", "NettingChannelLibrary.sol"),
         language='solidity'
     )
-    state.mine(number_of_blocks=1)
-    decode_tester = state.abi_contract(
+    tester_state.mine(number_of_blocks=1)
+    decode_tester = tester_state.abi_contract(
         None,
         path=get_test_contract_path("DecoderTester.sol"),
         language='solidity',
@@ -35,7 +32,7 @@ def deploy_decoder_tester(asset_address, address1, address2, settle_timeout):
         ),
         extra_args="raiden={}".format(os.path.join(get_project_root(), "smart_contracts"))
     )
-    state.mine(number_of_blocks=1)
+    tester_state.mine(number_of_blocks=1)
 
     return decode_tester
 
@@ -49,11 +46,17 @@ def test_decode_direct_transfer(
         tester_registry):
 
     privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = private_keys[1]
+    privatekey1 = tester.k1
     address0 = privatekey_to_address(privatekey0)
     address1 = privatekey_to_address(privatekey1)
 
-    dtester = deploy_decoder_tester(tester_token.address, address0, address1, settle_timeout)
+    dtester = deploy_decoder_tester(
+        tester_state,
+        tester_token.address,
+        address0,
+        address1,
+        settle_timeout
+    )
 
     locksroot = sha3("Waldemarstr")
 
@@ -71,7 +74,7 @@ def test_decode_direct_transfer(
     recovered_address = address_from_key(publickey)
     assert recovered_address == address0
 
-    assert dtester.testDecodeTransfer(message.encode()) is True
+    assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
     assert dtester.decodedNonce() == 2
     assert dtester.decodedAsset() == tester_token.address.encode('hex')
     assert dtester.decodedRecipient() == address1.encode('hex')
@@ -88,12 +91,19 @@ def test_decode_mediated_transfer(
         tester_registry):
 
     privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = private_keys[1]
+    privatekey1 = tester.k1
+    privatekey2 = tester.k2
     address0 = privatekey_to_address(privatekey0)
     address1 = privatekey_to_address(privatekey1)
-    address2 = privatekey_to_address(private_keys[2])
+    address2 = privatekey_to_address(privatekey2)
 
-    dtester = deploy_decoder_tester(tester_token.address, address0, address1, settle_timeout)
+    dtester = deploy_decoder_tester(
+        tester_state,
+        tester_token.address,
+        address0,
+        address1,
+        settle_timeout
+    )
 
     locksroot = sha3("Sikorka")
     amount = 1337
@@ -117,7 +127,7 @@ def test_decode_mediated_transfer(
     recovered_address = address_from_key(publickey)
     assert recovered_address == address0
 
-    assert dtester.testDecodeTransfer(message.encode()) is True
+    assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
     assert dtester.decodedNonce() == 88924902
     assert dtester.decodedExpiration() == expiration
     assert dtester.decodedAsset() == tester_token.address.encode('hex')
@@ -135,11 +145,17 @@ def test_decode_refund_transfer(
         tester_registry):
 
     privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = private_keys[1]
+    privatekey1 = tester.k1
     address0 = privatekey_to_address(privatekey0)
     address1 = privatekey_to_address(privatekey1)
 
-    dtester = deploy_decoder_tester(tester_token.address, address0, address1, settle_timeout)
+    dtester = deploy_decoder_tester(
+        tester_state,
+        tester_token.address,
+        address0,
+        address1,
+        settle_timeout
+    )
 
     locksroot = sha3("Mainz")
     amount = 1337
@@ -161,7 +177,7 @@ def test_decode_refund_transfer(
     recovered_address = address_from_key(publickey)
     assert recovered_address == address0
 
-    assert dtester.testDecodeTransfer(message.encode()) is True
+    assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
     assert dtester.decodedNonce() == 4242452
     assert dtester.decodedExpiration() == expiration
     assert dtester.decodedAsset() == tester_token.address.encode('hex')

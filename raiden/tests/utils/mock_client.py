@@ -455,16 +455,17 @@ class NettingChannelMock(object):
         for filter_ in BlockChainServiceMock.filters[self.address]:
             filter_.event(event)
 
-    def update_transfer(self, our_address, transfer):
+    def update_transfer(self, our_address, first_transfer, second_transfer=None):
         ctx = {
             'block_number': BlockChainServiceMock.block_number(),
             'msg.sender': our_address,
         }
 
-        if transfer is not None:
+        if first_transfer is not None:
             self.contract.update_transfer(
                 ctx,
-                transfer.encode(),
+                first_transfer.encode(),
+                second_transfer.encode() if second_transfer is not None else ""
             )
 
     def unlock(self, our_address, unlock_proofs):

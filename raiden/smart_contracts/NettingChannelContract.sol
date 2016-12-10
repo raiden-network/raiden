@@ -63,18 +63,23 @@ contract NettingChannelContract {
         return data.addressAndBalance();
     }
 
+    function closeWithoutTransfer() {
+        data.close(msg.sender, "", "");
+        ChannelClosed(msg.sender, data.closed);
+    }
+
     function closeSingleTransfer(bytes signed_transfer) {
-        data.closeSingleTransfer(msg.sender, signed_transfer);
+        data.close(msg.sender, signed_transfer, "");
         ChannelClosed(msg.sender, data.closed);
     }
 
-    function close(bytes first_encoded, bytes second_encoded) {
-        data.close(msg.sender, first_encoded, second_encoded);
+    function close(bytes theirs_encoded, bytes ours_encoded) {
+        data.close(msg.sender, theirs_encoded, ours_encoded);
         ChannelClosed(msg.sender, data.closed);
     }
 
-    function updateTransfer(bytes signed_transfer) {
-        data.updateTransfer(msg.sender, signed_transfer);
+    function updateTransfer(bytes theirs_encoded) {
+        data.updateTransfer(msg.sender, theirs_encoded);
         TransferUpdated(msg.sender, block.number);
     }
 

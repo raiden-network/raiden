@@ -133,8 +133,8 @@ class ChannelExternalStateTester(object):
     def isopen(self):
         return self.proxy.isopen()
 
-    def update_transfer(self, our_address, transfer):
-        return self.proxy.update_transfer(our_address, transfer)
+    def update_transfer(self, our_address, first_transfer, second_transfer=None):
+        return self.proxy.update_transfer(our_address, first_transfer, second_transfer)
 
     def unlock(self, our_address, unlock_proofs):
         return self.proxy.unlock(our_address, unlock_proofs)
@@ -676,13 +676,17 @@ class NettingChannelTesterMock(object):
             # TODO: allow to close nevertheless
             raise ValueError('channel wasnt used')
 
-    def update_transfer(self, our_address, transfer):
-        if transfer is not None:
-            transfer_encoded = transfer.encode()
-            self.proxy.updateTransfer(transfer_encoded)
+    def update_transfer(self, our_address, first_transfer):
+        if first_transfer is not None:
+            first_encoded = first_transfer.encode()
+            self.proxy.updateTransfer(first_encoded)
             self.tester_state.mine(number_of_blocks=1)
 
-        log.info('update_transfer called', contract=pex(self.address), transfer=transfer)
+        log.info(
+            'update_transfer called',
+            contract=pex(self.address),
+            first_transfer=first_transfer
+        )
 
     def unlock(self, our_address, unlock_proofs):
         # force a list to get the length (could be a generator)
