@@ -36,8 +36,8 @@ feature level. All proof of concept releases will have version numbers in the
 
 #### Developer notice:
 
-To create a proof of concept release, install [`bumpversion`](https://github.com/peritus/bumpversion)
-and call
+To create a proof of concept release, install [`bumpversion`](https://github.com/peritus/bumpversion), update your
+`master` branch to the latest upstream version (i.e. `git checkout master && git pull --rebase`), then call
 
 ```
 prepare_poc_release.sh

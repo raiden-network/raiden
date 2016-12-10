@@ -43,6 +43,11 @@ https://api.github.com/repos/raiden-network/raiden/pulls -d'{
     "head": "'"$RELEASE_BRANCH"'"
 }')
 
+echo $RESULT
+echo "--^ This should have created a pull request titled '$RELEASE_BRANCH'."
+
+echo "If there is no PR, you should rollback your changes and start over."
+
 GH_OTP=""
 
 PR_URL=$(echo $RESULT|cut -d' ' -f 3|cut -b2-|rev|cut -b3-|rev)
