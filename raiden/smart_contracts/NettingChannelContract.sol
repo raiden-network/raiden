@@ -80,6 +80,7 @@ contract NettingChannelContract {
 
     function updateTransfer(bytes theirs_encoded) {
         data.updateTransfer(msg.sender, theirs_encoded);
+        TransferUpdated(msg.sender, block.number);
     }
 
     function unlock(bytes locked_encoded, bytes merkle_proof, bytes32 secret) {
