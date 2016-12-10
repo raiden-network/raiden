@@ -2,7 +2,7 @@
 # pylint: disable=too-few-public-methods
 from collections import namedtuple
 
-Iteration = namedtuple('Iteration', ('new_state', 'actions'))
+Iteration = namedtuple('Iteration', ('new_state', 'events'))
 
 
 class State(object):
@@ -11,6 +11,7 @@ class State(object):
     Notes:
     - Don't duplicate the same state data in two different States, instead use
     identifiers.
+    - State objects may be nested.
     - These objects don't have logic by design.
     - These objects must not be mutated in-place.
     - This class is used as a marker for states.
@@ -22,11 +23,24 @@ class StateChange(object):
     """ Declare the transition to be applied in a state object. (eg. a
     blockchain event, a new packet, an error).
 
+    StateChanges are incoming events that change this node state. It is not
+    used for the node to comunicate with the outer world.
+
     Notes:
-    - Messages change a single State object.
-    - Reaplying StateChanges must produce the same result.
+    - A message changes a single State object.
+    - Re-applying StateChanges must produce the same result.
     - These objects don't have logic by design.
     - This class is used as a marker for state changes.
+    """
+    pass
+
+
+class Event(object):
+    """ Events produced by the execution of a state change.
+
+    Notes:
+    - The state machine is oblivious of the different kinds of events.
+    - This class is used as a marker for events.
     """
     pass
 
@@ -48,8 +62,31 @@ class StateManager(object):
         self.current_state = current_state
 
     def dispatch(self, state_change):
+        """ Apply the `state_change` in the current machine and return the
+        resulting events.
+
+        Args:
+            state_change (StateChange): An object represention of a state
+            change.
+
+        Return:
+            [Event]: A list of events produced by the state transition, it's
+            the upper layer responsability to decided how to handle these
+            events.
+        """
+        assert isinstance(state_change, StateChange)
+
         # update the current state by applying the change
-        self.current_state = self.state_transition.apply_state_change(
+        iteration = self.state_transition.apply_state_change(
             self.current_state,
             state_change,
         )
+
+        assert isinstance(self.current_state, Iteration)
+
+        self.current_state, events = iteration
+
+        assert isinstance(self.current_state, State)
+        assert all(isinstance(e, Event) for e in events)
+
+        return events
