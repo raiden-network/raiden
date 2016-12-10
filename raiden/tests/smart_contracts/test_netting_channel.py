@@ -713,7 +713,7 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     transfer1_event = tester_events[-1]
     assert transfer1_event == {
         '_event_type': 'TransferUpdated',
-        'node_address': address1.encode('hex'),
+        'node_address': address0.encode('hex'),
         'block_number': tester_state.block.number,
     }
 
@@ -856,7 +856,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
 
     nettingchannel.closeSingleTransfer(
         mediated_transfer1_data,
-        sender=privatekey0_raw,
+        sender=privatekey1_raw,
     )
 
     unlockproof0 = channel1.our_state.balance_proof.compute_proof_for_lock(
