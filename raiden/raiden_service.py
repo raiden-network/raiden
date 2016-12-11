@@ -306,6 +306,20 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
                 self.config['reveal_timeout'],
             )
 
+    def log_and_apply(self, state_change):
+        self.transact_log.log(state_change)
+
+        messages = self.state_manager.dispatch(state_change)
+
+        for m in messages:
+            # TODO:
+            # encoded_message = encode(m)
+            # self.send_async(message.recipient, encoded_message)
+            pass
+
+        state = self.state_manager.current_state
+        self.transact_log.snapshot(state)
+
     def stop(self):
         for asset_manager in self.managers_by_asset_address.itervalues():
             for task in asset_manager.transfermanager.transfertasks.itervalues():
