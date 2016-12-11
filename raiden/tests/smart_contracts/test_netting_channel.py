@@ -927,7 +927,6 @@ def test__if_updater_made_mistake(
     AB_Transfer1.sign(privatekeyA, addressA)
     channelAB.register_transfer(AB_Transfer1)
     channelBA.register_transfer(AB_Transfer1)
-    AB_Transfer1_data = str(AB_Transfer1.packed().data)
 
     transfer_amount = 40
     BA_Transfer0 = channelBA.create_directtransfer(
@@ -942,7 +941,6 @@ def test__if_updater_made_mistake(
     nettingchannel.closeSingleTransfer(BA_Transfer0_data, sender=privatekeyA_raw)
     nettingchannel.updateTransfer(
         AB_Transfer0_data,
-        # AB_Transfer1_data,
         sender=privatekeyB_raw,
     )
 
@@ -953,3 +951,58 @@ def test__if_updater_made_mistake(
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekeyA_raw) == 0
     assert tester_token.balanceOf(addressB, sender=privatekeyA_raw) == initial_balanceB  + 10
     assert tester_token.balanceOf(addressA, sender=privatekeyA_raw) == initial_balanceA  + 90
+
+
+def test_settlement_with_unauthorized_token_transfer(
+        deposit,
+        settle_timeout,
+        tester_state,
+        tester_channels,
+        tester_events,
+        tester_token):
+
+    privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
+    privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
+    address0 = privatekey_to_address(privatekey0_raw)
+    address1 = privatekey_to_address(privatekey1_raw)
+
+    # transfer some extra tokens to the contract to try to mess up the balance
+    extra_amount = 10
+    assert tester_token.transfer(nettingchannel.address, extra_amount, sender=privatekey0_raw)
+
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0_raw)
+    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
+
+    transfer_amount0 = 10
+    direct_transfer0 = channel0.create_directtransfer(
+        transfer_amount0,
+        1  # TODO: fill in identifier
+    )
+    direct_transfer0.sign(privatekey0, address0)
+
+    transfer_amount1 = 30
+    direct_transfer1 = channel1.create_directtransfer(
+        transfer_amount1,
+        1  # TODO: fill in identifier
+    )
+    direct_transfer1.sign(privatekey1, address1)
+
+    nettingchannel.close(
+        str(direct_transfer0.packed().data),
+        str(direct_transfer1.packed().data),
+        sender=privatekey1_raw,
+    )
+
+    block_number = tester_state.block.number
+
+    assert nettingchannel.closed(sender=privatekey0_raw) == block_number
+    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address1)
+
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    nettingchannel.settle(sender=privatekey0_raw)
+
+    assert tester_token.balanceOf(address0, sender=privatekey0_raw) == initial_balance0 + deposit - transfer_amount0 + transfer_amount1  # noqa
+    assert tester_token.balanceOf(address1, sender=privatekey1_raw) == initial_balance1 + deposit + transfer_amount0 - transfer_amount1  # noqa
+    # Make sure that the extra amount is burned/locked in the netting channel
+    assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == extra_amount
