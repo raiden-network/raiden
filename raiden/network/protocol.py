@@ -4,6 +4,7 @@ import time
 from collections import namedtuple
 from collections import defaultdict
 
+import cachetools
 import gevent
 from gevent.queue import Queue
 from gevent.event import AsyncResult, Event
@@ -20,6 +21,9 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 # - receiver_address used to tie back the echohash to the receiver (mainly for
 #   logging purposes)
 WaitAck = namedtuple('WaitAck', ('ack_result', 'receiver_address'))
+
+CACHE_TTL = 60
+TTTL_CACHE = cachetools.TTLCache(maxsize=50, ttl=CACHE_TTL)
 
 
 class NotifyingQueue(Event):
@@ -102,11 +106,15 @@ class RaidenProtocol(object):
         self.stop_async()
         gevent.wait(self.address_greenlet.itervalues())
 
+    @cachetools.cached(cache=TTTL_CACHE)
+    def get_host_port(self, receiver_address):
+        host_port = self.discovery.get(receiver_address)
+        return host_port
+
     def _send_queued_messages(self, receiver_address, queue_name):
         # Note: this task can be killed at any time
 
         queue = self.address_queue[(receiver_address, queue_name)]
-        host_port = self.discovery.get(receiver_address)
 
         while queue.wait():
             # avoid reserializing the message and calculate it's hash
@@ -123,6 +131,7 @@ class RaidenProtocol(object):
                     message,
                 )
 
+            host_port = self.get_host_port(receiver_address)
             self.transport.send(self.raiden, host_port, messagedata)
 
             retries_left = self.max_retries
@@ -235,9 +244,6 @@ class RaidenProtocol(object):
         if not isinstance(message, Ack):
             raise ValueError('Use send_Ack only for Ack messages or Erorrs')
 
-        host_port = self.discovery.get(receiver_address)
-        messagedata = message.encode()
-
         if log.isEnabledFor(logging.INFO):
             log.info(
                 'SENDING ACK %s > %s %s',
@@ -246,7 +252,10 @@ class RaidenProtocol(object):
                 message,
             )
 
+        messagedata = message.encode()
+        host_port = self.get_host_port(receiver_address)
         self.echohash_acks[message.echo] = (host_port, messagedata)
+
         self._send_ack(*self.echohash_acks[message.echo])
 
     def send_ping(self, receiver_address):

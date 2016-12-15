@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import cachetools
 import gevent
 import rlp
 from ethereum import slogging
@@ -36,6 +37,9 @@ GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
 GAS_PRICE = denoms.shannon * 20
 
 DEFAULT_POLL_TIMEOUT = 60
+
+CACHE_TTL = 60
+TTTL_CACHE = cachetools.TTLCache(maxsize=50, ttl=CACHE_TTL)
 
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
@@ -139,6 +143,7 @@ class BlockChainService(object):
         if level:
             self.client.print_communication = True
 
+    @cachetools.cached(cache=TTTL_CACHE)
     def block_number(self):
         return self.client.blocknumber()
 

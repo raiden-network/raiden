@@ -25,7 +25,6 @@ from raiden.messages import (
 from raiden.utils import lpex, pex
 
 __all__ = (
-    'LogListenerTask',
     'StartMediatedTransferTask',
     'MediateTransferTask',
     'EndMediatedTransferTask',
@@ -64,77 +63,6 @@ class Task(gevent.Greenlet):
             )
 
         self.response_queue.put(response)
-
-
-class LogListenerTask(Task):
-    """ Task for polling for filter changes. """
-
-    def __init__(self, listener_name, filter_, callback, contract_translator,
-                 events_poll_timeout=DEFAULT_EVENTS_POLL_TIMEOUT):
-        """
-        Args:
-            listener_name (str): A name to distinguish listener tasks.
-            filter_ (raiden.network.rpc.client.Filter): A proxy for calling the
-                blockchain's filter api.
-            callback (function): A function to be called once an event happens.
-            contract_translator (ethereum.abi.ContractTranslator): A contract
-                translator to decode the event data.
-            events_poll_timeout (float): How long the tasks should sleep before
-                polling again.
-        """
-        # pylint: disable=too-many-arguments
-
-        super(LogListenerTask, self).__init__()
-
-        self.listener_name = listener_name
-        self.filter_ = filter_
-        self.callback = callback
-        self.contract_translator = contract_translator
-
-        self.stop_event = AsyncResult()
-        self.sleep_time = events_poll_timeout
-
-        # exposes the AsyncResult timer, this allows us to raise the timeout
-        # inside this Task to force an update:
-        #
-        #   task.kill(task.timeout)
-        #
-        self.timeout = None
-
-    def __repr__(self):
-        return '<LogListenerTask {}>'.format(self.listener_name)
-
-    def _run(self):  # pylint: disable=method-hidden
-        stop = None
-
-        while stop is None:
-            filter_changes = self.filter_.changes()
-
-            for log_event in filter_changes:
-                log.debug('New Events', task=self.listener_name)
-
-                event = self.contract_translator.decode_event(
-                    log_event['topics'],
-                    log_event['data'],
-                )
-
-                if event is not None:
-                    originating_contract = log_event['address']
-
-                    try:
-                        self.callback(originating_contract, event)
-                    except:  # pylint: disable=bare-except
-                        log.exception('unexpected exception on log listener')
-
-            self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
-            stop = self.stop_event.wait(self.timeout)
-
-    def stop_and_wait(self):
-        self.stop_event.set(True)
-        gevent.wait(self)
-
-    def stop_async(self):
-        self.stop_event.set(True)
 
 
 class HealthcheckTask(Task):
