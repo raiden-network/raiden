@@ -121,6 +121,7 @@ class ChannelExternalStateTester(object):
     def get_block_number(self):
         return self.tester_state.block.number
 
+    @property
     def opened_block(self):
         return self.proxy.opened()
 

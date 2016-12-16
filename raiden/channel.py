@@ -520,6 +520,10 @@ class Channel(object):
         self.settle_timeout = settle_timeout
         self.external_state = external_state
 
+        # use nonce ranges
+        self.our_state.nonce = our_state.nonce * (external_state.opened_block * (2 ** 32))
+        self.partner_state.nonce = partner_state.nonce * (external_state.opened_block * (2 ** 32))
+
         self.open_event = Event()
         self.close_event = Event()
         self.settle_event = Event()
