@@ -16,3 +16,4 @@ repoze.lru
 gevent-websocket==0.9.4
 sphinx
 bumpversion
+cachetools>=2.0.0<3.0.0

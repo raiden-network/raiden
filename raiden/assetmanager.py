@@ -128,7 +128,7 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         external_state = ChannelExternalState(
             self.raiden.alarm.register_callback,
             self.register_channel_for_hashlock,
-            self.raiden.chain.block_number,
+            self.raiden.get_block_number,
             netting_channel,
         )
 

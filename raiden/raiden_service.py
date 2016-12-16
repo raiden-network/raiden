@@ -99,8 +99,12 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         event_handler = RaidenEventHandler(self)
 
         alarm = AlarmTask(chain)
-        alarm.register_callback(event_handler.poll_all_event_listeners)
+        # ignore the blocknumber
+        alarm.register_callback(lambda _: event_handler.poll_all_event_listeners())
         alarm.start()
+
+        self._blocknumber = alarm.last_block_number
+        alarm.register_callback(self.set_block_number)
 
         if config['max_unresponsive_time'] > 0:
             self.healthcheck = HealthcheckTask(
@@ -123,6 +127,12 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+
+    def set_block_number(self, blocknumber):
+        self._blocknumber = blocknumber
+
+    def get_block_number(self):
+        return self._blocknumber
 
     def get_manager_by_asset_address(self, asset_address_bin):
         """ Return the manager for the given `asset_address_bin`.  """
