@@ -4,6 +4,7 @@ import time
 from collections import namedtuple
 from collections import defaultdict
 
+import time
 import gevent
 from gevent.queue import Queue
 from gevent.event import AsyncResult, Event
@@ -63,9 +64,12 @@ class RaidenProtocol(object):
     max_retries = 5
     max_message_size = 1200
 
+    DISCOVERY_CACHE_TTL = 60.
+
     def __init__(self, transport, discovery, raiden):
         self.transport = transport
         self.discovery = discovery
+        self.discovery_cache_by_receiver = {}
         self.raiden = raiden
 
         # Messages are sent in-order for each partner
@@ -106,7 +110,17 @@ class RaidenProtocol(object):
         # Note: this task can be killed at any time
 
         queue = self.address_queue[(receiver_address, queue_name)]
-        host_port = self.discovery.get(receiver_address)
+
+        time_now = time.time()
+        needs_update = True
+        if receiver_address in self.discovery_cache_by_receiver:
+            host_port, last_time = self.discovery_cache_by_receiver[receiver_address]
+            if time_now - last_time < self.DISCOVERY_CACHE_TTL:
+                needs_update = False
+
+        if needs_update:
+            host_port = self.discovery.get(receiver_address)
+            self.discovery_cache_by_receiver[receiver_address] = (host_port, time_now)
 
         while queue.wait():
             # avoid reserializing the message and calculate it's hash
@@ -235,7 +249,17 @@ class RaidenProtocol(object):
         if not isinstance(message, Ack):
             raise ValueError('Use send_Ack only for Ack messages or Erorrs')
 
-        host_port = self.discovery.get(receiver_address)
+        time_now = time.time()
+        needs_update = True
+        if receiver_address in self.discovery_cache_by_receiver:
+            host_port, last_time = self.discovery_cache_by_receiver[receiver_address]
+            if time_now - last_time < self.DISCOVERY_CACHE_TTL:
+                needs_update = False
+
+        if needs_update:
+            host_port = self.discovery.get(receiver_address)
+            self.discovery_cache_by_receiver[receiver_address] = (host_port, time_now)
+
         messagedata = message.encode()
 
         if log.isEnabledFor(logging.INFO):
