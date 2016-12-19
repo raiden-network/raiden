@@ -172,7 +172,7 @@ def test_reopen_channel(
     address2 = tester.a2
 
     # We need to close the channel before it can be deleted, to do so we need
-    # one transfer to call closeSingleTransfer(0
+    # one transfer to call closeSingleTransfer()
     transfer_amount = 10
     identifier = 1
     direct_transfer = channel0.create_directtransfer(
@@ -193,14 +193,14 @@ def test_reopen_channel(
     )
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
-    # delete the channel needs to update the manager's state
+    # deleting the channel needs to update the manager's state
     number_of_channels = len(tester_channelmanager.getChannelsAddresses(sender=privatekey0_raw))
 
     nettingchannel.settle(sender=privatekey0_raw)
 
     tester_state.mine(1)
 
-    # now a single new channel can be open
+    # now a single new channel can be opened
     # if channel with address is settled a new can be opened
     # old entry will be deleted when calling newChannel
     netting_channel_address1_hex = tester_channelmanager.newChannel(
