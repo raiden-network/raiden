@@ -705,7 +705,7 @@ class RaidenEventHandler(object):
                 originating_contract = log_event['address']
 
                 try:
-                    # intentionally forcing all the event to go through
+                    # intentionally forcing all the events to go through
                     # the event handler
                     self.on_event(originating_contract, event)
                 except:  # pylint: disable=bare-except
