@@ -282,7 +282,10 @@ class ChannelEndState(object):
         # sequential nonce, current value has not been used.
         # 0 is used in the netting contract to represent the lack of a
         # transfer, so this value must start at 1
-        self.nonce = 1 * (get_block_number * (2 ** 32))
+        if isinstance(get_block_number, int):
+            self.nonce = 1 * (get_block_number * (2 ** 32))
+        else:
+            self.nonce = 1 * (get_block_number() * (2 ** 32))
 
         # contains the last known message with a valid signature and
         # transferred_amount, the secrets revealed since that transfer, and the
