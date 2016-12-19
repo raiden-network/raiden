@@ -387,7 +387,7 @@ class ChannelEndState(object):
         # end of the critical read/write section
 
 
-class ChannelExternalState(object):
+class ChannelExternalState(object):  # pylint: disable=too-many-instance-attributes
     def __init__(self, register_block_alarm, register_channel_for_hashlock,
                  get_block_number, netting_channel):
         self.register_block_alarm = register_block_alarm
@@ -812,7 +812,7 @@ class Channel(object):
                 )
             raise UnknownAddress(transfer)
 
-    def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa pylint: disable=too-many-branches
+    def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa pylint: disable=too-many-branches,too-many-statements
         """ Validates and register a signed transfer, updating the channel's state accordingly.
 
         Note:
