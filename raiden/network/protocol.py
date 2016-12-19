@@ -23,7 +23,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 WaitAck = namedtuple('WaitAck', ('ack_result', 'receiver_address'))
 
 CACHE_TTL = 60
-TTTL_CACHE = cachetools.TTLCache(maxsize=50, ttl=CACHE_TTL)
+TTL_CACHE = cachetools.TTLCache(maxsize=50, ttl=CACHE_TTL)
 
 
 class NotifyingQueue(Event):
@@ -106,7 +106,7 @@ class RaidenProtocol(object):
         self.stop_async()
         gevent.wait(self.address_greenlet.itervalues())
 
-    @cachetools.cached(cache=TTTL_CACHE)
+    @cachetools.cached(cache=TTL_CACHE)
     def get_host_port(self, receiver_address):
         host_port = self.discovery.get(receiver_address)
         return host_port
