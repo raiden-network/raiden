@@ -268,7 +268,7 @@ class BalanceProof(object):
 class ChannelEndState(object):
     """ Tracks the state of one of the participants in a channel. """
 
-    def __init__(self, participant_address, participant_balance):
+    def __init__(self, participant_address, participant_balance, get_block_number):
         # since ethereum only uses integral values we cannot use float/Decimal
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
@@ -282,7 +282,7 @@ class ChannelEndState(object):
         # sequential nonce, current value has not been used.
         # 0 is used in the netting contract to represent the lack of a
         # transfer, so this value must start at 1
-        self.nonce = 1
+        self.nonce = 1 * (get_block_number * (2 ** 32))
 
         # contains the last known message with a valid signature and
         # transferred_amount, the secrets revealed since that transfer, and the
@@ -519,10 +519,6 @@ class Channel(object):
         self.reveal_timeout = reveal_timeout
         self.settle_timeout = settle_timeout
         self.external_state = external_state
-
-        # use nonce ranges
-        self.our_state.nonce = our_state.nonce * (external_state.opened_block * (2 ** 32))
-        self.partner_state.nonce = partner_state.nonce * (external_state.opened_block * (2 ** 32))
 
         self.open_event = Event()
         self.close_event = Event()
