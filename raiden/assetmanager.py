@@ -119,12 +119,12 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
-            self.raiden.chain.block_number,
+            netting_channel.opened,
         )
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
-            self.raiden.chain.block_number,
+            netting_channel.opened,
         )
 
         external_state = ChannelExternalState(
