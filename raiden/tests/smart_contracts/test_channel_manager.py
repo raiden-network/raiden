@@ -11,8 +11,12 @@ from secp256k1 import PrivateKey
 from raiden.tests.utils.tester import new_channelmanager
 
 
-def test_channelnew_event(settle_timeout, tester_state, tester_events,
-                          tester_registry, tester_token):
+def test_channelnew_event(
+        settle_timeout,
+        tester_state,
+        tester_events,
+        tester_registry,
+        tester_token):
 
     privatekey0 = tester.DEFAULT_KEY
     address0 = tester.DEFAULT_ACCOUNT
@@ -42,10 +46,13 @@ def test_channelnew_event(settle_timeout, tester_state, tester_events,
     }
 
 
-def test_channelmanager(tester_state, tester_token, tester_events,
-                        tester_channelmanager_library_address, settle_timeout,
-                        netting_channel_abi):
-    # pylint: disable=too-many-locals,too-many-statements
+def test_channelmanager(
+        tester_state,
+        tester_token,
+        tester_events,
+        tester_channelmanager_library_address,
+        settle_timeout,
+        netting_channel_abi): # pylint: disable=too-many-locals,too-many-statements
 
     address0 = tester.DEFAULT_ACCOUNT
     address1 = tester.a1
@@ -150,8 +157,13 @@ def test_channelmanager(tester_state, tester_token, tester_events,
     #    channel_manager.key(sha3('address1')[:20], sha3('address1')[:20])
 
 @pytest.mark.xfail
-def test_reopen_channel(tester_state, tester_channelmanager, tester_channels, settle_timeout,
-                       netting_channel_abi):
+def test_reopen_channel(
+        tester_state,
+        tester_channelmanager,
+        tester_channels,
+        settle_timeout,
+        netting_channel_abi):
+
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, _ = tester_channels[0]
 
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
