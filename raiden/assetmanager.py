@@ -10,7 +10,6 @@ from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.blockchain.abi import NETTING_CHANNEL_ABI
 from raiden.transfermanager import TransferManager
 from raiden.messages import Secret, RevealSecret
-from raiden.tasks import LogListenerTask
 from raiden.utils import isaddress, pex
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -106,47 +105,15 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
 
         # Race condition:
         # - If the filter is installed after the call to `details` a deposit
-        # could be missed in the meantime, to avoid this we first install the
-        # filter listener and then call `deposit`.
-        # - Because of the above strategy a `deposit` event could be handled
-        # twice, for this reason we must not use `deposit` in the events but
-        # the resulting `balance`.
+        # can be missed, to avoid this the listener is installed first.
+        # - Because of the above a `ChannelNewBalance` event can be polled
+        # after the `details` calls succeds so the effects  must be
+        # idempotent.
 
-        task_name = 'ChannelNewBalance {}'.format(pex(netting_channel.address))
         newbalance = netting_channel.channelnewbalance_filter()
-        newbalance_listener = LogListenerTask(
-            task_name,
-            newbalance,
-            self.raiden.on_event,
-            translator,
-        )
-
-        task_name = 'ChannelSecretRevelead {}'.format(pex(netting_channel.address))
         secretrevealed = netting_channel.channelsecretrevealed_filter()
-        secretrevealed_listener = LogListenerTask(
-            task_name,
-            secretrevealed,
-            self.raiden.on_event,
-            translator,
-        )
-
-        task_name = 'ChannelClosed {}'.format(pex(netting_channel.address))
         close = netting_channel.channelclosed_filter()
-        close_listener = LogListenerTask(
-            task_name,
-            close,
-            self.raiden.on_event,
-            translator,
-        )
-
-        task_name = 'ChannelSettled {}'.format(pex(netting_channel.address))
         settled = netting_channel.channelsettled_filter()
-        settled_listener = LogListenerTask(
-            task_name,
-            settled,
-            self.raiden.on_event,
-            translator,
-        )
 
         channel_details = netting_channel.detail(self.raiden.address)
         our_state = ChannelEndState(
@@ -161,7 +128,7 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         external_state = ChannelExternalState(
             self.raiden.alarm.register_callback,
             self.register_channel_for_hashlock,
-            self.raiden.chain.block_number,
+            self.raiden.get_block_number,
             netting_channel,
         )
 
@@ -178,15 +145,29 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         self.partneraddress_channel[partner_state.address] = channel
         self.address_channel[netting_channel.address] = channel
 
-        newbalance_listener.start()
-        secretrevealed_listener.start()
-        close_listener.start()
-        settled_listener.start()
+        self.raiden.start_event_listener(
+            'ChannelNewBalance {}'.format(pex(netting_channel.address)),
+            newbalance,
+            translator,
+        )
 
-        self.raiden.event_listeners.append(newbalance_listener)
-        self.raiden.event_listeners.append(secretrevealed_listener)
-        self.raiden.event_listeners.append(close_listener)
-        self.raiden.event_listeners.append(settled_listener)
+        self.raiden.start_event_listener(
+            'ChannelSecretRevelead {}'.format(pex(netting_channel.address)),
+            secretrevealed,
+            translator,
+        )
+
+        self.raiden.start_event_listener(
+            'ChannelClosed {}'.format(pex(netting_channel.address)),
+            close,
+            translator,
+        )
+
+        self.raiden.start_event_listener(
+            'ChannelSettled {}'.format(pex(netting_channel.address)),
+            settled,
+            translator,
+        )
 
     def register_channel_for_hashlock(self, channel, hashlock):
         channels_registered = self.hashlock_channel[hashlock]

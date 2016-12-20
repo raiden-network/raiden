@@ -25,7 +25,6 @@ from raiden.messages import (
 from raiden.utils import lpex, pex
 
 __all__ = (
-    'LogListenerTask',
     'StartMediatedTransferTask',
     'MediateTransferTask',
     'EndMediatedTransferTask',
@@ -64,77 +63,6 @@ class Task(gevent.Greenlet):
             )
 
         self.response_queue.put(response)
-
-
-class LogListenerTask(Task):
-    """ Task for polling for filter changes. """
-
-    def __init__(self, listener_name, filter_, callback, contract_translator,
-                 events_poll_timeout=DEFAULT_EVENTS_POLL_TIMEOUT):
-        """
-        Args:
-            listener_name (str): A name to distinguish listener tasks.
-            filter_ (raiden.network.rpc.client.Filter): A proxy for calling the
-                blockchain's filter api.
-            callback (function): A function to be called once an event happens.
-            contract_translator (ethereum.abi.ContractTranslator): A contract
-                translator to decode the event data.
-            events_poll_timeout (float): How long the tasks should sleep before
-                polling again.
-        """
-        # pylint: disable=too-many-arguments
-
-        super(LogListenerTask, self).__init__()
-
-        self.listener_name = listener_name
-        self.filter_ = filter_
-        self.callback = callback
-        self.contract_translator = contract_translator
-
-        self.stop_event = AsyncResult()
-        self.sleep_time = events_poll_timeout
-
-        # exposes the AsyncResult timer, this allows us to raise the timeout
-        # inside this Task to force an update:
-        #
-        #   task.kill(task.timeout)
-        #
-        self.timeout = None
-
-    def __repr__(self):
-        return '<LogListenerTask {}>'.format(self.listener_name)
-
-    def _run(self):  # pylint: disable=method-hidden
-        stop = None
-
-        while stop is None:
-            filter_changes = self.filter_.changes()
-
-            for log_event in filter_changes:
-                log.debug('New Events', task=self.listener_name)
-
-                event = self.contract_translator.decode_event(
-                    log_event['topics'],
-                    log_event['data'],
-                )
-
-                if event is not None:
-                    originating_contract = log_event['address']
-
-                    try:
-                        self.callback(originating_contract, event)
-                    except:  # pylint: disable=bare-except
-                        log.exception('unexpected exception on log listener')
-
-            self.timeout = Timeout(self.sleep_time)  # wait() will call cancel()
-            stop = self.stop_event.wait(self.timeout)
-
-    def stop_and_wait(self):
-        self.stop_event.set(True)
-        gevent.wait(self)
-
-    def stop_async(self):
-        self.stop_event.set(True)
 
 
 class HealthcheckTask(Task):
@@ -219,9 +147,12 @@ class AlarmTask(Task):
 
         self.callbacks = list()
         self.stop_event = AsyncResult()
-        self.wait_time = 0.5
         self.chain = chain
         self.last_block_number = self.chain.block_number()
+
+        # TODO: Start with a larger wait_time and decrease it as the
+        # probability of a new block increases.
+        self.wait_time = 0.5
 
     def register_callback(self, callback):
         """ Register a new callback.
@@ -329,7 +260,7 @@ class BaseMediatedTransferTask(Task):
         """ Utility to handle multiple messages and timeout on a blocknumber. """
         raiden.send_async(recipient, transfer)
 
-        current_block = raiden.chain.block_number()
+        current_block = raiden.get_block_number()
         while current_block < expiration_block:
             try:
                 response = self.response_queue.get(
@@ -341,7 +272,7 @@ class BaseMediatedTransferTask(Task):
                 if response:
                     yield response
 
-            current_block = raiden.chain.block_number()
+            current_block = raiden.get_block_number()
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
@@ -372,7 +303,7 @@ class BaseMediatedTransferTask(Task):
         asset = mediated_transfer.asset
 
         while channel.our_state.balance_proof.is_unclaimed(hashlock):
-            current_block = raiden.chain.block_number()
+            current_block = raiden.get_block_number()
 
             if current_block > block_to_close:
                 if log.isEnabledFor(logging.WARN):
@@ -436,7 +367,7 @@ class BaseMediatedTransferTask(Task):
         expiration = transfer.lock.expiration + 1
 
         while True:
-            current_block = raiden.chain.block_number()
+            current_block = raiden.get_block_number()
 
             if current_block > expiration:
                 return
@@ -510,7 +441,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
             assetmanager.register_channel_for_hashlock(forward_channel, hashlock)
 
             lock_timeout = forward_channel.settle_timeout - forward_channel.reveal_timeout
-            lock_expiration = raiden.chain.block_number() + lock_timeout
+            lock_expiration = raiden.get_block_number() + lock_timeout
 
             mediated_transfer = forward_channel.create_mediatedtransfer(
                 node_address,
@@ -675,7 +606,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
 
         maximum_expiration = (
             originating_channel.settle_timeout +
-            raiden.chain.block_number() -
+            raiden.get_block_number() -
             2  # decrement as a safety measure to avoid limit errors
         )
 
@@ -703,7 +634,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
             return
 
         for path, forward_channel in routes:
-            current_block_number = raiden.chain.block_number()
+            current_block_number = raiden.get_block_number()
 
             # Dont forward the mediated transfer to the next_hop if we cannot
             # decrease the expiration by `reveal_timeout`, this is time
@@ -1051,7 +982,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             from_assetmanager.register_channel_for_hashlock(from_channel, hashlock)
 
             lock_expiration = (
-                raiden.chain.block_number() +
+                raiden.get_block_number() +
                 from_channel.settle_timeout -
                 raiden.config['reveal_timeout']
             )
@@ -1276,7 +1207,7 @@ class ExchangeTask(BaseMediatedTransferTask):
         from_assetmanager.register_channel_for_hashlock(from_channel, hashlock)
 
         lock_expiration = from_mediated_transfer.lock.expiration - raiden.config['reveal_timeout']
-        lock_timeout = lock_expiration - raiden.chain.block_number()
+        lock_timeout = lock_expiration - raiden.get_block_number()
 
         to_routes = to_assetmanager.get_best_routes(
             from_mediated_transfer.lock.amount,

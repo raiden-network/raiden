@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import itertools
+from collections import namedtuple
 
 import gevent
 from ethereum import slogging
@@ -18,7 +19,7 @@ from raiden.transfermanager import (
 )
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
 from raiden.network.channelgraph import ChannelGraph
-from raiden.tasks import AlarmTask, LogListenerTask, StartExchangeTask, HealthcheckTask
+from raiden.tasks import AlarmTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
@@ -28,6 +29,8 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 DEFAULT_REVEAL_TIMEOUT = 30
 DEFAULT_SETTLE_TIMEOUT = DEFAULT_REVEAL_TIMEOUT * 20
+
+EventListener = namedtuple('EventListener', ('event_name', 'filter_', 'translator'))
 
 
 def safe_address_decode(address):
@@ -82,7 +85,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.registries = list()
         self.managers_by_asset_address = dict()
         self.managers_by_address = dict()
-        self.event_listeners = list()
 
         self.chain = chain
         self.config = config
@@ -97,7 +99,13 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         event_handler = RaidenEventHandler(self)
 
         alarm = AlarmTask(chain)
+        # ignore the blocknumber
+        alarm.register_callback(lambda _: event_handler.poll_all_event_listeners())
         alarm.start()
+
+        self._blocknumber = alarm.last_block_number
+        alarm.register_callback(self.set_block_number)
+
         if config['max_unresponsive_time'] > 0:
             self.healthcheck = HealthcheckTask(
                 self,
@@ -112,12 +120,19 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.alarm = alarm
         self.event_handler = event_handler
         self.message_handler = message_handler
+        self.start_event_listener = event_handler.start_event_listener
 
         self.on_message = message_handler.on_message
         self.on_event = event_handler.on_event
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+
+    def set_block_number(self, blocknumber):
+        self._blocknumber = blocknumber
+
+    def get_block_number(self):
+        return self._blocknumber
 
     def get_manager_by_asset_address(self, asset_address_bin):
         """ Return the manager for the given `asset_address_bin`.  """
@@ -243,15 +258,11 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         all_manager_addresses = registry.manager_addresses()
 
-        task_name = 'Registry {}'.format(pex(registry.address))
-        asset_listener = LogListenerTask(
-            task_name,
+        self.start_event_listener(
+            'Registry {}'.format(pex(registry.address)),
             assetadded,
-            self.on_event,
             translator,
         )
-        asset_listener.start()
-        self.event_listeners.append(asset_listener)
 
         self.registries.append(registry)
 
@@ -269,15 +280,11 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         all_netting_contracts = channel_manager.channels_by_participant(self.address)
 
-        task_name = 'ChannelManager {}'.format(pex(channel_manager.address))
-        channel_listener = LogListenerTask(
-            task_name,
+        self.start_event_listener(
+            'ChannelManager {}'.format(pex(channel_manager.address)),
             channelnew,
-            self.on_event,
             translator,
         )
-        channel_listener.start()
-        self.event_listeners.append(channel_listener)
 
         asset_address_bin = channel_manager.asset_address()
         channel_manager_address_bin = channel_manager.address
@@ -300,10 +307,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             )
 
     def stop(self):
-        for listener in self.event_listeners:
-            listener.stop_async()
-            self.chain.uninstall_filter(listener.filter_.filter_id_raw)
-
         for asset_manager in self.managers_by_asset_address.itervalues():
             for task in asset_manager.transfermanager.transfertasks.itervalues():
                 task.kill()
@@ -315,12 +318,12 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             wait_for.append(self.healthcheck)
         self.protocol.stop_async()
 
-        wait_for.extend(self.event_listeners)
         wait_for.extend(self.protocol.address_greenlet.itervalues())
 
         for asset_manager in self.managers_by_asset_address.itervalues():
             wait_for.extend(asset_manager.transfermanager.transfertasks.itervalues())
 
+        self.event_handler.uninstall_listeners()
         gevent.wait(wait_for)
 
 
@@ -677,6 +680,48 @@ class RaidenEventHandler(object):
 
     def __init__(self, raiden):
         self.raiden = raiden
+        self.event_listeners = list()
+
+    def start_event_listener(self, event_name, filter_, translator):
+        event = EventListener(
+            event_name,
+            filter_,
+            translator,
+        )
+        self.event_listeners.append(event)
+
+        self.poll_event_listener(event_name, filter_, translator)
+
+    def poll_event_listener(self, event_name, filter_, translator):
+        for log_event in filter_.changes():
+            log.debug('New Events', task=event_name)
+
+            event = translator.decode_event(
+                log_event['topics'],
+                log_event['data'],
+            )
+
+            if event is not None:
+                originating_contract = log_event['address']
+
+                try:
+                    # intentionally forcing all the events to go through
+                    # the event handler
+                    self.on_event(originating_contract, event)
+                except:  # pylint: disable=bare-except
+                    log.exception('unexpected exception on log listener')
+
+    def poll_all_event_listeners(self):
+        for event_listener in self.event_listeners:
+            self.poll_event_listener(*event_listener)
+
+    def uninstall_listeners(self):
+        chain = self.raiden.chain
+
+        for listener in self.event_listeners:
+            chain.uninstall_filter(listener.filter_.filter_id_raw)
+
+        self.event_listeners = list()
 
     def on_event(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
         if log.isEnabledFor(logging.DEBUG):

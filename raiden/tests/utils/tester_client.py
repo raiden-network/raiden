@@ -179,20 +179,7 @@ class FilterTesterMock(object):
                 'address': event.address,
             })
 
-            # HACK: trigger all the listeners to update the app's states. An
-            # alternative implemenation would to use `raiden.event_listeners`
-            # directly, this approach would have a chicken/egg problem since we
-            # need the BlockchainService in order to create the Raiden app.
-            # import gc
-            # from raiden.tasks import LogListenerTask
-            # event_listeners = [
-            #     listener
-            #     for listener in gc.get_objects()
-            #     if isinstance(listener, LogListenerTask)
-            # ]
-            # for listener in event_listeners:
-            #     if listener.started and listener.timeout is not None:
-            #         listener.kill(listener.timeout)
+            # TODO: update all event listeners to update the app's states.
 
     def uninstall(self):
         self.events = list()

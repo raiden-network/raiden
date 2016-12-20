@@ -610,8 +610,8 @@ class Channel(object):
     def blockalarm_for_settle(self, block_number):
         def _settle():
             for _ in range(3):
-                # do not call settle if already settled, the settle_event might
-                # not be set if the LogListener is lagging behind.
+                # do not call settle if already settled, the event polling
+                # might be lagging behind.
                 settled_block = self.external_state.query_settled()
                 if settled_block != 0:
                     self.external_state.set_settled(settled_block)
