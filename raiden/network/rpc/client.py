@@ -67,7 +67,7 @@ def patch_send_transaction(client, nonce_offset=0):
         """
         pending_transactions_hex = client.call(
             'eth_getTransactionCount',
-            encode_hex(sender),
+            address_encoder(sender),
             'pending',
         )
         pending_transactions = int(pending_transactions_hex, 16)
