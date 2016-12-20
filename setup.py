@@ -30,6 +30,7 @@ history = ''
 
 
 install_requires_replacements = {
+    "-e git+https://github.com/konradkonrad/pyethapp@71f940c6d287b98a35ef524f4c5e3c13d530bfc5#egg=pyethapp": "pyethapp"
 }
 
 install_requires = list(set(
