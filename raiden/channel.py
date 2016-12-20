@@ -283,14 +283,8 @@ class ChannelEndState(object):
         # 0 is used in the netting contract to represent the lack of a
         # transfer, so this value must start at 1
         if isinstance(get_block_number, int):
-            # if get_block_number == 0:
-                # self.nonce = 1 * (1  * (2 ** 32))
-            # else:
             self.nonce = 1 * (get_block_number * (2 ** 32))
         else:
-            # if get_block_number() == 0:
-                # self.nonce = 1 * (1 * (2 ** 32))
-            # else:
             self.nonce = 1 * (get_block_number() * (2 ** 32))
 
         # contains the last known message with a valid signature and
