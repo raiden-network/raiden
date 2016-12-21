@@ -72,6 +72,11 @@ library NettingChannelLibrary {
         _;
     }
 
+    modifier channelSettled(Data storage self) {
+        if (self.settled == 0) throw;
+        _;
+    }
+
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
@@ -412,6 +417,8 @@ library NettingChannelLibrary {
                 throw;
             }
         }
+
+        kill(self);
     }
 
     function getTransferRawAddress(bytes memory signed_transfer) private returns (bytes memory, address) {
@@ -622,5 +629,9 @@ library NettingChannelLibrary {
         for (uint i = start; i < end; i ++) { //python style slice
             n[i-start] = a[i];
         }
+    }
+
+    function kill(Data storage self) channelSettled(self) {
+        selfdestruct(0x00000000000000000000);
     }
 }

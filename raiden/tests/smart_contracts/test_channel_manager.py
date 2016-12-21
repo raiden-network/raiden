@@ -101,9 +101,8 @@ def test_channelmanager(
     with pytest.raises(TransactionFailed):
         channel_manager.newChannel(address1, settle_timeout)
 
-    # should trow if there is no channel for the given address
-    with pytest.raises(TransactionFailed):
-        channel_manager.getChannelWith(inexisting_address)
+    # should be false if there is no channel for the given address
+    assert not channel_manager.getChannelWith(inexisting_address)[1]
 
     assert len(channel_manager.getChannelsParticipants()) == 2
 
@@ -122,8 +121,8 @@ def test_channelmanager(
     )
     assert len(previous_events) + 1 == len(tester_events), 'ChannelNew event must be fired.'
 
-    assert channel_manager.getChannelWith(address1) == netting_channel_address1_hex
-    assert channel_manager.getChannelWith(address2) == netting_channel_address2_hex
+    assert channel_manager.getChannelWith(address1)[0] == netting_channel_address1_hex
+    assert channel_manager.getChannelWith(address2)[0]== netting_channel_address2_hex
 
     msg_sender_channels = channel_manager.nettingContractsByAddress(tester.DEFAULT_ACCOUNT)
     address1_channels = channel_manager.nettingContractsByAddress(address1)
@@ -156,7 +155,6 @@ def test_channelmanager(
     # with pytest.raises(TransactionFailed):
     #    channel_manager.key(sha3('address1')[:20], sha3('address1')[:20])
 
-@pytest.mark.xfail
 def test_reopen_channel(
         tester_state,
         tester_channelmanager,
