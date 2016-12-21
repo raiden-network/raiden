@@ -34,7 +34,7 @@ before_install:
 install:
   - pip install -U pip wheel coveralls
   - pip install pytest-travis-fold
-  - pip install -r requirements.txt
+  - pip install -r requirements-dev.txt
 
 before_script:
   - ./.travis/make_dag.sh
