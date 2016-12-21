@@ -104,10 +104,12 @@ def channel_from_nettingcontract(our_key, netting_contract, external_state, reve
     our_state = ChannelEndState(
         our_address,
         our_balance,
+        external_state.opened_block,
     )
     partner_state = ChannelEndState(
         partner_address,
         partner_balance,
+        external_state.opened_block,
     )
 
     channel = Channel(

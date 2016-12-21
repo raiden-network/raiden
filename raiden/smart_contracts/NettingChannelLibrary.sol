@@ -64,6 +64,14 @@ library NettingChannelLibrary {
         _;
     }
 
+    modifier inNonceRange(Data storage self, bytes message) {
+        uint64 nonce;
+        nonce = getNonce(message);
+        if (nonce < self.opened * (2 ** 32) || nonce >= (self.opened + 1) * (2 ** 32))
+            throw;
+        _;
+    }
+
     /// @notice deposit(uint) to deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
@@ -198,7 +206,7 @@ library NettingChannelLibrary {
         }
 
         // else we are closing a channel that has received transfers
-        their_sender = processTransfer(node1, node2, their_transfer);
+        their_sender = processTransfer(self, node1, node2, their_transfer);
         if (their_sender == caller_address) {
             // the sender of "their" transaction can't be ourselves
             throw;
@@ -207,7 +215,7 @@ library NettingChannelLibrary {
         if (our_transfer.length != 0) {
             address our_sender;
             // we also provided a courtesy update of our own latest transfer
-            our_sender = processTransfer(node1, node2, our_transfer);
+            our_sender = processTransfer(self, node1, node2, our_transfer);
             if (our_sender != caller_address) {
                 // we have to be the sender of our own transaction
                 throw;
@@ -215,7 +223,11 @@ library NettingChannelLibrary {
         }
     }
 
-    function processTransfer(Participant storage node1, Participant storage node2, bytes transfer) internal  returns (address) {
+    function processTransfer(Data storage self, Participant storage node1, Participant storage node2, bytes transfer)
+        inNonceRange(self, transfer)
+        internal
+        returns (address)
+    {
         bytes memory transfer_raw;
         address transfer_address;
 
@@ -267,7 +279,7 @@ library NettingChannelLibrary {
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
 
-        processTransfer(node1, node2, their_transfer);
+        processTransfer(self, node1, node2, their_transfer);
 
         // TODO check if tampered and penalize
         // TODO check if outdated and penalize
@@ -569,6 +581,14 @@ library NettingChannelLibrary {
             amount := mload(add(lock, 40))      // expiration [8:40]
             hashlock := mload(add(lock, 72))    // expiration [40:72]
 
+        }
+    }
+
+    // Get nonce from a message
+    function getNonce(bytes message) private returns (uint64 nonce) {
+        // don't care about length of message since nonce is always at a fixed position
+        assembly {
+            nonce := mload(add(message, 12))
         }
     }
 

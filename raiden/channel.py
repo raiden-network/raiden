@@ -268,7 +268,7 @@ class BalanceProof(object):
 class ChannelEndState(object):
     """ Tracks the state of one of the participants in a channel. """
 
-    def __init__(self, participant_address, participant_balance):
+    def __init__(self, participant_address, participant_balance, get_block_number):
         # since ethereum only uses integral values we cannot use float/Decimal
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
@@ -281,8 +281,12 @@ class ChannelEndState(object):
 
         # sequential nonce, current value has not been used.
         # 0 is used in the netting contract to represent the lack of a
-        # transfer, so this value must start at 1
-        self.nonce = 1
+        # the nonce value must be inside the netting channel allowed range
+        # that is defined in terms of the opened block
+        if isinstance(get_block_number, int):
+            self.nonce = 1 * (get_block_number * (2 ** 32))
+        else:
+            self.nonce = 1 * (get_block_number() * (2 ** 32))
 
         # contains the last known message with a valid signature and
         # transferred_amount, the secrets revealed since that transfer, and the

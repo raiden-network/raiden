@@ -43,6 +43,7 @@ def make_external_state():
 
 
 def test_end_state():
+    netting_channel = NettingChannelMock()
     asset_address = make_address()
     privkey1, address1 = make_privkey_address()
     address2 = make_address()
@@ -55,8 +56,8 @@ def test_end_state():
     lock_expiration = 10
     lock_hashlock = sha3(lock_secret)
 
-    state1 = ChannelEndState(address1, balance1)
-    state2 = ChannelEndState(address2, balance2)
+    state1 = ChannelEndState(address1, balance1, netting_channel.opened)
+    state2 = ChannelEndState(address2, balance2, netting_channel.opened)
 
     assert state1.contract_balance == balance1
     assert state2.contract_balance == balance2
@@ -187,6 +188,7 @@ def test_end_state():
 
 
 def test_invalid_timeouts():
+    netting_channel = NettingChannelMock()
     asset_address = make_address()
     reveal_timeout = 5
     settle_timeout = 15
@@ -196,8 +198,8 @@ def test_invalid_timeouts():
     balance1 = 10
     balance2 = 10
 
-    our_state = ChannelEndState(address1, balance1)
-    partner_state = ChannelEndState(address2, balance2)
+    our_state = ChannelEndState(address1, balance1, netting_channel.opened)
+    partner_state = ChannelEndState(address2, balance2, netting_channel.opened)
     external_state = make_external_state()
 
     # do not allow a reveal timeout larger than the settle timeout
@@ -237,6 +239,7 @@ def test_invalid_timeouts():
 
 
 def test_python_channel():
+    netting_channel = NettingChannelMock()
     asset_address = make_address()
     privkey1, address1 = make_privkey_address()
     address2 = make_address()
@@ -247,8 +250,8 @@ def test_python_channel():
     reveal_timeout = 5
     settle_timeout = 15
 
-    our_state = ChannelEndState(address1, balance1)
-    partner_state = ChannelEndState(address2, balance2)
+    our_state = ChannelEndState(address1, balance1, netting_channel.opened)
+    partner_state = ChannelEndState(address2, balance2, netting_channel.opened)
     external_state = make_external_state()
 
     test_channel = Channel(
