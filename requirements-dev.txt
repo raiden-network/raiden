@@ -1,0 +1,21 @@
+-r requirements.txt
+
+# Testing
+pytest>=3.0.4
+pytest-timeout>=1.2.0
+pytest-random>=0.02
+
+# Debugging
+pdbpp>=0.8.3<1.0.0
+
+# Continuous Integration
+coverage>=4.0<5.0
+
+# Documentation
+sphinx>=1.5.1<2.0.0
+
+# Release
+bumpversion>=0.5.3
+
+# Benchmark
+u-msgpack-python>=2.3.0<3.0.0
