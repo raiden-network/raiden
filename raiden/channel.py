@@ -312,26 +312,12 @@ class ChannelEndState(object):
         return self.balance(other) - other.locked()
 
     def compute_merkleroot_with(self, include):
+        """ Compute the resulting merkle root if the lock `include` is added in
+        the tree.
+        """
         merkletree = self.balance_proof.unclaimed_merkletree()
         merkletree.append(sha3(include.as_bytes))
         return merkleroot(merkletree)
-
-    def compute_merkleroot_without(self, exclude):
-        """ Compute the resulting merkle root if the lock `exclude` is removed. """
-
-        if isinstance(exclude, Lock):
-            raise ValueError('exclude must be a Lock')
-
-        merkletree = self.balance_proof.unclaimed_merkletree()
-
-        if exclude.hashlock not in merkletree:
-            raise ValueError('unknown lock `exclude`', exclude=exclude)
-
-        exclude_hash = sha3(exclude.as_bytes)
-        merkletree.remove(exclude_hash)
-        root = merkleroot(merkletree)
-
-        return root
 
     # api design: using specialized methods to force the user to register the
     # transfer and the lock in a single step
