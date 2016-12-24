@@ -61,7 +61,8 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, poll_interval)
     netting_channel0 = app0.raiden.chain.netting_channel(netcontract_address)
     netting_channel1 = app1.raiden.chain.netting_channel(netcontract_address)
 
-    gevent.sleep(poll_interval)  # let the AlarmTask run
+    app0.raiden.event_handler.poll_all_event_listeners()
+    app1.raiden.event_handler.poll_all_event_listeners()
 
     assert events0[0]['_event_type'] == 'ChannelNew'
     assert events0[0]['settle_timeout'] == settle_timeout
@@ -83,7 +84,8 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, poll_interval)
     asset0.approve(netcontract_address, deposit)
     netting_channel0.deposit(app0.raiden.address, deposit)
 
-    gevent.sleep(poll_interval)  # let the AlarmTask run
+    app0.raiden.event_handler.poll_all_event_listeners()
+    app1.raiden.event_handler.poll_all_event_listeners()
 
     assert events0[1]['_event_type'] == 'ChannelNewBalance'
     assert events0[1]['balance'] == deposit
@@ -105,7 +107,8 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, poll_interval)
     asset1.approve(netcontract_address, deposit)
     netting_channel1.deposit(app1.raiden.address, deposit)
 
-    gevent.sleep(poll_interval)  # let the AlarmTask run
+    app0.raiden.event_handler.poll_all_event_listeners()
+    app1.raiden.event_handler.poll_all_event_listeners()
 
     assert events0[2]['_event_type'] == 'ChannelNewBalance'
     assert events0[2]['balance'] == deposit

@@ -177,7 +177,7 @@ class FilterMock(object):
         return events
 
     def event(self, event):
-        if event['topics'] == self.topics:
+        if event['topics'] is None or event['topics'] == self.topics:
             self.events.append(event)
 
     def uninstall(self):
@@ -515,6 +515,12 @@ class NettingChannelMock(object):
 
         for filter_ in BlockChainServiceMock.filters[self.address]:
             filter_.event(event)
+
+    def filter_for_all_events(self):
+        topics = None
+        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
+        BlockChainServiceMock.filters[self.address].append(filter_)
+        return filter_
 
     def channelnewbalance_filter(self):
         topics = [CHANNELNEWBALANCE_EVENTID]
