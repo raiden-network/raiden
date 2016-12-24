@@ -521,27 +521,3 @@ class NettingChannelMock(object):
         filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
         BlockChainServiceMock.filters[self.address].append(filter_)
         return filter_
-
-    def channelnewbalance_filter(self):
-        topics = [CHANNELNEWBALANCE_EVENTID]
-        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
-        BlockChainServiceMock.filters[self.address].append(filter_)
-        return filter_
-
-    def channelsecretrevealed_filter(self):
-        topics = [CHANNELSECRETREVEALED_EVENTID]
-        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
-        BlockChainServiceMock.filters[self.address].append(filter_)
-        return filter_
-
-    def channelclosed_filter(self):
-        topics = [CHANNELCLOSED_EVENTID]
-        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
-        BlockChainServiceMock.filters[self.address].append(filter_)
-        return filter_
-
-    def channelsettled_filter(self):
-        topics = [CHANNELSETTLED_EVENTID]
-        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
-        BlockChainServiceMock.filters[self.address].append(filter_)
-        return filter_

@@ -717,27 +717,3 @@ class NettingChannelTesterMock(object):
         filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
-
-    def channelnewbalance_filter(self):
-        topics = [CHANNELNEWBALANCE_EVENTID]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
-        self.tester_state.block.log_listeners.append(filter_.event)
-        return filter_
-
-    def channelsecretrevealed_filter(self):
-        topics = [CHANNELSECRETREVEALED_EVENTID]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
-        self.tester_state.block.log_listeners.append(filter_.event)
-        return filter_
-
-    def channelclosed_filter(self):
-        topics = [CHANNELCLOSED_EVENTID]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
-        self.tester_state.block.log_listeners.append(filter_.event)
-        return filter_
-
-    def channelsettled_filter(self):
-        topics = [CHANNELSETTLED_EVENTID]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
-        self.tester_state.block.log_listeners.append(filter_.event)
-        return filter_
