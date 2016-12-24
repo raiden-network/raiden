@@ -16,7 +16,7 @@ from raiden.utils import privatekey_to_address, get_contract_path
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
 
-@pytest.mark.timeout(120)
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -147,11 +147,7 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     assert netting_channel_02.detail(peer2_address)['our_balance'] == 130
 
 
-@pytest.mark.skipif(
-    'TRAVIS' in os.environ,
-    reason='Flaky test due to mark.timeout not being scheduled. Issue #319'
-)
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(
