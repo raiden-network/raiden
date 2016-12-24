@@ -123,7 +123,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.start_event_listener = event_handler.start_event_listener
 
         self.on_message = message_handler.on_message
-        self.on_event = event_handler.on_event
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))

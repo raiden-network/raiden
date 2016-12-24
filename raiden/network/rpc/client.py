@@ -89,8 +89,13 @@ def new_filter(jsonrpc_client, contract_address, topics):
         'fromBlock': '',
         'toBlock': '',
         'address': address_encoder(normalize_address(contract_address)),
-        'topics': [topic_encoder(topic) for topic in topics],
     }
+
+    if topics is not None:
+        json_data['topics'] = [
+            topic_encoder(topic)
+            for topic in topics
+        ]
 
     return jsonrpc_client.call('eth_newFilter', json_data)
 
@@ -884,6 +889,21 @@ class NettingChannel(object):
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
         # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
         log.info('settle called', contract=pex(self.address))
+
+    def filter_for_all_events(self):
+        """ Install a new filter for the current netting channel contract.
+
+        Return:
+            Filter: The filter instance.
+        """
+        netting_channel_address_bin = self.proxy.address
+
+        filter_id_raw = new_filter(self.client, netting_channel_address_bin, topics=None)
+
+        return Filter(
+            self.client,
+            filter_id_raw,
+        )
 
     def channelnewbalance_filter(self):
         """ Install a new filter for ChannelNewBalance events.
