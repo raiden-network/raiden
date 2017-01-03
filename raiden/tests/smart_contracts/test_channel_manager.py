@@ -52,7 +52,7 @@ def test_channelmanager(
         tester_events,
         tester_channelmanager_library_address,
         settle_timeout,
-        netting_channel_abi):  # pylint: disable=too-many-locals,too-many-statements
+        netting_channel_abi):
 
     address0 = tester.DEFAULT_ACCOUNT
     address1 = tester.a1
@@ -144,6 +144,7 @@ def test_channelmanager(
     }
 
 
+@pytest.mark.xfail(reason='issue #93')
 def test_reopen_channel(
         tester_state,
         tester_channelmanager,
