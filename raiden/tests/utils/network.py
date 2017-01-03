@@ -6,6 +6,7 @@ import copy
 from ethereum import slogging
 
 from raiden.app import App, INITIAL_PORT
+from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
 from raiden.network.discovery import Discovery
 from raiden.network.transport import DummyPolicy
 from raiden.utils import privatekey_to_address
@@ -33,35 +34,6 @@ def check_channel(app1, app2, netting_channel_address):
 
     assert app1_details['our_balance'] == app2_details['partner_balance']
     assert app1_details['partner_balance'] == app2_details['our_balance']
-
-
-def create_app(
-        privatekey_bin,
-        chain,
-        discovery,
-        transport_class,
-        send_ping_time,
-        max_unresponsive_time,
-        port,
-        host='127.0.0.1',
-):
-    ''' Instantiates an Raiden app with the given configuration. '''
-    config = copy.deepcopy(App.default_config)
-
-    config['port'] = port
-    config['host'] = host
-    config['privatekey_hex'] = privatekey_bin.encode('hex')
-    config['send_ping_time'] = send_ping_time
-    config['max_unresponsive_time'] = max_unresponsive_time
-
-    app = App(
-        config,
-        chain,
-        discovery,
-        transport_class,
-    )
-    app.raiden.protocol.transport.throttle_policy = DummyPolicy()
-    return app
 
 
 def setup_channels(asset_address, app_pairs, deposit, settle_timeout):
@@ -249,7 +221,9 @@ def create_apps(
         transport_class,
         verbosity,
         send_ping_time,
-        max_unresponsive_time):
+        max_unresponsive_time,
+        reveal_timeout=DEFAULT_REVEAL_TIMEOUT,
+        settle_timeout=DEFAULT_SETTLE_TIMEOUT):
     """ Create the apps.
 
     Note:
@@ -288,16 +262,26 @@ def create_apps(
 
         discovery.register(nodeid, host, port)
 
-        app = create_app(
-            private_key,
+        config_overwrite = {
+            'port': port,
+            'host': host,
+            'privatekey_hex': private_key.encode('hex'),
+            'send_ping_time': send_ping_time,
+            'max_unresponsive_time': max_unresponsive_time,
+            'reveal_timeout': reveal_timeout,
+            'settle_timeout': settle_timeout,
+        }
+
+        config = copy.deepcopy(App.default_config)
+        config.update(config_overwrite)
+
+        app = App(
+            config,
             blockchain,
             discovery,
             transport_class,
-            send_ping_time,
-            max_unresponsive_time,
-            port=port,
-            host=host
         )
+        app.raiden.protocol.transport.throttle_policy = DummyPolicy()
         apps.append(app)
 
     return apps

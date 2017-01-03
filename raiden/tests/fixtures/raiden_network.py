@@ -33,6 +33,7 @@ def raiden_chain(
         assets_addresses,
         channels_per_node,
         deposit,
+        reveal_timeout,
         settle_timeout,
         blockchain_services,
         raiden_udp_ports,
@@ -57,7 +58,9 @@ def raiden_chain(
         transport_class,
         verbosity,
         send_ping_time,
-        max_unresponsive_time
+        max_unresponsive_time,
+        reveal_timeout,
+        settle_timeout,
     )
 
     if not cached_genesis:
@@ -83,6 +86,7 @@ def raiden_network(
         assets_addresses,
         channels_per_node,
         deposit,
+        reveal_timeout,
         settle_timeout,
         blockchain_services,
         raiden_udp_ports,
@@ -99,7 +103,9 @@ def raiden_network(
         transport_class,
         verbosity,
         send_ping_time,
-        max_unresponsive_time
+        max_unresponsive_time,
+        reveal_timeout,
+        settle_timeout,
     )
 
     if not cached_genesis:
