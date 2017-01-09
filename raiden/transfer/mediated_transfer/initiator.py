@@ -2,10 +2,10 @@
 from copy import deepcopy
 
 from raiden.transfer.architecture import Iteration
-from raiden.transfer.state import RoutesState
+from raiden.transfer.state import AvailableRoutesState
 from raiden.transfer.mediated_transfer.state import InitiatorState
 from raiden.transfer.mediated_transfer.transition import update_route
-from raiden.transfer.state_change import Blocknumber, Route
+from raiden.transfer.state_change import Blocknumber, RouteChange
 from raiden.transfer.mediated_transfer.state_change import (
     Cancel,
     InitInitiator,
@@ -104,7 +104,7 @@ def state_transition(current_state, state_change):
         if isinstance(state_change, Blocknumber):
             next_state.block_number = state_change.block_number
 
-        elif isinstance(state_change, Route):
+        elif isinstance(state_change, RouteChange):
             update_route(next_state, state_change)
 
         elif isinstance(state_change, Cancel):
@@ -113,9 +113,9 @@ def state_transition(current_state, state_change):
     # Init state and request routes
     if state_uninitialized:
         if isinstance(state_change, InitInitiator):
-            routes = RoutesState([
+            routes = AvailableRoutesState([
                 route
-                for route in state_change.routes
+                for route in state_change.available_routes
                 if route.state == 'available'
             ])
 
