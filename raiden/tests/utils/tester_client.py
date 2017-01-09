@@ -630,6 +630,8 @@ class NettingChannelTesterMock(object):
         ))
 
     def close(self, our_address, first_transfer, second_transfer):
+        """`our_address` is an argument used only in mock_client.py but is also
+        kept here to maintain a consistent interface"""
         if first_transfer and second_transfer:
             first_encoded = first_transfer.encode()
             second_encoded = second_transfer.encode()
@@ -665,6 +667,8 @@ class NettingChannelTesterMock(object):
             raise ValueError('channel wasnt used')
 
     def update_transfer(self, our_address, first_transfer):
+        """`our_address` is an argument used only in mock_client.py but is also
+        kept here to maintain a consistent interface"""
         if first_transfer is not None:
             first_encoded = first_transfer.encode()
             self.proxy.updateTransfer(first_encoded)
@@ -677,6 +681,8 @@ class NettingChannelTesterMock(object):
         )
 
     def unlock(self, our_address, unlock_proofs):
+        """`our_address` is an argument used only in mock_client.py but is also
+        kept here to maintain a consistent interface"""
         # force a list to get the length (could be a generator)
         unlock_proofs = list(unlock_proofs)
         log.info('{} locks to unlock'.format(len(unlock_proofs)), contract=pex(self.address))

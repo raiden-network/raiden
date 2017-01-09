@@ -741,6 +741,8 @@ class NettingChannel(object):
         ))
 
     def deposit(self, our_address, amount):  # pylint: disable=unused-argument
+        """`our_address` is an argument used only in mock_client.py but is also
+        kept here to maintain a consistent interface"""
         if not isinstance(amount, (int, long)):
             raise ValueError('amount needs to be an integral number.')
 
@@ -776,6 +778,8 @@ class NettingChannel(object):
         return self.proxy.settled.call()
 
     def close(self, our_address, first_transfer, second_transfer):
+        """`our_address` is an argument used only in mock_client.py but is also
+        kept here to maintain a consistent interface"""
         if first_transfer and second_transfer:
             first_encoded = first_transfer.encode()
             second_encoded = second_transfer.encode()
@@ -824,6 +828,8 @@ class NettingChannel(object):
             raise ValueError('channel wasnt used')
 
     def update_transfer(self, our_address, their_transfer):
+        """`our_address` is an argument used only in mock_client.py but is also
+        kept here to maintain a consistent interface"""
         if their_transfer is not None:
             their_transfer_encoded = their_transfer.encode()
 
@@ -842,6 +848,8 @@ class NettingChannel(object):
             # it wasn't raise an error
 
     def unlock(self, our_address, unlock_proofs):
+        """`our_address` is an argument used only in mock_client.py but is also
+        kept here to maintain a consistent interface"""
         # force a list to get the length (could be a generator)
         unlock_proofs = list(unlock_proofs)
         log.info(
