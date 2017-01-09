@@ -574,10 +574,13 @@ class ChannelManager(object):
         # TODO: raise if the transaction failed because there is an existing
         # channel in place
 
-        netting_channel_address_encoded = self.proxy.getChannelWith.call(
+        netting_channel_results_encoded = self.proxy.getChannelWith.call(
             other,
             startgas=self.startgas,
         )
+
+        # address is at index 0
+        netting_channel_address_encoded = netting_channel_results_encoded[0]
 
         if not netting_channel_address_encoded:
             log.error('netting_channel_address failed', peer1=pex(peer1), peer2=pex(peer2))
