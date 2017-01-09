@@ -419,6 +419,8 @@ class ChannelExternalState(object):
             callback(block_number)
 
     def set_closed(self, block_number):
+        import pdb
+        pdb.set_trace()
         if self._closed_block != 0:
             raise RuntimeError('channel is already closed')
 
@@ -587,6 +589,8 @@ class Channel(object):
         self.on_withdrawable_callbacks.append(callback)
 
     def channel_closed(self, block_number):
+        import pdb
+        pdb.set_trace()
         self.external_state.register_block_alarm(self.blockalarm_for_settle)
 
         balance_proof = self.partner_state.balance_proof
@@ -596,6 +600,9 @@ class Channel(object):
 
         self.external_state.update_transfer(self.our_state.address, transfer)
         self.external_state.unlock(self.our_state.address, unlock_proofs)
+
+        # TODO: check the published messages for the correct transferred_amount
+        # and dispute if there is a discrepancy
 
     def blockalarm_for_settle(self, block_number):
         def _settle():

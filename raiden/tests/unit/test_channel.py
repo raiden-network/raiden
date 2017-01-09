@@ -3,11 +3,19 @@ from __future__ import division
 
 import pytest
 from ethereum import slogging
+from ethereum import tester
 
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.messages import DirectTransfer, Lock, LockedTransfer
-from raiden.utils import sha3, make_address, make_privkey_address
+from raiden.utils import (
+    sha3,
+    make_address,
+    make_privkey_address,
+    privatekey_to_address
+)
+from raiden.blockchain.abi import NETTING_CHANNEL_ABI
 from raiden.tests.utils.transfer import assert_synched_channels, channel
+from secp256k1 import PrivateKey
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 slogging.configure(':DEBUG')
@@ -646,3 +654,85 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
         channel0, balance0, [],
         channel1, balance1, [transfer1.lock],
     )
+
+
+@pytest.mark.parametrize('blockchain_type', ['geth'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_automatic_dispute(raiden_network, tester_state, settle_timeout):
+    app0, app1 = raiden_network
+    channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    privatekey0 = app0.raiden.private_key
+    privatekey1 = app1.raiden.private_key
+    address0 = privatekey_to_address(privatekey0.private_key)
+    address1 = privatekey_to_address(privatekey1.private_key)
+
+    # Alice sends Bob 10 tokens
+    amount = 10
+    direct_transfer = channel0.create_directtransfer(
+        amount,
+        1  # TODO: fill in identifier
+    )
+    direct_transfer.sign(privatekey0, address0)
+    channel0.register_transfer(direct_transfer)
+    channel1.register_transfer(direct_transfer)
+    alice_old_transaction_data = str(direct_transfer.packed().data)
+    alice_old_transaction = direct_transfer
+
+    # Bob sends Alice 50 tokens
+    amount = 50
+    direct_transfer = channel1.create_directtransfer(
+        amount,
+        1  # TODO: fill in identifier
+    )
+    direct_transfer.sign(privatekey1, address1)
+    channel0.register_transfer(direct_transfer)
+    channel1.register_transfer(direct_transfer)
+    bob_last_transaction_data = str(direct_transfer.packed().data)
+    bob_last_transaction = direct_transfer
+
+    # Finally Alice sends Bob 60 tokens
+    amount = 60
+    direct_transfer = channel0.create_directtransfer(
+        amount,
+        1  # TODO: fill in identifier
+    )
+    direct_transfer.sign(privatekey0, address0)
+    channel0.register_transfer(direct_transfer)
+    channel1.register_transfer(direct_transfer)
+
+    # Then Alice attempts to close the channel with an older transfer of hers
+    nettingchannel = tester.ABIContract(
+        tester_state,
+        tester.ContractTranslator(NETTING_CHANNEL_ABI),
+        channel0.external_state.netting_channel.address
+    )
+    nettingchannel.close(
+        bob_last_transaction_data,
+        alice_old_transaction_data,
+        sender=privatekey0.private_key,
+    )
+    channel0.external_state.close(
+        None,
+        bob_last_transaction,
+        alice_old_transaction
+    )
+    import pdb
+    pdb.set_trace()
+    import gevent
+    gevent.sleep(10)
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    gevent.sleep(10)
+
+
+    # # check the contract is intact
+    # assert details0 == netting_channel.detail(address0)
+    # assert details1 == netting_channel.detail(address1)
+
+    # assert channel0.contract_balance == contract_balance0
+    # assert channel1.contract_balance == contract_balance1
+
+    # assert_synched_channels(
+    #     channel0, contract_balance0 - amount, [],
+    #     channel1, contract_balance1 + amount, [],
+    # )
