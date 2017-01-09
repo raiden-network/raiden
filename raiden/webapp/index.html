@@ -1,0 +1,135 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Raiden API App">
+  <title>Raiden API Interface App</title>
+
+
+  <!-- Stylesheets-->
+  <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.13/css/jquery.dataTables.css">
+  <link rel="stylesheet" type="text/css" href="/node_modules/bootstrap/dist/css/bootstrap.min.css">
+
+  <!-- Scripts-->
+  <script type="text/javascript" charset="utf8" src="/node_modules/jquery/dist/jquery.min.js"></script>
+  <script type="text/javascript" charset="utf8" src="/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
+  <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.13/js/jquery.dataTables.js"></script>
+  <script type="text/javascript" charset="utf8"       src="//cdn.datatables.net/buttons/1.2.4/js/dataTables.buttons.min.js"></script>
+  <script type="text/javascript" charset="utf8"       src="//cdn.datatables.net/select/1.2.1/js/dataTables.select.min.js"></script>
+  <!-- <script type="text/javascript" charset="utf8" src="/scripts/editor.min.js"></script>-->
+  <script type="text/javascript" charset="utf8" src="/scripts/channeltable.js"></script>
+
+  <style>
+    body {
+        position: relative;
+    }
+    #section1 {padding-top:50px;height:500px; }
+    #section2 {padding-top:50px;height:500px; }
+    #open_channel_form{padding-top: 50px;}
+    </style>
+</head>
+
+<body data-spy="scroll" data-target=".navbar" data-offset="50">
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container-fluid">
+    <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">Raiden</a>
+    </div>
+    <div>
+      <div class="collapse navbar-collapse" id="myNavbar">
+        <ul class="nav navbar-nav">
+          <li><a href="#section1">Standard</a></li>
+          <li><a href="#section2">Advanced</a></li>
+
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<div id="section1" class="container-fluid">
+  <div class="container">
+    <h2>Channels</h2>
+    <p>Shows the Raiden channels that user has with other users </p>
+    <table class="table table-bordered" id="channels">
+      <thead>
+        <tr>
+          <th>Partner Address</th>
+          <th>Asset Address</th>
+          <th>Deposit</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tfoot>
+        <tr>
+          <th>Partner Address</th>
+          <th>Asset Address</th>
+          <th>Deposit</th>
+          <th>Status</th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+
+
+<div id="section2" class="container-fluid">
+  <h1>Advanced mode</h1>
+  <ul class="nav nav-tabs">
+    <li role="presentation" class="active"><a href="#open_channel_form">Open Channel</a></li>
+    <li role="presentation"><a href="#deposit_amount_form">Deposit Amount</a></li>
+    <li role="presentation"><a href="#">Transfer</a></li>
+    <li role="presentation"><a href="#">Close</a></li>
+    <li role="presentation"><a href="#">Settle</a></li>
+  </ul>
+
+    <div class="container-fluid">
+      <form class="form-horizontal" id="open_channel_form">
+        <div class="form-group">
+          <label class="control-label col-sm-2" for="partner_address">Partner Address</label>
+          <div class="col-sm-3">
+            <input type="text" class="form-control" id="partner_address">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label col-sm-2" for="asset_address">Asset Address</label>
+          <div class="col-sm-3">
+            <select class="form-control" id="asset_address"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label col-sm-2" for="settle_timeout">Settle Timeout</label>
+          <div class="col-sm-3">
+            <input type="text" class="form-control" id="settle_timeout">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="control-label col-sm-2" for="reveal_timeout">Reveal Timeout</label>
+          <div class="col-sm-3">
+            <input type="text" class="form-control" id="reveal_timeout">
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-sm-offset-2 col-sm-2">
+            <button type="submit" class="btn btn-default">Submit</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+</div>
+
+
+</body>
+
+</html>
