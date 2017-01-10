@@ -783,52 +783,22 @@ class NettingChannel(object):
     def close(self, our_address, first_transfer, second_transfer):
         """`our_address` is an argument used only in mock_client.py but is also
         kept here to maintain a consistent interface"""
-        if first_transfer and second_transfer:
-            first_encoded = first_transfer.encode()
-            second_encoded = second_transfer.encode()
+        first_encoded = first_transfer.encode() if first_transfer else ""
+        second_encoded = second_transfer.encode() if second_transfer else ""
 
-            transaction_hash = self.proxy.close.transact(
-                first_encoded,
-                second_encoded,
-                startgas=self.startgas,
-                gasprice=self.gasprice,
-            )
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-
-            log.info(
-                'close called',
-                contract=pex(self.address),
-                first_transfer=first_transfer,
-                second_transfer=second_transfer,
-            )
-
-        elif first_transfer:
-            first_encoded = first_transfer.encode()
-
-            transaction_hash = self.proxy.closeSingleTransfer.transact(
-                first_encoded,
-                startgas=self.startgas,
-                gasprice=self.gasprice,
-            )
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-
-            log.info('close called', contract=pex(self.address), first_transfer=first_transfer)
-
-        elif second_transfer:
-            second_encoded = second_transfer.encode()
-
-            transaction_hash = self.proxy.closeSingleTransfer.transact(
-                second_encoded,
-                startgas=self.startgas,
-                gasprice=self.gasprice,
-            )
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-
-            log.info('close called', contract=pex(self.address), second_transfer=second_transfer)
-
-        else:
-            # TODO: allow to close nevertheless
-            raise ValueError('channel wasnt used')
+        transaction_hash = self.proxy.close.transact(
+            first_encoded,
+            second_encoded,
+            startgas=self.startgas,
+            gasprice=self.gasprice,
+        )
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        log.info(
+            'close called',
+            contract=pex(self.address),
+            first_transfer=first_transfer,
+            second_transfer=second_transfer,
+        )
 
     def update_transfer(self, our_address, their_transfer):
         """`our_address` is an argument used only in mock_client.py but is also

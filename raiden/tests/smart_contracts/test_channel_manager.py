@@ -170,7 +170,7 @@ def test_reopen_channel(
     address2 = tester.a2
 
     # We need to close the channel before it can be deleted, to do so we need
-    # one transfer to call closeSingleTransfer()
+    # one transfer to pass in close()
     transfer_amount = 10
     identifier = 1
     direct_transfer = channel0.create_directtransfer(
@@ -185,7 +185,7 @@ def test_reopen_channel(
     assert should_be_nonce <= direct_transfer.nonce < should_be_nonce_plus_one
 
     # settle the channel should not change the channel manager state
-    nettingchannel.closeSingleTransfer(
+    nettingchannel.close(
         direct_transfer_data,
         sender=privatekey1_raw,
     )
@@ -217,8 +217,9 @@ def test_reopen_channel(
 
     # transfer not in nonce range
     with pytest.raises(TransactionFailed):
-        netting_contract_proxy1.closeSingleTransfer(
+        netting_contract_proxy1.close(
             direct_transfer_data,
+            "",
             sender=privatekey0_raw,
         )
 
