@@ -140,6 +140,13 @@ def pytest_addoption(parser):
     )
 
     parser.addoption(
+        '--initial-port',
+        type=int,
+        default=29870,
+        help='Base port number used to avoid conflicts while running parallel tests.',
+    )
+
+    parser.addoption(
         '--log-config',
         default=None,
     )

@@ -12,6 +12,7 @@ from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import address_decoder, address_encoder, default_gasprice
 
 from raiden.utils import privatekey_to_address, get_contract_path, safe_lstrip_hex
+from raiden.network.transport import DummyTransport
 from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
 from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
@@ -111,7 +112,7 @@ def cached_genesis(request, blockchain_type):
     raiden_apps = create_apps(
         blockchain_services,
         request.getfixturevalue('raiden_udp_ports'),
-        request.getfixturevalue('transport_class'),
+        DummyTransport,  # Do not use a UDP server to avoid port reuse in MacOSX
         request.config.option.verbose,
         request.getfixturevalue('send_ping_time'),
         request.getfixturevalue('max_unresponsive_time'),
