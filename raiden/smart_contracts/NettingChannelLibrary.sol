@@ -73,7 +73,8 @@ library NettingChannelLibrary {
     }
 
     modifier channelSettled(Data storage self) {
-        if (self.settled == 0) throw;
+        if (self.settled == 0)
+            throw;
         _;
     }
 
@@ -625,9 +626,9 @@ library NettingChannelLibrary {
             throw;
         }
 
-        n = new bytes(end-start);
-        for (uint i = start; i < end; i ++) { //python style slice
-            n[i-start] = a[i];
+        n = new bytes(end - start);
+        for (uint i = start; i < end; i++) { //python style slice
+            n[i - start] = a[i];
         }
     }
 

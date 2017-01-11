@@ -122,7 +122,7 @@ def test_channelmanager(
     assert len(previous_events) + 1 == len(tester_events), 'ChannelNew event must be fired.'
 
     assert channel_manager.getChannelWith(address1)[0] == netting_channel_address1_hex
-    assert channel_manager.getChannelWith(address2)[0]== netting_channel_address2_hex
+    assert channel_manager.getChannelWith(address2)[0] == netting_channel_address2_hex
 
     msg_sender_channels = channel_manager.nettingContractsByAddress(tester.DEFAULT_ACCOUNT)
     address1_channels = channel_manager.nettingContractsByAddress(address1)

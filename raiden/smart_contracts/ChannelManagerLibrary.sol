@@ -32,19 +32,18 @@ library ChannelManagerLibrary {
 
     /// @notice getChannelWith(address) to get the address of the unique channel of two parties.
     /// @dev Get the channel of two parties
+    /// @param caller_address (address) the address of the caller
     /// @param partner (address) the address of the partner
     /// @return channel (address) the address of the NettingChannelContract of the two parties.
     function getChannelWith(Data storage self, address caller_address, address partner)
         constant
         returns (address, bool, uint, uint)
     {
-        uint i;
-        uint j;
         address[] our_channels = self.node_channels[caller_address];
         address[] partner_channels = self.node_channels[partner];
 
-        for (i = 0; i < our_channels.length; ++i) {
-            for (j = 0; j < partner_channels.length; ++j) {
+        for (uint i = 0; i < our_channels.length; ++i) {
+            for (uint j = 0; j < partner_channels.length; ++j) {
                 if (our_channels[i] == partner_channels[j]) {
                     return (partner_channels[j], true, i, j);
                 }
@@ -68,14 +67,14 @@ library ChannelManagerLibrary {
     {
         address channel_address;
         bool has_channel;
-        uint i_index;
-        uint j_index;
+        uint caller_index;
+        uint partner_index;
 
-        (channel_address, has_channel, i_index, j_index) = getChannelWith(self, caller_address, partner);
+        (channel_address, has_channel, caller_index, partner_index) = getChannelWith(self, caller_address, partner);
         if (!has_channel) {
             // do nothing, continue to create a new channel
         } else if (!contractExists(self, channel_address)) {
-            deleteChannel(self, caller_address, partner, channel_address, i_index, j_index);
+            deleteChannel(self, caller_address, partner, channel_address, caller_index, partner_index);
         } else {
             // throw if an open contract exists that is not settled
             throw;
@@ -97,25 +96,28 @@ library ChannelManagerLibrary {
 
     /// @notice deleteChannel(address) to remove a channel after it's been settled
     /// @dev Remove channel after it's been settled
-    /// @param channel_address (address) address of the channel to be closed
+    /// @param caller_address (address) the address of the caller
     /// @param partner (address) address of the partner
+    /// @param channel_address (address) address of the channel to be closed
+    /// @param caller_index (uint) index of the caller in our channels
+    /// @param partner_index (uint) index of the partner in partner_channels
     function deleteChannel(
         Data storage self,
         address caller_address,
         address partner,
         address channel_address,
-        uint i_index,
-        uint j_index)
+        uint caller_index,
+        uint partner_index)
         private
     {
         address[] our_channels = self.node_channels[caller_address];
         address[] partner_channels = self.node_channels[partner];
 
         // move last element of array to i_index pos
-        our_channels[i_index] = our_channels[our_channels.length - 1];
+        our_channels[caller_index] = our_channels[our_channels.length - 1];
         our_channels.length--;
         // move last element of array to j_index pos
-        partner_channels[j_index] = partner_channels[partner_channels.length - 1];
+        partner_channels[partner_index] = partner_channels[partner_channels.length - 1];
         partner_channels.length--;
 
         // remove address from all_channels
@@ -140,6 +142,8 @@ library ChannelManagerLibrary {
         assembly {
             size := extcodesize(_addr)
         }
-        if (size > 0) return true;
+        if (size > 0) {
+            return true;
+        }
     }
 }
