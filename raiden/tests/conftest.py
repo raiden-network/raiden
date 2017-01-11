@@ -60,6 +60,7 @@ from raiden.tests.fixtures import (
     port_generator,
     blockchain_rpc_ports,
     blockchain_p2p_ports,
+    raiden_udp_ports,
 )
 
 __all__ = (
@@ -113,6 +114,7 @@ __all__ = (
     'port_generator',
     'blockchain_rpc_ports',
     'blockchain_p2p_ports',
+    'raiden_udp_ports',
 
     'pytest_addoption',
     'logging_level',

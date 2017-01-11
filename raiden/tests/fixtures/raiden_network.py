@@ -35,6 +35,7 @@ def raiden_chain(
         deposit,
         settle_timeout,
         blockchain_services,
+        raiden_udp_ports,
         transport_class,
         cached_genesis,
         send_ping_time,
@@ -52,6 +53,7 @@ def raiden_chain(
 
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
+        raiden_udp_ports,
         transport_class,
         verbosity,
         send_ping_time,
@@ -83,6 +85,7 @@ def raiden_network(
         deposit,
         settle_timeout,
         blockchain_services,
+        raiden_udp_ports,
         transport_class,
         send_ping_time,
         max_unresponsive_time,
@@ -92,6 +95,7 @@ def raiden_network(
 
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
+        raiden_udp_ports,
         transport_class,
         verbosity,
         send_ping_time,
