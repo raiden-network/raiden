@@ -110,6 +110,7 @@ def cached_genesis(request, blockchain_type):
 
     raiden_apps = create_apps(
         blockchain_services,
+        request.getfixturevalue('raiden_udp_ports'),
         request.getfixturevalue('transport_class'),
         request.config.option.verbose,
         request.getfixturevalue('send_ping_time'),

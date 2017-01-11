@@ -245,6 +245,7 @@ def create_sequential_channels(
 
 def create_apps(
         blockchain_services,
+        raiden_udp_ports,
         transport_class,
         verbosity,
         send_ping_time,
@@ -256,8 +257,14 @@ def create_apps(
         for this test to work in a mac both virtual interfaces must be created
         prior to the test execution::
 
-            ifconfig lo:0 127.0.0.10
-            ifconfig lo:1 127.0.0.11
+            MacOSX (tested on 10.11.5):
+                         interface       ip address netmask
+                ifconfig lo0       alias 127.0.0.10 255.255.255.0
+                ifconfig lo0       alias 127.0.0.11 255.255.255.0
+
+            Alternative syntax:
+                ifconfig lo:0 127.0.0.10
+                ifconfig lo:1 127.0.0.11
     """
     # pylint: disable=too-many-locals
     half_of_nodes = len(blockchain_services) // 2
@@ -265,7 +272,7 @@ def create_apps(
 
     apps = []
     for idx, blockchain in enumerate(blockchain_services):
-        port = INITIAL_PORT + idx
+        port = raiden_udp_ports[idx]
         private_key = blockchain.private_key
         nodeid = privatekey_to_address(private_key)
 

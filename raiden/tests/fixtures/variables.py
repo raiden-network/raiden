@@ -191,3 +191,14 @@ def blockchain_p2p_ports(blockchain_number_of_nodes, port_generator):
         next(port_generator)
         for _ in range(blockchain_number_of_nodes)
     ]
+
+
+@pytest.fixture
+def raiden_udp_ports(number_of_nodes, port_generator):
+    """ A list of unique port numbers to be used by the raiden apps for the udp
+    protocol.
+    """
+    return [
+        next(port_generator)
+        for _ in range(number_of_nodes)
+    ]
