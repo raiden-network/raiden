@@ -14,6 +14,7 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
+    get_encoded_transfers
 )
 from raiden.blockchain.abi import (
     ASSETADDED_EVENTID,
@@ -629,21 +630,20 @@ class NettingChannelTesterMock(object):
             data[2],
         ))
 
-    def close(self, our_address, first_transfer, second_transfer):
+    def close(self, our_address, their_transfer, our_transfer):
         """`our_address` is an argument used only in mock_client.py but is also
         kept here to maintain a consistent interface"""
-        first_encoded = first_transfer.encode() if first_transfer else ""
-        second_encoded = second_transfer.encode() if second_transfer else ""
+        their_encoded, our_encoded = get_encoded_transfers(their_transfer, our_transfer)
         self.proxy.close(
-            first_encoded,
-            second_encoded,
+            their_encoded,
+            our_encoded,
         )
         self.tester_state.mine(number_of_blocks=1)
         log.info(
             'close called',
             contract=pex(self.address),
-            first_transfer=first_transfer,
-            second_transfer=second_transfer,
+            their_transfer=their_transfer,
+            our_transfer=our_transfer,
         )
 
     def update_transfer(self, our_address, first_transfer):
