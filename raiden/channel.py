@@ -419,8 +419,6 @@ class ChannelExternalState(object):
             callback(block_number)
 
     def set_closed(self, block_number):
-        import pdb
-        pdb.set_trace()
         if self._closed_block != 0:
             raise RuntimeError('channel is already closed')
 
@@ -440,6 +438,9 @@ class ChannelExternalState(object):
 
     def query_settled(self):
         return self.netting_channel.settled()
+
+    def query_transferred_amount(self, participant_address):
+        return self.netting_channel.transferredAmount(participant_address)
 
     def callback_on_opened(self, callback):
         if self._opened_block != 0:
@@ -589,8 +590,6 @@ class Channel(object):
         self.on_withdrawable_callbacks.append(callback)
 
     def channel_closed(self, block_number):
-        import pdb
-        pdb.set_trace()
         self.external_state.register_block_alarm(self.blockalarm_for_settle)
 
         balance_proof = self.partner_state.balance_proof
@@ -601,8 +600,19 @@ class Channel(object):
         self.external_state.update_transfer(self.our_state.address, transfer)
         self.external_state.unlock(self.our_state.address, unlock_proofs)
 
-        # TODO: check the published messages for the correct transferred_amount
+        # check the published messages for the correct transferred_amount
         # and dispute if there is a discrepancy
+        our_closed_transferred = self.external_state.query_transferred_amount(
+            self.our_state.address
+        )
+        partner_closed_transferred = self.external_state.query_transferred_amount(
+            self.partner_state.address
+        )
+        if (
+                self.our_state.transferred_amount != our_closed_transferred or
+                self.partner_state.transferred_amount != partner_closed_transferred
+        ):
+            pass  # TODO: settle with our known amount
 
     def blockalarm_for_settle(self, block_number):
         def _settle():
@@ -642,7 +652,7 @@ class Channel(object):
         if self.partner_state.address == node_address_bin:
             return self.partner_state
 
-        raise Exception('Unknow address {}'.format(encode_hex(node_address_bin)))
+        raise Exception('Unknown address {}'.format(encode_hex(node_address_bin)))
 
     def register_secret(self, secret):
         """ Register a secret.

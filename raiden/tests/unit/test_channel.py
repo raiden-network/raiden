@@ -2,6 +2,7 @@
 from __future__ import division
 
 import pytest
+import gevent
 from ethereum import slogging
 from ethereum import tester
 
@@ -702,37 +703,12 @@ def test_automatic_dispute(raiden_network, tester_state, settle_timeout):
     channel1.register_transfer(direct_transfer)
 
     # Then Alice attempts to close the channel with an older transfer of hers
-    nettingchannel = tester.ABIContract(
-        tester_state,
-        tester.ContractTranslator(NETTING_CHANNEL_ABI),
-        channel0.external_state.netting_channel.address
-    )
-    nettingchannel.close(
-        bob_last_transaction_data,
-        alice_old_transaction_data,
-        sender=privatekey0.private_key,
-    )
     channel0.external_state.close(
         None,
         bob_last_transaction,
         alice_old_transaction
     )
-    import pdb
-    pdb.set_trace()
-    import gevent
-    gevent.sleep(10)
     tester_state.mine(number_of_blocks=settle_timeout + 1)
-    gevent.sleep(10)
+    gevent.sleep(5)
 
-
-    # # check the contract is intact
-    # assert details0 == netting_channel.detail(address0)
-    # assert details1 == netting_channel.detail(address1)
-
-    # assert channel0.contract_balance == contract_balance0
-    # assert channel1.contract_balance == contract_balance1
-
-    # assert_synched_channels(
-    #     channel0, contract_balance0 - amount, [],
-    #     channel1, contract_balance1 + amount, [],
-    # )
+    # TODO: check that the channel is correctly settled

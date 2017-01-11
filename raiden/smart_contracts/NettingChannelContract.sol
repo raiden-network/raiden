@@ -63,6 +63,10 @@ contract NettingChannelContract {
         return data.addressAndBalance();
     }
 
+    function transferredAmount(address participant) constant returns (uint) {
+        return data.transferredAmount(participant);
+    }
+
     function close(bytes theirs_encoded, bytes ours_encoded) {
         data.close(msg.sender, theirs_encoded, ours_encoded);
         ChannelClosed(msg.sender, data.closed);
