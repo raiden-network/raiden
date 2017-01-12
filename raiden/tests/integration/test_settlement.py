@@ -23,6 +23,7 @@ from raiden.utils import sha3
 slogging.configure(':DEBUG')
 
 
+@pytest.mark.xfail(reson='issue #198')
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
