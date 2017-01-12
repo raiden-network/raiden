@@ -13,14 +13,36 @@ from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.network import CHAIN
 
 
-@pytest.mark.timeout(60)
+def patch_event_handler(on_event):
+    """ Monkey patching for tracking the handled events. """
+    events = list()
+
+    def wrap_on_event(emitting_contract_address_bin, event):
+        events.append(event)
+        return on_event(emitting_contract_address_bin, event)
+
+    return wrap_on_event, events
+
+
+# @pytest.mark.timeout(60)
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_timeout):
+def test_event_new_channel(raiden_chain, deposit, settle_timeout, poll_interval):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
+    app0.raiden.event_handler.on_event, events0 = patch_event_handler(
+        app0.raiden.event_handler.on_event
+    )
+    app1.raiden.event_handler.on_event, events1 = patch_event_handler(
+        app1.raiden.event_handler.on_event
+    )
+
     asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
+    encoded_addresses = (
+        app0.raiden.address.encode('hex'),
+        app1.raiden.address.encode('hex'),
+    )
 
     assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 0
     assert len(app1.raiden.managers_by_asset_address[asset_address].address_channel) == 0
@@ -39,7 +61,13 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     netting_channel0 = app0.raiden.chain.netting_channel(netcontract_address)
     netting_channel1 = app1.raiden.chain.netting_channel(netcontract_address)
 
-    gevent.sleep(events_poll_timeout)
+    app0.raiden.event_handler.poll_all_event_listeners()
+    app1.raiden.event_handler.poll_all_event_listeners()
+
+    assert events0[0]['_event_type'] == 'ChannelNew'
+    assert events0[0]['settle_timeout'] == settle_timeout
+    assert events0[0]['participant1'] in encoded_addresses
+    assert events0[0]['participant2'] in encoded_addresses
 
     # channel is created but not opened and without funds
     assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 1
@@ -56,7 +84,13 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     asset0.approve(netcontract_address, deposit)
     netting_channel0.deposit(app0.raiden.address, deposit)
 
-    gevent.sleep(events_poll_timeout)
+    app0.raiden.event_handler.poll_all_event_listeners()
+    app1.raiden.event_handler.poll_all_event_listeners()
+
+    assert events0[1]['_event_type'] == 'ChannelNewBalance'
+    assert events0[1]['balance'] == deposit
+    assert events0[1]['asset_address'] == asset0.address.encode('hex')
+    assert events0[1]['participant'] == app0.raiden.address.encode('hex')
 
     # channel is open but single funded
     assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 1
@@ -73,7 +107,13 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     asset1.approve(netcontract_address, deposit)
     netting_channel1.deposit(app1.raiden.address, deposit)
 
-    gevent.sleep(events_poll_timeout)
+    app0.raiden.event_handler.poll_all_event_listeners()
+    app1.raiden.event_handler.poll_all_event_listeners()
+
+    assert events0[2]['_event_type'] == 'ChannelNewBalance'
+    assert events0[2]['balance'] == deposit
+    assert events0[2]['asset_address'] == asset1.address.encode('hex')
+    assert events0[2]['participant'] == app1.raiden.address.encode('hex')
 
     # channel is open and funded by both participants
     assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 1
@@ -93,7 +133,7 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_timeout):
+def test_secret_revealed(raiden_chain, deposit, settle_timeout):
     app0, app1, app2 = raiden_chain
 
     asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]

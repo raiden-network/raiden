@@ -32,7 +32,7 @@ __all__ = (
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 REMOVE_CALLBACK = object()
-DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
+DEFAULT_POLL_INTERVAL = 0.5
 DEFAULT_HEALTHCHECK_POLL_TIMEOUT = 1
 ESTIMATED_BLOCK_TIME = 7
 TIMEOUT = object()
@@ -142,7 +142,7 @@ class HealthcheckTask(Task):
 class AlarmTask(Task):
     """ Task to notify when a block is mined. """
 
-    def __init__(self, chain):
+    def __init__(self, chain, poll_interval=DEFAULT_POLL_INTERVAL):
         super(AlarmTask, self).__init__()
 
         self.callbacks = list()
@@ -150,9 +150,9 @@ class AlarmTask(Task):
         self.chain = chain
         self.last_block_number = self.chain.block_number()
 
-        # TODO: Start with a larger wait_time and decrease it as the
+        # TODO: Start with a larger poll_interval and decrease it as the
         # probability of a new block increases.
-        self.wait_time = 0.5
+        self.poll_interval = poll_interval
 
     def register_callback(self, callback):
         """ Register a new callback.
@@ -200,18 +200,18 @@ class AlarmTask(Task):
                 for callback in remove:
                     self.callbacks.remove(callback)
 
-            # we want this task to iterate in the tick of `wait_time`, so take
+            # we want this task to iterate in the tick of `poll_interval`, so take
             # into account how long we spent executing one tick.
             work_time = time.time() - last_loop
-            if work_time > self.wait_time:
+            if work_time > self.poll_interval:
                 log.warning(
                     'alarm loop is taking longer than the wait time',
                     work_time=work_time,
-                    wait_time=self.wait_time,
+                    poll_interval=self.poll_interval,
                 )
                 sleep_time = 0.001
             else:
-                sleep_time = self.wait_time - work_time
+                sleep_time = self.poll_interval - work_time
 
             stop = self.stop_event.wait(sleep_time)
             last_loop = time.time()
@@ -264,7 +264,7 @@ class BaseMediatedTransferTask(Task):
         while current_block < expiration_block:
             try:
                 response = self.response_queue.get(
-                    timeout=DEFAULT_EVENTS_POLL_TIMEOUT
+                    timeout=DEFAULT_POLL_INTERVAL
                 )
             except Empty:
                 pass
@@ -324,7 +324,7 @@ class BaseMediatedTransferTask(Task):
 
             try:
                 response = self.response_queue.get(
-                    timeout=DEFAULT_EVENTS_POLL_TIMEOUT
+                    timeout=DEFAULT_POLL_INTERVAL
                 )
             except Empty:
                 pass
@@ -353,7 +353,7 @@ class BaseMediatedTransferTask(Task):
                         repr(self),
                     )
 
-    def _wait_expiration(self, raiden, transfer, sleep=DEFAULT_EVENTS_POLL_TIMEOUT):
+    def _wait_expiration(self, raiden, transfer, sleep=DEFAULT_POLL_INTERVAL):
         """ Utility to wait until the expiration block.
 
         For a chain A-B-C, if an attacker controls A and C a mediated transfer

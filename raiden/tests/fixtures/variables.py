@@ -6,7 +6,7 @@ import pytest
 from ethereum.utils import sha3
 
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
-from raiden.tasks import DEFAULT_EVENTS_POLL_TIMEOUT
+from raiden.tasks import DEFAULT_POLL_INTERVAL
 from raiden.network.rpc.client import DEFAULT_POLL_TIMEOUT
 from raiden.network.transport import UDPTransport
 
@@ -31,8 +31,9 @@ def reveal_timeout():
 
 
 @pytest.fixture
-def events_poll_timeout():
-    return DEFAULT_EVENTS_POLL_TIMEOUT
+def poll_interval():
+    """ Default interval in seconds for waiting between polling actions. """
+    return DEFAULT_POLL_INTERVAL
 
 
 @pytest.fixture

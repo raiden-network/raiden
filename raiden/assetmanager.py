@@ -101,19 +101,13 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         """
         # pylint: disable=too-many-locals
 
-        translator = ContractTranslator(NETTING_CHANNEL_ABI)
-
         # Race condition:
         # - If the filter is installed after the call to `details` a deposit
         # can be missed, to avoid this the listener is installed first.
         # - Because of the above a `ChannelNewBalance` event can be polled
         # after the `details` calls succeds so the effects  must be
         # idempotent.
-
-        newbalance = netting_channel.channelnewbalance_filter()
-        secretrevealed = netting_channel.channelsecretrevealed_filter()
-        close = netting_channel.channelclosed_filter()
-        settled = netting_channel.channelsettled_filter()
+        netting_channel_events = netting_channel.filter_for_all_events()
 
         channel_details = netting_channel.detail(self.raiden.address)
         our_state = ChannelEndState(
@@ -147,27 +141,10 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         self.partneraddress_channel[partner_state.address] = channel
         self.address_channel[netting_channel.address] = channel
 
+        translator = ContractTranslator(NETTING_CHANNEL_ABI)
         self.raiden.start_event_listener(
-            'ChannelNewBalance {}'.format(pex(netting_channel.address)),
-            newbalance,
-            translator,
-        )
-
-        self.raiden.start_event_listener(
-            'ChannelSecretRevelead {}'.format(pex(netting_channel.address)),
-            secretrevealed,
-            translator,
-        )
-
-        self.raiden.start_event_listener(
-            'ChannelClosed {}'.format(pex(netting_channel.address)),
-            close,
-            translator,
-        )
-
-        self.raiden.start_event_listener(
-            'ChannelSettled {}'.format(pex(netting_channel.address)),
-            settled,
+            'NettingChannel Event {}'.format(pex(netting_channel.address)),
+            netting_channel_events,
             translator,
         )
 
