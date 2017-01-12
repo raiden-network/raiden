@@ -36,7 +36,7 @@ before_script:
   - ./.travis/make_dag.sh
 
 script:
-  - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/integration/test_settlement.py::test_settlement
+  - coverage run -m py.test --travis-fold=always -vvvvvv --capture=no --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/integration/test_settlement.py::test_settlement
 
 after_success:
   - coveralls
