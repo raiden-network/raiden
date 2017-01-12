@@ -52,7 +52,7 @@ def test_channelmanager(
         tester_events,
         tester_channelmanager_library_address,
         settle_timeout,
-        netting_channel_abi): # pylint: disable=too-many-locals,too-many-statements
+        netting_channel_abi):  # pylint: disable=too-many-locals,too-many-statements
 
     address0 = tester.DEFAULT_ACCOUNT
     address1 = tester.a1
@@ -143,17 +143,6 @@ def test_channelmanager(
         'settle_timeout': settle_timeout,
     }
 
-    # uncomment private in function to run test
-    # assert channel_manager.numberOfItems(netting_channel_creator1) == 2
-    # assert channel_manager.numberOfItems(sha3('address1')[:20]) == 1
-    # assert channel_manager.numberOfItems(sha3('iDontExist')[:20]) == 0
-    # vs = sorted((sha3('address1')[:20], sha3('address2')[:20]))
-    # k0 = channel_manager.key(sha3('address1')[:20], sha3('address2')[:20])
-    # assert k0 == sha3(vs[0] + vs[1])
-    # k1 = channel_manager.key(sha3('address2')[:20], sha3('address1')[:20])
-    # assert k1 == sha3(vs[0] + vs[1])
-    # with pytest.raises(TransactionFailed):
-    #    channel_manager.key(sha3('address1')[:20], sha3('address1')[:20])
 
 def test_reopen_channel(
         tester_state,
