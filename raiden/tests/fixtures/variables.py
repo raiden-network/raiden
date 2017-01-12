@@ -21,7 +21,7 @@ DEFAULT_DEPOSIT = 200
 @pytest.fixture
 def settle_timeout():
     """ NettingChannel default settle timeout. """
-    return 35
+    return 55
 
 
 @pytest.fixture
