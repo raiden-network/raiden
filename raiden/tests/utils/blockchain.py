@@ -45,11 +45,12 @@ def wait_until_block(chain, block):
     # we expect `next_block` to block until the next block, but, it could
     # advance miss and advance two or more
     curr_block = chain.block_number()
+    import threading
     while curr_block < block:
-        assert isinstance(curr_block, int)
-        assert isinstance(block, int)
+        print(list(threading.enumerate()))
         print('blocks: %s %s' % (curr_block, block))
         curr_block = chain.next_block()
+        gevent.sleep(3)
 
 
 def geth_to_cmd(node, datadir, verbosity):
