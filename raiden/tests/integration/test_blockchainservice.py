@@ -2,6 +2,8 @@
 from __future__ import division
 
 import pytest
+import os
+
 from ethereum import _solidity
 from ethereum._solidity import compile_file
 from ethereum.utils import denoms
@@ -145,6 +147,10 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     assert netting_channel_02.detail(peer2_address)['our_balance'] == 130
 
 
+@pytest.mark.skipif(
+    'TRAVIS' in os.environ,
+    reason='Flaky test due to mark.timeout not being scheduled. Issue #319'
+)
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
