@@ -46,6 +46,9 @@ def wait_until_block(chain, block):
     # advance miss and advance two or more
     curr_block = chain.block_number()
     while curr_block < block:
+        assert isinstance(curr_block, int)
+        assert isinstance(block, int)
+        print('blocks: %s %s' % (curr_block, block))
         curr_block = chain.next_block()
 
 
