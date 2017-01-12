@@ -176,12 +176,10 @@ def test_reopen_channel(
     # settle the channel should not change the channel manager state
     nettingchannel.close(
         direct_transfer_data,
+        "",
         sender=privatekey1_raw,
     )
     tester_state.mine(number_of_blocks=settle_timeout + 1)
-
-    # deleting the channel needs to update the manager's state
-    number_of_channels = len(tester_channelmanager.getChannelsAddresses(sender=privatekey0_raw))
 
     nettingchannel.settle(sender=privatekey0_raw)
 
@@ -221,7 +219,7 @@ def test_reopen_channel(
         )
 
     # opening a new channel that did not exist before
-    netting_channel_address2_hex = tester_channelmanager.newChannel(
+    tester_channelmanager.newChannel(
         address2,
         settle_timeout,
         sender=privatekey0_raw,
