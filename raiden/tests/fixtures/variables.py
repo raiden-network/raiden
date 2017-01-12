@@ -27,7 +27,7 @@ def settle_timeout():
 @pytest.fixture
 def reveal_timeout():
     """ NettingChannel default settle timeout. """
-    return 10
+    return 5
 
 
 @pytest.fixture
