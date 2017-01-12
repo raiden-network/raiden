@@ -213,10 +213,10 @@ def test_closewithouttransfer_settle(
     initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1)
 
     with pytest.raises(TransactionFailed):
-        nettingchannel.closeWithoutTransfer(sender=unknown_key)
+        nettingchannel.close(sender=unknown_key)
 
     previous_events = list(tester_events)
-    nettingchannel.closeWithoutTransfer(sender=privatekey0)
+    nettingchannel.close("", "", sender=privatekey0)
     assert len(previous_events) + 1 == len(tester_events)
 
     block_number = tester_state.block.number
@@ -313,7 +313,7 @@ def test_closewithouttransfer_badalice(
     channelBA.register_transfer(AB_Transfer1)
     AB_Transfer1_data = str(AB_Transfer1.packed().data)
 
-    nettingchannel.closeWithoutTransfer(sender=privatekeyA_raw)
+    nettingchannel.close("", "", sender=privatekeyA_raw)
 
     nettingchannel.updateTransfer(
         AB_Transfer1_data,
@@ -356,10 +356,10 @@ def test_closesingle_settle(
     direct_transfer_data = str(direct_transfer.packed().data)
 
     with pytest.raises(TransactionFailed):
-        nettingchannel.closeSingleTransfer(sender=unknown_key)
+        nettingchannel.close(sender=unknown_key)
 
     previous_events = list(tester_events)
-    nettingchannel.closeSingleTransfer(direct_transfer_data, sender=privatekey1_raw)
+    nettingchannel.close(direct_transfer_data, "", sender=privatekey1_raw)
     assert len(previous_events) + 1 == len(tester_events)
 
     block_number = tester_state.block.number
@@ -854,8 +854,9 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
 
     channel1.register_secret(secret1)
 
-    nettingchannel.closeSingleTransfer(
+    nettingchannel.close(
         mediated_transfer1_data,
+        "",
         sender=privatekey1_raw,
     )
 
@@ -938,7 +939,7 @@ def test__if_updater_made_mistake(
     channelBA.register_transfer(BA_Transfer0)
     BA_Transfer0_data = str(BA_Transfer0.packed().data)
 
-    nettingchannel.closeSingleTransfer(BA_Transfer0_data, sender=privatekeyA_raw)
+    nettingchannel.close(BA_Transfer0_data, "", sender=privatekeyA_raw)
     nettingchannel.updateTransfer(
         AB_Transfer0_data,
         sender=privatekeyB_raw,

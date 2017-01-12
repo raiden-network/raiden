@@ -14,6 +14,7 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
+    get_encoded_transfers
 )
 from raiden.blockchain.abi import (
     ASSETADDED_EVENTID,
@@ -629,42 +630,21 @@ class NettingChannelTesterMock(object):
             data[2],
         ))
 
-    def close(self, our_address, first_transfer, second_transfer):
+    def close(self, our_address, their_transfer, our_transfer):
         """`our_address` is an argument used only in mock_client.py but is also
         kept here to maintain a consistent interface"""
-        if first_transfer and second_transfer:
-            first_encoded = first_transfer.encode()
-            second_encoded = second_transfer.encode()
-
-            self.proxy.close(
-                first_encoded,
-                second_encoded,
-            )
-            self.tester_state.mine(number_of_blocks=1)
-            log.info(
-                'close called',
-                contract=pex(self.address),
-                first_transfer=first_transfer,
-                second_transfer=second_transfer,
-            )
-
-        elif first_transfer:
-            first_encoded = first_transfer.encode()
-
-            self.proxy.closeSingleTransfer(first_encoded)
-            self.tester_state.mine(number_of_blocks=1)
-            log.info('close called', contract=pex(self.address), first_transfer=first_transfer)
-
-        elif second_transfer:
-            second_encoded = second_transfer.encode()
-
-            self.proxy.closeSingleTransfer.transact(second_encoded)
-            self.tester_state.mine(number_of_blocks=1)
-            log.info('close called', contract=pex(self.address), second_transfer=second_transfer)
-
-        else:
-            # TODO: allow to close nevertheless
-            raise ValueError('channel wasnt used')
+        their_encoded, our_encoded = get_encoded_transfers(their_transfer, our_transfer)
+        self.proxy.close(
+            their_encoded,
+            our_encoded,
+        )
+        self.tester_state.mine(number_of_blocks=1)
+        log.info(
+            'close called',
+            contract=pex(self.address),
+            their_transfer=their_transfer,
+            our_transfer=our_transfer,
+        )
 
     def update_transfer(self, our_address, first_transfer):
         """`our_address` is an argument used only in mock_client.py but is also
