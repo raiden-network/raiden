@@ -26,8 +26,6 @@ slogging.configure(':DEBUG')
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('reveal_timeout', [5])  # use a lower reveal_timeout to match the settle_timeout
-@pytest.mark.parametrize('settle_timeout', [10])  # use a lower settle_timeout to speed up the test
 def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
