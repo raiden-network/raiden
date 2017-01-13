@@ -597,7 +597,6 @@ class Channel(object):
         transfer = balance_proof.transfer
         unlock_proofs = balance_proof.get_known_unlocks()
 
-        self.external_state.update_transfer(self.our_state.address, transfer)
         self.external_state.unlock(self.our_state.address, unlock_proofs)
 
         # check the published messages for the correct transferred_amount
@@ -612,7 +611,7 @@ class Channel(object):
                 self.our_state.transferred_amount != our_closed_transferred or
                 self.partner_state.transferred_amount != partner_closed_transferred
         ):
-            pass  # TODO: settle with our known amount
+            self.external_state.update_transfer(self.our_state.address, transfer)
 
     def blockalarm_for_settle(self, block_number):
         def _settle():

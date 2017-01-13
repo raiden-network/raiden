@@ -4,8 +4,8 @@ from __future__ import division
 import pytest
 import gevent
 from ethereum import slogging
-from ethereum import tester
 
+from raiden.tests.utils.blockchain import wait_until_block
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.messages import DirectTransfer, Lock, LockedTransfer
 from raiden.utils import (
@@ -14,9 +14,7 @@ from raiden.utils import (
     make_privkey_address,
     privatekey_to_address
 )
-from raiden.blockchain.abi import NETTING_CHANNEL_ABI
 from raiden.tests.utils.transfer import assert_synched_channels, channel
-from secp256k1 import PrivateKey
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 slogging.configure(':DEBUG')
@@ -659,7 +657,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_automatic_dispute(raiden_network, tester_state, settle_timeout):
+def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     app0, app1 = raiden_network
     channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
     channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
@@ -667,6 +665,8 @@ def test_automatic_dispute(raiden_network, tester_state, settle_timeout):
     privatekey1 = app1.raiden.private_key
     address0 = privatekey_to_address(privatekey0.private_key)
     address1 = privatekey_to_address(privatekey1.private_key)
+    balance0 = channel0.balance
+    balance1 = channel1.balance
 
     # Alice sends Bob 10 tokens
     amount = 10
@@ -677,7 +677,6 @@ def test_automatic_dispute(raiden_network, tester_state, settle_timeout):
     direct_transfer.sign(privatekey0, address0)
     channel0.register_transfer(direct_transfer)
     channel1.register_transfer(direct_transfer)
-    alice_old_transaction_data = str(direct_transfer.packed().data)
     alice_old_transaction = direct_transfer
 
     # Bob sends Alice 50 tokens
@@ -689,7 +688,6 @@ def test_automatic_dispute(raiden_network, tester_state, settle_timeout):
     direct_transfer.sign(privatekey1, address1)
     channel0.register_transfer(direct_transfer)
     channel1.register_transfer(direct_transfer)
-    bob_last_transaction_data = str(direct_transfer.packed().data)
     bob_last_transaction = direct_transfer
 
     # Finally Alice sends Bob 60 tokens
@@ -708,7 +706,16 @@ def test_automatic_dispute(raiden_network, tester_state, settle_timeout):
         bob_last_transaction,
         alice_old_transaction
     )
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
-    gevent.sleep(5)
+    gevent.sleep(3)
+
+    # wait until the settle timeout has passed
+    chain0 = app0.raiden.chain
+    settle_expiration = chain0.block_number() + settle_timeout
+    wait_until_block(chain0, settle_expiration)
 
     # TODO: check that the channel is correctly settled
+    # Note: settle() should be automatically called by blockalarm_for_settle
+    token = app0.raiden.chain.asset(channel0.asset_address.decode('hex'))
+
+    assert token.balance_of(address0.encode('hex')) == balance0 + deposit - 60 + 50  # noqa
+    assert token.balance_of(address1.encode('hex')) == balance1 + deposit + 60 - 50  # noqa
