@@ -28,25 +28,20 @@ def try_next_route(next_state):
         route = next_state.routes.available_routes.pop()
         reveal_expiration = route.reveal_timeout + next_state.block_number
 
-        # `reveal_timeout` is the number of blocks configured as a safe guard
-        # against DoS attacks to the ethereum, a node must only forward a
-        # mediated transfer if it can guarantee this timeout.
-        under_reveal_expiration = next_state.originating_transfer.expiration <= reveal_expiration
+        # `reveal_timeout` is the minimum number of blocks required to safely
+        # forward a lock.
+        good_reveal_expiration = next_state.from_transfer.lock.expiration > reveal_expiration
+        good_capacity = route.capacity > next_state.from_transfer.lock.amount
 
-        if route.capacity < next_state.transfer.amount or under_reveal_expiration:
-            next_state.routes.ignored_routes.append(route)
-        else:
+        if good_reveal_expiration and good_capacity:
             try_route = route
             break
+        else:
+            next_state.routes.ignored_routes.append(route)
 
     # No route found, refund the previous hop so that it can try a new route.
     if try_route is None:
-        refund = RefundTransfer(
-            next_state.transfer.identifier,
-            next_state.transfer.amount,
-            next_state.hashlock,
-            next_state.sender,
-        )
+        refund = RefundTransfer(next_state.from_transfer)
         next_state.sent_refund = refund
 
         next_state.route = None
@@ -56,7 +51,7 @@ def try_next_route(next_state):
 
     else:
         lock_timeout = (
-            next_state.originating_transfer.expiration -
+            next_state.from_transfer.expiration -
             next_state.block_number
         )
         new_lock_timeout = lock_timeout - try_route.reveal_timeout
@@ -69,13 +64,12 @@ def try_next_route(next_state):
         message_id = len(next_state.sent_transfers_refunded)
         new_lock_expiration = new_lock_timeout + next_state.block_number
         mediated_transfer = MediatedTransfer(
-            next_state.transfer.id,
-            message_id,
-            next_state.transfer.token,
-            next_state.transfer.amount,
+            next_state.from_transfer.identifier,
+            next_state.from_transfer.lock.token,
+            next_state.from_transfer.lock.amount,
             new_lock_expiration,
-            next_state.hashlock,
-            next_state.target,
+            next_state.from_transfer.lock.hashlock,
+            next_state.from_transfer.target,
             try_route.node_address,
         )
         next_state.message = mediated_transfer
@@ -86,13 +80,9 @@ def try_next_route(next_state):
 
 
 def cancel_current_transfer(next_state):
-    cancel_message = CancelMediatedTransfer(
-        transfer_id=next_state.transfer.transfer_id,
-        message_id=next_state.message.message_id
-    )
+    cancel_message = CancelMediatedTransfer(next_state.from_transfer)
 
     next_state.cancel = cancel_message
-    next_state.hashlock = None
     next_state.message = None
     next_state.route = None
 
@@ -112,7 +102,7 @@ def state_transition(current_state, state_change):
     else:
         state_uninitialized = False
         state_wait_secret = current_state.message is not None
-        state_wait_withdraw = current_state.secret is not None
+        state_wait_withdraw = current_state.lock.secret is not None
 
     iteration = Iteration(current_state, list())
     next_state = deepcopy(current_state)
@@ -130,8 +120,8 @@ def state_transition(current_state, state_change):
     # Init state and request routes
     if state_uninitialized:
         if isinstance(state_change, InitMediator):
-            originating_route = state_change.originating_route
-            originating_transfer = state_change.originating_transfer
+            from_route = state_change.from_route
+            lock = state_change.lock
             routes = AvailableRoutesState([
                 route
                 for route in state_change.routes
@@ -143,13 +133,13 @@ def state_transition(current_state, state_change):
                 state_change.target,
                 routes,
                 state_change.transfer,
-                originating_route,
-                originating_transfer,
+                from_route,
+                lock,
                 state_change.block_number,
             )
 
-            settle_expiration = originating_route.settle_timeout + state_change.block_number
-            over_settle_expiration = originating_transfer.expiration >= settle_expiration
+            settle_expiration = from_route.settle_timeout + state_change.block_number
+            over_settle_expiration = lock.expiration >= settle_expiration
 
             # The expiration /must/ be lower than settle_timeout, otherwise we
             # cannot guarantee the transfer will settled.
@@ -181,7 +171,7 @@ def state_transition(current_state, state_change):
 
         valid_reveal_secret = (
             isinstance(state_change, RevealSecretReceived) and
-            sha3(state_change.secret) == next_state.hashlock
+            sha3(state_change.lock.secret) == next_state.hashlock
         )
 
         if valid_refund:
@@ -191,12 +181,12 @@ def state_transition(current_state, state_change):
             iteration = try_next_route(next_state)
 
         elif valid_reveal_secret:
-            next_state.secret = state_change.secret
+            next_state.lock.secret = state_change.lock.secret
 
             reveal = RevealSecret(
-                next_state.originating_transfer.identifier,
-                next_state.secret,
-                next_state.originating_route.node_address,
+                next_state.transfer.identifier,
+                next_state.lock.secret,
+                next_state.from_route.node_address,
                 next_state.our_address,
             )
 
@@ -204,8 +194,8 @@ def state_transition(current_state, state_change):
                 UnlockLock(
                     refunded_transfer.identifier,
                     refunded_transfer.node_address,
-                    next_state.originating_transfer.token,
-                    next_state.secret,
+                    next_state.lock.token,
+                    next_state.lock.secret,
                     next_state.hashlock,
                 )
                 for refunded_transfer in next_state.sent_transfers_refunded
@@ -216,15 +206,15 @@ def state_transition(current_state, state_change):
     elif state_wait_withdraw:
         valid_secret = (
             isinstance(state_change, RevealSecretReceived) and
-            state_change.sender == next_state.originating_transfer.sender
+            state_change.sender == next_state.lock.sender
         )
 
         if valid_secret:
             withdraw = WithdrawLock(
-                next_state.originating_transfer.id,
-                next_state.originating_transfer.token,
-                next_state.secret,
-                next_state.hashlock,
+                next_state.transfer.identifier,
+                next_state.lock.token,
+                next_state.lock.secret,
+                next_state.lock.hashlock,
             )
             iteration = Iteration(None, [withdraw])
 
