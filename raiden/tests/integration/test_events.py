@@ -13,7 +13,7 @@ from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.network import CHAIN
 
 
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -88,7 +88,7 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     )
 
 
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(10)
 @pytest.mark.xfail(reason='out-of-gas for unlock and settle')
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])

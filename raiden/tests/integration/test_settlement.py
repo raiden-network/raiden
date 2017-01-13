@@ -23,10 +23,7 @@ from raiden.utils import sha3
 slogging.configure(':DEBUG')
 
 
-@pytest.mark.skipif(
-    'TRAVIS' in os.environ,
-    reason='Flaky test due to mark.timeout not being scheduled. Issue #319'
-)
+@pytest.mark.xfail(reson='issue #198')
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
@@ -126,7 +123,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert channel1.external_state.settled_block != 0
 
 
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -198,7 +195,7 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout, reveal_t
 
 
 @pytest.mark.xfail()
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_start_end_attack(asset_address, raiden_chain, deposit):

@@ -5,7 +5,7 @@ from raiden.utils import make_address, get_contract_path, privatekey_to_address
 from raiden.network.discovery import ContractDiscovery
 
 
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('poll_timeout', [80])
 def test_endpointregistry(private_keys, blockchain_services):
