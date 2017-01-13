@@ -19,11 +19,9 @@ class InitiatorState(State):
         self.random_generator = random_generator
         self.block_number = block_number
 
-        self.secret = None  #: the secret used to lock the current transfer
-        self.hashlock = None  #: the corresponding hashlock for the current secret
-
         self.message = None  #: current message in-transit
         self.route = None  #: current route being used
+        self.lock = None
         self.secretrequest = None
         self.revealsecret = None
 
@@ -32,23 +30,16 @@ class MediatorState(State):
     """ State of a node mediating a transfer.  """
     def __init__(self,
                  our_address,
-                 transfer,
                  routes,
-                 target,
-                 originating_route,
-                 originating_transfer,
+                 from_route,
+                 from_transfer,
                  block_number):
 
         self.our_address = our_address
-        self.transfer = transfer
         self.routes = routes
-        self.target = target
-        self.originating_route = originating_route
-        self.originating_transfer = originating_transfer
+        self.from_route = from_route
+        self.from_transfer = from_transfer
         self.block_number = block_number
-
-        self.secret = None
-        self.hashlock = None  #: the corresponding hashlock for the current secret
 
         self.message = None  #: current message in-transit
         self.route = None  #: current route being used
@@ -62,18 +53,16 @@ class TargetState(State):
     """ State of mediated transfer target.  """
     def __init__(self,
                  our_address,
-                 originating_route,
-                 originating_transfer,
+                 from_route,
+                 from_transfer,
                  hashlock,
-                 block_number,
-                 network_timeout):
+                 block_number):
 
         self.our_address = our_address
-        self.originating_route = originating_route
-        self.originating_transfer = originating_transfer
+        self.from_route = from_route
+        self.from_transfer = from_transfer
         self.hashlock = hashlock
         self.block_number = block_number
-        self.network_timeout = network_timeout
 
         self.secret = None
 
@@ -83,3 +72,28 @@ class TargetState(State):
 
         self.routes = None
         self.sent_transfers_refunded = list()
+
+
+class HashlockTransferState(State):
+    """ State of a transfer locked with a hashlock.
+
+    Args:
+        amount (int): Amount of `token' being transferred.
+        token (address): Token being transferred.
+        expiration (int): The absolute block number that the lock expires.
+        hashlock (bin): The hashlock.
+        secret (bin): The secret that unlocks the lock, may be None.
+    """
+    def __init__(self, amount, token, expiration, hashlock, secret):
+        self.amount = amount
+        self.token = token
+        self.expiration = expiration
+        self.hashlock = hashlock
+        self.secret = secret
+
+
+class LockedTransferState(State):
+    def __init__(self, identifier, target, lock):
+        self.identifier = identifier
+        self.target = target
+        self.lock = lock

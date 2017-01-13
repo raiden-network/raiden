@@ -3,7 +3,7 @@ from copy import deepcopy
 
 from raiden.transfer.architecture import Iteration
 from raiden.transfer.state import AvailableRoutesState
-from raiden.transfer.mediated_transfer.state import InitiatorState
+from raiden.transfer.mediated_transfer.state import InitiatorState, HashlockTransferState
 from raiden.transfer.mediated_transfer.transition import update_route
 from raiden.transfer.state_change import Blocknumber, RouteChange
 from raiden.transfer.mediated_transfer.state_change import (
@@ -28,8 +28,7 @@ def cancel_current_transfer(next_state):
     next_state.routes.canceled_routes.append(next_state.route)
     next_state.canceled_transfers.append(next_state.message)
 
-    next_state.secret = None
-    next_state.hashlock = None
+    next_state.lock = None
     next_state.message = None
     next_state.route = None
     next_state.secretrequest = None
@@ -38,12 +37,6 @@ def cancel_current_transfer(next_state):
 
 
 def try_next_route(next_state):
-    secret = next_state.random_generator.next()
-    hashlock = sha3(secret)
-
-    next_state.secret = secret
-    next_state.hashlock = hashlock
-
     try_route = None
     while next_state.routes.available_routes:
         route = next_state.routes.available_routes.pop()
@@ -63,9 +56,20 @@ def try_next_route(next_state):
         iteration = Iteration(None, [cancel])
 
     else:
+        secret = next_state.random_generator.next()
+        hashlock = sha3(secret)
+
         lock_timeout = try_route.settle_timeout - try_route.reveal_timeout
         lock_expiration = next_state.block_number + lock_timeout
         message_id = len(next_state.canceled_transfers)
+
+        lock = HashlockTransferState(
+            next_state.transfer.amount,
+            next_state.transfer.token,
+            lock_expiration,
+            hashlock,
+            secret,
+        )
 
         message = MediatedTransfer(
             next_state.transfer.identifier,
@@ -77,6 +81,8 @@ def try_next_route(next_state):
             next_state.transfer.target,
             try_route.node_address,
         )
+
+        next_state.lock = lock
         next_state.message = message
 
         iteration = Iteration(next_state, [message])
@@ -135,7 +141,7 @@ def state_transition(current_state, state_change):
 
         if isinstance(state_change, SecretRequestReceived):
             valid_secretrequest = (
-                state_change.transfer_id == next_state.transfer.id and
+                state_change.transfer_id == next_state.transfer.identifier and
                 state_change.amount == next_state.transfer.amount and
                 state_change.hashlock == next_state.hashlock and
                 state_change.identifier == next_state.transfer.identifier and
@@ -154,7 +160,7 @@ def state_transition(current_state, state_change):
 
         if valid_secretrequest:
             reveal_secret = RevealSecret(
-                next_state.transfer.id,
+                next_state.transfer.identifier,
                 next_state.secret,
                 next_state.transfer.target,
                 next_state.our_address,

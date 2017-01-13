@@ -33,24 +33,24 @@ def state_transition(current_state, state_change):
         if isinstance(state_change, InitTarget):
             our_address = state_change.our_address
             target = state_change.target
-            originating_route = state_change.originating_route
-            originating_transfer = state_change.originating_transfer
+            from_route = state_change.from_route
+            from_transfer = state_change.from_transfer
             hashlock = state_change.hashlock
             block_number = state_change.block_number
 
             next_state = TargetState(
                 our_address,
                 target,
-                originating_route,
-                originating_transfer,
+                from_route,
+                from_transfer,
                 hashlock,
                 block_number,
             )
 
             secret_request = SecretRequestMessageSend(
-                originating_transfer.identifier,
-                originating_transfer.amount,
-                originating_transfer.hashlock,
+                from_transfer.identifier,
+                from_transfer.amount,
+                from_transfer.hashlock,
             )
             next_state.secret_request = secret_request
 
@@ -66,9 +66,9 @@ def state_transition(current_state, state_change):
             next_state.secret = state_change.secret
 
             reveal = RevealSecret(
-                next_state.originating_transfer.identifier,
+                next_state.from_transfer.identifier,
                 next_state.secret,
-                next_state.originating_route.node_address,
+                next_state.from_route.node_address,
                 next_state.our_address,
             )
 
@@ -77,13 +77,13 @@ def state_transition(current_state, state_change):
     elif state_wait_withdraw:
         valid_secret = (
             isinstance(state_change, Secret) and
-            state_change.sender == next_state.originating_transfer.sender
+            state_change.sender == next_state.from_transfer.sender
         )
 
         if valid_secret:
             withdraw = WithdrawLock(
-                next_state.originating_transfer.identifier,
-                next_state.originating_transfer.token,
+                next_state.from_transfer.identifier,
+                next_state.from_transfer.token,
                 next_state.secret,
                 next_state.hashlock,
             )

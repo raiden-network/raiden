@@ -56,11 +56,8 @@ class RefundTransfer(Event):
     the sender, allowing the sender to try a different route without the risk
     of losing token.
     """
-    def __init__(self, transfer_id, hashlock, amount, sender):
-        self.transfer_id = transfer_id
-        self.amount = amount
-        self.hashlock = hashlock
-        self.sender = sender
+    def __init__(self, locked_transfer):
+        self.locked_transfer = locked_transfer
 
 
 class CancelMediatedTransfer(Event):
