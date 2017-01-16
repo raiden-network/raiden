@@ -39,7 +39,8 @@ def raiden_chain(
         transport_class,
         cached_genesis,
         send_ping_time,
-        max_unresponsive_time):
+        max_unresponsive_time,
+        reveal_timeout):
 
     if len(assets_addresses) > 1:
         raise ValueError('raiden_chain only works with a single asset')
@@ -50,14 +51,14 @@ def raiden_chain(
     )
 
     verbosity = request.config.option.verbose
-
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
         raiden_udp_ports,
         transport_class,
         verbosity,
         send_ping_time,
-        max_unresponsive_time
+        max_unresponsive_time,
+        reveal_timeout
     )
 
     if not cached_genesis:
@@ -89,7 +90,8 @@ def raiden_network(
         transport_class,
         send_ping_time,
         max_unresponsive_time,
-        cached_genesis):
+        cached_genesis,
+        reveal_timeout):
 
     verbosity = request.config.option.verbose
 
@@ -99,7 +101,8 @@ def raiden_network(
         transport_class,
         verbosity,
         send_ping_time,
-        max_unresponsive_time
+        max_unresponsive_time,
+        reveal_timeout
     )
 
     if not cached_genesis:
@@ -108,7 +111,7 @@ def raiden_network(
             assets_addresses,
             channels_per_node,
             deposit,
-            settle_timeout,
+            settle_timeout
         )
 
     for app in raiden_apps:
