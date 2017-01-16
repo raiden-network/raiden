@@ -32,6 +32,32 @@ assets = ["0x6266e28f62a851295a4afb9e3ceac754853b5a62",
           ]
 
 
+events = [
+    {
+        "partner": "0x9d80d905bc1e106d5bd0637c12b893c5ab60cb41",
+        "asset": "0x6266e28f62a851295a4afb9e3ceac754853b5a62",
+        "status": "Open",
+        "block": 89675,
+        "timestamp": 1484544213
+
+    },
+    {
+        "partner": "0xbcadef1867123721cdcd7869ab12383467bffa23",
+        "asset": "0x6266e28f62a851295a4afb9e3ceac754853b5a62",
+        "status": "settled",
+        "block": 98765,
+        "timestamp": 1484556781
+    },
+    {
+        "partner": "0xdfab2f1867123721bdbd2950ab12383467bffa235",
+        "asset": "0x6266e28f62a851295a4afb9e3ceac754853b5a62",
+        "status": "closed",
+        "block": 102865,
+        "timestamp": 1484589019
+    }
+
+]
+
 @app.route('/raiden/api/channels', methods=['GET'])
 def get_channels():
     return jsonify({'channels': channels})
@@ -40,6 +66,13 @@ def get_channels():
 @app.route('/raiden/api/assets', methods=['GET'])
 def get_assets():
     return jsonify({'assets': assets})
+
+
+@app.route('/raiden/api/events', methods=['GET'])
+def get_events():
+    return jsonify({'events': events})
+
+
 
 
 if __name__ == '__main__':
