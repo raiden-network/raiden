@@ -9,26 +9,35 @@
 
 
   <!-- Stylesheets-->
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
   <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.13/css/jquery.dataTables.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
   <link rel="stylesheet" type="text/css" href="/node_modules/bootstrap/dist/css/bootstrap.min.css">
-  <link rel="stylesheet" type="text/css" href="/css/timeline.css">
+  <link rel="stylesheet" type="text/css" href="/node_modules/jquery.tabulator/tabulator.css">
+  <link rel="stylesheet" type="text/css" href="/css/jquery.timelineMe.css">
   <!-- Scripts-->
   <script type="text/javascript" charset="utf8" src="/node_modules/jquery/dist/jquery.min.js"></script>
+  <script type="text/javascript" src="https://code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
   <script type="text/javascript" charset="utf8" src="/node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-  <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.13/js/jquery.dataTables.js"></script>
-  <script type="text/javascript" charset="utf8"       src="//cdn.datatables.net/buttons/1.2.4/js/dataTables.buttons.min.js"></script>
-  <script type="text/javascript" charset="utf8"       src="//cdn.datatables.net/select/1.2.1/js/dataTables.select.min.js"></script>
+
+  <script type="text/javascript" charset="utf8" src="/node_modules/jquery.tabulator/tabulator.js"></script>
+  <script type="text/javascript" charset="utf8" src="/scripts/jquery.timelineMe.js"></script>
   <script type="text/javascript" charset="utf8" src="/scripts/channeltable.js"></script>
 
   <style>
     body {
         position: relative;
     }
-    #section1 {padding-top:50px;height:500px; }
-    #section2 {padding-top:50px;height:500px; }
+    #section1 {padding-top:50px;height:600px; }
+    #section2 {padding-top:50px;height:600px; }
     #open_channel_form{padding-top: 50px;}
-    .sidebar-nav-fixed { padding-top:60px; width:25%;}
-
+    .sidebar-nav-fixed { padding-top:60px; width:30%;}
+    .well {
+    background-color : #8DD8DD;
+    }
+    .timeline-me-content {
+      width:150%;
+    }
     </style>
 </head>
 
@@ -57,31 +66,14 @@
   </div>
 </nav>
 
-<div class="container">
+<div class="container-fluid">
   <div class="row">
-    <div class="col-md-9">
+    <div class="col-md-8">
       <div id="section1" class="container-fluid">
 
           <h2>Channels</h2>
           <p>Shows the Raiden channels that user has with other users </p>
-          <table class="table table-bordered" id="channels">
-            <thead>
-              <tr>
-                <th>Partner Address</th>
-                <th>Asset Address</th>
-                <th>Deposit</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tfoot>
-              <tr>
-                <th>Partner Address</th>
-                <th>Asset Address</th>
-                <th>Deposit</th>
-                <th>Status</th>
-              </tr>
-            </tfoot>
-          </table>
+          <div id="channels"></div>
 
       </div>
 
@@ -132,16 +124,18 @@
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-4">
       <div class="sidebar-nav-fixed pull-right affix">
-        <div class="well">
-          <h3> Events </h3>
-          <div class="container-fluid">
+        <div class="container-fluid">
+          <div class="well">
+
+            <div id="timeline-container-relativepos-dates" type="text"></div>
+
             <ul class="timeline">
-              
+
             </ul>
-          </div>
-        </div><!--/.well -->
+          </div><!--/.well -->
+        </div>
       </div>
     </div>
   </div>
