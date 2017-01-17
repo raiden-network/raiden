@@ -5,7 +5,13 @@ from ethereum import slogging
 from ethereum import _solidity
 from ethereum.transactions import Transaction
 from ethereum.utils import denoms, int_to_big_endian, encode_hex, normalize_address
-from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder, default_gasprice
+from pyethapp.jsonrpc import (
+    address_encoder,
+    address_decoder,
+    data_decoder,
+    data_encoder,
+    default_gasprice,
+)
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 
 from raiden import messages
@@ -48,6 +54,14 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 #   - poll for the transaction hash
 #   - check if the proper events were emited
 #   - use `call` and `transact` to interact with pyethapp.rpc_client proxies
+
+
+def check_transaction_threw(client, transaction_hash):
+    """Check if the transaction threw or if it executed properly"""
+    encoded_transaction = data_encoder(transaction_hash.decode('hex'))
+    transaction = client.call('eth_getTransactionByHash', encoded_transaction)
+    receipt = client.call('eth_getTransactionReceipt', encoded_transaction)
+    return int(transaction['gas'], 0) == int(receipt['gasUsed'], 0)
 
 
 def patch_send_transaction(client, nonce_offset=0):
