@@ -511,7 +511,7 @@ class Channel(object):
             # transfer to be included in a block. This is the time to close a
             # channel and then to unlock a lock on chain.
             #
-            raise ValueError('reveal_timeout must be at least 1')
+            raise ValueError('reveal_timeout must be at least 3')
 
         if not isinstance(settle_timeout, (int, long)):
             raise ValueError('settle_timeout must be integral')
@@ -592,7 +592,7 @@ class Channel(object):
     def channel_closed(self, block_number):
         self.external_state.register_block_alarm(self.blockalarm_for_settle)
 
-        balance_proof = self.partner_state.balance_proof
+        balance_proof = self.our_state.balance_proof
 
         transfer = balance_proof.transfer
         unlock_proofs = balance_proof.get_known_unlocks()

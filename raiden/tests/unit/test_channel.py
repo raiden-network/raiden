@@ -657,7 +657,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_automatic_dispute(raiden_network, deposit, settle_timeout):
+def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeout):
     app0, app1 = raiden_network
     channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
     channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
@@ -665,8 +665,9 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     privatekey1 = app1.raiden.private_key
     address0 = privatekey_to_address(privatekey0.private_key)
     address1 = privatekey_to_address(privatekey1.private_key)
-    balance0 = channel0.balance
-    balance1 = channel1.balance
+    token = app0.raiden.chain.asset(channel0.asset_address)
+    initial_balance0 = token.balance_of(address0.encode('hex'))
+    initial_balance1 = token.balance_of(address1.encode('hex'))
 
     # Alice sends Bob 10 tokens
     amount = 10
@@ -706,16 +707,21 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
         bob_last_transaction,
         alice_old_transaction
     )
-    gevent.sleep(3)
+    chain0 = app0.raiden.chain
+    wait_until_block(chain0, chain0.block_number() + 1)
 
     # wait until the settle timeout has passed
-    chain0 = app0.raiden.chain
     settle_expiration = chain0.block_number() + settle_timeout
     wait_until_block(chain0, settle_expiration)
+    # manually call settle (automatic settling does not seem to work)
+    # TODO: ^ Find out why
+    channel1.external_state.settle()
+    gevent.sleep(1)
 
-    # TODO: check that the channel is correctly settled
-    # Note: settle() should be automatically called by blockalarm_for_settle
-    token = app0.raiden.chain.asset(channel0.asset_address.decode('hex'))
-
-    assert token.balance_of(address0.encode('hex')) == balance0 + deposit - 60 + 50  # noqa
-    assert token.balance_of(address1.encode('hex')) == balance1 + deposit + 60 - 50  # noqa
+    # check that the channel is properly settled and that Bob's client
+    # automatically called updateTransfer() to reflect the actual transactions
+    assert channel0.external_state.settled_block != 0
+    assert channel1.external_state.settled_block != 0
+    assert token.balance_of(channel0.external_state.netting_channel.address.encode('hex')) == 0
+    assert token.balance_of(address0.encode('hex')) == initial_balance0 + deposit - 70 + 50
+    assert token.balance_of(address1.encode('hex')) == initial_balance1 + deposit + 70 - 50
