@@ -1,138 +1,126 @@
 var raidenAddress = "0xbff78da2ff4e106d5bd0637c12b893c5ab60cb41";
 
+var channelTable = ( function() {
 
-var channel_table = (function() {
-      var table;
-      var initialiseTable = function() {
-          table = $('#channels').dataTable( {
-            "ajax": {
-              "url": "http://localhost:5000/raiden/api/channels",
-              "dataSrc": "channels",
-            },
-            "columns": [
-                    { "data": "partner" },
-                    { "data": "asset" },
-                    { "data": "deposit" },
-                    { "data": "status" }
-            ]
+    var actionEditor = function(cell, value){
+        //cell - JQuery object for current cell
+        //value - the current value for current cell
 
-          });
-      }
+        //create and style editor
+        var editor = $("<select>"+
+        "<option value='open' selected>Open Channel</option>"+
+        "<option value='close'>Close Channel</option>"+
+        "<option value='settle'>Settle Channel</option>"+
+        "<option value='deposit'>Deposit in Channel</option>"+
+        "</select>");
+        editor.css({
+          "padding":"3px",
+          "width":"100%",
+          "box-sizing":"border-box",
+        })
+
+        //set focus on the select box when the editor is selected (timeout allows for editor to be added to DOM)
+        if(cell.hasClass("tabulator-cell")){
+          setTimeout(function(){
+              editor.focus();
+          },100);
+        }
+
+        //return the editor element
+          return editor;
+    }
+
+
+    var initialiseTable = function() {
+      $("#channels").tabulator({
+        ajaxURL: "http://localhost:5000/raiden/api/channels",
+        fitColumns: true,
+        columns:[ //set column definitions for imported table data
+            {title: "Partner Address", field: "partner" },
+            {title: "Asset Address", field: "asset" },
+            {title: "Deposit", field: "deposit" },
+            {title: "Status", field: "status" },
+            {title: "Action", editable:true, editor:actionEditor}
+        ],
+      });
+    }
 
     return {
-        table: table,
         initialiseTable: initialiseTable
     };
 
 })();
 
 var assetSelect = ( function() {
-      var initialiseAssetSelect = function(){ $.ajax({
-          url: "http://localhost:5000/raiden/api/assets",
-          type: 'get',
-          dataType: 'json',
-          success:function(response){
-              var assets = response.assets;
-              console.log(assets.length);
-              $("#asset_address").empty();
-              for( var i = 0; i < assets.length; i++){
-
-                    $("#asset_address").
-                    append("<option value='"+assets[i]+"'>"+assets[i]+"</option>");
-
-                }
-          }
-        });
-      }
-
-      return {
-          initialiseAssetSelect: initialiseAssetSelect
-      };
-})();
-
-var events = ( function() {
-        var eventList;
-
-        var initialiseEvents = function(){
-          eventList = $(".timeline");
-          $.ajax({
-            url: "http://localhost:5000/raiden/api/events",
-            type: 'get',
-            dataType: 'json',
-            success:function(response){
-                var events = response.events;
-                console.log("length of events=="+events[0]);
-                eventList.empty();
-                for( var i = 0; i < events.length; i++){
-                    channelEvent = document.createElement('event-item');
-                    channelEvent.setTitle(events[i].status);
-                    channelEvent.setTime(events[i].timestamp);
-                    channelEvent.setMessage(events[i]);
-                    eventList.append(channelEvent);
-                }
+    var initialiseAssetSelect = function(){ $.ajax({
+        url: "http://localhost:5000/raiden/api/assets",
+        type: 'get',
+        dataType: 'json',
+        success:function(response){
+            var assets = response.assets;
+            $("#asset_address").empty();
+            for( var i = 0; i < assets.length; i++){
+                $("#asset_address").
+                append("<option value='"+assets[i]+"'>"+assets[i]+"</option>");
             }
-          });
-
         }
+      });
+    }
 
-        return {
-            eventList: eventList,
-            initialiseEvents: initialiseEvents
-        };
+    return {
+        initialiseAssetSelect: initialiseAssetSelect
+    };
 })();
 
-var eventListItem = Object.create(HTMLElement.prototype);
 
-eventListItem.TEMPLATE =
-    '<li>'+
-      '<div class="timeline-badge"><i class="glyphicon glyphicon-check"></i></div>'+
-      '<div class="timeline-panel">'+
-        '<div class="timeline-heading">'+
-          '<h4 class="timeline-title"></h4>'+
-          '<p><small class="text-muted"><i class="glyphicon glyphicon-time"></i>'+
+var eventsTimeline = ( function() {
 
-          '</small></p>'+
-        '</div>'+
-        '<div class="timeline-body">'+
-          '<p class="message"></p>'+
-        '</div>'+
-      '</div>'+
-    '</li>';
+    var itemList = [];
 
+    var pictos = {
+      "transferred": '<i class="fa fa-money"></i>',
+      "closed": '<i class="glyphicon glyphicon-ban-circle"></i>',
+      "settled": '<i class="fa fa-calendar-check-o"></i>',
+      "default": '<i class="fa fa-calendar-o"></i>'
+    }
 
-eventListItem.createdCallback = function() {
-        this.innerHTML = eventListItem.TEMPLATE;
-        this.titleElement = this.querySelector('.timeline-title');
-        this.dateElement = this.querySelector('.text-muted');
-        this.messageElement = this.querySelector('.message');
-}
+    var initialiseTimeline = function() {
+      $.ajax({
+        url: "http://localhost:5000/raiden/api/events",
+        type: 'get',
+        dataType: 'json',
+        success:function(response){
+            prepareItemList(response.events);
+            $('#timeline-container-relativepos-dates').timelineMe({
+              items: itemList
+            });
+        }
+      });
+    }
 
-eventListItem.setMessage = function(event) {
+    var prepareItemList = function(events) {
+        for( var i = 0; i < events.length; i++){
+            var eventItem = {};
+            eventItem["type"] = 'smallItem';
+            var eventDate = new Date(events[i].timestamp*1000);
+            eventItem["label"] = eventDate.toDateString();
+            console.log(eventDate);
+            eventItem["shortContent"] = events[i].status;
+            eventItem["forcePosition"] = 'right';
+            eventItem["showMore"] = ''+events[i].partner + "<br>" + events[i].status + "<br>" + raidenAddress;
+            eventItem["picto"] = pictos.hasOwnProperty(events[i].status) ? pictos[events[i].status] : pictos["default"];
+            itemList.push(eventItem);
+        }
+    }
 
-        var message = event.partner +" "+ event.status +" "+ "with" + " "+ raidenAddress;
-        this.messageElement.textContent = message;
+    return {
+        initialiseTimeline: initialiseTimeline
+    };
 
-}
-
-eventListItem.setTime = function(timestamp) {
-        var date = new Date(timestamp);
-        //this.dateElement.textContent = date.toDateString();
-        this.dateElement.insertAdjacentText('beforeend', date.toDateString());
-}
-
-eventListItem.setTitle = function(title) {
-        this.titleElement.textContent = title;
-}
-
-document.registerElement('event-item', {
-  prototype: eventListItem
-});
-
-
+})();
 
 $( document ).ready( function() {
-    channel_table.initialiseTable();
+    channelTable.initialiseTable();
     assetSelect.initialiseAssetSelect();
-    events.initialiseEvents();
-
+    eventsTimeline.initialiseTimeline();
 });

@@ -9,7 +9,7 @@ channels = [
         "partner": "0x9d80d905bc1e106d5bd0637c12b893c5ab60cb41",
         "asset": "0x6266e28f62a851295a4afb9e3ceac754853b5a62",
         "deposit": 500,
-        "status": "Open"
+        "status": "opened"
     },
     {
         "partner": "0xbcadef1867123721cdcd7869ab12383467bffa23",
@@ -36,9 +36,9 @@ events = [
     {
         "partner": "0x9d80d905bc1e106d5bd0637c12b893c5ab60cb41",
         "asset": "0x6266e28f62a851295a4afb9e3ceac754853b5a62",
-        "status": "Open",
+        "status": "opened",
         "block": 89675,
-        "timestamp": 1484544213
+        "timestamp": 1484638939
 
     },
     {
@@ -46,21 +46,20 @@ events = [
         "asset": "0x6266e28f62a851295a4afb9e3ceac754853b5a62",
         "status": "settled",
         "block": 98765,
-        "timestamp": 1484556781
+        "timestamp": 1484563339
     },
     {
         "partner": "0xdfab2f1867123721bdbd2950ab12383467bffa235",
         "asset": "0x6266e28f62a851295a4afb9e3ceac754853b5a62",
         "status": "closed",
         "block": 102865,
-        "timestamp": 1484589019
+        "timestamp": 1484484139
     }
-
 ]
 
 @app.route('/raiden/api/channels', methods=['GET'])
 def get_channels():
-    return jsonify({'channels': channels})
+    return jsonify(channels)
 
 
 @app.route('/raiden/api/assets', methods=['GET'])
