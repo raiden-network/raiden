@@ -8,7 +8,6 @@ from ethereum.utils import encode_hex
 from secp256k1 import PrivateKey
 
 from raiden.encoding.signing import GLOBAL_CTX
-from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
 from raiden.utils import sha3, privatekey_to_address
 from raiden.tests.utils.tester import (
     new_channelmanager,
@@ -511,9 +510,15 @@ def test_close_settle(
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == 0
 
 
-def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
-                                        tester_channels, tester_token,
-                                        tester_events):
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+def test_two_messages_mediated_transfer(
+        deposit,
+        settle_timeout,
+        reveal_timeout,
+        tester_state,
+        tester_channels,
+        tester_token,
+        tester_events):
 
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
@@ -526,7 +531,7 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
     initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
 
     lock_amount0 = 29
-    lock_expiration0 = tester_state.block.number + DEFAULT_REVEAL_TIMEOUT + 3
+    lock_expiration0 = tester_state.block.number + reveal_timeout + 3
     hashlock0 = sha3(tester.k0)
 
     mediated_transfer0 = channel0.create_mediatedtransfer(
@@ -541,7 +546,7 @@ def test_two_messages_mediated_transfer(deposit, settle_timeout, tester_state,
     mediated_transfer0.sign(privatekey0, address0)
 
     lock_amount1 = 29
-    lock_expiration1 = tester_state.block.number + DEFAULT_REVEAL_TIMEOUT + 5
+    lock_expiration1 = tester_state.block.number + reveal_timeout + 5
     hashlock1 = sha3(tester.k1)
 
     mediated_transfer1 = channel1.create_mediatedtransfer(
@@ -733,7 +738,13 @@ def test_update_direct_transfer(settle_timeout, tester_state, tester_channels, t
     # - add locked amounts and assert that they are respected
 
 
-def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels, tester_events):
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+def test_update_mediated_transfer(
+        settle_timeout,
+        reveal_timeout,
+        tester_state,
+        tester_channels,
+        tester_events):
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
     privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
@@ -754,7 +765,7 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
     target = tester.a0
     initiator = tester.a1
     lock_amount = 5
-    lock_expiration = tester_state.block.number + DEFAULT_REVEAL_TIMEOUT + 3
+    lock_expiration = tester_state.block.number + reveal_timeout + 3
     lock_hashlock = sha3('secret')
     mediated_transfer0 = channel0.create_mediatedtransfer(
         transfer_initiator=initiator,
@@ -801,17 +812,17 @@ def test_update_mediated_transfer(settle_timeout, tester_state, tester_channels,
     # - add locked amounts and assert that they are respected
 
 
-def test_unlock(tester_token, tester_channels, tester_events, tester_state):
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+def test_unlock(reveal_timeout, tester_token, tester_channels, tester_events, tester_state):
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
-    privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
     address0 = privatekey_to_address(privatekey0_raw)
 
     target = tester.a0
     initiator = tester.a1
 
     lock_amount0 = 5
-    lock_timeout0 = DEFAULT_REVEAL_TIMEOUT + 5
+    lock_timeout0 = reveal_timeout + 5
     lock_expiration0 = tester_state.block.number + lock_timeout0
     secret0 = 'expiredlockexpiredlockexpiredloc'
     lock_hashlock0 = sha3(secret0)
@@ -833,7 +844,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
     tester_state.mine(number_of_blocks=lock_timeout0 + 1)
 
     lock_amount1 = 5
-    lock_timeout1 = DEFAULT_REVEAL_TIMEOUT + 3
+    lock_timeout1 = reveal_timeout + 3
     lock_expiration1 = tester_state.block.number + lock_timeout1
     secret1 = 'secretsecretsecretsecretsecretse'
     lock_hashlock1 = sha3(secret1)
@@ -894,7 +905,7 @@ def test_unlock(tester_token, tester_channels, tester_events, tester_state):
 
 @pytest.mark.parametrize('both_participants_deposit', [False])
 @pytest.mark.parametrize('deposit', [100])
-def test__if_updater_made_mistake(
+def test_if_updater_made_mistake(
         deposit,
         settle_timeout,
         tester_state,

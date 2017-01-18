@@ -8,7 +8,6 @@ from ethereum.utils import int_to_addr, zpad
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 
 
-from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
 from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.tests.utils.tester import (
@@ -273,7 +272,7 @@ def tester_nettingcontracts(
 
 
 @pytest.fixture
-def tester_channels(tester_state, tester_nettingcontracts):
+def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
     result = list()
     for first_key, second_key, nettingcontract in tester_nettingcontracts:
         first_externalstate = ChannelExternalStateTester(
@@ -285,7 +284,7 @@ def tester_channels(tester_state, tester_nettingcontracts):
             first_key,
             nettingcontract,
             first_externalstate,
-            DEFAULT_REVEAL_TIMEOUT,
+            reveal_timeout,
         )
 
         second_externalstate = ChannelExternalStateTester(
@@ -297,7 +296,7 @@ def tester_channels(tester_state, tester_nettingcontracts):
             second_key,
             nettingcontract,
             second_externalstate,
-            DEFAULT_REVEAL_TIMEOUT,
+            reveal_timeout,
         )
 
         result.append(

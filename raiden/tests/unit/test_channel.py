@@ -2,11 +2,18 @@
 from __future__ import division
 
 import pytest
+import gevent
 from ethereum import slogging
 
+from raiden.tests.utils.blockchain import wait_until_block
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.messages import DirectTransfer, Lock, LockedTransfer
-from raiden.utils import sha3, make_address, make_privkey_address
+from raiden.utils import (
+    sha3,
+    make_address,
+    make_privkey_address,
+    privatekey_to_address
+)
 from raiden.tests.utils.transfer import assert_synched_channels, channel
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -646,3 +653,75 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
         channel0, balance0, [],
         channel1, balance1, [transfer1.lock],
     )
+
+
+@pytest.mark.parametrize('blockchain_type', ['geth'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeout):
+    app0, app1 = raiden_network
+    channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    privatekey0 = app0.raiden.private_key
+    privatekey1 = app1.raiden.private_key
+    address0 = privatekey_to_address(privatekey0.private_key)
+    address1 = privatekey_to_address(privatekey1.private_key)
+    token = app0.raiden.chain.asset(channel0.asset_address)
+    initial_balance0 = token.balance_of(address0.encode('hex'))
+    initial_balance1 = token.balance_of(address1.encode('hex'))
+
+    # Alice sends Bob 10 tokens
+    amount = 10
+    direct_transfer = channel0.create_directtransfer(
+        amount,
+        1  # TODO: fill in identifier
+    )
+    direct_transfer.sign(privatekey0, address0)
+    channel0.register_transfer(direct_transfer)
+    channel1.register_transfer(direct_transfer)
+    alice_old_transaction = direct_transfer
+
+    # Bob sends Alice 50 tokens
+    amount = 50
+    direct_transfer = channel1.create_directtransfer(
+        amount,
+        1  # TODO: fill in identifier
+    )
+    direct_transfer.sign(privatekey1, address1)
+    channel0.register_transfer(direct_transfer)
+    channel1.register_transfer(direct_transfer)
+    bob_last_transaction = direct_transfer
+
+    # Finally Alice sends Bob 60 tokens
+    amount = 60
+    direct_transfer = channel0.create_directtransfer(
+        amount,
+        1  # TODO: fill in identifier
+    )
+    direct_transfer.sign(privatekey0, address0)
+    channel0.register_transfer(direct_transfer)
+    channel1.register_transfer(direct_transfer)
+
+    # Then Alice attempts to close the channel with an older transfer of hers
+    channel0.external_state.close(
+        None,
+        bob_last_transaction,
+        alice_old_transaction
+    )
+    chain0 = app0.raiden.chain
+    wait_until_block(chain0, chain0.block_number() + 1)
+
+    # wait until the settle timeout has passed
+    settle_expiration = chain0.block_number() + settle_timeout
+    wait_until_block(chain0, settle_expiration)
+    # manually call settle (automatic settling does not seem to work)
+    # TODO: ^ Find out why
+    channel1.external_state.settle()
+    gevent.sleep(1)
+
+    # check that the channel is properly settled and that Bob's client
+    # automatically called updateTransfer() to reflect the actual transactions
+    assert channel0.external_state.settled_block != 0
+    assert channel1.external_state.settled_block != 0
+    assert token.balance_of(channel0.external_state.netting_channel.address.encode('hex')) == 0
+    assert token.balance_of(address0.encode('hex')) == initial_balance0 + deposit - 70 + 50
+    assert token.balance_of(address1.encode('hex')) == initial_balance1 + deposit + 70 - 50

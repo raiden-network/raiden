@@ -116,6 +116,7 @@ def cached_genesis(request, blockchain_type):
         request.config.option.verbose,
         request.getfixturevalue('send_ping_time'),
         request.getfixturevalue('max_unresponsive_time'),
+        request.getfixturevalue('reveal_timeout'),
     )
 
     if 'raiden_network' in request.fixturenames:

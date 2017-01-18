@@ -5,7 +5,6 @@ from itertools import count
 import pytest
 from ethereum.utils import sha3
 
-from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
 from raiden.tasks import DEFAULT_EVENTS_POLL_TIMEOUT
 from raiden.network.rpc.client import DEFAULT_POLL_TIMEOUT
 from raiden.network.transport import UDPTransport
@@ -19,15 +18,29 @@ DEFAULT_DEPOSIT = 200
 
 
 @pytest.fixture
-def settle_timeout():
-    """ NettingChannel default settle timeout. """
-    return DEFAULT_SETTLE_TIMEOUT
+def settle_timeout(blockchain_type):
+    """
+    NettingChannel default settle timeout for tests.
+    If using geth we set it considerably lower since waiting for
+    too many blocks to be mined is very costly time-wise.
+    """
+    if blockchain_type == 'geth':
+        return 10
+    else:
+        return 400
 
 
 @pytest.fixture
-def reveal_timeout():
-    """ NettingChannel default settle timeout. """
-    return DEFAULT_REVEAL_TIMEOUT
+def reveal_timeout(blockchain_type):
+    """
+    NettingChannel default reveal timeout for tests.
+    If using geth we set it considerably lower since waiting for
+    too many blocks to be mined is very costly time-wise.
+    """
+    if blockchain_type == 'geth':
+        return 5
+    else:
+        return 20
 
 
 @pytest.fixture

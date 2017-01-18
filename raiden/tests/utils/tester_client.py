@@ -584,6 +584,11 @@ class NettingChannelTesterMock(object):
         self.proxy.deposit(amount)
         self.tester_state.mine(number_of_blocks=1)
 
+    def transferred_amount(self, participant_address):
+        amount = self.proxy.transferredAmount(participant_address).call()
+        self.tester_state.mine(number_of_blocks=1)
+        return amount
+
     def opened(self):
         opened = self.proxy.opened()
         self.tester_state.mine(number_of_blocks=1)

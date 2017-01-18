@@ -151,6 +151,23 @@ library NettingChannelLibrary {
         return 0x0;
     }
 
+    function transferredAmount(Data storage self, address participant_address)
+        constant
+        returns (uint)
+    {
+        Participant[2] participants = self.participants;
+        Participant node1 = participants[0];
+        Participant node2 = participants[1];
+
+        if (node1.node_address == participant_address) {
+            return node1.transferred_amount;
+        } else if (node2.node_address == participant_address) {
+            return node2.transferred_amount;
+        }
+        // invalid address
+        throw;
+    }
+
     function addressAndBalance(Data storage self)
         constant
         returns(

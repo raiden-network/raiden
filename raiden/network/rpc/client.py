@@ -772,6 +772,9 @@ class NettingChannel(object):
 
         log.info('deposit called', contract=pex(self.address), amount=amount)
 
+    def transferred_amount(self, participant_address):
+        return self.proxy.transferredAmount(participant_address)
+
     def opened(self):
         return self.proxy.opened.call()
 
