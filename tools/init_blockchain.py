@@ -6,12 +6,18 @@ from raiden.utils import get_contract_path
 from raiden.network.rpc.client import patch_send_transaction
 
 
-def connect(host="127.0.0.1",
+def connect(host='127.0.0.1',
             port=8545,
             use_ssl=False):
     """Create a jsonrpcclient instance, using the 'zero-privatekey'.
     """
-    client = JSONRPCClient(host, port, privkey="1" * 64)
+    client = JSONRPCClient(
+        host,
+        port,
+        privkey='1' * 64,
+        print_communication=False,
+        use_ssl=use_ssl,
+    )
     patch_send_transaction(client)
     return client
 
