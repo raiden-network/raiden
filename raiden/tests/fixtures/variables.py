@@ -18,15 +18,29 @@ DEFAULT_DEPOSIT = 200
 
 
 @pytest.fixture
-def settle_timeout():
-    """ NettingChannel default settle timeout. """
-    return 10
+def settle_timeout(blockchain_type):
+    """
+    NettingChannel default settle timeout for tests.
+    If using geth we set it considerably lower since waiting for
+    too many blocks to be mined is very costly time-wise.
+    """
+    if blockchain_type == 'geth':
+        return 10
+    else:
+        return 400
 
 
 @pytest.fixture
-def reveal_timeout():
-    """ NettingChannel default reveal timeout. """
-    return 3
+def reveal_timeout(blockchain_type):
+    """
+    NettingChannel default reveal timeout for tests.
+    If using geth we set it considerably lower since waiting for
+    too many blocks to be mined is very costly time-wise.
+    """
+    if blockchain_type == 'geth':
+        return 5
+    else:
+        return 20
 
 
 @pytest.fixture
