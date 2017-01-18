@@ -303,7 +303,7 @@ def _geth_blockchain(
         request,
         deploy_key,
         private_keys,
-        cluster_private_keys,
+        blockchain_private_keys,
         blockchain_p2p_ports,
         blockchain_rpc_ports,
         tmpdir,
@@ -315,7 +315,7 @@ def _geth_blockchain(
     geth_processes = geth_create_blockchain(
         deploy_key,
         private_keys,
-        cluster_private_keys,
+        blockchain_private_keys,
         blockchain_rpc_ports,
         blockchain_p2p_ports,
         str(tmpdir),
