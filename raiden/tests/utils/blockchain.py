@@ -204,7 +204,7 @@ def geth_wait_and_check(privatekeys, rpc_ports):
 def geth_create_blockchain(
         deploy_key,
         private_keys,
-        geth_private_keys,
+        blockchain_private_keys,
         rpc_ports,
         p2p_ports,
         base_datadir,
@@ -213,7 +213,9 @@ def geth_create_blockchain(
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments
 
     nodes_configuration = []
-    for pos, (key, p2p_port, rpc_port) in enumerate(zip(geth_private_keys, p2p_ports, rpc_ports)):
+    key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports)
+
+    for pos, (key, p2p_port, rpc_port) in enumerate(key_p2p_rpc):
         config = dict()
 
         # make the first node miner
