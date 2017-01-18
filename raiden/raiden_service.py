@@ -790,7 +790,7 @@ class RaidenEventHandler(object):
                         manager_address=pex(manager_address_bin),
                     )
         else:
-            log.info('ignoring new channel, this is node is not a participant.')
+            log.info('ignoring new channel, this node is not a participant.')
 
     def event_channelnewbalance(self, netting_contract_address_bin, event):
         if log.isEnabledFor(logging.DEBUG):
