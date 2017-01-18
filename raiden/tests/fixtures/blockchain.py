@@ -342,10 +342,12 @@ def _jsonrpc_services(
         registry_address=None):
 
     host = '0.0.0.0'
+    print_communication = verbose > 6
     deploy_client = JSONRPCClient(
         host=host,
         port=rpc_port,
         privkey=deploy_key,
+        print_communication=print_communication,
     )
 
     # we cannot instantiate BlockChainService without a registry, so first
