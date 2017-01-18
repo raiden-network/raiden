@@ -273,7 +273,7 @@ def tester_nettingcontracts(
 
 
 @pytest.fixture
-def tester_channels(tester_state, tester_nettingcontracts):
+def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
     result = list()
     for first_key, second_key, nettingcontract in tester_nettingcontracts:
         first_externalstate = ChannelExternalStateTester(
@@ -285,7 +285,7 @@ def tester_channels(tester_state, tester_nettingcontracts):
             first_key,
             nettingcontract,
             first_externalstate,
-            DEFAULT_REVEAL_TIMEOUT,
+            reveal_timeout,
         )
 
         second_externalstate = ChannelExternalStateTester(
@@ -297,7 +297,7 @@ def tester_channels(tester_state, tester_nettingcontracts):
             second_key,
             nettingcontract,
             second_externalstate,
-            DEFAULT_REVEAL_TIMEOUT,
+            reveal_timeout,
         )
 
         result.append(
