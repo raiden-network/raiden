@@ -440,7 +440,7 @@ class ChannelExternalState(object):
         return self.netting_channel.settled()
 
     def query_transferred_amount(self, participant_address):
-        return self.netting_channel.transferredAmount(participant_address)
+        return self.netting_channel.transferred_amount(participant_address)
 
     def callback_on_opened(self, callback):
         if self._opened_block != 0:
