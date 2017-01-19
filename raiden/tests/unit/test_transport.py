@@ -2,30 +2,29 @@
 import time
 
 import pytest
-import gevent
-from ethereum import slogging
 
 from raiden.utils import sha3
 from raiden.messages import Ping, Ack, decode
 from raiden.network.transport import UDPTransport, TokenBucket, DummyPolicy
 from raiden.tests.utils.messages import setup_messages_cb
 
-slogging.configure(':DEBUG')
-
 
 class IntervalCheck(object):
+    """ Helper class to check the timespan between events.
+
+    An instance of this class will keep track of the last event time and
+    provide utility functions to assert on the time intervals.
+    """
     def __init__(self):
-        self.t1 = time.time()
+        self.last_event_time = time.time()
 
-    def inside(self, tolerance):
-        t2 = time.time()
-        assert abs(t2 - self.t1) < tolerance
-        self.t1 = t2
-
-    def stepped(self, span, tolerance):
-        t2 = time.time()
-        assert abs(t2 - (self.t1 + span)) < tolerance
-        self.t1 = t2
+    def elapsed(self, seconds, tolerance):
+        """ Assert the difference from the last event to now is at least
+        `seconds` with `tolerance` of difference.
+        """
+        now = time.time()
+        assert abs(now - (self.last_event_time + seconds)) < tolerance
+        self.last_event_time = now
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -75,14 +74,14 @@ def test_throttle_policy_ping(monkeypatch, raiden_network):
     # Each token corresponds to a single message, the initial capacity is 2
     # meaning the first burst is of 2 packets.
     events[1].wait()
-    check.inside(tolerance)
+    check.elapsed(seconds=0, tolerance=tolerance)
 
     assert len(messages) == 4  # two Pings and the corresponding Acks
 
     # Now check the fill_rate for the remaining packets
     for i in range(2, 10):
         events[i].wait()
-        check.stepped(token_refill, tolerance)
+        check.elapsed(token_refill, tolerance)
 
     # all 10 Pings and their Acks
     assert len(messages) == 20
