@@ -16,7 +16,8 @@ contract ChannelManagerContract {
         address participant2,
         uint settle_timeout
     );
-    event ChannelDelete(
+    // Event emitting out of the Library needs to be declared in the contract as well
+    event ChannelDeleted(
         address caller_address,
         address partner,
         address channel_address
@@ -119,6 +120,24 @@ contract ChannelManagerContract {
     }
 
     function newChannel(address partner, uint settle_timeout) returns (address channel) {
+        address channel_address;
+        bool has_channel;
+        uint caller_index;
+        uint partner_index;
+        address caller_address = msg.sender;
+        (channel_address, has_channel, caller_index, partner_index) = data.getChannelWith(caller_address, partner);
+        // Check if channel is present in the node_channels mapping within the Data struct
+        if (has_channel) {
+            if (data.contractExists(channel_address)) {
+                throw; // throw if an open contract exists that is not settled
+            }
+            else {
+                // If contract is not deployed then call deleteChannel
+                data.deleteChannel(caller_address, partner, channel_address, caller_index, partner_index);
+                ChannelDeleted(caller_address, partner, channel_address);
+            }
+        }
+
         channel = data.newChannel(msg.sender, partner, settle_timeout);
         ChannelNew(channel, msg.sender, partner, settle_timeout);
     }

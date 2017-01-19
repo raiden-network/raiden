@@ -197,7 +197,7 @@ def test_reopen_channel(
 
     channeldelete_event = tester_events[-2]
     assert channeldelete_event == {
-        '_event_type': 'ChannelDelete',
+        '_event_type': 'ChannelDeleted',
         'caller_address': address0.encode('hex'),
         'partner': address1.encode('hex'),
         'channel_address': nettingchannel.address
