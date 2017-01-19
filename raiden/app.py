@@ -49,5 +49,9 @@ class App(object):  # pylint: disable=too-few-public-methods
         )
 
     def stop(self):
-        self.transport.stop()
         self.raiden.stop()
+
+        # The transport must be stopped after the protocol. The protocol can be
+        # running multiple threads of execution and it expects the protocol to
+        # be available.
+        self.transport.stop()
