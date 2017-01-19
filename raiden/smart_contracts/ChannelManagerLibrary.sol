@@ -10,7 +10,7 @@ library ChannelManagerLibrary {
         address[] all_channels;
         Token token;
     }
-
+    event ChannelDelete(address caller_address, address partner, address channel_address);
     /// @notice getChannelsAddresses to get all channels
     /// @dev Get all channels
     /// @return channels (address[]) all the channels
@@ -75,6 +75,7 @@ library ChannelManagerLibrary {
             // do nothing, continue to create a new channel
         } else if (!contractExists(self, channel_address)) {
             deleteChannel(self, caller_address, partner, channel_address, caller_index, partner_index);
+            ChannelDelete(caller_address, partner, channel_address);
         } else {
             // throw if an open contract exists that is not settled
             throw;

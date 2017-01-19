@@ -16,6 +16,11 @@ contract ChannelManagerContract {
         address participant2,
         uint settle_timeout
     );
+    event ChannelDelete(
+        address caller_address,
+        address partner,
+        address channel_address
+    );
 
     function ChannelManagerContract(address token_address) {
         data.token = Token(token_address);
