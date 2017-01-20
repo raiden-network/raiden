@@ -121,6 +121,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.event_handler = event_handler
         self.message_handler = message_handler
         self.start_event_listener = event_handler.start_event_listener
+        self.start_event_getter = event_handler.start_event_getter
 
         self.on_message = message_handler.on_message
         self.on_event = event_handler.on_event
@@ -254,9 +255,16 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         """
         translator = ContractTranslator(REGISTRY_ABI)
 
-        assetadded = registry.assetadded_filter()
+        # all_manager_addresses = registry.manager_addresses()
+        allassets = registry.allassets_filter()
 
-        all_manager_addresses = registry.manager_addresses()
+        self.start_event_getter(
+            'Registry {}'.format(pex(registry.address)),
+            allassets,
+            translator,
+        )
+
+        assetadded = registry.assetadded_filter()
 
         self.start_event_listener(
             'Registry {}'.format(pex(registry.address)),
@@ -266,9 +274,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         self.registries.append(registry)
 
-        for manager_address in all_manager_addresses:
-            channel_manager = self.chain.manager(manager_address)
-            self.register_channel_manager(channel_manager)
+        # for manager_address in all_manager_addresses:
+            # channel_manager = self.chain.manager(manager_address)
+            # self.register_channel_manager(channel_manager)
 
     def register_channel_manager(self, channel_manager):
         """ Discover and register the channels for the given asset. """
@@ -692,8 +700,36 @@ class RaidenEventHandler(object):
 
         self.poll_event_listener(event_name, filter_, translator)
 
+    def start_event_getter(self, event_name, filter_, translator):
+        event = EventListener(
+            event_name,
+            filter_,
+            translator,
+        )
+
+        self.poll_event_getter(event_name, filter_, translator)
+
     def poll_event_listener(self, event_name, filter_, translator):
         for log_event in filter_.changes():
+            log.debug('New Events', task=event_name)
+
+            event = translator.decode_event(
+                log_event['topics'],
+                log_event['data'],
+            )
+
+            if event is not None:
+                originating_contract = log_event['address']
+
+                try:
+                    # intentionally forcing all the events to go through
+                    # the event handler
+                    self.on_event(originating_contract, event)
+                except:  # pylint: disable=bare-except
+                    log.exception('unexpected exception on log listener')
+
+    def poll_event_getter(self, event_name, filter_, translator):
+        for log_event in filter_.all_events():
             log.debug('New Events', task=event_name)
 
             event = translator.decode_event(
