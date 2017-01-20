@@ -63,21 +63,28 @@ library ChannelManagerLibrary {
         address caller_address,
         address partner,
         uint settle_timeout)
-        returns (address)
+        returns (address channel_address, bool channelDeleted, address old_channel)
     {
-        address channel_address;
         bool has_channel;
         uint caller_index;
         uint partner_index;
 
         (channel_address, has_channel, caller_index, partner_index) = getChannelWith(self, caller_address, partner);
-        if (!has_channel) {
-            // do nothing, continue to create a new channel
-        } else if (!contractExists(self, channel_address)) {
-            deleteChannel(self, caller_address, partner, channel_address, caller_index, partner_index);
-        } else {
-            // throw if an open contract exists that is not settled
-            throw;
+        // Check if channel is present in the node_channels mapping within the Data struct
+        if (has_channel) {
+            if(contractExists(self, channel_address)) {
+                throw; // throw if an open contract exists that is not settled
+            }
+            else {
+                // If contract is not deployed(mostly committed suicide) only then call deleteChannel
+                channelDeleted = deleteChannel(self,
+                                        caller_address,
+                                        partner,
+                                        channel_address,
+                                        caller_index,
+                                        partner_index);
+                old_channel = channel_address;
+            }
         }
 
         channel_address = new NettingChannelContract(
@@ -90,8 +97,6 @@ library ChannelManagerLibrary {
         self.node_channels[caller_address].push(channel_address);
         self.node_channels[partner].push(channel_address);
         self.all_channels.push(channel_address);
-
-        return channel_address;
     }
 
     /// @notice deleteChannel(address) to remove a channel after it's been settled
@@ -108,7 +113,7 @@ library ChannelManagerLibrary {
         address channel_address,
         uint caller_index,
         uint partner_index)
-        private
+        private returns (bool success)
     {
         address[] our_channels = self.node_channels[caller_address];
         address[] partner_channels = self.node_channels[partner];
@@ -131,6 +136,7 @@ library ChannelManagerLibrary {
 
         self.node_channels[caller_address] = our_channels;
         self.node_channels[partner] = partner_channels;
+        success = true;
     }
 
     /// @notice contractExists(address) to check if a contract is deployed at given address

@@ -17,6 +17,12 @@ contract ChannelManagerContract {
         uint settle_timeout
     );
 
+    event ChannelDeleted(
+        address caller_address,
+        address partner,
+        address channel_address
+    );
+
     function ChannelManagerContract(address token_address) {
         data.token = Token(token_address);
     }
@@ -114,7 +120,11 @@ contract ChannelManagerContract {
     }
 
     function newChannel(address partner, uint settle_timeout) returns (address channel) {
-        channel = data.newChannel(msg.sender, partner, settle_timeout);
+        address old_channel;
+        bool channelDeleted;
+        (channel, channelDeleted, old_channel)  = data.newChannel(msg.sender, partner, settle_timeout);
+        // Only if channelDeleted is true raise an ChannelDeleted event.
+        if (channelDeleted) ChannelDeleted(msg.sender, partner, old_channel);
         ChannelNew(channel, msg.sender, partner, settle_timeout);
     }
 
