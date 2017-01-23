@@ -119,6 +119,22 @@ contract ChannelManagerContract {
     }
 
     function newChannel(address partner, uint settle_timeout) returns (address channel) {
+        address channel_address;
+        bool has_channel;
+        uint caller_index;
+        uint partner_index;
+
+        (channel_address, has_channel, caller_index, partner_index) = getChannelWith(partner);
+        // Check if channel is present in the node_channels mapping within the Data struct
+        if (has_channel) {
+            if(contractExists(channel_address)) {
+                throw; // throw if an open contract exists that is not settled
+            } else {
+                // If contract is not deployed(mostly committed suicide) only then call deleteChannel
+                deleteChannel(msg.sender, partner, channel_address, caller_index, partner_index);
+            }
+        }
+
         channel = data.newChannel(msg.sender, partner, settle_timeout);
         ChannelNew(channel, msg.sender, partner, settle_timeout);
     }
@@ -126,6 +142,17 @@ contract ChannelManagerContract {
     function contractExists(address channel) returns (bool) {
         return data.contractExists(channel);
     }
+
+    function deleteChannel(
+        address caller_address,
+        address partner,
+        address channel_address,
+        uint caller_index,
+        uint partner_index)
+        {
+            data.deleteChannel(caller_address, partner, channel_address, caller_index, partner_index);
+            ChannelDeleted(caller_address, partner);
+        }
 
     function () { throw; }
 }

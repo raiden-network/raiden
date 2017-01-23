@@ -11,11 +11,6 @@ library ChannelManagerLibrary {
         Token token;
     }
 
-    event ChannelDeleted(
-        address caller_address,
-        address partner
-    );
-
     /// @notice getChannelsAddresses to get all channels
     /// @dev Get all channels
     /// @return channels (address[]) all the channels
@@ -70,20 +65,6 @@ library ChannelManagerLibrary {
         uint settle_timeout)
         returns (address channel_address)
     {
-        bool has_channel;
-        uint caller_index;
-        uint partner_index;
-
-        (channel_address, has_channel, caller_index, partner_index) = getChannelWith(self, caller_address, partner);
-        // Check if channel is present in the node_channels mapping within the Data struct
-        if (has_channel) {
-            if(contractExists(self, channel_address)) {
-                throw; // throw if an open contract exists that is not settled
-            } else {
-                // If contract is not deployed(mostly committed suicide) only then call deleteChannel
-                deleteChannel(self, caller_address, partner, channel_address, caller_index, partner_index);
-            }
-        }
 
         channel_address = new NettingChannelContract(
             self.token,
@@ -111,7 +92,7 @@ library ChannelManagerLibrary {
         address channel_address,
         uint caller_index,
         uint partner_index)
-        private
+        internal
     {
         address[] our_channels = self.node_channels[caller_address];
         address[] partner_channels = self.node_channels[partner];
@@ -134,7 +115,6 @@ library ChannelManagerLibrary {
 
         self.node_channels[caller_address] = our_channels;
         self.node_channels[partner] = partner_channels;
-        ChannelDeleted(caller_address, partner);
     }
 
     /// @notice contractExists(address) to check if a contract is deployed at given address
