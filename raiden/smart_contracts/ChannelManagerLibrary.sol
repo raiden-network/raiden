@@ -63,22 +63,8 @@ library ChannelManagerLibrary {
         address caller_address,
         address partner,
         uint settle_timeout)
-        returns (address)
+        returns (address channel_address)
     {
-        address channel_address;
-        bool has_channel;
-        uint caller_index;
-        uint partner_index;
-
-        (channel_address, has_channel, caller_index, partner_index) = getChannelWith(self, caller_address, partner);
-        if (!has_channel) {
-            // do nothing, continue to create a new channel
-        } else if (!contractExists(self, channel_address)) {
-            deleteChannel(self, caller_address, partner, channel_address, caller_index, partner_index);
-        } else {
-            // throw if an open contract exists that is not settled
-            throw;
-        }
 
         channel_address = new NettingChannelContract(
             self.token,
@@ -108,7 +94,7 @@ library ChannelManagerLibrary {
         address channel_address,
         uint caller_index,
         uint partner_index)
-        private
+        internal
     {
         address[] our_channels = self.node_channels[caller_address];
         address[] partner_channels = self.node_channels[partner];
