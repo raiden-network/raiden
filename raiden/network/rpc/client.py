@@ -91,7 +91,10 @@ def patch_send_transaction(client, nonce_offset=0):
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
         assert hasattr(client, 'privkey') and client.privkey
         tx.sign(client.privkey)
-        result = client.call('eth_sendRawTransaction', rlp.encode(tx).encode('hex'))
+        result = client.call(
+            'eth_sendRawTransaction',
+            data_encoder(rlp.encode(tx)),
+        )
         return result[2 if result.startswith('0x') else 0:]
 
     if patch_necessary:
