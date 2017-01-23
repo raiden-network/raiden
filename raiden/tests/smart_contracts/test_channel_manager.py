@@ -9,15 +9,6 @@ from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
 from secp256k1 import PrivateKey
 
 from raiden.tests.utils.tester import new_channelmanager
-from contextlib import contextmanager
-
-
-@contextmanager
-def print_gas_used(state, string):
-    t_gas = state.block.gas_used
-    yield
-    gas_used = state.block.gas_used - t_gas - 21000
-    print string, gas_used
 
 
 def test_channelnew_event(
@@ -198,19 +189,17 @@ def test_reopen_channel(
     # now a single new channel can be opened
     # if channel with address is settled a new can be opened
     # old entry will be deleted when calling newChannel
-    with print_gas_used(tester_state, 'gas for newChannel when deleteChannel function called'):
-        netting_channel_address1_hex = tester_channelmanager.newChannel(
-            address1,
-            settle_timeout,
-            sender=privatekey0_raw,
-        )
+    netting_channel_address1_hex = tester_channelmanager.newChannel(
+        address1,
+        settle_timeout,
+        sender=privatekey0_raw,
+    )
 
     channeldelete_event = tester_events[-2]
     assert channeldelete_event == {
         '_event_type': 'ChannelDeleted',
         'caller_address': address0.encode('hex'),
-        'partner': address1.encode('hex'),
-        'channel_address': nettingchannel.address
+        'partner': address1.encode('hex')
     }
 
     netting_channel_translator = ContractTranslator(netting_channel_abi)
@@ -238,9 +227,8 @@ def test_reopen_channel(
         )
 
     # opening a new channel that did not exist before
-    with print_gas_used(tester_state, 'gas for newChannel function call'):
-        tester_channelmanager.newChannel(
-            address2,
-            settle_timeout,
-            sender=privatekey0_raw,
-        )
+    tester_channelmanager.newChannel(
+        address2,
+        settle_timeout,
+        sender=privatekey0_raw,
+    )

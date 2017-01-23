@@ -11,6 +11,11 @@ library ChannelManagerLibrary {
         Token token;
     }
 
+    event ChannelDeleted(
+        address caller_address,
+        address partner
+    );
+
     /// @notice getChannelsAddresses to get all channels
     /// @dev Get all channels
     /// @return channels (address[]) all the channels
@@ -63,7 +68,7 @@ library ChannelManagerLibrary {
         address caller_address,
         address partner,
         uint settle_timeout)
-        returns (address channel_address, bool channelDeleted, address old_channel)
+        returns (address channel_address)
     {
         bool has_channel;
         uint caller_index;
@@ -74,16 +79,9 @@ library ChannelManagerLibrary {
         if (has_channel) {
             if(contractExists(self, channel_address)) {
                 throw; // throw if an open contract exists that is not settled
-            }
-            else {
+            } else {
                 // If contract is not deployed(mostly committed suicide) only then call deleteChannel
-                channelDeleted = deleteChannel(self,
-                                        caller_address,
-                                        partner,
-                                        channel_address,
-                                        caller_index,
-                                        partner_index);
-                old_channel = channel_address;
+                deleteChannel(self, caller_address, partner, channel_address, caller_index, partner_index);
             }
         }
 
@@ -113,7 +111,7 @@ library ChannelManagerLibrary {
         address channel_address,
         uint caller_index,
         uint partner_index)
-        private returns (bool success)
+        private
     {
         address[] our_channels = self.node_channels[caller_address];
         address[] partner_channels = self.node_channels[partner];
@@ -136,7 +134,7 @@ library ChannelManagerLibrary {
 
         self.node_channels[caller_address] = our_channels;
         self.node_channels[partner] = partner_channels;
-        success = true;
+        ChannelDeleted(caller_address, partner);
     }
 
     /// @notice contractExists(address) to check if a contract is deployed at given address
