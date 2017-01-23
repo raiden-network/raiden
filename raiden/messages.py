@@ -264,19 +264,27 @@ class Secret(SignedMessage):
     """
     cmdid = messages.SECRET
 
-    def __init__(self, identifier, secret, asset):
+    def __init__(self, identifier, nonce, asset, transferred_amount, recipient, locksroot, secret):
         super(Secret, self).__init__()
         self.identifier = identifier
-        self.secret = secret
+        self.nonce = nonce
         self.asset = asset
+        self.transferred_amount = transferred_amount  #: total amount of asset sent to partner
+        self.recipient = recipient  #: partner's address
+        self.locksroot = locksroot  #: the merkle root that represent all pending locked transfers
+        self.secret = secret
         self._hashlock = None
 
     def __repr__(self):
-        return '<{} [sender:{} hashlock:{} asset:{} hash:{}]>'.format(
+        return '<{} [sender:{} asset:{} nonce:{} transferred_amount:{} recipient:{} locksroot:{} secret:{} hash:{}]>'.format(
             self.__class__.__name__,
             pex(self.sender),
-            pex(self.hashlock),
             pex(self.asset),
+            pex(self.nonce),
+            pex(self.transferred_amount),
+            pex(self.recipient),
+            pex(self.locksroot),
+            pex(self.secret),
             pex(self.hash),
         )
 
@@ -288,14 +296,26 @@ class Secret(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        secret = Secret(packed.identifier, packed.secret, packed.asset)
+        secret = Secret(
+            packed.identifier,
+            packed.nonce,
+            packed.asset,
+            packed.transferred_amount,
+            packed.recipient,
+            packed.locksroot,
+            packed.secret,
+        )
         secret.signature = packed.signature
         return secret
 
     def pack(self, packed):
         packed.identifier = self.identifier
-        packed.secret = self.secret
+        packed.nonce = self.nonce
         packed.asset = self.asset
+        packed.transferred_amount = self.transferred_amount
+        packed.recipient = self.recipient
+        packed.locksroot = self.locksroot
+        packed.secret = self.secret
         packed.signature = self.signature
 
 
