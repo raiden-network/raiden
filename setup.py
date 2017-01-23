@@ -49,7 +49,7 @@ setup(
     long_description=readme + '\n\n' + history,
     author='HeikoHeiko',
     author_email='heiko@brainbot.com',
-    url='https://github.com/heikoheiko/raiden',
+    url='https://github.com/raiden-network/raiden',
     packages=[
         'raiden',
         'raiden.api',
