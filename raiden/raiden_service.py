@@ -3,6 +3,8 @@ import logging
 import itertools
 
 import gevent
+from gevent.queue import Queue
+from gevent.queue import Empty as QueueEmpty
 from ethereum import slogging
 from ethereum.abi import ContractTranslator
 from ethereum.utils import encode_hex
@@ -22,8 +24,16 @@ from raiden.tasks import AlarmTask, LogListenerTask, StartExchangeTask, Healthch
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
-from raiden.utils import privatekey_to_address, isaddress, pex, GLOBAL_CTX
-from raiden.api.dispatch import expose
+from raiden.utils import privatekey_to_address, isaddress, pex, GLOBAL_CTX, camel_to_snake_case
+
+from raiden.api.objects import (
+    TransferReceived,
+    ChannelClosed,
+    ChannelNew,
+    ChannelNewBalance,
+    ChannelSecretRevealed,
+    ChannelSettled
+)
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -38,9 +48,6 @@ def safe_address_decode(address):
         pass
 
     return address
-
-
-
 
 
 class RaidenError(Exception):
@@ -67,18 +74,19 @@ class InsufficientFunds(RaidenError):
     pass
 
 
-
-from raiden.api.events import TransferReceived, ChannelNew
-import re
-
-def convert_camel_to_snake(name):
-    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
-    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
-
-
 class EventManager(object):
-    blockchain_events = [ChannelNew]
-    raiden_events = [TransferReceived]
+
+    blockchain_events = [
+        ChannelNew,
+        ChannelClosed,
+        ChannelSettled,
+        ChannelSecretRevealed,
+        ChannelNewBalance
+    ]
+
+    raiden_events = [
+        TransferReceived
+    ]
 
 
     def __init__(self, raiden):
@@ -89,7 +97,7 @@ class EventManager(object):
 
     def get_method_for_event(self, klass):
         klass_name = klass.__name__
-        func_name = 'on_' + convert_camel_to_snake(klass_name)
+        func_name = 'on_' + camel_to_snake_case(klass_name)
         func = getattr(self, func_name)
         return func
 
@@ -104,15 +112,29 @@ class EventManager(object):
             func = self.get_method_for_event(klass)
             self.raiden.event_handler.register_event_callback(klass.__name__, func)
 
-    def on_transfer_received(self, *args, **kwargs):
-        event = TransferReceived(*args, **kwargs)
+    def on_channel_closed(self, *args, **kwargs):
+        event = ChannelClosed(*args, **kwargs)
         self.event_queue.put(event)
 
-    def on_channel_opened(self, *args, **kwargs):
+    def on_channel_new(self, *args, **kwargs):
         event = ChannelNew(*args, **kwargs)
         self.event_queue.put(event)
 
+    def on_channel_new_balance(self, *args, **kwargs):
+        event = ChannelNewBalance(*args, **kwargs)
+        self.event_queue.put(event)
 
+    def on_channel_settled(self, *args, **kwargs):
+        event = ChannelSettled(*args, **kwargs)
+        self.event_queue.put(event)
+
+    def on_channel_secret_revealed(self, *args, **kwargs):
+        event = ChannelSecretRevealed(*args, **kwargs)
+        self.event_queue.put(event)
+
+    def on_transfer_received(self, *args, **kwargs):
+        event = TransferReceived(*args, **kwargs)
+        self.event_queue.put(event)
 
 
 class RaidenService(object):  # pylint: disable=too-many-instance-attributes
@@ -170,12 +192,16 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         self.event_manager = EventManager(self)  # FIXME naming
 
-        # FIXME if no client connects, queue will get filled indefininately
+        # Adding events to Queue should be stopped if connection closed by client,
+        # and a max-size of the Queue should be introduced!
+        # At the moment, as soon as the callbacks are registered, the Queue will fill indefinately,
+        # if no client polls the Events from the Queue
         self.event_manager.register_callbacks()
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
+    @property
     def event_queue(self):
         return self.event_manager.event_queue
 
@@ -428,31 +454,30 @@ class RaidenAPI(object):
     def get_completed_transfers(self, asset_address=None, partner_address=None):
         pass
 
-    def get_new_events(self, timeout=None):
+    def get_channel(self, channel_address):
+        pass
 
-        # FIXME queue has to be gevent patched!
+    def get_channel_list(self, asset_address=None, partner_address=None):
+        pass
+
+    def get_new_events(self):
         queue = self.raiden.event_queue
 
-        # assumption: once the api-server is running, there has to exist a queue
-        assert queue
 
-        # should be stopped if connection closed by client
 
         while queue.empty():
             gevent.sleep(0.5)
             # blocks until item in queue
 
-        results = []
+        event_list = []
         while True:
             try:
                 result = queue.get(False, None)
-                results.append(result)
-            except Empty:
+                event_list.append(result)
+            except QueueEmpty:
                 break
 
-        return results
-
-
+        return event_list
 
     def open(self, asset_address, partner_address,
              settle_timeout=None, reveal_timeout=None):
@@ -478,10 +503,6 @@ class RaidenAPI(object):
         )
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         asset_manager.register_channel(netting_channel, reveal_timeout)
-
-        """
-        The register_channel metho
-        """
 
         return netting_channel
 
@@ -560,9 +581,6 @@ class RaidenAPI(object):
         asset_manager = self.raiden.get_manager_by_asset_address(from_asset)
         asset_manager.transfermanager.exchanges[ExchangeKey(from_asset, from_amount)] = exchange
 
-    @expose('/api/sync/transfer/<address:asset_address>/<int:amount>/<address:target>/',
-            ['POST'],
-            async=False)
     def transfer_and_wait(self, asset_address, amount, target, identifier=None,
                           callback=None, timeout=None):
         """ Do a transfer with `target` with the given `amount` of `asset_address`. """
@@ -579,10 +597,6 @@ class RaidenAPI(object):
 
     transfer = transfer_and_wait  # expose a synchronous interface to the user
 
-
-    @expose('/api/transfer/<address:asset_address>/<int:amount>/<address:target>/',
-            ['POST'],
-            async=True)
     def transfer_async(
             self,
             asset_address,
@@ -622,9 +636,6 @@ class RaidenAPI(object):
         )
         return async_result
 
-    @expose('/api/channel/<address:asset_address/<address:partner_address>',
-            ['DELETE'],
-            async=False) # TODO should be async, add callback
     def close(self, asset_address, partner_address):
         """ Close a channel opened with `partner_address` for the given `asset_address`. """
         asset_address_bin = safe_address_decode(asset_address)
@@ -654,9 +665,8 @@ class RaidenAPI(object):
             second_transfer,
         )
 
-    @expose('/api/channel/settle/<address:asset_address/<address:partner_address>',
-            ['POST'],
-            async=False)  # FIXME shuoldn't be exposed actually (handled internally)
+        return netting_channel
+
     def settle(self, asset_address, partner_address):
         """ Settle a closed channel with `partner_address` for the given `asset_address`. """
         asset_address_bin = safe_address_decode(asset_address)
@@ -838,22 +848,20 @@ class RaidenEventHandler(object):
             if callback:
                 registry_address = emitting_contract_address_bin
                 # TODO
-                asset_address = event['']
-                channel_manager_address = event['']
+                asset_address = event['asset_added']
+                channel_manager_address = event['channel_manager_address']
 
                 callback(registry_address, asset_address, channel_manager_address)
 
         elif event['_event_type'] == 'ChannelNew':
             self.event_channelnew(emitting_contract_address_bin, event)
 
-            # this is called after processing the event!
-
             callback = self.get_event_callback(event)
             if callback:
+                channel_address = emitting_contract_address_bin
                 closing_address = event['closing_address']
-                # asset_address = self.raiden.get_manager_by_address()
                 block_number = event['block_number']
-                callback(emitting_contract_address_bin, closing_address, block_number)
+                callback(channel_address, closing_address, block_number)
 
         elif event['_event_type'] == 'ChannelNewBalance':
             self.event_channelnewbalance(emitting_contract_address_bin, event)
@@ -862,29 +870,26 @@ class RaidenEventHandler(object):
             if callback:
                 channel_address = emitting_contract_address_bin
                 # TODO:
-                asset_address = event['']
-                participant_address = event['']
-                balance = event['']
-                block_number =  event['']
+                asset_address = event['asset_address']
+                participant_address = event['participant_address']
+                balance = event['balance']
+                block_number = event['block_number']
 
                 callback(channel_address, asset_address, participant_address, balance, block_number)
 
         elif event['_event_type'] == 'ChannelClosed':
             self.event_channelclosed(emitting_contract_address_bin, event)
 
-
             callback = self.get_event_callback(event)
             if callback:
                 channel_address = emitting_contract_address_bin
-                # TODO
-                closing_address = event['']
-                block_number = event['']
+                closing_address = event['closing_address']
+                block_number = event['block_number']
 
                 callback(channel_address, closing_address, block_number)
 
         elif event['_event_type'] == 'ChannelSettled':
             self.event_channelsettled(emitting_contract_address_bin, event)
-
 
             callback = self.get_event_callback(event)
             if callback:
@@ -896,12 +901,11 @@ class RaidenEventHandler(object):
         elif event['_event_type'] == 'ChannelSecretRevealed':
             self.event_channelsecretrevealed(emitting_contract_address_bin, event)
 
-
             callback = self.get_event_callback(event)
             if callback:
                 channel_address = emitting_contract_address_bin
                 # TODO
-                secret = event['']
+                secret = event['secret']
 
                 callback(channel_address, secret)
 
