@@ -190,5 +190,5 @@ class UnreliableTransport(DummyTransport):
             log.debug(
                 'dropped packet',
                 counter=self.network.counter,
-                data=format(pex(sha3(bytes_)))
+                msghash=format(pex(sha3(bytes_)))
             )

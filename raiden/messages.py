@@ -51,9 +51,9 @@ class Message(MessageHashable):
     def __repr__(self):
         packed = self.packed()
 
-        return '<{klass} [{content}]>'.format(
+        return '<{klass} [msghash={msghash}]>'.format(
             klass=self.__class__.__name__,
-            content=pex(packed.data),
+            msghash=pex(sha3(packed.data)),
         )
 
     @classmethod
