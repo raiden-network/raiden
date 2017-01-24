@@ -209,7 +209,8 @@ def geth_create_blockchain(
         p2p_ports,
         base_datadir,
         verbosity,
-        genesis_path=None):
+        genesis_path=None,
+        logdirectory=None):
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments
 
     nodes_configuration = []
@@ -264,16 +265,36 @@ def geth_create_blockchain(
     if isinstance(sys.stdin, file):  # check that the test is running on non-capture mode
         term_settings = termios.tcgetattr(sys.stdin)
 
+    stdout = None
+    stderr = None
     processes_list = []
-    for cmd in cmds:
+    for pos, cmd in enumerate(cmds):
+        if logdirectory:
+            log_path = os.path.join(logdirectory, str(pos))
+            logfile = open(log_path, 'w')
+
+            stdout = logfile
+            stderr = logfile
+
         if '--unlock' in cmd:
-            process = subprocess.Popen(cmd, universal_newlines=True, stdin=subprocess.PIPE)
+            process = subprocess.Popen(
+                cmd,
+                universal_newlines=True,
+                stdin=subprocess.PIPE,
+                stdout=stdout,
+                stderr=stderr,
+            )
 
             # --password wont work, write password to unlock
             process.stdin.write(DEFAULT_PASSPHRASE + os.linesep)  # Passphrase:
             process.stdin.write(DEFAULT_PASSPHRASE + os.linesep)  # Repeat passphrase:
         else:
-            process = subprocess.Popen(cmd)
+            process = subprocess.Popen(
+                cmd,
+                universal_newlines=True,
+                stdout=stdout,
+                stderr=stderr,
+            )
 
         processes_list.append(process)
         assert process.returncode is None
