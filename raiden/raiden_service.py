@@ -444,8 +444,14 @@ class RaidenAPI(object):
         asset_manager = self.raiden.get_manager_by_asset_address(from_asset)
         asset_manager.transfermanager.exchanges[ExchangeKey(from_asset, from_amount)] = exchange
 
-    def transfer_and_wait(self, asset_address, amount, target, identifier=None,
-                          callback=None, timeout=None):
+    def transfer_and_wait(
+            self,
+            asset_address,
+            amount,
+            target,
+            identifier=None,
+            callback=None,
+            timeout=None):
         """ Do a transfer with `target` with the given `amount` of `asset_address`. """
         # pylint: disable=too-many-arguments
 
