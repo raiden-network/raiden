@@ -127,7 +127,7 @@ contract ChannelManagerContract {
         (channel_address, has_channel, caller_index, partner_index) = getChannelWith(partner);
         // Check if channel is present in the node_channels mapping within the Data struct
         if (has_channel) {
-            if(contractExists(channel_address)) {
+            if (contractExists(channel_address)) {
                 throw; // throw if an open contract exists that is not settled
             } else {
                 // If contract is not deployed(mostly committed suicide) only then call deleteChannel
@@ -149,10 +149,10 @@ contract ChannelManagerContract {
         address channel_address,
         uint caller_index,
         uint partner_index)
-        {
-            data.deleteChannel(caller_address, partner, channel_address, caller_index, partner_index);
-            ChannelDeleted(caller_address, partner);
-        }
+    {
+        data.deleteChannel(caller_address, partner, channel_address, caller_index, partner_index);
+        ChannelDeleted(caller_address, partner);
+    }
 
     function () { throw; }
 }
