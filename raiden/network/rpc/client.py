@@ -3,8 +3,10 @@ import gevent
 import rlp
 from ethereum import slogging
 from ethereum import _solidity
+from ethereum.exceptions import InvalidTransaction
 from ethereum.transactions import Transaction
 from ethereum.utils import denoms, int_to_big_endian, encode_hex, normalize_address
+<<<<<<< 4c31f51f14f0b23ec72f06c4605e9944fbe60a20
 from pyethapp.jsonrpc import (
     address_encoder,
     address_decoder,
@@ -13,8 +15,15 @@ from pyethapp.jsonrpc import (
     default_gasprice,
 )
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
+=======
+from pyethapp.jsonrpc import address_encoder, address_decoder, data_decoder, default_gasprice
+#FIXME will get implemented in pyethapp's PR #179:
+from pyethapp.rpc_client import topic_encoder, JSONRPCClient, JSONRPCPollTimeoutException
+
+>>>>>>> Implement exception reraise for blockchain-polling to avoid external Exception classes
 
 from raiden import messages
+from raiden.raiden_service import RaidenError
 from raiden.utils import (
     get_contract_path,
     isaddress,
@@ -54,6 +63,14 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 #   - poll for the transaction hash
 #   - check if the proper events were emited
 #   - use `call` and `transact` to interact with pyethapp.rpc_client proxies
+
+
+class BlockchainPollTimeout(RaidenError):
+    pass
+
+
+class BlockchainInvalidTransaction(RaidenError):
+    pass
 
 
 def check_transaction_threw(client, transaction_hash):
@@ -260,6 +277,7 @@ class BlockChainService(object):
             contract_file,
         )
 
+        # TODO should we also check for BlockchainPollTimeout / BlockchainInvalidTransaction here?
         proxy = self.client.deploy_solidity_contract(
             self.node_address,
             contract_name,
@@ -274,6 +292,7 @@ class BlockChainService(object):
     def deploy_and_register_asset(self, contract_name, contract_file, constructor_parameters=None):
         assert self.default_registry
 
+        # TODO should we also check for BlockchainPollTimeout / BlockchainInvalidTransaction here?
         token_address = self.deploy_contract(
             contract_name,
             contract_file,
@@ -366,10 +385,16 @@ class Discovery(object):
 
         transaction_hash = self.proxy.registerEndpoint.transact(endpoint)
 
-        self.client.poll(
-            transaction_hash.decode('hex'),
-            timeout=self.poll_timeout,
-        )
+        try:
+            self.client.poll(
+                transaction_hash.decode('hex'),
+                timeout=self.poll_timeout,
+            )
+        except JSONRPCPollTimeoutException:
+            raise BlockchainPollTimeout()
+        except InvalidTransaction:
+            raise BlockchainInvalidTransaction()
+
 
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = node_address_bin.encode('hex')
@@ -434,7 +459,14 @@ class Asset(object):
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+        try:
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        except JSONRPCPollTimeoutException:
+            raise BlockchainPollTimeout()
+        except InvalidTransaction:
+            raise BlockchainInvalidTransaction()
+
 
     def balance_of(self, address):
         """ Return the balance of `address`. """
@@ -447,7 +479,14 @@ class Asset(object):
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
-        self.client.poll(transaction_hash.decode('hex'))
+
+        try:
+            self.client.poll(transaction_hash.decode('hex'))
+        except JSONRPCPollTimeoutException:
+            raise BlockchainPollTimeout()
+        except InvalidTransaction:
+            raise BlockchainInvalidTransaction()
+
         # TODO: check Transfer event
 
 
@@ -488,7 +527,13 @@ class Registry(object):
             asset_address,
             startgas=self.startgas,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+        try:
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        except JSONRPCPollTimeoutException:
+            raise BlockchainPollTimeout()
+        except InvalidTransaction:
+            raise BlockchainInvalidTransaction()
 
         channel_manager_address_encoded = self.proxy.channelManagerByAsset.call(
             asset_address,
@@ -571,7 +616,7 @@ class ChannelManager(object):
 
     def new_netting_channel(self, peer1, peer2, settle_timeout):
         if not isaddress(peer1):
-            raise ValueError('The pee1 must be a valid address')
+            raise ValueError('The peer1 must be a valid address')
 
         if not isaddress(peer2):
             raise ValueError('The peer2 must be a valid address')
@@ -587,7 +632,13 @@ class ChannelManager(object):
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+        try:
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        except JSONRPCPollTimeoutException:
+            raise BlockchainPollTimeout()
+        except InvalidTransaction:
+            raise BlockchainInvalidTransaction()
 
         # TODO: raise if the transaction failed because there is an existing
         # channel in place
@@ -785,7 +836,13 @@ class NettingChannel(object):
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+        try:
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        except JSONRPCPollTimeoutException:
+            raise BlockchainPollTimeout()
+        except InvalidTransaction:
+            raise BlockchainInvalidTransaction()
 
         log.info('deposit called', contract=pex(self.address), amount=amount)
 
@@ -811,7 +868,12 @@ class NettingChannel(object):
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        try:
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        except JSONRPCPollTimeoutException:
+            raise BlockchainPollTimeout()
+        except InvalidTransaction:
+            raise BlockchainInvalidTransaction()
         log.info(
             'close called',
             contract=pex(self.address),
@@ -830,7 +892,14 @@ class NettingChannel(object):
                 startgas=self.startgas,
                 gasprice=self.gasprice,
             )
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+            try:
+                self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+            except JSONRPCPollTimeoutException:
+                raise BlockchainPollTimeout()
+            except InvalidTransaction:
+                raise BlockchainInvalidTransaction()
+
             log.info(
                 'update_transfer called',
                 contract=pex(self.address),
@@ -863,7 +932,14 @@ class NettingChannel(object):
                 startgas=self.startgas,
                 gasprice=self.gasprice,
             )
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+            try:
+                self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+            except JSONRPCPollTimeoutException:
+                raise BlockchainPollTimeout()
+            except InvalidTransaction:
+                raise BlockchainInvalidTransaction()
+
             # TODO: check if the ChannelSecretRevealed event was emitted and if
             # it wasn't raise an error
 
@@ -881,7 +957,14 @@ class NettingChannel(object):
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+
+        try:
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        except JSONRPCPollTimeoutException:
+            raise BlockchainPollTimeout()
+        except InvalidTransaction:
+            raise BlockchainInvalidTransaction()
+
         # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
         log.info('settle called', contract=pex(self.address))
 
