@@ -1,11 +1,9 @@
-
-def to_camel_case(snake_string):
-    return snake_string.title().replace("_", "")
+from raiden.utils import snake_to_camel_case
 
 
 def subclass_from_classifier(cls, classifier):
     # classifiers are specified as the snake_case of the CamelCased class-name:
-    search_name = to_camel_case(classifier)
+    search_name = snake_to_camel_case(classifier)
     found_class = None
     for klass in cls.__subclasses__():
         name = klass.__name__
@@ -17,7 +15,7 @@ def subclass_from_classifier(cls, classifier):
 
 
 # BASE:
-
+# (mostly for namespacing in the Encoding)
 
 class List(list):
     """
@@ -56,9 +54,9 @@ class Filter(object):
 
 
 class Result(object):
-    def __init__(self, successful, result):
+    def __init__(self, successful, data):
         self.successful = successful
-        self.result = result # TODO arbitrary nested data, again enveloped!
+        self.data = data # TODO arbitrary nested data, again enveloped!
 
 
 class AddressFilter(object):
@@ -66,7 +64,6 @@ class AddressFilter(object):
     def __init__(self, address_type, address):
         self.address_type = address_type
         self.address = address
-
 
 
 class Channel(object):
@@ -84,8 +81,8 @@ class ChannelList(list):
     pass
 
 
+# EVENTS
 
-## EVENTS
 
 class Events(List):
     pass
@@ -152,6 +149,7 @@ class ChannelSecretRevealed(Event):
 
 
 
+# HACK just to have easy access to the base Classes from outside:
 type_class_mapping = {
     'Event': Event,
     'List': List,

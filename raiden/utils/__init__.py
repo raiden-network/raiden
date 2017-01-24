@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 import sys
 import string
 import random
@@ -25,6 +26,8 @@ __all__ = (
     'pex',
     'lpex',
     'get_contract_path',
+    'safe_lstrip_hex',
+    'camel_to_snake_case'
 )
 
 LETTERS = string.printable
@@ -148,3 +151,12 @@ def get_encoded_transfers(their_transfer, our_transfer):
     their_encoded = their_transfer.encode() if their_transfer else ""
     our_encoded = our_transfer.encode() if our_transfer else ""
     return their_encoded, our_encoded
+
+
+def camel_to_snake_case(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
+def snake_to_camel_case(snake_string):
+    return snake_string.title().replace("_", "")
