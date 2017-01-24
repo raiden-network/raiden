@@ -11,7 +11,7 @@ from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
 from raiden.messages import decode, Ack, Ping, SignedMessage
-from raiden.transfermanager import UnknownAddress, UnknownAssetAddress
+from raiden.transfermanager import UnknownAddress, UnknownAssetAddress, TransferWhenClosed
 from raiden.channel import InvalidLocksRoot, InvalidNonce
 from raiden.utils import isaddress, sha3, pex
 
@@ -342,7 +342,7 @@ class RaidenProtocol(object):
             # this might exit with an exception
             try:
                 self.raiden.on_message(message, echohash)
-            except (UnknownAddress, InvalidNonce):
+            except (UnknownAddress, InvalidNonce, TransferWhenClosed):
                 # Do not send ACK for these cases
                 return
             except (UnknownAssetAddress, InvalidLocksRoot) as e:

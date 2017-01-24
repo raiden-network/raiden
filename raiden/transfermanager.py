@@ -35,6 +35,10 @@ class UnknownAddress(Exception):
     pass
 
 
+class TransferWhenClosed(Exception):
+    pass
+
+
 class UnknownAssetAddress(Exception):
     def __init__(self, address):
         Exception.__init__(
@@ -233,7 +237,6 @@ class TransferManager(object):
 
     def on_mediatedtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
-            # Log a warning and don't process further
             if log.isEnabledFor(logging.WARN):
                 log.warn(
                     'Received mediated transfer message from unknown channel.'
@@ -246,6 +249,13 @@ class TransferManager(object):
         asset_address = self.assetmanager.asset_address
 
         channel = self.assetmanager.get_channel_by_partner_address(transfer.sender)
+        if not channel.isopen:
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received mediated transfer message from %s after channel closing',
+                    pex(transfer.sender),
+                )
+            raise TransferWhenClosed
         channel.register_transfer(transfer)  # raises if the transfer is invalid
 
         exchange_key = ExchangeKey(transfer.asset, transfer.lock.amount)
@@ -323,7 +333,6 @@ class TransferManager(object):
 
     def on_directtransfer_message(self, transfer):
         if transfer.sender not in self.assetmanager.partneraddress_channel:
-            # Log a warning and don't process further
             if log.isEnabledFor(logging.WARN):
                 log.warn(
                     'Received direct transfer message from unknown sender %s',
@@ -332,6 +341,14 @@ class TransferManager(object):
             raise UnknownAddress
 
         channel = self.assetmanager.partneraddress_channel[transfer.sender]
+
+        if not channel.isopen:
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received direct transfer message from %s after channel closing',
+                    pex(transfer.sender),
+                )
+            raise TransferWhenClosed
         channel.register_transfer(transfer)
 
     def on_exchangerequest_message(self, message):
