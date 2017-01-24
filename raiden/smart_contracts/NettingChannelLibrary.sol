@@ -465,7 +465,9 @@ library NettingChannelLibrary {
 
         cmdid = uint(transfer_raw[0]);
 
-        if (cmdid == 5) {
+        if (cmdid == 4) {
+            assignUnlockTransfer(sender, transfer_raw);
+        } else if (cmdid == 5) {
             assignDirectTransfer(sender, transfer_raw);
         } else if (cmdid == 7) {
             assignMediatedTransfer(sender, transfer_raw);
@@ -484,6 +486,38 @@ library NettingChannelLibrary {
     //  ref: https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
 
     // TODO: use sstore instead of these temporaries
+
+    function assignUnlockTransfer(Participant storage participant, bytes memory message) private {
+        if (message.length != 156) {  // raw message size (without signature)
+            throw;
+        }
+
+        uint64 nonce;
+        address asset;
+        address recipient;
+        uint256 transferred_amount;
+        bytes32 locksroot;
+        bytes32 secret;
+
+        assembly {
+            // cmdid [0:1]
+            // pad [1:4]
+            nonce := mload(add(message, 12))              // nonce [4:12]
+            // identifier [12:20]
+            asset := mload(add(message, 40))              // asset [20:40]
+            recipient := mload(add(message, 60))          // recipient [40:60]
+            transferred_amount := mload(add(message, 92)) // transferred_amount [60:92]
+            locksroot := mload(add(message, 124))         // locksroot [92:124]
+            secret := mload(add(message, 156))            // secret [124:156]
+        }
+
+        participant.nonce = nonce;
+        participant.asset = asset;
+        participant.recipient = recipient;
+        participant.transferred_amount = transferred_amount;
+        participant.locksroot = locksroot;
+        participant.secret = secret;
+    }
 
     function assignDirectTransfer(Participant storage participant, bytes memory message) private {
         if (message.length != 156) {  // raw message size (without signature)

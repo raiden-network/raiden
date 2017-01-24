@@ -136,11 +136,15 @@ SecretRequest = namedbuffer(
 Secret = namedbuffer(
     'secret',
     [
-        cmdid(SECRET),  # [0:1]
-        pad(3),         # [1:4]
-        identifier,     # [4:12]
-        secret,         # [12:44]
-        asset,
+        cmdid(SECRET),          # [0:1]
+        pad(3),                 # [1:4]
+        nonce,                  # [4:12]
+        identifier,             # [12:20]
+        asset,                  # [20:40]
+        recipient,              # [40:60]
+        transferred_amount,     # [60:92]
+        locksroot,              # [92:124]
+        secret,                 # [124:156]
         signature,
     ]
 )
