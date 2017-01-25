@@ -20,6 +20,7 @@ from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
 from raiden.network.rpc.client import (
     patch_send_transaction,
+    patch_send_message,
     BlockChainService,
 )
 from raiden.tests.utils.blockchain import (
@@ -355,6 +356,7 @@ def _jsonrpc_services(
     if registry_address is None:
         address = privatekey_to_address(deploy_key)
         patch_send_transaction(deploy_client)
+        patch_send_message(deploy_client)
 
         registry_path = get_contract_path('Registry.sol')
         registry_contracts = compile_file(registry_path, libraries=dict())
