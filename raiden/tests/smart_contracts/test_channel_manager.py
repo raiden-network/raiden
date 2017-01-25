@@ -146,6 +146,7 @@ def test_channelmanager(
 
 def test_reopen_channel(
         tester_state,
+        tester_events,
         tester_channelmanager,
         tester_channels,
         settle_timeout,
@@ -193,6 +194,13 @@ def test_reopen_channel(
         settle_timeout,
         sender=privatekey0_raw,
     )
+
+    channeldelete_event = tester_events[-2]
+    assert channeldelete_event == {
+        '_event_type': 'ChannelDeleted',
+        'caller_address': address0.encode('hex'),
+        'partner': address1.encode('hex')
+    }
 
     netting_channel_translator = ContractTranslator(netting_channel_abi)
 
