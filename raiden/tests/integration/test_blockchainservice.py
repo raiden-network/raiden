@@ -5,7 +5,7 @@ import os
 
 import pytest
 from ethereum import _solidity
-from ethereum._solidity import compile_file
+from ethereum._solidity import compile_file, solidity_get_contract_data
 from ethereum.utils import denoms
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import default_gasprice
@@ -191,6 +191,7 @@ def test_blockchain(
         humantoken_contracts,
         dict(),
         (total_asset, 'raiden', 2, 'Rd'),
+        contract_path=humantoken_path,
         gasprice=default_gasprice,
         timeout=poll_timeout,
     )
@@ -203,6 +204,7 @@ def test_blockchain(
         registry_contracts,
         dict(),
         tuple(),
+        contract_path=registry_path,
         gasprice=default_gasprice,
         timeout=poll_timeout,
     )
@@ -257,8 +259,13 @@ def test_blockchain(
     assert channel_manager_address == event['channel_manager_address'].decode('hex')
     assert token_proxy.address == event['asset_address'].decode('hex')
 
+    contract_data = solidity_get_contract_data(
+        registry_contracts,
+        get_contract_path('ChannelManagerContract.sol'),
+        'ChannelManagerContract'
+    )
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
-        registry_contracts['ChannelManagerContract']['abi'],
+        contract_data['abi'],
         channel_manager_address,
     )
 

@@ -266,6 +266,7 @@ class BlockChainService(object):
             contracts,
             dict(),
             constructor_parameters,
+            contract_path=contract_path,
             gasprice=default_gasprice,
             timeout=self.poll_timeout,
         )

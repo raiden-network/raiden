@@ -45,6 +45,7 @@ def deploy_files(contract_files, client):
             compiled_contracts,
             libraries,
             '',
+            contract_path=c,
             gasprice=default_gasprice
         )
         libraries[name] = proxy.address
