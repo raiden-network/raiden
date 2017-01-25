@@ -5,27 +5,28 @@ from raiden.transfer.architecture import Event
 class MediatedTransfer(Event):
     """ A mediated transfer that must be sent to `node_address`. """
     def __init__(self,
-                 transfer_id,
-                 message_id,
+                 identifier,
                  token,
                  amount,
-                 expiration,
                  hashlock,
                  target,
+                 expiration,
                  node_address):
 
-        self.transfer_id = transfer_id
-        self.message_id = message_id
+        self.identifier = identifier
         self.token = token
         self.amount = amount
-        self.expiration = expiration
         self.hashlock = hashlock
         self.target = target
+        self.expiration = expiration
         self.node_address = node_address
 
 
-class RevealSecret(Event):
+class RevealSecretTo(Event):
     """ Event used to reveal a secret.
+
+    Used by all roles in a mediate transfer to reveal the secret to a specific
+    node.
 
     Note:
         The receiver must only update it's local balance once the payer sends
@@ -60,18 +61,25 @@ class RefundTransfer(Event):
         self.locked_transfer = locked_transfer
 
 
-class CancelMediatedTransfer(Event):
+class CancelTransfer(Event):
     """ Event used to inform the nodes in the mediation chain that an
     unrecoverable error occurred and the transfer cannot proceed. The initiator
     may try a new route.
     """
 
-    def __init__(self, transfer_id, message_id):
+    def __init__(self, transfer_id, reason):
         self.transfer_id = transfer_id
+        self.reason = reason
 
-        # the message_id of the canceled message. Note this is not the same
-        # value as the transfer_id, transfer_id contains the agreed transfer
-        # identifier between the sender/receiver, message_id is this node
-        # identifier for a message, that means a single transfer_id could have
-        # multiple messages sent each with a unique identifier.
-        self.message_id = message_id
+
+class UnlockLock(Event):
+    """ Unlock the asset locked by hashlock and send the Secret message to
+    update the partner node.
+    """
+
+    def __init__(self, transfer_id, node_address, token, secret, hashlock):
+        self.transfer_id = transfer_id
+        self.node_address = node_address
+        self.token = token
+        self.secret = secret
+        self.hashlock = hashlock

@@ -14,16 +14,20 @@ from raiden.transfer.state_change import (
 )
 
 
-def state_transition(current_state, state_change):
+def state_transition(next_state, state_change):
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
-    state_uninitialized = current_state is None
-    state_wait_secret = current_state.secret is None
-    state_wait_withdraw = current_state.secret is not None
+    if next_state is None:
+        state_uninitialized = True
+        state_wait_secret = False
+        state_wait_withdraw = False
+    else:
+        state_uninitialized = False
+        state_wait_secret = next_state.secret is None
+        state_wait_withdraw = next_state.secret is not None
 
-    iteration = Iteration(current_state, list())
-    next_state = deepcopy(current_state)
+    iteration = Iteration(next_state, list())
 
     if not state_uninitialized:
         if isinstance(state_change, Blocknumber):

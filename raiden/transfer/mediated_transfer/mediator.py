@@ -2,7 +2,7 @@
 from copy import deepcopy
 
 from raiden.transfer.architecture import Iteration
-from raiden.transfer.state import AvailableRoutesState
+from raiden.transfer.state import RoutesState
 from raiden.transfer.mediated_transfer.transition import update_route
 from raiden.transfer.state_change import Blocknumber, RouteChange
 from raiden.transfer.mediated_transfer.state import MediatorState, Cancel
@@ -91,21 +91,20 @@ def cancel_current_transfer(next_state):
     return iteration
 
 
-def state_transition(current_state, state_change):
+def state_transition(next_state, state_change):
     """ State machine for a node mediating a transfer. """
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
-    if current_state is None:
+    if next_state is None:
         state_uninitialized = True
         state_wait_secret = False
         state_wait_withdraw = False
     else:
         state_uninitialized = False
-        state_wait_secret = current_state.message is not None
-        state_wait_withdraw = current_state.lock.secret is not None
+        state_wait_secret = next_state.message is not None
+        state_wait_withdraw = next_state.lock.secret is not None
 
-    iteration = Iteration(current_state, list())
-    next_state = deepcopy(current_state)
+    iteration = Iteration(next_state, list())
 
     if not state_uninitialized:
         if isinstance(state_change, Blocknumber):
@@ -122,7 +121,7 @@ def state_transition(current_state, state_change):
         if isinstance(state_change, InitMediator):
             from_route = state_change.from_route
             lock = state_change.lock
-            routes = AvailableRoutesState([
+            routes = RoutesState([
                 route
                 for route in state_change.routes
                 if route.state == 'available'
