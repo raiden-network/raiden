@@ -9,6 +9,7 @@ class InitiatorState(State):
     Args:
         our_address (address): This node address.
         transfer (TransferState): The description of the mediated transfer.
+        routes (RoutesState): An route state object with the available_routes filled.
         block_number (int): Latest known block number.
         config (dict): This node configuration.
     """
@@ -21,9 +22,9 @@ class InitiatorState(State):
 
         self.message = None  #: current message in-transit
         self.route = None  #: current route being used
-        self.lock = None
         self.secretrequest = None
         self.revealsecret = None
+        self.canceled_transfers = list()
 
 
 class MediatorState(State):
@@ -74,26 +75,31 @@ class TargetState(State):
         self.sent_transfers_refunded = list()
 
 
-class HashlockTransferState(State):
-    """ State of a transfer locked with a hashlock.
+class LockedTransferState(State):
+    """ State of a transfer that is time hash locked.
 
     Args:
+        identifier (int): A unique identifer for the transfer.
         amount (int): Amount of `token' being transferred.
         token (address): Token being transferred.
+        target (address): Transfer target address.
         expiration (int): The absolute block number that the lock expires.
         hashlock (bin): The hashlock.
         secret (bin): The secret that unlocks the lock, may be None.
     """
-    def __init__(self, amount, token, expiration, hashlock, secret):
+    def __init__(self,
+                 identifier,
+                 amount,
+                 token,
+                 target,
+                 expiration,
+                 hashlock,
+                 secret):
+
+        self.identifier = identifier
         self.amount = amount
         self.token = token
+        self.target = target
         self.expiration = expiration
         self.hashlock = hashlock
         self.secret = secret
-
-
-class LockedTransferState(State):
-    def __init__(self, identifier, target, lock):
-        self.identifier = identifier
-        self.target = target
-        self.lock = lock

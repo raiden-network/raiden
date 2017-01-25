@@ -3,28 +3,22 @@ from raiden.transfer.architecture import StateChange
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
-class Cancel(StateChange):
-    """ Cannot proceed and finish the transfer, cancel it.
-
-    Args:
-        transfer_id: The transfer identifer.
-    """
-
-    def __init__(self, transfer_id):
-        self.transfer_id = transfer_id
+# Note: The init states must contain all the required data for trying doing
+# useful work, ie. there must /not/ be an event for requesting new data.
 
 
 class InitInitiator(StateChange):
     """ Initial state of a new mediated transfer.
 
     Args:
-        our_address: This node address.
-        target: The mediated transfer target.
-        routes: The current available routes.
+        our_address (address): This node address.
+        target (address): The mediated transfer target.
+        routes (RouteState): The current available routes.
         transfer: A state object containing the transfer details.
-        random_generator: A generator for secrets.
-        block_number: The current block number.
+        random_generator (generator): A generator for secrets.
+        block_number (int): The current block number.
     """
+
     def __init__(self,
                  our_address,
                  transfer,
@@ -48,6 +42,7 @@ class InitMediator(StateChange):
         originating_transfer: The received MediatedTransfer.
         block_number: The current block number.
     """
+
     def __init__(self,
                  our_address,
                  originating_route,
@@ -70,6 +65,7 @@ class InitTarget(StateChange):
         block_number: The current block number.
         config (dict): This node configuration.
     """
+
     def __init__(self,
                  our_address,
                  originating_route,
@@ -86,6 +82,7 @@ class InitTarget(StateChange):
 
 class SecretRequestReceived(StateChange):
     """ A SecretRequest message received. """
+
     def __init__(self, transfer_id, amount, hashlock, identifier, sender):
         self.transfer_id = transfer_id
         self.amount = amount
@@ -94,8 +91,8 @@ class SecretRequestReceived(StateChange):
         self.sender = sender
 
 
-class RevealSecretReceived(StateChange):
-    """ A RevealSecret message received. """
+class SecretRevealReceived(StateChange):
+    """ A SecretReveal message received. """
     def __init__(self, transfer_id, secret, target, sender):
         self.transfer_id = transfer_id
         self.secret = secret
@@ -103,7 +100,18 @@ class RevealSecretReceived(StateChange):
         self.sender = sender
 
 
-class RefundTransferReceived(StateChange):
+class TransferCancelReceived(StateChange):
+    """ Cannot proceed and finish the transfer, cancel it.
+
+    Args:
+        transfer_id: The transfer identifer.
+    """
+
+    def __init__(self, transfer_id):
+        self.transfer_id = transfer_id
+
+
+class TransferRefundReceived(StateChange):
     """ A RefundTransfer message received. """
     def __init__(self, transfer_id, hashlock, amount, sender):
         self.transfer_id = transfer_id
