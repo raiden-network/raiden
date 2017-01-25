@@ -4,7 +4,7 @@ from __future__ import division
 import pytest
 from ethereum import slogging
 
-from raiden.channel import Channel, ChannelEndState, ChannelExternalState
+from raiden.channel import BalanceProof, Channel, ChannelEndState, ChannelExternalState
 from raiden.messages import DirectTransfer, Lock, LockedTransfer
 from raiden.utils import sha3, make_address, make_privkey_address
 from raiden.tests.utils.transfer import assert_synched_channels, channel
@@ -26,7 +26,6 @@ class NettingChannelMock(object):
     def settled(self):
         return 0
 
-
 def make_external_state():
     block_alarm = list()
     channel_for_hashlock = list()
@@ -40,7 +39,6 @@ def make_external_state():
     )
 
     return external_state
-
 
 def test_end_state():
     netting_channel = NettingChannelMock()
