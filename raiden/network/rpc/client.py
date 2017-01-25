@@ -140,8 +140,13 @@ def new_filter(jsonrpc_client, contract_address, topics):
         'fromBlock': '',
         'toBlock': '',
         'address': address_encoder(normalize_address(contract_address)),
-        'topics': [topic_encoder(topic) for topic in topics],
     }
+
+    if topics is not None:
+        json_data['topics'] = [
+            topic_encoder(topic)
+            for topic in topics
+        ]
 
     return jsonrpc_client.call('eth_newFilter', json_data)
 
@@ -920,64 +925,15 @@ class NettingChannel(object):
         # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
         log.info('settle called', contract=pex(self.address))
 
-    def channelnewbalance_filter(self):
-        """ Install a new filter for ChannelNewBalance events.
+    def filter_for_all_events(self):
+        """ Install a new filter for the current netting channel contract.
 
         Return:
             Filter: The filter instance.
         """
         netting_channel_address_bin = self.proxy.address
-        topics = [CHANNELNEWBALANCE_EVENTID]
 
-        filter_id_raw = new_filter(self.client, netting_channel_address_bin, topics)
-
-        return Filter(
-            self.client,
-            filter_id_raw,
-        )
-
-    def channelsecretrevealed_filter(self):
-        """ Install a new filter for ChannelSecret events.
-
-        Return:
-            Filter: The filter instance.
-        """
-        netting_channel_address_bin = self.proxy.address
-        topics = [CHANNELSECRETREVEALED_EVENTID]
-
-        filter_id_raw = new_filter(self.client, netting_channel_address_bin, topics)
-
-        return Filter(
-            self.client,
-            filter_id_raw,
-        )
-
-    def channelclosed_filter(self):
-        """ Install a new filter for ChannelClose events.
-
-        Return:
-            Filter: The filter instance.
-        """
-        topics = [CHANNELCLOSED_EVENTID]
-
-        channel_manager_address_bin = self.proxy.address
-        filter_id_raw = new_filter(self.client, channel_manager_address_bin, topics)
-
-        return Filter(
-            self.client,
-            filter_id_raw,
-        )
-
-    def channelsettled_filter(self):
-        """ Install a new filter for ChannelSettled events.
-
-        Return:
-            Filter: The filter instance.
-        """
-        topics = [CHANNELSETTLED_EVENTID]
-
-        channel_manager_address_bin = self.proxy.address
-        filter_id_raw = new_filter(self.client, channel_manager_address_bin, topics)
+        filter_id_raw = new_filter(self.client, netting_channel_address_bin, topics=None)
 
         return Filter(
             self.client,
