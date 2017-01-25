@@ -2,7 +2,7 @@ pysha3
 # temporary until https://github.com/ethereum/pyethapp/pull/184 comes upstream (see also setup.py)
 -e git+https://github.com/konradkonrad/pyethapp@71f940c6d287b98a35ef524f4c5e3c13d530bfc5#egg=pyethapp
 ipython<5.0.0
-rlp>=0.4.3<=0.4.6
+rlp>=0.4.3,<=0.4.6
 secp256k1==0.12.1
 pycryptodome>=3.4.3
 miniupnpc
@@ -11,4 +11,4 @@ ethereum>=1.3.2
 ethereum-serpent
 repoze.lru
 gevent-websocket==0.9.4
-cachetools>=2.0.0<3.0.0
+cachetools>=2.0.0,<3.0.0
