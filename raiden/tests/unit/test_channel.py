@@ -5,7 +5,7 @@ import pytest
 from ethereum import slogging
 
 from raiden.channel import BalanceProof, Channel, ChannelEndState, ChannelExternalState
-from raiden.messages import DirectTransfer, Lock, LockedTransfer
+from raiden.messages import DirectTransfer, Lock, LockedTransfer, Secret
 from raiden.utils import sha3, make_address, make_privkey_address
 from raiden.tests.utils.transfer import assert_synched_channels, channel
 
@@ -165,7 +165,23 @@ def test_end_state():
     assert state1.balance_proof.merkleroot_for_unclaimed() == ''
     assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
-    state2.release_lock(state1, lock_secret)
+    unlocked_locksroot = state2.compute_merkleroot_without(lock_secret)
+
+    unlock_transfer = Secret(
+        identifier=None,
+        nonce=state1.nonce,
+        asset=asset_address,
+        transferred_amount=lock_amount,
+        recipient=state2.address,
+        locksroot=unlocked_locksroot,
+        secret=lock_secret,
+    )
+
+    state2.register_unlock_transfer(unlock_transfer)
+
+    # Need update transferred amount here because it is normally handled at the Channel level
+    state1.transferred_amount = unlock_transfer.transferred_amount
+    state1.nonce += 1
 
     assert state1.contract_balance == balance1 + 10
     assert state2.contract_balance == balance2
@@ -323,7 +339,13 @@ def test_python_channel():
     assert test_channel.our_state.locked() == 0
     assert test_channel.partner_state.locked() == amount2
 
-    test_channel.release_lock(secret)
+    unlock_transfer = test_channel.create_unlocktransfer(
+        1, # TODO fill in identifier
+        secret
+    )
+    unlock_transfer.sign(privkey1, address1)
+
+    test_channel.register_transfer(unlock_transfer)
 
     assert test_channel.contract_balance == balance1
     assert test_channel.balance == balance1 - amount1 - amount2
@@ -447,8 +469,10 @@ def test_interwoven_transfers(number_of_transfers, raiden_network,
             secret = transfers_secret[i - 1]
 
             # synchronized clamining
-            channel0.release_lock(secret)
-            channel1.withdraw_lock(secret)
+            unlock_transfer = channel0.create_unlocktransfer(1, secret)
+            app0.raiden.sign(unlock_transfer)
+            channel0.register_transfer(unlock_transfer)
+            channel1.register_transfer(unlock_transfer)
 
             # update test state
             claimed_amount += transfer.lock.amount
@@ -549,7 +573,7 @@ def test_locked_transfer(raiden_network, settle_timeout):
     # reveal_timeout <= expiration < contract.lock_time
     expiration = app0.raiden.chain.block_number() + settle_timeout - 1
 
-    secret = 'secret'
+    secret = sha3('secret')
     hashlock = sha3(secret)
 
     locked_transfer = channel0.create_lockedtransfer(
@@ -569,8 +593,10 @@ def test_locked_transfer(raiden_network, settle_timeout):
         channel1, balance1, [locked_transfer.lock],
     )
 
-    channel0.release_lock(secret)
-    channel1.withdraw_lock(secret)
+    unlock_transfer = channel0.create_unlocktransfer(1, secret)
+    app0.raiden.sign(unlock_transfer)
+    channel0.register_transfer(unlock_transfer)
+    channel1.register_transfer(unlock_transfer)
 
     # upon revelation of the secret both balances are updated
     assert_synched_channels(
