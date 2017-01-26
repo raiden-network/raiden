@@ -31,8 +31,8 @@ history = ''
 
 install_requires_replacements = {
 #    "-e git+https://github.com/konradkonrad/pyethapp@71f940c6d287b98a35ef524f4c5e3c13d530bfc5#egg=pyethapp": "pyethapp",
-    "-e git+https://github.com/LefterisJP/pyethapp@d1c9f39313d1facd54ee2a27d0ff6e8550ae2d64#egg=pyethapp": "pyethapp",
-    "-e git+https://github.com/LefterisJP/pyethereum@43d184ee74df1caaf5f4ffd06343938db3839005#egg=ethereum": "ethereum"
+    "-e git+https://github.com/LefterisJP/pyethapp@use_new_solc_combinedjson_key#egg=pyethapp": "pyethapp",
+    "-e git+https://github.com/LefterisJP/pyethereum@fix_solidity_key_combinedjson#egg=ethereum": "ethereum"
 }
 
 install_requires = list(set(
