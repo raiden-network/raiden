@@ -366,6 +366,7 @@ def _jsonrpc_services(
             registry_contracts,
             dict(),
             tuple(),
+            contract_path=registry_path,
             gasprice=default_gasprice,
             timeout=poll_timeout,
         )

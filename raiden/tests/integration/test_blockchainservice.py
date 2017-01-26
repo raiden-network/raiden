@@ -12,6 +12,7 @@ from pyethapp.jsonrpc import default_gasprice
 
 from raiden.network.rpc.client import decode_topic, patch_send_transaction
 from raiden.utils import privatekey_to_address, get_contract_path
+from raiden.blockchain.abi import CHANNEL_MANAGER_ABI
 
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
@@ -191,6 +192,7 @@ def test_blockchain(
         humantoken_contracts,
         dict(),
         (total_asset, 'raiden', 2, 'Rd'),
+        contract_path=humantoken_path,
         gasprice=default_gasprice,
         timeout=poll_timeout,
     )
@@ -203,6 +205,7 @@ def test_blockchain(
         registry_contracts,
         dict(),
         tuple(),
+        contract_path=registry_path,
         gasprice=default_gasprice,
         timeout=poll_timeout,
     )
@@ -258,7 +261,7 @@ def test_blockchain(
     assert token_proxy.address == event['asset_address'].decode('hex')
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
-        registry_contracts['ChannelManagerContract']['abi'],
+        CHANNEL_MANAGER_ABI,
         channel_manager_address,
     )
 

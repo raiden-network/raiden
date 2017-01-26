@@ -22,19 +22,23 @@ def connect(host='127.0.0.1',
     return client
 
 
-def create_and_distribute_token(client, receivers,
-                                amount_per_receiver=1000,
-                                name=None,
-                                gasprice=default_gasprice,
-                                timeout=120):
+def create_and_distribute_token(
+        client,
+        receivers,
+        amount_per_receiver=1000,
+        name=None,
+        gasprice=default_gasprice,
+        timeout=120
+):
     """Create a new ERC-20 token and distribute it among `receivers`.
     If `name` is None, the name will be derived from hashing all receivers.
     """
     name = name or sha3(''.join(receivers)).encode('hex')
+    contract_path = get_contract_path('HumanStandardToken.sol')
     token_proxy = client.deploy_solidity_contract(
         client.sender,
         'HumanStandardToken',
-        compile_file(get_contract_path('HumanStandardToken.sol')),
+        compile_file(contract_path),
         dict()
         (
             len(receivers) * amount_per_receiver,
@@ -42,6 +46,7 @@ def create_and_distribute_token(client, receivers,
             2,  # decimals
             name[:4].upper()  # symbol
         ),
+        contract_path=contract_path,
         gasprice=gasprice,
         timeout=timeout
     )

@@ -179,12 +179,14 @@ class ConsoleTools(object):
         Returns:
             token_address: the hex encoded address of the new token/asset.
         """
+        contract_path = get_contract_path('HumanStandardToken.sol')
         # Deploy a new ERC20 token
         token_proxy = self._chain.client.deploy_solidity_contract(
             self._raiden.address, 'HumanStandardToken',
-            compile_file(get_contract_path('HumanStandardToken.sol')),
+            compile_file(contract_path),
             dict(),
             (initial_alloc, name, decimals, symbol),
+            contract_path=contract_path,
             gasprice=gasprice,
             timeout=timeout)
         token_address = token_proxy.address.encode('hex')
