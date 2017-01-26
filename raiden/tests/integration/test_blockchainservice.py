@@ -5,13 +5,14 @@ import os
 
 import pytest
 from ethereum import _solidity
-from ethereum._solidity import compile_file, solidity_get_contract_data
+from ethereum._solidity import compile_file
 from ethereum.utils import denoms
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import default_gasprice
 
 from raiden.network.rpc.client import decode_topic, patch_send_transaction
 from raiden.utils import privatekey_to_address, get_contract_path
+from raiden.blockchain.abi import CHANNEL_MANAGER_ABI
 
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
@@ -259,13 +260,8 @@ def test_blockchain(
     assert channel_manager_address == event['channel_manager_address'].decode('hex')
     assert token_proxy.address == event['asset_address'].decode('hex')
 
-    contract_data = solidity_get_contract_data(
-        registry_contracts,
-        get_contract_path('ChannelManagerContract.sol'),
-        'ChannelManagerContract'
-    )
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
-        contract_data['abi'],
+        CHANNEL_MANAGER_ABI,
         channel_manager_address,
     )
 

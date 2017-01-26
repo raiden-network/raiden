@@ -1,6 +1,4 @@
 pysha3
-# temporary until https://github.com/ethereum/pyethapp/pull/184 comes upstream (see also setup.py)
-#-e git+https://github.com/konradkonrad/pyethapp@71f940c6d287b98a35ef524f4c5e3c13d530bfc5#egg=pyethapp
 # temporary until new version of pyethereum is released, that supports solc >= v0.4.9
 -e git+https://github.com/LefterisJP/pyethapp@use_new_solc_combinedjson_key#egg=pyethapp
 ipython<5.0.0
