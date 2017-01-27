@@ -10,7 +10,9 @@ from ethereum.utils import denoms
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import default_gasprice
 
-from raiden.network.rpc.client import decode_topic, patch_send_transaction
+from raiden.network.rpc.client import (
+    decode_topic, patch_send_transaction, patch_send_message
+)
 from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.blockchain.abi import CHANNEL_MANAGER_ABI
 
@@ -183,6 +185,7 @@ def test_blockchain(
         print_communication=False,
     )
     patch_send_transaction(jsonrpc_client)
+    patch_send_message(jsonrpc_client)
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())

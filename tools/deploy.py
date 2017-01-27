@@ -9,7 +9,7 @@ from ethereum.utils import decode_hex
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import default_gasprice
 from raiden.utils import get_contract_path
-from raiden.network.rpc.client import patch_send_transaction
+from raiden.network.rpc.client import patch_send_transaction, patch_send_message
 
 
 # ordered list of solidity files to deploy for the raiden registry
@@ -54,6 +54,7 @@ def deploy_files(contract_files, client):
 
 def deploy_all(client):
     patch_send_transaction(client)
+    patch_send_message(client)
     deployed = dict()
     deployed.update(deploy_files(RAIDEN_CONTRACT_FILES, client))
     deployed.update(deploy_files(DISCOVERY_CONTRACT_FILES, client))
@@ -79,6 +80,7 @@ if __name__ == "__main__":
         print_communication=False,
     )
     patch_send_transaction(client)
+    patch_send_message(client)
     deployed = deploy_all(client)
 
     if args.pretty:

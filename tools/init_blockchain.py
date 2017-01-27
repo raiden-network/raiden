@@ -3,7 +3,7 @@ from pyethapp.jsonrpc import default_gasprice
 from ethereum.utils import sha3
 from ethereum._solidity import compile_file
 from raiden.utils import get_contract_path
-from raiden.network.rpc.client import patch_send_transaction
+from raiden.network.rpc.client import patch_send_transaction, patch_send_message
 
 
 def connect(host='127.0.0.1',
@@ -19,6 +19,7 @@ def connect(host='127.0.0.1',
         use_ssl=use_ssl,
     )
     patch_send_transaction(client)
+    patch_send_message(client)
     return client
 
 

@@ -13,6 +13,7 @@ from pyethapp.jsonrpc import (
     default_gasprice,
 )
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
+import requests
 
 from raiden import messages
 from raiden.utils import (
@@ -101,6 +102,38 @@ def patch_send_transaction(client, nonce_offset=0):
         client.send_transaction = send_transaction
 
 
+def patch_send_message(client, pool_maxsize=50):
+    """Monkey patch fix for issue #253. This makes the underlying `tinyrpc`
+    transport class use a `requests.session` instead of regenerating sessions
+    for each request.
+
+    See also: https://github.com/mbr/tinyrpc/pull/31 for a proposed upstream
+    fix.
+
+    Args:
+        client (pyethapp.rpc_client.JSONRPCClient): the instance to patch
+        pool_maxsize: the maximum poolsize to be used by the `requests.Session()`
+    """
+    session = requests.Session()
+    adapter = requests.adapters.HTTPAdapter(pool_maxsize=pool_maxsize)
+    session.mount(client.transport.endpoint, adapter)
+
+    def send_message(message, expect_reply=True):
+        if not isinstance(message, str):
+            raise TypeError('str expected')
+
+        r = session.post(
+            client.transport.endpoint,
+            data=message,
+            **client.transport.request_kwargs
+        )
+
+        if expect_reply:
+            return r.content
+
+    client.transport.send_message = send_message
+
+
 def new_filter(jsonrpc_client, contract_address, topics):
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     json_data = {
@@ -146,6 +179,7 @@ class BlockChainService(object):
             print_communication=kwargs.get('print_communication', False),
         )
         patch_send_transaction(jsonrpc_client)
+        patch_send_message(jsonrpc_client)
 
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
