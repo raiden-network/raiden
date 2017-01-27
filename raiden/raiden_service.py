@@ -551,10 +551,10 @@ class RaidenAPI(object):
 
         netting_channel = channel.external_state.netting_channel
 
-        if (self.raiden.chain.block_number() >=
+        if (self.raiden.chain.block_number() <=
             (channel.external_state.closed_block +
              netting_channel.detail(self.raiden.address)['settle_timeout'])):
-            raise InvalidState('settlement period is over.')
+            raise InvalidState('settlement period is not yet over.')
 
         netting_channel.settle()
         return netting_channel

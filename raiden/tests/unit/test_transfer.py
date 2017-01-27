@@ -718,8 +718,9 @@ def test_transfer_to_unknownchannel(raiden_network, private_keys):
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('settle_timeout', [30])
-def test_transfer_from_outdated(raiden_network, tester_state, settle_timeout):
+def test_transfer_from_outdated(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    tester_state = app0.raiden.chain.tester_state
 
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
     asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
@@ -748,9 +749,13 @@ def test_transfer_from_outdated(raiden_network, tester_state, settle_timeout):
 
     app1.raiden.api.close(asset_manager0.asset_address, app0.raiden.address)
     tester_state.mine(1)
-    gevent.sleep(1)
-    app0.raiden.api.settle(asset_manager0.asset_address, app1.raiden.address)
+    gevent.sleep(.5)
     tester_state.mine(number_of_blocks=settle_timeout + 1)
+    app0.raiden.api.settle(asset_manager0.asset_address, app1.raiden.address)
+    gevent.sleep(.5)
+
+    assert channel0.external_state.settled_block != 0
+    assert channel1.external_state.settled_block != 0
 
     # and now receive one more transfer from the closed channel
     direct_transfer = DirectTransfer(
