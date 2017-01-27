@@ -5,6 +5,7 @@ from itertools import count
 from ethereum import tester, slogging, _solidity
 from ethereum.abi import ContractTranslator
 from ethereum.utils import decode_hex, encode_hex
+from ethereum._solidity import solidity_get_contract_key
 from pyethapp.jsonrpc import address_decoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
@@ -36,20 +37,26 @@ FILTER_ID_GENERATOR = count()
 # NOTE: mine after each transaction to reset block.gas_used
 
 
-def tester_deploy_contract(tester_state, private_key, contract_name,
-                           contract_file, constructor_parameters=None):
+def tester_deploy_contract(
+        tester_state,
+        private_key,
+        contract_name,
+        contract_file,
+        constructor_parameters=None):
+
     contract_path = get_contract_path(contract_file)
     all_contracts = _solidity.compile_file(contract_path, libraries=dict())
 
-    contract = all_contracts[contract_name]
+    contract_key = solidity_get_contract_key(all_contracts, contract_path, contract_name)
+    contract = all_contracts[contract_key]
     contract_interface = contract['abi']
 
     log.info('Deploying "{}" contract'.format(contract_file))
 
     dependencies = deploy_dependencies_symbols(all_contracts)
-    deployment_order = dependencies_order_of_build(contract_name, dependencies)
+    deployment_order = dependencies_order_of_build(contract_key, dependencies)
 
-    log.info('Deploing dependencies: {}'.format(str(deployment_order)))
+    log.info('Deploying dependencies: {}'.format(str(deployment_order)))
     deployment_order.pop()  # remove `contract_name` from the list
     libraries = dict()
 
