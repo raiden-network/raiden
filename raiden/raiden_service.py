@@ -444,8 +444,14 @@ class RaidenAPI(object):
         asset_manager = self.raiden.get_manager_by_asset_address(from_asset)
         asset_manager.transfermanager.exchanges[ExchangeKey(from_asset, from_amount)] = exchange
 
-    def transfer_and_wait(self, asset_address, amount, target, identifier=None,
-                          callback=None, timeout=None):
+    def transfer_and_wait(
+            self,
+            asset_address,
+            amount,
+            target,
+            identifier=None,
+            callback=None,
+            timeout=None):
         """ Do a transfer with `target` with the given `amount` of `asset_address`. """
         # pylint: disable=too-many-arguments
 
@@ -545,10 +551,10 @@ class RaidenAPI(object):
 
         netting_channel = channel.external_state.netting_channel
 
-        if not (self.raiden.chain.client.blocknumber() >=
-                (channel.external_state.closed_block +
-                 netting_channel.detail(self.raiden.address)['settle_timeout'])):
-            raise InvalidState('settlement period not over.')
+        if (self.raiden.chain.block_number() <=
+            (channel.external_state.closed_block +
+             netting_channel.detail(self.raiden.address)['settle_timeout'])):
+            raise InvalidState('settlement period is not yet over.')
 
         netting_channel.settle()
         return netting_channel

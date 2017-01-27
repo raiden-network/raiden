@@ -26,6 +26,7 @@ from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
 from raiden.tests.utils.network import CHAIN
 from raiden.utils import pex, sha3, privatekey_to_address
+from raiden.raiden_service import NoPathError
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
@@ -679,7 +680,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
         channel1, balance1 + amount, []
     )
 
-    # and now send one more direct transfer with the locksoot not set correctly
+    # and now send one more direct transfer with the locksroot not set correctly
     direct_transfer = DirectTransfer(
         identifier=asset_manager0.transfermanager.create_default_identifier(app1.raiden.address),
         nonce=2,
@@ -690,3 +691,83 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     )
     app0_key = PrivateKey(private_keys[0])
     sign_and_send(direct_transfer, app0_key, app0.raiden.address, app1)
+
+
+@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [1])
+def test_transfer_to_unknownchannel(raiden_network, private_keys):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+
+    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
+
+    with pytest.raises(NoPathError):
+        app0.raiden.api.transfer(
+            asset_manager0.asset_address,
+            10,
+            # sending to an unknown/non-existant address
+            target='\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1',
+        )
+
+
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.parametrize('settle_timeout', [30])
+def test_transfer_from_outdated(raiden_network, settle_timeout):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    tester_state = app0.raiden.chain.tester_state
+
+    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+
+    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+
+    balance0 = channel0.balance
+    balance1 = channel1.balance
+
+    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert app1.raiden.address in asset_manager0.partneraddress_channel
+
+    amount = 10
+    app0.raiden.api.transfer(
+        asset_manager0.asset_address,
+        amount,
+        target=app1.raiden.address,
+    )
+    gevent.sleep(1)
+
+    assert_synched_channels(
+        channel0, balance0 - amount, [],
+        channel1, balance1 + amount, []
+    )
+
+    app1.raiden.api.close(asset_manager0.asset_address, app0.raiden.address)
+    tester_state.mine(1)
+    gevent.sleep(.5)
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    app0.raiden.api.settle(asset_manager0.asset_address, app1.raiden.address)
+    gevent.sleep(.5)
+
+    assert channel0.external_state.settled_block != 0
+    assert channel1.external_state.settled_block != 0
+
+    # and now receive one more transfer from the closed channel
+    direct_transfer = DirectTransfer(
+        identifier=1,
+        nonce=1,
+        asset=asset_manager0.asset_address,
+        transferred_amount=10,
+        recipient=app0.raiden.address,
+        locksroot=sha3("muchrain")
+    )
+    sign_and_send(
+        direct_transfer,
+        app1.raiden.private_key,
+        app1.raiden.address, app1
+    )
