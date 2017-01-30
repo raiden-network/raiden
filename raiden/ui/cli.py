@@ -177,8 +177,8 @@ def app(address,
     )
 
     discovery = ContractDiscovery(
-        blockchain_service,
-        decode_hex(discovery_contract_address)  # FIXME: double encoding
+        blockchain_service.node_address,
+        blockchain_service.discovery(discovery_contract_address)
     )
 
     return App(config, blockchain_service, discovery)
