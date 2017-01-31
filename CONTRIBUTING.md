@@ -49,7 +49,7 @@ In this section we are going to describe the coding rules for contributing to th
 
 ### Commiting Rules
 
-For an exchaustive guide read [this](http://chris.beams.io/posts/git-commit/) guide. It's all really good advise. Some rules that
+For an exchaustive guide read [this](http://chris.beams.io/posts/git-commit/) guide. It's all really good advice. Some rules that
 you should always follow though are:
 
 - A commit title not exceeding 50 characters
@@ -242,4 +242,3 @@ git push hackaugusto travis_build
 ```
 
 Congratulations, you have added to someone else's PR!
-
