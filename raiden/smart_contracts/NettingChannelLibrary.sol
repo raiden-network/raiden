@@ -380,7 +380,6 @@ library NettingChannelLibrary {
         notSettledButClosed(self)
         timeoutOver(self)
     {
-        uint total_netted;
         uint total_deposit;
         uint k;
 
@@ -402,7 +401,6 @@ library NettingChannelLibrary {
         }
 
         self.settled = block.number;
-        total_netted = node1.netted + node2.netted;
         total_deposit = node1.balance + node2.balance;
 
         Participant memory closing_party;
@@ -415,7 +413,6 @@ library NettingChannelLibrary {
             closing_party = node2;
             other_party = node1;
         }
-
 
         // first pay out to the party that did not close the channel
         uint amount = total_deposit < other_party.netted
