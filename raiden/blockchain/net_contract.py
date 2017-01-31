@@ -30,7 +30,7 @@ STATE_THIRDPARTY = 2  # also used when close() is called
 
 
 def tuple32(data):
-    """ A helper to split a concatenated merkle proof into it's individual
+    """ A helper to split a concatenated merkle proof into its individual
     elements.
     """
     start = 0
@@ -136,7 +136,7 @@ class NettingChannelContract(object):
 
     Multiple transfers are expected to occur from the opening of a channel
     onwards. The `nonce` field is used by this contract to compare transfers
-    and define which is the latest, it's responsability of each participant to
+    and define which is the latest. It's the responsability of each participant to
     reject messages with an decreasing or equal `nonce`, ensuring that this
     value is increasing.
 
@@ -161,17 +161,17 @@ class NettingChannelContract(object):
 
     Mediated transfers require the participation of one or more intermediary
     nodes, these intermediaries compose a path from the initiator to the
-    target. The path of length `n` has it's transfer started by the initiator
+    target. The path of length `n` has its transfer started by the initiator
     `1`, with each intermediary `i` mediating a transfer from `i-1` to `i+1`
     until the the target node `n` is reached. This contract has the required
     mechanisms to protect the individual node's assets, the contract allows any
-    `i` to safely transfer it's asset to `i+1` with the guarantee that it will
+    `i` to safely transfer its asset to `i+1` with the guarantee that it will
     have the transfer from `i-1` done.
 
     Penalization
     ------------
 
-    An evil participant can reduce it's spending in two ways:
+    An evil participant can reduce its spending in two ways:
 
         1. Tampered messages: Send a transfer signed with a lower
         `amount_transferred`.
