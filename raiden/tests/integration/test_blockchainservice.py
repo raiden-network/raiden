@@ -76,15 +76,6 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     assert manager0.channels_by_participant(peer1_address) == [netting_address_01]
     assert manager0.channels_by_participant(peer2_address) == []
 
-    # TODO:
-    # cant recreate the existing channel
-    # with pytest.raises(Exception):
-    #     manager0.new_netting_channel(
-    #         peer0_address,
-    #         peer1_address,
-    #         settle_timeout,
-    #     )
-
     # create other chanel
     netting_address_02 = manager0.new_netting_channel(
         peer0_address,
@@ -128,9 +119,6 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
 
     assert netting_channel_01.detail(peer0_address)['our_balance'] == 100
     assert netting_channel_01.detail(peer1_address)['our_balance'] == 0
-
-    # with pytest.raises(Exception):
-    #    blockchain_service0.deposit(asset_address, netting_address_01, peer0_address, 100)
 
     # double-funded channel
     app0.raiden.chain.asset(asset_address).approve(netting_address_02, 70)

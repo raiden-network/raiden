@@ -16,20 +16,8 @@ slogging.configure(':DEBUG')
 def test_direct_transfer_callback(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    # @ezdac: These vars are not used anywhere. Please address them
-    # messages = setup_messages_cb()
-    # mlogger = MessageLogger()
-    # a0_address = pex(app0.raiden.address)
-    # a1_address = pex(app1.raiden.address)
-
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
     asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
-
-    # @ezdac: These vars are not used anywhere. Please address them
-    # channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    # channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
-    # balance0 = channel0.balance
-    # balance1 = channel1.balance
 
     assert asset_manager0.asset_address == asset_manager1.asset_address
     assert app1.raiden.address in asset_manager0.partneraddress_channel
@@ -70,20 +58,8 @@ def test_direct_transfer_callback(raiden_network):
 def test_on_hashlock_result_callback(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    # @ezdac: These vars are not used anywhere. Please address them
-    # messages = setup_messages_cb()
-    # mlogger = MessageLogger()
-    # a0_address = pex(app0.raiden.address)
-    # a1_address = pex(app1.raiden.address)
-
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
     asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
-
-    # @ezdac: These vars are not used anywhere. Please address them
-    # channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    # channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
-    # balance0 = channel0.balance
-    # balance1 = channel1.balance
 
     assert asset_manager0.asset_address == asset_manager1.asset_address
     assert app1.raiden.address in asset_manager0.partneraddress_channel
@@ -108,10 +84,12 @@ def test_on_hashlock_result_callback(raiden_network):
 
     # mock the transfer container: XXX eventually use messages.MediatedTransfer() message instead
     Transfer = namedtuple('Transfer', ['asset', 'recipient', 'initiator', 'transferred_amount'])
-    transfer = Transfer(asset_manager0.asset_address,
-                        app1.raiden.address,
-                        app0.raiden.address,
-                        amount)
+    transfer = Transfer(
+        asset_manager0.asset_address,
+        app1.raiden.address,
+        app0.raiden.address,
+        amount
+    )
 
     tm1 = asset_manager1.transfermanager
 
