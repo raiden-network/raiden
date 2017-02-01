@@ -30,7 +30,6 @@ history = ''
 
 
 install_requires_replacements = {
-#    "-e git+https://github.com/konradkonrad/pyethapp@71f940c6d287b98a35ef524f4c5e3c13d530bfc5#egg=pyethapp": "pyethapp",
     "-e git+https://github.com/LefterisJP/pyethapp@use_new_solc_combinedjson_key#egg=pyethapp": "pyethapp",
     "-e git+https://github.com/LefterisJP/pyethereum@fix_solidity_key_combinedjson#egg=ethereum": "ethereum"
 }

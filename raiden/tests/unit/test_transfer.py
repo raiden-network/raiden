@@ -32,6 +32,7 @@ from raiden.raiden_service import NoPathError
 slogging.configure(':DEBUG')
 
 HASH = sha3("muchcodingsuchwow")
+HASH2 = sha3("terribleweathermuchstayinside")
 
 
 def sign_and_send(message, key, address, app):
@@ -386,7 +387,7 @@ def test_receive_directtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
 
-    other_key = PrivateKey(sha3("rainyweather"), ctx=GLOBAL_CTX, raw=True)
+    other_key = PrivateKey(HASH, ctx=GLOBAL_CTX, raw=True)
     other_address = privatekey_to_address(other_key.private_key)
     direct_transfer = DirectTransfer(
         identifier=1,
@@ -394,7 +395,7 @@ def test_receive_directtransfer_unknown(raiden_network):
         asset=asset_manager0.asset_address,
         transferred_amount=10,
         recipient=app0.raiden.address,
-        locksroot=sha3("muchrain")
+        locksroot=HASH
     )
     sign_and_send(direct_transfer, other_key, other_address, app0)
 
@@ -406,10 +407,10 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
 
-    other_key = PrivateKey(sha3("rainstopped"), ctx=GLOBAL_CTX, raw=True)
+    other_key = PrivateKey(HASH, ctx=GLOBAL_CTX, raw=True)
     other_address = privatekey_to_address(other_key.private_key)
     amount = 10
-    locksroot = sha3("muchsunny")
+    locksroot = HASH
     mediated_transfer = MediatedTransfer(
         identifier=1,
         nonce=1,
@@ -418,7 +419,7 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
         recipient=app0.raiden.address,
         locksroot=locksroot,
         lock=Lock(amount, 1, locksroot),
-        target=privatekey_to_address(sha3("cloudsagain")),
+        target=privatekey_to_address(HASH2),
         initiator=other_address,
         fee=0
     )
@@ -433,38 +434,37 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
 
     asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
 
-    other_key = PrivateKey(sha3("rainstopped"), ctx=GLOBAL_CTX, raw=True)
+    other_key = PrivateKey(HASH2, ctx=GLOBAL_CTX, raw=True)
     other_address = privatekey_to_address(other_key.private_key)
     amount = 10
-    a_hash = sha3("foo")
-    lock = Lock(amount, 1, a_hash)
+    lock = Lock(amount, 1, HASH)
     refund_transfer = RefundTransfer(
         identifier=1,
         nonce=1,
         asset=asset_manager0.asset_address,
         transferred_amount=amount,
         recipient=app0.raiden.address,
-        locksroot=a_hash,
+        locksroot=HASH,
         lock=lock
     )
     sign_and_send(refund_transfer, other_key, other_address, app0)
 
-    transfer_timeout = TransferTimeout(a_hash, a_hash)
+    transfer_timeout = TransferTimeout(HASH, HASH)
     sign_and_send(transfer_timeout, other_key, other_address, app0)
 
-    secret = Secret(1, a_hash, asset_manager0.asset_address)
+    secret = Secret(1, HASH, asset_manager0.asset_address)
     sign_and_send(secret, other_key, other_address, app0)
 
-    secret_request = SecretRequest(1, a_hash, 1)
+    secret_request = SecretRequest(1, HASH, 1)
     sign_and_send(secret_request, other_key, other_address, app0)
 
-    reveal_secret = RevealSecret(a_hash)
+    reveal_secret = RevealSecret(HASH)
     sign_and_send(reveal_secret, other_key, other_address, app0)
 
     # Whenever processing of ConfirmTransfer is implemented test it here
     # too by removing the expectation of an exception
     with pytest.raises(KeyError):
-        confirm_transfer = ConfirmTransfer(a_hash)
+        confirm_transfer = ConfirmTransfer(HASH)
         sign_and_send(confirm_transfer, other_key, other_address, app0)
 
 
@@ -764,7 +764,7 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         asset=asset_manager0.asset_address,
         transferred_amount=10,
         recipient=app0.raiden.address,
-        locksroot=sha3("muchrain")
+        locksroot=HASH
     )
     sign_and_send(
         direct_transfer,
