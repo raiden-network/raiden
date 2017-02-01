@@ -7,13 +7,13 @@ library ChannelManagerLibrary {
     // TODO: experiment with a sorted data structure
     struct Data {
         mapping(address => address[]) node_channels;
+        mapping(bytes32 => address) channel_addresses;
         address[] all_channels;
         Token token;
     }
 
     /// @notice Get all channels
     /// @dev Get all channels
-    /// @return all the channels
     function getChannelsAddresses(Data storage self) returns (address[] channels) {
         channels = self.all_channels;
     }
@@ -35,6 +35,27 @@ library ChannelManagerLibrary {
     /// @param partner The address of the partner
     /// @return The address of the NettingChannelContract of the two parties.
     function getChannelWith(Data storage self, address caller_address, address partner)
+        constant
+        returns (address, bool)
+    {
+        bytes32 party_hash = partyHash(caller_address, partner);
+        if (self.channel_addresses[party_hash] == 0x0 || 
+            !contractExists(self, self.channel_addresses[party_hash])) {
+            return (0x0, false);
+        } else {
+            return (self.channel_addresses[party_hash], true);
+        }
+    }
+
+    /// @notice getChannelWithForDelete(address) to get the address of the unique channel of two parties.
+    /// @dev Get the channel of two parties
+    /// @param caller_address (address) the address of the caller
+    /// @param partner (address) the address of the partner
+    /// @return (address) the address of the NettingChannelContract of the two parties.
+    /// @return (bool) value to reflect if a channel exists
+    /// @return (uint) index of channel in our_channels
+    /// @return (uint) index of channel in partner_channels
+    function getChannelWithForDelete(Data storage self, address caller_address, address partner)
         constant
         returns (address, bool, uint, uint)
     {
@@ -74,6 +95,7 @@ library ChannelManagerLibrary {
 
         self.node_channels[caller_address].push(channel_address);
         self.node_channels[partner].push(channel_address);
+        self.channel_addresses[partyHash(caller_address, partner)] = channel_address;
         self.all_channels.push(channel_address);
     }
 
@@ -104,13 +126,12 @@ library ChannelManagerLibrary {
         partner_channels.length--;
 
         // remove address from all_channels
-        for (uint k = 0; k < self.all_channels.length; ++k) {
-            if (self.all_channels[k] == channel_address) {
-                self.all_channels[k] == self.all_channels[self.all_channels.length - 1];
-                self.all_channels.length--;
-                break;
-            }
-        }
+        uint i = getIndex(self, channel_address);
+        self.all_channels[i] == self.all_channels[self.all_channels.length - 1];
+        self.all_channels.length--;
+
+        // remove channel from channel_addresses. 
+        self.channel_addresses[partyHash(caller_address, partner)] = 0x0;
 
         self.node_channels[caller_address] = our_channels;
         self.node_channels[partner] = partner_channels;

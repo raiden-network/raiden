@@ -114,7 +114,11 @@ contract ChannelManagerContract {
         return data.node_channels[node_address];
     }
 
-    function getChannelWith(address partner) constant returns (address, bool, uint, uint) {
+    function getChannelWithForDelete(address partner) private constant returns (address, bool, uint, uint) {
+        return data.getChannelWithForDelete(msg.sender, partner);
+    }
+
+    function getChannelWith(address partner) constant returns (address, bool) {
         return data.getChannelWith(msg.sender, partner);
     }
 
@@ -124,7 +128,7 @@ contract ChannelManagerContract {
         uint caller_index;
         uint partner_index;
 
-        (channel_address, has_channel, caller_index, partner_index) = getChannelWith(partner);
+        (channel_address, has_channel, caller_index, partner_index) = getChannelWithForDelete(partner);
         // Check if channel is present in the node_channels mapping within the Data struct
         if (has_channel) {
             if (contractExists(channel_address)) {
@@ -139,7 +143,7 @@ contract ChannelManagerContract {
         ChannelNew(channel, msg.sender, partner, settle_timeout);
     }
 
-    function contractExists(address channel) returns (bool) {
+    function contractExists(address channel) private constant returns (bool) {
         return data.contractExists(channel);
     }
 
