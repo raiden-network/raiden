@@ -15,19 +15,18 @@ from raiden.transfer.state_change import (
     Blocknumber,
     RouteChange,
     # user interaction
-    UserCancel,
+    CancelTransfer,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     # machine state
     InitInitiator,
     # protocol messages
-    TransferCancelReceived,
     TransferRefundReceived,
     SecretRequestReceived,
     SecretRevealReceived,
 )
 from raiden.transfer.mediated_transfer.events import (
-    CancelTransfer,
+    TransferFailed,
     MediatedTransfer,
     RevealSecretTo,
 )
@@ -44,13 +43,12 @@ HOP3 = '3333333333333333333333333333333333333333'
 HOP4 = '4444444444444444444444444444444444444444'
 HOP5 = '5555555555555555555555555555555555555555'
 HOP6 = '6666666666666666666666666666666666666666'
+UNIT_TRANSFER_AMOUNT = 10
 
 # add the current block number to get the expiration
 HOP1_TIMEOUT = UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT
 HOP2_TIMEOUT = HOP1_TIMEOUT - UNIT_REVEAL_TIMEOUT
 HOP3_TIMEOUT = HOP2_TIMEOUT - UNIT_REVEAL_TIMEOUT
-
-UNIT_TRANSFER_AMOUNT = 10
 
 
 class SequenceGenerator():
@@ -152,7 +150,9 @@ def make_init_statechange(routes,
 def make_initiator_state(routes,
                          target,
                          amount=UNIT_TRANSFER_AMOUNT,
-                         block_number=1):
+                         block_number=1,
+                         our_address=ADDR,
+                         secret_generator=None):
 
     init_state_change = make_init_statechange(
         routes,
@@ -261,10 +261,9 @@ def test_init_with_usable_routes():
 
 
 def test_init_without_routes():
-    amount = 10
+    amount = UNIT_TRANSFER_AMOUNT
     block_number = 1
     our_address, target_address = HOP1, HOP3
-    expiration = block_number + HOP1_TIMEOUT
     routes = []
 
     transfer = make_hashlock_transfer(
@@ -291,5 +290,5 @@ def test_init_without_routes():
     )
 
     assert len(events) == 1
-    assert isinstance(events[0], CancelTransfer)
+    assert isinstance(events[0], TransferFailed)
     assert initiator_state_machine.current_state is None

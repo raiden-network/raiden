@@ -42,8 +42,7 @@ class RevealSecretTo(Event):
 
 
 class SecretRequest(Event):
-    """ Event used by a target node to request the secret from the initiator.
-    """
+    """ Event used by a target node to request the secret from the initiator. """
     def __init__(self, transfer_id, amount, hashlock):
         self.transfer_id = transfer_id
         self.amount = amount
@@ -61,10 +60,13 @@ class RefundTransfer(Event):
         self.locked_transfer = locked_transfer
 
 
-class CancelTransfer(Event):
-    """ Event used to inform the nodes in the mediation chain that an
-    unrecoverable error occurred and the transfer cannot proceed. The initiator
-    may try a new route.
+class TransferFailed(Event):
+    """ Event emitted by the initiator when a transfer cannot be completed.
+
+    Note:
+        Mediator and target nodes cannot emit this event since they cannot
+        cancel the transfer, these nodes may only reject the transfer before
+        intereacting or wait for the lock expiration.
     """
 
     def __init__(self, transfer_id, reason):

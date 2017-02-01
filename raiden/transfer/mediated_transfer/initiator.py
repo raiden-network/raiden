@@ -13,19 +13,20 @@ from raiden.transfer.state_change import (
     Blocknumber,
     RouteChange,
     # user interaction
-    UserCancel,
+    CancelTransfer,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     # machine state
     InitInitiator,
     # protocol messages
-    TransferCancelReceived,
     TransferRefundReceived,
     SecretRequestReceived,
     SecretRevealReceived,
+    # user interaction
+    CancelRoute,
 )
 from raiden.transfer.mediated_transfer.events import (
-    CancelTransfer,
+    TransferFailed,
     MediatedTransfer,
     RevealSecretTo,
 )
@@ -65,7 +66,11 @@ def user_cancel_transfer(next_state):
     next_state.secretrequest = None
     next_state.revealsecret = None
 
-    iteration = Iteration(None, [])
+    cancel = TransferFailed(
+        transfer_id=next_state.transfer.identifier,
+        reason='user canceled transfer',
+    )
+    iteration = Iteration(None, [cancel])
 
     return iteration
 
@@ -103,7 +108,7 @@ def try_new_route(next_state):
         # At this point we can just discard all the state data, this is only
         # valid because we are the initiator and we known that the secret was
         # not released.
-        cancel = CancelTransfer(
+        cancel = TransferFailed(
             transfer_id=next_state.transfer.identifier,
             reason='no route available',
         )
@@ -180,8 +185,8 @@ def state_transition(next_state, state_change):
                 state_change.our_address,
                 state_change.transfer,
                 routes,
-                state_change.random_generator,
                 state_change.block_number,
+                state_change.random_generator,
             )
 
             iteration = try_new_route(next_state)
@@ -218,8 +223,8 @@ def state_transition(next_state, state_change):
         )
 
         cancel_transfer = (
-            isinstance(state_change, TransferCancelReceived) and
-            state_change.sender == next_state.route.node_address
+            isinstance(state_change, CancelRoute) and
+            state_change.transfer_id == next_state.transfer.identifier
         )
 
         if valid_secretrequest:
@@ -243,7 +248,7 @@ def state_transition(next_state, state_change):
             # anything out-of-the-ordinary happened
             iteration = cancel_current_route(next_state)
 
-        elif isinstance(state_change, UserCancel):
+        elif isinstance(state_change, CancelTransfer):
             # the raiden user (could be another software) asked for the
             # transfer to be canceled
             iteration = user_cancel_transfer(next_state)
