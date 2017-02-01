@@ -34,7 +34,7 @@ class RouteChange(StateChange):
         self.route = route
 
 
-class UserCancel(StateChange):
+class CancelTransfer(StateChange):
     """ The user request the transfer to be cancelled.
 
     This state change can fail, it depends on the node's role and the current

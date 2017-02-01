@@ -9,11 +9,11 @@ class InitiatorState(State):
     Args:
         our_address (address): This node address.
         transfer (TransferState): The description of the mediated transfer.
-        routes (RoutesState): An route state object with the available_routes filled.
+        routes (RoutesState): Routes available for this transfer.
         block_number (int): Latest known block number.
-        config (dict): This node configuration.
+        random_generator (generator): A generator that yields valid secrets.
     """
-    def __init__(self, our_address, transfer, routes, random_generator, block_number):
+    def __init__(self, our_address, transfer, routes, block_number, random_generator):
         self.our_address = our_address
         self.transfer = transfer
         self.routes = routes
@@ -28,25 +28,32 @@ class InitiatorState(State):
 
 
 class MediatorState(State):
-    """ State of a node mediating a transfer.  """
+    """ State of a node mediating a transfer.
+
+    Args:
+        our_address (address): This node address.
+        from_transfer (TransferState): The description of the mediated transfer.
+        routes (RoutesState): Routes available for this transfer.
+        block_number (int): Latest known block number.
+        from_route (RouteState): The route through which the mediated transfer was received.
+    """
     def __init__(self,
                  our_address,
-                 routes,
-                 from_route,
                  from_transfer,
-                 block_number):
+                 routes,
+                 block_number,
+                 from_route):
 
         self.our_address = our_address
-        self.routes = routes
-        self.from_route = from_route
         self.from_transfer = from_transfer
+        self.routes = routes
         self.block_number = block_number
+        self.from_route = from_route
 
         self.message = None  #: current message in-transit
         self.route = None  #: current route being used
         self.sent_refund = None  #: set with the refund transfer if it was sent
 
-        self.routes = None
         self.sent_transfers_refunded = list()
 
 
