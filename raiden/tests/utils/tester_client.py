@@ -181,7 +181,13 @@ class FilterTesterMock(object):
 
     def event(self, event):
         # TODO: implement OR
-        if event.topics == self.topics and event.address == self.contract_address:
+        valid_address = event.address == self.contract_address
+        valid_topics = (
+            self.topics is None or
+            event.topics == self.topics
+        )
+
+        if valid_topics and valid_address:
             self.events.append({
                 'topics': event.topics,
                 'data': event.data,
