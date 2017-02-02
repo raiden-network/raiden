@@ -12,9 +12,8 @@ class InitInitiator(StateChange):
 
     Args:
         our_address (address): This node address.
-        target (address): The mediated transfer target.
-        routes (RouteState): The current available routes.
-        transfer: A state object containing the transfer details.
+        transfer (LockedTransferState): A state object containing the transfer details.
+        routes (RoutesState): The current available routes.
         random_generator (generator): A generator for secrets.
         block_number (int): The current block number.
     """
@@ -37,20 +36,23 @@ class InitMediator(StateChange):
     """ Initial state for a new mediator.
 
     Args:
-        our_address: This node address.
-        from_route: The route from which the MediatedTransfer was received.
-        from_transfer: The received MediatedTransfer.
-        block_number: The current block number.
+        our_address (address): This node address.
+        from_transfer (LockedTransferState): The received MediatedTransfer.
+        routes (RoutesState): The current available routes.
+        from_route (RouteState): The route from which the MediatedTransfer was received.
+        block_number (int): The current block number.
     """
 
     def __init__(self,
                  our_address,
                  from_transfer,
+                 routes,
                  from_route,
                  block_number):
 
         self.our_address = our_address
         self.from_transfer = from_transfer
+        self.routes = routes
         self.from_route = from_route
         self.block_number = block_number
 

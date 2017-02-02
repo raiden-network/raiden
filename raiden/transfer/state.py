@@ -11,7 +11,8 @@ class RouteState(State):
         state (string): The current state of the route (available or
             unavailable).
         node_address (address): The address of the next_hop.
-        capacity (int): The current available balance that can be transferred
+        channel_address (address): The address of the on chain netting channel.
+        available_balance (int): The current available balance that can be transferred
             through `node_address`.
         settle_timeout (int): The settle_timeout of the channel set in the
             smart contract.
@@ -19,34 +20,39 @@ class RouteState(State):
     """
 
     valid_states = (
-        'unavailable',
         'available',
+        'closed',
+        'settled',
     )
 
     def __init__(self,
                  state,
                  node_address,
-                 capacity,
+                 chanel_address,
+                 available_balance,
                  settle_timeout,
-                 reveal_timeout):
+                 reveal_timeout,
+                 blocks_until_settlement):
 
         if state not in self.valid_states:
             raise ValueError('invalid value for state')
 
         self.state = state
         self.node_address = node_address
-        self.capacity = capacity  # TODO: rename to available_balance
+        self.channel_address = chanel_address
+        self.available_balance = available_balance
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
+        self.blocks_until_settlement = blocks_until_settlement
 
     def __repr__(self):
         return (
-            '<Route {state} hop:{address} capacity:{capacity} '
+            '<Route {state} hop:{address} available_balance:{available_balance} '
             'settle:{settle_timeout} reveal:{reveal_timeout}>'
         ).format(
             state=self.state,
             address=pex(self.node_address),
-            capacity=self.capacity,
+            available_balance=self.available_balance,
             settle_timeout=self.settle_timeout,
             reveal_timeout=self.reveal_timeout,
         )
@@ -56,7 +62,7 @@ class RouteState(State):
             return (
                 self.state == other.state and
                 self.node_address == other.node_address and
-                self.capacity == other.capacity and
+                self.available_balance == other.available_balance and
                 self.settle_timeout == other.settle_timeout and
                 self.reveal_timeout == other.reveal_timeout
             )
@@ -81,3 +87,11 @@ class RoutesState(State):
         self.ignored_routes = list()
         self.refunded_routes = list()
         self.canceled_routes = list()
+
+    def __repr__(self):
+        return '<Routes available={} ignored={} refunded={} canceled={}>'.format(
+            len(self.available_routes),
+            len(self.ignored_routes),
+            len(self.refunded_routes),
+            len(self.canceled_routes),
+        )
