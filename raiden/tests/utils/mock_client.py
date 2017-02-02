@@ -521,7 +521,7 @@ class NettingChannelMock(object):
         for filter_ in BlockChainServiceMock.filters[self.address]:
             filter_.event(event)
 
-    def filter_for_all_events(self):
+    def all_events_filter(self):
         topics = None
         filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
         BlockChainServiceMock.filters[self.address].append(filter_)

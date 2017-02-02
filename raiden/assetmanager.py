@@ -110,7 +110,7 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         # after the `details` calls succeds so the effects  must be
         # idempotent.
 
-        netting_channel_events = netting_channel.filter_for_all_events()
+        netting_channel_events = netting_channel.all_events_filter()
 
         channel_details = netting_channel.detail(self.raiden.address)
         our_state = ChannelEndState(

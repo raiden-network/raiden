@@ -925,8 +925,8 @@ class NettingChannel(object):
         # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
         log.info('settle called', contract=pex(self.address))
 
-    def filter_for_all_events(self):
-        """ Install a new filter for the current netting channel contract.
+    def all_events_filter(self):
+        """ Install a new filter for all the events emitted by the current netting channel contract
 
         Return:
             Filter: The filter instance.

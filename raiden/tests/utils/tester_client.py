@@ -710,7 +710,7 @@ class NettingChannelTesterMock(object):
         self.proxy.settle()
         self.tester_state.mine(number_of_blocks=1)
 
-    def filter_for_all_events(self):
+    def all_events_filter(self):
         topics = None
         filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
         self.tester_state.block.log_listeners.append(filter_.event)
