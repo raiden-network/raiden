@@ -36,6 +36,7 @@ class MediatorState(State):
         routes (RoutesState): Routes available for this transfer.
         block_number (int): Latest known block number.
         from_route (RouteState): The route through which the mediated transfer was received.
+        expiration (int): The expiration block of the received transfer.
     """
     def __init__(self,
                  our_address,
@@ -54,7 +55,9 @@ class MediatorState(State):
         self.route = None  #: current route being used
         self.sent_refund = None  #: set with the refund transfer if it was sent
 
-        self.sent_transfers_refunded = list()
+        self.last_expiration = from_transfer.expiration  #: last used lock expiration
+        self.transfers_refunded = list()  #: transfers waiting for up-to-date balance proof
+        self.transfers_settling = list()  #: transfer that are being settled on chain
 
 
 class TargetState(State):
@@ -73,13 +76,6 @@ class TargetState(State):
         self.block_number = block_number
 
         self.secret = None
-
-        self.message = None  #: current message in-transit
-        self.route = None  #: current route being used
-        self.sent_refund = None  #: set with the refund transfer if it was sent
-
-        self.routes = None
-        self.sent_transfers_refunded = list()
 
 
 class LockedTransferState(State):
@@ -110,3 +106,13 @@ class LockedTransferState(State):
         self.expiration = expiration
         self.hashlock = hashlock
         self.secret = secret
+
+    def __str__(self):
+        return '<HashTimeLocked id={} amount={} token={} target={} expire={} hashlock={}>'.format(
+            self.identifier,
+            self.amount,
+            self.token,
+            self.target,
+            self.expiration,
+            self.hashlock,
+        )

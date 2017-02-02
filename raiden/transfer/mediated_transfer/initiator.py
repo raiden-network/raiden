@@ -95,14 +95,14 @@ def try_new_route(next_state):
     while next_state.routes.available_routes:
         route = next_state.routes.available_routes.pop(0)
 
-        if route.capacity < next_state.transfer.amount:
+        if route.available_balance < next_state.transfer.amount:
             next_state.routes.ignored_routes.append(route)
         else:
             try_route = route
             break
 
     if try_route is None:
-        # No avaiable route has sufficient capacity for the current transfer,
+        # No avaiable route has sufficient balance for the current transfer,
         # cancel it.
         #
         # At this point we can just discard all the state data, this is only
@@ -120,8 +120,13 @@ def try_new_route(next_state):
         secret = next_state.random_generator.next()
         hashlock = sha3(secret)
 
-        lock_timeout = try_route.settle_timeout - try_route.reveal_timeout
-        lock_expiration = next_state.block_number + lock_timeout
+        # The initiator doesn't need to learn the secret, so there is no need
+        # to decremented reveal_timeout from the lock timeout.
+        #
+        # A value larger than settle_timeout could be used but wouldn't
+        # improve, since the next hop will take settle_timeout as an upper
+        # limit for expiration.
+        lock_expiration = next_state.block_number + try_route.settle_timeout
         transfer_id = len(next_state.canceled_transfers)
 
         transfer = LockedTransferState(

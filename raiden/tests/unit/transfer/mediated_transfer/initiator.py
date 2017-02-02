@@ -3,56 +3,27 @@ import pytest
 
 from raiden.utils import sha3
 from raiden.transfer.architecture import StateManager
-from raiden.transfer.state import RoutesState, RouteState
+from raiden.transfer.state import (
+    RoutesState,
+)
 from raiden.transfer.mediated_transfer import initiator
 from raiden.transfer.mediated_transfer.state import (
     InitiatorState,
     LockedTransferState,
 )
-from raiden.transfer.mediated_transfer.transition import update_route
-from raiden.transfer.state_change import (
-    # blockchain events
-    Blocknumber,
-    RouteChange,
-    # user interaction
-    CancelTransfer,
-)
 from raiden.transfer.mediated_transfer.state_change import (
-    # machine state
     InitInitiator,
-    # protocol messages
-    TransferRefundReceived,
-    SecretRequestReceived,
-    SecretRevealReceived,
 )
 from raiden.transfer.mediated_transfer.events import (
     TransferFailed,
     MediatedTransfer,
-    RevealSecretTo,
 )
-
-# prefixing with UNIT_ to differ from the default globals
-UNIT_SETTLE_TIMEOUT = 50
-UNIT_REVEAL_TIMEOUT = 5
-UNIT_TOKEN_ADDRESS = 'tokentokentokentokentokentokentokentoken'
-
-ADDR = 'addraddraddraddraddraddraddraddraddraddr'
-HOP1 = '1111111111111111111111111111111111111111'
-HOP2 = '2222222222222222222222222222222222222222'
-HOP3 = '3333333333333333333333333333333333333333'
-HOP4 = '4444444444444444444444444444444444444444'
-HOP5 = '5555555555555555555555555555555555555555'
-HOP6 = '6666666666666666666666666666666666666666'
-UNIT_TRANSFER_AMOUNT = 10
-
-# add the current block number to get the expiration
-HOP1_TIMEOUT = UNIT_SETTLE_TIMEOUT - UNIT_REVEAL_TIMEOUT
-HOP2_TIMEOUT = HOP1_TIMEOUT - UNIT_REVEAL_TIMEOUT
-HOP3_TIMEOUT = HOP2_TIMEOUT - UNIT_REVEAL_TIMEOUT
+from . import factories
 
 
-class SequenceGenerator():
+class SequenceGenerator(object):
     """ Return a generator that goes thorugh the alphabet letters. """
+
     def __init__(self):
         import string
         import itertools
@@ -72,33 +43,10 @@ class SequenceGenerator():
     next = __next__
 
 
-def make_route(node_address,
-               capacity,
-               settle_timeout=UNIT_SETTLE_TIMEOUT,
-               reveal_timeout=UNIT_REVEAL_TIMEOUT):
-    """ Helper for creating a route.
-
-    Args:
-        node_address (address): The node address.
-        capacity (int): The available capacity of the route.
-        settle_timeout (int): The settle_timeout of the route, as agreed in the netting contract.
-        reveal_timeout (int): The configure reveal_timeout of the raiden node.
-    """
-    state = 'available'
-    route = RouteState(
-        state,
-        node_address,
-        capacity,
-        settle_timeout,
-        reveal_timeout,
-    )
-    return route
-
-
 def make_hashlock_transfer(amount,
                            target,
                            identifier=0,
-                           token=UNIT_TOKEN_ADDRESS):
+                           token=factories.UNIT_TOKEN_ADDRESS):
     """ Helper for creating a hashlocked transfer.
 
     Args:
@@ -107,11 +55,11 @@ def make_hashlock_transfer(amount,
         expiration (int): Block number
     """
 
+    # the initiator machine populates this values
     secret = None
-    """ The corresponding secret to the hashlock that can unlock it. """
-
     hashlock = None
     expiration = None
+
     transfer = LockedTransferState(
         identifier,
         amount,
@@ -126,12 +74,10 @@ def make_hashlock_transfer(amount,
 
 def make_init_statechange(routes,
                           target,
-                          amount=UNIT_TRANSFER_AMOUNT,
+                          amount=factories.UNIT_TRANSFER_AMOUNT,
                           block_number=1,
-                          our_address=ADDR,
+                          our_address=factories.ADDR,
                           secret_generator=None):
-
-    our_address = ADDR
 
     if secret_generator is None:
         secret_generator = SequenceGenerator()
@@ -149,9 +95,9 @@ def make_init_statechange(routes,
 
 def make_initiator_state(routes,
                          target,
-                         amount=UNIT_TRANSFER_AMOUNT,
+                         amount=factories.UNIT_TRANSFER_AMOUNT,
                          block_number=1,
-                         our_address=ADDR,
+                         our_address=factories.ADDR,
                          secret_generator=None):
 
     init_state_change = make_init_statechange(
@@ -159,6 +105,8 @@ def make_initiator_state(routes,
         target,
         amount,
         block_number,
+        our_address,
+        secret_generator,
     )
 
     inital_state = None
@@ -168,11 +116,11 @@ def make_initiator_state(routes,
 
 
 def test_next_route():
-    target = HOP1
+    target = factories.HOP1
     routes = [
-        make_route(HOP2, capacity=UNIT_TRANSFER_AMOUNT),
-        make_route(HOP3, capacity=UNIT_TRANSFER_AMOUNT - 1),
-        make_route(HOP4, capacity=UNIT_TRANSFER_AMOUNT),
+        factories.make_route(factories.HOP2, available_balance=factories.UNIT_TRANSFER_AMOUNT),
+        factories.make_route(factories.HOP3, available_balance=factories.UNIT_TRANSFER_AMOUNT - 1),
+        factories.make_route(factories.HOP4, available_balance=factories.UNIT_TRANSFER_AMOUNT),
     ]
 
     state = make_initiator_state(routes, target)
@@ -191,21 +139,23 @@ def test_next_route():
     state.route = None
     initiator.try_new_route(state)
 
+    # HOP3 should be ignored because it doesnt have enough balance
+    assert len(state.routes.ignored_routes) == 1
+
     assert len(state.routes.available_routes) == 0
-    assert len(state.routes.ignored_routes) == 1, 'HOP3 should be ignored because it doesnt have enough balance'
     assert len(state.routes.refunded_routes) == 0
     assert len(state.routes.canceled_routes) == 1
 
 
 def test_init_with_usable_routes():
-    amount = UNIT_TRANSFER_AMOUNT
+    amount = factories.UNIT_TRANSFER_AMOUNT
     block_number = 1
-    mediator_address = HOP1
-    target_address = HOP2
-    our_address = ADDR
+    mediator_address = factories.HOP1
+    target_address = factories.HOP2
+    our_address = factories.ADDR
     secret_generator = SequenceGenerator()
 
-    routes = [make_route(mediator_address, capacity=amount)]
+    routes = [factories.make_route(mediator_address, available_balance=amount)]
     init_state_change = make_init_statechange(
         routes,
         target_address,
@@ -214,7 +164,7 @@ def test_init_with_usable_routes():
         secret_generator=secret_generator,
     )
 
-    expiration = block_number + HOP1_TIMEOUT
+    expiration = block_number + factories.HOP1_TIMEOUT
 
     initiator_state_machine = StateManager(
         initiator.state_transition,
@@ -247,7 +197,7 @@ def test_init_with_usable_routes():
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
     mediated_transfer = mediated_transfers[0]
 
-    assert mediated_transfer.token == UNIT_TOKEN_ADDRESS, 'transfer token address mismatch'
+    assert mediated_transfer.token == factories.UNIT_TOKEN_ADDRESS, 'transfer token address mismatch'
     assert mediated_transfer.amount == amount, 'transfer amount mismatch'
     assert mediated_transfer.expiration == expiration, 'transfer expiration mismatch'
     assert mediated_transfer.hashlock == sha3(secret_generator.secrets[0]), 'wrong hashlock'
@@ -261,9 +211,9 @@ def test_init_with_usable_routes():
 
 
 def test_init_without_routes():
-    amount = UNIT_TRANSFER_AMOUNT
+    amount = factories.UNIT_TRANSFER_AMOUNT
     block_number = 1
-    our_address, target_address = HOP1, HOP3
+    our_address, target_address = factories.HOP1, factories.HOP3
     routes = []
 
     transfer = make_hashlock_transfer(
