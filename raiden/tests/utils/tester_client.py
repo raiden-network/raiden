@@ -181,7 +181,13 @@ class FilterTesterMock(object):
 
     def event(self, event):
         # TODO: implement OR
-        if event.topics == self.topics and event.address == self.contract_address:
+        valid_address = event.address == self.contract_address
+        valid_topics = (
+            self.topics is None or
+            event.topics == self.topics
+        )
+
+        if valid_topics and valid_address:
             self.events.append({
                 'topics': event.topics,
                 'data': event.data,
@@ -592,7 +598,7 @@ class NettingChannelTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
 
     def transferred_amount(self, participant_address):
-        amount = self.proxy.transferredAmount(participant_address).call()
+        amount = self.proxy.transferredAmount(participant_address)
         self.tester_state.mine(number_of_blocks=1)
         return amount
 
@@ -704,26 +710,8 @@ class NettingChannelTesterMock(object):
         self.proxy.settle()
         self.tester_state.mine(number_of_blocks=1)
 
-    def channelnewbalance_filter(self):
-        topics = [CHANNELNEWBALANCE_EVENTID]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
-        self.tester_state.block.log_listeners.append(filter_.event)
-        return filter_
-
-    def channelsecretrevealed_filter(self):
-        topics = [CHANNELSECRETREVEALED_EVENTID]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
-        self.tester_state.block.log_listeners.append(filter_.event)
-        return filter_
-
-    def channelclosed_filter(self):
-        topics = [CHANNELCLOSED_EVENTID]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
-        self.tester_state.block.log_listeners.append(filter_.event)
-        return filter_
-
-    def channelsettled_filter(self):
-        topics = [CHANNELSETTLED_EVENTID]
+    def all_events_filter(self):
+        topics = None
         filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
