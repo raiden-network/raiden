@@ -444,6 +444,22 @@ class RaidenAPI(object):
         asset_manager = self.raiden.get_manager_by_asset_address(from_asset)
         asset_manager.transfermanager.exchanges[ExchangeKey(from_asset, from_amount)] = exchange
 
+    def get_channel_list(self, asset_address=None, partner_address=None):
+        if asset_address:
+            asset_manager = self.raiden.get_manager_by_asset_address(asset_address)
+            if partner_address:
+                return [asset_manager.partneraddress_channel[partner_address]]
+            return asset_manager.address_channel.values()
+        else:
+            channel_list = []
+            if partner_address:
+                for manager in self.raiden.managers_by_asset_address.values():
+                    channel_list.extend([manager.partneraddress_channel[partner_address]])
+                return channel_list
+            for manager in self.raiden.managers_by_asset_address.values():
+                channel_list.extend(manager.address_channel.values())
+            return channel_list
+
     def transfer_and_wait(
             self,
             asset_address,
