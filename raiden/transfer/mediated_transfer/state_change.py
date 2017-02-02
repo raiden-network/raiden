@@ -102,6 +102,7 @@ class SecretRequestReceived(StateChange):
         self.hashlock = hashlock
         self.identifier = identifier
         self.sender = sender
+        self.revealsecret = None
 
 
 class SecretRevealReceived(StateChange):
@@ -111,6 +112,7 @@ class SecretRevealReceived(StateChange):
         self.secret = secret
         self.target = target
         self.sender = sender
+        self.revealsecret = secret
 
 
 class TransferRefundReceived(StateChange):

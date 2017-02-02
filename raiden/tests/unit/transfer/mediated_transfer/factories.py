@@ -38,7 +38,7 @@ def make_route(node_address,
 
     Args:
         node_address (address): The node address.
-        capacity (int): The available capacity of the route.
+        available_balance (int): The available capacity of the route.
         settle_timeout (int): The settle_timeout of the route, as agreed in the netting contract.
         reveal_timeout (int): The configure reveal_timeout of the raiden node.
         channel_address (address): The correspoding channel address.

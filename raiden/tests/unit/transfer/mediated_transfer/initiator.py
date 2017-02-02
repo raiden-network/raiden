@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 import pytest
+from copy import deepcopy
 
 from raiden.utils import sha3
 from raiden.transfer.architecture import StateManager
@@ -11,32 +12,43 @@ from raiden.transfer.mediated_transfer.state import (
     InitiatorState,
     LockedTransferState,
 )
+#from raiden.transfer.mediated_transfer.transition import update_route  # TODO
+#from raiden.transfer.state_change import (
+    # blockchain events
+    #Blocknumber,  # TODO
+    #RouteChange,  # TODO
+    # user interaction
+    #UserCancel,  # TODO
+#)
 from raiden.transfer.mediated_transfer.state_change import (
     InitInitiator,
+    # protocol messages
+    #TransferCancelReceived,  # TODO
+    #TransferRefundReceived,  # TODO
+    SecretRequestReceived,
+    #SecretRevealReceived,  # TODO
 )
 from raiden.transfer.mediated_transfer.events import (
     TransferFailed,
     MediatedTransfer,
+    #RevealSecretTo,  # TODO
 )
 from . import factories
 
 
 class SequenceGenerator(object):
-    """ Return a generator that goes thorugh the alphabet letters. """
-
+    """ Return a generator that goes through the alphabet letters. """
     def __init__(self):
-        import string
-        import itertools
-
+        self.i = 0
         self.secrets = list()
-        self.generator = itertools.cycle(string.letters)
 
     def __iter__(self):
         return self
 
     def __next__(self):
         # pad the secret to the correct length by repeating the current character
-        new_secret = next(self.generator) * 40
+        import string
+        new_secret = string.letters[self.i % len(string.letters)] * 40
         self.secrets.append(new_secret)
         return new_secret
 
@@ -242,3 +254,51 @@ def test_init_without_routes():
     assert len(events) == 1
     assert isinstance(events[0], TransferFailed)
     assert initiator_state_machine.current_state is None
+
+
+def test_state_uninitialized():
+    """ nothing to test """
+    pass
+
+
+def test_state_wait_secretrequest_valid():
+    transfer_id = 1
+    amount = factories.UNIT_TRANSFER_AMOUNT
+    hashlock = None
+    identifier = 0
+    block_number = 1
+    mediator_address = factories.HOP1
+    target_address = factories.HOP2
+    our_address = factories.ADDR
+
+    routes = [factories.make_route(mediator_address, available_balance=amount)]
+    current_state = make_initiator_state(
+        routes,
+        target_address,
+        block_number=block_number,
+        our_address=our_address,
+        secret_generator=SequenceGenerator(),
+    )
+
+    deepcopy(current_state)
+
+    state_change = SecretRequestReceived(
+        transfer_id,
+        amount,
+        hashlock,
+        identifier,
+        our_address
+    )
+
+    initiator_state_machine = StateManager(
+        initiator.state_transition,
+        current_state,
+    )
+
+    event = initiator_state_machine.dispatch(state_change)
+    # no events generated from SecretRequestReceived  # FIXME
+    assert not event
+
+
+def test_state_wait_unlock():
+    assert False
