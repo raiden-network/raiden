@@ -56,6 +56,7 @@ library ChannelManagerLibrary {
     /// @return (uint) index of channel in our_channels
     /// @return (uint) index of channel in partner_channels
     function getChannelWithForDelete(Data storage self, address caller_address, address partner)
+        internal
         constant
         returns (address, bool, uint, uint)
     {
