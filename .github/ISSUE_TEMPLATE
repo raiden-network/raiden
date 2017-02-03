@@ -1,0 +1,28 @@
+## Problem Definition
+
+Provide a description of what is the current problem and why you are raising this issue.
+If it's a bug please describe what was the unexpected thing that occured and what was the
+expected behaviour.
+
+## Solution
+
+Here provide a detailed explanation, if you can suggest one, for how to go about solving the problem.
+
+
+## Tasklist
+
+Here provide a checkpoint list of tasks that need to be done in order for this issue to be considered closed.
+This will help us evaluate if the issue has been properly addressed.
+
+Example:
+
+- [ ] Implement feature XXX
+- [ ] Create test for XX
+- [ ] Add a changelog entry.
+
+## Only For Bugs
+
+Bother with this section only if you are reporting a bug
+
+### System Description
+Here add a detailed description of your system, raiden version, geth version, solidity version e.t.c.
