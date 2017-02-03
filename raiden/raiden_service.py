@@ -454,7 +454,8 @@ class RaidenAPI(object):
             channel_list = []
             if partner_address:
                 for manager in self.raiden.managers_by_asset_address.values():
-                    channel_list.extend([manager.partneraddress_channel[partner_address]])
+                    if partner_address in manager.partneraddress_channel:
+                        channel_list.extend([manager.partneraddress_channel[partner_address]])
                 return channel_list
             for manager in self.raiden.managers_by_asset_address.values():
                 channel_list.extend(manager.address_channel.values())
