@@ -445,6 +445,18 @@ class RaidenAPI(object):
         asset_manager.transfermanager.exchanges[ExchangeKey(from_asset, from_amount)] = exchange
 
     def get_channel_list(self, asset_address=None, partner_address=None):
+        """Returns a list of channels associated with the optional given `asset_address` and/or `partner_address`.
+        Args:
+            asset_address (bin): optional the asset address
+            partner_address (bin): optional the peer at partner address
+        Return:
+            A list containing all channels the node participates. Optionally filtered by an asset address
+            and/or partner address.
+        Raises:
+            UnknownAssetAddress: An error occurred when the asset address is unknown to the node.
+            KeyError: An error occurred when the given partner address isn't associated with the given
+            asset address.
+        """
         if asset_address:
             asset_manager = self.raiden.get_manager_by_asset_address(asset_address)
             if partner_address:
