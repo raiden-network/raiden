@@ -37,26 +37,26 @@ OPTIONS = [
         type=click.Path(exists=True),
     ),
     click.option(
-        '--eth_rpc_endpoint',
+        '--eth-rpc-endpoint',
         help='"host:port" address of ethereum JSON-RPC server.\n'
         'Also accepts a protocol prefix (http:// or https://) with optional port',
         default='127.0.0.1:8545',  # geth default jsonrpc port
         type=str,
     ),
     click.option(
-        '--registry_contract_address',
+        '--registry-contract-address',
         help='hex encoded address of the registry contract.',
         default='32c5dab9b099a5b6c0e626c1862c07b30f58d76a',  # testnet default
         type=str,
     ),
     click.option(
-        '--discovery_contract_address',
+        '--discovery-contract-address',
         help='hex encoded address of the discovery contract.',
         default='79ab17cc105e820368e695dfa547604651d02cbb',  # testnet default
         type=str,
     ),
     click.option(
-        '--listen_address',
+        '--listen-address',
         help='"host:port" for the raiden service to listen on.',
         default="0.0.0.0:{}".format(INITIAL_PORT),
         type=str,
