@@ -20,10 +20,10 @@ contract Registry {
         _;
     }
 
-    /// @notice addAsset(address) to register a new ERC20 token
+    /// @notice addAsset to register a new ERC20 token
     /// @dev Register a new ERC20 token
-    /// @param asset_address (address) the address of the token
-    /// @return (address) the address of the channel manager
+    /// @param asset_address address of the token
+    /// @return the address of the channel manager
     function addAsset(address asset_address)
         doesNotExist(asset_address)
         returns (address)
@@ -41,10 +41,10 @@ contract Registry {
         return manager_address;
     }
 
-    /// @notice channelManagerByAsset(address) to get the ChannelManager address for a specific token
+    /// @notice channelManagerByAsset to get the ChannelManager address for a specific token
     /// @dev get the address of the channel manager for the given token
-    /// @param asset_address (address) the address of the given token
-    /// @return (address) address of channel manager
+    /// @param asset_address the address of the given token
+    /// @return address of channel manager
     function channelManagerByAsset(address asset_address)
         addressExists(asset_address)
         constant
@@ -53,9 +53,9 @@ contract Registry {
         return registry[asset_address];
     }
 
-    /// @notice assetAddresses() to get all registered tokens
+    /// @notice assetAddresses to get all registered tokens
     /// @dev Get all registered tokens
-    /// @return (address[]) addresses of all registered tokens
+    /// @return addresses of all registered tokens
     function assetAddresses()
         constant
         returns (address[])
@@ -63,9 +63,9 @@ contract Registry {
         return assets;
     }
 
-    /// @notice channelManagerAddresses() to get the addresses of all channel managers for all registered tokens
+    /// @notice channelManagerAddresses to get the addresses of all channel managers for all registered tokens
     /// @dev Get all addresses for channel managers
-    /// @return (address[]) addresses of all channel managers
+    /// @return addresses of all channel managers
     function channelManagerAddresses()
         constant
         returns (address[])

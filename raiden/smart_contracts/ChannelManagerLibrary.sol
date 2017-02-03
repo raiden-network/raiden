@@ -47,15 +47,15 @@ library ChannelManagerLibrary {
         }
     }
 
-    /// @notice getChannelWithForDelete(address) to get the address of the unique channel of two parties.
+    /// @notice getChannelAndIndices to get the address of the unique channel of two parties.
     /// @dev Get the channel of two parties
-    /// @param caller_address (address) the address of the caller
-    /// @param partner (address) the address of the partner
-    /// @return (address) the address of the NettingChannelContract of the two parties.
-    /// @return (bool) value to reflect if a channel exists
-    /// @return (uint) index of channel in our_channels
-    /// @return (uint) index of channel in partner_channels
-    function getChannelWithForDelete(Data storage self, address caller_address, address partner)
+    /// @param caller_address the address of the caller
+    /// @param partner the address of the partner
+    /// @return the address of the NettingChannelContract of the two parties.
+    /// @return value to reflect if a channel exists
+    /// @return index of channel in our_channels
+    /// @return index of channel in partner_channels
+    function getChannelAndIndices(Data storage self, address caller_address, address partner)
         internal
         constant
         returns (address, bool, uint, uint)

@@ -57,7 +57,7 @@ def test_channelmanager(
     address0 = tester.DEFAULT_ACCOUNT
     address1 = tester.a1
     address2 = tester.a2
-    inexisting_address = sha3('this_does_not_exist')[:20]
+    nonexisting_address = sha3('this_does_not_exist')[:20]
 
     channelmanager_path = get_contract_path('ChannelManagerContract.sol')
     channel_manager = tester_state.abi_contract(
@@ -102,8 +102,8 @@ def test_channelmanager(
         channel_manager.newChannel(address1, settle_timeout)
 
     # should be false if there is no channel for the given address
-    assert channel_manager.getChannelWith(inexisting_address)[0] == '0' * 40
-    assert channel_manager.getChannelWith(inexisting_address)[1] == False
+    assert channel_manager.getChannelWith(nonexisting_address)[0] == '0' * 40
+    assert channel_manager.getChannelWith(nonexisting_address)[1] == False
 
     assert len(channel_manager.getChannelsParticipants()) == 2
 
@@ -129,11 +129,11 @@ def test_channelmanager(
 
     msg_sender_channels = channel_manager.nettingContractsByAddress(tester.DEFAULT_ACCOUNT)
     address1_channels = channel_manager.nettingContractsByAddress(address1)
-    inexisting_channels = channel_manager.nettingContractsByAddress(inexisting_address)
+    nonexisting_channels = channel_manager.nettingContractsByAddress(nonexisting_address)
 
     assert len(msg_sender_channels) == 2
     assert len(address1_channels) == 1
-    assert len(inexisting_channels) == 0
+    assert len(nonexisting_channels) == 0
 
     assert len(channel_manager.getChannelsParticipants()) == 4
 
