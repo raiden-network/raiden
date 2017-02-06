@@ -89,26 +89,25 @@ class CancelRoute(StateChange):
         Used to cancel a specific route but not the transfer, may be used for
         timeouts.
     """
-    def __init__(self, transfer_id):
-        self.transfer_id = transfer_id
+    def __init__(self, identifier):
+        self.identifier = identifier
 
 
 class SecretRequestReceived(StateChange):
     """ A SecretRequest message received. """
 
-    def __init__(self, transfer_id, amount, hashlock, identifier, sender):
-        self.transfer_id = transfer_id
+    def __init__(self, identifier, amount, hashlock, sender):
+        self.identifier = identifier
         self.amount = amount
         self.hashlock = hashlock
-        self.identifier = identifier
         self.sender = sender
         self.revealsecret = None
 
 
 class SecretRevealReceived(StateChange):
     """ A SecretReveal message received. """
-    def __init__(self, transfer_id, secret, target, sender):
-        self.transfer_id = transfer_id
+    def __init__(self, identifier, secret, target, sender):
+        self.identifier = identifier
         self.secret = secret
         self.target = target
         self.sender = sender
@@ -117,8 +116,8 @@ class SecretRevealReceived(StateChange):
 
 class TransferRefundReceived(StateChange):
     """ A RefundTransfer message received. """
-    def __init__(self, transfer_id, hashlock, amount, sender):
-        self.transfer_id = transfer_id
+    def __init__(self, identifier, hashlock, amount, sender):
+        self.identifier = identifier
         self.amount = amount
         self.hashlock = hashlock
         self.sender = sender

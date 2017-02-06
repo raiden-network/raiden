@@ -26,11 +26,11 @@ class RouteChange(StateChange):
           balance.
     """
 
-    def __init__(self, transfer_id, route):
+    def __init__(self, identifier, route):
         if not isinstance(route, RouteState):
             raise ValueError('route must be a RouteState')
 
-        self.transfer_id = transfer_id
+        self.identifier = identifier
         self.route = route
 
 
@@ -41,5 +41,5 @@ class CancelTransfer(StateChange):
     state of the transfer.
     """
 
-    def __init__(self, transfer_id):
-        self.transfer_id = transfer_id
+    def __init__(self, identifier):
+        self.identifier = identifier
