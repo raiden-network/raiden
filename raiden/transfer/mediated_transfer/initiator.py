@@ -272,7 +272,7 @@ def state_transition(state, state_change):
             # the withdraw message to next hop
             unlock_lock = RevealSecretTo(
                 state.transfer.identifier,
-                state.secret,
+                state.transfer.secret,
                 state.route.node_address,
                 state.our_address,
             )
