@@ -157,27 +157,31 @@ def try_new_route(next_state):
     return iteration
 
 
-def state_transition(next_state, state_change):
-    """ State machine for a node starting a mediated transfer. """
+def state_transition(state, state_change):
+    """ State machine for a node starting a mediated transfer.
+    Args:
+        state: the current State that is transitioned from
+        state_change: the state_change that will be applied
+    """
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
-    if next_state is None:
+    if state is None:
         state_uninitialized = True
         state_wait_secretrequest = False
         state_wait_unlock = False
     else:
         state_uninitialized = False
-        state_wait_secretrequest = next_state.revealsecret is None
-        state_wait_unlock = next_state.revealsecret is not None
+        state_wait_secretrequest = state.revealsecret is None
+        state_wait_unlock = state.revealsecret is not None
 
-    iteration = Iteration(next_state, list())
+    iteration = Iteration(state, list())
 
     if not state_uninitialized:
         if isinstance(state_change, Blocknumber):
-            next_state.block_number = state_change.block_number
+            state.block_number = state_change.block_number
 
         elif isinstance(state_change, RouteChange):
-            update_route(next_state, state_change)
+            update_route(state, state_change)
 
     # Init state and try the first available route
     if state_uninitialized:
@@ -186,7 +190,7 @@ def state_transition(next_state, state_change):
             assert isinstance(state_change.routes, RoutesState)
             routes = deepcopy(state_change.routes)
 
-            next_state = InitiatorState(
+            state = InitiatorState(
                 state_change.our_address,
                 state_change.transfer,
                 routes,
@@ -194,7 +198,7 @@ def state_transition(next_state, state_change):
                 state_change.random_generator,
             )
 
-            iteration = try_new_route(next_state)
+            iteration = try_new_route(state)
 
     # 1- Target received the mediated transfer and sent a secretrequest.
     # 2- The mediated transfer failed mid flight and we need to try a new route.
@@ -202,17 +206,15 @@ def state_transition(next_state, state_change):
 
         if isinstance(state_change, SecretRequestReceived):
             valid_secretrequest = (
-                state_change.sender == next_state.transfer.target and
-                state_change.hashlock == next_state.hashlock and
-
-                state_change.transfer_id == next_state.transfer.identifier and
-                state_change.amount == next_state.transfer.amount and
-                state_change.identifier == next_state.transfer.identifier
+                state_change.sender == state.transfer.target and
+                state_change.hashlock == state.transfer.hashlock and
+                state_change.identifier == state.transfer.identifier and
+                state_change.amount == state.transfer.amount
             )
 
             invalid_secretrequest = (
-                state_change.sender == next_state.transfer.target and
-                state_change.hashlock == next_state.hashlock and
+                state_change.sender == state.transfer.target and
+                state_change.hashlock == state.transfer.hashlock and
 
                 not valid_secretrequest
             )
@@ -224,7 +226,7 @@ def state_transition(next_state, state_change):
         # hashlock and amount since the current secret will be discarded
         refund_transfer = (
             isinstance(state_change, TransferRefundReceived) and
-            state_change.sender == next_state.route.node_address
+            state_change.sender == state.route.node_address
         )
 
         cancel_transfer = (
@@ -240,38 +242,39 @@ def state_transition(next_state, state_change):
             # Note: The target might be the first hop
             #
             reveal_secret = RevealSecretTo(
-                next_state.transfer.identifier,
-                next_state.secret,
-                next_state.transfer.target,
-                next_state.our_address,
+                state.transfer.identifier,
+                state.transfer.secret,
+                state.transfer.target,
+                state.our_address,
             )
 
-            next_state.revealsecret = reveal_secret
-            iteration = Iteration(next_state, [reveal_secret])
+            state.revealsecret = reveal_secret
+            iteration = Iteration(state, [reveal_secret])
 
         elif invalid_secretrequest or refund_transfer or cancel_transfer:
             # anything out-of-the-ordinary happened
-            iteration = cancel_current_route(next_state)
+            iteration = cancel_current_route(state)
 
         elif isinstance(state_change, CancelTransfer):
             # the raiden user (could be another software) asked for the
             # transfer to be canceled
-            iteration = user_cancel_transfer(next_state)
+            iteration = user_cancel_transfer(state)
 
     elif state_wait_unlock:
+
         secret_reveal = (
             isinstance(state_change, SecretRevealReceived) and
-            state_change.sender == next_state.route.node_address
+            state_change.sender == state.route.node_address
         )
 
         if secret_reveal:
             # next hop learned the secret, unlock the token locally and send
             # the withdraw message to next hop
             unlock_lock = RevealSecretTo(
-                next_state.transfer.identifier,
-                next_state.secret,
-                next_state.route.node_address,
-                next_state.our_address,
+                state.transfer.identifier,
+                state.secret,
+                state.route.node_address,
+                state.our_address,
             )
 
             iteration = Iteration(None, [unlock_lock])
