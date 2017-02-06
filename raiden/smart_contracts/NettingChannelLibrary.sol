@@ -78,14 +78,14 @@ library NettingChannelLibrary {
         _;
     }
 
-    /// @notice deposit(uint) to deposit amount to channel.
+    /// @notice Deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
-    /// @param caller_address (address) the address of the invoker of the function
-    /// @param channel_address (address) the address of the channel
-    /// @param amount (uint) the amount to be deposited to the address
-    /// @return success (bool) if the transfer was successful
-    /// @return balance (uint256) the new balance of the invoker
+    /// @param caller_address The address of the invoker of the function
+    /// @param channel_address The address of the channel
+    /// @param amount The amount to be deposited to the address
+    /// @return Success if the transfer was successful
+    /// @return The new balance of the invoker
     function deposit(
         Data storage self,
         address caller_address,
@@ -132,9 +132,9 @@ library NettingChannelLibrary {
         return (false, 0);
     }
 
-    /// @notice partner() to get the partner or other participant of the channel
+    /// @notice Get the partner or other participant of the channel
     /// @dev Get the other participating party of the channel
-    /// @return (address) the partner of the calling party
+    /// @return The partner of the calling party
     function partner(Data storage self, address one_address) constant returns (address) {
         Participant[2] storage participants = self.participants;
         Participant storage node1 = participants[0];
@@ -191,8 +191,8 @@ library NettingChannelLibrary {
     /// @param caller_address The address of the participant closing the channel
     /// @param their_transfer The latest known transfer of the other participant
     ///                       to the channel. Can also be empty, in which case
-    //                        we are attempting to close a channel without any
-    //                        transfers.
+    ///                       we are attempting to close a channel without any
+    ///                       transfers.
     /// @param our_transfer Optionally provide the caller's own latest transfer
     ///                     as a courtesy to the other party in order to save
     ///                     them a blockchain transaction. Can also be empty.
@@ -279,7 +279,7 @@ library NettingChannelLibrary {
         return sender.node_address;
     }
 
-    /// @notice updateTransfer Updates (disputes) the state after closing.
+    /// @notice Updates (disputes) the state after closing.
     /// @param caller_address The counterparty to the channel. The participant
     ///                       that did not close the channel.
     /// @param their_transfer The transfer the counterparty believes is the
@@ -308,11 +308,11 @@ library NettingChannelLibrary {
         // TODO check if outdated and penalize
     }
 
-    /// @notice unlock(bytes, bytes, bytes32) to unlock a locked transfer
+    /// @notice Unlock a locked transfer
     /// @dev Unlock a locked transfer
-    /// @param locked_encoded (bytes) the lock
-    /// @param merkle_proof (bytes) the merkle proof
-    /// @param secret (bytes32) the secret
+    /// @param locked_encoded The lock
+    /// @param merkle_proof The merkle proof
+    /// @param secret The secret
     function unlock(
         Data storage self,
         address caller_address,
@@ -373,9 +373,9 @@ library NettingChannelLibrary {
         self.locks[hashlock] = true;
     }
 
-    /// @notice settle() to settle the balance between the two parties
+    /// @notice Settles the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
-    /// @return participants (Participant[2]) the participants with netted balances
+    /// @return The participants with netted balances
     function settle(Data storage self, address caller_address)
         notSettledButClosed(self)
         timeoutOver(self)

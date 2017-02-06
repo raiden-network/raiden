@@ -11,18 +11,17 @@ library ChannelManagerLibrary {
         Token token;
     }
 
-    /// @notice getChannelsAddresses to get all channels
+    /// @notice Get all channels
     /// @dev Get all channels
-    /// @return channels (address[]) all the channels
+    /// @return all the channels
     function getChannelsAddresses(Data storage self) returns (address[] channels) {
         channels = self.all_channels;
     }
 
-    /// @notice getChannelsForNode(address) to get channels that 
-    /// the address participates in.
+    /// @notice Get channels that the address participates in.
     /// @dev Get channels where the given address participates.
-    /// @param node_address (address) the address of the node
-    /// @return (address[]) of the channel's addresses that node_address participates.
+    /// @param node_address The address of the node
+    /// @return The channels that the node_address participates in
     function getChannelsForNode(Data storage self, address node_address)
         constant
         returns (address[])
@@ -30,11 +29,11 @@ library ChannelManagerLibrary {
         return self.node_channels[node_address];
     }
 
-    /// @notice getChannelWith(address) to get the address of the unique channel of two parties.
+    /// @notice Get the address of the unique channel of two parties.
     /// @dev Get the channel of two parties
-    /// @param caller_address (address) the address of the caller
-    /// @param partner (address) the address of the partner
-    /// @return channel (address) the address of the NettingChannelContract of the two parties.
+    /// @param caller_address The address of the caller
+    /// @param partner The address of the partner
+    /// @return The address of the NettingChannelContract of the two parties.
     function getChannelWith(Data storage self, address caller_address, address partner)
         constant
         returns (address, bool, uint, uint)
@@ -53,11 +52,11 @@ library ChannelManagerLibrary {
         return (0x0, false, 0, 0);
     }
 
-    /// @notice newChannel(address, uint) to create a new payment channel between two parties
+    /// @notice Create a new payment channel between two parties
     /// @dev Create a new channel between two parties
-    /// @param partner (address) the address of the partner
-    /// @param settle_timeout (uint) the settle timeout in blocks
-    /// @return (address) the address of the NettingChannelContract.
+    /// @param partner The address of the partner
+    /// @param settle_timeout The settle timeout in blocks
+    /// @return The address of the NettingChannelContract.
     function newChannel(
         Data storage self,
         address caller_address,
@@ -78,13 +77,13 @@ library ChannelManagerLibrary {
         self.all_channels.push(channel_address);
     }
 
-    /// @notice deleteChannel(address) to remove a channel after it's been settled
+    /// @notice Remove a channel after it's been settled
     /// @dev Remove channel after it's been settled
-    /// @param caller_address (address) the address of the caller
-    /// @param partner (address) address of the partner
-    /// @param channel_address (address) address of the channel to be closed
-    /// @param caller_index (uint) index of the caller in our channels
-    /// @param partner_index (uint) index of the partner in partner_channels
+    /// @param caller_address Τhe address of the caller
+    /// @param partner Αddress of the partner
+    /// @param channel_address Αddress of the channel to be closed
+    /// @param caller_index Τhe index of the caller in our channels
+    /// @param partner_index Index of the partner in partner_channels
     function deleteChannel(
         Data storage self,
         address caller_address,
@@ -117,10 +116,10 @@ library ChannelManagerLibrary {
         self.node_channels[partner] = partner_channels;
     }
 
-    /// @notice contractExists(address) to check if a contract is deployed at given address
+    /// @notice Check if a contract is deployed at given address
     /// @dev Check if a channel is deployed at address
-    /// @param _addr (address) the address to check for a deployed contract
-    /// @return (bool) true if contract exists, false if not
+    /// @param _addr The address to check for a deployed contract
+    /// @return True if contract exists, false if not
     function contractExists(Data storage self, address _addr) returns (bool) {
         uint size;
         assembly {
