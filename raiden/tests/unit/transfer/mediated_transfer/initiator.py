@@ -66,8 +66,7 @@ def make_hashlock_transfer(amount,
         target (address): Transfer target.
         expiration (int): Block number
     """
-
-    # the initiator machine populates this values
+    # the initiator machine populates these values
     secret = None
     hashlock = None
     expiration = None
@@ -89,14 +88,15 @@ def make_init_statechange(routes,
                           amount=factories.UNIT_TRANSFER_AMOUNT,
                           block_number=1,
                           our_address=factories.ADDR,
-                          secret_generator=None):
+                          secret_generator=None,
+                          identifier=0):
 
     if secret_generator is None:
         secret_generator = SequenceGenerator()
 
     init_state_change = InitInitiator(
         our_address,
-        make_hashlock_transfer(amount, target=target),
+        make_hashlock_transfer(amount, target=target, identifier=identifier),
         RoutesState(routes),
         secret_generator,
         block_number,
@@ -110,7 +110,8 @@ def make_initiator_state(routes,
                          amount=factories.UNIT_TRANSFER_AMOUNT,
                          block_number=1,
                          our_address=factories.ADDR,
-                         secret_generator=None):
+                         secret_generator=None,
+                         identifier=0):
 
     init_state_change = make_init_statechange(
         routes,
@@ -119,6 +120,7 @@ def make_initiator_state(routes,
         block_number,
         our_address,
         secret_generator,
+        identifier=identifier
     )
 
     inital_state = None
@@ -278,6 +280,7 @@ def test_state_wait_secretrequest_valid():
         block_number=block_number,
         our_address=our_address,
         secret_generator=SequenceGenerator(),
+        identifier=identifier,
     )
 
     deepcopy(current_state)
