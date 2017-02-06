@@ -34,8 +34,8 @@ class RevealSecretTo(Event):
         synchronized. The reveal secret message flows from the receiver to the
         sender, so once the message is received it must not update the balance.
     """
-    def __init__(self, transfer_id, secret, target, sender):
-        self.transfer_id = transfer_id
+    def __init__(self, identifier, secret, target, sender):
+        self.identifier = identifier
         self.secret = secret
         self.target = target
         self.sender = sender
@@ -43,8 +43,8 @@ class RevealSecretTo(Event):
 
 class SecretRequest(Event):
     """ Event used by a target node to request the secret from the initiator. """
-    def __init__(self, transfer_id, amount, hashlock):
-        self.transfer_id = transfer_id
+    def __init__(self, identifier, amount, hashlock):
+        self.identifier = identifier
         self.amount = amount
         self.hashlock = hashlock
 
@@ -81,16 +81,16 @@ class TransferFailed(Event):
         intereacting or wait for the lock expiration.
     """
 
-    def __init__(self, transfer_id, reason):
-        self.transfer_id = transfer_id
+    def __init__(self, identifier, reason):
+        self.identifier = identifier
         self.reason = reason
 
 
 class TransferCompleted(Event):
     """ Event emitted when the transfer is complete for the given node.  """
 
-    def __init__(self, transfer_id, secret, hashlock):
-        self.transfer_id = transfer_id
+    def __init__(self, identifier, secret, hashlock):
+        self.identifier = identifier
         self.secret = secret
         self.hashlock = hashlock
 

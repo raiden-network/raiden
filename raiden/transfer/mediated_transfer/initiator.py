@@ -67,7 +67,7 @@ def user_cancel_transfer(next_state):
     next_state.revealsecret = None
 
     cancel = TransferFailed(
-        transfer_id=next_state.transfer.identifier,
+        identifier=next_state.transfer.identifier,
         reason='user canceled transfer',
     )
     iteration = Iteration(None, [cancel])
@@ -109,7 +109,7 @@ def try_new_route(next_state):
         # valid because we are the initiator and we known that the secret was
         # not released.
         cancel = TransferFailed(
-            transfer_id=next_state.transfer.identifier,
+            identifier=next_state.transfer.identifier,
             reason='no route available',
         )
         iteration = Iteration(None, [cancel])
@@ -127,10 +127,10 @@ def try_new_route(next_state):
         # improve, since the next hop will take settle_timeout as an upper
         # limit for expiration.
         lock_expiration = next_state.block_number + try_route.settle_timeout
-        transfer_id = len(next_state.canceled_transfers)
+        identifier = next_state.transfer.identifier
 
         transfer = LockedTransferState(
-            transfer_id,
+            identifier,
             next_state.transfer.amount,
             next_state.transfer.token,
             next_state.transfer.target,
@@ -229,7 +229,7 @@ def state_transition(next_state, state_change):
 
         cancel_transfer = (
             isinstance(state_change, CancelRoute) and
-            state_change.transfer_id == next_state.transfer.identifier
+            state_change.identifier == state.transfer.identifier
         )
 
         if valid_secretrequest:
