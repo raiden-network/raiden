@@ -445,10 +445,10 @@ class RaidenAPI(object):
         asset_manager.transfermanager.exchanges[ExchangeKey(from_asset, from_amount)] = exchange
 
     def get_channel_list(self, asset_address=None, partner_address=None):
-        """Returns a list of channels associated with the optional given `asset_address` and/or `partner_address`.
+        """Returns a list of channels associated with the optionally given `asset_address` and/or `partner_address`.
         Args:
-            asset_address (bin): optional the asset address
-            partner_address (bin): optional the peer at partner address
+            asset_address (bin): an optionally provided asset address
+            partner_address (bin): an optionally provided partner address
         Return:
             A list containing all channels the node participates. Optionally filtered by an asset address
             and/or partner address.

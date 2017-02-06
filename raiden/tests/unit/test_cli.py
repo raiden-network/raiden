@@ -18,6 +18,14 @@ def test_get_channel_list(raiden_network, assets_addresses):
     assert channel1 in app1.raiden.api.get_channel_list(assets_addresses[0], app0.raiden.address)
     assert not app1.raiden.api.get_channel_list(partner_address=app2.raiden.address)
 
-    pytest.raises(KeyError, app1.raiden.api.get_channel_list, asset_address=assets_addresses[0],
-                  partner_address=app2.raiden.address)
-    pytest.raises(UnknownAssetAddress, app2.raiden.api.get_channel_list, asset_address=app2.raiden.address)
+    pytest.raises(
+        KeyError,
+        app1.raiden.api.get_channel_list,
+        asset_address=assets_addresses[0],
+        partner_address=app2.raiden.address
+    )
+    pytest.raises(
+        UnknownAssetAddress,
+        app2.raiden.api.get_channel_list,
+        asset_address=app2.raiden.address
+    )
