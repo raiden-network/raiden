@@ -299,4 +299,42 @@ def test_state_wait_secretrequest_valid():
 
 
 def test_state_wait_unlock():
-    assert False
+    identifier = identifier = 1
+    amount = factories.UNIT_TRANSFER_AMOUNT
+    block_number = 1
+    mediator_address = factories.HOP1
+    target_address = factories.HOP2
+    our_address = factories.ADDR
+    secret_generator = SequenceGenerator()
+
+    routes = [factories.make_route(mediator_address, available_balance=amount)]
+    current_state = make_initiator_state(
+        routes,
+        target_address,
+        block_number=block_number,
+        our_address=our_address,
+        secret_generator=secret_generator,
+    )
+
+    secret = secret_generator.secrets[0]
+    assert secret is not None
+
+    # FIXME: not sure if that's the correct type for
+    # `current_state.revealsecret`?
+    current_state.revealsecret = RevealSecretTo(identifier, secret, target_address, our_address)
+
+    initiator_state_machine = StateManager(
+        initiator.state_transition,
+        current_state,
+    )
+
+    state_change = SecretRevealReceived(
+        identifier=identifier,
+        secret=secret,
+        target=our_address,
+        sender=mediator_address,
+    )
+    events = initiator_state_machine.dispatch(state_change)
+    assert len(events) == 1
+    assert isinstance(events[0], RevealSecretTo)
+    assert events[0].target == mediator_address
