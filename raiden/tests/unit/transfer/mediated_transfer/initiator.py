@@ -1,7 +1,5 @@
 # -*- coding: utf8 -*-
 import pytest
-from copy import deepcopy
-
 from raiden.utils import sha3
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.state import (
@@ -26,12 +24,12 @@ from raiden.transfer.mediated_transfer.state_change import (
     #TransferCancelReceived,  # TODO
     #TransferRefundReceived,  # TODO
     SecretRequestReceived,
-    #SecretRevealReceived,  # TODO
+    SecretRevealReceived,
 )
 from raiden.transfer.mediated_transfer.events import (
     TransferFailed,
     MediatedTransfer,
-    #RevealSecretTo,  # TODO
+    RevealSecretTo,
 )
 from . import factories
 
@@ -264,10 +262,8 @@ def test_state_uninitialized():
 
 
 def test_state_wait_secretrequest_valid():
-    transfer_id = 1
+    identifier = 1
     amount = factories.UNIT_TRANSFER_AMOUNT
-    hashlock = None
-    identifier = 0
     block_number = 1
     mediator_address = factories.HOP1
     target_address = factories.HOP2
@@ -283,14 +279,13 @@ def test_state_wait_secretrequest_valid():
         identifier=identifier,
     )
 
-    deepcopy(current_state)
+    hashlock = current_state.transfer.hashlock
 
     state_change = SecretRequestReceived(
-        transfer_id,
-        amount,
-        hashlock,
-        identifier,
-        our_address
+        identifier=identifier,
+        amount=amount,
+        hashlock=hashlock,
+        sender=target_address,
     )
 
     initiator_state_machine = StateManager(
@@ -298,9 +293,9 @@ def test_state_wait_secretrequest_valid():
         current_state,
     )
 
-    event = initiator_state_machine.dispatch(state_change)
-    # no events generated from SecretRequestReceived  # FIXME
-    assert not event
+    events = initiator_state_machine.dispatch(state_change)
+    assert all(isinstance(event, RevealSecretTo) for event in events)
+    assert len(events) == 1
 
 
 def test_state_wait_unlock():
