@@ -10,23 +10,6 @@ library ChannelManagerLibrary {
         Token token;
     }
 
-    /// @notice Get all channels
-    /// @dev Get all channels
-    function getChannelsAddresses(Data storage self) returns (address[] channels) {
-        channels = self.all_channels;
-    }
-
-    /// @notice Get channels that the address participates in.
-    /// @dev Get channels where the given address participates.
-    /// @param node_address The address of the node
-    /// @return The channels that the node_address participates in
-    function getChannelsForNode(Data storage self, address node_address)
-        constant
-        returns (address[])
-    {
-        return self.node_channels[node_address];
-    }
-
     /// @notice Get the address of the unique channel of two parties.
     /// @dev Get the channel of two parties
     /// @param caller_address The address of the caller
