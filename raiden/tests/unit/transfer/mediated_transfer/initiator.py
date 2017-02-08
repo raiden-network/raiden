@@ -12,17 +12,16 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferState,
 )
 #from raiden.transfer.mediated_transfer.transition import update_route  # TODO
-#from raiden.transfer.state_change import (
+from raiden.transfer.state_change import (
     # blockchain events
     #Blocknumber,  # TODO
     #RouteChange,  # TODO
     # user interaction
-    #UserCancel,  # TODO
-#)
+    CancelTransfer
+)
 from raiden.transfer.mediated_transfer.state_change import (
     InitInitiator,
     # protocol messages
-    #TransferCancelReceived,  # TODO
     TransferRefundReceived,
     SecretRequestReceived,
     SecretRevealReceived,
@@ -369,7 +368,6 @@ def test_state_wait_unlock_invalid():
     current_state.revealsecret = RevealSecretTo(identifier, secret, target_address, our_address)
 
     before_state = deepcopy(current_state)
-    # before_state.revealsecret = [1]
 
     initiator_state_machine = StateManager(
         initiator.state_transition,
@@ -411,12 +409,10 @@ def test_refund_transfer_next_route():
         identifier=identifier,
     )
 
-    hashlock = current_state.transfer.hashlock
-
     state_change = TransferRefundReceived(
-        identifier=identifier,
-        amount=amount,
-        hashlock=hashlock,
+        identifier=None,
+        amount=None,
+        hashlock=None,
         sender=mediator_address,
     )
 
@@ -455,14 +451,12 @@ def test_refund_transfer_no_more_routes():
         identifier=identifier,
     )
 
-    hashlock = current_state.transfer.hashlock
-
     state_change = TransferRefundReceived(
-        identifier=identifier,
-        amount=amount,
-        hashlock=hashlock,
-        sender=mediator_address,  # TODO test other addresses for the same outcome!
-    )
+        identifier=None,
+        amount=None,
+        hashlock=None,
+        sender=mediator_address,
+        )
 
     initiator_state_machine = StateManager(
         initiator.state_transition,
@@ -496,12 +490,10 @@ def test_refund_transfer_invalid_sender():
         identifier=identifier,
     )
 
-    hashlock = current_state.transfer.hashlock
-
     state_change = TransferRefundReceived(
-        identifier=identifier,
-        amount=amount,
-        hashlock=hashlock,
+        identifier=None,
+        amount=None,
+        hashlock=None,
         sender=our_address,  # is not a valid TransferRefundReceived
     )
 
@@ -519,7 +511,7 @@ def test_refund_transfer_invalid_sender():
     assert_state_equal(initiator_state_machine.current_state, prior_state)
 
 
-def test_refund_transfer_invalid_hashlock():
+def test_cancel_transfer():
     identifier = 1
     amount = factories.UNIT_TRANSFER_AMOUNT
     block_number = 1
@@ -530,6 +522,7 @@ def test_refund_transfer_invalid_hashlock():
     routes = [
             factories.make_route(mediator_address, available_balance=amount),
             ]
+
     current_state = make_initiator_state(
         routes,
         target_address,
@@ -539,14 +532,9 @@ def test_refund_transfer_invalid_hashlock():
         identifier=identifier,
     )
 
-    state_change = TransferRefundReceived(
-        identifier=identifier,
-        amount=amount,
-        hashlock=sha3('not the right one'),  # is not a valid TransferRefundReceived
-        sender=mediator_address,
+    state_change = CancelTransfer(
+            identifier=identifier
     )
-
-    prior_state = deepcopy(current_state)
 
     initiator_state_machine = StateManager(
         initiator.state_transition,
@@ -555,11 +543,9 @@ def test_refund_transfer_invalid_hashlock():
     assert initiator_state_machine.current_state is not None
 
     events = initiator_state_machine.dispatch(state_change)
-
-    # TransferRefundReceived is invalid, should not change the state!
-    assert len(events) == 0
-    assert initiator_state_machine.current_state is not None
-    assert_state_equal(initiator_state_machine.current_state, prior_state)
+    assert len(events) == 1
+    assert isinstance(events[0], TransferFailed)
+    assert initiator_state_machine.current_state is None
 
 
 def assert_state_equal(state1, state2):
