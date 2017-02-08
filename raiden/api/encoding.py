@@ -158,13 +158,14 @@ class ChannelListSchema(BaseListSchema):
 
 class ChannelNewSchema(EventSchema):
     netting_channel_address = AddressField()
-    asset_address = AddressField()
-    partner_address = AddressField()
-    block_number = fields.Integer()
+    participant1 = AddressField()
+    participant2 = AddressField()
+    settle_timeout = fields.Integer()
 
     class Meta:
         strict = True
         decoding_class = ChannelNew
+
 
 class AssetAddedSchema(EventSchema):
     registry_address = AddressField()
@@ -174,6 +175,7 @@ class AssetAddedSchema(EventSchema):
     class Meta:
         strict = True
         decoding_class = AssetAdded
+
 
 class ChannelNewBalanceSchema(EventSchema):
     netting_channel_address = AddressField()
@@ -204,6 +206,7 @@ class ChannelSettledSchema(EventSchema):
     class Meta:
         strict = True
         decoding_class = ChannelSettled
+
 
 class ChannelSecretRevealedSchema(EventSchema):
     netting_channel_address = AddressField()

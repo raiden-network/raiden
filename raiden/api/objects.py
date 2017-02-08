@@ -53,11 +53,11 @@ class AssetAdded(object):
 
 class ChannelNew(object):
 
-    def __init__(self, netting_channel_address, asset_address, partner_address, block_number):
+    def __init__(self, netting_channel_address, participant1, participant2, settle_timeout):
         self.netting_channel_address = netting_channel_address
-        self.asset_address = asset_address
-        self.partner_address = partner_address
-        self.block_number = block_number
+        self.participant1 = participant1
+        self.participant2 = participant2
+        self.settle_timeout = settle_timeout
 
 
 class ChannelNewBalance(object):

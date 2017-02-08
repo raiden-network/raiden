@@ -862,7 +862,6 @@ class RaidenEventHandler(object):
             callback_func = None
         return callback_func
 
-
     def on_event(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
         # abstract events for serialization
         # should this be here or AFTER/WHERE the events are processed?
@@ -877,72 +876,22 @@ class RaidenEventHandler(object):
         if event['_event_type'] == 'AssetAdded':
             self.event_assetadded(emitting_contract_address_bin, event)
 
-            # XXX since the current implementation of event-querying doesn't allow server-side
-            # filtering (based on the contract's address), it has to be included in the
-            # event that get's emitted to a client of raiden's API.
-            # Since the blockchain-event doesn't include the emitting-contract address,
-            # this is why we are not just passing the blockchain-event directly
-            callback = self.get_on_event_callback(event)
-            if callback:
-                registry_address = emitting_contract_address_bin
-                asset_address = event['asset_added']
-                channel_manager_address = event['channel_manager_address']
-
-                callback(registry_address, asset_address, channel_manager_address)
 
         elif event['_event_type'] == 'ChannelNew':
             self.event_channelnew(emitting_contract_address_bin, event)
 
-            callback = self.get_on_event_callback(event)
-            if callback:
-                channel_address = emitting_contract_address_bin
-                closing_address = event['closing_address']  # FIXME
-                block_number = event['block_number']
-                callback(channel_address, closing_address, block_number)
-
         elif event['_event_type'] == 'ChannelNewBalance':
             self.event_channelnewbalance(emitting_contract_address_bin, event)
 
-            callback = self.get_on_event_callback(event)
-            if callback:
-                channel_address = emitting_contract_address_bin
-                asset_address = event['asset_address']
-                participant_address = event['participant_address']
-                balance = event['balance']
-                block_number = event['block_number']
-
-                callback(channel_address, asset_address, participant_address, balance, block_number)
 
         elif event['_event_type'] == 'ChannelClosed':
             self.event_channelclosed(emitting_contract_address_bin, event)
 
-            callback = self.get_on_event_callback(event)
-            if callback:
-                channel_address = emitting_contract_address_bin
-                closing_address = event['closing_address']
-                block_number = event['block_number']
-
-                callback(channel_address, closing_address, block_number)
-
         elif event['_event_type'] == 'ChannelSettled':
             self.event_channelsettled(emitting_contract_address_bin, event)
 
-            callback = self.get_on_event_callback(event)
-            if callback:
-                channel_address = emitting_contract_address_bin
-                block_number = event['block_number']
-
-                callback(channel_address, block_number)
-
         elif event['_event_type'] == 'ChannelSecretRevealed':
             self.event_channelsecretrevealed(emitting_contract_address_bin, event)
-
-            callback = self.get_on_event_callback(event)
-            if callback:
-                channel_address = emitting_contract_address_bin
-                secret = event['secret']
-
-                callback(channel_address, secret)
 
         else:
             log.error('Unknown event %s', repr(event))
@@ -951,6 +900,18 @@ class RaidenEventHandler(object):
         manager_address_bin = address_decoder(event['channel_manager_address'])
         manager = self.raiden.chain.manager(manager_address_bin)
         self.raiden.register_channel_manager(manager)
+
+        # XXX since the current implementation of event-querying doesn't allow server-side
+        # filtering (based on the contract's address), it has to be included in the
+        # event that get's emitted to a client of raiden's API.
+        # Since the blockchain-event doesn't include the emitting-contract address,
+        # this is why we are not just passing the blockchain-event directly
+        callback = self.get_on_event_callback(event)
+        if callback:
+            asset_address = address_decoder(event['asset_added'])
+
+            callback(registry_address_bin, asset_address, manager_address_bin)
+
 
     def event_channelnew(self, manager_address_bin, event):  # pylint: disable=unused-argument
         # should not raise, filters are installed only for registered managers
@@ -984,6 +945,17 @@ class RaidenEventHandler(object):
                         channel_address=event['netting_channel'],
                         manager_address=pex(manager_address_bin),
                     )
+
+            callback = self.get_on_event_callback(event)
+            if callback:
+                callback(
+                    manager_address_bin,
+                    netting_channel_address_bin,
+                    participant1,
+                    participant2,
+                    event['settle_timeout']
+                )
+
         else:
             log.info('ignoring new channel, this node is not a participant.')
 
@@ -1009,9 +981,24 @@ class RaidenEventHandler(object):
         if channel.external_state.opened_block == 0:
             channel.external_state.set_opened(event['block_number'])
 
+        callback = self.get_on_event_callback(event)
+        if callback:
+            callback(
+                netting_contract_address_bin,
+                asset_address_bin,
+                participant_address_bin,
+                event['balance'],
+                event['block_number']
+            )
+
     def event_channelclosed(self, netting_contract_address_bin, event):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
         channel.external_state.set_closed(event['block_number'])
+
+        callback = self.get_on_event_callback(event)
+        if callback:
+            closing_address_bin = address_decoder(event['closing_address'])
+            callback(netting_contract_address_bin, closing_address_bin, event['block_number'])
 
     def event_channelsettled(self, netting_contract_address_bin, event):
         if log.isEnabledFor(logging.DEBUG):
@@ -1024,6 +1011,14 @@ class RaidenEventHandler(object):
         channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
         channel.external_state.set_settled(event['block_number'])
 
+        callback = self.get_on_event_callback(event)
+        if callback:
+            callback(netting_contract_address_bin, event['block_number'])
+
     def event_channelsecretrevealed(self, netting_contract_address_bin, event):
         # pylint: disable=unused-argument
         self.raiden.register_secret(event['secret'])
+
+        callback = self.get_on_event_callback(event)
+        if callback:
+            callback(netting_contract_address_bin, event['secret'])
