@@ -35,7 +35,10 @@ class ChannelsResource(BaseResource):
 
     )
 
-    @use_kwargs(get_schema)
+    # e.g. this endpoint will accept the args from all locations:
+    # as JSON object, via form data. or as query string
+    # change according to what is desired here
+    @use_kwargs(get_schema, locations=('json', 'form', 'query'))
     def get(self, **kwargs):
         """
         this translates to 'get all channels the node is connected with'
