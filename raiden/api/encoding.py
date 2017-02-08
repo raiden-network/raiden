@@ -1,15 +1,46 @@
-
-from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load
 from werkzeug.routing import BaseConverter
-from pyethapp.jsonrpc import address_encoder, address_decoder, data_encoder, data_decoder
+from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load, pre_dump
+from marshmallow_polyfield import PolyField
 from webargs import fields, validate
 
-from raiden.api.objects import Event, List, Object, Filter
+from pyethapp.jsonrpc import address_encoder, address_decoder, data_encoder, data_decoder
 
-API_VERSION = '0.9b'
+from raiden.utils import camel_to_snake_case, snake_to_camel_case
+from raiden.api.objects import (
+    Channel,
+    ChannelList,
+    EventsList,
+    AssetAdded,
+    ChannelClosed,
+    ChannelSettled,
+    ChannelNew,
+    ChannelNewBalance,
+    ChannelSecretRevealed,
+    TransferReceived
+)
+
+def serialize_schema_selector(list_element, list_obj):
+    schema = None
+    try:
+        schema = event_class_name_to_schema[list_element.__class__.__name__]()
+
+    except Exception as e:
+        raise e
+    return schema
+
+def deserialize_schema_selector(element_dict, base_dict):
+    event_type = element_dict['event_type']
+    event_class_name = snake_to_camel_case(event_type)
+    schema = None
+    try:
+        schema = event_class_name_to_schema[event_class_name]()
+
+    except Exception as e:
+        raise e
+    return schema
 
 
-# type converters for the flask routes
+# type converter for the flask route
 class HexAddressConverter(BaseConverter):
 
     def to_python(self, value):
@@ -40,134 +71,92 @@ class DataField(fields.Field):
         return data_decoder(value)
 
 
-class NamespaceOpts(SchemaOpts):
+class BaseOpts(SchemaOpts):
+    """
+    This allows for having the Object the Schema encodes to inside of the class Meta
+    """
     def __init__(self, meta):
         SchemaOpts.__init__(self, meta)
-        self.type = getattr(meta, 'type', None)
-        self.classifier = getattr(meta, 'classifier', None)
-        self.api_version = API_VERSION
+        self.decoding_class = getattr(meta, 'decoding_class', None)
 
 
-class EnvelopedSchema(Schema):
-    '''
-
-    e.g.
-        {
-            'type': 'Event',
-            'classifier': 'channel_settled',
-            'version': '0.9b',
-            'data': {
-                'netting_channel_address': '0x624c4a42215d63282b5e3f754d7b3d5e542c3842',
-                'block_number': '1'
-            },
-        }
-    '''
-    OPTIONS_CLASS = NamespaceOpts
-
-    @pre_load
-    def unwrap_envelope(self, data):
-        """
-        gets called before loading from serialized JSON-Input
-        unpacks the envelope
-        :param data:
-        :return:
-        """
-        return data['data']
-
-    @post_dump
-    def wrap_with_envelope(self, data):
-        type = self.opts.type.__name__
-        classifier = self.opts.classifier
-        api_version = self.opts.api_version
-        return {'type': type, 'classifier': classifier, 'version': api_version, 'data': data}
+class BaseSchema(Schema):
+    OPTIONS_CLASS = BaseOpts
 
     @post_load
     def make_object(self, data):
         # this will depend on the Schema used, which has it's object class in the class Meta attributes
-        baseclass = self.opts.type
-        classifier_str = self.opts.classifier
-        # baseclass = type_class_mapping[type_str]
-        klass = baseclass.get_subclass_from_classifier(classifier_str)
-        return klass(**data)
+        decoding_class = self.opts.decoding_class
+        return decoding_class(**data)
 
 
-class ListOpts(SchemaOpts):
-    """Same as the default class Meta options, but adds "name" and
-    "plural_name" options for enveloping.
-    """
-    def __init__(self, meta):
-        SchemaOpts.__init__(self, meta)
-        # use 'List' subclass as type if none is provided
-        self.type = getattr(meta, 'type')
-        self.classifier = getattr(meta, 'classifier')
-        self.api_version = API_VERSION
+class BaseListSchema(Schema):
+    OPTIONS_CLASS = BaseOpts
 
+    @pre_load
+    def wrap_data_envelope(self,data):
+        # because the EventListSchema and ChannelListSchema ojects need to have some field ('data'),
+        # the data has to be enveloped in the internal representation to comply with the Schema
+        data = dict(data=data)
+        return data
 
-class ListSchema(Schema):
-    OPTIONS_CLASS = ListOpts
-
-    @pre_load(pass_many=True)
-    def unwrap_envelope(self, data, many):
-        # assert many == True  # FIXME what if only one in list?
+    @post_dump
+    def unwrap_data_envelope(self, data):
         return data['data']
-
-    @post_dump(pass_many=True)
-    def wrap_with_envelope(self, data, many):
-        assert many == True  # FIXME what if only one in list?
-        type = self.opts.type.__name__
-        classifier = self.opts.classifier
-        api_version = self.opts.api_version
-        return {'type': type, 'classifier': classifier, 'version': api_version, 'data': data}
 
     @post_load
     def make_object(self, data):
-        baseclass = self.opts.type
-        classifier_str = self.opts.classifier
-        # get the class to instantiate from the baseclass attribute
-        klass = baseclass.get_subclass_from_classifier(classifier_str)
-        return klass(list((elem for elem in data))) # TODO checkme
+        decoding_class = self.opts.decoding_class
+        list_ = data['data']
+        return decoding_class(list_)
 
 
-class EventsListSchema(ListSchema):
+class EventSchema(BaseSchema):
+
+    @pre_load
+    def unwrap_envelope(self, data):
+        # exclude the event_type from the dict, since this is irrelevant internally
+        data = {key:data[key] for key in data if key !='event_type'}
+        return data
+
+    @post_dump
+    def wrap_with_envelope(self, data):
+        event_type = camel_to_snake_case(self.opts.decoding_class.__name__)
+        data['event_type'] = event_type
+        return data
+
+
+class EventsListSchema(BaseListSchema):
+    data = PolyField(serialization_schema_selector=serialize_schema_selector, deserialization_schema_selector=deserialize_schema_selector, many=True)
+
     class Meta:
         strict = True
-        type = List
-        classifier = 'events'
+        decoding_class = EventsList
 
 
-class ChannelSchema(EnvelopedSchema):
-    channel_address = AddressField(missing=None)
-    asset_address = AddressField(required=True, missing=None)
-    partner_address = AddressField(required=True, missing=None)
-    settle_timeout = fields.Integer(missing=None)
-    reveal_timeout = fields.Integer(missing=None)
-    amount = fields.Integer(missing=None)
-    status = fields.String(missing=None, validate=validate.OneOf(['closed', 'open', 'settled']))
-
-    class Meta:
-        strict= True
-        type = Object
-        classifier = 'channel'
-
-
-class ChannelListSchema(ListSchema):
-    class Meta:
-        strict= True
-        type = List
-        classifier = 'channel'
-
-
-class AddressFilterSchema(EnvelopedSchema):
-    address_type = fields.String(validate=validate.OneOf(['asset_address', 'partner_address']))
-    address = AddressField()
+class ChannelSchema(BaseSchema):
+    channel_address = AddressField()
+    asset_address = AddressField()
+    partner_address = AddressField()
+    settle_timeout = fields.Integer()
+    reveal_timeout = fields.Integer()
+    deposit = fields.Integer()
+    status = fields.String(validate=validate.OneOf(['closed', 'open', 'settled']))
 
     class Meta:
         strict= True
-        type = Filter
-        classifier = 'address_filter'
+        decoding_class = Channel
 
 
-class ChannelNewSchema(EnvelopedSchema):
+class ChannelListSchema(BaseListSchema):
+    data = fields.Nested(ChannelSchema, many=True)
+
+    class Meta:
+        strict= True
+        decoding_class = ChannelList
+
+
+class ChannelNewSchema(EventSchema):
     netting_channel_address = AddressField()
     asset_address = AddressField()
     partner_address = AddressField()
@@ -175,22 +164,18 @@ class ChannelNewSchema(EnvelopedSchema):
 
     class Meta:
         strict = True
-        type = Event
-        classifier = 'transfer_received'
+        decoding_class = ChannelNew
 
-
-class AssetAddedSchema(EnvelopedSchema):
+class AssetAddedSchema(EventSchema):
     registry_address = AddressField()
     asset_address = AddressField()
     channel_manager_address = AddressField()
 
     class Meta:
         strict = True
-        type = Event
-        classifier = 'asset_added'
+        decoding_class = AssetAdded
 
-
-class ChannelNewBalanceSchema(EnvelopedSchema):
+class ChannelNewBalanceSchema(EventSchema):
     netting_channel_address = AddressField()
     asset_address = AddressField()
     participant_address = AddressField()
@@ -199,43 +184,37 @@ class ChannelNewBalanceSchema(EnvelopedSchema):
 
     class Meta:
         strict = True
-        type = Event
-        classifier = 'channel_new_balance'
+        decoding_class = ChannelNewBalance
 
 
-class ChannelClosedSchema(EnvelopedSchema):
+class ChannelClosedSchema(EventSchema):
     netting_channel_address = AddressField()
     closing_address = AddressField()
     block_number = fields.Integer()
 
     class Meta:
         strict = True
-        type = Event
-        classifier = 'channel_closed'
+        decoding_class = ChannelClosed
 
 
-class ChannelSettledSchema(EnvelopedSchema):
+class ChannelSettledSchema(EventSchema):
     netting_channel_address = AddressField()
     block_number = fields.Integer()
 
     class Meta:
         strict = True
-        type = Event
-        classifier = 'channel_settled'
+        decoding_class = ChannelSettled
 
-
-class ChannelSecretRevealedSchema(EnvelopedSchema):
+class ChannelSecretRevealedSchema(EventSchema):
     netting_channel_address = AddressField()
     secret = DataField()
 
     class Meta:
         strict = True
-        type = Event
-        classifier = 'channel_secret_revealed'
+        decoding_class = ChannelSecretRevealed
 
 
-
-class TransferReceivedSchema(EnvelopedSchema):
+class TransferReceivedSchema(EventSchema):
     asset_address = AddressField()
     initiator_address = AddressField()
     recipient_address = AddressField()
@@ -245,34 +224,16 @@ class TransferReceivedSchema(EnvelopedSchema):
 
     class Meta:
         strict = True
-        type = Event
-        classifier = 'transfer_received'
+        decoding_class = TransferReceived
 
 
+event_class_name_to_schema = dict(
+    AssetAdded=AssetAddedSchema,
+    ChannelNew=ChannelNewSchema,
+    ChannelClosed=ChannelClosedSchema,
+    ChannelSettled=ChannelSettledSchema,
+    ChannelSecretRevealed=ChannelSecretRevealedSchema,
+    ChannelNewBalance=ChannelNewBalanceSchema,
+    TransferReceived=TransferReceivedSchema,
+)
 
-if __name__ == '__main__':
-
-    from raiden.api.objects import ChannelSettled
-    from marshmallow import pprint
-
-    # test: this works!!
-
-    obj = ChannelSettled(address_decoder('0x624c4a42215d63282b5e3f754d7b3d5e542c3842'), 100)
-    obj2 = ChannelSettled(address_decoder('0x624c4a42215d63282b5e3f754d7b3d5e542c3842'), 1111)
-
-    schema = ChannelSettledSchema()
-    ser = schema.dump(obj)
-    ser = ser.data
-    deser = schema.load(ser)
-
-
-    # test: TODO fixme
-
-    schema = EventsListSchema()
-    ser_iterable = schema.dump([obj, obj2], many=True)
-    ser_iterable = ser_iterable.data
-    deser_iterable = schema.load(ser_iterable)
-    pprint(deser_iterable)
-
-
-    assert obj == deser # FIXME equality!

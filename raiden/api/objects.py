@@ -1,103 +1,49 @@
-from raiden.utils import snake_to_camel_case
 
-
-def subclass_from_classifier(cls, classifier):
-    # classifiers are specified as the snake_case of the CamelCased class-name:
-    search_name = snake_to_camel_case(classifier)
-    found_class = None
-    for klass in cls.__subclasses__():
-        name = klass.__name__
-        if name == search_name:
-            found_class = klass
-            break
-
-    return found_class
-
-
-# BASE:
-# (mostly for namespacing in the Encoding)
-
-class List(list):
+class FlatList(list):
     """
-    __init__(**events) will initialise the list!
+    This class inherits from list and has the same interface as a list-type.
+    However, there is a 'data'-attribute introduced, that is required for the encoding of the list!
+    The fields of the encoding-Schema must match the fields of the Object to be encoded!
     """
 
-    @classmethod
-    def get_subclass_from_classifier(cls, classifier):
-        return subclass_from_classifier(cls, classifier)
+    @property
+    def data(self):
+        return list(self)
+
+    def __repr__(self):
+        return '<{}: {}>'.format(self.__class__.__name__, list(self))
 
 
-class Event(object):
-    """
-    Namespacing for the 'type'and 'classifier' (see raiden.api.encoding.NameSpaceSchema)
-    """
-
-    @classmethod
-    def get_subclass_from_classifier(cls, classifier):
-        return subclass_from_classifier(cls, classifier)
+class ChannelList(FlatList):
+    pass
 
 
-class Object(object):
-
-    @classmethod
-    def get_subclass_from_classifier(cls, classifier):
-        return subclass_from_classifier(cls, classifier)
-
-
-class Filter(object):
-    @classmethod
-    def get_subclass_from_classifier(cls, classifier):
-        return subclass_from_classifier(cls, classifier)
-
-
-# OTHER
-
-
-class Result(object):
-    def __init__(self, successful, data):
-        self.successful = successful
-        self.data = data # TODO arbitrary nested data, again enveloped!
-
-
-class AddressFilter(object):
-
-    def __init__(self, address_type, address):
-        self.address_type = address_type
-        self.address = address
+class EventsList(FlatList):
+    pass
 
 
 class Channel(object):
-    def __init__(self, channel_address, asset_address, partner_address, settle_timeout, reveal_timeout, amount, status):
+    def __init__(self, channel_address, asset_address, partner_address, settle_timeout, reveal_timeout, deposit, status):
         self.channel_address = channel_address
         self.asset_address = asset_address
         self.partner_address = partner_address
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
-        self.amount = amount
+        self.deposit = deposit
         self.status = status
 
 
-class ChannelList(list):
-    pass
-
-
-# EVENTS
-
-
-class Events(List):
-    pass
-
-
-class TransferReceived(Event):
-    def __init__(self, asset_address, initiator_address, recipient_address, transferred_amount, identifier, hashlock=None):
+class TransferReceived(object):
+    def __init__(self, asset_address, recipient_address, initiator_address, transferred_amount, hashlock, identifier):
         self.asset_address = asset_address,
-        self.initiator_address = initiator_address,
         self.recipient_address = recipient_address,
+        self.initiator_address = initiator_address,
         self.transferred_amount = transferred_amount,
+        self.hashlock = hashlock
         self.identifier = identifier
 
 
-class AssetAdded(Event):
+class AssetAdded(object):
 
     def __init__(self, registry_address, asset_address, channel_manager_address):
         self.registry_address = registry_address
@@ -105,7 +51,7 @@ class AssetAdded(Event):
         self.channel_manager_address = channel_manager_address
 
 
-class ChannelNew(Event):
+class ChannelNew(object):
 
     def __init__(self, netting_channel_address, asset_address, partner_address, block_number):
         self.netting_channel_address = netting_channel_address
@@ -114,7 +60,7 @@ class ChannelNew(Event):
         self.block_number = block_number
 
 
-class ChannelNewBalance(Event):
+class ChannelNewBalance(object):
 
     def __init__(self, netting_channel_address, asset_address, participant_address, new_balance, block_number):
         self.netting_channel_address = netting_channel_address
@@ -124,7 +70,7 @@ class ChannelNewBalance(Event):
         self.block_number = block_number
 
 
-class ChannelClosed(Event):
+class ChannelClosed(object):
 
     def __init__(self, netting_channel_address, closing_address, block_number):
         self.netting_channel_address = netting_channel_address
@@ -132,27 +78,15 @@ class ChannelClosed(Event):
         self.block_number = block_number
 
 
-
-class ChannelSettled(Event):
+class ChannelSettled(object):
 
     def __init__(self, netting_channel_address, block_number):
         self.netting_channel_address = netting_channel_address
         self.block_number = block_number
 
 
-
-class ChannelSecretRevealed(Event):
+class ChannelSecretRevealed(object):
 
    def __init__(self, netting_channel_address, secret):
         self.netting_channel_address = netting_channel_address
         self.secret = secret
-
-
-
-# HACK just to have easy access to the base Classes from outside:
-type_class_mapping = {
-    'Event': Event,
-    'List': List,
-    'Object': Object,
-    'Filter': Filter
-}
