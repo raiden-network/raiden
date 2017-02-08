@@ -108,7 +108,8 @@ class TransferManager(object):
                             transfer.recipient,
                             transfer.initiator,
                             transfer.transferred_amount,
-                            hashlock
+                            hashlock,
+                            transfer.identifier
                         )
                     )
             del self.endtask_transfer_mapping[task]
