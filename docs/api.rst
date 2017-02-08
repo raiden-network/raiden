@@ -319,36 +319,70 @@ Example Response
 Querying Events
 ================
 
-Events are kept by the node in a FIFO queue. Once an event endpoint is queried it empties and returns the entire queue.
+Events are kept by the node. Once an event endpoint is queried the relevant events
+from either the beginning of time or the given block are returned.
 
 Events are queried by two different endpoints depending on whether they are related
 to a specific channel or not.
 
-Querying global events
------------------------
+All events can be filtered down by providing the query string argument `from_block`
+to signify the block from which you would like the events to be returned.
+
+Querying general network events
+---------------------------------
 
 
 You can query for non-channel specific events by making a `GET` request to the
-following endpoint.
+endpoint of the asset registry contract. `GET /api/events/network/<asset_registry_address>`
 
-*Example Request*
+Example Request
+^^^^^^^^^^^^^^^
 
-`GET /api/events/global/`
+`GET /api/events/network/0x4bb96091ee9d802ed039c4d1a5f6216f90f81b01`
 
-*Example Response*
+Example Response
+^^^^^^^^^^^^^^^^
+::
 
-```
-[
-    {
-        'event_type': 'AssetAdded',
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'm
-        'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
-    }, {
-        'event_type': 'AddressRegistered',
-        'eth_address': '0x91337a300e0361bddb2e377dd4e88ccb7796663d',
-        'socket': '127.0.0.1:40001'
-    }, {
+    [
+        {
+            'event_type': 'AssetAdded',
+            'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+            'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
+        }, {
+            'event_type': 'AssetAdded',
+            'asset_address': '0x91337a300e0361bddb2e377dd4e88ccb7796663d'
+            'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
+        }, {
+            ...
+        }
         ...
-    }
-]
-```
+    ]
+
+Querying channel events
+------------------------
+
+You can query for events tied to a specific channel by making a `GET` request to the event endpoint of its address. `GET /api/events/channels/<channel_registry_address>`
+
+Example Request
+^^^^^^^^^^^^^^^
+
+`GET /api/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337`
+
+Example Response
+^^^^^^^^^^^^^^^^
+::
+
+    [
+        {
+            'event_type': 'ChannelNewBalance',
+            'participant': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+            'balance': 150000,
+            'block_number': 54388
+        }, {
+            'event_type': 'TransferUpdated',
+            'asset_address': '0x91337a300e0361bddb2e377dd4e88ccb7796663d'
+            'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
+        },
+        ...
+    ]
