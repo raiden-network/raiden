@@ -74,69 +74,6 @@ class InsufficientFunds(RaidenError):
     pass
 
 
-class EventManager(object):
-
-    blockchain_events = [
-        ChannelNew,
-        ChannelClosed,
-        ChannelSettled,
-        ChannelSecretRevealed,
-        ChannelNewBalance
-    ]
-
-    raiden_events = [
-        TransferReceived
-    ]
-
-
-    def __init__(self, raiden):
-        self.raiden = raiden
-
-        # TODO needs maxsize, but should discard old events when full
-        self.event_queue = Queue()
-
-    def get_method_for_event(self, klass):
-        klass_name = klass.__name__
-        func_name = 'on_' + camel_to_snake_case(klass_name)
-        func = getattr(self, func_name)
-        return func
-
-    def register_callbacks(self):
-        # this will also report transfers when being a mediator!
-        self.raiden.register_on_withdrawable_callbacks(
-            self.get_method_for_event(TransferReceived)
-        )
-
-        # register all blockchain events
-        for klass in self.blockchain_events:
-            func = self.get_method_for_event(klass)
-            self.raiden.event_handler.register_event_callback(klass.__name__, func)
-
-    def on_channel_closed(self, *args, **kwargs):
-        event = ChannelClosed(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_channel_new(self, *args, **kwargs):
-        event = ChannelNew(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_channel_new_balance(self, *args, **kwargs):
-        event = ChannelNewBalance(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_channel_settled(self, *args, **kwargs):
-        event = ChannelSettled(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_channel_secret_revealed(self, *args, **kwargs):
-        event = ChannelSecretRevealed(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_transfer_received(self, *args, **kwargs):
-        event = TransferReceived(*args, **kwargs)
-        self.event_queue.put(event)
-
-
 class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     """ A Raiden node. """
 
@@ -190,21 +127,20 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.on_message = message_handler.on_message
         self.on_event = event_handler.on_event
 
-        self.event_manager = EventManager(self)  # FIXME naming
+        self.api_event_manager = APIEventManager(self)
 
         # Adding events to Queue should be stopped if connection closed by client,
         # and a max-size of the Queue should be introduced!
         # At the moment, as soon as the callbacks are registered, the Queue will fill indefinately,
         # if no client polls the Events from the Queue
-        self.event_manager.register_callbacks()
+        self.api_event_manager.register_callbacks()
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
     @property
     def event_queue(self):
-        return self.event_manager.event_queue
-
+        return self.api_event_manager.event_queue
 
     def get_manager_by_asset_address(self, asset_address_bin):
         """ Return the manager for the given `asset_address_bin`.  """
@@ -349,7 +285,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     def register_on_withdrawable_callbacks(self, callback_s):
         # wrap in list if only one callback
         try:
-            iter(callback_s)
+            callbacks = iter(callback_s)
         except TypeError:
             callbacks = [callback_s]
         all_asset_managers = self.managers_by_asset_address.values()
@@ -459,8 +395,6 @@ class RaidenAPI(object):
 
     def get_new_events(self):
         queue = self.raiden.event_queue
-
-
 
         while queue.empty():
             gevent.sleep(0.5)
@@ -638,7 +572,6 @@ class RaidenAPI(object):
             callback=None):
         # pylint: disable=too-many-arguments
 
-        #TODO identifier is obsolete (CHECKME)
 
         if not isinstance(amount, (int, long)):
             raise InvalidAmount('Amount not a number')
@@ -727,6 +660,75 @@ class RaidenAPI(object):
         return netting_channel
 
 
+class APIEventManager(object):
+    """
+    The EventManager holds the Queue where the Events are put in order to pass them to a client
+    via the API.
+
+    It houses the callbacks that are used to create the Objects of the events,
+    and it registers those callbacks in the appropriate places in the code.
+
+    The current approach is very simplistic, since it puts every event that the raiden-node receives (blockchain_events)
+    or creates (raiden_events) in a simple Queue, which doesn't allow filtering of Events.
+    """
+
+    blockchain_events = [
+        ChannelNew,
+        ChannelClosed,
+        ChannelSettled,
+        ChannelSecretRevealed,
+        ChannelNewBalance
+    ]
+
+    raiden_events = [
+        TransferReceived
+    ]
+
+    def __init__(self, raiden):
+        self.raiden = raiden
+        self.event_queue = Queue()
+
+    def get_method_for_event(self, klass):
+        klass_name = klass.__class__.__name__
+        func_name = 'on_' + camel_to_snake_case(klass_name)
+        func = getattr(self, func_name)
+        return func
+
+    def register_callbacks(self):
+        # register the TransferReceived-callback with the convenience-method in RaidenService:
+        # this will also report transfers when being a mediator!
+        self.raiden.register_on_withdrawable_callbacks(
+            self.get_method_for_event(TransferReceived)
+        )
+
+        # register all blockchain events in the event-handler
+        for klass in self.blockchain_events:
+            func = self.get_method_for_event(klass)
+            self.raiden.event_handler.register_event_callback(klass.__class__.__name__, func)
+
+    def on_channel_closed(self, *args, **kwargs):
+        event = ChannelClosed(*args, **kwargs)
+        self.event_queue.put(event)
+
+    def on_channel_new(self, *args, **kwargs):
+        event = ChannelNew(*args, **kwargs)
+        self.event_queue.put(event)
+
+    def on_channel_new_balance(self, *args, **kwargs):
+        event = ChannelNewBalance(*args, **kwargs)
+        self.event_queue.put(event)
+
+    def on_channel_settled(self, *args, **kwargs):
+        event = ChannelSettled(*args, **kwargs)
+        self.event_queue.put(event)
+
+    def on_channel_secret_revealed(self, *args, **kwargs):
+        event = ChannelSecretRevealed(*args, **kwargs)
+        self.event_queue.put(event)
+
+    def on_transfer_received(self, *args, **kwargs):
+        event = TransferReceived(*args, **kwargs)
+        self.event_queue.put(event)
 
 class RaidenMessageHandler(object):
     """ Class responsible to handle the protocol messages.
@@ -833,7 +835,7 @@ class RaidenEventHandler(object):
         instead.
     """
 
-    event_types = [
+    blockchain_event_types = [
         'AssetAdded',
         'ChannelNew',
         'ChannelNewBalance',
@@ -844,19 +846,18 @@ class RaidenEventHandler(object):
 
     def __init__(self, raiden):
         self.raiden = raiden
-        self.event_callback = dict()
+        self.on_event_callback = dict()
 
     def register_event_callback(self, event_type, callback):
-        # TODO support multiple callbacks per event_type
-        if event_type in self.event_types:
-            self.event_callback[event_type] = callback
+        if event_type in self.blockchain_event_types:
+            self.on_event_callback[event_type] = callback
         else:
-            raise Exception()  # TODO
+            raise Exception()
 
-    def get_event_callback(self, event):
+    def get_on_event_callback(self, event):
         event_type = event['_event_type']
         try:
-            callback_func = self.event_callback[event_type]
+            callback_func = self.on_event_callback[event_type]
         except KeyError:
             callback_func = None
         return callback_func
@@ -876,10 +877,14 @@ class RaidenEventHandler(object):
         if event['_event_type'] == 'AssetAdded':
             self.event_assetadded(emitting_contract_address_bin, event)
 
-            callback = self.get_event_callback(event)
+            # XXX since the current implementation of event-querying doesn't allow server-side
+            # filtering (based on the contract's address), it has to be included in the
+            # event that get's emitted to a client of raiden's API.
+            # Since the blockchain-event doesn't include the emitting-contract address,
+            # this is why we are not just passing the blockchain-event directly
+            callback = self.get_on_event_callback(event)
             if callback:
                 registry_address = emitting_contract_address_bin
-                # TODO
                 asset_address = event['asset_added']
                 channel_manager_address = event['channel_manager_address']
 
@@ -888,20 +893,19 @@ class RaidenEventHandler(object):
         elif event['_event_type'] == 'ChannelNew':
             self.event_channelnew(emitting_contract_address_bin, event)
 
-            callback = self.get_event_callback(event)
+            callback = self.get_on_event_callback(event)
             if callback:
                 channel_address = emitting_contract_address_bin
-                closing_address = event['closing_address']
+                closing_address = event['closing_address']  # FIXME
                 block_number = event['block_number']
                 callback(channel_address, closing_address, block_number)
 
         elif event['_event_type'] == 'ChannelNewBalance':
             self.event_channelnewbalance(emitting_contract_address_bin, event)
 
-            callback = self.get_event_callback(event)
+            callback = self.get_on_event_callback(event)
             if callback:
                 channel_address = emitting_contract_address_bin
-                # TODO:
                 asset_address = event['asset_address']
                 participant_address = event['participant_address']
                 balance = event['balance']
@@ -912,7 +916,7 @@ class RaidenEventHandler(object):
         elif event['_event_type'] == 'ChannelClosed':
             self.event_channelclosed(emitting_contract_address_bin, event)
 
-            callback = self.get_event_callback(event)
+            callback = self.get_on_event_callback(event)
             if callback:
                 channel_address = emitting_contract_address_bin
                 closing_address = event['closing_address']
@@ -923,7 +927,7 @@ class RaidenEventHandler(object):
         elif event['_event_type'] == 'ChannelSettled':
             self.event_channelsettled(emitting_contract_address_bin, event)
 
-            callback = self.get_event_callback(event)
+            callback = self.get_on_event_callback(event)
             if callback:
                 channel_address = emitting_contract_address_bin
                 block_number = event['block_number']
@@ -933,10 +937,9 @@ class RaidenEventHandler(object):
         elif event['_event_type'] == 'ChannelSecretRevealed':
             self.event_channelsecretrevealed(emitting_contract_address_bin, event)
 
-            callback = self.get_event_callback(event)
+            callback = self.get_on_event_callback(event)
             if callback:
                 channel_address = emitting_contract_address_bin
-                # TODO
                 secret = event['secret']
 
                 callback(channel_address, secret)
