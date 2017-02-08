@@ -3,7 +3,7 @@ from Queue import Empty as QueueEmpty
 from time import sleep
 from collections import defaultdict
 
-from raiden.api.objects import ChannelList, Result, AddressFilter, Channel, ChannelNew
+from raiden.api.objects import ChannelList, Channel, ChannelNew
 from raiden.api.resources import EventsResoure, ChannelsResource, ChannelsResourceByAsset
 from raiden.api.rest import RestfulAPI, APIWrapper
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
@@ -33,8 +33,14 @@ class MockAPI(object):
     channels_by_asset = defaultdict(list) # 1:N
     channels_by_partner = defaultdict(list) # 1:N
     event_queue = Queue()
-    # will get raised +1 after every public method call FIXME:
     block_number = 0
+
+    # To emulate mining, the block_number will increase after every public method call with a 50% success rate
+    def _mine_new_block_try(self):
+        import random
+        success = random.choice([True, False])
+        if success == True:
+            self.block_number += 1
 
     def _get_channel_by_asset_and_partner(self, asset, partner):
         list_ = self.channels_by_asset[asset]
@@ -57,6 +63,10 @@ class MockAPI(object):
         self.event_queue.put(event)
 
     def _consume_event_queue(self):
+        """
+        The simplistic event queue will get popped empty.
+        :return: returns a list of all objects currently in the Queue
+        """
 
         event_list = []
 
@@ -66,15 +76,13 @@ class MockAPI(object):
                 event_list.append(event)
             except QueueEmpty():
                 break
-            else:
-                sleep(0.01)  # TODO CHECKME
 
         return event_list
 
     def open(self, asset_address, partner_address, settle_timeout,reveal_timeout):
         existing_channel = self._get_channel_by_asset_and_partner(asset_address, partner_address)
         if existing_channel:
-            result = Result(successful=False, data=existing_channel)
+            channel = existing_channel
         else:
             netting_channel_address = make_address() # the new channel address
             channel = Channel(
@@ -83,7 +91,7 @@ class MockAPI(object):
                 partner_address,
                 settle_timeout or DEFAULT_SETTLE_TIMEOUT,
                 reveal_timeout or DEFAULT_REVEAL_TIMEOUT,
-                amount=0,
+                deposit=0,
                 status='open'
             )
 
@@ -91,20 +99,18 @@ class MockAPI(object):
 
             event = ChannelNew(netting_channel_address, asset_address, partner_address, self.block_number)
 
-            result = Result(successful=True, data=channel)
-
             self._queue_event(event)
 
-        self.block_number += 1
-        return result
+        self._mine_new_block_try()
+        return channel
 
     def close(self, asset_address, partner_address):
         existing_channel = self._get_channel_by_asset_and_partner(asset_address, partner_address)
+        # modify field in place
         existing_channel.status = 'closed'
 
-        result = Result(successful=True, data=existing_channel)
-        self.block_number += 1
-        return result
+        self._mine_new_block_try()
+        return existing_channel
 
     def deposit(self, asset_address, partner_address, amount):
         channel = None
@@ -118,13 +124,10 @@ class MockAPI(object):
             else:
                 channel = existing_channel
 
-        result = Result(successful=successful, data=channel)
-
-        self.block_number += 1
-        return result
+        self._mine_new_block_try()
+        return channel
 
     def get_channel_list(self, asset_address=None, partner_address=None):
-        # TODO allow multiple filters like two asset addresses
         channels = list()
 
         if asset_address is not None:
@@ -136,20 +139,13 @@ class MockAPI(object):
         if asset_address is None and partner_address is None:
             channels = self.all_channel
 
-        filter = list()
-        if asset_address is not None:
-            filter.append(AddressFilter('asset_address', asset_address))
-        if partner_address is not None:
-            filter.append(AddressFilter('partner_address', partner_address))
-        channel_list = ChannelList(channels, filter)
-
-        self.block_number += 1
-        return channel_list
+        self._mine_new_block_try()
+        return channels
 
     def get_channel(self, channel_address):
         channel = self.channel_by_address[channel_address]
 
-        self.block_number += 1
+        self._mine_new_block_try()
         return channel
 
     def get_new_events(self):
@@ -158,8 +154,18 @@ class MockAPI(object):
 
         event_list = self._consume_event_queue()
 
-        self.block_number += 1
+        self._mine_new_block_try()
         return event_list
+
+    def transfer(self):
+        raise NotImplementedError()
+
+    def exchange(self):
+        raise NotImplementedError()
+
+    def expect_exchange(self):
+        raise NotImplementedError()
+
 
 if __name__ == '__main__':
 
