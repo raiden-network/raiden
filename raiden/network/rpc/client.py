@@ -14,8 +14,7 @@ from pyethapp.jsonrpc import (
     default_gasprice,
 )
 import requests
-#FIXME will get implemented in pyethapp's PR #179:
-from pyethapp.rpc_client import topic_encoder, JSONRPCClient, JSONRPCPollTimeoutException
+from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 
 from raiden import messages
 from raiden.raiden_service import RaidenError
@@ -58,6 +57,11 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 #   - poll for the transaction hash
 #   - check if the proper events were emited
 #   - use `call` and `transact` to interact with pyethapp.rpc_client proxies
+
+
+class JSONRPCPollTimeoutException(Exception):
+    # FIXME import this from pyethapp.rpc_client once it is implemented
+    pass
 
 
 class BlockchainPollTimeout(RaidenError):
