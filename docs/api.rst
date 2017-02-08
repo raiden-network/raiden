@@ -1,5 +1,5 @@
 Raiden's API Documentation
-=========================================
+##########################
 
 
 Contents:
@@ -10,29 +10,29 @@ Contents:
 
 
 Introduction
-=============
+*************
 Raiden has a Restful API with URL endpoints corresponding to actions that the user can perform with his channels. The endpoints accept and return JSON encoded objects.
 
 
 
 JSON Object Encoding
-====================
+********************
 
 The ojects that are sent to and received from the API are JSON-encoded. Following are the common objects used in the API.
 
 Channel Object
----------------
+===============
+::
 
-```
-{
-    'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-    'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-    'balance': 35000000
-    'state': 'open'
-}
+    {
+       'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+       'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+       'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+       'balance': 35000000
+       'state': 'open'
+    }
 
-```
+
 
 A channel object consists of a
 
@@ -56,7 +56,7 @@ A channel object consists of a
 
 
 Event Object
----------------
+==============
 
 Channels events are encoded as json objects with the event arguments as attributes
 of the dictionary, with one difference. The `event_type` is also added for all events to easily distinguish between events.
@@ -67,108 +67,117 @@ of the dictionary, with one difference. The `event_type` is also added for all e
 
 
 Endpoints
-=============
+***********
 
 Following are the available API endpoints with which you can interact with Raiden.
 
 Querying Information About Channels and Assets
------------------------------------------------
+===============================================
 
 Querying specific channel
-*************************
+--------------------------
 
 There are multiple ways to query information about your channels. The most direct, if you know the channel address, is to query the master resource endpoint with a `GET` request.
 
-*Example Request*
+Example Request
+^^^^^^^^^^^^^^^
 
 `GET /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/`
 
-*Example Response*
+Example Response
+^^^^^^^^^^^^^^^^
+::
 
-```
-{
-    'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-    'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-    'balance': 35000000
-    'state': 'open'
-}
-```
+    {
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+        'balance': 35000000
+        'state': 'open'
+    }
+
 
 The other ways to query information about the channels is to navigate the document
 hierarchy of the API and find the channel address which will lead you to the master
 resource as shown above.
 
 Querying All Channels
-*************************
+--------------------------
 
 By making a `GET` request to `/api/channels` you can get a list of all non-settled channels.
 
 
-*Example Request*
+Example Request
+^^^^^^^^^^^^^^^
 
 `GET /api/channels/`
 
-*Example Response*
+Example Response
+^^^^^^^^^^^^^^^^
+::
 
-```
-{
-    [{
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-        'balance': 35000000
-        'state': 'open'
-    }, {
-        ...
-    }]
-}
-```
+    {
+        [{
+            'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+            'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+            'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+            'balance': 35000000
+            'state': 'open'
+        }, {
+            ...
+        }]
+    }
+
 
 Querying all traded Assets
-***************************
+--------------------------
 
 By making a `GET` request to `/api/asssets` you can get a list of addresses of all
 assets we have channels open for.
 
 
-*Example Request*
+Example Request
+^^^^^^^^^^^^^^^
 
 `GET /api/assets/`
 
-*Example Response*
+Example Response
+^^^^^^^^^^^^^^^^
+::
 
-```
-{
-    ['0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-     '0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6',
-     ...
-    ]
-}
-```
+    {
+        ['0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+         '0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6',
+         ...
+        ]
+    }
+
 
 Querying All Partners for an Asset
-***********************************
+-----------------------------------
 
 By making a `GET` request to `/api/assets/<asset_address>/partners` you can get a list of all partners
 you have non-settled channels with.
 
-*Example Request*
+Example Request
+^^^^^^^^^^^^^^^
 
 `GET /api/assets/0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6/partners/`
 
-*Example Response*
+Example Response
+^^^^^^^^^^^^^^^^
+::
+   
 
-```
-{
-    [{
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-        'channel': '/api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-    }, {
-        ...
-    }]
-}
-```
+    {
+        [{
+            'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+            'channel': '/api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+        }, {
+            ...
+        }]
+    }
+
 
 Notice that you also get a link to the channel resource for the channel between you
 and each partner for the asset.
@@ -176,10 +185,10 @@ and each partner for the asset.
 
 
 Channel Management
--------------------
+==================
 
 Open Channel
-************
+------------
 
 You can create a channel by posting a channel object to the following endpoint.
 
@@ -188,93 +197,105 @@ You can create a channel by posting a channel object to the following endpoint.
 Since it is a new channel, the channel object's `channel_address` and `status`
 field will be ignored and can be omitted.
 
-*Example Request*
+Example Request
+^^^^^^^^^^^^^^^
 
-```
-{
-    'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-    'balance': 35000000
-}
+`PUT /api/channels` with payload:::
 
-```
+
+    {
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+        'balance': 35000000
+    }
+
+
 
 The `balance` field will signify the initial deposit you wish to make to the channel.
 
 The request to the endpoint should later return the fully created channel object
 from which we can find the address of the channel.
 
-*Example Response*
+Example Response
+^^^^^^^^^^^^^^^^
+::
 
-```
-{
-    'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-    'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-    'balance': 35000000
-    'state': 'open'
-}
-```
+    {
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+        'balance': 35000000
+        'state': 'open'
+    }
+
 
 Close Channel
-*************
+--------------
 
 You can close an existing channel by making a `PATCH` request to its endpoint and altering the state to closed.
 
 `PATCH /api/channels/<channel_address>/`
 
-*Example Request*
+Example Request
+^^^^^^^^^^^^^^^
 
 `PATCH /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/`
 
 with payload
 `{'state':'closed'}`
 
-*Example Response*
+Example Response
+^^^^^^^^^^^^^^^^
+::
 
-```
-{
-    'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-    'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-    'balance': 35000000
-    'state': 'closed'
-}
-```
+    {
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+        'balance': 35000000
+        'state': 'closed'
+    }
+
 
 Settle Channel
-***************
+---------------
 
 You can settle an existing channel by making a `PATCH` request to its endpoint and altering the state to settled.
 
 `PATCH /api/channels/<channel_address>/`
 
-*Example Request*
+Example Request
+^^^^^^^^^^^^^^^
 
 `PATCH /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/`
 
-*Example Response*
+with payload
+`{'state':'settled'}`
 
-```
-{
-    'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-    'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-    'balance': 0
-    'state': 'settled'
-}
-```
+Example Response
+^^^^^^^^^^^^^^^^
+::
+
+    {
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+        'balance': 0
+        'state': 'settled'
+    }
+
 
 
 Deposit to a Channel
-*********************
+---------------------
 
 You can deposit more of a particular token to a channel by updating the `balance`
 field of the channel in the corresponding endpoint with a `PATCH` http request.
 
 `PATCH /api/channels/<channel_address>/`
 
-*Example Request*
+Example Request
+^^^^^^^^^^^^^^^
 
 `PATCH /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/`
 
@@ -282,20 +303,21 @@ with payload
 
 `{'balance': 100}`
 
-*Example Response*
+Example Response
+^^^^^^^^^^^^^^^^
+::
 
-```
-{
-    'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-    'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-    'balance': 100
-    'state': 'open'
-}
-```
+    {
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+        'balance': 100
+        'state': 'open'
+    }
+
 
 Querying Events
-----------------
+================
 
 Events are kept by the node in a FIFO queue. Once an event endpoint is queried it empties and returns the entire queue.
 
@@ -303,7 +325,7 @@ Events are queried by two different endpoints depending on whether they are rela
 to a specific channel or not.
 
 Querying global events
-***********************
+-----------------------
 
 
 You can query for non-channel specific events by making a `GET` request to the
