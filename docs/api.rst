@@ -25,11 +25,12 @@ Channel Object
 ::
 
     {
-       'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-       'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-       'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-       'balance': 35000000
-       'state': 'open'
+       'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+       'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+       'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+       'balance': 35000000,
+       'state': 'open',
+       'settle_timeout': 100
     }
 
 
@@ -89,11 +90,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-        'balance': 35000000
-        'state': 'open'
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'balance': 35000000,
+        'state': 'open',
+        'settle_timeout': 100
     }
 
 
@@ -118,11 +120,12 @@ Example Response
 
     {
         [{
-            'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-            'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-            'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-            'balance': 35000000
-            'state': 'open'
+            'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+            'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+            'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+            'balance': 35000000,
+            'state': 'open',
+            'settle_timeout': 100
         }, {
             ...
         }]
@@ -171,7 +174,7 @@ Example Response
 
     {
         [{
-            'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+            'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',,
             'channel': '/api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226'
         }, {
             ...
@@ -204,9 +207,10 @@ Example Request
 
 
     {
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-        'balance': 35000000
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'balance': 35000000,
+        'settle_timeout': 100
     }
 
 
@@ -221,11 +225,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-        'balance': 35000000
-        'state': 'open'
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'balance': 35000000,
+        'state': 'open',
+        'settle_timeout': 100
     }
 
 
@@ -249,11 +254,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-        'balance': 35000000
-        'state': 'closed'
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'balance': 35000000,
+        'state': 'closed',
+        'settle_timeout': 100
     }
 
 
@@ -277,11 +283,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-        'balance': 0
-        'state': 'settled'
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'balance': 0,
+        'state': 'settled',
+        'settle_timeout': 100
     }
 
 
@@ -308,11 +315,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
-        'balance': 100
-        'state': 'open'
+        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'balance': 100,
+        'state': 'open',
+        'settle_timeout': 100
     }
 
 
