@@ -4,7 +4,7 @@ import pytest
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.utils import make_address, make_privkey_address
 
-from raiden.api.encoding import ChannelListSchema
+from raiden.api.encoding import ChannelListSchema, ChannelSchema
 from raiden.api.objects import ChannelList
 from raiden.api.objects import Channel as ChannelContainer
 
@@ -36,9 +36,11 @@ def make_external_state():
 
     return external_state
 
+
 @pytest.fixture()
 def num_channels():
     return 10
+
 
 @pytest.fixture()
 def channel_list_mock(num_channels):
@@ -68,6 +70,15 @@ def channel_list_mock(num_channels):
 
     return channel_list
 
+
+def test_channel(channel_list_mock):
+    channel =  channel_list_mock[0]
+    schema = ChannelSchema()
+    ser_channel = schema.dump(channel).data
+    deser_channel = schema.load(ser_channel).data
+    assert_channel_deserialization(channel, deser_channel)
+
+
 def test_channel_list(channel_list_mock):
     assert isinstance(channel_list_mock, list)
     # has to be wrapped in a ChannelList, which uses same interface as list
@@ -75,19 +86,24 @@ def test_channel_list(channel_list_mock):
     schema = ChannelListSchema()
     ser_iterable = schema.dump(channel_list).data
 
+    deser_iterable = schema.load(ser_iterable).data
+    assert isinstance(deser_iterable, ChannelList)
+
+    for channel, deserialized_channel in zip(channel_list, deser_iterable):
+        assert_channel_deserialization(channel, deserialized_channel)
+
+
+def assert_channel_deserialization(channel_object, deserialized_channel):
     # we cannot construct an internal Channel from serialized data directly, because not all information is encoded!
     # so we use a data container that stores all relevant fields
-    #
-    deser_iterable = schema.load(ser_iterable).data
+    assert isinstance(channel_object, Channel)
+    assert isinstance(deserialized_channel, ChannelContainer)
+    assert channel_object.__class__ != deserialized_channel.__class__
+    assert channel_object.status == deserialized_channel.status
+    assert channel_object.partner_address == deserialized_channel.partner_address
+    assert channel_object.channel_address == deserialized_channel.channel_address
+    assert channel_object.deposit == deserialized_channel.deposit
+    assert channel_object.reveal_timeout == deserialized_channel.reveal_timeout
+    assert channel_object.settle_timeout == deserialized_channel.settle_timeout
 
-    for channel, channel_container in zip(channel_list, deser_iterable):
-        assert isinstance(channel, Channel)
-        assert isinstance(channel_container, ChannelContainer)
-        assert channel.__class__ != channel_container.__class__
-        assert channel.status == channel_container.status
-        assert channel.partner_address == channel_container.partner_address
-        assert channel.channel_address == channel_container.channel_address
-        assert channel.deposit == channel_container.deposit
-        assert channel.reveal_timeout == channel_container.reveal_timeout
-        assert channel.settle_timeout == channel_container.settle_timeout
 
