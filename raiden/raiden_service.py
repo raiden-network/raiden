@@ -689,7 +689,7 @@ class APIEventManager(object):
         self.event_queue = Queue()
 
     def get_method_for_event(self, klass):
-        klass_name = klass.__class__.__name__
+        klass_name = klass.__name__
         func_name = 'on_' + camel_to_snake_case(klass_name)
         func = getattr(self, func_name)
         return func
@@ -704,7 +704,7 @@ class APIEventManager(object):
         # register all blockchain events in the event-handler
         for klass in self.blockchain_events:
             func = self.get_method_for_event(klass)
-            self.raiden.event_handler.register_event_callback(klass.__class__.__name__, func)
+            self.raiden.event_handler.register_event_callback(klass.__name__, func)
 
     def on_channel_closed(self, *args, **kwargs):
         event = ChannelClosed(*args, **kwargs)
