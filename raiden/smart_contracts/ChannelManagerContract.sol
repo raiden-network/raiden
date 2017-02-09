@@ -9,10 +9,16 @@ import "./ChannelManagerLibrary.sol";
 contract ChannelManagerContract {
     using ChannelManagerLibrary for ChannelManagerLibrary.Data;
     ChannelManagerLibrary.Data data;
+    /// @dev All open channels for a specific token
     address[] all_channels;
+    /// @dev All open channels for a given node
     mapping(address => address[]) node_channels;
+    /// @dev The two participants of a specific channel
     mapping(address => address[2]) channel_participants;
+    /// @dev Index of a channel between two parties.
+    /// This is used to keep track of the position of a partner in `node_channels`
     mapping(address => mapping(address => uint)) node_index;
+    /// @dev Index of a specific channel in `all_channels`
     mapping(address => uint) all_channels_index;
 
     event ChannelNew(
@@ -31,13 +37,14 @@ contract ChannelManagerContract {
         data.token = Token(token_address);
     }
 
-    /// @notice getChannelsAddresses to get all channels
-    /// @dev Get all channels
-    /// @return all the open channels
+    /// @notice Get all channels
+    /// @return All the open channels
     function getChannelsAddresses() constant returns (address[] channels) {
         channels = all_channels;
     }
 
+    /// @notice Get all participants of all channels
+    /// @return All participants in all channels
     function getChannelsParticipants() constant returns (address[] channels) {
         uint i;
         uint pos;
@@ -61,23 +68,30 @@ contract ChannelManagerContract {
         return result;
     }
 
-    /// @notice nettingContractsByAddress to get channels that 
-    /// the address participates in.
-    /// @dev Get channels where the given address participates.
+    /// @notice Get all channels that an address participates in.
     /// @param node_address The address of the node
     /// @return The channel's addresses that node_address participates in.
     function nettingContractsByAddress(address node_address) constant returns (address[]){
         return node_channels[node_address];
     }
 
+    /// @notice Get the address of the channel token
+    /// @return The token
     function tokenAddress() constant returns (address) {
         return data.token;
     }
 
+    /// @notice Get the address of channel with a partner
+    /// @param partner The address of the partner
+    /// @return The address of the channel
     function getChannelWith(address partner) constant returns (address) {
         return data.getChannelWith(msg.sender, partner);
     }
 
+    /// @notice Create a new channel
+    /// @param partner The address you want to open a channel with
+    /// @param settle_timeout The desired settlement timeout period
+    /// @return The address of the newly created channel
     function newChannel(address partner, uint settle_timeout) returns (address channel) {
         address channel_address;
 
@@ -111,22 +125,34 @@ contract ChannelManagerContract {
         // Keep track of the index of the channel in the array
         node_index[partner][msg.sender] = node_channels[partner].length - 1;
 
-        // add the two participants to mapping keeping track of all channel participants
+        // add the two participants to the mapping keeping track of all channel participants
         channel_participants[channel] = [msg.sender, partner];
 
         ChannelNew(channel, msg.sender, partner, settle_timeout);
     }
 
+    /// @notice Check if a contract exists
+    /// @param channel The address to check whether a contract is deployed or not
+    /// @return True if a contract exists, false otherwise
     function contractExists(address channel) private constant returns (bool) {
         return data.contractExists(channel);
     }
 
+    /// @dev Delete a channel that's been settled
+    /// @param caller_address The address of the party calling delete
+    /// @param partner The address of the partner of the channel
+    /// @param channel_address The address to be deleted
     function deleteChannel(
         address caller_address,
         address partner,
         address channel_address)
         private
     {
+        // throw if the channel has already been deleted
+        if (data.getChannelWith(caller_address, partner) == 0x0){
+            throw;
+        }
+
         address[] our_channels = node_channels[caller_address];
         address[] partner_channels = node_channels[partner];
         uint caller_index = node_index[caller_address][partner];

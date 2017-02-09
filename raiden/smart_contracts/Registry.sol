@@ -20,10 +20,9 @@ contract Registry {
         _;
     }
 
-    /// @notice addAsset to register a new ERC20 token
-    /// @dev Register a new ERC20 token
-    /// @param asset_address address of the token
-    /// @return the address of the channel manager
+    /// @notice Register a new ERC20 token
+    /// @param asset_address Address of the token
+    /// @return The address of the channel manager
     function addAsset(address asset_address)
         doesNotExist(asset_address)
         returns (address)
@@ -41,10 +40,9 @@ contract Registry {
         return manager_address;
     }
 
-    /// @notice channelManagerByAsset to get the ChannelManager address for a specific token
-    /// @dev get the address of the channel manager for the given token
-    /// @param asset_address the address of the given token
-    /// @return address of channel manager
+    /// @notice Get the ChannelManager address for a specific token
+    /// @param asset_address The address of the given token
+    /// @return Address of channel manager
     function channelManagerByAsset(address asset_address)
         addressExists(asset_address)
         constant
@@ -53,8 +51,7 @@ contract Registry {
         return registry[asset_address];
     }
 
-    /// @notice assetAddresses to get all registered tokens
-    /// @dev Get all registered tokens
+    /// @notice Get all registered tokens
     /// @return addresses of all registered tokens
     function assetAddresses()
         constant
@@ -63,8 +60,7 @@ contract Registry {
         return assets;
     }
 
-    /// @notice channelManagerAddresses to get the addresses of all channel managers for all registered tokens
-    /// @dev Get all addresses for channel managers
+    /// @notice Get the addresses of all channel managers for all registered tokens
     /// @return addresses of all channel managers
     function channelManagerAddresses()
         constant

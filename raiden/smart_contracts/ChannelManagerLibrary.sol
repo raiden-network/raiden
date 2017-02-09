@@ -4,7 +4,6 @@ import "./Token.sol";
 import "./NettingChannelContract.sol";
 
 library ChannelManagerLibrary {
-    // TODO: experiment with a sorted data structure
     struct Data {
         mapping(bytes32 => address) channel_addresses;
         Token token;
@@ -59,8 +58,7 @@ library ChannelManagerLibrary {
         self.channel_addresses[partyHash(caller_address, partner)] = 0x0;
     }
 
-    /// @notice partyHash get the hash of the two addresses
-    /// @dev Get hash of two addresses
+    /// @notice Get the hash of the two addresses
     /// @param address_one address of one party
     /// @param address_two of the other party
     /// @return The sha3 hash of both parties sorted by size of address
@@ -70,12 +68,11 @@ library ChannelManagerLibrary {
         } else if (address_one > address_two){
             return sha3(address_two, address_one);
         } else {
-            throw;
+            throw; // if the two addresses provided are identical
         }
     }
 
-    /// @notice contractExists check if a contract is deployed at given address
-    /// @dev Check if a channel is deployed at address
+    /// @notice Check if a contract is deployed at given address
     /// @param _addr address to check for a deployed contract
     /// @return if contract exists, false if not
     function contractExists(Data storage self, address _addr) internal constant returns (bool) {
