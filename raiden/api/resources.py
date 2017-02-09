@@ -1,8 +1,8 @@
-from webargs import fields
-from webargs.flaskparser import use_kwargs
+from webargs import fields, validate
+from webargs.flaskparser import use_kwargs, use_args
 from flask_restful import Resource
 
-from raiden.api.encoding import AddressField
+from raiden.api.encoding import AddressField, ChannelSchema, ChannelRequestSchema
 
 
 class BaseResource(Resource):
@@ -17,19 +17,10 @@ class ChannelsResource(BaseResource):
 
     # has to be set externally via dependency injection
     rest_api = None
-
-    get_schema = dict(
-        asset_address=AddressField(missing=None),
-        partner_address=AddressField(missing=None),
+    put_schema = ChannelRequestSchema(
+        exclude=('channel_address', 'status'),
     )
 
-    put_schema = dict(
-        asset_address=AddressField(required=True),
-        partner_address=AddressField(required=True),
-        settle_timeout = fields.Integer(missing=None),
-        reveal_timeout = fields.Integer(missing=None),
-        amount = fields.Integer(missing=None)
-    )
 
     delete_schema = dict(
 
@@ -39,17 +30,16 @@ class ChannelsResource(BaseResource):
 
     )
 
-    # e.g. this endpoint will accept the args from all locations:
-    # as JSON object, via form data. or as query string
-    # change according to what is desired here
-    @use_kwargs(get_schema, locations=('json', 'form', 'query'))
-    def get(self, **kwargs):
+    def get(self):
         """
         this translates to 'get all channels the node is connected with'
         """
-        return self.rest_api.get_channel_list(**kwargs)
+        return self.rest_api.get_channel_list()
 
-    @use_kwargs(put_schema)
+    # e.g. this endpoint will accept the args from all locations:
+    # as JSON object, via form data. or as query string
+    # change according to what is desired here
+    @use_kwargs(put_schema, locations=('json', 'form', 'query'))
     def put(self, **kwargs):
         return self.rest_api.open(**kwargs)
 
@@ -66,6 +56,19 @@ class ChannelsResourceByAsset(ChannelsResource):
     _route = '/api/assets/<hexaddress:asset_address>/channels'
     rest_api = None
 
+class ChannelsResourceByChannelAddress(Resource):
+    _route = '/api/channels/<hexaddress:channel_address>'
+    rest_api = None
+
+    patch_schema = ChannelRequestSchema(
+        exclude=('channel_address', 'asset_address', 'partner_address'),
+    )
+
+    @use_kwargs(patch_schema)
+    def patch(self, **kwargs):
+        # the channel_address kwarg is automatically included in the kwargs,
+        # because there is a argument placeholder in the route!
+        return self.rest_api.patch_channel(**kwargs)
 
 class ChannelsByPartner(BaseResource):
     """
@@ -74,7 +77,7 @@ class ChannelsByPartner(BaseResource):
     _route = '/api/partner/<hexaddress:partner_address>/channels'
     rest_api = None
 
-    @use_kwargs({'asset_address': AddressField})
+    @use_kwargs({'asset_address': AddressField()})
     def get(self, partner_address, args):
         channel_list = self.rest_api.get_channel_list(asset_address=None, partner_address=partner_address)
 

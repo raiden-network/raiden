@@ -1,7 +1,8 @@
 from werkzeug.routing import BaseConverter
 from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load, pre_dump
 from marshmallow_polyfield import PolyField
-from webargs import fields, validate
+from webargs import validate
+from marshmallow import fields
 
 from pyethapp.jsonrpc import address_encoder, address_decoder, data_encoder, data_decoder
 
@@ -147,6 +148,17 @@ class ChannelSchema(BaseSchema):
         strict= True
         decoding_class = Channel
 
+class ChannelRequestSchema(BaseSchema):
+    channel_address = AddressField(missing=None)
+    asset_address = AddressField(required=True)
+    partner_address = AddressField(required=True)
+    deposit = fields.Integer(default=None, missing=None)
+    status = fields.String(default=None, missing=None, validate=validate.OneOf(['closed', 'open', 'settled']))
+
+    class Meta:
+        strict = True
+        # decoding to a dict is required by the @use_kwargs decorator from webargs:
+        decoding_class = dict
 
 class ChannelListSchema(BaseListSchema):
     data = fields.Nested(ChannelSchema, many=True)

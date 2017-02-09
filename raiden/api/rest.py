@@ -4,7 +4,7 @@ from flask_restful import Resource, Api, abort
 from webargs.flaskparser import parser, abort
 
 from raiden.api.encoding import EventsListSchema, ChannelSchema, ChannelListSchema, HexAddressConverter
-from raiden.api.resources import ChannelsResource, ChannelsByPartner
+from raiden.api.resources import ChannelsResource, ChannelsByPartner, ChannelsResourceByChannelAddress
 from raiden.api.objects import EventsList, ChannelList
 
 
@@ -41,7 +41,8 @@ class APIServer(object):
     # once the RestfulAPI is running
     _default_resource_classes = [
         ChannelsResource,
-        ChannelsByPartner
+        ChannelsByPartner,
+        ChannelsResourceByChannelAddress
     ]
 
     def __init__(self, rest_api):
@@ -49,14 +50,12 @@ class APIServer(object):
         self.flask_api_middleware = Api(app)
 
         self._register_type_converters()
-        self._add_default_resources()
+        # self._add_default_resources()
 
     def _add_default_resources(self):
         for klass in self._default_resource_classes:
             self.add_resource(klass)
 
-    def _inject_api(self, klass):
-        klass.api = self.rest_api
 
     def _register_type_converters(self, additional_mapping=None):
         # an additional mapping concats to class-mapping and will overwrite existing keys
@@ -69,7 +68,8 @@ class APIServer(object):
             app.url_map.converters[key] = value
 
     def add_resource(self, resource_cls):
-        self._inject_api(resource_cls)
+        # inject rest_api
+        resource_cls.rest_api = self.rest_api
 
         self.flask_api_middleware.add_resource(
             resource_cls,
@@ -89,21 +89,19 @@ class RestAPI(object):
     def __init__(self, raiden_api):
         self.raiden_api = raiden_api
 
-    def open(self, partner_address, asset_address, settle_timeout=None, reveal_timeout=None, amount=None):
+    def open(self, partner_address, asset_address, deposit=None):
 
         api_result = self.raiden_api.open(
             asset_address,
             partner_address,
-            settle_timeout,
-            reveal_timeout
         )
 
-        if amount:
+        if deposit:
             # make initial deposit
             api_result = self.raiden_api.deposit(
                 asset_address,
                 partner_address,
-                amount
+                deposit
             )
 
         schema = ChannelSchema()
@@ -154,6 +152,27 @@ class RestAPI(object):
         schema = EventsListSchema()
         result = schema.dumps(events_list)
         return result
+
+    def patch_channel(self, channel_address, deposit=None, status=None):
+
+        schema =ChannelSchema()
+        if deposit != None and status == None:
+            api_result = self.raiden_api.deposit(deposit)
+            return schema.dumps(api_result)
+
+        elif status != None and deposit == None:
+
+            if status == 'closed':
+                api_result = self.raiden_api.close(channel_address)
+                return schema.dumps(api_result)
+
+            if status == 'settled':
+                api_result = self.raiden_api.close(channel_address)
+                return schema.dumps(api_result)
+
+            if status=='open':
+                raise Exception('nothing to do here')
+        raise Exception()
 
 
 @parser.error_handler

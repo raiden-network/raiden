@@ -4,7 +4,7 @@ from time import sleep
 from collections import defaultdict
 
 from raiden.api.objects import ChannelList, Channel, ChannelNew
-from raiden.api.resources import EventsResoure, ChannelsResource, ChannelsResourceByAsset
+from raiden.api.resources import EventsResoure, ChannelsResource, ChannelsResourceByAsset, ChannelsResourceByChannelAddress
 from raiden.api.rest import APIServer, RestAPI
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
 
@@ -79,7 +79,7 @@ class MockAPI(object):
 
         return event_list
 
-    def open(self, asset_address, partner_address, settle_timeout,reveal_timeout):
+    def open(self, asset_address, partner_address, settle_timeout=None,reveal_timeout=None):
         existing_channel = self._get_channel_by_asset_and_partner(asset_address, partner_address)
         if existing_channel:
             channel = existing_channel
@@ -104,21 +104,22 @@ class MockAPI(object):
         self._mine_new_block_try()
         return channel
 
-    def close(self, asset_address, partner_address):
-        existing_channel = self._get_channel_by_asset_and_partner(asset_address, partner_address)
+    def close(self, channel_address):
+        existing_channel = self.channel_by_address[channel_address]
+
         # modify field in place
         existing_channel.status = 'closed'
 
         self._mine_new_block_try()
         return existing_channel
 
-    def deposit(self, asset_address, partner_address, amount):
+    def deposit(self, asset_address, partner_address, deposit):
         channel = None
         successful = False
         existing_channel = self._get_channel_by_asset_and_partner(asset_address, partner_address)
         if existing_channel:
-            if existing_channel.amount < amount:
-                existing_channel.amount = amount
+            if existing_channel.deposit < deposit:
+                existing_channel.deposit = deposit
                 channel = existing_channel
                 successful = True
             else:
@@ -173,5 +174,6 @@ if __name__ == '__main__':
     rest_api = RestAPI(mock_api)
 
     api_server = APIServer(rest_api)
+    api_server._add_default_resources()
     api_server.run(5001, debug=True)
 
