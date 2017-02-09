@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import cachetools
 import gevent
 import rlp
 from ethereum import slogging
@@ -14,8 +13,8 @@ from pyethapp.jsonrpc import (
     data_encoder,
     default_gasprice,
 )
-import requests
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient
+import requests
 
 from raiden import messages
 from raiden.raiden_service import RaidenError
@@ -47,9 +46,6 @@ GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
 GAS_PRICE = denoms.shannon * 20
 
 DEFAULT_POLL_TIMEOUT = 60
-
-CACHE_TTL = 60
-TTTL_CACHE = cachetools.TTLCache(maxsize=50, ttl=CACHE_TTL)
 
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
@@ -215,7 +211,6 @@ class BlockChainService(object):
         if level:
             self.client.print_communication = True
 
-    @cachetools.cached(cache=TTTL_CACHE)
     def block_number(self):
         return self.client.blocknumber()
 
@@ -319,7 +314,6 @@ class BlockChainService(object):
             contract_file,
         )
 
-        # TODO should we also check for BlockchainPollTimeout / BlockchainInvalidTransaction here?
         proxy = self.client.deploy_solidity_contract(
             self.node_address,
             contract_name,
@@ -335,7 +329,6 @@ class BlockChainService(object):
     def deploy_and_register_asset(self, contract_name, contract_file, constructor_parameters=None):
         assert self.default_registry
 
-        # TODO should we also check for BlockchainPollTimeout / BlockchainInvalidTransaction here?
         token_address = self.deploy_contract(
             contract_name,
             contract_file,

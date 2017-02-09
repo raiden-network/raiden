@@ -110,8 +110,12 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         event_handler = RaidenEventHandler(self)
 
         alarm = AlarmTask(chain)
-        alarm.register_callback(event_handler.poll_all_event_listeners)
+        # ignore the blocknumber
+        alarm.register_callback(lambda _: event_handler.poll_all_event_listeners())
         alarm.start()
+
+        self._blocknumber = alarm.last_block_number
+        alarm.register_callback(self.set_block_number)
 
         if config['max_unresponsive_time'] > 0:
             self.healthcheck = HealthcheckTask(
@@ -142,6 +146,12 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+
+    def set_block_number(self, blocknumber):
+        self._blocknumber = blocknumber
+
+    def get_block_number(self):
+        return self._blocknumber
 
     @property
     def event_queue(self):
@@ -370,7 +380,6 @@ class RaidenAPI(object):
     def address(self):
         return self.raiden.address
 
-
     @property
     def assets(self):
         """ Return a list of the assets registered with the default registry. """
@@ -378,7 +387,6 @@ class RaidenAPI(object):
 
     def get_balance(self, asset_address, partner_address):
         pass
-
 
     def get_completed_transfers(self, asset_address=None, partner_address=None):
         pass
@@ -564,7 +572,6 @@ class RaidenAPI(object):
             identifier=None,
             callback=None):
         # pylint: disable=too-many-arguments
-
 
         if not isinstance(amount, (int, long)):
             raise InvalidAmount('Amount not a number')
@@ -898,7 +905,6 @@ class RaidenEventHandler(object):
         self.event_listeners = list()
 
     def on_event(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
-
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
                 'event received',
@@ -909,13 +915,11 @@ class RaidenEventHandler(object):
         if event['_event_type'] == 'AssetAdded':
             self.event_assetadded(emitting_contract_address_bin, event)
 
-
         elif event['_event_type'] == 'ChannelNew':
             self.event_channelnew(emitting_contract_address_bin, event)
 
         elif event['_event_type'] == 'ChannelNewBalance':
             self.event_channelnewbalance(emitting_contract_address_bin, event)
-
 
         elif event['_event_type'] == 'ChannelClosed':
             self.event_channelclosed(emitting_contract_address_bin, event)
