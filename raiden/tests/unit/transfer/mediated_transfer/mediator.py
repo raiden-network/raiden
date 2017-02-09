@@ -174,3 +174,70 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     # (block=6) B learns the secret
     # (block=7) B call unlock on channel A-B (settle_timeout is over)
     pass
+
+
+def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
+    # For a path A1-B-C-A2, an attacker controlling A1 and A2 should not be
+    # able to force B-C to close the channel by burning token.
+    #
+    # The attack would be as follows:
+    #
+    # - Attacker uses two nodes to open two really cheap channels A1 <-> B and
+    #   node A2 <-> C
+    # - Attacker sends a mediated message with the lowest possible token
+    #   amount from A1 through B and C to A2
+    # - Since the attacker controls A1 and A2 it knows the secret, she can choose
+    #   when the secret is revealed
+    # - The secret is hold back until the hash time lock B->C is almost expiring,
+    #   then it's revealed (meaning that the attacker is losing token, that's why
+    #   it's using the lowest possible amount)
+    # - C wants the token from B, it will reveal the secret and close the channel
+    #   (because it must assume the balance proof won't make in time and it needs
+    #   to unlock on-chain)
+    #
+    # Mitigation:
+    #
+    # - C should only close the channel B-C if he has paid A2, since this may
+    #   only happen if the lock for the transfer C-A2 has not yet expired then C
+    #   has enough time to follow the protocol without closing the channel B-C.
+    pass
+
+
+def mediate_transfer_payee_timeout_must_be_lower_than_settlement_and_payer_timeout():
+    # Test:
+    # - the current payer route/transfer is the reference, not the from_route / from_transfer
+    # - the lowest value from blocks_until_settlement and lock expiration must be used
+    pass
+
+
+def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
+    # The payee could reveal the secret on it's lock expiration block, the
+    # mediator node will respond with a balance-proof to the payee since the
+    # lock is valid and the mediator can safely get the token from the payer,
+    # the secret is know and if there are no additional blocks the mediator
+    # will be at risk of not being able to withdraw on-chain, so the channel
+    # will be closed to safely withdraw.
+    #
+    # T2.expiration cannot be equal to T1.expiration - reveal_timeout:
+    #
+    # T1 |---|
+    # T2     |---|
+    #        ^- reveal the secret
+    #        T1.expiration - reveal_timeout == current_block -> withdraw on chain
+    #
+    # If T2.expiration canot be equal to T1.expiration - reveal_timeout minus ONE:
+    #
+    # T1 |---|
+    # T2      |---|
+    #         ^- reveal the secret
+    #
+    # Race:
+    #  1> Secret is learned
+    #  2> balance-proof is sent to payee (payee transfer is payed)
+    #  3! New block is mined and Raiden learns about it
+    #  4> Now the secret is know, the payee is payed, and the current block is
+    #     equal to the payer.expiration - reveal-timeout -> withdraw on chain
+    #
+    # The race is depending on the handling of 3 before 4.
+    #
+    pass

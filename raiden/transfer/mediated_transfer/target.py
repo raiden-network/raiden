@@ -14,24 +14,24 @@ from raiden.transfer.state_change import (
 )
 
 
-def state_transition(next_state, state_change):
+def state_transition(state, state_change):
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
-    if next_state is None:
+    if state is None:
         state_uninitialized = True
         state_wait_secret = False
         state_wait_withdraw = False
     else:
         state_uninitialized = False
-        state_wait_secret = next_state.secret is None
-        state_wait_withdraw = next_state.secret is not None
+        state_wait_secret = state.secret is None
+        state_wait_withdraw = state.secret is not None
 
-    iteration = Iteration(next_state, list())
+    iteration = Iteration(state, list())
 
     if not state_uninitialized:
         if isinstance(state_change, Blocknumber):
-            next_state.block_number = state_change.block_number
+            state.block_number = state_change.block_number
 
     if state_uninitialized:
         if isinstance(state_change, InitTarget):
@@ -42,7 +42,7 @@ def state_transition(next_state, state_change):
             hashlock = state_change.hashlock
             block_number = state_change.block_number
 
-            next_state = TargetState(
+            state = TargetState(
                 our_address,
                 target,
                 from_route,
@@ -56,40 +56,40 @@ def state_transition(next_state, state_change):
                 from_transfer.amount,
                 from_transfer.hashlock,
             )
-            next_state.secret_request = secret_request
+            state.secret_request = secret_request
 
-            iteration = Iteration(next_state, [secret_request])
+            iteration = Iteration(state, [secret_request])
 
     elif state_wait_secret:
         secret_reveal = (
             isinstance(state_change, RevealSecret) and
-            sha3(state_change.secret) == next_state.hashlock
+            sha3(state_change.secret) == state.hashlock
         )
 
         if secret_reveal:
-            next_state.secret = state_change.secret
+            state.secret = state_change.secret
 
             reveal = RevealSecret(
-                next_state.from_transfer.identifier,
-                next_state.secret,
-                next_state.from_route.node_address,
-                next_state.our_address,
+                state.from_transfer.identifier,
+                state.secret,
+                state.from_route.node_address,
+                state.our_address,
             )
 
-            iteration = Iteration(next_state, [reveal])
+            iteration = Iteration(state, [reveal])
 
     elif state_wait_withdraw:
         valid_secret = (
             isinstance(state_change, Secret) and
-            state_change.sender == next_state.from_transfer.sender
+            state_change.sender == state.from_transfer.sender
         )
 
         if valid_secret:
             withdraw = WithdrawLock(
-                next_state.from_transfer.identifier,
-                next_state.from_transfer.token,
-                next_state.secret,
-                next_state.hashlock,
+                state.from_transfer.identifier,
+                state.from_transfer.token,
+                state.secret,
+                state.hashlock,
             )
             iteration = Iteration(None, [withdraw])
 

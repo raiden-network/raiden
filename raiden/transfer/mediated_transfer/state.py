@@ -32,32 +32,27 @@ class MediatorState(State):
 
     Args:
         our_address (address): This node address.
-        from_transfer (TransferState): The description of the mediated transfer.
         routes (RoutesState): Routes available for this transfer.
         block_number (int): Latest known block number.
-        from_route (RouteState): The route through which the mediated transfer was received.
-        expiration (int): The expiration block of the received transfer.
+        hashlock (bin): The hashlock used for this transfer.
     """
     def __init__(self,
                  our_address,
-                 from_transfer,
                  routes,
                  block_number,
-                 from_route):
+                 hashlock):
 
         self.our_address = our_address
-        self.from_transfer = from_transfer
         self.routes = routes
         self.block_number = block_number
-        self.from_route = from_route
+        self.hashlock = hashlock  # for convenience
 
-        self.message = None  #: current message in-transit
+        self.secret = None
         self.route = None  #: current route being used
-        self.sent_refund = None  #: set with the refund transfer if it was sent
 
-        self.last_expiration = from_transfer.expiration  #: last used lock expiration
-        self.transfers_refunded = list()  #: transfers waiting for up-to-date balance proof
-        self.transfers_settling = list()  #: transfer that are being settled on chain
+        # keeping all transfers in a single list byzantine behavior for secret
+        # reveal and simplifies secret setting
+        self.transfers_pair = list()
 
 
 class TargetState(State):
@@ -116,3 +111,52 @@ class LockedTransferState(State):
             self.expiration,
             self.hashlock,
         )
+
+
+class MediationPairState(State):
+    """ State for a mediated transfer.
+
+    A mediator will pay payee node knowing that there is a payer node to cover
+    the token expenses. This state keeps track of the routes and transfer for
+    the payer and payee, and the current state of the payment.
+    """
+
+    valid_payee_states = (
+        'payee_pending',
+        'payee_secret_revealed',  # reached on a SecretRevealReceived
+        'payee_channel_withdraw',  # reached when the /partner/ node unlocks
+        'payee_balance_proof',  # reached when this node sends SendBalanceProof
+        'payee_expired',
+    )
+
+    valid_payer_states = (
+        'payer_pending',
+        'payer_secret_revealed',  # reached on a RevealSecretTo
+        'payer_waiting_withdraw',  # reached when unlock is called
+        'payer_channel_withdraw',  # this state is reached the unlock from /this/ node completes
+        'payer_balance_proof',  # reached when a balance proof is received
+        'payer_expired',
+    )
+
+    def __init__(self,
+                 payer_route,
+                 payer_transfer,
+                 payee_route,
+                 payee_transfer):
+        """
+        Args:
+            payer_route (RouteState): The details of the route with the payer.
+            payer_transfer (LockedTransferState): The transfer this node
+                *received* that will cover the expenses.
+
+            payee_route (RouteState): The details of the route with the payee.
+            payee_transfer (LockedTransferState): The transfer this node *sent*
+                that will be withdrawn by the payee.
+        """
+        self.payer_route = payer_route
+        self.payer_transfer = payer_transfer
+        self.payer_state = 'payer_pending'
+
+        self.payee_route = payee_route
+        self.payee_transfer = payee_transfer
+        self.payee_state = 'payee_pending'

@@ -111,7 +111,6 @@ class SecretRevealReceived(StateChange):
         self.secret = secret
         self.target = target
         self.sender = sender
-        self.revealsecret = secret
 
 
 class TransferRefundReceived(StateChange):
@@ -121,3 +120,22 @@ class TransferRefundReceived(StateChange):
         self.amount = amount
         self.hashlock = hashlock
         self.sender = sender
+
+
+class BalanceProofReceived(StateChange):
+    """ A balance proof `identifier` was received. """
+    def __init__(self, identifier, channel_address, node_address):
+        self.identifier = identifier
+        self.channel_address = channel_address
+        self.node_address = node_address
+
+
+class NettingChannelWithdraw(StateChange):
+    """ Our partner withdrawned the lock throught the blockchain.
+
+    Used when a hash time lock was withdrawn and a log ChannelSecretRevealed is
+    emited by the netting channel.
+    """
+    def __init__(self, secret, channel_address):
+        self.secret = secret
+        self.channel_address = channel_address
