@@ -176,6 +176,11 @@ class FilterMock(object):
         self.events = list()
         return events
 
+    def all_events(self):
+        events = self.events
+        self.events = list()
+        return events
+
     def event(self, event):
         if event['topics'] is None or event['topics'] == self.topics:
             self.events.append(event)
@@ -269,6 +274,12 @@ class RegistryMock(object):
         ]
 
     def assetadded_filter(self):
+        topics = [ASSETADDED_EVENTID]
+        filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
+        BlockChainServiceMock.filters[self.address].append(filter_)
+        return filter_
+
+    def allassets_filter(self):
         topics = [ASSETADDED_EVENTID]
         filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
         BlockChainServiceMock.filters[self.address].append(filter_)

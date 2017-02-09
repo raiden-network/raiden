@@ -85,6 +85,8 @@ def cached_genesis(request, blockchain_type):
         dict: A dictionary representing the genesis block.
     """
 
+    return
+
     if not request.config.option.blockchain_cache:
         return
 

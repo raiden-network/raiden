@@ -43,7 +43,7 @@ GAS_LIMIT = 3141592  # Morden's gasLimit.
 GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
 GAS_PRICE = denoms.shannon * 20
 
-DEFAULT_POLL_TIMEOUT = 60
+DEFAULT_POLL_TIMEOUT = 600
 
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
@@ -356,6 +356,33 @@ class Filter(object):
 
         return result
 
+    def all_events(self):
+        filter_events = self.client.call(
+            'eth_getFilterLogs',
+            self.filter_id_raw,
+        )
+
+        # geth could return None
+        if filter_events is None:
+            return []
+
+        result = list()
+        for log_event in filter_events:
+            address = address_decoder(log_event['address'])
+            data = data_decoder(log_event['data'])
+            topics = [
+                decode_topic(topic)
+                for topic in log_event['topics']
+            ]
+
+            result.append({
+                'topics': topics,
+                'data': data,
+                'address': address,
+            })
+
+        return result
+
     def uninstall(self):
         self.client.call(
             'eth_uninstallFilter',
@@ -569,6 +596,21 @@ class Registry(object):
         return Filter(
             self.client,
             filter_id_raw,
+        )
+
+    def allassets_filter(self):
+        registry_address_bin = self.proxy.address
+        quantity_filter_id = JSONRPCClient.new_filter(
+            self.client,
+            address=registry_address_bin,
+            topics=None,
+            fromBlock='0',
+            toBlock='latest',
+        )
+
+        return Filter(
+            self.client,
+            quantity_filter_id,
         )
 
 
