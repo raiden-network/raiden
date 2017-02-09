@@ -23,22 +23,38 @@ class MediatedTransfer(Event):
 
 
 class RevealSecretTo(Event):
-    """ Event used to reveal a secret.
+    """ Event used to send a reveal the secret to another node, not the same as
+    a balance-proof.
 
-    Used by all roles in a mediate transfer to reveal the secret to a specific
-    node.
+    Used by payees: The target and mediator nodes.
 
     Note:
-        The receiver must only update it's local balance once the payer sends
-        an update message, this is a requirement for keeping the nodes
-        synchronized. The reveal secret message flows from the receiver to the
-        sender, so once the message is received it must not update the balance.
+        The payee must only update it's local balance once the payer sends an
+        update message with a balance-proof, this is a requirement for keeping
+        the nodes synchronized. The reveal secret message flows from the
+        receiver to the sender, so when the secret is learned it is not yet
+        time to update the balance.
     """
     def __init__(self, identifier, secret, target, sender):
         self.identifier = identifier
         self.secret = secret
         self.target = target
         self.sender = sender
+
+
+class SendBalanceProof(Event):
+    """ Event used to release a lock locally and send a balance-proof to the
+    counter-party, allowing the counter-party to withdraw the lock.
+
+    Used by payers: The initiator and mediator nodes.
+
+    Note:
+        This is event has a dual role, it serves as a synchronization and as
+        balance-proof for the netting channel smart contract.
+    """
+    def __init__(self, identifier, target):
+        self.identifier = identifier
+        self.target = target
 
 
 class SecretRequest(Event):
@@ -95,8 +111,8 @@ class TransferCompleted(Event):
         self.hashlock = hashlock
 
 
-class SettleOnChain(Event):
-    """ Event emitted when the settlement must go on-chain. """
+class WithdrawOnChain(Event):
+    """ Event emitted when the lock must withdrawn on-chain. """
 
     def __init__(self, transfer, channel_address):
         self.transfer = transfer

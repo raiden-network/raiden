@@ -33,41 +33,41 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.utils import sha3
 
 
-def cancel_current_route(next_state):
+def cancel_current_route(state):
     """ Clear current state and try a new rotue.
 
     - Discards the current secret
     - Add the current route to the canceled list
     - Add the current message to the canceled transfers
     """
-    assert next_state.revealsecret is None, 'cannot cancel a transfer with a RevealSecret in flight'
+    assert state.revealsecret is None, 'cannot cancel a transfer with a RevealSecret in flight'
 
-    next_state.routes.canceled_routes.append(next_state.route)
-    next_state.canceled_transfers.append(next_state.message)
+    state.routes.canceled_routes.append(state.route)
+    state.canceled_transfers.append(state.message)
 
-    next_state.transfer.secret = None
-    next_state.transfer.hashlock = None
-    next_state.message = None
-    next_state.route = None
-    next_state.secretrequest = None
+    state.transfer.secret = None
+    state.transfer.hashlock = None
+    state.message = None
+    state.route = None
+    state.secretrequest = None
 
-    return try_new_route(next_state)
+    return try_new_route(state)
 
 
-def user_cancel_transfer(next_state):
+def user_cancel_transfer(state):
     """ Cancel the current in-transit message. """
-    assert next_state.revealsecret is None, 'cannot cancel a transfer with a RevealSecret in flight'
+    assert state.revealsecret is None, 'cannot cancel a transfer with a RevealSecret in flight'
 
-    # reset the next_state copy
-    next_state.transfer.secret = None
-    next_state.transfer.hashlock = None
-    next_state.message = None
-    next_state.route = None
-    next_state.secretrequest = None
-    next_state.revealsecret = None
+    # reset the state
+    state.transfer.secret = None
+    state.transfer.hashlock = None
+    state.message = None
+    state.route = None
+    state.secretrequest = None
+    state.revealsecret = None
 
     cancel = TransferFailed(
-        identifier=next_state.transfer.identifier,
+        identifier=state.transfer.identifier,
         reason='user canceled transfer',
     )
     iteration = Iteration(None, [cancel])
@@ -75,8 +75,8 @@ def user_cancel_transfer(next_state):
     return iteration
 
 
-def try_new_route(next_state):
-    assert next_state.route is None, 'cannot try a new route while one is being used'
+def try_new_route(state):
+    assert state.route is None, 'cannot try a new route while one is being used'
 
     # TODO:
     # - Route ranking. An upper layer should rate each route to optimize
@@ -92,11 +92,11 @@ def try_new_route(next_state):
     # Find a single route that may fulfill the request, this uses a single
     # route intentionally
     try_route = None
-    while next_state.routes.available_routes:
-        route = next_state.routes.available_routes.pop(0)
+    while state.routes.available_routes:
+        route = state.routes.available_routes.pop(0)
 
-        if route.available_balance < next_state.transfer.amount:
-            next_state.routes.ignored_routes.append(route)
+        if route.available_balance < state.transfer.amount:
+            state.routes.ignored_routes.append(route)
         else:
             try_route = route
             break
@@ -109,15 +109,15 @@ def try_new_route(next_state):
         # valid because we are the initiator and we known that the secret was
         # not released.
         cancel = TransferFailed(
-            identifier=next_state.transfer.identifier,
+            identifier=state.transfer.identifier,
             reason='no route available',
         )
         iteration = Iteration(None, [cancel])
 
     else:
-        next_state.route = try_route
+        state.route = try_route
 
-        secret = next_state.random_generator.next()
+        secret = state.random_generator.next()
         hashlock = sha3(secret)
 
         # The initiator doesn't need to learn the secret, so there is no need
@@ -126,14 +126,14 @@ def try_new_route(next_state):
         # A value larger than settle_timeout could be used but wouldn't
         # improve, since the next hop will take settle_timeout as an upper
         # limit for expiration.
-        lock_expiration = next_state.block_number + try_route.settle_timeout
-        identifier = next_state.transfer.identifier
+        lock_expiration = state.block_number + try_route.settle_timeout
+        identifier = state.transfer.identifier
 
         transfer = LockedTransferState(
             identifier,
-            next_state.transfer.amount,
-            next_state.transfer.token,
-            next_state.transfer.target,
+            state.transfer.amount,
+            state.transfer.token,
+            state.transfer.target,
             lock_expiration,
             hashlock,
             secret,
@@ -149,10 +149,10 @@ def try_new_route(next_state):
             try_route.node_address,
         )
 
-        next_state.transfer = transfer
-        next_state.message = message
+        state.transfer = transfer
+        state.message = message
 
-        iteration = Iteration(next_state, [message])
+        iteration = Iteration(state, [message])
 
     return iteration
 
