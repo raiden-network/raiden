@@ -37,13 +37,13 @@ def make_external_state():
     return external_state
 
 @pytest.fixture()
-def no_channels():
+def num_channels():
     return 10
 
 @pytest.fixture()
-def channel_list_mock(no_channels):
+def channel_list_mock(num_channels):
     channel_list = []
-    for _ in range(0,no_channels):
+    for _ in range(0,num_channels):
         netting_channel = NettingChannelMock()
         asset_address = make_address()
         privkey1, address1 = make_privkey_address()

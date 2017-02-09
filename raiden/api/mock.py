@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from raiden.api.objects import ChannelList, Channel, ChannelNew
 from raiden.api.resources import EventsResoure, ChannelsResource, ChannelsResourceByAsset
-from raiden.api.rest import RestfulAPI, APIWrapper
+from raiden.api.rest import APIServer, RestAPI
 from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
 
 from raiden.utils import make_address
@@ -170,13 +170,8 @@ class MockAPI(object):
 if __name__ == '__main__':
 
     mock_api = MockAPI()
-    wrapped_api = APIWrapper(mock_api)
+    rest_api = RestAPI(mock_api)
 
-    rest_api = RestfulAPI(wrapped_api)
-    rest_api.register_type_converters()
-
-    for klass in [ChannelsResource, ChannelsResourceByAsset, EventsResoure]:
-        rest_api.add_resource(klass, klass._route)
-
-    rest_api.run(5001, debug=True)
+    api_server = APIServer(rest_api)
+    api_server.run(5001, debug=True)
 

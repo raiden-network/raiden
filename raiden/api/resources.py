@@ -12,7 +12,11 @@ class BaseResource(Resource):
 
 class ChannelsResource(BaseResource):
 
+    # define the route of the resource here:
     _route = '/api/channels'
+
+    # has to be set externally via dependency injection
+    rest_api = None
 
     get_schema = dict(
         asset_address=AddressField(missing=None),
@@ -43,23 +47,24 @@ class ChannelsResource(BaseResource):
         """
         this translates to 'get all channels the node is connected with'
         """
-        return self.api.get_channel_list( **kwargs)
+        return self.rest_api.get_channel_list(**kwargs)
 
     @use_kwargs(put_schema)
     def put(self, **kwargs):
-        return self.api.open(**kwargs)
+        return self.rest_api.open(**kwargs)
 
     @use_kwargs(delete_schema)
     def delete(self, **kwargs):
-        return self.api.close(**kwargs)
+        return self.rest_api.close(**kwargs)
 
     @use_kwargs(update_schema)
     def update(self, **kwargs):
-        return self.api.deposit(**kwargs)
+        return self.rest_api.deposit(**kwargs)
 
 
 class ChannelsResourceByAsset(ChannelsResource):
     _route = '/api/assets/<hexaddress:asset_address>/channels'
+    rest_api = None
 
 
 class ChannelsByPartner(BaseResource):
@@ -67,10 +72,11 @@ class ChannelsByPartner(BaseResource):
     this translates to 'All channel the node is connected with and have the specified asset
     """
     _route = '/api/partner/<hexaddress:partner_address>/channels'
+    rest_api = None
 
     @use_kwargs({'asset_address': AddressField})
     def get(self, partner_address, args):
-        channel_list = self.api.get_channel_list(asset_address=None, partner_address=partner_address)
+        channel_list = self.rest_api.get_channel_list(asset_address=None, partner_address=partner_address)
 
         return channel_list
 
@@ -89,6 +95,7 @@ class EventsResoure(BaseResource):
     """
 
     _route = '/api/events'
+    rest_api = None
 
     def get(self):
-        return self.api.get_new_events()
+        return self.rest_api.get_new_events()
