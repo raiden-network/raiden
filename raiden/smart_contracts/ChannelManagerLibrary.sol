@@ -10,7 +10,6 @@ library ChannelManagerLibrary {
     }
 
     /// @notice Get the address of the unique channel of two parties.
-    /// @dev Get the channel of two parties
     /// @param caller_address The address of the caller
     /// @param partner The address of the partner
     /// @return The address of the NettingChannelContract of the two parties.
@@ -23,7 +22,6 @@ library ChannelManagerLibrary {
     }
 
     /// @notice Create a new payment channel between two parties
-    /// @dev Create a new channel between two parties
     /// @param partner The address of the partner
     /// @param settle_timeout The settle timeout in blocks
     /// @return The address of the NettingChannelContract.
@@ -45,7 +43,6 @@ library ChannelManagerLibrary {
     }
 
     /// @notice Remove a channel after it's been settled
-    /// @dev Remove channel after it's been settled
     /// @param caller_address address of the caller
     /// @param partner of the partner
     function deleteChannel(

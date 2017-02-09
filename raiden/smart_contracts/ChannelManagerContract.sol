@@ -9,16 +9,16 @@ import "./ChannelManagerLibrary.sol";
 contract ChannelManagerContract {
     using ChannelManagerLibrary for ChannelManagerLibrary.Data;
     ChannelManagerLibrary.Data data;
-    /// @dev All open channels for a specific token
+    // All open channels for a specific token
     address[] all_channels;
-    /// @dev All open channels for a given node
+    // All open channels for a given node
     mapping(address => address[]) node_channels;
-    /// @dev The two participants of a specific channel
+    // The two participants of a specific channel
     mapping(address => address[2]) channel_participants;
-    /// @dev Index of a channel between two parties.
-    /// This is used to keep track of the position of a partner in `node_channels`
+    // Index of a channel between two parties.
+    // This is used to keep track of the position of a partner in `node_channels`
     mapping(address => mapping(address => uint)) node_index;
-    /// @dev Index of a specific channel in `all_channels`
+    // Index of a specific channel in `all_channels`
     mapping(address => uint) all_channels_index;
 
     event ChannelNew(
@@ -71,7 +71,7 @@ contract ChannelManagerContract {
     /// @notice Get all channels that an address participates in.
     /// @param node_address The address of the node
     /// @return The channel's addresses that node_address participates in.
-    function nettingContractsByAddress(address node_address) constant returns (address[]){
+    function nettingContractsByAddress(address node_address) constant returns (address[]) {
         return node_channels[node_address];
     }
 
@@ -149,7 +149,7 @@ contract ChannelManagerContract {
         private
     {
         // throw if the channel has already been deleted
-        if (data.getChannelWith(caller_address, partner) == 0x0){
+        if (data.getChannelWith(caller_address, partner) == 0x0) {
             throw;
         }
 
