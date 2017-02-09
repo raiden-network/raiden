@@ -57,7 +57,7 @@ def test_channelmanager(
     address0 = tester.DEFAULT_ACCOUNT
     address1 = tester.a1
     address2 = tester.a2
-    inexisting_address = sha3('this_does_not_exist')[:20]
+    nonexisting_address = sha3('this_does_not_exist')[:20]
 
     channelmanager_path = get_contract_path('ChannelManagerContract.sol')
     channel_manager = tester_state.abi_contract(
@@ -101,8 +101,8 @@ def test_channelmanager(
     with pytest.raises(TransactionFailed):
         channel_manager.newChannel(address1, settle_timeout)
 
-    # should be false if there is no channel for the given address
-    assert not channel_manager.getChannelWith(inexisting_address)[1]
+    # should be zero address if there is no channel for the given address
+    assert channel_manager.getChannelWith(nonexisting_address) == '0' * 40
 
     assert len(channel_manager.getChannelsParticipants()) == 2
 
@@ -121,16 +121,16 @@ def test_channelmanager(
     )
     assert len(previous_events) + 1 == len(tester_events), 'ChannelNew event must be fired.'
 
-    assert channel_manager.getChannelWith(address1)[0] == netting_channel_address1_hex
-    assert channel_manager.getChannelWith(address2)[0] == netting_channel_address2_hex
+    assert channel_manager.getChannelWith(address1) == netting_channel_address1_hex
+    assert channel_manager.getChannelWith(address2) == netting_channel_address2_hex
 
     msg_sender_channels = channel_manager.nettingContractsByAddress(tester.DEFAULT_ACCOUNT)
     address1_channels = channel_manager.nettingContractsByAddress(address1)
-    inexisting_channels = channel_manager.nettingContractsByAddress(inexisting_address)
+    nonexisting_channels = channel_manager.nettingContractsByAddress(nonexisting_address)
 
     assert len(msg_sender_channels) == 2
     assert len(address1_channels) == 1
-    assert len(inexisting_channels) == 0
+    assert len(nonexisting_channels) == 0
 
     assert len(channel_manager.getChannelsParticipants()) == 4
 

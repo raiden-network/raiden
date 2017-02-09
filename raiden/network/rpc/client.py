@@ -638,7 +638,7 @@ class ChannelManager(object):
         )
 
         # address is at index 0
-        netting_channel_address_encoded = netting_channel_results_encoded[0]
+        netting_channel_address_encoded = netting_channel_results_encoded
 
         if not netting_channel_address_encoded:
             log.error('netting_channel_address failed', peer1=pex(peer1), peer2=pex(peer2))
