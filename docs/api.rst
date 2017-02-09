@@ -27,7 +27,7 @@ Channel Object
     {
        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-       'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+       'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
        'balance': 35000000,
        'state': 'open',
        'settle_timeout': 100
@@ -43,15 +43,15 @@ A channel object consists of a
 - `partner_address` should be a `string` containing the hexadecimal address of the
   partner with whom we have opened a channel
 
-- `asset_address` should be a `string` containing the hexadecimal address of the
-  asset we are trading in the channel.
+- `token_address` should be a `string` containing the hexadecimal address of the
+  token we are trading in the channel.
 
-- `balance` should be an integer of the amount of the `asset_address` token we have
+- `balance` should be an integer of the amount of the `token_address` token we have
   deposited in the channel.
 
 - `state` should be the current state of the channel represented by a string.
   Possible value are:
-  - `'open'`: The channel is open and assets are tradeable
+  - `'open'`: The channel is open and tokens are tradeable
   - `'closed'`: The channel has been closed by a participant
   - `'settled'`: The channel has been closed by a participant and also settled.
 
@@ -92,7 +92,7 @@ Example Response
     {
         'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
         'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'balance': 35000000,
         'state': 'open',
         'settle_timeout': 100
@@ -122,7 +122,7 @@ Example Response
         [{
             'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
             'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-            'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+            'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
             'balance': 35000000,
             'state': 'open',
             'settle_timeout': 100
@@ -136,13 +136,13 @@ Querying all traded Assets
 --------------------------
 
 By making a `GET` request to `/api/asssets` you can get a list of addresses of all
-assets we have channels open for.
+tokens we have channels open for.
 
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`GET /api/assets/`
+`GET /api/tokens/`
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -159,13 +159,13 @@ Example Response
 Querying All Partners for an Asset
 -----------------------------------
 
-By making a `GET` request to `/api/assets/<asset_address>/partners` you can get a list of all partners
+By making a `GET` request to `/api/tokens/<token_address>/partners` you can get a list of all partners
 you have non-settled channels with.
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`GET /api/assets/0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6/partners/`
+`GET /api/tokens/0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6/partners/`
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -183,7 +183,7 @@ Example Response
 
 
 Notice that you also get a link to the channel resource for the channel between you
-and each partner for the asset.
+and each partner for the token.
 
 
 
@@ -208,7 +208,7 @@ Example Request
 
     {
         'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'balance': 35000000,
         'settle_timeout': 100
     }
@@ -227,7 +227,7 @@ Example Response
     {
         'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
         'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'balance': 35000000,
         'state': 'open',
         'settle_timeout': 100
@@ -256,7 +256,7 @@ Example Response
     {
         'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
         'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'balance': 35000000,
         'state': 'closed',
         'settle_timeout': 100
@@ -285,7 +285,7 @@ Example Response
     {
         'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
         'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'balance': 0,
         'state': 'settled',
         'settle_timeout': 100
@@ -317,7 +317,7 @@ Example Response
     {
         'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
         'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'balance': 100,
         'state': 'open',
         'settle_timeout': 100
@@ -341,7 +341,7 @@ Querying general network events
 
 
 You can query for non-channel specific events by making a `GET` request to the
-endpoint of the asset registry contract. `GET /api/events/network/<asset_registry_address>`
+endpoint of the token registry contract. `GET /api/events/network/<token_registry_address>`
 
 Example Request
 ^^^^^^^^^^^^^^^
@@ -355,11 +355,11 @@ Example Response
     [
         {
             'event_type': 'AssetAdded',
-            'asset_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+            'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
             'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
         }, {
             'event_type': 'AssetAdded',
-            'asset_address': '0x91337a300e0361bddb2e377dd4e88ccb7796663d'
+            'token_address': '0x91337a300e0361bddb2e377dd4e88ccb7796663d'
             'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
         }, {
             ...
@@ -389,7 +389,7 @@ Example Response
             'block_number': 54388
         }, {
             'event_type': 'TransferUpdated',
-            'asset_address': '0x91337a300e0361bddb2e377dd4e88ccb7796663d'
+            'token_address': '0x91337a300e0361bddb2e377dd4e88ccb7796663d',
             'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
         },
         ...
