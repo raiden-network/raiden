@@ -106,7 +106,7 @@ resource as shown above.
 Querying All Channels
 --------------------------
 
-By making a `GET` request to `/api/channels` you can get a list of all non-settled channels.
+By making a ``GET`` request to ``/api/channels`` you can get a list of all non-settled channels.
 
 
 Example Request
@@ -118,8 +118,8 @@ Example Response
 ^^^^^^^^^^^^^^^^
 ::
 
-    {
-        [{
+    [
+        {
             'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
             'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
             'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
@@ -128,21 +128,21 @@ Example Response
             'settle_timeout': 100
         }, {
             ...
-        }]
-    }
+        }
+    ]
 
 
 Querying all traded Assets
 --------------------------
 
-By making a `GET` request to `/api/asssets` you can get a list of addresses of all
+By making a ``GET`` request to ``/api/tokens`` you can get a list of addresses of all
 tokens we have channels open for.
 
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`GET /api/tokens/`
+``GET /api/tokens/``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -159,13 +159,13 @@ Example Response
 Querying All Partners for an Asset
 -----------------------------------
 
-By making a `GET` request to `/api/tokens/<token_address>/partners` you can get a list of all partners
+By making a ``GET`` request to ``/api/tokens/<token_address>/partners`` you can get a list of all partners
 you have non-settled channels with.
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`GET /api/tokens/0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6/partners/`
+``GET /api/tokens/0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6/partners/``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -195,15 +195,15 @@ Open Channel
 
 You can create a channel by posting a channel object to the following endpoint.
 
-`PUT /api/channels`
+``PUT /api/channels``
 
-Since it is a new channel, the channel object's `channel_address` and `status`
+Since it is a new channel, the channel object's ``channel_address`` and ``status``
 field will be ignored and can be omitted.
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`PUT /api/channels` with payload:::
+``PUT /api/channels`` with payload:::
 
 
     {
@@ -215,7 +215,7 @@ Example Request
 
 
 
-The `balance` field will signify the initial deposit you wish to make to the channel.
+The ``balance`` field will signify the initial deposit you wish to make to the channel.
 
 The request to the endpoint should later return the fully created channel object
 from which we can find the address of the channel.
@@ -237,17 +237,17 @@ Example Response
 Close Channel
 --------------
 
-You can close an existing channel by making a `PATCH` request to its endpoint and altering the state to closed.
+You can close an existing channel by making a ``PATCH`` request to its endpoint and altering the state to closed.
 
-`PATCH /api/channels/<channel_address>/`
+``PATCH /api/channels/<channel_address>/``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`PATCH /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/`
+``PATCH /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/``
 
 with payload
-`{'state':'closed'}`
+``{'state':'closed'}``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -266,17 +266,17 @@ Example Response
 Settle Channel
 ---------------
 
-You can settle an existing channel by making a `PATCH` request to its endpoint and altering the state to settled.
+You can settle an existing channel by making a ``PATCH`` request to its endpoint and altering the state to settled.
 
-`PATCH /api/channels/<channel_address>/`
+``PATCH /api/channels/<channel_address>/``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`PATCH /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/`
+``PATCH /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/``
 
 with payload
-`{'state':'settled'}`
+``{'state':'settled'}``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -296,19 +296,19 @@ Example Response
 Deposit to a Channel
 ---------------------
 
-You can deposit more of a particular token to a channel by updating the `balance`
-field of the channel in the corresponding endpoint with a `PATCH` http request.
+You can deposit more of a particular token to a channel by updating the ``balance``
+field of the channel in the corresponding endpoint with a ``PATCH`` http request.
 
-`PATCH /api/channels/<channel_address>/`
+``PATCH /api/channels/<channel_address>/``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`PATCH /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/`
+``PATCH /api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/``
 
 with payload
 
-`{'balance': 100}`
+``{'balance': 100}``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -333,20 +333,20 @@ from either the beginning of time or the given block are returned.
 Events are queried by two different endpoints depending on whether they are related
 to a specific channel or not.
 
-All events can be filtered down by providing the query string argument `from_block`
+All events can be filtered down by providing the query string argument ``from_block``
 to signify the block from which you would like the events to be returned.
 
 Querying general network events
 ---------------------------------
 
 
-You can query for non-channel specific events by making a `GET` request to the
-endpoint of the token registry contract. `GET /api/events/network/<token_registry_address>`
+You can query for non-channel specific events by making a ``GET`` request to the
+endpoint of the token registry contract. ``GET /api/events/network/<token_registry_address>``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`GET /api/events/network/0x4bb96091ee9d802ed039c4d1a5f6216f90f81b01`
+``GET /api/events/network/0x4bb96091ee9d802ed039c4d1a5f6216f90f81b01``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -370,12 +370,12 @@ Example Response
 Querying channel events
 ------------------------
 
-You can query for events tied to a specific channel by making a `GET` request to the event endpoint of its address. `GET /api/events/channels/<channel_registry_address>`
+You can query for events tied to a specific channel by making a ``GET`` request to the event endpoint of its address. ``GET /api/events/channels/<channel_registry_address>``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-`GET /api/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337`
+``GET /api/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337``
 
 Example Response
 ^^^^^^^^^^^^^^^^
