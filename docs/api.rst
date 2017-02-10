@@ -120,6 +120,9 @@ Example Request
 
 Example Response
 ^^^^^^^^^^^^^^^^
+
+``200 OK`` and
+
 ::
 
     [
@@ -134,6 +137,18 @@ Example Response
             ...
         }
     ]
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For a succesful Query     |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
+
 
 
 Querying all traded Assets
@@ -150,6 +165,8 @@ Example Request
 
 Example Response
 ^^^^^^^^^^^^^^^^
+``200 OK`` and
+
 ::
 
     {
@@ -158,6 +175,17 @@ Example Response
          ...
         ]
     }
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For a succesful Query     |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
 
 
 Querying All Partners for an Asset
@@ -173,8 +201,10 @@ Example Request
 
 Example Response
 ^^^^^^^^^^^^^^^^
+``200 OK``
+
 ::
-   
+
 
     [
         {
@@ -188,6 +218,20 @@ Example Response
 
 Notice that you also get a link to the channel resource for the channel between you
 and each partner for the token.
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For a succesful Query     |
++------------------+---------------------------+
+| 302 Redirect     | If the user accesses the  |
+|                  | channel link endpoint     |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
 
 
 
@@ -226,6 +270,7 @@ from which we can find the address of the channel.
 
 Example Response
 ^^^^^^^^^^^^^^^^
+``201 Created`` and
 ::
 
     {
@@ -236,6 +281,20 @@ Example Response
         'state': 'open',
         'settle_timeout': 100
     }
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 201 Created      | For succesful Creation    |
++------------------+---------------------------+
+| 400 Bad Request  | If the provided json is in|
+|                  | some way malformed        |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
 
 
 Close Channel
@@ -255,6 +314,7 @@ with payload
 
 Example Response
 ^^^^^^^^^^^^^^^^
+``200 OK`` with
 ::
 
     {
@@ -265,6 +325,20 @@ Example Response
         'state': 'closed',
         'settle_timeout': 100
     }
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For succesful Closing     |
++------------------+---------------------------+
+| 400 Bad Request  | If the provided json is in|
+|                  | some way malformed        |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
 
 
 Settle Channel
@@ -284,6 +358,7 @@ with payload
 
 Example Response
 ^^^^^^^^^^^^^^^^
+``200 OK`` with
 ::
 
     {
@@ -295,7 +370,19 @@ Example Response
         'settle_timeout': 100
     }
 
+Possible Responses
+^^^^^^^^^^^^^^^^^^
 
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For succesful Settlement  |
++------------------+---------------------------+
+| 400 Bad Request  | If the provided json is in|
+|                  | some way malformed        |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
 
 Deposit to a Channel
 ---------------------
@@ -316,6 +403,7 @@ with payload
 
 Example Response
 ^^^^^^^^^^^^^^^^
+``200 OK`` with
 ::
 
     {
@@ -327,6 +415,19 @@ Example Response
         'settle_timeout': 100
     }
 
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For succesful Deposit     |
++------------------+---------------------------+
+| 400 Bad Request  | If the provided json is in|
+|                  | some way malformed        |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
 
 Querying Events
 ================
@@ -354,6 +455,7 @@ Example Request
 
 Example Response
 ^^^^^^^^^^^^^^^^
+``200 OK`` with
 ::
 
     [
@@ -371,6 +473,20 @@ Example Response
         ...
     ]
 
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For succesful Query       |
++------------------+---------------------------+
+| 400 Bad Request  | If the provided query     |
+|                  | string is  malformed      |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
+
 Querying channel events
 ------------------------
 
@@ -383,6 +499,7 @@ Example Request
 
 Example Response
 ^^^^^^^^^^^^^^^^
+``200 OK`` with
 ::
 
     [
@@ -398,3 +515,17 @@ Example Response
         },
         ...
     ]
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For succesful Query       |
++------------------+---------------------------+
+| 400 Bad Request  | If the provided query     |
+|                  | string is  malformed      |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
