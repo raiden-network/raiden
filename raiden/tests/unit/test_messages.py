@@ -47,7 +47,7 @@ def test_ack():
 
 def test_mediated_transfer():
     nonce = balance = 1
-    asset = recipient = target = initiator = ADDRESS
+    token = recipient = target = initiator = ADDRESS
     hashlock = locksroot = sha3(ADDRESS)
     amount = expiration = 1
     fee = 0
@@ -56,7 +56,7 @@ def test_mediated_transfer():
     mediated_transfer = MediatedTransfer(
         1,  # TODO: fill in identifier
         nonce,
-        asset,
+        token,
         balance,
         recipient,
         locksroot,

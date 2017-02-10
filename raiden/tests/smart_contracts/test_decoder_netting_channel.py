@@ -10,7 +10,7 @@ from raiden.encoding.signing import GLOBAL_CTX, address_from_key
 from raiden.tests.utils.tests import get_test_contract_path
 
 
-def deploy_decoder_tester(tester_state, asset_address, address1, address2, settle_timeout):
+def deploy_decoder_tester(tester_state, token_address, address1, address2, settle_timeout):
     nettingchannel_lib = tester_state.abi_contract(
         None,
         path=os.path.join(get_project_root(), "smart_contracts", "NettingChannelLibrary.sol"),
@@ -25,7 +25,7 @@ def deploy_decoder_tester(tester_state, asset_address, address1, address2, settl
             'NettingChannelLibrary': nettingchannel_lib.address.encode('hex')
         },
         constructor_parameters=(
-            asset_address,
+            token_address,
             address1,
             address2,
             settle_timeout
@@ -63,7 +63,7 @@ def test_decode_direct_transfer(
     message = DirectTransfer(
         identifier=1,
         nonce=2,
-        asset=tester_token.address,
+        token=tester_token.address,
         transferred_amount=1337,
         recipient=address1,
         locksroot=locksroot
@@ -76,7 +76,7 @@ def test_decode_direct_transfer(
 
     assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
     assert dtester.decodedNonce() == 2
-    assert dtester.decodedAsset() == tester_token.address.encode('hex')
+    assert dtester.decodedToken() == tester_token.address.encode('hex')
     assert dtester.decodedRecipient() == address1.encode('hex')
     assert dtester.decodedAmount() == 1337
     assert dtester.decodedLocksroot() == locksroot
@@ -113,7 +113,7 @@ def test_decode_mediated_transfer(
     message = MediatedTransfer(
         identifier=313151,
         nonce=88924902,
-        asset=tester_token.address,
+        token=tester_token.address,
         transferred_amount=amount,
         recipient=address1,
         locksroot=locksroot,
@@ -130,7 +130,7 @@ def test_decode_mediated_transfer(
     assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
     assert dtester.decodedNonce() == 88924902
     assert dtester.decodedExpiration() == expiration
-    assert dtester.decodedAsset() == tester_token.address.encode('hex')
+    assert dtester.decodedToken() == tester_token.address.encode('hex')
     assert dtester.decodedRecipient() == address1.encode('hex')
     assert dtester.decodedAmount() == amount
     assert dtester.decodedLocksroot() == locksroot
@@ -165,7 +165,7 @@ def test_decode_refund_transfer(
     message = RefundTransfer(
         identifier=321313,
         nonce=4242452,
-        asset=tester_token.address,
+        token=tester_token.address,
         transferred_amount=amount,
         recipient=address1,
         locksroot=locksroot,
@@ -180,7 +180,7 @@ def test_decode_refund_transfer(
     assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
     assert dtester.decodedNonce() == 4242452
     assert dtester.decodedExpiration() == expiration
-    assert dtester.decodedAsset() == tester_token.address.encode('hex')
+    assert dtester.decodedToken() == tester_token.address.encode('hex')
     assert dtester.decodedRecipient() == address1.encode('hex')
     assert dtester.decodedAmount() == amount
     assert dtester.decodedLocksroot() == locksroot

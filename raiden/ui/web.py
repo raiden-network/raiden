@@ -84,11 +84,11 @@ class UIHandler(object):
         assert isinstance(self.api, RaidenAPI)
         self.port = None  # neccessary?
         self.ui_service = None  # neccessary?
-        # self.assetmanagers = self.api.raiden.ass
+        # self.tokenmanagers = self.api.raiden.ass
         self.registrars = registrars  # NOTIMPLEMENTED
 
     @export_rpc
-    def transfer(self, asset_address, amount, target, id):
+    def transfer(self, token_address, amount, target, id):
         try:
             amount = int(amount)
         except ValueError:
@@ -96,7 +96,7 @@ class UIHandler(object):
             return False
         # try to forward transfer to API and handle occuring excpetions
         try:
-            self.api.transfer(asset_address, amount, target,
+            self.api.transfer(token_address, amount, target,
                               lambda _, status, id=id: self.transfer_callback(_, status, id))
             # if cb just failes with success==False, then everything was right,except:
             #   - no active channel was found
@@ -111,7 +111,7 @@ class UIHandler(object):
             self.exception_handler(id, 'INVALID_AMOUNT')
             return False
         except InvalidAddress as ex:
-            if ex.args[1] is 'asset':
+            if ex.args[1] is 'token':
                 self.exception_handler(id, 'INVALID_ASSET')
             elif ex.args[1] is 'receiver':
                 self.exception_handler(id, 'INVALID_TARGET')
@@ -137,9 +137,9 @@ class UIHandler(object):
         self.transfer_callback(None, False, id, reason=reason)
 
     @export_rpc
-    def get_assets(self):
-        assets = [asset.encode('hex') for asset in getattr(self.api, 'assets')]
-        return assets
+    def get_tokens(self):
+        tokens = [token.encode('hex') for token in getattr(self.api, 'tokens')]
+        return tokens
 
     def publish(self, message):
         """ 'message' format:

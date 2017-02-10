@@ -23,16 +23,16 @@ from raiden.tests.benchmark.utils import (
 def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-many-locals
     channels_per_node = 1
     num_nodes = 2
-    num_assets = 1
+    num_tokens = 1
 
     private_keys = [
         sha3('speed:{}'.format(position))
         for position in range(num_nodes)
     ]
 
-    assets = [
-        sha3('asset:{}'.format(number))[:20]
-        for number in range(num_assets)
+    tokens = [
+        sha3('token:{}'.format(number))[:20]
+        for number in range(num_tokens)
     ]
 
     amounts = [
@@ -52,12 +52,12 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
     BlockChainServiceMock._instance = blockchain_service  # pylint: disable=redefined-variable-type
 
     registry = blockchain_service.registry(MOCK_REGISTRY_ADDRESS)
-    for asset in assets:
-        registry.add_asset(asset)
+    for token in tokens:
+        registry.add_token(token)
 
     apps = create_network(
         private_keys,
-        assets,
+        tokens,
         MOCK_REGISTRY_ADDRESS,
         channels_per_node,
         deposit,
@@ -68,8 +68,8 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
     )
 
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
-    channel0 = app0.raiden.get_manager_by_asset_address(assets[0]).address_channel.values()[0]
-    channel1 = app1.raiden.get_manager_by_asset_address(assets[0]).address_channel.values()[0]
+    channel0 = app0.raiden.get_manager_by_token_address(tokens[0]).address_channel.values()[0]
+    channel1 = app1.raiden.get_manager_by_token_address(tokens[0]).address_channel.values()[0]
 
     expiration = app0.raiden.chain.block_number() + DEFAULT_REVEAL_TIMEOUT + 3
 

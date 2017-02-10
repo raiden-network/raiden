@@ -30,7 +30,7 @@ def _raiden_cleanup(request, raiden_apps):
 @pytest.fixture
 def raiden_chain(
         request,
-        assets_addresses,
+        tokens_addresses,
         channels_per_node,
         deposit,
         settle_timeout,
@@ -42,8 +42,8 @@ def raiden_chain(
         max_unresponsive_time,
         reveal_timeout):
 
-    if len(assets_addresses) > 1:
-        raise ValueError('raiden_chain only works with a single asset')
+    if len(tokens_addresses) > 1:
+        raise ValueError('raiden_chain only works with a single token')
 
     assert channels_per_node in (0, 1, 2, CHAIN), (
         'deployed_network uses create_sequential_network that can only work '
@@ -64,7 +64,7 @@ def raiden_chain(
     if not cached_genesis:
         create_sequential_channels(
             raiden_apps,
-            assets_addresses[0],
+            tokens_addresses[0],
             channels_per_node,
             deposit,
             settle_timeout,
@@ -81,7 +81,7 @@ def raiden_chain(
 @pytest.fixture
 def raiden_network(
         request,
-        assets_addresses,
+        tokens_addresses,
         channels_per_node,
         deposit,
         settle_timeout,
@@ -108,7 +108,7 @@ def raiden_network(
     if not cached_genesis:
         create_network_channels(
             raiden_apps,
-            assets_addresses,
+            tokens_addresses,
             channels_per_node,
             deposit,
             settle_timeout

@@ -76,7 +76,7 @@ def test_secret(iterations=ITERATIONS):
 def test_direct_transfer(iterations=ITERATIONS):
     identifier = 1
     nonce = 1
-    asset = ADDRESS
+    token = ADDRESS
     balance = 1
     recipient = ADDRESS
     locksroot = HASH
@@ -84,7 +84,7 @@ def test_direct_transfer(iterations=ITERATIONS):
     msg = DirectTransfer(
         identifier,
         nonce,
-        asset,
+        token,
         balance,
         recipient,
         locksroot,
@@ -101,7 +101,7 @@ def test_mediated_transfer(iterations=ITERATIONS):
     lock = Lock(amount, expiration, hashlock)
 
     nonce = 1
-    asset = ADDRESS
+    token = ADDRESS
     balance = 1
     recipient = ADDRESS
     locksroot = sha3(ADDRESS)
@@ -110,7 +110,7 @@ def test_mediated_transfer(iterations=ITERATIONS):
     msg = MediatedTransfer(
         identifier,
         nonce,
-        asset,
+        token,
         balance,
         recipient,
         locksroot,
@@ -132,14 +132,14 @@ def test_cancel_transfer(iterations=ITERATIONS):
 
     identifier = 1
     nonce = 1
-    asset = ADDRESS
+    token = ADDRESS
     transferred_amount = 1
     recipient = ADDRESS
     locksroot = sha3(ADDRESS)
     msg = RefundTransfer(
         identifier,
         nonce,
-        asset,
+        token,
         transferred_amount,
         recipient,
         locksroot,

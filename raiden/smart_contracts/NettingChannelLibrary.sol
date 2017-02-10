@@ -22,7 +22,7 @@ library NettingChannelLibrary {
         bytes32 secret;
         uint256 expiration;
         uint64 nonce;
-        address asset;
+        address token;
         address recipient;
         bytes32 locksroot;
         Lock[] unlocked;
@@ -488,7 +488,7 @@ library NettingChannelLibrary {
         }
 
         uint64 nonce;
-        address asset;
+        address token;
         address recipient;
         uint256 transferred_amount;
         bytes32 locksroot;
@@ -499,7 +499,7 @@ library NettingChannelLibrary {
             // pad [1:4]
             nonce := mload(add(message, 12))              // nonce [4:12]
             // identifier [12:20]
-            asset := mload(add(message, 40))              // asset [20:40]
+            token := mload(add(message, 40))              // token [20:40]
             recipient := mload(add(message, 60))          // recipient [40:60]
             transferred_amount := mload(add(message, 92)) // transferred_amount [60:92]
             locksroot := mload(add(message, 124))         // optional_locksroot [92:124]
@@ -507,7 +507,7 @@ library NettingChannelLibrary {
         }
 
         participant.nonce = nonce;
-        participant.asset = asset;
+        participant.token = token;
         participant.recipient = recipient;
         participant.transferred_amount = transferred_amount;
         participant.locksroot = locksroot;
@@ -521,7 +521,7 @@ library NettingChannelLibrary {
 
         uint64 nonce;
         uint64 expiration;
-        address asset;
+        address token;
         address recipient;
         bytes32 locksroot;
         bytes32 hashlock;
@@ -534,7 +534,7 @@ library NettingChannelLibrary {
             nonce := mload(add(message, 12))               // nonce [4:12]
             // identifier [12:20]
             expiration := mload(add(message, 28))          // expiration [20:28]
-            asset := mload(add(message, 48))               // asset [28:48]
+            token := mload(add(message, 48))               // token [28:48]
             recipient := mload(add(message, 68))           // recipient [48:68]
             // target [68:88]
             // initiator [88:108]
@@ -547,7 +547,7 @@ library NettingChannelLibrary {
 
         participant.nonce = nonce;
         participant.expiration = expiration;
-        participant.asset = asset;
+        participant.token = token;
         participant.recipient = recipient;
         participant.locksroot = locksroot;
         participant.hashlock = hashlock;
@@ -562,7 +562,7 @@ library NettingChannelLibrary {
 
         uint64 nonce;
         uint64 expiration;
-        address asset;
+        address token;
         address recipient;
         bytes32 locksroot;
         uint256 transferred_amount;
@@ -575,7 +575,7 @@ library NettingChannelLibrary {
             nonce := mload(add(message, 12))                // nonce [4:12]
             // identifier [12:20]
             expiration := mload(add(message, 28))           // expiration [20:28]
-            asset := mload(add(message, 48))                // asset [28:48]
+            token := mload(add(message, 48))                // token [28:48]
             recipient := mload(add(message, 68))            // recipient [48:68]
             locksroot := mload(add(message, 100))           // locksroot [68:100]
             transferred_amount := mload(add(message, 132))  // transferred_amount [100:132]
@@ -585,7 +585,7 @@ library NettingChannelLibrary {
 
         participant.nonce = nonce;
         participant.expiration = expiration;
-        participant.asset = asset;
+        participant.token = token;
         participant.recipient = recipient;
         participant.locksroot = locksroot;
         participant.transferred_amount = transferred_amount;

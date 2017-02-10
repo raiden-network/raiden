@@ -35,13 +35,13 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     setup_messages_cb()
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
+    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
 
     chain0 = app0.raiden.chain
 
-    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+    channel0 = token_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = token_manager1.partneraddress_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
@@ -51,8 +51,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     secret = 'secret'
     hashlock = sha3(secret)
 
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
-    assert asset_manager0.asset_address == asset_manager1.asset_address
+    assert app1.raiden.address in token_manager0.partneraddress_channel
+    assert token_manager0.token_address == token_manager1.token_address
 
     nettingaddress0 = channel0.external_state.netting_channel.address
     nettingaddress1 = channel1.external_state.netting_channel.address
@@ -132,11 +132,11 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 # TODO: Need to expose the netted value to use a different blockchain_type
 @pytest.mark.parametrize('blockchain_type', ['mock'])
-def test_settled_lock(assets_addresses, raiden_network, settle_timeout, reveal_timeout):
+def test_settled_lock(tokens_addresses, raiden_network, settle_timeout, reveal_timeout):
     """ Any transfer following a secret revealed must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
-    asset = assets_addresses[0]
+    token = tokens_addresses[0]
     amount = 30
 
     app0, app1, app2, _ = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -148,7 +148,7 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout, reveal_t
     expiration = app0.raiden.chain.block_number() + settle_timeout - reveal_timeout
     secret = pending_mediated_transfer(
         raiden_network,
-        asset,
+        token,
         amount,
         identifier,
         expiration,
@@ -156,18 +156,18 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout, reveal_t
     hashlock = sha3(secret)
 
     # get a proof for the pending transfer
-    back_channel = channel(app1, app0, asset)
+    back_channel = channel(app1, app0, token)
     secret_transfer = get_received_transfer(back_channel, 0)
     lock = back_channel.our_state.balance_proof.get_lock_by_hashlock(hashlock)
     unlock_proof = back_channel.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
     # reveal the secret
-    claim_lock(raiden_network, asset, secret)
+    claim_lock(raiden_network, token, secret)
 
     # a new transfer to update the hashlock
-    direct_transfer(app0, app1, asset, amount)
+    direct_transfer(app0, app1, token, amount)
 
-    forward_channel = channel(app0, app1, asset)
+    forward_channel = channel(app0, app1, token)
     last_transfer = get_sent_transfer(forward_channel, 1)
 
     # call close giving the secret for a transfer that has being revealed
@@ -201,8 +201,8 @@ def test_settled_lock(assets_addresses, raiden_network, settle_timeout, reveal_t
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_start_end_attack(asset_address, raiden_chain, deposit):
-    """ An attacker can try to steal assets from a hub or the last node in a
+def test_start_end_attack(token_address, raiden_chain, deposit):
+    """ An attacker can try to steal tokens from a hub or the last node in a
     path.
 
     The attacker needs to use two addresses (A1 and A2) and connect both to the
@@ -211,27 +211,27 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
     uses the it's know secret and reveal to close and settles the channel H-A2,
     without revealing the secret to H's raiden node.
 
-    The intention is to make the hub transfer the asset but for him to be
-    unable to require the asset A1.
+    The intention is to make the hub transfer the token but for him to be
+    unable to require the token A1.
     """
     amount = 30
 
-    asset = asset_address[0]
+    token = token_address[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     # the attacker owns app0 and app2 and creates a transfer throught app1
     secret = pending_mediated_transfer(
         raiden_chain,
-        asset,
+        token,
         amount,
         1  # TODO: fill in identifier
     )
     hashlock = sha3(secret)
 
-    attack_channel = channel(app2, app1, asset)
+    attack_channel = channel(app2, app1, token)
     attack_transfer = get_received_transfer(attack_channel, 0)
     attack_contract = attack_channel.external_state.netting_channel.address
-    hub_contract = channel(app1, app0, asset).external_state.netting_channel.address
+    hub_contract = channel(app1, app0, token).external_state.netting_channel.address
 
     # the attacker can create a merkle proof of the locked transfer
     lock = attack_channel.our_state.balance_proof.get_lock_by_hashlock(hashlock)
@@ -255,32 +255,32 @@ def test_start_end_attack(asset_address, raiden_chain, deposit):
     # XXX: verify that the secret was publicized
 
     # at this point the hub might not know yet the secret, and won't be able to
-    # claim the asset from the channel A1 - H
+    # claim the token from the channel A1 - H
 
     # the attacker settle the contract
     app2.raiden.chain.next_block()
 
-    attack_channel.netting_channel.settle(asset, attack_contract)
+    attack_channel.netting_channel.settle(token, attack_contract)
 
     # at this point the attack has the "stolen" funds
-    attack_contract = app2.raiden.chain.asset_hashchannel[asset][attack_contract]
+    attack_contract = app2.raiden.chain.token_hashchannel[token][attack_contract]
     assert attack_contract.participants[app2.raiden.address]['netted'] == deposit + amount
     assert attack_contract.participants[app1.raiden.address]['netted'] == deposit - amount
 
     # and the hub's channel A1-H doesn't
-    hub_contract = app1.raiden.chain.asset_hashchannel[asset][hub_contract]
+    hub_contract = app1.raiden.chain.token_hashchannel[token][hub_contract]
     assert hub_contract.participants[app0.raiden.address]['netted'] == deposit
     assert hub_contract.participants[app1.raiden.address]['netted'] == deposit
 
     # to mitigate the attack the Hub _needs_ to use a lower expiration for the
-    # locked transfer between H-A2 than A1-H, since for A2 to acquire the asset
+    # locked transfer between H-A2 than A1-H, since for A2 to acquire the token
     # it needs to make the secret public in the block chain we publish the
     # secret through an event and the Hub will be able to require it's funds
     app1.raiden.chain.next_block()
 
     # XXX: verify that the Hub has found the secret, close and settle the channel
 
-    # the hub has acquired it's asset
-    hub_contract = app1.raiden.chain.asset_hashchannel[asset][hub_contract]
+    # the hub has acquired it's token
+    hub_contract = app1.raiden.chain.token_hashchannel[token][hub_contract]
     assert hub_contract.participants[app0.raiden.address]['netted'] == deposit + amount
     assert hub_contract.participants[app1.raiden.address]['netted'] == deposit - amount

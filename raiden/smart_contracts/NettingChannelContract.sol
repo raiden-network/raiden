@@ -6,7 +6,7 @@ contract NettingChannelContract {
     using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
 
-    event ChannelNewBalance(address asset_address, address participant, uint balance, uint block_number);
+    event ChannelNewBalance(address token_address, address participant, uint balance, uint block_number);
     event ChannelClosed(address closing_address, uint block_number);
     event TransferUpdated(address node_address, uint block_number);
     event ChannelSettled(uint block_number);
@@ -18,7 +18,7 @@ contract NettingChannelContract {
     }
 
     function NettingChannelContract(
-        address asset_address,
+        address token_address,
         address participant1,
         address participant2,
         uint timeout)
@@ -31,7 +31,7 @@ contract NettingChannelContract {
         data.participants[0].node_address = participant1;
         data.participants[1].node_address = participant2;
 
-        data.token = Token(asset_address);
+        data.token = Token(token_address);
         data.settle_timeout = timeout;
     }
 
@@ -91,7 +91,7 @@ contract NettingChannelContract {
         return data.settle_timeout;
     }
 
-    function assetAddress() constant returns (address) {
+    function tokenAddress() constant returns (address) {
         return data.token;
     }
 

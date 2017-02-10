@@ -33,13 +33,13 @@ def hostport_to_privkeyaddr(host, port):
     return privkey, addr
 
 
-def random_raiden_network(asset_address, blockchain_service, node_addresses,
+def random_raiden_network(token_address, blockchain_service, node_addresses,
                           deposit, settle_timeout):
     """ Creates random channels among the test nodes until we have a connected graph. """
     graph = networkx.Graph()
     graph.add_nodes_from(node_addresses)
 
-    for edge in blockchain_service.addresses_by_asset(asset_address):
+    for edge in blockchain_service.addresses_by_token(token_address):
         graph.add_edge(edge[0], edge[1])
 
     while not networkx.is_connected(graph):
@@ -47,21 +47,21 @@ def random_raiden_network(asset_address, blockchain_service, node_addresses,
         to_address = random.choice(node_addresses)
 
         netcontract_address = blockchain_service.new_netting_contract(
-            asset_address,
+            token_address,
             from_address,
             to_address,
             settle_timeout,
         )
 
         blockchain_service.deposit(
-            asset_address,
+            token_address,
             netcontract_address,
             from_address,
             deposit,
         )
 
         blockchain_service.deposit(
-            asset_address,
+            token_address,
             netcontract_address,
             to_address,
             deposit,
@@ -70,7 +70,7 @@ def random_raiden_network(asset_address, blockchain_service, node_addresses,
         graph.add_edge(from_address, to_address)
 
 
-def setup_tps(rpc_server, config_path, channelmanager_address, asset_address,
+def setup_tps(rpc_server, config_path, channelmanager_address, token_address,
               deposit, settle_timeout):
     """ Creates the required contract and the fully connected Raiden network
     prior to running the test.
@@ -80,7 +80,7 @@ def setup_tps(rpc_server, config_path, channelmanager_address, asset_address,
             the JSON-RPC end-point.
         config_path (str): A full/relative path to the yaml configuration file.
         channelmanager_address (str): The address of the channel manager contract.
-        asset_address (str): The address of the asset used for testing.
+        token_address (str): The address of the token used for testing.
         deposit (int): The default deposit that will be made for all test nodes.
     """
     # TODO:
@@ -90,7 +90,7 @@ def setup_tps(rpc_server, config_path, channelmanager_address, asset_address,
     rpc_connection = (rpc_connection[0], int(rpc_connection[1]))
 
     blockchain_service = BlockChainService(rpc_connection, channelmanager_address)
-    blockchain_service.new_channel_manager_contract(asset_address=asset_address)
+    blockchain_service.new_channel_manager_contract(token_address=token_address)
 
     with codecs.open(config_path, encoding='utf8') as handler:
         config = yaml.load(handler)
@@ -101,7 +101,7 @@ def setup_tps(rpc_server, config_path, channelmanager_address, asset_address,
         node_addresses.append(privatekey_to_address(privkey))
 
     random_raiden_network(
-        asset_address,
+        token_address,
         blockchain_service,
         node_addresses,
         deposit,
@@ -109,19 +109,19 @@ def setup_tps(rpc_server, config_path, channelmanager_address, asset_address,
     )
 
 
-def random_transfer(app, asset, transfer_amount):
-    channelgraph = app.raiden.asset_managers[asset].channelgraph
+def random_transfer(app, token, transfer_amount):
+    channelgraph = app.raiden.token_managers[token].channelgraph
 
     nodes = channelgraph.graph.nodes()
     nodes.remove(app.raiden.address)
 
     while True:
         target = random.choice(nodes)
-        app.raiden.api.transfer(asset, transfer_amount, target)
+        app.raiden.api.transfer(token, transfer_amount, target)
 
 
 def tps_run(host, port, config, rpc_server, channelmanager_address,
-            asset_address, transfer_amount, parallel):
+            token_address, transfer_amount, parallel):
     # pylint: disable=too-many-locals,too-many-arguments
     ourprivkey, _ = hostport_to_privkeyaddr(host, port)
 
@@ -153,21 +153,21 @@ def tps_run(host, port, config, rpc_server, channelmanager_address,
 
     app = App(config, blockchain_service, discovery)
 
-    for asset_address in blockchain_service.asset_addresses:
-        all_netting_contracts = blockchain_service.nettingaddresses_by_asset_participant(
-            asset_address,
+    for token_address in blockchain_service.token_addresses:
+        all_netting_contracts = blockchain_service.nettingaddresses_by_token_participant(
+            token_address,
             app.raiden.address,
         )
 
         for netting_contract_address in all_netting_contracts:
             app.raiden.setup_channel(
-                asset_address,
+                token_address,
                 netting_contract_address,
                 app.config['reveal_timeout'],
             )
 
     for _ in range(parallel):
-        gevent.spawn(random_transfer, app, asset_address, transfer_amount)
+        gevent.spawn(random_transfer, app, token_address, transfer_amount)
 
     # wait for interrupt
     event = gevent.event.Event()

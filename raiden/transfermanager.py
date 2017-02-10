@@ -18,15 +18,15 @@ from raiden.utils import pex, sha3
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 Exchange = namedtuple('Exchange', (
     'identifier',
-    'from_asset',
+    'from_token',
     'from_amount',
-    'from_nodeaddress',  # the node' address of the owner of the `from_asset`
-    'to_asset',
+    'from_nodeaddress',  # the node' address of the owner of the `from_token`
+    'to_token',
     'to_amount',
-    'to_nodeaddress',  # the node' address of the owner of the `to_asset`
+    'to_nodeaddress',  # the node' address of the owner of the `to_token`
 ))
 ExchangeKey = namedtuple('ExchangeKey', (
-    'from_asset',
+    'from_token',
     'from_amount',
 ))
 
@@ -39,19 +39,19 @@ class TransferWhenClosed(Exception):
     pass
 
 
-class UnknownAssetAddress(Exception):
+class UnknownTokenAddress(Exception):
     def __init__(self, address):
         Exception.__init__(
             self,
-            'Message with unknown asset address {} received'.format(pex(address))
+            'Message with unknown token address {} received'.format(pex(address))
         )
 
 
 class TransferManager(object):
     """ Manages all transfers done through this node. """
 
-    def __init__(self, assetmanager):
-        self.assetmanager = assetmanager
+    def __init__(self, tokenmanager):
+        self.tokenmanager = tokenmanager
 
         self.transfertasks = dict()
         self.exchanges = dict()  #: mapping for pending exchanges
@@ -62,7 +62,7 @@ class TransferManager(object):
 
     # TODO: Move registration to raiden_service.py:Raiden. This is used to
     # dispatch messages by hashlock and to expose callbacks to applications
-    # built on top of raiden, since hashlocks can be shared among assets this
+    # built on top of raiden, since hashlocks can be shared among tokens this
     # should be moved to an upper layer.
     def register_task_for_hashlock(self, task, hashlock):
         """ Register the task to receive messages based on hashlock.
@@ -104,7 +104,7 @@ class TransferManager(object):
                 for callback in self.on_result_callbacks:
                     gevent.spawn(
                         callback(
-                            transfer.asset,
+                            transfer.token,
                             transfer.recipient,
                             transfer.initiator,
                             transfer.transferred_amount,
@@ -121,13 +121,13 @@ class TransferManager(object):
         The default message identifier value is the first 8 bytes of the sha3 of:
             - Our Address
             - Our target address
-            - The asset address
+            - The token address
             - A random 8 byte number for uniqueness
         """
         hash_ = sha3("{}{}{}{}".format(
-            self.assetmanager.raiden.address,
+            self.tokenmanager.raiden.address,
             target,
-            self.assetmanager.asset_address,
+            self.tokenmanager.token_address,
             random.randint(0, 18446744073709551614L)
         ))
         return int(hash_[0:8].encode('hex'), 16)
@@ -147,7 +147,7 @@ class TransferManager(object):
         if identifier is None:
             identifier = self.create_default_identifier(target)
 
-        direct_channel = self.assetmanager.partneraddress_channel.get(target)
+        direct_channel = self.tokenmanager.partneraddress_channel.get(target)
 
         if direct_channel:
             async_result = self._direct_or_mediated_transfer(
@@ -206,13 +206,13 @@ class TransferManager(object):
 
         else:
             direct_transfer = direct_channel.create_directtransfer(amount, identifier)
-            self.assetmanager.raiden.sign(direct_transfer)
+            self.tokenmanager.raiden.sign(direct_transfer)
             direct_channel.register_transfer(direct_transfer)
 
             if callback:
                 direct_channel.on_task_completed_callbacks.append(callback)
 
-            async_result = self.assetmanager.raiden.protocol.send_async(
+            async_result = self.tokenmanager.raiden.protocol.send_async(
                 direct_channel.partner_state.address,
                 direct_transfer,
             )
@@ -221,8 +221,8 @@ class TransferManager(object):
     def _mediated_transfer(self, amount, identifier, target, callback):
         asunc_result = AsyncResult()
         task = StartMediatedTransferTask(
-            self.assetmanager.raiden,
-            self.assetmanager.asset_address,
+            self.tokenmanager.raiden,
+            self.tokenmanager.token_address,
             amount,
             identifier,
             target,
@@ -236,7 +236,7 @@ class TransferManager(object):
         return asunc_result
 
     def on_mediatedtransfer_message(self, transfer):
-        if transfer.sender not in self.assetmanager.partneraddress_channel:
+        if transfer.sender not in self.tokenmanager.partneraddress_channel:
             if log.isEnabledFor(logging.WARN):
                 log.warn(
                     'Received mediated transfer message from unknown channel.'
@@ -245,10 +245,10 @@ class TransferManager(object):
                 )
             raise UnknownAddress
 
-        raiden = self.assetmanager.raiden
-        asset_address = self.assetmanager.asset_address
+        raiden = self.tokenmanager.raiden
+        token_address = self.tokenmanager.token_address
 
-        channel = self.assetmanager.get_channel_by_partner_address(transfer.sender)
+        channel = self.tokenmanager.get_channel_by_partner_address(transfer.sender)
         if not channel.isopen:
             if log.isEnabledFor(logging.WARN):
                 log.warn(
@@ -258,21 +258,21 @@ class TransferManager(object):
             raise TransferWhenClosed
         channel.register_transfer(transfer)  # raises if the transfer is invalid
 
-        exchange_key = ExchangeKey(transfer.asset, transfer.lock.amount)
+        exchange_key = ExchangeKey(transfer.token, transfer.lock.amount)
         if exchange_key in self.exchanges:
             exchange = self.exchanges[exchange_key]
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
                     'EXCHANGE TRANSFER RECEIVED node:%s %s > %s hashlock:%s'
-                    ' from_asset:%s from_amount:%s to_asset:%s to_amount:%s [%s]',
-                    pex(self.assetmanager.raiden.address),
+                    ' from_token:%s from_amount:%s to_token:%s to_amount:%s [%s]',
+                    pex(self.tokenmanager.raiden.address),
                     pex(transfer.sender),
-                    pex(self.assetmanager.raiden.address),
+                    pex(self.tokenmanager.raiden.address),
                     pex(transfer.lock.hashlock),
-                    pex(exchange.from_asset),
+                    pex(exchange.from_token),
                     exchange.from_amount,
-                    pex(exchange.to_asset),
+                    pex(exchange.to_token),
                     exchange.to_amount,
                     repr(transfer),
                 )
@@ -280,25 +280,25 @@ class TransferManager(object):
             exchange_task = ExchangeTask(
                 raiden,
                 from_mediated_transfer=transfer,
-                to_asset=exchange.to_asset,
+                to_token=exchange.to_token,
                 to_amount=exchange.to_amount,
                 target=exchange.from_nodeaddress,
             )
             exchange_task.start()
 
-        elif transfer.target == self.assetmanager.raiden.address:
+        elif transfer.target == self.tokenmanager.raiden.address:
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
                     'MEDIATED TRANSFER RECEIVED node:%s %s > %s hashlock:%s [%s]',
-                    pex(self.assetmanager.raiden.address),
+                    pex(self.tokenmanager.raiden.address),
                     pex(transfer.sender),
-                    pex(self.assetmanager.raiden.address),
+                    pex(self.tokenmanager.raiden.address),
                     pex(transfer.lock.hashlock),
                     repr(transfer),
                 )
 
             try:
-                self.assetmanager.raiden.message_for_task(
+                self.tokenmanager.raiden.message_for_task(
                     transfer,
                     transfer.lock.hashlock
                 )
@@ -307,7 +307,7 @@ class TransferManager(object):
                 # (used for exchanges)
                 secret_request_task = EndMediatedTransferTask(
                     raiden,
-                    asset_address,
+                    token_address,
                     transfer,
                 )
                 secret_request_task.start()
@@ -316,23 +316,23 @@ class TransferManager(object):
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
                     'TRANSFER TO BE MEDIATED RECEIVED node:%s %s > %s hashlock:%s [%s]',
-                    pex(self.assetmanager.raiden.address),
+                    pex(self.tokenmanager.raiden.address),
                     pex(transfer.sender),
-                    pex(self.assetmanager.raiden.address),
+                    pex(self.tokenmanager.raiden.address),
                     pex(transfer.lock.hashlock),
                     repr(transfer),
                 )
 
             transfer_task = MediateTransferTask(
                 raiden,
-                asset_address,
+                token_address,
                 transfer,
                 0,  # TODO: calculate the fee
             )
             transfer_task.start()
 
     def on_directtransfer_message(self, transfer):
-        if transfer.sender not in self.assetmanager.partneraddress_channel:
+        if transfer.sender not in self.tokenmanager.partneraddress_channel:
             if log.isEnabledFor(logging.WARN):
                 log.warn(
                     'Received direct transfer message from unknown sender %s',
@@ -340,7 +340,7 @@ class TransferManager(object):
                 )
             raise UnknownAddress
 
-        channel = self.assetmanager.partneraddress_channel[transfer.sender]
+        channel = self.tokenmanager.partneraddress_channel[transfer.sender]
 
         if not channel.isopen:
             if log.isEnabledFor(logging.WARN):

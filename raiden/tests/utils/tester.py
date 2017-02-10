@@ -82,13 +82,13 @@ def channel_from_nettingcontract(our_key, netting_contract, external_state, reve
     """
     our_address = privatekey_to_address(our_key)
 
-    asset_address_hex = netting_contract.assetAddress(sender=our_key)
+    token_address_hex = netting_contract.tokenAddress(sender=our_key)
     settle_timeout = netting_contract.settleTimeout(sender=our_key)
 
     address_balance = netting_contract.addressAndBalance(sender=our_key)
     address1_hex, balance1, address2_hex, balance2 = address_balance
 
-    asset_address = decode_hex(asset_address_hex)
+    token_address = decode_hex(token_address_hex)
     address1 = decode_hex(address1_hex)
     address2 = decode_hex(address2_hex)
 
@@ -117,7 +117,7 @@ def channel_from_nettingcontract(our_key, netting_contract, external_state, reve
         partner_state,
         external_state,
 
-        asset_address,
+        token_address,
         reveal_timeout,
         settle_timeout,
     )
@@ -126,7 +126,7 @@ def channel_from_nettingcontract(our_key, netting_contract, external_state, reve
 
 
 def new_channelmanager(our_key, tester_state, log_listener, tester_registry, tester_token):
-    channel_manager_address = tester_registry.addAsset(
+    channel_manager_address = tester_registry.addToken(
         tester_token.address,
         sender=our_key,
     )

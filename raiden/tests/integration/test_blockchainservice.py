@@ -23,8 +23,8 @@ solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('number_of_assets', [0])
-def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
+@pytest.mark.parametrize('number_of_tokens', [0])
+def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     # pylint: disable=line-too-long,too-many-statements,too-many-locals
 
     app0, app1, app2 = raiden_network
@@ -34,20 +34,20 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
 
     blockchain_service0 = app0.raiden.chain
 
-    asset_address = blockchain_service0.deploy_and_register_asset(
+    token_address = blockchain_service0.deploy_and_register_token(
         contract_name='HumanStandardToken',
         contract_file='HumanStandardToken.sol',
-        constructor_parameters=(asset_amount, 'raiden', 2, 'Rd'),
+        constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
     )
 
-    asset0 = blockchain_service0.asset(asset_address)
+    token0 = blockchain_service0.token(token_address)
     for transfer_to in raiden_network[1:]:
-        asset0.transfer(
+        token0.transfer(
             privatekey_to_address(transfer_to.raiden.privkey),
-            asset_amount // len(raiden_network),
+            token_amount // len(raiden_network),
         )
 
-    manager0 = blockchain_service0.manager_by_asset(asset_address)
+    manager0 = blockchain_service0.manager_by_token(token_address)
 
     # sanity
     assert manager0.channels_addresses() == []
@@ -112,7 +112,7 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     assert netting_channel_01.detail(peer1_address)['our_balance'] == 0
 
     # single-funded channel
-    app0.raiden.chain.asset(asset_address).approve(netting_address_01, 100)
+    app0.raiden.chain.token(token_address).approve(netting_address_01, 100)
     netting_channel_01.deposit(peer0_address, 100)
     assert netting_channel_01.isopen() is True
     assert netting_channel_02.isopen() is False
@@ -121,7 +121,7 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     assert netting_channel_01.detail(peer1_address)['our_balance'] == 0
 
     # double-funded channel
-    app0.raiden.chain.asset(asset_address).approve(netting_address_02, 70)
+    app0.raiden.chain.token(token_address).approve(netting_address_02, 70)
     netting_channel_02.deposit(peer0_address, 70)
     assert netting_channel_01.isopen() is True
     assert netting_channel_02.isopen() is True
@@ -129,7 +129,7 @@ def test_new_netting_contract(raiden_network, asset_amount, settle_timeout):
     assert netting_channel_02.detail(peer0_address)['our_balance'] == 70
     assert netting_channel_02.detail(peer2_address)['our_balance'] == 0
 
-    app2.raiden.chain.asset(asset_address).approve(netting_address_02, 130)
+    app2.raiden.chain.token(token_address).approve(netting_address_02, 130)
     app2.raiden.chain.netting_channel(netting_address_02).deposit(peer2_address, 130)
     assert netting_channel_01.isopen() is True
     assert netting_channel_02.isopen() is True
@@ -165,7 +165,7 @@ def test_blockchain(
 
     privatekey = private_keys[0]
     address = privatekey_to_address(privatekey)
-    total_asset = 100
+    total_token = 100
 
     jsonrpc_client = JSONRPCClient(
         port=blockchain_rpc_ports[0],
@@ -182,7 +182,7 @@ def test_blockchain(
         'HumanStandardToken',
         humantoken_contracts,
         dict(),
-        (total_asset, 'raiden', 2, 'Rd'),
+        (total_token, 'raiden', 2, 'Rd'),
         contract_path=humantoken_path,
         gasprice=default_gasprice,
         timeout=poll_timeout,
@@ -213,14 +213,14 @@ def test_blockchain(
 
     # pylint: disable=no-member
 
-    assert token_proxy.balanceOf(address) == total_asset
-    transaction_hash = registry_proxy.addAsset.transact(
+    assert token_proxy.balanceOf(address) == total_token
+    transaction_hash = registry_proxy.addToken.transact(
         token_proxy.address,
         gasprice=denoms.wei,
     )
     jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=poll_timeout)
 
-    assert len(registry_proxy.assetAddresses.call()) == 1
+    assert len(registry_proxy.tokenAddresses.call()) == 1
 
     log_list = jsonrpc_client.call(
         'eth_getLogs',
@@ -232,7 +232,7 @@ def test_blockchain(
     )
     assert len(log_list) == 1
 
-    channel_manager_address_encoded = registry_proxy.channelManagerByAsset.call(
+    channel_manager_address_encoded = registry_proxy.channelManagerByToken.call(
         token_proxy.address,
     )
     channel_manager_address = channel_manager_address_encoded.decode('hex')
@@ -249,7 +249,7 @@ def test_blockchain(
     )
 
     assert channel_manager_address == event['channel_manager_address'].decode('hex')
-    assert token_proxy.address == event['asset_address'].decode('hex')
+    assert token_proxy.address == event['token_address'].decode('hex')
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         CHANNEL_MANAGER_ABI,

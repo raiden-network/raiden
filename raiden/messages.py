@@ -264,19 +264,19 @@ class Secret(SignedMessage):
     """
     cmdid = messages.SECRET
 
-    def __init__(self, identifier, secret, asset):
+    def __init__(self, identifier, secret, token):
         super(Secret, self).__init__()
         self.identifier = identifier
         self.secret = secret
-        self.asset = asset
+        self.token = token
         self._hashlock = None
 
     def __repr__(self):
-        return '<{} [sender:{} hashlock:{} asset:{} hash:{}]>'.format(
+        return '<{} [sender:{} hashlock:{} token:{} hash:{}]>'.format(
             self.__class__.__name__,
             pex(self.sender),
             pex(self.hashlock),
-            pex(self.asset),
+            pex(self.token),
             pex(self.hash),
         )
 
@@ -288,14 +288,14 @@ class Secret(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        secret = Secret(packed.identifier, packed.secret, packed.asset)
+        secret = Secret(packed.identifier, packed.secret, packed.token)
         secret.signature = packed.signature
         return secret
 
     def pack(self, packed):
         packed.identifier = self.identifier
         packed.secret = self.secret
-        packed.asset = self.asset
+        packed.token = self.token
         packed.signature = self.signature
 
 
@@ -338,10 +338,10 @@ class RevealSecret(SignedMessage):
 
 
 class DirectTransfer(SignedMessage):
-    """ A direct asset exchange, used when both participants have a previously
+    """ A direct token exchange, used when both participants have a previously
     opened channel.
 
-    Signs the unidirectional settled `balance` of `asset` to `recipient` plus
+    Signs the unidirectional settled `balance` of `token` to `recipient` plus
     locked transfers.
 
     Settled refers to the inclusion of formerly locked amounts.
@@ -352,8 +352,8 @@ class DirectTransfer(SignedMessage):
         nonce: A sequential nonce, used to protected against replay attacks and
             to give a total order for the messages. This nonce is per
             participant, not shared.
-        asset: The address of the asset being exchanged in the channel.
-        transferred_amount: The total amount of asset that was transferred to
+        token: The address of the token being exchanged in the channel.
+        transferred_amount: The total amount of token that was transferred to
             the channel partner. This value is monotonically increasing and can
             be larger than a channels deposit, since the channels are
             bidirecional.
@@ -364,12 +364,12 @@ class DirectTransfer(SignedMessage):
 
     cmdid = messages.DIRECTTRANSFER
 
-    def __init__(self, identifier, nonce, asset, transferred_amount, recipient, locksroot):
+    def __init__(self, identifier, nonce, token, transferred_amount, recipient, locksroot):
         super(DirectTransfer, self).__init__()
         self.identifier = identifier
         self.nonce = nonce
-        self.asset = asset
-        self.transferred_amount = transferred_amount  #: total amount of asset sent to partner
+        self.token = token
+        self.transferred_amount = transferred_amount  #: total amount of token sent to partner
         self.recipient = recipient  #: partner's address
         self.locksroot = locksroot  #: the merkle root that represent all pending locked transfers
 
@@ -378,7 +378,7 @@ class DirectTransfer(SignedMessage):
         transfer = DirectTransfer(
             packed.identifier,
             packed.nonce,
-            packed.asset,
+            packed.token,
             packed.transferred_amount,
             packed.recipient,
             packed.locksroot,
@@ -390,7 +390,7 @@ class DirectTransfer(SignedMessage):
     def pack(self, packed):
         packed.identifier = self.identifier
         packed.nonce = self.nonce
-        packed.asset = self.asset
+        packed.token = self.token
         packed.transferred_amount = self.transferred_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
@@ -401,7 +401,7 @@ class Lock(MessageHashable):
     """ Describes a locked `amount`.
 
     Args:
-        amount: Amount of the asset being transferred.
+        amount: Amount of the token being transferred.
         expiration: Highest block_number until which the transfer can be settled
         hashlock: Hashed secret `sha3(secret)` used to register the transfer,
             the real `secret` is necessary to release the locked amount.
@@ -451,7 +451,7 @@ class LockedTransfer(SignedMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
     she knows the secret to `hashlock`.
 
-    The asset amount is implicitly represented in the `locksroot` and won't be
+    The token amount is implicitly represented in the `locksroot` and won't be
     reflected in the `transferred_amount` until the secret is revealed.
 
     This signs Carol, that she can claim locked_amount from Bob if she knows the secret to hashlock
@@ -459,16 +459,16 @@ class LockedTransfer(SignedMessage):
     If the secret to hashlock becomes public, but Bob fails to sign Carol a netted balance,
     with an updated rootlock which reflects the deletion of the lock, then
     Carol can request settlement on chain by providing:
-        any signed [nonce, asset, balance, recipient, locksroot, ...]
+        any signed [nonce, token, balance, recipient, locksroot, ...]
         along a merkle proof from locksroot to the not yet netted formerly locked amount
     """
     cmdid = messages.LOCKEDTRANSFER
 
-    def __init__(self, identifier, nonce, asset, transferred_amount, recipient, locksroot, lock):
+    def __init__(self, identifier, nonce, token, transferred_amount, recipient, locksroot, lock):
         super(LockedTransfer, self).__init__()
         self.identifier = identifier
         self.nonce = nonce
-        self.asset = asset
+        self.token = token
         self.transferred_amount = transferred_amount
         self.recipient = recipient
         self.locksroot = locksroot
@@ -479,7 +479,7 @@ class LockedTransfer(SignedMessage):
         return MediatedTransfer(
             self.identifier,
             self.nonce,
-            self.asset,
+            self.token,
             self.transferred_amount,
             self.recipient,
             self.locksroot,
@@ -493,7 +493,7 @@ class LockedTransfer(SignedMessage):
         return RefundTransfer(
             self.identifier,
             self.nonce,
-            self.asset,
+            self.token,
             self.transferred_amount,
             self.recipient,
             self.locksroot,
@@ -511,7 +511,7 @@ class LockedTransfer(SignedMessage):
         locked_transfer = LockedTransfer(
             packed.identifier,
             packed.nonce,
-            packed.asset,
+            packed.token,
             packed.transferred_amount,
             packed.recipient,
             packed.locksroot,
@@ -523,7 +523,7 @@ class LockedTransfer(SignedMessage):
     def pack(self, packed):
         packed.identifier = self.identifier
         packed.nonce = self.nonce
-        packed.asset = self.asset
+        packed.token = self.token
         packed.transferred_amount = self.transferred_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
@@ -559,7 +559,7 @@ class MediatedTransfer(LockedTransfer):
 
     cmdid = messages.MEDIATEDTRANSFER
 
-    def __init__(self, identifier, nonce, asset, transferred_amount, recipient,
+    def __init__(self, identifier, nonce, token, transferred_amount, recipient,
                  locksroot, lock, target, initiator, fee=0):
 
         if nonce >= 2 ** 64:
@@ -574,7 +574,7 @@ class MediatedTransfer(LockedTransfer):
         super(MediatedTransfer, self).__init__(
             identifier,
             nonce,
-            asset,
+            token,
             transferred_amount,
             recipient,
             locksroot,
@@ -587,10 +587,10 @@ class MediatedTransfer(LockedTransfer):
 
     def __repr__(self):
         representation = (
-            '<{} [asset:{} nonce:{} transferred_amount:{} lock_amount:{} hash:{} locksroot:{}]>'
+            '<{} [token:{} nonce:{} transferred_amount:{} lock_amount:{} hash:{} locksroot:{}]>'
         ).format(
             self.__class__.__name__,
-            pex(self.asset),
+            pex(self.token),
             self.nonce,
             self.transferred_amount,
             self.lock.amount,
@@ -611,7 +611,7 @@ class MediatedTransfer(LockedTransfer):
         mediated_transfer = MediatedTransfer(
             packed.identifier,
             packed.nonce,
-            packed.asset,
+            packed.token,
             packed.transferred_amount,
             packed.recipient,
             packed.locksroot,
@@ -626,7 +626,7 @@ class MediatedTransfer(LockedTransfer):
     def pack(self, packed):
         packed.identifier = self.identifier
         packed.nonce = self.nonce
-        packed.asset = self.asset
+        packed.token = self.token
         packed.transferred_amount = self.transferred_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
@@ -660,7 +660,7 @@ class RefundTransfer(LockedTransfer):
         locked_transfer = RefundTransfer(
             packed.identifier,
             packed.nonce,
-            packed.asset,
+            packed.token,
             packed.transferred_amount,
             packed.recipient,
             packed.locksroot,
@@ -671,7 +671,7 @@ class RefundTransfer(LockedTransfer):
 
     def pack(self, packed):
         packed.nonce = self.nonce
-        packed.asset = self.asset
+        packed.token = self.token
         packed.transferred_amount = self.transferred_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot

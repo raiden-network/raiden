@@ -4,9 +4,9 @@ import "./ChannelManagerContract.sol";
 
 contract Registry {
     mapping(address => address) public registry;
-    address[] public assets;
+    address[] public tokens;
 
-    event AssetAdded(address asset_address, address channel_manager_address);
+    event TokenAdded(address token_address, address channel_manager_address);
 
     modifier addressExists(address _address) {
         if (registry[_address] == 0x0)
@@ -21,43 +21,43 @@ contract Registry {
     }
 
     /// @notice Register a new ERC20 token
-    /// @param asset_address Address of the token
+    /// @param token_address Address of the token
     /// @return The address of the channel manager
-    function addAsset(address asset_address)
-        doesNotExist(asset_address)
+    function addToken(address token_address)
+        doesNotExist(token_address)
         returns (address)
     {
         address manager_address;
         ChannelManagerContract manager;
 
-        manager_address = new ChannelManagerContract(asset_address);
+        manager_address = new ChannelManagerContract(token_address);
 
-        registry[asset_address] = manager_address;
-        assets.push(asset_address);
+        registry[token_address] = manager_address;
+        tokens.push(token_address);
 
-        AssetAdded(asset_address, manager_address);
+        TokenAdded(token_address, manager_address);
 
         return manager_address;
     }
 
     /// @notice Get the ChannelManager address for a specific token
-    /// @param asset_address The address of the given token
+    /// @param token_address The address of the given token
     /// @return Address of channel manager
-    function channelManagerByAsset(address asset_address)
-        addressExists(asset_address)
+    function channelManagerByToken(address token_address)
+        addressExists(token_address)
         constant
         returns (address)
     {
-        return registry[asset_address];
+        return registry[token_address];
     }
 
     /// @notice Get all registered tokens
     /// @return addresses of all registered tokens
-    function assetAddresses()
+    function tokenAddresses()
         constant
         returns (address[])
     {
-        return assets;
+        return tokens;
     }
 
     /// @notice Get the addresses of all channel managers for all registered tokens
@@ -67,14 +67,14 @@ contract Registry {
         returns (address[])
     {
         uint i;
-        address asset_address;
+        address token_address;
         address[] memory result;
 
-        result = new address[](assets.length);
+        result = new address[](tokens.length);
 
-        for (i = 0; i < assets.length; i++) {
-            asset_address = assets[i];
-            result[i] = registry[asset_address];
+        for (i = 0; i < tokens.length; i++) {
+            token_address = tokens[i];
+            result[i] = registry[token_address];
         }
 
         return result;

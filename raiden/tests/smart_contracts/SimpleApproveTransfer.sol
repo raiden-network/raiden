@@ -1,12 +1,12 @@
 contract SimpleApproveTransfer {
-    address asset; 
+    address token; 
 
-    function SimpleApproveTransfer(address assetAddress) {
-        asset = assetAddress;
+    function SimpleApproveTransfer(address tokenAddress) {
+        token = tokenAddress;
     }
 
     function transfer(address to, uint256 amount) returns (bool) {
-        return asset.call(
+        return token.call(
             bytes4(bytes32(sha3("transferFrom(address,address,uint256)"))),
             msg.sender,
             to,

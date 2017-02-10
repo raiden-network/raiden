@@ -19,30 +19,30 @@ from raiden.tests.utils.transfer import (
 def test_fullnetwork(raiden_chain):
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
+    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
 
     amount = 80
     random.seed(0)
-    direct_transfer(app0, app1, asset_address, amount)
+    direct_transfer(app0, app1, token_address, amount)
     # Assert default identifier is generated correctly
-    fchannel = channel(app0, app1, asset_address)
+    fchannel = channel(app0, app1, token_address)
     last_transfer = get_sent_transfer(fchannel, 0)
     random.seed(0)
-    assert_identifier_correct(app0, asset_address, app1.raiden.address, last_transfer.identifier)
+    assert_identifier_correct(app0, token_address, app1.raiden.address, last_transfer.identifier)
 
     amount = 50
-    direct_transfer(app1, app2, asset_address, amount)
+    direct_transfer(app1, app2, token_address, amount)
 
     amount = 30
     random.seed(0)
     mediated_transfer(
         app1,
         app2,
-        asset_address,
+        token_address,
         amount
     )
     # Assert default identifier is generated correctly
-    fchannel = channel(app1, app2, asset_address)
+    fchannel = channel(app1, app2, token_address)
     last_transfer = get_sent_transfer(fchannel, 1)
     random.seed(0)
-    assert_identifier_correct(app1, asset_address, app2.raiden.address, last_transfer.identifier)
+    assert_identifier_correct(app1, token_address, app2.raiden.address, last_transfer.identifier)

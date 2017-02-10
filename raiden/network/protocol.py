@@ -11,7 +11,7 @@ from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
 from raiden.messages import decode, Ack, Ping, SignedMessage
-from raiden.transfermanager import UnknownAddress, UnknownAssetAddress, TransferWhenClosed
+from raiden.transfermanager import UnknownAddress, UnknownTokenAddress, TransferWhenClosed
 from raiden.channel import InvalidLocksRoot, InvalidNonce
 from raiden.utils import isaddress, sha3, pex
 
@@ -222,8 +222,8 @@ class RaidenProtocol(object):
             ack_result = AsyncResult()
             self.echohash_asyncresult[echohash] = WaitAck(ack_result, receiver_address)
 
-            # state changes are local to each channel/asset
-            queue_name = getattr(message, 'asset', '')
+            # state changes are local to each channel/token
+            queue_name = getattr(message, 'token', '')
 
             self._send(receiver_address, queue_name, message, messagedata, echohash)
         else:
@@ -345,7 +345,7 @@ class RaidenProtocol(object):
             except (UnknownAddress, InvalidNonce, TransferWhenClosed):
                 # Do not send ACK for these cases
                 return
-            except (UnknownAssetAddress, InvalidLocksRoot) as e:
+            except (UnknownTokenAddress, InvalidLocksRoot) as e:
                 if log.isEnabledFor(logging.WARN):
                     log.warn(str(e))
                 return

@@ -168,12 +168,12 @@ class BlockChainService(object):
             poll_timeout=DEFAULT_POLL_TIMEOUT,
             **kwargs):
 
-        self.address_asset = dict()
+        self.address_token = dict()
         self.address_discovery = dict()
         self.address_manager = dict()
         self.address_contract = dict()
         self.address_registry = dict()
-        self.asset_manager = dict()
+        self.token_manager = dict()
 
         # if this object becomes a problem for testing consider using one of
         # the mock blockchains
@@ -209,16 +209,16 @@ class BlockChainService(object):
 
         return current_block
 
-    def asset(self, asset_address):
-        """ Return a proxy to interact with an asset. """
-        if asset_address not in self.address_asset:
-            self.address_asset[asset_address] = Asset(
+    def token(self, token_address):
+        """ Return a proxy to interact with an token. """
+        if token_address not in self.address_token:
+            self.address_token[token_address] = Token(
                 self.client,
-                asset_address,
+                token_address,
                 poll_timeout=self.poll_timeout,
             )
 
-        return self.address_asset[asset_address]
+        return self.address_token[token_address]
 
     def discovery(self, discovery_address):
         """ Return a proxy to interact with the discovery. """
@@ -252,30 +252,30 @@ class BlockChainService(object):
                 poll_timeout=self.poll_timeout,
             )
 
-            asset_address = manager.asset_address()
+            token_address = manager.token_address()
 
-            self.asset_manager[asset_address] = manager
+            self.token_manager[token_address] = manager
             self.address_manager[manager_address] = manager
 
         return self.address_manager[manager_address]
 
-    def manager_by_asset(self, asset_address):
-        """ Find the channel manager for `asset_address` and return a proxy to
+    def manager_by_token(self, token_address):
+        """ Find the channel manager for `token_address` and return a proxy to
         interact with it.
         """
-        if asset_address not in self.asset_manager:
-            asset = self.asset(asset_address)  # check that the asset exists
-            manager_address = self.default_registry.manager_address_by_asset(asset.address)
+        if token_address not in self.token_manager:
+            token = self.token(token_address)  # check that the token exists
+            manager_address = self.default_registry.manager_address_by_token(token.address)
             manager = ChannelManager(
                 self.client,
                 address_decoder(manager_address),
                 poll_timeout=self.poll_timeout,
             )
 
-            self.asset_manager[asset_address] = manager
+            self.token_manager[token_address] = manager
             self.address_manager[manager_address] = manager
 
-        return self.asset_manager[asset_address]
+        return self.token_manager[token_address]
 
     def registry(self, registry_address):
         if registry_address not in self.address_registry:
@@ -311,7 +311,7 @@ class BlockChainService(object):
         )
         return proxy.address
 
-    def deploy_and_register_asset(self, contract_name, contract_file, constructor_parameters=None):
+    def deploy_and_register_token(self, contract_name, contract_file, constructor_parameters=None):
         assert self.default_registry
 
         token_address = self.deploy_contract(
@@ -319,7 +319,7 @@ class BlockChainService(object):
             contract_file,
             constructor_parameters,
         )
-        self.default_registry.add_asset(token_address)  # pylint: disable=no-member
+        self.default_registry.add_token(token_address)  # pylint: disable=no-member
 
         return token_address
 
@@ -429,11 +429,11 @@ class Discovery(object):
         return address.decode('hex')
 
 
-class Asset(object):
+class Token(object):
     def __init__(
             self,
             jsonrpc_client,
-            asset_address,
+            token_address,
             startgas=GAS_LIMIT,
             gasprice=GAS_PRICE,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
@@ -441,21 +441,21 @@ class Asset(object):
 
         result = jsonrpc_client.call(
             'eth_getCode',
-            address_encoder(asset_address),
+            address_encoder(token_address),
             'latest',
         )
 
         if result == '0x':
-            raise ValueError('Asset address {} does not contain code'.format(
-                address_encoder(asset_address),
+            raise ValueError('Token address {} does not contain code'.format(
+                address_encoder(token_address),
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
             HUMAN_TOKEN_ABI,
-            address_encoder(asset_address),
+            address_encoder(token_address),
         )
 
-        self.address = asset_address
+        self.address = token_address
         self.proxy = proxy
         self.client = jsonrpc_client
         self.startgas = startgas
@@ -519,39 +519,39 @@ class Registry(object):
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
-    def manager_address_by_asset(self, asset_address):
-        """ Return the channel manager address for the given asset. """
-        return self.proxy.channelManagerByAsset.call(asset_address)
+    def manager_address_by_token(self, token_address):
+        """ Return the channel manager address for the given token. """
+        return self.proxy.channelManagerByToken.call(token_address)
 
-    def add_asset(self, asset_address):
-        transaction_hash = self.proxy.addAsset.transact(
-            asset_address,
+    def add_token(self, token_address):
+        transaction_hash = self.proxy.addToken.transact(
+            token_address,
             startgas=self.startgas,
         )
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
-        channel_manager_address_encoded = self.proxy.channelManagerByAsset.call(
-            asset_address,
+        channel_manager_address_encoded = self.proxy.channelManagerByToken.call(
+            token_address,
             startgas=self.startgas,
         )
 
         if not channel_manager_address_encoded:
-            log.error('add_asset failed', asset_address=pex(asset_address))
-            raise RuntimeError('add_asset failed')
+            log.error('add_token failed', token_address=pex(token_address))
+            raise RuntimeError('add_token failed')
 
         channel_manager_address_bin = address_decoder(channel_manager_address_encoded)
 
         log.info(
-            'add_asset called',
-            asset_address=pex(asset_address),
+            'add_token called',
+            token_address=pex(token_address),
             registry_address=pex(self.address),
             channel_manager_address=pex(channel_manager_address_bin),
         )
 
-    def asset_addresses(self):
+    def token_addresses(self):
         return [
             address_decoder(address)
-            for address in self.proxy.assetAddresses.call(startgas=self.startgas)
+            for address in self.proxy.tokenAddresses.call(startgas=self.startgas)
         ]
 
     def manager_addresses(self):
@@ -560,7 +560,7 @@ class Registry(object):
             for address in self.proxy.channelManagerAddresses.call(startgas=self.startgas)
         ]
 
-    def assetadded_filter(self):
+    def tokenadded_filter(self):
         topics = [ASSETADDED_EVENTID]
 
         registry_address_bin = self.proxy.address
@@ -605,8 +605,8 @@ class ChannelManager(object):
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
-    def asset_address(self):
-        """ Return the asset of this manager. """
+    def token_address(self):
+        """ Return the token of this manager. """
         return address_decoder(self.proxy.tokenAddress.call())
 
     def new_netting_channel(self, peer1, peer2, settle_timeout):
@@ -739,8 +739,8 @@ class NettingChannel(object):
         self.node_address = privatekey_to_address(self.client.privkey)
         self.detail(self.node_address)
 
-    def asset_address(self):
-        return address_decoder(self.proxy.assetAddress.call())
+    def token_address(self):
+        return address_decoder(self.proxy.tokenAddress.call())
 
     def detail(self, our_address):
         data = self.proxy.addressAndBalance.call(startgas=self.startgas)
@@ -807,12 +807,12 @@ class NettingChannel(object):
         if not isinstance(amount, (int, long)):
             raise ValueError('amount needs to be an integral number.')
 
-        asset = Asset(
+        token = Token(
             self.client,
-            self.asset_address(),
+            self.token_address(),
             poll_timeout=self.poll_timeout,
         )
-        current_balance = asset.balance_of(self.node_address)
+        current_balance = token.balance_of(self.node_address)
 
         if current_balance < amount:
             raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(

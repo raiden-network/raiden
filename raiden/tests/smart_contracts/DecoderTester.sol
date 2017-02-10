@@ -22,7 +22,7 @@ contract DecoderTester {
     }
 
     function DecoderTester(
-        address asset_address,
+        address token_address,
         address participant1,
         address participant2,
         uint timeout)
@@ -35,7 +35,7 @@ contract DecoderTester {
         data.participants[0].node_address = participant1;
         data.participants[1].node_address = participant2;
 
-        data.token = Token(asset_address);
+        data.token = Token(token_address);
         data.settle_timeout = timeout;
     }
 
@@ -49,8 +49,8 @@ contract DecoderTester {
         return data.participants[0].nonce;
     }
 
-    function decodedAsset() after_decoding constant returns (address) {
-        return data.participants[0].asset;
+    function decodedToken() after_decoding constant returns (address) {
+        return data.participants[0].token;
     }
 
     function decodedRecipient() after_decoding constant returns (address) {

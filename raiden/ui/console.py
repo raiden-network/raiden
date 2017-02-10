@@ -175,9 +175,9 @@ class ConsoleTools(object):
             timeout (int): timeout in seconds for creation.
             gasprice (int): gasprice for the creation transaction.
             auto_register (boolean): if True(default), automatically register
-                the asset with raiden.
+                the token with raiden.
         Returns:
-            token_address: the hex encoded address of the new token/asset.
+            token_address: the hex encoded address of the new token/token.
         """
         contract_path = get_contract_path('HumanStandardToken.sol')
         # Deploy a new ERC20 token
@@ -191,25 +191,25 @@ class ConsoleTools(object):
             timeout=timeout)
         token_address = token_proxy.address.encode('hex')
         if auto_register:
-            self.register_asset(token_address)
+            self.register_token(token_address)
         print("Successfully created {}the token '{}'.".format(
             'and registered ' if auto_register else ' ',
             name
         ))
         return token_address
 
-    def register_asset(self, token_address):
-        """Register a token with the raiden asset manager.
+    def register_token(self, token_address):
+        """Register a token with the raiden token manager.
         Args:
             token_address (string): a hex encoded token address.
         Returns:
             channel_manager: the channel_manager contract_proxy.
         """
         # Add the ERC20 token to the raiden registry
-        self._chain.default_registry.add_asset(token_address)
+        self._chain.default_registry.add_token(token_address)
 
         # Obtain the channel manager for the token
-        channel_manager = self._chain.manager_by_asset(token_address.decode('hex'))
+        channel_manager = self._chain.manager_by_token(token_address.decode('hex'))
 
         # Register the channel manager with the raiden registry
         self._raiden.register_channel_manager(channel_manager)
@@ -266,7 +266,7 @@ class ConsoleTools(object):
 
     def channel_stats_for(self, token_address, peer, pretty=False):
         """Collect information about sent and received transfers
-        between yourself and your peer for the given asset.
+        between yourself and your peer for the given token.
         Args:
             token_address (string): hex encoded address of the token
             peer (string): hex encoded address of the peer
@@ -275,15 +275,15 @@ class ConsoleTools(object):
             stats (dict): collected stats for the channel or None if pretty
 
         """
-        # Get the asset
-        asset = self._chain.asset(token_address.decode('hex'))
+        # Get the token
+        token = self._chain.token(token_address.decode('hex'))
 
-        # Obtain the asset manager
-        asset_manager = self._raiden.managers_by_asset_address[token_address.decode('hex')]
-        assert asset_manager
+        # Obtain the token manager
+        token_manager = self._raiden.managers_by_token_address[token_address.decode('hex')]
+        assert token_manager
 
         # Get the channel
-        channel = asset_manager.get_channel_by_partner_address(peer.decode('hex'))
+        channel = token_manager.get_channel_by_partner_address(peer.decode('hex'))
         assert channel
 
         # Collect data
@@ -302,11 +302,11 @@ class ConsoleTools(object):
                 settled_at=channel.external_state.settled_block or 'not yet',
             ),
             funding=channel.external_state.netting_channel.detail(self._raiden.address),
-            asset=dict(
-                our_balance=asset.balance_of(self._raiden.address),
-                partner_balance=asset.balance_of(peer.decode('hex')),
-                name=asset.proxy.name(),
-                symbol=asset.proxy.symbol(),
+            token=dict(
+                our_balance=token.balance_of(self._raiden.address),
+                partner_balance=token.balance_of(peer.decode('hex')),
+                name=token.proxy.name(),
+                symbol=token.proxy.symbol(),
             ),
         )
         stats['funding']['our_address'] = stats['funding']['our_address'].encode('hex')
@@ -324,11 +324,11 @@ class ConsoleTools(object):
         Returns:
             events (list)
         """
-        # Obtain the asset manager
-        asset_manager = self._raiden.get_manager_by_asset_address(token_address.decode('hex'))
-        assert asset_manager
+        # Obtain the token manager
+        token_manager = self._raiden.get_manager_by_token_address(token_address.decode('hex'))
+        assert token_manager
         # Get the address for the netting contract
-        netcontract_address = asset_manager.get_channel_by_partner_address(
+        netcontract_address = token_manager.get_channel_by_partner_address(
             peer.decode('hex')).external_state.netting_channel.address
         assert len(netcontract_address)
         # Get the netting_channel instance

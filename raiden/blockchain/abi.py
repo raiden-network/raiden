@@ -92,7 +92,7 @@ NETTING_CHANNEL_ABI = netting_channel_compiled['abi']
 REGISTRY_ABI = registry_compiled['abi']
 ENDPOINT_REGISTRY_ABI = endpoint_registry_compiled['abi']
 
-ASSETADDED_EVENT = get_event(REGISTRY_ABI, 'AssetAdded')
+ASSETADDED_EVENT = get_event(REGISTRY_ABI, 'TokenAdded')
 ASSETADDED_EVENTID = event_id(*get_eventname_types(ASSETADDED_EVENT))
 
 CHANNELNEW_EVENT = get_event(CHANNEL_MANAGER_ABI, 'ChannelNew')

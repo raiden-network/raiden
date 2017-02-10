@@ -170,12 +170,12 @@ def print_stats(stat_list, total_time):
 
 
 def profile_transfer(num_nodes=10, channels_per_node=2):
-    num_assets = 1
+    num_tokens = 1
     deposit = 10000
 
-    assets = [
-        sha3('asset:{}'.format(number))[:20]
-        for number in range(num_assets)
+    tokens = [
+        sha3('token:{}'.format(number))[:20]
+        for number in range(num_tokens)
     ]
 
     private_keys = [
@@ -193,13 +193,13 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
         blockchain_services.append(blockchain)
 
     registry = blockchain_services[0].registry(MOCK_REGISTRY_ADDRESS)
-    for asset in assets:
-        registry.add_asset(asset)
+    for token in tokens:
+        registry.add_token(token)
 
     verbosity = 3
     apps = create_network(
         blockchain_services,
-        assets,
+        tokens,
         channels_per_node,
         deposit,
         DEFAULT_SETTLE_TIMEOUT,
@@ -211,12 +211,12 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
     main_api = main_app.raiden.api
 
     # channels
-    main_assetmanager = main_app.raiden.get_manager_by_asset_address(assets[0])
+    main_tokenmanager = main_app.raiden.get_manager_by_token_address(tokens[0])
 
     # search for a path of length=2 A > B > C
     num_hops = 2
     source = main_app.raiden.address
-    paths = main_assetmanager.channelgraph.get_paths_of_length(source, num_hops)
+    paths = main_tokenmanager.channelgraph.get_paths_of_length(source, num_hops)
 
     # sanity check
     assert len(paths)
@@ -226,14 +226,14 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
 
     # addresses
     a, b, c = path
-    asset_address = main_assetmanager.asset_address
+    token_address = main_tokenmanager.token_address
 
     amount = 10
 
     # measure the hot path
     with profiling.profile():
         result = main_api.transfer_async(
-            asset_address,
+            token_address,
             amount,
             target,
             1  # TODO: fill in identifier

@@ -9,18 +9,18 @@ from raiden.mtree import merkleroot
 from raiden.tasks import StartMediatedTransferTask
 
 
-def channel(app0, app1, asset):
+def channel(app0, app1, token):
     """ Nice to read shortcut to get the channel. """
-    asset_manager = app0.raiden.managers_by_asset_address[asset]
-    return asset_manager.partneraddress_channel[app1.raiden.address]
+    token_manager = app0.raiden.managers_by_token_address[token]
+    return token_manager.partneraddress_channel[app1.raiden.address]
 
 
-def sleep(initiator_app, target_app, asset, multiplier=1):
+def sleep(initiator_app, target_app, token, multiplier=1):
     """ Sleep long enough to conclude a transfer from `initiator_app` to
     `target_app`.
     """
-    assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
-    path = list(assetmanager.channelgraph.get_shortest_paths(
+    tokenmanager = initiator_app.raiden.managers_by_token_address[token]
+    path = list(tokenmanager.channelgraph.get_shortest_paths(
         initiator_app.raiden.address,
         target_app.raiden.address,
     ))
@@ -39,7 +39,7 @@ def get_received_transfer(app_channel, transfer_number):
     return app_channel.received_transfers[transfer_number]
 
 
-def transfer(initiator_app, target_app, asset, amount, identifier):
+def transfer(initiator_app, target_app, token, amount, identifier):
     """ Nice to read shortcut to make a transfer.
 
     The transfer is either a DirectTransfer or a MediatedTransfer, in both
@@ -48,40 +48,40 @@ def transfer(initiator_app, target_app, asset, amount, identifier):
     """
 
     initiator_app.raiden.api.transfer(
-        asset,
+        token,
         amount,
         target_app.raiden.address,
         identifier
     )
 
 
-def direct_transfer(initiator_app, target_app, asset, amount, identifier=None):
+def direct_transfer(initiator_app, target_app, token, amount, identifier=None):
     """ Nice to read shortcut to make a DirectTransfer. """
-    assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
-    has_channel = target_app.raiden.address in assetmanager.partneraddress_channel
+    tokenmanager = initiator_app.raiden.managers_by_token_address[token]
+    has_channel = target_app.raiden.address in tokenmanager.partneraddress_channel
     assert has_channel, 'there is not a direct channel'
 
     initiator_app.raiden.api.transfer(
-        asset,
+        token,
         amount,
         target_app.raiden.address,
         identifier,
     )
 
 
-def mediated_transfer(initiator_app, target_app, asset, amount, identifier=None):
+def mediated_transfer(initiator_app, target_app, token, amount, identifier=None):
     """ Nice to read shortcut to make a MediatedTransfer.
 
     The secret will be revealed and the apps will be synchronized.
     """
     # pylint: disable=too-many-arguments
 
-    assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
-    has_channel = initiator_app.raiden.address in assetmanager.partneraddress_channel
+    tokenmanager = initiator_app.raiden.managers_by_token_address[token]
+    has_channel = initiator_app.raiden.address in tokenmanager.partneraddress_channel
 
     # api.transfer() would do a DirectTransfer
     if has_channel:
-        transfermanager = assetmanager.transfermanager
+        transfermanager = tokenmanager.transfermanager
         # Explicitly call the default identifier creation since this mock
         # function here completely skips the `transfer_async()` call.
         if not identifier:
@@ -99,14 +99,14 @@ def mediated_transfer(initiator_app, target_app, asset, amount, identifier=None)
         result.wait()
     else:
         initiator_app.raiden.api.transfer(
-            asset,
+            token,
             amount,
             target_app.raiden.address,
             identifier
         )
 
 
-def pending_mediated_transfer(app_chain, asset, amount, identifier, expiration):
+def pending_mediated_transfer(app_chain, token, amount, identifier, expiration):
     """ Nice to read shortcut to make a MediatedTransfer were the secret is
     _not_ revealed.
 
@@ -128,8 +128,8 @@ def pending_mediated_transfer(app_chain, asset, amount, identifier, expiration):
     target_app = app_chain[0]
 
     for from_app, to_app in zip(app_chain[:-1], app_chain[1:]):
-        from_channel = channel(from_app, to_app, asset)
-        to_channel = channel(to_app, from_app, asset)
+        from_channel = channel(from_app, to_app, token)
+        to_channel = channel(to_app, from_app, token)
 
         # use the initiator channel to generate a secret
         if secret is None:
@@ -154,19 +154,19 @@ def pending_mediated_transfer(app_chain, asset, amount, identifier, expiration):
     return secret
 
 
-def claim_lock(app_chain, asset, secret):
+def claim_lock(app_chain, token, secret):
     """ Unlock a pending transfer. """
     for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
-        channel_ = channel(from_, to_, asset)
+        channel_ = channel(from_, to_, token)
         withdraw_or_unlock(channel_, secret)
 
-        channel_ = channel(to_, from_, asset)
+        channel_ = channel(to_, from_, token)
         withdraw_or_unlock(channel_, secret)
 
 
-def assert_identifier_correct(initiator_app, asset, target, expected_id):
-    assetmanager = initiator_app.raiden.managers_by_asset_address[asset]
-    got_id = assetmanager.transfermanager.create_default_identifier(target)
+def assert_identifier_correct(initiator_app, token, target, expected_id):
+    tokenmanager = initiator_app.raiden.managers_by_token_address[token]
+    got_id = tokenmanager.transfermanager.create_default_identifier(target)
     assert got_id == expected_id
 
 
@@ -190,8 +190,8 @@ def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1,
     """
     # pylint: disable=too-many-arguments
 
-    total_asset = channel0.contract_balance + channel1.contract_balance
-    assert total_asset == channel0.balance + channel1.balance
+    total_token = channel0.contract_balance + channel1.contract_balance
+    assert total_token == channel0.balance + channel1.balance
 
     locked_amount0 = sum(lock.amount for lock in outstanding_locks0)
     locked_amount1 = sum(lock.amount for lock in outstanding_locks1)
@@ -253,12 +253,12 @@ def assert_locked(channel0, outstanding_locks):
 
 
 def assert_balance(channel0, balance, outstanding, distributable):
-    """ Assert the channel0 overall asset values. """
+    """ Assert the channel0 overall token values. """
     assert channel0.balance == balance
     assert channel0.distributable == distributable
     assert channel0.outstanding == outstanding
 
-    # the amount of asset locked in our end of the channel is equal to how much
+    # the amount of token locked in our end of the channel is equal to how much
     # we have outstading
     assert channel0.our_state.locked() == outstanding
 
