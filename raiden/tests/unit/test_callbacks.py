@@ -24,9 +24,11 @@ def test_direct_transfer_callback(raiden_network):
 
     amount = 10
 
+
+    identifier = 42
     CALLED = [False]
 
-    def assert_callback(cb_asset, cb_recipient, cb_sender, cb_amount, cb_hashlock):
+    def assert_callback(cb_asset, cb_recipient, cb_sender, cb_amount, cb_hashlock, cb_identifier):
         # check that callback only gets called once:
         assert not CALLED[0]
 
@@ -37,15 +39,17 @@ def test_direct_transfer_callback(raiden_network):
         assert cb_sender == app0.raiden.address
         assert cb_amount == amount
         assert cb_hashlock is None
+        assert cb_identifier == identifier
 
     # register callbacks to DirectTransfers (channel.py) and LockedTransfers (transfermanager.py)
-    app1.raiden.api.register_on_withdrawable_callbacks(assert_callback)
+    app1.raiden.register_on_withdrawable_callbacks(assert_callback)
 
     # transfer with a direct path
     app0.raiden.api.transfer(
         asset_manager0.asset_address,
         amount,
         target=app1.raiden.address,
+        identifier=identifier
     )
     gevent.sleep(1)
 
@@ -66,11 +70,13 @@ def test_on_hashlock_result_callback(raiden_network):
 
     amount = 10
 
+    identifier = 42
+
     hashlock = sha3('hashlock')
 
     CALLED = [False]
 
-    def assert_callback(cb_asset, cb_recipient, cb_sender, cb_amount, cb_hashlock):
+    def assert_callback(cb_asset, cb_recipient, cb_sender, cb_amount, cb_hashlock, cb_identifier):
         # check that callback only gets called once:
         assert not CALLED[0]
 
@@ -81,14 +87,16 @@ def test_on_hashlock_result_callback(raiden_network):
         assert cb_sender == app0.raiden.address
         assert cb_amount == amount
         assert cb_hashlock == hashlock
+        assert cb_identifier == identifier
 
     # mock the transfer container: XXX eventually use messages.MediatedTransfer() message instead
-    Transfer = namedtuple('Transfer', ['asset', 'recipient', 'initiator', 'transferred_amount'])
+    Transfer = namedtuple('Transfer', ['asset', 'recipient', 'initiator', 'transferred_amount', 'identifier'])
     transfer = Transfer(
         asset_manager0.asset_address,
         app1.raiden.address,
         app0.raiden.address,
-        amount
+        amount,
+        identifier
     )
 
     tm1 = asset_manager1.transfermanager
