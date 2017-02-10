@@ -12,10 +12,6 @@ env:
     - SOLC_URL='https://github.com/brainbot-com/solidity-static/releases/download/v0.4.4/solc'
     - SOLC_VERSION='0.4.4'
   matrix:
-    - TEST_TYPE='unit'
-    - TEST_TYPE='smart_contracts'
-
-    - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=tester'
     - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
 
 cache:
@@ -40,7 +36,7 @@ before_script:
   - ./.travis/make_dag.sh
 
 script:
-  - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
+  - coverage run -m gevent.monkey $(which py.test) --timeout_method=signal --travis-fold=always -vvvvvv --capture=no --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/integration/test_settlement.py::test_settlement
 
 after_success:
   - coveralls
