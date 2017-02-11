@@ -648,6 +648,9 @@ class ChannelManager(object):
         else:
             other = peer1
 
+        if self.proxy.getChannelWith(other) != '0' * 40:
+            raise Exception('Channel already exists')
+
         transaction_hash = self.proxy.newChannel.transact(
             other,
             settle_timeout,
@@ -661,9 +664,6 @@ class ChannelManager(object):
             raise e
         except InvalidTransaction as e:
             raise e
-
-        # TODO: raise if the transaction failed because there is an existing
-        # channel in place
 
         netting_channel_results_encoded = self.proxy.getChannelWith.call(
             other,
