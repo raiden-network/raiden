@@ -75,7 +75,12 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert manager0.channels_by_participant(peer0_address) == [netting_address_01]
     assert manager0.channels_by_participant(peer1_address) == [netting_address_01]
     assert manager0.channels_by_participant(peer2_address) == []
-
+    with pytest.raises(Exception):
+        manager0.new_netting_channel(
+            peer0_address,
+            peer1_address,
+            settle_timeout,
+        )
     # create other chanel
     netting_address_02 = manager0.new_netting_channel(
         peer0_address,
