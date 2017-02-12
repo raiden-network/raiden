@@ -280,7 +280,7 @@ def test_start_end_attack(token_address, raiden_chain, deposit):
 
     # XXX: verify that the Hub has found the secret, close and settle the channel
 
-    # the hub has acquired it's token
+    # the hub has acquired its token
     hub_contract = app1.raiden.chain.token_hashchannel[token][hub_contract]
     assert hub_contract.participants[app0.raiden.address]['netted'] == deposit + amount
     assert hub_contract.participants[app1.raiden.address]['netted'] == deposit - amount

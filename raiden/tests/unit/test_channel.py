@@ -595,7 +595,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 
     The bug occurred if a transfer with an invalid allowance but a valid secret
     was registered, when the local end registered the transfer it would
-    "unlock" the partners token, but the transfer wouldn't be sent because the
+    "unlock" the partners' token, but the transfer wouldn't be sent because the
     allowance check failed, leaving the channel in an inconsistent state.
     """
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking

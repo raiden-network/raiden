@@ -683,7 +683,7 @@ class Channel(object):
         partner_known = self.partner_state.balance_proof.is_known(hashlock)
 
         if not our_known and not partner_known:
-            msg = 'Secret doesnt correspond to a registered hashlock. hashlock:{} token:{}'.format(
+            msg = 'Secret doesn\'t correspond to a registered hashlock. hashlock:{} token:{}'.format(
                 pex(hashlock),
                 pex(self.token_address),
             )
@@ -740,7 +740,7 @@ class Channel(object):
         hashlock = sha3(secret)
 
         if not self.partner_state.balance_proof.is_known(hashlock):
-            raise ValueError('The secret doesnt unlock any hashlock. hashlock:{} token:{}'.format(
+            raise ValueError('The secret doesn\'t unlock any hashlock. hashlock:{} token:{}'.format(
                 pex(hashlock),
                 pex(self.token_address),
             ))
@@ -767,7 +767,7 @@ class Channel(object):
         hashlock = sha3(secret)
 
         if not self.our_state.balance_proof.is_known(hashlock):
-            msg = 'The secret doesnt withdraw any hashlock. hashlock:{} token:{}'.format(
+            msg = 'The secret doesn\'t withdraw any hashlock. hashlock:{} token:{}'.format(
                 pex(hashlock),
                 pex(self.token_address),
             )
@@ -1115,7 +1115,7 @@ class Channel(object):
         Args:
             transfer_initiator (address): The node that requested the transfer.
             transfer_target (address): The final destination node of the transfer
-            amount (float): How much of an token is being transferred.
+            amount (float): How much of a token is being transferred.
             expiration (int): The maximum block number until the transfer
                 message can be received.
         """

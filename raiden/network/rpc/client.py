@@ -210,7 +210,7 @@ class BlockChainService(object):
         return current_block
 
     def token(self, token_address):
-        """ Return a proxy to interact with an token. """
+        """ Return a proxy to interact with a token. """
         if token_address not in self.address_token:
             self.address_token[token_address] = Token(
                 self.client,

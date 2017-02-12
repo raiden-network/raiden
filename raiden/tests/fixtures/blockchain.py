@@ -101,8 +101,8 @@ def cached_genesis(request, blockchain_type):
         request.getfixturevalue('tester_blockgas_limit'),
     )
 
-    # create_network only register the tokens, the contracts must be deployed
-    # previously
+    # create_network only registers the tokens,
+    # the contracts must be deployed previously
     token_contract_addresses = _tokens_addresses(
         request.getfixturevalue('token_amount'),
         request.getfixturevalue('number_of_tokens'),

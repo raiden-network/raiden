@@ -153,7 +153,7 @@ class NettingChannelContract(object):
     Direct transfer depend on the existence of direct channels among the
     participants, since direct channels are expected to be the exception and
     not the rule a different mechanism is required for indirect transfers, this
-    is done by exploiting existing channels to mediate an token transfer.
+    is done by exploiting existing channels to mediate a token transfer.
 
     The path discovery required to find which channels will be used to mediate
     the transfer isn't part of this contract, only the means to protect the

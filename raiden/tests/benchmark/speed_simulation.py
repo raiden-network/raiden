@@ -33,8 +33,13 @@ def hostport_to_privkeyaddr(host, port):
     return privkey, addr
 
 
-def random_raiden_network(token_address, blockchain_service, node_addresses,
-                          deposit, settle_timeout):
+def random_raiden_network(
+        token_address,
+        blockchain_service,
+        node_addresses,
+        deposit,
+        settle_timeout
+):
     """ Creates random channels among the test nodes until we have a connected graph. """
     graph = networkx.Graph()
     graph.add_nodes_from(node_addresses)
@@ -70,8 +75,14 @@ def random_raiden_network(token_address, blockchain_service, node_addresses,
         graph.add_edge(from_address, to_address)
 
 
-def setup_tps(rpc_server, config_path, channelmanager_address, token_address,
-              deposit, settle_timeout):
+def setup_tps(
+        rpc_server,
+        config_path,
+        channelmanager_address,
+        token_address,
+        deposit,
+        settle_timeout
+):
     """ Creates the required contract and the fully connected Raiden network
     prior to running the test.
 
@@ -120,8 +131,16 @@ def random_transfer(app, token, transfer_amount):
         app.raiden.api.transfer(token, transfer_amount, target)
 
 
-def tps_run(host, port, config, rpc_server, channelmanager_address,
-            token_address, transfer_amount, parallel):
+def tps_run(
+        host,
+        port,
+        config,
+        rpc_server,
+        channelmanager_address,
+        token_address,
+        transfer_amount,
+        parallel
+):
     # pylint: disable=too-many-locals,too-many-arguments
     ourprivkey, _ = hostport_to_privkeyaddr(host, port)
 
