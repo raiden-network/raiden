@@ -2,7 +2,7 @@
   var sess = null;
   var wsuri = "ws://" + window.location.hostname + ":8080/ws";
   var current_id = 1;
-  var assets;
+  var tokens;
   var tx_button = tx_button_init();
   var subscriptions = []
   // ab.debug(true, true);
@@ -14,7 +14,7 @@
           console.log("Connected to " + wsuri);
           console.log("Current id: " + current_id);
           subscribe_transfer(sess);
-          get_assets(sess);
+          get_tokens(sess);
           tx_button(sess);
           // console.log("before close");
           // sess.close();
@@ -118,17 +118,17 @@
   }
 
 
-  function get_assets(session) {
+  function get_tokens(session) {
     session.call(
-        'http://localhost:8080/raiden#get_assets'
+        'http://localhost:8080/raiden#get_tokens'
     ).then(
         function (res) {
-          console.log('Available assets: ' + res),
-          assets = res;
+          console.log('Available tokens: ' + res),
+          tokens = res;
           var content;
-          for (i = 0; i < assets.length; i++) {
-            content += '<option value=\"'+assets[i]+'\">'+assets[i]+'</option>'
-          $("#transfer_pubAsset").html(content)
+          for (i = 0; i < tokens.length; i++) {
+            content += '<option value=\"'+tokens[i]+'\">'+tokens[i]+'</option>'
+          $("#transfer_pubToken").html(content)
         }
 
       },
@@ -138,7 +138,7 @@
 
 
   $('#transfer').click(function() {
-      var asset = $('#transfer_pubAsset').val();
+      var token = $('#transfer_pubToken').val();
       var amount = $('#transfer_amount').val();
       var receiver = $('#transfer_pubTo').val();
       // TODO: create storage for current id..
@@ -146,21 +146,21 @@
 
       sess.call(
           'http://localhost:8080/raiden#transfer',
-          asset,
+          token,
           amount,
           receiver,
           callback_id
       );
       console.log(
         "Transfer requested:"
-        + "  asset - " + asset
+        + "  token - " + token
         + "; amount - " + amount
         + "; Receiver - " + receiver
         + "; callback ID - " + callback_id
       );
       $('#channelTab').find('tbody:last').append('<tr id=\'cb_id_'+callback_id+'\'>\
                   <td>'+callback_id+'</td>\
-                  <td>'+asset+'</td>\
+                  <td>'+token+'</td>\
                   <td>'+receiver+'</td>\
                   <td style="text-align:right">'+amount+'</td>\
                   <td><span class=\'status\' style=\'color:yellow\' >Requesting</span></td>\

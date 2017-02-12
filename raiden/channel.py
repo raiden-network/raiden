@@ -276,7 +276,7 @@ class ChannelEndState(object):
         self.contract_balance = participant_balance
         self.address = participant_address
 
-        # amount of asset transferred and unlocked
+        # amount of token transferred and unlocked
         self.transferred_amount = 0
 
         # sequential nonce, current value has not been used.
@@ -294,7 +294,7 @@ class ChannelEndState(object):
         self.balance_proof = BalanceProof()
 
     def locked(self):
-        """ Return how much asset is locked waiting for a secret. """
+        """ Return how much token is locked waiting for a secret. """
         return self.balance_proof.locked()
 
     def update_contract_balance(self, contract_balance):
@@ -310,7 +310,7 @@ class ChannelEndState(object):
         return self.contract_balance - self.transferred_amount + other.transferred_amount
 
     def distributable(self, other):
-        """ Return the available amount of the asset that can be transferred in
+        """ Return the available amount of the token that can be transferred in
         the channel.
         """
         return self.balance(other) - other.locked()
@@ -486,14 +486,14 @@ class Channel(object):
     # pylint: disable=too-many-instance-attributes,too-many-arguments
 
     def __init__(self, our_state, partner_state, external_state,
-                 asset_address, reveal_timeout, settle_timeout):
+                 token_address, reveal_timeout, settle_timeout):
 
         if settle_timeout <= reveal_timeout:
             # reveal_timeout must be a fraction of the settle_timeout
             raise ValueError('reveal_timeout can not be larger-or-equal to settle_timeout')
 
         if reveal_timeout < 3:
-            # To guarantee that assets won't be lost the expiration needs to
+            # To guarantee that tokens won't be lost the expiration needs to
             # decrease at each hop, this is what forces the next hop to reveal
             # the secret with enough time for this node to unlock the lock with
             # the previous.
@@ -522,7 +522,7 @@ class Channel(object):
         self.our_state = our_state
         self.partner_state = partner_state
 
-        self.asset_address = asset_address
+        self.token_address = token_address
         self.reveal_timeout = reveal_timeout
         self.settle_timeout = settle_timeout
         self.external_state = external_state
@@ -548,7 +548,7 @@ class Channel(object):
 
     @property
     def contract_balance(self):
-        """ Return the amount of asset used to open the channel. """
+        """ Return the amount of token used to open the channel. """
         return self.our_state.contract_balance
 
     @property
@@ -567,14 +567,14 @@ class Channel(object):
 
     @property
     def distributable(self):
-        """ Return the available amount of the asset that our end of the
+        """ Return the available amount of the token that our end of the
         channel can transfer to the partner.
         """
         return self.our_state.distributable(self.partner_state)
 
     @property
     def locked(self):
-        """ Return the current amount of our asset that is locked waiting for a
+        """ Return the current amount of our token that is locked waiting for a
         secret.
 
         The locked value is equal to locked transfers that have being
@@ -683,9 +683,9 @@ class Channel(object):
         partner_known = self.partner_state.balance_proof.is_known(hashlock)
 
         if not our_known and not partner_known:
-            msg = 'Secret doesnt correspond to a registered hashlock. hashlock:{} asset:{}'.format(
+            msg = 'Secret doesn\'t correspond to a registered hashlock. hashlock:{} token:{}'.format(
                 pex(hashlock),
-                pex(self.asset_address),
+                pex(self.token_address),
             )
 
             raise ValueError(msg)
@@ -695,11 +695,11 @@ class Channel(object):
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'SECRET REGISTERED node:%s %s > %s asset:%s hashlock:%s amount:%s',
+                    'SECRET REGISTERED node:%s %s > %s token:%s hashlock:%s amount:%s',
                     pex(self.our_state.address),
                     pex(self.our_state.address),
                     pex(self.partner_state.address),
-                    pex(self.asset_address),
+                    pex(self.token_address),
                     pex(hashlock),
                     lock.amount,
                 )
@@ -711,11 +711,11 @@ class Channel(object):
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'SECRET REGISTERED node:%s %s > %s asset:%s hashlock:%s amount:%s',
+                    'SECRET REGISTERED node:%s %s > %s token:%s hashlock:%s amount:%s',
                     pex(self.our_state.address),
                     pex(self.partner_state.address),
                     pex(self.our_state.address),
-                    pex(self.asset_address),
+                    pex(self.token_address),
                     pex(hashlock),
                     lock.amount,
                 )
@@ -740,19 +740,19 @@ class Channel(object):
         hashlock = sha3(secret)
 
         if not self.partner_state.balance_proof.is_known(hashlock):
-            raise ValueError('The secret doesnt unlock any hashlock. hashlock:{} asset:{}'.format(
+            raise ValueError('The secret doesn\'t unlock any hashlock. hashlock:{} token:{}'.format(
                 pex(hashlock),
-                pex(self.asset_address),
+                pex(self.token_address),
             ))
 
         lock = self.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
-                'ASSET UNLOCKED %s > %s asset:%s hashlock:%s lockhash:%s amount:%s',
+                'ASSET UNLOCKED %s > %s token:%s hashlock:%s lockhash:%s amount:%s',
                 pex(self.our_state.address),
                 pex(self.partner_state.address),
-                pex(self.asset_address),
+                pex(self.token_address),
                 pex(hashlock),
                 pex(sha3(lock.as_bytes)),
                 lock.amount,
@@ -767,9 +767,9 @@ class Channel(object):
         hashlock = sha3(secret)
 
         if not self.our_state.balance_proof.is_known(hashlock):
-            msg = 'The secret doesnt withdraw any hashlock. hashlock:{} asset:{}'.format(
+            msg = 'The secret doesn\'t withdraw any hashlock. hashlock:{} token:{}'.format(
                 pex(hashlock),
-                pex(self.asset_address),
+                pex(self.token_address),
             )
             raise ValueError(msg)
 
@@ -777,10 +777,10 @@ class Channel(object):
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
-                'ASSET WITHDRAWN %s < %s asset:%s hashlock:%s lockhash:%s amount:%s',
+                'ASSET WITHDRAWN %s < %s token:%s hashlock:%s lockhash:%s amount:%s',
                 pex(self.our_state.address),
                 pex(self.partner_state.address),
-                pex(self.asset_address),
+                pex(self.token_address),
                 pex(hashlock),
                 pex(sha3(lock.as_bytes)),
                 lock.amount,
@@ -834,10 +834,10 @@ class Channel(object):
             InvalidLockTime: If the transfer has expired.
             InvalidNonce: If the expected nonce does not match.
             InvalidSecret: If there is no lock registered for the given secret.
-            ValueError: If there is an address mismatch (asset or node address).
+            ValueError: If there is an address mismatch (token or node address).
         """
-        if transfer.asset != self.asset_address:
-            raise ValueError('Asset address mismatch')
+        if transfer.token != self.token_address:
+            raise ValueError('Token address mismatch')
 
         if transfer.recipient != to_state.address:
             raise ValueError('Unknown recipient')
@@ -889,7 +889,7 @@ class Channel(object):
 
             # As a receiver: If the lock expiration is larger than the settling
             # time a secret could be revealed after the channel is settled and
-            # we won't be able to claim the asset
+            # we won't be able to claim the token
             if not transfer.lock.expiration - block_number < self.settle_timeout:
                 log.error(
                     "Transfer expiration doesn't allow for correct settlement.",
@@ -974,7 +974,7 @@ class Channel(object):
                 for callback in self.on_withdrawable_callbacks:
                     gevent.spawn(
                         callback,
-                        transfer.asset,
+                        transfer.token,
                         transfer.recipient,
                         transfer.sender,  # 'initiator' is sender here
                         transfer.transferred_amount,
@@ -1036,7 +1036,7 @@ class Channel(object):
         return DirectTransfer(
             identifier=identifier,
             nonce=from_.nonce,
-            asset=self.asset_address,
+            token=self.token_address,
             transferred_amount=transferred_amount,
             recipient=to_.address,
             locksroot=current_locksroot,
@@ -1098,7 +1098,7 @@ class Channel(object):
         return LockedTransfer(
             identifier=identifier,
             nonce=from_.nonce,
-            asset=self.asset_address,
+            token=self.token_address,
             transferred_amount=transferred_amount,
             recipient=to_.address,
             locksroot=updated_locksroot,
@@ -1115,7 +1115,7 @@ class Channel(object):
         Args:
             transfer_initiator (address): The node that requested the transfer.
             transfer_target (address): The final destination node of the transfer
-            amount (float): How much of an asset is being transferred.
+            amount (float): How much of a token is being transferred.
             expiration (int): The maximum block number until the transfer
                 message can be received.
         """

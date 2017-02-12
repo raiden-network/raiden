@@ -15,30 +15,30 @@ from raiden.utils import isaddress, pex
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class AssetManager(object):  # pylint: disable=too-many-instance-attributes
-    """ Manages netting contracts for a given asset. """
+class TokenManager(object):  # pylint: disable=too-many-instance-attributes
+    """ Manages netting contracts for a given token. """
 
-    def __init__(self, raiden, asset_address, channel_manager_address, channel_graph):
+    def __init__(self, raiden, token_address, channel_manager_address, channel_graph):
         """
         Args:
             raiden (RaidenService): a node's service
-            asset_address (bin): the asset address managed by this instance
+            token_address (bin): the token address managed by this instance
             channel_manager_address (bin): The channel manager address.
             channelgraph (networkx.Graph): a graph representing the raiden network
         """
-        if not isaddress(asset_address):
-            raise ValueError('asset_address must be a valid address')
+        if not isaddress(token_address):
+            raise ValueError('token_address must be a valid address')
 
         self.partneraddress_channel = dict()  #: maps the partner address to the channel instance
         self.address_channel = dict()  #: maps the channel address to the channel instance
 
         # This is a map from a hashlock to a list of channels, the same
-        # hashlock can be used in more than one AssetManager (for exchanges), a
+        # hashlock can be used in more than one TokenManager (for exchanges), a
         # channel should be removed from this list only when the lock is
         # released/withdrawed but not when the secret is registered.
         self.hashlock_channel = defaultdict(list)  #: channels waiting on the conditional lock
 
-        self.asset_address = asset_address
+        self.token_address = token_address
         self.channel_manager_address = channel_manager_address
         self.channelgraph = channel_graph
         self.raiden = raiden
@@ -136,7 +136,7 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
             partner_state,
             external_state,
 
-            self.asset_address,
+            self.token_address,
             reveal_timeout,
             channel_details['settle_timeout'],
         )
@@ -186,7 +186,7 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
 
         This function will:
             - Unlock the locks created by this node and send a Secret message to
-            the corresponding partner so that she can withdraw the asset.
+            the corresponding partner so that she can withdraw the token.
             - Register the secret for the locks received and reveal the secret
             to the senders
 
@@ -195,14 +195,14 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
             `register_channel_for_hashlock`.
         """
         # handling the secret needs to:
-        # - unlock the asset for all `forward_channel` (the current one
+        # - unlock the token for all `forward_channel` (the current one
         #   and the ones that failed with a refund)
         # - send a message to each of the forward nodes allowing them
-        #   to withdraw the asset
+        #   to withdraw the token
         # - register the secret for the `originating_channel` so that a
         #   proof can be made, if necessary
         # - reveal the secret to the `sender` node (otherwise we
-        #   cannot withdraw the asset)
+        #   cannot withdraw the token)
         hashlock = sha3(secret)
         self._secret(identifier, secret, None, hashlock)
 
@@ -213,7 +213,7 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         This function will:
             - Withdraw the lock from sender.
             - Unlock the locks created by this node and send a Secret message to
-            the corresponding partner so that she can withdraw the asset.
+            the corresponding partner so that she can withdraw the token.
             - Register the secret for the locks received and reveal the secret
             to the senders
 
@@ -230,9 +230,9 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
         channels_list = self.hashlock_channel[hashlock]
         channels_to_remove = list()
 
-        # Dont use the partner_secret_message.asset since it might not match with the
-        # current asset manager
-        our_secret_message = Secret(identifier, secret, self.asset_address)
+        # Dont use the partner_secret_message.token since it might not match with the
+        # current token manager
+        our_secret_message = Secret(identifier, secret, self.token_address)
         self.raiden.sign(our_secret_message)
 
         revealsecret_message = RevealSecret(secret)
@@ -256,22 +256,22 @@ class AssetManager(object):  # pylint: disable=too-many-instance-attributes
                 channel.release_lock(secret)
 
                 # notify our partner that our state is updated and it can
-                # withdraw the asset
+                # withdraw the token
                 self.raiden.send_async(channel.partner_state.address, our_secret_message)
 
                 channels_to_remove.append(channel)
 
-            # we are the recipient, we can only withdraw the asset if a secret
-            # message is received from the correct sender and asset address, so
+            # we are the recipient, we can only withdraw the token if a secret
+            # message is received from the correct sender and token address, so
             # withdraw if a valid message is received otherwise register the
             # secret and reveal the secret to channel patner.
             if channel.our_state.balance_proof.is_unclaimed(hashlock):
                 # partner_secret_message might be None
                 if partner_secret_message:
                     valid_sender = partner_secret_message.sender == channel.partner_state.address
-                    valid_asset = partner_secret_message.asset == channel.asset_address
+                    valid_token = partner_secret_message.token == channel.token_address
 
-                    if valid_sender and valid_asset:
+                    if valid_sender and valid_token:
                         channel.withdraw_lock(secret)
                         channels_to_remove.append(channel)
                     else:

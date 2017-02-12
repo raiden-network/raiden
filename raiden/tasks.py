@@ -79,7 +79,7 @@ class HealthcheckTask(Task):
 
              :param raiden RaidenService: The Raiden service which will give us
                                           access to the protocol object and to
-                                          the asset manager
+                                          the token manager
              :param int sleep_time: Time in seconds between each healthcheck task
              :param int send_ping_time: Time in seconds after not having received
                                         a message from an address at which to send
@@ -104,7 +104,7 @@ class HealthcheckTask(Task):
             keys_to_remove = []
             for key, queue in self.protocol.address_queue.iteritems():
                 receiver_address = key[0]
-                asset_address = key[1]
+                token_address = key[1]
                 if queue.empty():
                     elapsed_time = (
                         time.time() - self.protocol.last_received_time[receiver_address]
@@ -113,10 +113,10 @@ class HealthcheckTask(Task):
                     gevent.sleep(randint(0, int(0.2 * self.send_ping_time)))
                     if elapsed_time > self.max_unresponsive_time:
                         # remove the node from the graph
-                        asset_manager = self.raiden.get_manager_by_asset_address(
-                            asset_address
+                        token_manager = self.raiden.get_manager_by_token_address(
+                            token_address
                         )
-                        asset_manager.channelgraph.remove_path(
+                        token_manager.channelgraph.remove_path(
                             self.protocol.raiden.address,
                             receiver_address
                         )
@@ -284,7 +284,7 @@ class BaseMediatedTransferTask(Task):
 
         yield TIMEOUT
 
-    def _wait_for_unlock_or_close(self, raiden, assetmanager, channel, mediated_transfer):  # noqa
+    def _wait_for_unlock_or_close(self, raiden, tokenmanager, channel, mediated_transfer):  # noqa
         """ Wait for a Secret message from our partner to update the local
         state, if the Secret message is not sent within time the channel will
         be closed.
@@ -300,7 +300,7 @@ class BaseMediatedTransferTask(Task):
         block_to_close = mediated_transfer.lock.expiration - raiden.config['reveal_timeout']
         hashlock = mediated_transfer.lock.hashlock
         identifier = mediated_transfer.identifier
-        asset = mediated_transfer.asset
+        token = mediated_transfer.token
 
         while channel.our_state.balance_proof.is_unclaimed(hashlock):
             current_block = raiden.get_block_number()
@@ -330,21 +330,21 @@ class BaseMediatedTransferTask(Task):
                 pass
             else:
                 if isinstance(response, Secret):
-                    if response.identifier == identifier and response.asset == asset:
-                        assetmanager.handle_secretmessage(response)
+                    if response.identifier == identifier and response.token == token:
+                        tokenmanager.handle_secretmessage(response)
                     else:
-                        assetmanager.handle_secret(identifier, response.secret)
+                        tokenmanager.handle_secret(identifier, response.secret)
 
                         if log.isEnabledFor(logging.ERROR):
                             log.error(
                                 'Invalid Secret message received, expected message'
-                                ' for asset=%s identifier=%s received=%s',
-                                asset,
+                                ' for token=%s identifier=%s received=%s',
+                                token,
                                 identifier,
                                 response,
                             )
                 elif isinstance(response, RevealSecret):
-                    assetmanager.handle_secret(identifier, response.secret)
+                    tokenmanager.handle_secret(identifier, response.secret)
 
                 elif log.isEnabledFor(logging.ERROR):
                     log.error(
@@ -381,23 +381,23 @@ class BaseMediatedTransferTask(Task):
 
 
 class StartMediatedTransferTask(BaseMediatedTransferTask):
-    def __init__(self, raiden, asset_address, amount, identifier, target, done_result):
+    def __init__(self, raiden, token_address, amount, identifier, target, done_result):
         # pylint: disable=too-many-arguments
 
         super(StartMediatedTransferTask, self).__init__()
 
         self.raiden = raiden
-        self.asset_address = asset_address
+        self.token_address = token_address
         self.amount = amount
         self.identifier = identifier
         self.target = target
         self.done_result = done_result
 
     def __repr__(self):
-        return '<{} {} asset:{}>'.format(
+        return '<{} {} token:{}>'.format(
             self.__class__.__name__,
             pex(self.raiden.address),
-            pex(self.asset_address),
+            pex(self.token_address),
         )
 
     def _run(self):  # noqa pylint: disable=method-hidden,too-many-locals
@@ -407,12 +407,12 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
         target = self.target
 
         node_address = raiden.address
-        assetmanager = raiden.get_manager_by_asset_address(self.asset_address)
-        transfermanager = assetmanager.transfermanager
+        tokenmanager = raiden.get_manager_by_token_address(self.token_address)
+        transfermanager = tokenmanager.transfermanager
 
         fee = 0
         # there are no guarantees that the next_hop will follow the same route
-        routes = assetmanager.get_best_routes(
+        routes = tokenmanager.get_best_routes(
             amount,
             target,
             lock_timeout=None,
@@ -426,7 +426,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
             )
 
         for path, forward_channel in routes:
-            # never reuse the last secret, discard it to avoid losing asset
+            # never reuse the last secret, discard it to avoid losing token
             secret = sha3(hex(random.getrandbits(256)))
             hashlock = sha3(secret)
 
@@ -438,7 +438,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
                 )
 
             transfermanager.register_task_for_hashlock(self, hashlock)
-            assetmanager.register_channel_for_hashlock(forward_channel, hashlock)
+            tokenmanager.register_channel_for_hashlock(forward_channel, hashlock)
 
             lock_timeout = forward_channel.settle_timeout - forward_channel.reveal_timeout
             lock_expiration = raiden.get_block_number() + lock_timeout
@@ -472,7 +472,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
 
                     # we cannot wait for ever since the `target` might
                     # intentionally _not_ send the Ack, blocking us from
-                    # unlocking the asset.
+                    # unlocking the token.
                     wait = (
                         ESTIMATED_BLOCK_TIME * lock_timeout / .6
                     )
@@ -481,7 +481,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
 
                     # target has acknowledged the RevealSecret, we can update
                     # the chain in the forward direction
-                    assetmanager.handle_secret(
+                    tokenmanager.handle_secret(
                         identifier,
                         secret,
                     )
@@ -502,7 +502,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
                     # the initiator can unregister right away because it knowns
                     # no one else can reveal the secret
                     transfermanager.on_hashlock_result(hashlock, False)
-                    del assetmanager.hashlock_channel[hashlock]
+                    del tokenmanager.hashlock_channel[hashlock]
                     break
 
         if log.isEnabledFor(logging.DEBUG):
@@ -559,19 +559,19 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
 
 
 class MediateTransferTask(BaseMediatedTransferTask):
-    def __init__(self, raiden, asset_address, originating_transfer, fee):
+    def __init__(self, raiden, token_address, originating_transfer, fee):
         super(MediateTransferTask, self).__init__()
 
         self.raiden = raiden
-        self.asset_address = asset_address
+        self.token_address = token_address
         self.originating_transfer = originating_transfer
         self.fee = fee
 
     def __repr__(self):
-        return '<{} {} asset:{}>'.format(
+        return '<{} {} token:{}>'.format(
             self.__class__.__name__,
             pex(self.raiden.address),
-            pex(self.asset_address),
+            pex(self.token_address),
         )
 
     def _run(self):  # noqa
@@ -581,17 +581,17 @@ class MediateTransferTask(BaseMediatedTransferTask):
         originating_transfer = self.originating_transfer
 
         raiden = self.raiden
-        assetmanager = raiden.get_manager_by_asset_address(self.asset_address)
-        transfermanager = assetmanager.transfermanager
+        tokenmanager = raiden.get_manager_by_token_address(self.token_address)
+        transfermanager = tokenmanager.transfermanager
         from_address = originating_transfer.sender
-        originating_channel = assetmanager.partneraddress_channel[from_address]
+        originating_channel = tokenmanager.partneraddress_channel[from_address]
         hashlock = originating_transfer.lock.hashlock
 
         transfermanager.register_task_for_hashlock(self, hashlock)
-        assetmanager.register_channel_for_hashlock(originating_channel, hashlock)
+        tokenmanager.register_channel_for_hashlock(originating_channel, hashlock)
 
         # there are no guarantees that the next_hop will follow the same route
-        routes = assetmanager.get_best_routes(
+        routes = tokenmanager.get_best_routes(
             originating_transfer.lock.amount,
             originating_transfer.target,
         )
@@ -621,7 +621,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
 
             # Notes:
             # - The node didn't send a transfer forward, so it can not lose
-            #   asset.
+            #   token.
             # - It's quiting early, so it wont claim the lock if the secret is
             #   revealed.
             # - The previous_node knowns the settle_timeout because this value
@@ -657,7 +657,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
 
             # Our partner won't accept a locked transfer that can expire after
             # the settlement period, otherwise the secret could be revealed
-            # after channel is settled and asset would be lost, in that case
+            # after channel is settled and token would be lost, in that case
             # decrease the expiration by an amount larger than reveal_timeout.
             if new_lock_timeout > forward_channel.settle_timeout:
                 new_lock_timeout = forward_channel.settle_timeout
@@ -697,7 +697,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
                     pex(hashlock),
                 )
 
-            assetmanager.register_channel_for_hashlock(
+            tokenmanager.register_channel_for_hashlock(
                 forward_channel,
                 hashlock,
             )
@@ -710,26 +710,26 @@ class MediateTransferTask(BaseMediatedTransferTask):
                 )
 
                 if isinstance(response, RevealSecret):
-                    assetmanager.handle_secret(
+                    tokenmanager.handle_secret(
                         originating_transfer.identifier,
                         response.secret,
                     )
 
                     self._wait_for_unlock_or_close(
                         raiden,
-                        assetmanager,
+                        tokenmanager,
                         originating_channel,
                         originating_transfer,
                     )
 
                 elif isinstance(response, Secret):
-                    assetmanager.handle_secretmessage(response)
+                    tokenmanager.handle_secretmessage(response)
 
                     # Secret might be from a different node, wait for the
                     # update from `from_address`
                     self._wait_for_unlock_or_close(
                         raiden,
-                        assetmanager,
+                        tokenmanager,
                         originating_channel,
                         originating_transfer,
                     )
@@ -815,18 +815,18 @@ class MediateTransferTask(BaseMediatedTransferTask):
 class EndMediatedTransferTask(BaseMediatedTransferTask):
     """ Task that requests a secret for a registered transfer. """
 
-    def __init__(self, raiden, asset_address, originating_transfer):
+    def __init__(self, raiden, token_address, originating_transfer):
         super(EndMediatedTransferTask, self).__init__()
 
         self.raiden = raiden
-        self.asset_address = asset_address
+        self.token_address = token_address
         self.originating_transfer = originating_transfer
 
     def __repr__(self):
-        return '<{} {} asset:{}>'.format(
+        return '<{} {} token:{}>'.format(
             self.__class__.__name__,
             pex(self.raiden.address),
-            pex(self.asset_address),
+            pex(self.token_address),
         )
 
     def _run(self):  # pylint: disable=method-hidden
@@ -834,14 +834,14 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
         originating_transfer = self.originating_transfer
         hashlock = originating_transfer.lock.hashlock
 
-        assetmanager = raiden.get_manager_by_asset_address(self.asset_address)
-        transfermanager = assetmanager.transfermanager
-        originating_channel = assetmanager.get_channel_by_partner_address(
+        tokenmanager = raiden.get_manager_by_token_address(self.token_address)
+        transfermanager = tokenmanager.transfermanager
+        originating_channel = tokenmanager.get_channel_by_partner_address(
             originating_transfer.sender,
         )
 
         transfermanager.register_task_for_hashlock(self, hashlock)
-        assetmanager.register_channel_for_hashlock(originating_channel, hashlock)
+        tokenmanager.register_channel_for_hashlock(originating_channel, hashlock)
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
@@ -873,14 +873,14 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
 
             # at this point a Secret message is not valid
             if isinstance(response, RevealSecret):
-                assetmanager.handle_secret(
+                tokenmanager.handle_secret(
                     originating_transfer.identifier,
                     response.secret,
                 )
 
                 self._wait_for_unlock_or_close(
                     raiden,
-                    assetmanager,
+                    tokenmanager,
                     originating_channel,
                     originating_transfer,
                 )
@@ -932,46 +932,46 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
 
 class StartExchangeTask(BaseMediatedTransferTask):
     """ Initiator task, responsible to choose a random secret, initiate the
-    asset exchange by sending a mediated transfer to the counterparty and
+    token exchange by sending a mediated transfer to the counterparty and
     revealing the secret once the exchange can be complete.
     """
 
-    def __init__(self, identifier, raiden, from_asset, from_amount, to_asset, to_amount, target):
+    def __init__(self, identifier, raiden, from_token, from_amount, to_token, to_amount, target):
         # pylint: disable=too-many-arguments
 
         super(StartExchangeTask, self).__init__()
 
         self.identifier = identifier
         self.raiden = raiden
-        self.from_asset = from_asset
+        self.from_token = from_token
         self.from_amount = from_amount
-        self.to_asset = to_asset
+        self.to_token = to_token
         self.to_amount = to_amount
         self.target = target
 
     def __repr__(self):
-        return '<{} {} from_asset:{} to_asset:{}>'.format(
+        return '<{} {} from_token:{} to_token:{}>'.format(
             self.__class__.__name__,
             pex(self.raiden.address),
-            pex(self.from_asset),
-            pex(self.to_asset),
+            pex(self.from_token),
+            pex(self.to_token),
         )
 
     def _run(self):  # pylint: disable=method-hidden,too-many-locals
         identifier = self.identifier
         raiden = self.raiden
-        from_asset = self.from_asset
+        from_token = self.from_token
         from_amount = self.from_amount
-        to_asset = self.to_asset
+        to_token = self.to_token
         to_amount = self.to_amount
         target = self.target
 
-        from_assetmanager = raiden.get_manager_by_asset_address(from_asset)
-        to_assetmanager = raiden.get_manager_by_asset_address(to_asset)
+        from_tokenmanager = raiden.get_manager_by_token_address(from_token)
+        to_tokenmanager = raiden.get_manager_by_token_address(to_token)
 
-        from_transfermanager = from_assetmanager.transfermanager
+        from_transfermanager = from_tokenmanager.transfermanager
 
-        from_routes = from_assetmanager.get_best_routes(
+        from_routes = from_tokenmanager.get_best_routes(
             from_amount,
             target,
             lock_timeout=None,
@@ -984,7 +984,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             hashlock = sha3(secret)
 
             from_transfermanager.register_task_for_hashlock(self, hashlock)
-            from_assetmanager.register_channel_for_hashlock(from_channel, hashlock)
+            from_tokenmanager.register_channel_for_hashlock(from_channel, hashlock)
 
             lock_expiration = (
                 raiden.get_block_number() +
@@ -1009,7 +1009,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
                 raiden,
                 path,
                 from_mediated_transfer,
-                to_asset,
+                to_token,
                 to_amount,
             )
 
@@ -1017,7 +1017,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
                 # the initiator can unregister right away since it knows the
                 # secret wont be revealed
                 from_transfermanager.on_hashlock_result(hashlock, False)
-                del from_assetmanager.hashlock_channel[hashlock]
+                del from_tokenmanager.hashlock_channel[hashlock]
 
             elif isinstance(to_mediated_transfer, MediatedTransfer):
                 to_hop = to_mediated_transfer.sender
@@ -1030,17 +1030,17 @@ class StartExchangeTask(BaseMediatedTransferTask):
                     exchange_node=target,
                 )
 
-                to_channel = to_assetmanager.get_channel_by_partner_address(
+                to_channel = to_tokenmanager.get_channel_by_partner_address(
                     to_mediated_transfer.sender
                 )
 
                 # now the secret can be revealed forward (`from_hop`)
-                from_assetmanager.handle_secret(identifier, secret)
-                to_assetmanager.handle_secret(identifier, secret)
+                from_tokenmanager.handle_secret(identifier, secret)
+                to_tokenmanager.handle_secret(identifier, secret)
 
                 self._wait_for_unlock_or_close(
                     raiden,
-                    to_assetmanager,
+                    to_tokenmanager,
                     to_channel,
                     to_mediated_transfer,
                 )
@@ -1052,15 +1052,15 @@ class StartExchangeTask(BaseMediatedTransferTask):
             self,
             raiden,
             path,
-            from_asset_transfer,
-            to_asset,
+            from_token_transfer,
+            to_token,
             to_amount):
         """ Start the exchange by sending the first mediated transfer to the
-        taker and wait for mediated transfer for the exchanged asset.
+        taker and wait for mediated transfer for the exchanged token.
 
         This method will validate the messages received, discard the invalid
         ones, and wait until a valid state is reached. The valid state is
-        reached when a mediated transfer for `to_asset` with `to_amount` tokens
+        reached when a mediated transfer for `to_token` with `to_amount` tokens
         and a SecretRequest from the taker are received.
 
         Returns:
@@ -1075,14 +1075,14 @@ class StartExchangeTask(BaseMediatedTransferTask):
         taker_address = path[-1]  # taker_address and next_hop might be equal
 
         # a valid state must have a secret request from the maker and a valid
-        # mediated transfer for the new asset
+        # mediated transfer for the new token
         received_secretrequest = False
         mediated_transfer = None
 
         response_iterator = self._send_and_wait_time(
             raiden,
-            from_asset_transfer.recipient,
-            from_asset_transfer,
+            from_token_transfer.recipient,
+            from_token_transfer,
             raiden.config['msg_timeout'],
         )
 
@@ -1092,7 +1092,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
                 if log.isEnabledFor(logging.DEBUG):
                     log.debug(
                         'EXCHANGE TRANSFER TIMED OUT hashlock:%s',
-                        pex(from_asset_transfer.lock.hashlock),
+                        pex(from_token_transfer.lock.hashlock),
                     )
 
                 return None
@@ -1101,8 +1101,8 @@ class StartExchangeTask(BaseMediatedTransferTask):
             # a different node.
             #
             # The other participant must not use a direct transfer to finish
-            # the asset exchange, ignore it
-            if isinstance(response, MediatedTransfer) and response.asset == to_asset:
+            # the token exchange, ignore it
+            if isinstance(response, MediatedTransfer) and response.token == to_token:
                 # XXX: allow multiple transfers to add up to the correct amount
                 if response.lock.amount == to_amount:
                     mediated_transfer = response
@@ -1144,7 +1144,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
         itself).
 
         With exchanges there is an additional failure point, if a node is
-        mediating both asset transfers it can intercept the transfer (as in not
+        mediating both token transfers it can intercept the transfer (as in not
         revealing the secret to others), for this reason it is not sufficient
         to just send the Secret backwards, the Secret must also be sent to the
         exchange_node.
@@ -1169,7 +1169,7 @@ class ExchangeTask(BaseMediatedTransferTask):
     from_transfer and forward a to_transfer with the same hashlock.
     """
 
-    def __init__(self, raiden, from_mediated_transfer, to_asset, to_amount, target):
+    def __init__(self, raiden, from_mediated_transfer, to_token, to_amount, target):
         # pylint: disable=too-many-arguments
 
         super(ExchangeTask, self).__init__()
@@ -1179,14 +1179,14 @@ class ExchangeTask(BaseMediatedTransferTask):
         self.target = target
 
         self.to_amount = to_amount
-        self.to_asset = to_asset
+        self.to_token = to_token
 
     def __repr__(self):
-        return '<{} {} from_asset:{} to_asset:{}>'.format(
+        return '<{} {} from_token:{} to_token:{}>'.format(
             self.__class__.__name__,
             pex(self.raiden.address),
-            pex(self.from_mediated_transfer.asset),
-            pex(self.to_asset),
+            pex(self.from_mediated_transfer.token),
+            pex(self.to_token),
         )
 
     def _run(self):  # pylint: disable=method-hidden,too-many-locals
@@ -1196,25 +1196,25 @@ class ExchangeTask(BaseMediatedTransferTask):
         from_mediated_transfer = self.from_mediated_transfer
         hashlock = from_mediated_transfer.lock.hashlock
 
-        from_asset = from_mediated_transfer.asset
-        to_asset = self.to_asset
+        from_token = from_mediated_transfer.token
+        to_token = self.to_token
         to_amount = self.to_amount
 
-        to_assetmanager = raiden.get_manager_by_asset_address(to_asset)
-        from_assetmanager = raiden.get_manager_by_asset_address(from_asset)
-        from_transfermanager = from_assetmanager.transfermanager
+        to_tokenmanager = raiden.get_manager_by_token_address(to_token)
+        from_tokenmanager = raiden.get_manager_by_token_address(from_token)
+        from_transfermanager = from_tokenmanager.transfermanager
 
-        from_channel = from_assetmanager.get_channel_by_partner_address(
+        from_channel = from_tokenmanager.get_channel_by_partner_address(
             from_mediated_transfer.sender,
         )
 
         from_transfermanager.register_task_for_hashlock(self, hashlock)
-        from_assetmanager.register_channel_for_hashlock(from_channel, hashlock)
+        from_tokenmanager.register_channel_for_hashlock(from_channel, hashlock)
 
         lock_expiration = from_mediated_transfer.lock.expiration - raiden.config['reveal_timeout']
         lock_timeout = lock_expiration - raiden.get_block_number()
 
-        to_routes = to_assetmanager.get_best_routes(
+        to_routes = to_tokenmanager.get_best_routes(
             from_mediated_transfer.lock.amount,
             from_mediated_transfer.initiator,  # route back to the initiator
             lock_timeout,
@@ -1242,7 +1242,7 @@ class ExchangeTask(BaseMediatedTransferTask):
 
             to_mediated_transfer = to_channel.create_mediatedtransfer(
                 raiden.address,  # this node is the new initiator
-                from_mediated_transfer.initiator,  # the initiator is the target for the to_asset
+                from_mediated_transfer.initiator,  # the initiator is the target for the to_token
                 fee,
                 to_amount,
                 lock_expiration,
@@ -1257,9 +1257,9 @@ class ExchangeTask(BaseMediatedTransferTask):
                     pex(from_mediated_transfer.lock.hashlock),
                 )
 
-            # Using assetmanager to register the interest because it outlives
+            # Using tokenmanager to register the interest because it outlives
             # this task, the secret handling will happen only _once_
-            to_assetmanager.register_channel_for_hashlock(
+            to_tokenmanager.register_channel_for_hashlock(
                 to_channel,
                 hashlock,
             )
@@ -1274,7 +1274,7 @@ class ExchangeTask(BaseMediatedTransferTask):
                     pex(hashlock),
                 )
 
-            # only refunds for `from_asset` must be considered (check send_and_wait_valid)
+            # only refunds for `from_token` must be considered (check send_and_wait_valid)
             if isinstance(response, RefundTransfer):
                 if response.lock.amount != to_mediated_transfer.amount:
                     log.info(
@@ -1291,15 +1291,15 @@ class ExchangeTask(BaseMediatedTransferTask):
                     to_channel.register_transfer(response)
 
             elif isinstance(response, Secret):
-                # this node is receiving the from_asset and sending the
-                # to_asset, meaning that it can claim the to_asset but it needs
-                # a Secret message to claim the from_asset
-                to_assetmanager.handle_secretmessage(response)
-                from_assetmanager.handle_secretmessage(response)
+                # this node is receiving the from_token and sending the
+                # to_token, meaning that it can claim the to_token but it needs
+                # a Secret message to claim the from_token
+                to_tokenmanager.handle_secretmessage(response)
+                from_tokenmanager.handle_secretmessage(response)
 
                 self._wait_for_unlock_or_close(
                     raiden,
-                    from_assetmanager,
+                    from_tokenmanager,
                     from_channel,
                     from_mediated_transfer,
                 )
@@ -1328,12 +1328,12 @@ class ExchangeTask(BaseMediatedTransferTask):
 
                 return response
 
-            # first check that the message is from a known/valid sender/asset
+            # first check that the message is from a known/valid sender/token
             valid_target = response.target == raiden.address
             valid_sender = response.sender == mediated_transfer.recipient
-            valid_asset = response.asset == mediated_transfer.asset
+            valid_token = response.token == mediated_transfer.token
 
-            if not valid_target or not valid_sender or not valid_asset:
+            if not valid_target or not valid_sender or not valid_token:
                 log.error(
                     'Invalid message [%s] supplied to the task, ignoring.',
                     repr(response),

@@ -51,7 +51,7 @@ def test_channeldeposit(private_keys, settle_timeout, tester_state,
 
     # check initial state, needs to be zeroed out
     assert channel.settleTimeout(sender=privatekey0) == settle_timeout
-    assert channel.assetAddress(sender=privatekey0) == encode_hex(tester_token.address)
+    assert channel.tokenAddress(sender=privatekey0) == encode_hex(tester_token.address)
     assert channel.opened(sender=privatekey0) == 0
     assert channel.closed(sender=privatekey0) == 0
     assert channel.settled(sender=privatekey0) == 0
@@ -102,7 +102,7 @@ def test_channeldeposit(private_keys, settle_timeout, tester_state,
     # allowance zeroed, we cant make a new deposit
     assert channel.deposit(deposit_amount, sender=privatekey0) is False
 
-    # needs to be able to add aditional asset
+    # needs to be able to add aditional token
     assert tester_token.approve(channel.address, deposit_amount, sender=privatekey0) is True
     assert channel.deposit(deposit_amount, sender=privatekey0) is True
 
@@ -165,7 +165,7 @@ def test_channelnewbalance_event(private_keys, settle_timeout, tester_state,
     newbalance_event = tester_events[-1]
     assert newbalance_event == {
         '_event_type': 'ChannelNewBalance',
-        'asset_address': encode_hex(tester_token.address),
+        'token_address': encode_hex(tester_token.address),
         'participant': encode_hex(address0),
         'balance': deposit_amount,
         'block_number': block_number,
@@ -188,7 +188,7 @@ def test_channelnewbalance_event(private_keys, settle_timeout, tester_state,
     newbalance_event = tester_events[-1]
     assert newbalance_event == {
         '_event_type': 'ChannelNewBalance',
-        'asset_address': encode_hex(tester_token.address),
+        'token_address': encode_hex(tester_token.address),
         'participant': encode_hex(address1),
         'balance': deposit_amount,
         'block_number': block_number,

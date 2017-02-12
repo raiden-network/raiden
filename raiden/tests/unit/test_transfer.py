@@ -45,23 +45,23 @@ def sign_and_send(message, key, address, app):
 
 class MediatedTransferTestHelper:
 
-    def __init__(self, raiden_network, asset_manager):
+    def __init__(self, raiden_network, token_manager):
         self.raiden_network = raiden_network
-        self.asset_manager = asset_manager
-        self.asset_address = asset_manager.asset_address
+        self.token_manager = token_manager
+        self.token_address = token_manager.token_address
         self.ams_by_address = dict(
-            (app.raiden.address, app.raiden.managers_by_asset_address)
+            (app.raiden.address, app.raiden.managers_by_token_address)
             for app in self.raiden_network
         )
 
     def get_channel(self, from_, to_):
-        return self.ams_by_address[from_][self.asset_address].partneraddress_channel[to_]
+        return self.ams_by_address[from_][self.token_address].partneraddress_channel[to_]
 
     def get_paths_of_length(self, initiator_address, num_hops):
         """
         Search for paths of length=num_of_hops starting from initiator_address
         """
-        paths_length = self.asset_manager.channelgraph.get_paths_of_length(
+        paths_length = self.token_manager.channelgraph.get_paths_of_length(
             initiator_address,
             num_hops,
         )
@@ -73,7 +73,7 @@ class MediatedTransferTestHelper:
 
     def assert_path_in_shortest_paths(self, path, initiator_address, num_hops):
         _, _, charlie_address = path
-        shortest_paths = list(self.asset_manager.channelgraph.get_shortest_paths(
+        shortest_paths = list(self.token_manager.channelgraph.get_shortest_paths(
             initiator_address,
             charlie_address,
         ))
@@ -98,21 +98,21 @@ def test_transfer(raiden_network):
     a0_address = pex(app0.raiden.address)
     a1_address = pex(app1.raiden.address)
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
+    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
 
-    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+    channel0 = token_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = token_manager1.partneraddress_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
-    assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
+    assert token_manager0.token_address == token_manager1.token_address
+    assert app1.raiden.address in token_manager0.partneraddress_channel
 
     amount = 10
     app0.raiden.api.transfer(
-        asset_manager0.asset_address,
+        token_manager0.token_address,
         amount,
         target=app1.raiden.address,
     )
@@ -166,9 +166,9 @@ def test_mediated_transfer(raiden_network):
     alice_app = raiden_network[0]
     setup_messages_cb()
 
-    asset_manager = alice_app.raiden.managers_by_asset_address.values()[0]
-    asset_address = asset_manager.asset_address
-    mt_helper = MediatedTransferTestHelper(raiden_network, asset_manager)
+    token_manager = alice_app.raiden.managers_by_token_address.values()[0]
+    token_address = token_manager.token_address
+    mt_helper = MediatedTransferTestHelper(raiden_network, token_manager)
 
     initiator_address = alice_app.raiden.address
     path = mt_helper.get_paths_of_length(initiator_address, 2)
@@ -189,7 +189,7 @@ def test_mediated_transfer(raiden_network):
     amount = 10
 
     alice_app.raiden.api.transfer(
-        asset_address,
+        token_address,
         amount,
         charlie_address,
     )
@@ -207,9 +207,9 @@ def test_mediated_transfer(raiden_network):
 @pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('asset', [sha3('cancel_transfer')[:20]])
+@pytest.mark.parametrize('token', [sha3('cancel_transfer')[:20]])
 @pytest.mark.parametrize('deposit', [100])
-def test_cancel_transfer(raiden_chain, asset, deposit):
+def test_cancel_transfer(raiden_chain, token, deposit):
 
     app0, app1, app2, app3 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
@@ -217,60 +217,60 @@ def test_cancel_transfer(raiden_chain, asset, deposit):
     mlogger = MessageLogger()
 
     assert_synched_channels(
-        channel(app0, app1, asset), deposit, [],
-        channel(app1, app0, asset), deposit, []
+        channel(app0, app1, token), deposit, [],
+        channel(app1, app0, token), deposit, []
     )
 
     assert_synched_channels(
-        channel(app1, app2, asset), deposit, [],
-        channel(app2, app1, asset), deposit, []
+        channel(app1, app2, token), deposit, [],
+        channel(app2, app1, token), deposit, []
     )
 
     assert_synched_channels(
-        channel(app2, app3, asset), deposit, [],
-        channel(app3, app2, asset), deposit, []
+        channel(app2, app3, token), deposit, [],
+        channel(app3, app2, token), deposit, []
     )
 
     assert_synched_channels(
-        channel(app0, app1, asset), deposit, [],
-        channel(app1, app0, asset), deposit, []
+        channel(app0, app1, token), deposit, [],
+        channel(app1, app0, token), deposit, []
     )
 
     # drain the channel app1 -> app2
     amount12 = 50
-    direct_transfer(app1, app2, asset, amount12)
+    direct_transfer(app1, app2, token, amount12)
 
     # drain the channel app2 -> app3
     amount23 = 80
-    direct_transfer(app2, app3, asset, amount23)
+    direct_transfer(app2, app3, token, amount23)
 
     assert_synched_channels(
-        channel(app1, app2, asset), deposit - amount12, [],
-        channel(app2, app1, asset), deposit + amount12, []
+        channel(app1, app2, token), deposit - amount12, [],
+        channel(app2, app1, token), deposit + amount12, []
     )
 
     assert_synched_channels(
-        channel(app2, app3, asset), deposit - amount23, [],
-        channel(app3, app2, asset), deposit + amount23, []
+        channel(app2, app3, token), deposit - amount23, [],
+        channel(app3, app2, token), deposit + amount23, []
     )
 
     # app1 -> app3 is the only available path but app2 -> app3 doesnt have
     # resources and needs to send a RefundTransfer down the path
-    transfer(app0, app3, asset, 50)
+    transfer(app0, app3, token, 50)
 
     assert_synched_channels(
-        channel(app0, app1, asset), deposit, [],
-        channel(app1, app0, asset), deposit, []
+        channel(app0, app1, token), deposit, [],
+        channel(app1, app0, token), deposit, []
     )
 
     assert_synched_channels(
-        channel(app1, app2, asset), deposit - amount12, [],
-        channel(app2, app1, asset), deposit + amount12, []
+        channel(app1, app2, token), deposit - amount12, [],
+        channel(app2, app1, token), deposit + amount12, []
     )
 
     assert_synched_channels(
-        channel(app2, app3, asset), deposit - amount23, [],
-        channel(app3, app2, asset), deposit + amount23, []
+        channel(app2, app3, token), deposit - amount23, [],
+        channel(app3, app2, token), deposit + amount23, []
     )
 
     assert len(messages) == 12  # DT + DT + SMT + MT + RT + RT + ACKs
@@ -290,23 +290,23 @@ def test_healthcheck_with_normal_peer(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
     messages = setup_messages_cb()
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
+    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
 
     max_unresponsive_time = app0.raiden.config['max_unresponsive_time']
 
-    assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
+    assert token_manager0.token_address == token_manager1.token_address
+    assert app1.raiden.address in token_manager0.partneraddress_channel
 
     amount = 10
     app0.raiden.api.transfer(
-        asset_manager0.asset_address,
+        token_manager0.token_address,
         amount,
         target=app1.raiden.address,
     )
 
     gevent.sleep(max_unresponsive_time)
-    assert asset_manager0.channelgraph.has_path(
+    assert token_manager0.channelgraph.has_path(
         app0.raiden.address,
         app1.raiden.address
     )
@@ -334,21 +334,21 @@ def test_healthcheck_with_bad_peer(raiden_network):
     send_ping_time = app0.raiden.config['send_ping_time']
     max_unresponsive_time = app0.raiden.config['max_unresponsive_time']
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
+    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
 
-    assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
+    assert token_manager0.token_address == token_manager1.token_address
+    assert app1.raiden.address in token_manager0.partneraddress_channel
 
     amount = 10
     app0.raiden.api.transfer(
-        asset_manager0.asset_address,
+        token_manager0.token_address,
         amount,
         target=app1.raiden.address,
     )
 
     gevent.sleep(2)
-    assert asset_manager0.channelgraph.has_path(
+    assert token_manager0.channelgraph.has_path(
         app0.raiden.address,
         app1.raiden.address
     )
@@ -370,7 +370,7 @@ def test_healthcheck_with_bad_peer(raiden_network):
 
     gevent.sleep(max_unresponsive_time - send_ping_time)
     # By now our peer has not replied and must have been removed from the graph
-    assert not asset_manager0.channelgraph.has_path(
+    assert not token_manager0.channelgraph.has_path(
         app0.raiden.address,
         app1.raiden.address
     )
@@ -385,14 +385,14 @@ def test_healthcheck_with_bad_peer(raiden_network):
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_directtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
 
     other_key = PrivateKey(HASH, ctx=GLOBAL_CTX, raw=True)
     other_address = privatekey_to_address(other_key.private_key)
     direct_transfer = DirectTransfer(
         identifier=1,
         nonce=1,
-        asset=asset_manager0.asset_address,
+        token=token_manager0.token_address,
         transferred_amount=10,
         recipient=app0.raiden.address,
         locksroot=HASH
@@ -405,7 +405,7 @@ def test_receive_directtransfer_unknown(raiden_network):
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_mediatedtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
 
     other_key = PrivateKey(HASH, ctx=GLOBAL_CTX, raw=True)
     other_address = privatekey_to_address(other_key.private_key)
@@ -414,7 +414,7 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
     mediated_transfer = MediatedTransfer(
         identifier=1,
         nonce=1,
-        asset=asset_manager0.asset_address,
+        token=token_manager0.token_address,
         transferred_amount=amount,
         recipient=app0.raiden.address,
         locksroot=locksroot,
@@ -432,7 +432,7 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
 def test_receive_hashlocktransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
 
     other_key = PrivateKey(HASH2, ctx=GLOBAL_CTX, raw=True)
     other_address = privatekey_to_address(other_key.private_key)
@@ -441,7 +441,7 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
     refund_transfer = RefundTransfer(
         identifier=1,
         nonce=1,
-        asset=asset_manager0.asset_address,
+        token=token_manager0.token_address,
         transferred_amount=amount,
         recipient=app0.raiden.address,
         locksroot=HASH,
@@ -452,7 +452,7 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
     transfer_timeout = TransferTimeout(HASH, HASH)
     sign_and_send(transfer_timeout, other_key, other_address, app0)
 
-    secret = Secret(1, HASH, asset_manager0.asset_address)
+    secret = Secret(1, HASH, token_manager0.token_address)
     sign_and_send(secret, other_key, other_address, app0)
 
     secret_request = SecretRequest(1, HASH, 1)
@@ -474,21 +474,21 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
 def test_receive_directtransfer_outoforder(raiden_network, private_keys):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
+    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
 
-    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+    channel0 = token_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = token_manager1.partneraddress_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
-    assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
+    assert token_manager0.token_address == token_manager1.token_address
+    assert app1.raiden.address in token_manager0.partneraddress_channel
 
     amount = 10
     app0.raiden.api.transfer(
-        asset_manager0.asset_address,
+        token_manager0.token_address,
         amount,
         target=app1.raiden.address,
     )
@@ -502,9 +502,9 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
     # and now send one more direct transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
     direct_transfer = DirectTransfer(
-        identifier=asset_manager0.transfermanager.create_default_identifier(app1.raiden.address),
+        identifier=token_manager0.transfermanager.create_default_identifier(app1.raiden.address),
         nonce=1,
-        asset=asset_manager0.asset_address,
+        token=token_manager0.token_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
         locksroot=HASH,
@@ -520,17 +520,17 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     alice_app = raiden_network[0]
     setup_messages_cb()
 
-    asset_manager = alice_app.raiden.managers_by_asset_address.values()[0]
-    asset_address = asset_manager.asset_address
+    token_manager = alice_app.raiden.managers_by_token_address.values()[0]
+    token_address = token_manager.token_address
 
-    mt_helper = MediatedTransferTestHelper(raiden_network, asset_manager)
+    mt_helper = MediatedTransferTestHelper(raiden_network, token_manager)
     initiator_address = alice_app.raiden.address
     path = mt_helper.get_paths_of_length(initiator_address, 2)
 
     alice_address, bob_address, charlie_address = path
     amount = 10
     alice_app.raiden.api.transfer(
-        asset_address,
+        token_address,
         amount,
         charlie_address,
     )
@@ -541,9 +541,9 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
     mediated_transfer = MediatedTransfer(
-        identifier=asset_manager.transfermanager.create_default_identifier(charlie_address),
+        identifier=token_manager.transfermanager.create_default_identifier(charlie_address),
         nonce=1,
-        asset=asset_address,
+        token=token_address,
         transferred_amount=amount,
         recipient=bob_address,
         locksroot=locksroot,
@@ -564,17 +564,17 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     alice_app = raiden_network[0]
     setup_messages_cb()
 
-    asset_manager = alice_app.raiden.managers_by_asset_address.values()[0]
-    asset_address = asset_manager.asset_address
+    token_manager = alice_app.raiden.managers_by_token_address.values()[0]
+    token_address = token_manager.token_address
 
-    mt_helper = MediatedTransferTestHelper(raiden_network, asset_manager)
+    mt_helper = MediatedTransferTestHelper(raiden_network, token_manager)
     initiator_address = alice_app.raiden.address
     path = mt_helper.get_paths_of_length(initiator_address, 2)
 
     alice_address, bob_address, charlie_address = path
     amount = 10
     alice_app.raiden.api.transfer(
-        asset_address,
+        token_address,
         amount,
         charlie_address,
     )
@@ -585,9 +585,9 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
     mediated_transfer = MediatedTransfer(
-        identifier=asset_manager.transfermanager.create_default_identifier(charlie_address),
+        identifier=token_manager.transfermanager.create_default_identifier(charlie_address),
         nonce=1,
-        asset=asset_address,
+        token=token_address,
         transferred_amount=amount,
         recipient=bob_address,
         locksroot=locksroot,
@@ -608,24 +608,24 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
-def test_receive_directtransfer_wrongasset(raiden_network, private_keys):
+def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
+    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
 
-    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+    channel0 = token_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = token_manager1.partneraddress_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
-    assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
+    assert token_manager0.token_address == token_manager1.token_address
+    assert app1.raiden.address in token_manager0.partneraddress_channel
 
     amount = 10
     app0.raiden.api.transfer(
-        asset_manager0.asset_address,
+        token_manager0.token_address,
         amount,
         target=app1.raiden.address,
     )
@@ -636,11 +636,11 @@ def test_receive_directtransfer_wrongasset(raiden_network, private_keys):
         channel1, balance1 + amount, []
     )
 
-    # and now send one more direct transfer with a mistaken asset address
+    # and now send one more direct transfer with a mistaken token address
     direct_transfer = DirectTransfer(
-        identifier=asset_manager0.transfermanager.create_default_identifier(app1.raiden.address),
+        identifier=token_manager0.transfermanager.create_default_identifier(app1.raiden.address),
         nonce=2,
-        asset=HASH[0:20],
+        token=HASH[0:20],
         transferred_amount=10,
         recipient=app1.raiden.address,
         locksroot=HASH,
@@ -655,21 +655,21 @@ def test_receive_directtransfer_wrongasset(raiden_network, private_keys):
 def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
+    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
 
-    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+    channel0 = token_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = token_manager1.partneraddress_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
-    assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
+    assert token_manager0.token_address == token_manager1.token_address
+    assert app1.raiden.address in token_manager0.partneraddress_channel
 
     amount = 10
     app0.raiden.api.transfer(
-        asset_manager0.asset_address,
+        token_manager0.token_address,
         amount,
         target=app1.raiden.address,
     )
@@ -682,9 +682,9 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
 
     # and now send one more direct transfer with the locksroot not set correctly
     direct_transfer = DirectTransfer(
-        identifier=asset_manager0.transfermanager.create_default_identifier(app1.raiden.address),
+        identifier=token_manager0.transfermanager.create_default_identifier(app1.raiden.address),
         nonce=2,
-        asset=asset_manager0.asset_address,
+        token=token_manager0.token_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
         locksroot=HASH,
@@ -699,15 +699,15 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
 def test_transfer_to_unknownchannel(raiden_network, private_keys):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
+    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
 
-    assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
+    assert token_manager0.token_address == token_manager1.token_address
+    assert app1.raiden.address in token_manager0.partneraddress_channel
 
     with pytest.raises(NoPathError):
         app0.raiden.api.transfer(
-            asset_manager0.asset_address,
+            token_manager0.token_address,
             10,
             # sending to an unknown/non-existant address
             target='\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1',
@@ -722,21 +722,21 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
     tester_state = app0.raiden.chain.tester_state
 
-    asset_manager0 = app0.raiden.managers_by_asset_address.values()[0]
-    asset_manager1 = app1.raiden.managers_by_asset_address.values()[0]
+    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
+    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
 
-    channel0 = asset_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = asset_manager1.partneraddress_channel[app0.raiden.address]
+    channel0 = token_manager0.partneraddress_channel[app1.raiden.address]
+    channel1 = token_manager1.partneraddress_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
-    assert asset_manager0.asset_address == asset_manager1.asset_address
-    assert app1.raiden.address in asset_manager0.partneraddress_channel
+    assert token_manager0.token_address == token_manager1.token_address
+    assert app1.raiden.address in token_manager0.partneraddress_channel
 
     amount = 10
     app0.raiden.api.transfer(
-        asset_manager0.asset_address,
+        token_manager0.token_address,
         amount,
         target=app1.raiden.address,
     )
@@ -747,11 +747,11 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         channel1, balance1 + amount, []
     )
 
-    app1.raiden.api.close(asset_manager0.asset_address, app0.raiden.address)
+    app1.raiden.api.close(token_manager0.token_address, app0.raiden.address)
     tester_state.mine(1)
     gevent.sleep(.5)
     tester_state.mine(number_of_blocks=settle_timeout + 1)
-    app0.raiden.api.settle(asset_manager0.asset_address, app1.raiden.address)
+    app0.raiden.api.settle(token_manager0.token_address, app1.raiden.address)
     gevent.sleep(.5)
 
     assert channel0.external_state.settled_block != 0
@@ -761,7 +761,7 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
     direct_transfer = DirectTransfer(
         identifier=1,
         nonce=1,
-        asset=asset_manager0.asset_address,
+        token=token_manager0.token_address,
         transferred_amount=10,
         recipient=app0.raiden.address,
         locksroot=HASH

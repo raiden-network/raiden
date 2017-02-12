@@ -209,12 +209,12 @@ class BlockChainServiceTesterMock(object):
         self.private_key = private_key
         self.default_registry = default_registry
 
-        self.address_asset = dict()
+        self.address_token = dict()
         self.address_discovery = dict()
         self.address_manager = dict()
         self.address_contract = dict()
         self.address_registry = dict()
-        self.asset_manager = dict()
+        self.token_manager = dict()
 
     def set_verbosity(self, level):
         pass
@@ -226,16 +226,16 @@ class BlockChainServiceTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
         return self.tester_state.block.number
 
-    def asset(self, asset_address):
-        """ Return a proxy to interact with an asset. """
-        if asset_address not in self.address_asset:
-            self.address_asset[asset_address] = AssetTesterMock(
+    def token(self, token_address):
+        """ Return a proxy to interact with an token. """
+        if token_address not in self.address_token:
+            self.address_token[token_address] = TokenTesterMock(
                 self.tester_state,
                 self.private_key,
-                asset_address,
+                token_address,
             )
 
-        return self.address_asset[asset_address]
+        return self.address_token[token_address]
 
     def discovery(self, discovery_address):
         if discovery_address not in self.address_discovery:
@@ -268,29 +268,29 @@ class BlockChainServiceTesterMock(object):
                 manager_address,
             )
 
-            asset_address = manager.asset_address()
+            token_address = manager.token_address()
 
-            self.asset_manager[asset_address] = manager
+            self.token_manager[token_address] = manager
             self.address_manager[manager_address] = manager
 
         return self.address_manager[manager_address]
 
-    def manager_by_asset(self, asset_address):
-        """ Find the channel manager for `asset_address` and return a proxy to
+    def manager_by_token(self, token_address):
+        """ Find the channel manager for `token_address` and return a proxy to
         interact with it.
         """
-        if asset_address not in self.asset_manager:
-            manager_address = self.default_registry.manager_address_by_asset(asset_address)
+        if token_address not in self.token_manager:
+            manager_address = self.default_registry.manager_address_by_token(token_address)
             manager = ChannelManagerTesterMock(
                 self.tester_state,
                 self.private_key,
                 manager_address,
             )
 
-            self.asset_manager[asset_address] = manager
+            self.token_manager[token_address] = manager
             self.address_manager[manager_address] = manager
 
-        return self.asset_manager[asset_address]
+        return self.token_manager[token_address]
 
     def registry(self, registry_address):
         if registry_address not in self.address_registry:
@@ -314,7 +314,7 @@ class BlockChainServiceTesterMock(object):
             constructor_parameters,
         )
 
-    def deploy_and_register_asset(self, contract_name, contract_file, constructor_parameters=None):
+    def deploy_and_register_token(self, contract_name, contract_file, constructor_parameters=None):
         assert self.default_registry
 
         token_address = self.deploy_contract(
@@ -322,7 +322,7 @@ class BlockChainServiceTesterMock(object):
             contract_file,
             constructor_parameters,
         )
-        self.default_registry.add_asset(token_address)  # pylint: disable=no-member
+        self.default_registry.add_token(token_address)  # pylint: disable=no-member
 
         return token_address
 
@@ -368,7 +368,7 @@ class DiscoveryTesterMock(object):
         return address.decode('hex')
 
 
-class AssetTesterMock(object):
+class TokenTesterMock(object):
     def __init__(self, tester_state, private_key, address):
         if len(tester_state.block.get_code(address)) == 0:
             raise Exception('Contract code empty')
@@ -413,21 +413,21 @@ class RegistryTesterMock(object):
             self.address,
             default_key=private_key,
         )
-        self.assetadded_filters = list()
+        self.tokenadded_filters = list()
 
-    def manager_address_by_asset(self, asset_address):
-        channel_manager_address_hex = self.registry_proxy.channelManagerByAsset(asset_address)
+    def manager_address_by_token(self, token_address):
+        channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
         self.tester_state.mine(number_of_blocks=1)
         return channel_manager_address_hex.decode('hex')
 
-    def add_asset(self, asset_address):
-        self.registry_proxy.addAsset(asset_address)
+    def add_token(self, token_address):
+        self.registry_proxy.addToken(token_address)
         self.tester_state.mine(number_of_blocks=1)
 
-    def asset_addresses(self):
+    def token_addresses(self):
         result = [
             address.decode('hex')
-            for address in self.registry_proxy.assetAddresses()
+            for address in self.registry_proxy.tokenAddresses()
         ]
         self.tester_state.mine(number_of_blocks=1)
         return result
@@ -440,7 +440,7 @@ class RegistryTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
         return result
 
-    def assetadded_filter(self):
+    def tokenadded_filter(self):
         topics = [ASSETADDED_EVENTID]
         filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
         self.tester_state.block.log_listeners.append(filter_.event)
@@ -465,11 +465,11 @@ class ChannelManagerTesterMock(object):
         self.participant_filter = defaultdict(list)
         self.address_filter = defaultdict(list)
 
-    def asset_address(self):
-        asset_address_hex = self.proxy.tokenAddress()
+    def token_address(self):
+        token_address_hex = self.proxy.tokenAddress()
         self.tester_state.mine(number_of_blocks=1)
-        asset_address = address_decoder(asset_address_hex)
-        return asset_address
+        token_address = address_decoder(token_address_hex)
+        return token_address
 
     def new_netting_channel(self, peer1, peer2, settle_timeout):
         """ Creates a new netting contract between peer1 and peer2.
@@ -551,8 +551,8 @@ class NettingChannelTesterMock(object):
         # check we are a participant of the channel
         self.detail(privatekey_to_address(private_key))
 
-    def asset_address(self):
-        result = address_decoder(self.proxy.assetAddress())
+    def token_address(self):
+        result = address_decoder(self.proxy.tokenAddress())
         self.tester_state.mine(number_of_blocks=1)
         return result
 
@@ -581,12 +581,12 @@ class NettingChannelTesterMock(object):
         if privatekey_to_address(self.private_key) != our_address:
             raise ValueError('our_address doesnt match the privatekey')
 
-        asset = AssetTesterMock(
+        token = TokenTesterMock(
             self.tester_state,
             self.private_key,
-            self.asset_address(),
+            self.token_address(),
         )
-        current_balance = asset.balance_of(privatekey_to_address(self.private_key))
+        current_balance = token.balance_of(privatekey_to_address(self.private_key))
 
         if current_balance < amount:
             raise ValueError('deposit [{}] cant be larger than the available balance [{}].'.format(

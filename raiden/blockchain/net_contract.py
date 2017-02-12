@@ -18,7 +18,7 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 #     - Direct access to gasused of previous blocks.
 #     - Heuristic, no settlements in the previous blocks.
 # Todos:
-#     Compatible Asset/Token/Coin Contract
+#     Compatible Token/Token/Coin Contract
 #     Channel Opening sequence
 #     Channel Fees (i.e. Accounts w/ higher reputation could charge a fee/deposit).
 #     use channel.opened to collect reputation of an account (long lasting channels == good)
@@ -65,10 +65,10 @@ class Participant(object):
 
     def __init__(self):
         self.deposit = 0
-        """ int: Amount of asset deposited by the participant. """
+        """ int: Amount of token deposited by the participant. """
 
         self.netted = 0
-        """ int: Amount of asset netted after the channel is settled. """
+        """ int: Amount of token netted after the channel is settled. """
 
         # Used to track the latest know transfer from the partner
         self.transfer = None
@@ -92,7 +92,7 @@ class Participant(object):
 class NettingChannelContract(object):
     """ Contract that allows users to perform fast off-chain transactions.
 
-    The netting contract allows two parties to engage in off-chain asset
+    The netting contract allows two parties to engage in off-chain token
     transfers without trust among them, with the functionality of detecting
     frauds, penalise the wrongdoers, and to participate in an off-chain network
     for fast and cheap transactions.
@@ -101,10 +101,10 @@ class NettingChannelContract(object):
     ---------
 
     These transactions are done by external clients without interaction with
-    the contract, the contract's role is only to secure the asset and create
+    the contract, the contract's role is only to secure the token and create
     the mechanism that allows settlement of conflicts.
 
-    The asset transfers are done through the exchange of signed messages among
+    The token transfers are done through the exchange of signed messages among
     the participants, each message works as a proof of the transfer made from a
     given participant. These messages are composed of:
 
@@ -132,7 +132,7 @@ class NettingChannelContract(object):
     There are two kinds of transfers that are recognized by the contract, a
     transfer initiated by a channel participant to the other participant, called
     a direct transfer, or a mediated transfer involving multiple channels, used
-    for cooperatively transfer assets for nodes without a direct channel.
+    for cooperatively transfer tokens for nodes without a direct channel.
 
     Multiple transfers are expected to occur from the opening of a channel
     onwards. The `nonce` field is used by this contract to compare transfers
@@ -153,19 +153,19 @@ class NettingChannelContract(object):
     Direct transfer depend on the existence of direct channels among the
     participants, since direct channels are expected to be the exception and
     not the rule a different mechanism is required for indirect transfers, this
-    is done by exploiting existing channels to mediate an asset transfer.
+    is done by exploiting existing channels to mediate a token transfer.
 
     The path discovery required to find which channels will be used to mediate
     the transfer isn't part of this contract, only the means to protect the
-    individual assets.
+    individual tokens.
 
     Mediated transfers require the participation of one or more intermediary
     nodes, these intermediaries compose a path from the initiator to the
     target. The path of length `n` has its transfer started by the initiator
     `1`, with each intermediary `i` mediating a transfer from `i-1` to `i+1`
     until the the target node `n` is reached. This contract has the required
-    mechanisms to protect the individual node's assets, the contract allows any
-    `i` to safely transfer its asset to `i+1` with the guarantee that it will
+    mechanisms to protect the individual node's tokens, the contract allows any
+    `i` to safely transfer its token to `i+1` with the guarantee that it will
     have the transfer from `i-1` done.
 
     Penalization
@@ -189,7 +189,7 @@ class NettingChannelContract(object):
         testing.
     """
 
-    def __init__(self, asset_address, netcontract_address, address_A,
+    def __init__(self, token_address, netcontract_address, address_A,
                  address_B, settle_timeout):
         log.debug(
             'creating nettingchannelcontract',
@@ -197,7 +197,7 @@ class NettingChannelContract(object):
             b=pex(address_B),
         )
 
-        self.asset_address = asset_address
+        self.token_address = token_address
         self.netcontract_address = netcontract_address
         self.participants = {
             address_A: Participant(),
@@ -255,7 +255,7 @@ class NettingChannelContract(object):
         )
 
     def deposit(self, address, amount, block_number):
-        """ Method for `address` to make a deposit of `amount` asset. """
+        """ Method for `address` to make a deposit of `amount` token. """
 
         if address not in self.participants:
             msg = 'The address {address} is not a participant of this contract.'.format(

@@ -51,7 +51,7 @@ def make_external_state():
 
 def test_end_state():
     netting_channel = NettingChannelMock()
-    asset_address = make_address()
+    token_address = make_address()
     privkey1, address1 = make_privkey_address()
     address2 = make_address()
 
@@ -96,7 +96,7 @@ def test_end_state():
     locked_transfer = LockedTransfer(
         1,  # TODO: fill in identifier
         nonce=state1.nonce,
-        asset=asset_address,
+        token=token_address,
         transferred_amount=transferred_amount,
         recipient=state2.address,
         locksroot=locksroot,
@@ -196,7 +196,7 @@ def test_end_state():
 
 def test_invalid_timeouts():
     netting_channel = NettingChannelMock()
-    asset_address = make_address()
+    token_address = make_address()
     reveal_timeout = 5
     settle_timeout = 15
 
@@ -218,7 +218,7 @@ def test_invalid_timeouts():
             our_state,
             partner_state,
             external_state,
-            asset_address,
+            token_address,
             large_reveal_timeout,
             small_settle_timeout,
         )
@@ -229,7 +229,7 @@ def test_invalid_timeouts():
                 our_state,
                 partner_state,
                 external_state,
-                asset_address,
+                token_address,
                 invalid_value,
                 settle_timeout,
             )
@@ -239,7 +239,7 @@ def test_invalid_timeouts():
                 our_state,
                 partner_state,
                 external_state,
-                asset_address,
+                token_address,
                 reveal_timeout,
                 invalid_value,
             )
@@ -247,7 +247,7 @@ def test_invalid_timeouts():
 
 def test_python_channel():
     netting_channel = NettingChannelMock()
-    asset_address = make_address()
+    token_address = make_address()
     privkey1, address1 = make_privkey_address()
     address2 = make_address()
 
@@ -263,7 +263,7 @@ def test_python_channel():
 
     test_channel = Channel(
         our_state, partner_state, external_state,
-        asset_address, reveal_timeout, settle_timeout,
+        token_address, reveal_timeout, settle_timeout,
     )
 
     assert test_channel.contract_balance == our_state.contract_balance
@@ -351,20 +351,20 @@ def test_python_channel():
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_setup(raiden_network, deposit, assets_addresses):
+def test_setup(raiden_network, deposit, tokens_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    assets0 = app0.raiden.managers_by_asset_address.keys()
-    assets1 = app1.raiden.managers_by_asset_address.keys()
+    tokens0 = app0.raiden.managers_by_token_address.keys()
+    tokens1 = app1.raiden.managers_by_token_address.keys()
 
-    assert len(assets0) == 1
-    assert len(assets1) == 1
-    assert assets0 == assets1
-    assert assets0[0] == assets_addresses[0]
+    assert len(tokens0) == 1
+    assert len(tokens1) == 1
+    assert tokens0 == tokens1
+    assert tokens0[0] == tokens_addresses[0]
 
-    asset_address = assets0[0]
-    channel0 = channel(app0, app1, asset_address)
-    channel1 = channel(app1, app0, asset_address)
+    token_address = tokens0[0]
+    channel0 = channel(app0, app1, token_address)
+    channel1 = channel(app1, app0, token_address)
 
     assert channel0 and channel1
 
@@ -403,8 +403,8 @@ def test_interwoven_transfers(number_of_transfers, raiden_network,
 
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    channel0 = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
 
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
@@ -480,11 +480,11 @@ def test_interwoven_transfers(number_of_transfers, raiden_network,
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_transfer(raiden_network, assets_addresses):
+def test_transfer(raiden_network, tokens_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = channel(app0, app1, assets_addresses[0])
-    channel1 = channel(app1, app0, assets_addresses[0])
+    channel0 = channel(app0, app1, tokens_addresses[0])
+    channel1 = channel(app1, app0, tokens_addresses[0])
 
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
@@ -493,14 +493,14 @@ def test_transfer(raiden_network, assets_addresses):
     address0 = channel0.our_state.address
     address1 = channel1.our_state.address
 
-    app0_asset = app0.raiden.managers_by_asset_address.keys()[0]
-    app1_asset = app1.raiden.managers_by_asset_address.keys()[0]
+    app0_token = app0.raiden.managers_by_token_address.keys()[0]
+    app1_token = app1.raiden.managers_by_token_address.keys()[0]
 
-    app0_partners = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()
-    app1_partners = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.keys()
+    app0_partners = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.keys()
+    app1_partners = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.keys()
 
-    assert channel0.asset_address == channel1.asset_address
-    assert app0_asset == app1_asset
+    assert channel0.token_address == channel1.token_address
+    assert app0_token == app1_token
     assert app1.raiden.address in app0_partners
     assert app0.raiden.address in app1_partners
 
@@ -547,8 +547,8 @@ def test_transfer(raiden_network, assets_addresses):
 def test_locked_transfer(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    channel0 = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
@@ -595,13 +595,13 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 
     The bug occurred if a transfer with an invalid allowance but a valid secret
     was registered, when the local end registered the transfer it would
-    "unlock" the partners asset, but the transfer wouldn't be sent because the
+    "unlock" the partners' token, but the transfer wouldn't be sent because the
     allowance check failed, leaving the channel in an inconsistent state.
     """
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    channel0 = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
@@ -634,7 +634,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     transfer2 = DirectTransfer(
         1,  # TODO: fill in identifier
         nonce=channel0.our_state.nonce,
-        asset=channel0.asset_address,
+        token=channel0.token_address,
         transferred_amount=channel1.balance + balance0 + amount,
         recipient=channel0.partner_state.address,
         locksroot=channel0.partner_state.balance_proof.merkleroot_for_unclaimed(),
@@ -659,13 +659,13 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeout):
     app0, app1 = raiden_network
-    channel0 = app0.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address.values()[0].partneraddress_channel.values()[0]
+    channel0 = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
     privatekey0 = app0.raiden.private_key
     privatekey1 = app1.raiden.private_key
     address0 = privatekey_to_address(privatekey0.private_key)
     address1 = privatekey_to_address(privatekey1.private_key)
-    token = app0.raiden.chain.asset(channel0.asset_address)
+    token = app0.raiden.chain.token(channel0.token_address)
     initial_balance0 = token.balance_of(address0.encode('hex'))
     initial_balance1 = token.balance_of(address1.encode('hex'))
 

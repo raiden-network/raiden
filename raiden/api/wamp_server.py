@@ -134,9 +134,9 @@ class WebSocketAPI(WebSocketApplication):
 
     # refactor to API
     @export_rpc
-    def get_assets(self):
-        assets = [asset.encode('hex') for asset in getattr(self.api, 'assets')]
-        return assets
+    def get_tokens(self):
+        tokens = [token.encode('hex') for token in getattr(self.api, 'tokens')]
+        return tokens
 
     @export_rpc
     def get_address(self):
@@ -147,7 +147,7 @@ class WebSocketAPI(WebSocketApplication):
 
     @register_pubsub_with_callback  # noqa
     @export_rpc
-    def transfer(self, asset_address, amount, target, callback_id):
+    def transfer(self, token_address, amount, target, callback_id):
         """
         Wraps around the APIs transfer() method to introduce additional
         PubSub and callback features.
@@ -163,10 +163,10 @@ class WebSocketAPI(WebSocketApplication):
             return False
         # try to forward transfer to API and handle occuring excpetions
         try:
-            self.api.transfer(asset_address, amount, target,
+            self.api.transfer(token_address, amount, target,
                               lambda _, status, id=callback_id, topic=publish_topic:
                               self.status_callback(_, status, id, topic))
-            # self.api.transfer(asset_address, amount, target,callback=self.print_callback)
+            # self.api.transfer(token_address, amount, target,callback=self.print_callback)
 
             # # XXX check id / callback_id naming
             # if cb just failes with success==False, then everything was right,except:
@@ -184,7 +184,7 @@ class WebSocketAPI(WebSocketApplication):
         except IndexError as ex:
             self.callback_with_exception(callback_id, publish_topic, reason='INVALID_TARGET')
         except InvalidAddress as ex:
-            if ex.args[1] is 'asset':
+            if ex.args[1] is 'token':
                 self.callback_with_exception(callback_id, publish_topic, reason='INVALID_ASSET')
             elif ex.args[1] is 'receiver':
                 self.callback_with_exception(callback_id, publish_topic, reason='INVALID_TARGET')

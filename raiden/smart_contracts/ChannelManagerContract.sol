@@ -3,7 +3,7 @@ pragma solidity ^0.4.0;
 import "./Token.sol";
 import "./ChannelManagerLibrary.sol";
 
-// for each asset a manager will be deployed, to reduce gas usage for manager
+// for each token a manager will be deployed, to reduce gas usage for manager
 // deployment the logic is moved into a library and this contract will work
 // only as a proxy/state container.
 contract ChannelManagerContract {

@@ -61,8 +61,8 @@ def both_participants_deposit():
 
 
 @pytest.fixture
-def number_of_assets():
-    """ Number of assets pre-registered in the test Registry. """
+def number_of_tokens():
+    """ Number of tokens pre-registered in the test Registry. """
     return 1
 
 
@@ -120,10 +120,10 @@ def privatekey_seed():
 
 
 @pytest.fixture
-def asset_amount(number_of_nodes, deposit):
+def token_amount(number_of_nodes, deposit):
     total_per_node = 3 * (deposit + 1)
-    total_asset = total_per_node * number_of_nodes
-    return total_asset
+    total_token = total_per_node * number_of_nodes
+    return total_token
 
 
 @pytest.fixture

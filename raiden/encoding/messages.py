@@ -66,7 +66,7 @@ nonce = make_field('nonce', 8, '8s', integer(0, BYTE ** 8))
 identifier = make_field('identifier', 8, '8s', integer(0, BYTE ** 8))
 expiration = make_field('expiration', 8, '8s', integer(0, BYTE ** 8))
 
-asset = make_field('asset', 20, '20s')
+token = make_field('token', 20, '20s')
 recipient = make_field('recipient', 20, '20s')
 target = make_field('target', 20, '20s')
 initiator = make_field('initiator', 20, '20s')
@@ -140,7 +140,7 @@ Secret = namedbuffer(
         pad(3),         # [1:4]
         identifier,     # [4:12]
         secret,         # [12:44]
-        asset,
+        token,
         signature,
     ]
 )
@@ -162,7 +162,7 @@ DirectTransfer = namedbuffer(
         pad(3),                 # [1:4]
         nonce,                  # [4:12]
         identifier,             # [12:20]
-        asset,                  # [20:40]
+        token,                  # [20:40]
         recipient,              # [40:60]
         transferred_amount,
         optional_locksroot,
@@ -179,7 +179,7 @@ LockedTransfer = namedbuffer(
         nonce,                  # [4:12]
         identifier,             # [12:20]
         expiration,             # [20:28]
-        asset,                  # [28:48]
+        token,                  # [28:48]
         recipient,              # [48:68]
         locksroot,
         transferred_amount,
@@ -197,7 +197,7 @@ MediatedTransfer = namedbuffer(
         nonce,                    # [4:12]
         identifier,               # [12:20]
         expiration,               # [20:28]
-        asset,                    # [28:48]
+        token,                    # [28:48]
         recipient,                # [48:68]
         target,                   # [68:88]
         initiator,                # [88:108]
@@ -218,7 +218,7 @@ RefundTransfer = namedbuffer(
         nonce,                  # [4:12]
         identifier,             # [12:20]
         expiration,             # [20:28]
-        asset,                  # [28:48]
+        token,                  # [28:48]
         recipient,              # [48:68]
         locksroot,              # [68:100]
         transferred_amount,     # [100:132]

@@ -20,15 +20,15 @@ from raiden.tests.utils.network import CHAIN
 def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_timeout):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
-    asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
+    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
 
-    assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 0
-    assert len(app1.raiden.managers_by_asset_address[asset_address].address_channel) == 0
+    assert len(app0.raiden.managers_by_token_address[token_address].address_channel) == 0
+    assert len(app1.raiden.managers_by_token_address[token_address].address_channel) == 0
 
-    asset0 = app0.raiden.chain.asset(asset_address)
-    manager0 = app0.raiden.chain.manager_by_asset(asset_address)
+    token0 = app0.raiden.chain.token(token_address)
+    manager0 = app0.raiden.chain.manager_by_token(token_address)
 
-    asset1 = app1.raiden.chain.asset(asset_address)
+    token1 = app1.raiden.chain.token(token_address)
 
     netcontract_address = manager0.new_netting_channel(
         app0.raiden.address,
@@ -42,45 +42,45 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     gevent.sleep(events_poll_timeout)
 
     # channel is created but not opened and without funds
-    assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 1
-    assert len(app1.raiden.managers_by_asset_address[asset_address].address_channel) == 1
+    assert len(app0.raiden.managers_by_token_address[token_address].address_channel) == 1
+    assert len(app1.raiden.managers_by_token_address[token_address].address_channel) == 1
 
-    channel0 = app0.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
+    channel0 = app0.raiden.managers_by_token_address[token_address].address_channel.values()[0]
+    channel1 = app1.raiden.managers_by_token_address[token_address].address_channel.values()[0]
 
     assert_synched_channels(
         channel0, 0, [],
         channel1, 0, [],
     )
 
-    asset0.approve(netcontract_address, deposit)
+    token0.approve(netcontract_address, deposit)
     netting_channel0.deposit(app0.raiden.address, deposit)
 
     gevent.sleep(events_poll_timeout)
 
     # channel is open but single funded
-    assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 1
-    assert len(app1.raiden.managers_by_asset_address[asset_address].address_channel) == 1
+    assert len(app0.raiden.managers_by_token_address[token_address].address_channel) == 1
+    assert len(app1.raiden.managers_by_token_address[token_address].address_channel) == 1
 
-    channel0 = app0.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
+    channel0 = app0.raiden.managers_by_token_address[token_address].address_channel.values()[0]
+    channel1 = app1.raiden.managers_by_token_address[token_address].address_channel.values()[0]
 
     assert_synched_channels(
         channel0, deposit, [],
         channel1, 0, [],
     )
 
-    asset1.approve(netcontract_address, deposit)
+    token1.approve(netcontract_address, deposit)
     netting_channel1.deposit(app1.raiden.address, deposit)
 
     gevent.sleep(events_poll_timeout)
 
     # channel is open and funded by both participants
-    assert len(app0.raiden.managers_by_asset_address[asset_address].address_channel) == 1
-    assert len(app1.raiden.managers_by_asset_address[asset_address].address_channel) == 1
+    assert len(app0.raiden.managers_by_token_address[token_address].address_channel) == 1
+    assert len(app1.raiden.managers_by_token_address[token_address].address_channel) == 1
 
-    channel0 = app0.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
-    channel1 = app1.raiden.managers_by_asset_address[asset_address].address_channel.values()[0]
+    channel0 = app0.raiden.managers_by_token_address[token_address].address_channel.values()[0]
+    channel1 = app1.raiden.managers_by_token_address[token_address].address_channel.values()[0]
 
     assert_synched_channels(
         channel0, deposit, [],
@@ -96,15 +96,15 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
 def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_timeout):
     app0, app1, app2 = raiden_chain
 
-    asset_address = app0.raiden.chain.default_registry.asset_addresses()[0]
+    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
     amount = 10
 
-    channel21 = channel(app2, app1, asset_address)
+    channel21 = channel(app2, app1, token_address)
     netting_channel = channel21.external_state.netting_channel
 
     secret = pending_mediated_transfer(
         raiden_chain,
-        asset_address,
+        token_address,
         amount,
         1  # TODO: fill in identifier
     )
@@ -135,11 +135,11 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_time
     channel21.settle_event.wait(timeout=10)
 
     assert_synched_channels(
-        channel(app1, app2, asset_address), deposit - amount, [],
-        channel(app2, app1, asset_address), deposit + amount, [],
+        channel(app1, app2, token_address), deposit - amount, [],
+        channel(app2, app1, token_address), deposit + amount, [],
     )
 
     assert_synched_channels(
-        channel(app0, app1, asset_address), deposit - amount, [],
-        channel(app1, app2, asset_address), deposit + amount, [],
+        channel(app0, app1, token_address), deposit - amount, [],
+        channel(app1, app2, token_address), deposit + amount, [],
     )

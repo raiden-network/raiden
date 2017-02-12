@@ -23,14 +23,14 @@ from raiden.ui.web import WAMPRouter
 
 @pytest.mark.skipif(True, reason='UI has to be tested manually')
 def test_webui():  # pylint: disable=too-many-locals
-    num_assets = 3
+    num_tokens = 3
     num_nodes = 10
     verbose = 0
     settle_timeout = DEFAULT_SETTLE_TIMEOUT
 
-    assets_addresses = [
-        sha3('webui:asset:{}'.format(number))[:20]
-        for number in range(num_assets)
+    tokens_addresses = [
+        sha3('webui:token:{}'.format(number))[:20]
+        for number in range(num_tokens)
     ]
 
     private_keys = [
@@ -42,8 +42,8 @@ def test_webui():  # pylint: disable=too-many-locals
     blockchain_service = BlockChainServiceMock(None, MOCK_REGISTRY_ADDRESS)
     registry = blockchain_service.registry(MOCK_REGISTRY_ADDRESS)
 
-    for asset in assets_addresses:
-        registry.add_asset(asset)
+    for token in tokens_addresses:
+        registry.add_token(token)
 
     channels_per_node = 2
     deposit = 100
@@ -61,7 +61,7 @@ def test_webui():  # pylint: disable=too-many-locals
 
     create_network_channels(
         app_list,
-        assets_addresses,
+        tokens_addresses,
         channels_per_node,
         deposit,
         settle_timeout,
@@ -81,10 +81,10 @@ def test_webui():  # pylint: disable=too-many-locals
 
     setup_messages_cb()
 
-    app0_assets = getattr(app0.raiden.api, 'assets')
-    print '\nAvailable assets:'
-    for asset in app0_assets:
-        print asset.encode('hex')
+    app0_tokens = getattr(app0.raiden.api, 'tokens')
+    print '\nAvailable tokens:'
+    for token in app0_tokens:
+        print token.encode('hex')
     print '\n'
 
     wamp = WAMPRouter(app0.raiden, 8080, ['channel', 'test'])

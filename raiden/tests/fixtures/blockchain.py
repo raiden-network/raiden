@@ -39,7 +39,7 @@ BlockchainServices = namedtuple(
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 __all__ = (
-    'assets_addresses',
+    'tokens_addresses',
     'blockchain_services',
     'blockchain_backend',
 )
@@ -54,22 +54,22 @@ def genesis_path_from_testfunction(request):
     return str(genesis_path)  # makedir returns a py.path.LocalPath object
 
 
-def _assets_addresses(asset_amount, number_of_assets, deploy_service, blockchain_services):
+def _tokens_addresses(token_amount, number_of_tokens, deploy_service, blockchain_services):
     result = list()
-    for _ in range(number_of_assets):
-        asset_address = deploy_service.deploy_and_register_asset(
+    for _ in range(number_of_tokens):
+        token_address = deploy_service.deploy_and_register_token(
             contract_name='HumanStandardToken',
             contract_file='HumanStandardToken.sol',
-            constructor_parameters=(asset_amount, 'raiden', 2, 'Rd'),
+            constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
         )
-        result.append(asset_address)
+        result.append(token_address)
 
         # only the creator of the token starts with a balance (deploy_service),
         # transfer from the creator to the other nodes
         for transfer_to in blockchain_services:
-            deploy_service.asset(asset_address).transfer(
+            deploy_service.token(token_address).transfer(
                 privatekey_to_address(transfer_to.private_key),
-                asset_amount // len(blockchain_services),
+                token_amount // len(blockchain_services),
             )
 
     return result
@@ -101,11 +101,11 @@ def cached_genesis(request, blockchain_type):
         request.getfixturevalue('tester_blockgas_limit'),
     )
 
-    # create_network only register the assets, the contracts must be deployed
-    # previously
-    asset_contract_addresses = _assets_addresses(
-        request.getfixturevalue('asset_amount'),
-        request.getfixturevalue('number_of_assets'),
+    # create_network only registers the tokens,
+    # the contracts must be deployed previously
+    token_contract_addresses = _tokens_addresses(
+        request.getfixturevalue('token_amount'),
+        request.getfixturevalue('number_of_tokens'),
         deploy_service,
         blockchain_services,
     )
@@ -123,7 +123,7 @@ def cached_genesis(request, blockchain_type):
     if 'raiden_network' in request.fixturenames:
         create_network_channels(
             raiden_apps,
-            asset_contract_addresses,
+            token_contract_addresses,
             request.getfixturevalue('channels_per_node'),
             request.getfixturevalue('deposit'),
             request.getfixturevalue('settle_timeout'),
@@ -132,7 +132,7 @@ def cached_genesis(request, blockchain_type):
     elif 'raiden_chain' in request.fixturenames:
         create_sequential_channels(
             raiden_apps,
-            asset_contract_addresses[0],
+            token_contract_addresses[0],
             request.getfixturevalue('channels_per_node'),
             request.getfixturevalue('deposit'),
             request.getfixturevalue('settle_timeout'),
@@ -176,36 +176,36 @@ def cached_genesis(request, blockchain_type):
     genesis = GENESIS_STUB.copy()
     genesis['alloc'] = alloc
     genesis['config']['defaultRegistryAddress'] = address_encoder(registry_address)
-    genesis['config']['assetAddresses'] = [
-        address_encoder(asset_address)
-        for asset_address in asset_contract_addresses
+    genesis['config']['tokenAddresses'] = [
+        address_encoder(token_address)
+        for token_address in token_contract_addresses
     ]
 
     return genesis
 
 
 @pytest.fixture
-def assets_addresses(
+def tokens_addresses(
         request,
-        asset_amount,
-        number_of_assets,
+        token_amount,
+        number_of_tokens,
         blockchain_services,
         cached_genesis):
 
     if cached_genesis:
-        assets_addresses = [
-            address_decoder(asset_address)
-            for asset_address in cached_genesis['config']['assetAddresses']
+        tokens_addresses = [
+            address_decoder(token_address)
+            for token_address in cached_genesis['config']['tokenAddresses']
         ]
     else:
-        assets_addresses = _assets_addresses(
-            asset_amount,
-            number_of_assets,
+        tokens_addresses = _tokens_addresses(
+            token_amount,
+            number_of_tokens,
             blockchain_services.deploy_service,
             blockchain_services.blockchain_services,
         )
 
-    return assets_addresses
+    return tokens_addresses
 
 
 @pytest.fixture

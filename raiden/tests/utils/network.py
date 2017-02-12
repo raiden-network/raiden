@@ -66,10 +66,10 @@ def create_app(
     return app
 
 
-def setup_channels(asset_address, app_pairs, deposit, settle_timeout):
+def setup_channels(token_address, app_pairs, deposit, settle_timeout):
     for first, second in app_pairs:
-        assert len(asset_address)
-        manager = first.raiden.chain.manager_by_asset(asset_address)
+        assert len(token_address)
+        manager = first.raiden.chain.manager_by_token(token_address)
 
         netcontract_address = manager.new_netting_channel(
             first.raiden.address,
@@ -80,16 +80,16 @@ def setup_channels(asset_address, app_pairs, deposit, settle_timeout):
 
         # use each app's own chain because of the private key / local signing
         for app in [first, second]:
-            asset = app.raiden.chain.asset(asset_address)
+            token = app.raiden.chain.token(token_address)
             netting_channel = app.raiden.chain.netting_channel(netcontract_address)
-            previous_balance = asset.balance_of(app.raiden.address)
+            previous_balance = token.balance_of(app.raiden.address)
 
             assert previous_balance >= deposit
 
-            asset.approve(netcontract_address, deposit)
+            token.approve(netcontract_address, deposit)
             netting_channel.deposit(app.raiden.address, deposit)
 
-            new_balance = asset.balance_of(app.raiden.address)
+            new_balance = token.balance_of(app.raiden.address)
 
             assert previous_balance - deposit == new_balance
 
@@ -152,8 +152,8 @@ def network_with_minimum_channels(apps, channels_per_node):
         unconnected_apps[curr_app.raiden.address] = all_apps
         channel_count[curr_app.raiden.address] = 0
 
-    # Create `channels_per_node` channels for each asset in each app
-    # for asset_address, curr_app in product(assets_list, sorted(apps, key=sort_by_address)):
+    # Create `channels_per_node` channels for each token in each app
+    # for token_address, curr_app in product(tokens_list, sorted(apps, key=sort_by_address)):
 
     # sorting the apps and use the next n apps to make a channel to avoid edge
     # cases
@@ -177,7 +177,7 @@ def network_with_minimum_channels(apps, channels_per_node):
 
 def create_network_channels(
         raiden_apps,
-        assets_addresses,
+        tokens_addresses,
         channels_per_node,
         deposit,
         settle_timeout):
@@ -187,14 +187,14 @@ def create_network_channels(
     if channels_per_node is not CHAIN and channels_per_node > num_nodes:
         raise ValueError("Can't create more channels than nodes")
 
-    for asset in assets_addresses:
+    for token in tokens_addresses:
         if channels_per_node == CHAIN:
             app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
         else:
             app_channels = list(network_with_minimum_channels(raiden_apps, channels_per_node))
 
         setup_channels(
-            asset,
+            token,
             app_channels,
             deposit,
             settle_timeout,
@@ -203,7 +203,7 @@ def create_network_channels(
 
 def create_sequential_channels(
         raiden_apps,
-        assets_addresses,
+        tokens_addresses,
         channels_per_node,
         deposit,
         settle_timeout):
@@ -238,7 +238,7 @@ def create_sequential_channels(
         app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
 
     setup_channels(
-        assets_addresses,
+        tokens_addresses,
         app_channels,
         deposit,
         settle_timeout,
