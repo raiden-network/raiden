@@ -85,9 +85,9 @@ def test_init_mediator():
     mediator_state = mediator_state_machine.current_state
     assert isinstance(mediator_state, MediatorState)
     assert mediator_state.our_address == factories.ADDR
-    assert mediator_state.from_transfer == from_transfer
     assert mediator_state.block_number == init_state_change.block_number
-    assert mediator_state.from_route == from_route
+    assert mediator_state.transfers_pair[0].payer_transfer == from_transfer
+    assert mediator_state.transfers_pair[0].payer_route == from_route
 
     assert len(events), 'we have a valid route, the mediated transfer event must be emited'
 
@@ -133,15 +133,7 @@ def test_no_valid_routes():
         init_state_change,
     )
 
-    mediator_state = mediator_state_machine.current_state
-
-    assert len(mediator_state.routes.available_routes) == 0
-    assert len(mediator_state.routes.refunded_routes) == 0
-    assert len(mediator_state.routes.canceled_routes) == 0
-    assert len(mediator_state.routes.ignored_routes) == 2
-
-    assert mediator_state.route is None
-    assert mediator_state.message is None
+    assert mediator_state_machine.current_state is None
 
     assert len(events) == 1
     assert isinstance(events[0], SendRefundTransfer)
