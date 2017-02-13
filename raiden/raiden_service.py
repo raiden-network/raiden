@@ -312,7 +312,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             for token_manager in all_token_managers:
                 token_manager.transfermanager.register_callback_for_result(callback)
 
-
     def register_channel_manager(self, channel_manager):
         """ Discover and register the channels for the given token. """
         translator = ContractTranslator(CHANNEL_MANAGER_ABI)
@@ -386,13 +385,13 @@ class RaidenAPI(object):
         return self.raiden.chain.default_registry.token_addresses()
 
     def get_balance(self, token_address, partner_address):
-        pass
+        raise NotImplementedError()
 
     def get_completed_transfers(self, token_address=None, partner_address=None):
-        pass
+        raise NotImplementedError()
 
     def get_channel(self, channel_address):
-        pass
+        raise NotImplementedError()
 
     def get_new_events(self):
         queue = self.raiden.event_queue
@@ -668,8 +667,9 @@ class APIEventManager(object):
     It houses the callbacks that are used to create the Objects of the events,
     and it registers those callbacks in the appropriate places in the code.
 
-    The current approach is very simplistic, since it puts every event that the raiden-node receives (blockchain_events)
-    or creates (raiden_events) in a simple Queue, which doesn't allow filtering of Events.
+    The current approach is very simplistic, since it puts every event that the raiden-node
+    receives (blockchain_events) or creates (raiden_events) in a simple Queue, which doesn't
+    allow filtering of Events.
     """
 
     blockchain_events = [
@@ -949,7 +949,6 @@ class RaidenEventHandler(object):
             token_address = address_decoder(event['token_added'])
 
             callback(registry_address_bin, token_address, manager_address_bin)
-
 
     def event_channelnew(self, manager_address_bin, event):  # pylint: disable=unused-argument
         # should not raise, filters are installed only for registered managers

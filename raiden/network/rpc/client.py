@@ -17,7 +17,6 @@ from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 import requests
 
 from raiden import messages
-from raiden.raiden_service import RaidenError
 from raiden.utils import (
     get_contract_path,
     isaddress,
@@ -27,12 +26,8 @@ from raiden.utils import (
 )
 from raiden.blockchain.abi import (
     ASSETADDED_EVENTID,
-    CHANNELCLOSED_EVENTID,
     CHANNEL_MANAGER_ABI,
-    CHANNELNEWBALANCE_EVENTID,
     CHANNELNEW_EVENTID,
-    CHANNELSECRETREVEALED_EVENTID,
-    CHANNELSETTLED_EVENTID,
     ENDPOINT_REGISTRY_ABI,
     HUMAN_TOKEN_ABI,
     NETTING_CHANNEL_ABI,
@@ -61,14 +56,6 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 class JSONRPCPollTimeoutException(Exception):
     # FIXME import this from pyethapp.rpc_client once it is implemented
-    pass
-
-
-class BlockchainPollTimeout(RaidenError):
-    pass
-
-
-class BlockchainInvalidTransaction(RaidenError):
     pass
 
 
@@ -426,11 +413,10 @@ class Discovery(object):
                 transaction_hash.decode('hex'),
                 timeout=self.poll_timeout,
             )
-        except JSONRPCPollTimeoutException:
-            raise BlockchainPollTimeout()
-        except InvalidTransaction:
-            raise BlockchainInvalidTransaction()
-
+        except JSONRPCPollTimeoutException as e:
+            raise e
+        except InvalidTransaction as e:
+            raise e
 
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = node_address_bin.encode('hex')
@@ -498,11 +484,10 @@ class Token(object):
 
         try:
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException:
-            raise BlockchainPollTimeout()
-        except InvalidTransaction:
-            raise BlockchainInvalidTransaction()
-
+        except JSONRPCPollTimeoutException as e:
+            raise e
+        except InvalidTransaction as e:
+            raise e
 
     def balance_of(self, address):
         """ Return the balance of `address`. """
@@ -518,10 +503,10 @@ class Token(object):
 
         try:
             self.client.poll(transaction_hash.decode('hex'))
-        except JSONRPCPollTimeoutException:
-            raise BlockchainPollTimeout()
-        except InvalidTransaction:
-            raise BlockchainInvalidTransaction()
+        except JSONRPCPollTimeoutException as e:
+            raise e
+        except InvalidTransaction as e:
+            raise e
 
         # TODO: check Transfer event
 
@@ -566,10 +551,10 @@ class Registry(object):
 
         try:
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException:
-            raise BlockchainPollTimeout()
-        except InvalidTransaction:
-            raise BlockchainInvalidTransaction()
+        except JSONRPCPollTimeoutException as e:
+            raise e
+        except InvalidTransaction as e:
+            raise e
 
         channel_manager_address_encoded = self.proxy.channelManagerByToken.call(
             token_address,
@@ -671,10 +656,10 @@ class ChannelManager(object):
 
         try:
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException:
-            raise BlockchainPollTimeout()
-        except InvalidTransaction:
-            raise BlockchainInvalidTransaction()
+        except JSONRPCPollTimeoutException as e:
+            raise e
+        except InvalidTransaction as e:
+            raise e
 
         # TODO: raise if the transaction failed because there is an existing
         # channel in place
@@ -875,10 +860,10 @@ class NettingChannel(object):
 
         try:
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException:
-            raise BlockchainPollTimeout()
-        except InvalidTransaction:
-            raise BlockchainInvalidTransaction()
+        except JSONRPCPollTimeoutException as e:
+            raise e
+        except InvalidTransaction as e:
+            raise e
 
         log.info('deposit called', contract=pex(self.address), amount=amount)
 
@@ -906,10 +891,10 @@ class NettingChannel(object):
         )
         try:
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException:
-            raise BlockchainPollTimeout()
-        except InvalidTransaction:
-            raise BlockchainInvalidTransaction()
+        except JSONRPCPollTimeoutException as e:
+            raise e
+        except InvalidTransaction as e:
+            raise e
         log.info(
             'close called',
             contract=pex(self.address),
@@ -931,10 +916,10 @@ class NettingChannel(object):
 
             try:
                 self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-            except JSONRPCPollTimeoutException:
-                raise BlockchainPollTimeout()
-            except InvalidTransaction:
-                raise BlockchainInvalidTransaction()
+            except JSONRPCPollTimeoutException as e:
+                raise e
+            except InvalidTransaction as e:
+                raise e
 
             log.info(
                 'update_transfer called',
@@ -971,10 +956,10 @@ class NettingChannel(object):
 
             try:
                 self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-            except JSONRPCPollTimeoutException:
-                raise BlockchainPollTimeout()
-            except InvalidTransaction:
-                raise BlockchainInvalidTransaction()
+            except JSONRPCPollTimeoutException as e:
+                raise e
+            except InvalidTransaction as e:
+                raise e
 
             # TODO: check if the ChannelSecretRevealed event was emitted and if
             # it wasn't raise an error
@@ -996,10 +981,10 @@ class NettingChannel(object):
 
         try:
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException:
-            raise BlockchainPollTimeout()
-        except InvalidTransaction:
-            raise BlockchainInvalidTransaction()
+        except JSONRPCPollTimeoutException as e:
+            raise e
+        except InvalidTransaction as e:
+            raise e
 
         # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
         log.info('settle called', contract=pex(self.address))
