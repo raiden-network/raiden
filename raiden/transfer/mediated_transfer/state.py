@@ -112,6 +112,20 @@ class LockedTransferState(State):
             self.hashlock,
         )
 
+    def __eq__(self, other):
+        if isinstance(other, LockedTransferState):
+            return (
+                self.identifier == other.identifier and
+                self.amount == other.amount and
+                self.token == other.token and
+                self.target == other.target and
+                self.expiration == other.expiration and
+                self.hashlock == other.hashlock and
+                self.secret == other.secret
+            )
+
+        return False
+
 
 class MediationPairState(State):
     """ State for a mediated transfer.
