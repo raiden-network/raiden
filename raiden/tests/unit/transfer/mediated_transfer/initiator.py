@@ -17,19 +17,19 @@ from raiden.transfer.state_change import (
     #Blocknumber,  # TODO
     #RouteChange,  # TODO
     # user interaction
-    CancelTransfer
+    ActionCancelTransfer,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    InitInitiator,
+    ActionInitInitiator,
     # protocol messages
-    TransferRefundReceived,
-    SecretRequestReceived,
-    SecretRevealReceived,
+    ReceiveTransferRefund,
+    ReceiveSecretRequest,
+    ReceiveSecretReveal,
 )
 from raiden.transfer.mediated_transfer.events import (
-    TransferFailed,
-    MediatedTransfer,
-    RevealSecretTo,
+    EventTransferFailed,
+    SendMediatedTransfer,
+    SendRevealSecret,
 )
 from . import factories
 
@@ -92,7 +92,7 @@ def make_init_statechange(routes,
     if secret_generator is None:
         secret_generator = SequenceGenerator()
 
-    init_state_change = InitInitiator(
+    init_state_change = ActionInitInitiator(
         our_address,
         make_hashlock_transfer(amount, target=target, identifier=identifier),
         RoutesState(routes),
@@ -204,7 +204,7 @@ def test_init_with_usable_routes():
 
     mediated_transfers = [
         e for e in events
-        if isinstance(e, MediatedTransfer)
+        if isinstance(e, SendMediatedTransfer)
     ]
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
     mediated_transfer = mediated_transfers[0]
@@ -232,7 +232,7 @@ def test_init_without_routes():
         amount,
         target=target_address,
     )
-    init_state_change = InitInitiator(
+    init_state_change = ActionInitInitiator(
         our_address,
         transfer,
         RoutesState(routes),
@@ -252,7 +252,7 @@ def test_init_without_routes():
     )
 
     assert len(events) == 1
-    assert isinstance(events[0], TransferFailed)
+    assert isinstance(events[0], EventTransferFailed)
     assert initiator_state_machine.current_state is None
 
 
@@ -281,7 +281,7 @@ def test_state_wait_secretrequest_valid():
 
     hashlock = current_state.transfer.hashlock
 
-    state_change = SecretRequestReceived(
+    state_change = ReceiveSecretRequest(
         identifier=identifier,
         amount=amount,
         hashlock=hashlock,
@@ -294,7 +294,7 @@ def test_state_wait_secretrequest_valid():
     )
 
     events = initiator_state_machine.dispatch(state_change)
-    assert all(isinstance(event, RevealSecretTo) for event in events)
+    assert all(isinstance(event, SendRevealSecret) for event in events)
     assert len(events) == 1
 
 
@@ -321,14 +321,14 @@ def test_state_wait_unlock_valid():
 
     # FIXME: not sure if that's the correct type for
     # `current_state.revealsecret`?
-    current_state.revealsecret = RevealSecretTo(identifier, secret, target_address, our_address)
+    current_state.revealsecret = SendRevealSecret(identifier, secret, target_address, our_address)
 
     initiator_state_machine = StateManager(
         initiator.state_transition,
         current_state,
     )
 
-    state_change = SecretRevealReceived(
+    state_change = ReceiveSecretReveal(
         identifier=identifier,
         secret=secret,
         target=our_address,
@@ -336,7 +336,7 @@ def test_state_wait_unlock_valid():
     )
     events = initiator_state_machine.dispatch(state_change)
     assert len(events) == 1
-    assert isinstance(events[0], RevealSecretTo)
+    assert isinstance(events[0], SendRevealSecret)
     assert events[0].target == mediator_address
     # state should have been cleaned:
     assert initiator_state_machine.current_state is None
@@ -365,7 +365,7 @@ def test_state_wait_unlock_invalid():
 
     # FIXME: not sure if that's the correct type for
     # `current_state.revealsecret`?
-    current_state.revealsecret = RevealSecretTo(identifier, secret, target_address, our_address)
+    current_state.revealsecret = SendRevealSecret(identifier, secret, target_address, our_address)
 
     before_state = deepcopy(current_state)
 
@@ -374,7 +374,7 @@ def test_state_wait_unlock_invalid():
         current_state,
     )
 
-    state_change = SecretRevealReceived(
+    state_change = ReceiveSecretReveal(
         identifier=identifier,
         secret=secret,
         # would need to be mediator_address
@@ -409,7 +409,7 @@ def test_refund_transfer_next_route():
         identifier=identifier,
     )
 
-    state_change = TransferRefundReceived(
+    state_change = ReceiveTransferRefund(
         identifier=None,
         amount=None,
         hashlock=None,
@@ -426,7 +426,7 @@ def test_refund_transfer_next_route():
 
     events = initiator_state_machine.dispatch(state_change)
     assert len(events) == 1
-    assert isinstance(events[0], MediatedTransfer)
+    assert isinstance(events[0], SendMediatedTransfer)
     assert initiator_state_machine.current_state is not None
     assert initiator_state_machine.current_state.routes.canceled_routes[0] == prior_state.route
 
@@ -451,7 +451,7 @@ def test_refund_transfer_no_more_routes():
         identifier=identifier,
     )
 
-    state_change = TransferRefundReceived(
+    state_change = ReceiveTransferRefund(
         identifier=None,
         amount=None,
         hashlock=None,
@@ -466,7 +466,7 @@ def test_refund_transfer_no_more_routes():
 
     events = initiator_state_machine.dispatch(state_change)
     assert len(events) == 1
-    assert isinstance(events[0], TransferFailed)
+    assert isinstance(events[0], EventTransferFailed)
     assert initiator_state_machine.current_state is None
 
 
@@ -490,11 +490,11 @@ def test_refund_transfer_invalid_sender():
         identifier=identifier,
     )
 
-    state_change = TransferRefundReceived(
+    state_change = ReceiveTransferRefund(
         identifier=None,
         amount=None,
         hashlock=None,
-        sender=our_address,  # is not a valid TransferRefundReceived
+        sender=our_address,  # is not a valid ReceiveTransferRefund
     )
 
     prior_state = deepcopy(current_state)
@@ -532,7 +532,7 @@ def test_cancel_transfer():
         identifier=identifier,
     )
 
-    state_change = CancelTransfer(
+    state_change = ActionCancelTransfer(
             identifier=identifier
     )
 
@@ -544,7 +544,7 @@ def test_cancel_transfer():
 
     events = initiator_state_machine.dispatch(state_change)
     assert len(events) == 1
-    assert isinstance(events[0], TransferFailed)
+    assert isinstance(events[0], EventTransferFailed)
     assert initiator_state_machine.current_state is None
 
 

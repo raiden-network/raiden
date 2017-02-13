@@ -5,11 +5,11 @@ from raiden.utils import sha3
 from raiden.transfer.architecture import Iteration
 from raiden.transfer.mediated_transfer.state import TargetState
 from raiden.transfer.state_change import (
-    Blocknumber,
-    InitTarget,
-    RevealSecret,
+    Block,
+    ActionInitTarget,
+    ReceiveSecretReveal,
     Secret,
-    SecretRequestMessageSend,
+    SendSecretRequest,
     WithdrawLock,
 )
 
@@ -30,11 +30,11 @@ def state_transition(state, state_change):
     iteration = Iteration(state, list())
 
     if not state_uninitialized:
-        if isinstance(state_change, Blocknumber):
+        if isinstance(state_change, Block):
             state.block_number = state_change.block_number
 
     if state_uninitialized:
-        if isinstance(state_change, InitTarget):
+        if isinstance(state_change, ActionInitTarget):
             our_address = state_change.our_address
             target = state_change.target
             from_route = state_change.from_route
@@ -51,7 +51,7 @@ def state_transition(state, state_change):
                 block_number,
             )
 
-            secret_request = SecretRequestMessageSend(
+            secret_request = SendSecretRequest(
                 from_transfer.identifier,
                 from_transfer.amount,
                 from_transfer.hashlock,
@@ -62,14 +62,14 @@ def state_transition(state, state_change):
 
     elif state_wait_secret:
         secret_reveal = (
-            isinstance(state_change, RevealSecret) and
+            isinstance(state_change, ReceiveSecretReveal) and
             sha3(state_change.secret) == state.hashlock
         )
 
         if secret_reveal:
             state.secret = state_change.secret
 
-            reveal = RevealSecret(
+            reveal = ReceiveSecretReveal(
                 state.from_transfer.identifier,
                 state.secret,
                 state.from_route.node_address,
