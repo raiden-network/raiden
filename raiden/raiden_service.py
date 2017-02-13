@@ -299,9 +299,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             callbacks = iter(callback_s)
         except TypeError:
             callbacks = [callback_s]
-        all_asset_managers = self.managers_by_asset_address.values()
+        all_token_managers = self.managers_by_token_address.values()
         # get all channel the node participates in:
-        all_channel = [am.partneraddress_channel.values() for am in all_asset_managers]
+        all_channel = [am.partneraddress_channel.values() for am in all_token_managers]
         # and flatten the list:
         all_channel = list(itertools.chain.from_iterable(all_channel))
 
@@ -309,8 +309,8 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             for channel in all_channel:
                 channel.register_withdrawable_callback(callback)
 
-            for asset_manager in all_asset_managers:
-                asset_manager.transfermanager.register_callback_for_result(callback)
+            for token_manager in all_token_managers:
+                token_manager.transfermanager.register_callback_for_result(callback)
 
 
     def register_channel_manager(self, channel_manager):
@@ -634,7 +634,7 @@ class RaidenAPI(object):
 
     def settle(self, token_address, partner_address):
         """ Settle a closed channel with `partner_address` for the given `token_address`. """
-        token_address_bin = safe_address_decode(asset_address)
+        token_address_bin = safe_address_decode(token_address)
         partner_address_bin = safe_address_decode(partner_address)
 
         if not isaddress(token_address_bin) or token_address_bin not in self.tokens:
@@ -837,7 +837,7 @@ class RaidenEventHandler(object):
     """
 
     blockchain_event_types = [
-        'AssetAdded',
+        'TokenAdded',
         'ChannelNew',
         'ChannelNewBalance',
         'ChannelClosed',
@@ -946,9 +946,9 @@ class RaidenEventHandler(object):
         # this is why we are not just passing the blockchain-event directly
         callback = self.get_on_event_callback(event)
         if callback:
-            asset_address = address_decoder(event['asset_added'])
+            token_address = address_decoder(event['token_added'])
 
-            callback(registry_address_bin, asset_address, manager_address_bin)
+            callback(registry_address_bin, token_address, manager_address_bin)
 
 
     def event_channelnew(self, manager_address_bin, event):  # pylint: disable=unused-argument
