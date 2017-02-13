@@ -1,6 +1,8 @@
 # -*- coding: utf8 -*-
-import pytest
 from copy import deepcopy
+
+import pytest
+
 from raiden.utils import sha3
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.state import (
@@ -11,17 +13,11 @@ from raiden.transfer.mediated_transfer.state import (
     InitiatorState,
     LockedTransferState,
 )
-#from raiden.transfer.mediated_transfer.transition import update_route  # TODO
 from raiden.transfer.state_change import (
-    # blockchain events
-    #Blocknumber,  # TODO
-    #RouteChange,  # TODO
-    # user interaction
     ActionCancelTransfer,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
-    # protocol messages
     ReceiveTransferRefund,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
@@ -209,7 +205,7 @@ def test_init_with_usable_routes():
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
     mediated_transfer = mediated_transfers[0]
 
-    assert mediated_transfer.token == factories.UNIT_TOKEN_ADDRESS, 'transfer token address mismatch'
+    assert mediated_transfer.token == factories.UNIT_TOKEN_ADDRESS
     assert mediated_transfer.amount == amount, 'transfer amount mismatch'
     assert mediated_transfer.expiration == expiration, 'transfer expiration mismatch'
     assert mediated_transfer.hashlock == sha3(secret_generator.secrets[0]), 'wrong hashlock'
@@ -254,11 +250,6 @@ def test_init_without_routes():
     assert len(events) == 1
     assert isinstance(events[0], EventTransferFailed)
     assert initiator_state_machine.current_state is None
-
-
-def test_state_uninitialized():
-    """ nothing to test """
-    pass
 
 
 def test_state_wait_secretrequest_valid():
@@ -319,9 +310,13 @@ def test_state_wait_unlock_valid():
     secret = secret_generator.secrets[0]
     assert secret is not None
 
-    # FIXME: not sure if that's the correct type for
-    # `current_state.revealsecret`?
-    current_state.revealsecret = SendRevealSecret(identifier, secret, target_address, our_address)
+    # setup the state for the wait unlock
+    current_state.revealsecret = SendRevealSecret(
+        identifier,
+        secret,
+        target_address,
+        our_address,
+    )
 
     initiator_state_machine = StateManager(
         initiator.state_transition,
@@ -338,8 +333,7 @@ def test_state_wait_unlock_valid():
     assert len(events) == 1
     assert isinstance(events[0], SendRevealSecret)
     assert events[0].target == mediator_address
-    # state should have been cleaned:
-    assert initiator_state_machine.current_state is None
+    assert initiator_state_machine.current_state is None, 'state must be cleaned'
 
 
 def test_state_wait_unlock_invalid():
@@ -363,9 +357,12 @@ def test_state_wait_unlock_invalid():
     secret = secret_generator.secrets[0]
     assert secret is not None
 
-    # FIXME: not sure if that's the correct type for
-    # `current_state.revealsecret`?
-    current_state.revealsecret = SendRevealSecret(identifier, secret, target_address, our_address)
+    current_state.revealsecret = SendRevealSecret(
+        identifier,
+        secret,
+        target_address,
+        our_address,
+    )
 
     before_state = deepcopy(current_state)
 
@@ -397,9 +394,9 @@ def test_refund_transfer_next_route():
     our_address = factories.ADDR
 
     routes = [
-            factories.make_route(mediator_address, available_balance=amount),
-            factories.make_route(factories.HOP2, available_balance=amount),
-            ]
+        factories.make_route(mediator_address, available_balance=amount),
+        factories.make_route(factories.HOP2, available_balance=amount),
+    ]
     current_state = make_initiator_state(
         routes,
         target_address,
@@ -440,8 +437,8 @@ def test_refund_transfer_no_more_routes():
     our_address = factories.ADDR
 
     routes = [
-            factories.make_route(mediator_address, available_balance=amount),
-            ]
+        factories.make_route(mediator_address, available_balance=amount),
+    ]
     current_state = make_initiator_state(
         routes,
         target_address,
@@ -456,7 +453,7 @@ def test_refund_transfer_no_more_routes():
         amount=None,
         hashlock=None,
         sender=mediator_address,
-        )
+    )
 
     initiator_state_machine = StateManager(
         initiator.state_transition,
@@ -479,8 +476,8 @@ def test_refund_transfer_invalid_sender():
     our_address = factories.ADDR
 
     routes = [
-            factories.make_route(mediator_address, available_balance=amount),
-            ]
+        factories.make_route(mediator_address, available_balance=amount),
+    ]
     current_state = make_initiator_state(
         routes,
         target_address,
@@ -520,8 +517,8 @@ def test_cancel_transfer():
     our_address = factories.ADDR
 
     routes = [
-            factories.make_route(mediator_address, available_balance=amount),
-            ]
+        factories.make_route(mediator_address, available_balance=amount),
+    ]
 
     current_state = make_initiator_state(
         routes,
@@ -533,7 +530,7 @@ def test_cancel_transfer():
     )
 
     state_change = ActionCancelTransfer(
-            identifier=identifier
+        identifier=identifier
     )
 
     initiator_state_machine = StateManager(
@@ -551,12 +548,10 @@ def test_cancel_transfer():
 def assert_state_equal(state1, state2):
     """ Weak equality check between to InitiatorState instances """
     assert state1.__class__ == state2.__class__
-    for key in ['our_address', 'block_number']:
-        assert state1.__dict__[key] == state2.__dict__[key]
+    assert state1.our_address == state2.our_address
+    assert state1.block_number == state2.block_number
     assert state1.routes == state2.routes
     assert state1.route == state2.route
-    assert all(state1.transfer.__dict__[key] == state2.transfer.__dict__[key]
-            for key in ['identifier', 'amount', 'token', 'target', 'expiration',
-                'hashlock', 'secret'])
+    assert state1.transfer == state2.transfer
     assert state1.random_generator.secrets == state2.random_generator.secrets
-    assert len(state1.canceled_transfers) == len(state2.canceled_transfers)
+    assert state1.canceled_transfers == state2.canceled_transfers
