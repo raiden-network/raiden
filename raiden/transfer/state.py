@@ -97,15 +97,12 @@ class RoutesState(State):
         )
 
     def __eq__(self, other):
-        same = lambda routes1, routes2: (all(
-            routes1[i] == routes2[i] for i in range(len(routes1)))
-            and len(routes1) == len(routes2)
-        )
         if isinstance(other, RoutesState):
-            return all(t for t in [
-                same(self.available_routes, other.available_routes),
-                same(self.ignored_routes, other.ignored_routes),
-                same(self.refunded_routes, other.refunded_routes),
-                same(self.canceled_routes, other.canceled_routes),
-            ])
+            return (
+                self.available_routes == other.available_routes and
+                self.ignored_routes == other.ignored_routes and
+                self.refunded_routes == other.refunded_routes and
+                self.canceled_routes == other.canceled_routes
+            )
+
         return False
