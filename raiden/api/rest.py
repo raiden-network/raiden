@@ -1,10 +1,19 @@
-from flask import Flask, jsonify, redirect, url_for, request
-from flask_restful import Resource, Api, abort
+from flask import Flask
+from flask_restful import Api, abort
 
-from webargs.flaskparser import parser, abort
+from webargs.flaskparser import parser
 
-from raiden.api.encoding import EventsListSchema, ChannelSchema, ChannelListSchema, HexAddressConverter
-from raiden.api.resources import ChannelsResource, ChannelsByPartner, ChannelsResourceByChannelAddress
+from raiden.api.encoding import (
+    EventsListSchema,
+    ChannelSchema,
+    ChannelListSchema,
+    HexAddressConverter
+)
+from raiden.api.resources import (
+    ChannelsResource,
+    ChannelsByPartner,
+    ChannelsResourceByChannelAddress
+)
 from raiden.api.objects import EventsList, ChannelList
 
 
@@ -56,7 +65,6 @@ class APIServer(object):
         for klass in self._default_resource_classes:
             self.add_resource(klass)
 
-
     def _register_type_converters(self, additional_mapping=None):
         # an additional mapping concats to class-mapping and will overwrite existing keys
         if additional_mapping:
@@ -79,6 +87,7 @@ class APIServer(object):
     def run(self, port, debug=False):
         app.run(port=port, debug=debug)
 
+
 class RestAPI(object):
     """
     This wraps around the actual RaidenAPI in raiden_service.
@@ -88,6 +97,9 @@ class RestAPI(object):
 
     def __init__(self, raiden_api):
         self.raiden_api = raiden_api
+        self.channel_schema = ChannelSchema()
+        self.channel_list_schema = ChannelListSchema()
+        self.events_list_schema = EventsListSchema()
 
     def open(self, partner_address, asset_address, deposit=None):
 
@@ -104,8 +116,7 @@ class RestAPI(object):
                 deposit
             )
 
-        schema = ChannelSchema()
-        result = schema.dumps(api_result)
+        result = self.channel_schema.dumps(api_result)
         return result
 
     def deposit(self, asset_address, partner_address, amount):
@@ -116,8 +127,7 @@ class RestAPI(object):
             amount
         )
 
-        schema = ChannelSchema()
-        result = schema.dumps(api_result)
+        result = self.channel_schema.dumps(api_result)
         return result
 
     def close(self, asset_address, partner_address):
@@ -127,8 +137,7 @@ class RestAPI(object):
             partner_address
         )
 
-        schema = ChannelSchema()
-        result = schema.dumps(api_result)
+        result = self.channel_schema.dumps(api_result)
         return result
 
     def get_channel_list(self, asset_address=None, partner_address=None):
@@ -137,40 +146,35 @@ class RestAPI(object):
 
         # wrap in ChannelList:
         channel_list = ChannelList(api_result)
-
-        schema = ChannelListSchema()
-        result = schema.dumps(channel_list)
+        result = self.channel_list_schema.dumps(channel_list)
         return result
 
     def get_new_events(self):
         api_result = self.get_new_events()
         assert isinstance(api_result, list)
 
-        #wrap in EventsList:
+        # wrap in EventsList:
         events_list = EventsList(api_result)
-
-        schema = EventsListSchema()
-        result = schema.dumps(events_list)
+        result = self.events_list_schema.dumps(events_list)
         return result
 
     def patch_channel(self, channel_address, deposit=None, status=None):
 
-        schema =ChannelSchema()
-        if deposit != None and status == None:
+        if deposit is not None and status is None:
             api_result = self.raiden_api.deposit(deposit)
-            return schema.dumps(api_result)
+            return self.channel_schema.dumps(api_result)
 
-        elif status != None and deposit == None:
+        elif status is not None and deposit is None:
 
             if status == 'closed':
                 api_result = self.raiden_api.close(channel_address)
-                return schema.dumps(api_result)
+                return self.channel_schema.dumps(api_result)
 
             if status == 'settled':
                 api_result = self.raiden_api.close(channel_address)
-                return schema.dumps(api_result)
+                return self.channel_schema.dumps(api_result)
 
-            if status=='open':
+            if status == 'open':
                 raise Exception('nothing to do here')
         raise Exception()
 
@@ -178,4 +182,3 @@ class RestAPI(object):
 @parser.error_handler
 def handle_request_parsing_error(err):
     abort(422, errors=err.messages)
-
