@@ -751,8 +751,6 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
     tester_state.mine(1)
     gevent.sleep(.5)
     tester_state.mine(number_of_blocks=settle_timeout + 1)
-    app0.raiden.api.settle(token_manager0.token_address, app1.raiden.address)
-    gevent.sleep(.5)
 
     assert channel0.external_state.settled_block != 0
     assert channel1.external_state.settled_block != 0
