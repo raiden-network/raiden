@@ -9,11 +9,11 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    InitMediator,
+    ActionInitMediator,
 )
 from raiden.transfer.mediated_transfer.events import (
-    MediatedTransfer,
-    RefundTransfer,
+    SendMediatedTransfer,
+    SendRefundTransfer,
 )
 from . import factories
 
@@ -24,7 +24,7 @@ def make_init_statechange(from_transfer,
                           our_address=factories.ADDR):
 
     block_number = 1
-    init_state_change = InitMediator(
+    init_state_change = ActionInitMediator(
         our_address,
         from_transfer,
         RoutesState(routes),
@@ -93,7 +93,7 @@ def test_init_mediator():
 
     mediated_transfers = [
         e for e in events
-        if isinstance(e, MediatedTransfer)
+        if isinstance(e, SendMediatedTransfer)
     ]
     assert len(mediated_transfers) == 1, 'mediated_transfer should /not/ split the transfer'
     mediated_transfer = mediated_transfers[0]
@@ -144,7 +144,7 @@ def test_no_valid_routes():
     assert mediator_state.message is None
 
     assert len(events) == 1
-    assert isinstance(events[0], RefundTransfer)
+    assert isinstance(events[0], SendRefundTransfer)
 
 
 def test_lock_timeout_lower_than_previous_channel_settlement_period():

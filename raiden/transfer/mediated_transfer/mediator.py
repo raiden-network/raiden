@@ -6,22 +6,22 @@ from raiden.transfer.mediated_transfer.state import (
     MediationPairState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    BalanceProofReceived,
-    InitMediator,
-    NettingChannelWithdraw,
-    SecretRevealReceived,
-    TransferRefundReceived,
+    ReceiveBalanceProof,
+    ActionInitMediator,
+    ContractReceiveWithdraw,
+    ReceiveSecretReveal,
+    ReceiveTransferRefund,
 )
 from raiden.transfer.state_change import (
-    Blocknumber,
-    RouteChange,
+    Block,
+    ActionRouteChange,
 )
 from raiden.transfer.mediated_transfer.events import (
-    MediatedTransfer,
-    RefundTransfer,
-    RevealSecretTo,
+    ContractSendWithdraw,
     SendBalanceProof,
-    WithdrawOnChain,
+    SendMediatedTransfer,
+    SendRefundTransfer,
+    SendRevealSecret,
 )
 from raiden.utils import sha3
 
@@ -37,26 +37,26 @@ TRANSIT_BLOCKS = 2  # TODO: make this a configuration variable
 
 STATE_SECRET_KNOWN = (
     'payee_secret_revealed',
-    'payee_channel_withdraw',
+    'payee_contract_withdraw',
     'payee_balance_proof',
 
     'payer_secret_revealed',
-    'payer_channel_withdraw',
+    'payer_contract_withdraw',
     'payer_balance_proof',
 )
 STATE_TRANSFER_PAYED = (
-    'payee_channel_withdraw',
+    'payee_contract_withdraw',
     'payee_balance_proof',
 
-    'payer_channel_withdraw',
+    'payer_contract_withdraw',
     'payer_balance_proof',
 )
 STATE_TRANSFER_FINAL = (
-    'payee_channel_withdraw',
+    'payee_contract_withdraw',
     'payee_balance_proof',
     'payee_expired',
 
-    'payer_channel_withdraw',
+    'payer_contract_withdraw',
     'payer_balance_proof',
     'payer_expired',
 )
@@ -168,46 +168,7 @@ def set_payee_state_and_check_reveal_order(transfers_pair,
     return list()
 
 
-def secret_learned(state, secret, payee_address, new_payee_state):
-    """ Set the state of the `payee_address` transfer, check the secret is
-    being revealed backwards, and if necessary send out RevealSecret and
-    BalanceProof.
-    """
-    assert new_payee_state in STATE_SECRET_KNOWN
-
-    # TODO: if any of the transfers is in expired state, event for byzantine
-    # behavior
-
-    if state.secret is None:
-        set_secret(state, secret)
-
-    # change the payee state
-    wrong_order = set_payee_state_and_check_reveal_order(
-        state.transfers_pair,
-        payee_address,
-        new_payee_state,
-    )
-
-    # reveal the secret backwards
-    secret_reveal = event_reveal_secret_backwards(
-        state
-    )
-
-    # send the balance proof to payee that knows the secret but is not payed
-    # yet
-    balance_proof = events_for_balance_proof(
-        state
-    )
-
-    iteration = Iteration(
-        state,
-        wrong_order + secret_reveal + balance_proof,
-    )
-
-    return iteration
-
-
-def event_reveal_secret_backwards(state):
+def events_for_revealsecret(state):
     """ Reveal the secret backwards.
 
     This node is named N, suppose there is a mediated transfer with two
@@ -236,7 +197,7 @@ def event_reveal_secret_backwards(state):
 
         if payee_secret and not payer_secret:
             pair.payer_transfer.state = 'payer_secret_revealed'
-            reveal_secret = RevealSecretTo(
+            reveal_secret = SendRevealSecret(
                 pair.payer_transfer.identifier,
                 pair.payer_transfer.secret,
                 pair.payer_route.node_address,
@@ -247,7 +208,7 @@ def event_reveal_secret_backwards(state):
     return events
 
 
-def events_for_balance_proof(state):
+def events_for_balanceproof(state):
     """ Send the balance proof to nodes that know the secret. """
 
     events = list()
@@ -267,138 +228,43 @@ def events_for_balance_proof(state):
     return events
 
 
-def handle_new_block(state):
-    """ After Raiden learns about a new block this function must be called to
-    handle expiration of the hash time locks.
-
-    Args:
-        state (MediatorState): The current state.
-
-    Return:
-        Iteration: The resulting iteration
+def secret_learned(state, secret, payee_address, new_payee_state):
+    """ Set the state of the `payee_address` transfer, check the secret is
+    being revealed backwards, and if necessary send out RevealSecret and
+    BalanceProof.
     """
-    block_number = state.block_number
+    assert new_payee_state in STATE_SECRET_KNOWN
 
-    events = list()
-    pending_transfers_pairs = get_pending_transfer_pairs(state.transfers_pair)
+    # TODO: if any of the transfers is in expired state, event for byzantine
+    # behavior
 
-    for pair in reversed(pending_transfers_pairs):
-        # Only withdraw on chain if the corresponding payee transfer is payed,
-        # this prevents attacks were tokens are burned to force a channel close.
-        payee_payed = pair.payee_transfer.state in STATE_TRANSFER_PAYED
-        payer_payed = pair.payer_transfer.state in STATE_TRANSFER_PAYED
-        witdrawing = pair.payer_state == 'payer_waiting_withdraw'
+    if state.secret is None:
+        set_secret(state, secret)
 
-        if payee_payed and not payer_payed and not witdrawing:
-            safe_to_wait = is_safe_to_wait(
-                block_number,
-                pair.payer_transfer,
-                pair.payer_route.reveal_timeout,
-            )
+    # change the payee state
+    wrong_order = set_payee_state_and_check_reveal_order(
+        state.transfers_pair,
+        payee_address,
+        new_payee_state,
+    )
 
-            if not safe_to_wait:
-                pair.payer_state = 'payer_waiting_withdraw'
-                settle_channel = WithdrawOnChain(
-                    pair.payer_transfer,
-                    pair.payer_route.channel_address,
-                )
-                events.append(settle_channel)
+    # reveal the secret backwards
+    secret_reveal = events_for_revealsecret(
+        state
+    )
 
-        if pair.payer_transfer.expiration > block_number:
-            assert pair.payee_state not in STATE_TRANSFER_PAYED
-            pair.payee_state = 'payee_expired'
-            pair.payer_state = 'payer_expired'
+    # send the balance proof to payee that knows the secret but is not payed
+    # yet
+    balance_proof = events_for_balanceproof(
+        state
+    )
 
-    iteration = Iteration(state, events)
+    iteration = Iteration(
+        state,
+        wrong_order + secret_reveal + balance_proof,
+    )
 
     return iteration
-
-
-def handle_refundtransfer(state, state_change):
-    """ Validate and handle a TransferRefundReceived state change.
-
-    Args:
-        state (MediatorState): Current state.
-        state_change (TransferRefundReceived): The state change.
-
-    Returns:
-        Iteration: The resulting iteration.
-    """
-    assert state.secret is None, 'refunds are not allowed if the secret is revealed'
-
-    # The last sent transfer is the only one thay may be refunded, all the
-    # previous ones are refunded already.
-    transfer_pair = state.transfers_pair[-1]
-    payee_transfer = transfer_pair.payee_transfer
-
-    if is_valid_refund(payee_transfer, state_change.message):
-        payee_route = transfer_pair.payee_route
-
-        state.routes.refund_routes.append(state.route)
-        state.route = None
-
-        iteration = mediate_transfer(
-            state,
-            payee_route,
-            payee_transfer,
-        )
-
-    else:
-        # TODO: Use an event to notify about byzantine behavior
-        iteration = Iteration(state, list())
-
-    return iteration
-
-
-def handle_secretreveal(state, state_change):
-    """ Validate and handle a SecretRevealReceived state change.
-
-    The Secret must propagate backwards through the chain of mediators, this
-    function will record the learned secret, check if the secret is propagating
-    backwards (for the known paths), and send the BalanceProof/RevealSecret if
-    necessary.
-    """
-    secret = state_change.secret
-
-    if sha3(secret) == state.hashlock:
-        iteration = secret_learned(
-            state,
-            secret,
-            state_change.sender,
-            'payee_secret_revealed',
-        )
-
-    else:
-        # TODO: event for byzantine behavior
-        iteration = Iteration(state, list())
-
-    return iteration
-
-
-def handle_channelwithdraw(state, state_change):
-    """ Handle a NettingChannelUnlock state change. """
-    assert sha3(state.secret) == state.hashlock, 'the secret must be validated by the smart contract'
-
-    for pair in state.transfers_pair:
-        if pair.payer_route.channel_address == state_change.channel_address:
-            pair.payer_state = 'payer_channel_withdraw'
-            break
-    else:
-        iteration = secret_learned(
-            state,
-            state_change.secret,
-            state_change.sender,
-            'payee_channel_withdraw',
-        )
-
-    return iteration
-
-
-def handle_balanceproof(state, state_change):
-    """ Handle a BalanceProofReceived state change. """
-    for pair in state.transfers_pair:
-        if pair.payer_route.channel_address == state_change.node_address:
-            pair.payer_state = 'payer_balance_proof'
 
 
 def mediate_transfer(state, payer_route, payer_transfer):
@@ -413,8 +279,8 @@ def mediate_transfer(state, payer_route, payer_transfer):
 
     In the above scenario B has two pairs of payer and payee transfers:
 
-        payer:A payee:C from the first MediatedTransfer
-        payer:C payee:D from the following RefundTransfer
+        payer:A payee:C from the first SendMediatedTransfer
+        payer:C payee:D from the following SendRefundTransfer
 
     Args:
         state (MediatorState): The current state of the task.
@@ -467,7 +333,7 @@ def mediate_transfer(state, payer_route, payer_transfer):
         # No route available, refund the from_route hop so that it can try a
         # new route.
         #
-        # A refund transfer works like a special MediatedTransfer, so it must
+        # A refund transfer works like a special SendMediatedTransfer, so it must
         # follow the same rules and decrement reveal_timeout from the
         # payee_transfer.
         new_lock_timeout = timeout - state.from_route.reveal_timeout
@@ -476,7 +342,7 @@ def mediate_transfer(state, payer_route, payer_transfer):
         if new_lock_timeout > 0:
             new_lock_expiration = new_lock_timeout + state.block_number
 
-            refund_transfer = RefundTransfer(
+            refund_transfer = SendRefundTransfer(
                 from_transfer.identifier,
                 from_transfer.token,
                 from_transfer.amount,
@@ -494,7 +360,7 @@ def mediate_transfer(state, payer_route, payer_transfer):
     else:
         lock_expiration = lock_timeout + state.block_number
 
-        mediated_transfer = MediatedTransfer(
+        mediated_transfer = SendMediatedTransfer(
             from_transfer.identifier,
             from_transfer.token,
             from_transfer.amount,
@@ -522,6 +388,152 @@ def mediate_transfer(state, payer_route, payer_transfer):
     return iteration
 
 
+def handle_block(state, state_change):
+    """ After Raiden learns about a new block this function must be called to
+    handle expiration of the hash time locks.
+
+    Args:
+        state (MediatorState): The current state.
+
+    Return:
+        Iteration: The resulting iteration
+    """
+    block_number = state_change.block_number
+    state.block_number = block_number
+
+    events = list()
+    pending_transfers_pairs = get_pending_transfer_pairs(state.transfers_pair)
+
+    for pair in reversed(pending_transfers_pairs):
+        # Only withdraw on chain if the corresponding payee transfer is payed,
+        # this prevents attacks were tokens are burned to force a channel close.
+        payee_payed = pair.payee_transfer.state in STATE_TRANSFER_PAYED
+        payer_payed = pair.payer_transfer.state in STATE_TRANSFER_PAYED
+        witdrawing = pair.payer_state == 'payer_waiting_withdraw'
+
+        if payee_payed and not payer_payed and not witdrawing:
+            safe_to_wait = is_safe_to_wait(
+                block_number,
+                pair.payer_transfer,
+                pair.payer_route.reveal_timeout,
+            )
+
+            if not safe_to_wait:
+                pair.payer_state = 'payer_waiting_withdraw'
+                settle_channel = ContractSendWithdraw(
+                    pair.payer_transfer,
+                    pair.payer_route.channel_address,
+                )
+                events.append(settle_channel)
+
+        if pair.payer_transfer.expiration > block_number:
+            assert pair.payee_state not in STATE_TRANSFER_PAYED
+            pair.payee_state = 'payee_expired'
+            pair.payer_state = 'payer_expired'
+
+    iteration = Iteration(state, events)
+
+    return iteration
+
+
+def handle_refundtransfer(state, state_change):
+    """ Validate and handle a ReceiveTransferRefund state change.
+
+    Args:
+        state (MediatorState): Current state.
+        state_change (ReceiveTransferRefund): The state change.
+
+    Returns:
+        Iteration: The resulting iteration.
+    """
+    assert state.secret is None, 'refunds are not allowed if the secret is revealed'
+
+    # The last sent transfer is the only one thay may be refunded, all the
+    # previous ones are refunded already.
+    transfer_pair = state.transfers_pair[-1]
+    payee_transfer = transfer_pair.payee_transfer
+
+    if is_valid_refund(payee_transfer, state_change.message):
+        payee_route = transfer_pair.payee_route
+
+        state.routes.refund_routes.append(state.route)
+        state.route = None
+
+        iteration = mediate_transfer(
+            state,
+            payee_route,
+            payee_transfer,
+        )
+
+    else:
+        # TODO: Use an event to notify about byzantine behavior
+        iteration = Iteration(state, list())
+
+    return iteration
+
+
+def handle_secretreveal(state, state_change):
+    """ Validate and handle a ReceiveSecretReveal state change.
+
+    The Secret must propagate backwards through the chain of mediators, this
+    function will record the learned secret, check if the secret is propagating
+    backwards (for the known paths), and send the BalanceProof/RevealSecret if
+    necessary.
+    """
+    secret = state_change.secret
+
+    if sha3(secret) == state.hashlock:
+        iteration = secret_learned(
+            state,
+            secret,
+            state_change.sender,
+            'payee_secret_revealed',
+        )
+
+    else:
+        # TODO: event for byzantine behavior
+        iteration = Iteration(state, list())
+
+    return iteration
+
+
+def handle_contractwithdraw(state, state_change):
+    """ Handle a NettingChannelUnlock state change. """
+    assert sha3(state.secret) == state.hashlock, 'the secret must be validated by the smart contract'
+
+    for pair in state.transfers_pair:
+        if pair.payer_route.channel_address == state_change.channel_address:
+            pair.payer_state = 'payer_contract_withdraw'
+            break
+    else:
+        iteration = secret_learned(
+            state,
+            state_change.secret,
+            state_change.sender,
+            'payee_contract_withdraw',
+        )
+
+    return iteration
+
+
+def handle_balanceproof(state, state_change):
+    """ Handle a ReceiveBalanceProof state change. """
+    for pair in state.transfers_pair:
+        if pair.payer_route.channel_address == state_change.node_address:
+            pair.payer_state = 'payer_balance_proof'
+
+    iteration = Iteration(state, list())
+
+    return iteration
+
+
+def handle_routechange(state, state_change):
+    """ Hande a ActionRouteChange state change. """
+    update_route(state, state_change)
+    iteration = Iteration(state, list())
+    return iteration
+
+
 def state_transition(state, state_change):
     """ State machine for a node mediating a transfer. """
     # Notes:
@@ -531,7 +543,7 @@ def state_transition(state, state_change):
     #   expiration before safely discarding the transfer.
 
     if state is None:
-        if isinstance(state_change, InitMediator):
+        if isinstance(state_change, ActionInitMediator):
             routes = state_change.routes
 
             from_route = state_change.from_route
@@ -547,40 +559,32 @@ def state_transition(state, state_change):
             iteration = mediate_transfer(state, from_route, from_transfer)
 
     elif state.secret is None:
-        # while waiting for the secret refunds are valid
-        if isinstance(state_change, TransferRefundReceived):
+        if isinstance(state_change, Block):
+            iteration = handle_block(state, state_change)
+
+        elif isinstance(state_change, ActionRouteChange):
+            iteration = handle_routechange(state, state_change)
+
+        elif isinstance(state_change, ReceiveTransferRefund):
             iteration = handle_refundtransfer(state, state_change)
 
-        elif isinstance(state_change, SecretRevealReceived):
+        elif isinstance(state_change, ReceiveSecretReveal):
             iteration = handle_secretreveal(state, state_change)
 
-        elif isinstance(state_change, NettingChannelWithdraw):
-            iteration = handle_channelwithdraw(state, state_change)
-
-        elif isinstance(state_change, Blocknumber):
-            state.block_number = state_change.block_number
-            iteration = handle_new_block(state)
-
-        elif isinstance(state_change, RouteChange):
-            update_route(state, state_change)
-            iteration = Iteration(state, list())
+        elif isinstance(state_change, ContractReceiveWithdraw):
+            iteration = handle_contractwithdraw(state, state_change)
 
     else:
-        # when the secret is revealed the path cannot change anymore, so ignore
-        # refunds and route changes
+        if isinstance(state_change, Block):
+            iteration = handle_block(state, state_change)
 
-        if isinstance(state_change, SecretRevealReceived):
+        if isinstance(state_change, ReceiveSecretReveal):
             iteration = handle_secretreveal(state, state_change)
 
-        elif isinstance(state_change, NettingChannelWithdraw):
-            iteration = handle_channelwithdraw(state, state_change)
+        elif isinstance(state_change, ReceiveBalanceProof):
+            iteration = handle_balanceproof(state, state_change)
 
-        elif isinstance(state_change, BalanceProofReceived):
-            handle_balanceproof(state, state_change)
-            iteration = Iteration(state, list())
-
-        elif isinstance(state_change, Blocknumber):
-            state.block_number = state_change.block_number
-            iteration = handle_new_block(state)
+        elif isinstance(state_change, ContractReceiveWithdraw):
+            iteration = handle_contractwithdraw(state, state_change)
 
     return clear_if_finalized(iteration)

@@ -4,7 +4,7 @@ from raiden.transfer.state import RouteState
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
-class Blocknumber(StateChange):
+class Block(StateChange):
     """ Transition used when a new block is mined.
 
     Args:
@@ -15,7 +15,7 @@ class Blocknumber(StateChange):
         self.block_number = block_number
 
 
-class RouteChange(StateChange):
+class ActionRouteChange(StateChange):
     """ A route change.
 
     State change used for:
@@ -34,7 +34,7 @@ class RouteChange(StateChange):
         self.route = route
 
 
-class CancelTransfer(StateChange):
+class ActionCancelTransfer(StateChange):
     """ The user request the transfer to be cancelled.
 
     This state change can fail, it depends on the node's role and the current

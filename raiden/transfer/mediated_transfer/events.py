@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import Event
+# pylint: disable=too-many-arguments,too-few-public-methods
 
 
-class MediatedTransfer(Event):
+class SendMediatedTransfer(Event):
     """ A mediated transfer that must be sent to `node_address`. """
     def __init__(self,
                  identifier,
@@ -22,7 +23,7 @@ class MediatedTransfer(Event):
         self.node_address = node_address
 
 
-class RevealSecretTo(Event):
+class SendRevealSecret(Event):
     """ Event used to send a reveal the secret to another node, not the same as
     a balance-proof.
 
@@ -57,7 +58,7 @@ class SendBalanceProof(Event):
         self.target = target
 
 
-class SecretRequest(Event):
+class SendSecretRequest(Event):
     """ Event used by a target node to request the secret from the initiator. """
     def __init__(self, identifier, amount, hashlock):
         self.identifier = identifier
@@ -65,7 +66,7 @@ class SecretRequest(Event):
         self.hashlock = hashlock
 
 
-class RefundTransfer(Event):
+class SendRefundTransfer(Event):
     """ Event used to cleanly backtrack the current node in the route.
 
     This message will pay back the same amount of token from the receiver to
@@ -88,7 +89,7 @@ class RefundTransfer(Event):
         self.node_address = node_address
 
 
-class TransferFailed(Event):
+class EventTransferFailed(Event):
     """ Event emitted by the initiator when a transfer cannot be completed.
 
     Note:
@@ -102,7 +103,7 @@ class TransferFailed(Event):
         self.reason = reason
 
 
-class TransferCompleted(Event):
+class EventTransferCompleted(Event):
     """ Event emitted when the transfer is complete for the given node.  """
 
     def __init__(self, identifier, secret, hashlock):
@@ -111,7 +112,7 @@ class TransferCompleted(Event):
         self.hashlock = hashlock
 
 
-class WithdrawOnChain(Event):
+class ContractSendWithdraw(Event):
     """ Event emitted when the lock must withdrawn on-chain. """
 
     def __init__(self, transfer, channel_address):

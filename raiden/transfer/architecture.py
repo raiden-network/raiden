@@ -7,6 +7,31 @@ from copy import deepcopy
 Iteration = namedtuple('Iteration', ('new_state', 'events'))
 
 
+# Quick overview
+# --------------
+#
+# Goals:
+# - Reliable failure recovery.
+#
+# Approach:
+# - Use a write-ahead-log for state changes. Under a node restart the
+# latest state snapshot can be recovered and the pending state changes
+# reaplied.
+#
+# Requirements:
+# - The function call `state_transition(curr_state, state_change)` must be
+# deterministic, the recovery depends on the re-execution of the state changes
+# from the WAL and must produce the same result.
+# - StateChange must be idenpotent because the partner node might be recovering
+# from a failure and a Event might be produced more than once.
+#
+# Requirements that are enforced:
+# - A state_transition function must not produce a result that must be further
+# processed, i.e. the state change must be self contained and the result state
+# tree must be serializable to produce a snapshot. To enforce this inputs and
+# outputs are separated under different class hierarquies (StateChange and Event).
+
+
 class State(object):
     """ An isolated state, modified by StateChange messages.
 
@@ -14,23 +39,28 @@ class State(object):
     - Don't duplicate the same state data in two different States, instead use
     identifiers.
     - State objects may be nested.
-    - These objects don't have logic by design.
-    - These objects must not be mutated in-place.
+    - State classes don't have logic by design.
+    - Each iteration must operate on fresh copy of the state, treating the old
+      objects as immutable.
     - This class is used as a marker for states.
     """
     pass
 
 
 class StateChange(object):
-    """ Declare the transition to be applied in a state object. (eg. a
-    blockchain event, a new packet, an error).
+    """ Declare the transition to be applied in a state object.
 
-    StateChanges are incoming events that change this node state. It is not
-    used for the node to comunicate with the outer world.
+    StateChanges are incoming events that change this node state (eg. a
+    blockchain event, a new packet, an error). It is not used for the node to
+    comunicate with the outer world.
+
+    Nomenclature convetion:
+    - 'Receive' prefix for protocol messages.
+    - 'ContractReceive' prefix for smart contract logs.
+    - 'Action' prefix for other interactions.
 
     Notes:
     - A message changes a single State object.
-    - Re-applying StateChanges must produce the same result.
     - These objects don't have logic by design.
     - This class is used as a marker for state changes.
     """
@@ -40,9 +70,14 @@ class StateChange(object):
 class Event(object):
     """ Events produced by the execution of a state change.
 
+    Nomenclature convetion:
+    - 'Send' prefix for protocol messages.
+    - 'ContractSend' prefix for smart contract function calls.
+    - 'Event' for node events.
+
     Notes:
-    - The state machine is oblivious of the different kinds of events.
     - This class is used as a marker for events.
+    - These objects don't have logic by design.
     - Separate events are preferred because there is a decoupling of what the
       upper layer will use the events for.
     """

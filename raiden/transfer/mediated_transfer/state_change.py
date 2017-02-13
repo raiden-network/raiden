@@ -7,7 +7,7 @@ from raiden.transfer.architecture import StateChange
 # useful work, ie. there must /not/ be an event for requesting new data.
 
 
-class InitInitiator(StateChange):
+class ActionInitInitiator(StateChange):
     """ Initial state of a new mediated transfer.
 
     Args:
@@ -32,7 +32,7 @@ class InitInitiator(StateChange):
         self.block_number = block_number
 
 
-class InitMediator(StateChange):
+class ActionInitMediator(StateChange):
     """ Initial state for a new mediator.
 
     Args:
@@ -57,7 +57,7 @@ class InitMediator(StateChange):
         self.block_number = block_number
 
 
-class InitTarget(StateChange):
+class ActionInitTarget(StateChange):
     """ Initial state for a new target.
 
     Args:
@@ -82,7 +82,7 @@ class InitTarget(StateChange):
         self.block_number = block_number
 
 
-class CancelRoute(StateChange):
+class ActionCancelRoute(StateChange):
     """ Cancel the current route.
 
     Notes:
@@ -93,7 +93,7 @@ class CancelRoute(StateChange):
         self.identifier = identifier
 
 
-class SecretRequestReceived(StateChange):
+class ReceiveSecretRequest(StateChange):
     """ A SecretRequest message received. """
 
     def __init__(self, identifier, amount, hashlock, sender):
@@ -104,7 +104,7 @@ class SecretRequestReceived(StateChange):
         self.revealsecret = None
 
 
-class SecretRevealReceived(StateChange):
+class ReceiveSecretReveal(StateChange):
     """ A SecretReveal message received. """
     def __init__(self, identifier, secret, target, sender):
         self.identifier = identifier
@@ -113,7 +113,7 @@ class SecretRevealReceived(StateChange):
         self.sender = sender
 
 
-class TransferRefundReceived(StateChange):
+class ReceiveTransferRefund(StateChange):
     """ A RefundTransfer message received. """
     def __init__(self, identifier, hashlock, amount, sender):
         self.identifier = identifier
@@ -122,7 +122,7 @@ class TransferRefundReceived(StateChange):
         self.sender = sender
 
 
-class BalanceProofReceived(StateChange):
+class ReceiveBalanceProof(StateChange):
     """ A balance proof `identifier` was received. """
     def __init__(self, identifier, channel_address, node_address):
         self.identifier = identifier
@@ -130,7 +130,7 @@ class BalanceProofReceived(StateChange):
         self.node_address = node_address
 
 
-class NettingChannelWithdraw(StateChange):
+class ContractReceiveWithdraw(StateChange):
     """ Our partner withdrawned the lock throught the blockchain.
 
     Used when a hash time lock was withdrawn and a log ChannelSecretRevealed is

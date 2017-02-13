@@ -123,18 +123,18 @@ class MediationPairState(State):
 
     valid_payee_states = (
         'payee_pending',
-        'payee_secret_revealed',  # reached on a SecretRevealReceived
-        'payee_channel_withdraw',  # reached when the /partner/ node unlocks
+        'payee_secret_revealed',  # reached on a ReceiveSecretReveal
+        'payee_contract_withdraw',  # reached when the /partner/ node unlocks
         'payee_balance_proof',  # reached when this node sends SendBalanceProof
         'payee_expired',
     )
 
     valid_payer_states = (
         'payer_pending',
-        'payer_secret_revealed',  # reached on a RevealSecretTo
+        'payer_secret_revealed',  # reached on a SendRevealSecret
         'payer_waiting_withdraw',  # reached when unlock is called
-        'payer_channel_withdraw',  # this state is reached the unlock from /this/ node completes
-        'payer_balance_proof',  # reached when a balance proof is received
+        'payer_contract_withdraw',  # this state is reached the unlock from /this/ node completes
+        'payer_balance_proof',  # reached on a ReceiveBalanceProof
         'payer_expired',
     )
 
