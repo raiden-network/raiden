@@ -544,17 +544,14 @@ class Channel(object):
 
     @property
     def status(self):
-        status = None
         if self.isopen:
-            status = 'open'
-            return status
+            return 'open'
+        elif self.external_state.settled_block != 0:
+            return 'settled'
+        elif self.external_state.closed_block != 0:
+            return 'closed'
         else:
-            if self.external_state.settled_block != 0:
-                status = 'settled'
-                if self.external_state.closed_block != 0:
-                    status = 'closed'
-                return status
-        raise Exception('invalid state')
+            raise Exception('invalid state')
 
     @property
     def partner_address(self):
