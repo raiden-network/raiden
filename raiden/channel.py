@@ -663,7 +663,9 @@ class Channel(object):
                     log.info('channel automatically settled')
                     return
 
-        if self.external_state.closed_block + self.settle_timeout >= block_number:
+        if (self.external_state.closed_block != 0 and block_number >= (
+                self.external_state.closed_block + self.settle_timeout)):
+
             gevent.spawn(_settle)  # don't block the alarm
             return REMOVE_CALLBACK
 
