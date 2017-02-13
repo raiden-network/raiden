@@ -2,7 +2,6 @@
 from __future__ import division
 
 import pytest
-import gevent
 from ethereum import slogging
 
 from raiden.tests.utils.blockchain import wait_until_block
@@ -713,10 +712,6 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     # wait until the settle timeout has passed
     settle_expiration = chain0.block_number() + settle_timeout
     wait_until_block(chain0, settle_expiration)
-    # manually call settle (automatic settling does not seem to work)
-    # TODO: ^ Find out why
-    channel1.external_state.settle()
-    gevent.sleep(1)
 
     # check that the channel is properly settled and that Bob's client
     # automatically called updateTransfer() to reflect the actual transactions
