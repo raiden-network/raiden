@@ -97,19 +97,18 @@ def is_valid_refund(original_transfer, refund_transfer):
 
 def clear_if_finalized(iteration):
     """ Clear the state if all transfer pairs have finalized. """
-    state = iteration.state
+    state = iteration.new_state
 
     all_finalized = all(
         pair.payee_state in STATE_TRANSFER_FINAL and pair.payer_state in STATE_TRANSFER_FINAL
         for pair in state.transfers_pair
     )
 
-    if all_finalized:
-        iteration.state = None
-
     # TODO: how do we define success and failure for a mediator since the state
     # of individual paths may differ?
 
+    if all_finalized:
+        return Iteration(None, iteration.events)
     return iteration
 
 
@@ -310,7 +309,6 @@ def mediate_transfer(state, payer_route, payer_transfer):
     timeout = min(settle_timeout, lock_timeout)
 
     try_route = None
-    from_transfer = state.from_transfer
 
     while state.routes.available_routes:
         route = state.routes.available_routes.pop()
@@ -321,7 +319,7 @@ def mediate_transfer(state, payer_route, payer_transfer):
         lock_timeout = timeout - route.reveal_timeout
         lock_timeout -= TRANSIT_BLOCKS
 
-        enough_balance = route.available_balance >= from_transfer.amount
+        enough_balance = route.available_balance >= payer_transfer.amount
 
         if enough_balance and lock_timeout > 0:
             try_route = route
@@ -330,25 +328,30 @@ def mediate_transfer(state, payer_route, payer_transfer):
             state.routes.ignored_routes.append(route)
 
     if try_route is None:
-        # No route available, refund the from_route hop so that it can try a
+        if state.transfers_pair:
+            original_route = state.transfers_pair[0].payer_transfer
+        else:
+            original_route = payer_route
+
+        # No route available, refund the original_route hop so that it can try a
         # new route.
         #
         # A refund transfer works like a special SendMediatedTransfer, so it must
         # follow the same rules and decrement reveal_timeout from the
         # payee_transfer.
-        new_lock_timeout = timeout - state.from_route.reveal_timeout
+        new_lock_timeout = timeout - original_route.reveal_timeout
         new_lock_timeout -= TRANSIT_BLOCKS
 
         if new_lock_timeout > 0:
             new_lock_expiration = new_lock_timeout + state.block_number
 
             refund_transfer = SendRefundTransfer(
-                from_transfer.identifier,
-                from_transfer.token,
-                from_transfer.amount,
-                from_transfer.hashlock,
+                payer_transfer.identifier,
+                payer_transfer.token,
+                payer_transfer.amount,
+                payer_transfer.hashlock,
                 new_lock_expiration,
-                state.from_route.node_address,
+                original_route.node_address,
             )
 
             iteration = Iteration(state, [refund_transfer])
@@ -361,11 +364,11 @@ def mediate_transfer(state, payer_route, payer_transfer):
         lock_expiration = lock_timeout + state.block_number
 
         mediated_transfer = SendMediatedTransfer(
-            from_transfer.identifier,
-            from_transfer.token,
-            from_transfer.amount,
-            from_transfer.hashlock,
-            from_transfer.target,
+            payer_transfer.identifier,
+            payer_transfer.token,
+            payer_transfer.amount,
+            payer_transfer.hashlock,
+            payer_transfer.target,
             lock_expiration,
             try_route.node_address,
         )
