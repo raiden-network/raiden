@@ -32,22 +32,27 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     token_manager0 = app0.raiden.managers_by_token_address.values()[0]
     token_manager1 = app1.raiden.managers_by_token_address.values()[0]
-
-    chain0 = app0.raiden.chain
+    assert token_manager0.token_address == token_manager1.token_address
 
     channel0 = token_manager0.partneraddress_channel[app1.raiden.address]
     channel1 = token_manager1.partneraddress_channel[app0.raiden.address]
 
-    balance0 = channel0.balance
-    balance1 = channel1.balance
+    deposit0 = channel0.balance
+    deposit1 = channel1.balance
+
+    token = app0.raiden.chain.token(channel0.token_address)
+
+    balance0 = token.balance_of(app0.raiden.address)
+    balance1 = token.balance_of(app1.raiden.address)
+
+    chain0 = app0.raiden.chain
 
     amount = 10
     expiration = app0.raiden.chain.block_number() + reveal_timeout + 1
-    secret = 'secret'
+    secret = 'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
     assert app1.raiden.address in token_manager0.partneraddress_channel
-    assert token_manager0.token_address == token_manager1.token_address
 
     nettingaddress0 = channel0.external_state.netting_channel.address
     nettingaddress1 = channel1.external_state.netting_channel.address
@@ -69,8 +74,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     channel1.register_transfer(transfermessage)
 
     assert_synched_channels(
-        channel0, balance0, [],
-        channel1, balance1, [transfermessage.lock],
+        channel0, deposit0, [],
+        channel1, deposit1, [transfermessage.lock],
     )
 
     # At this point we are assuming the following:
@@ -85,6 +90,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
     lock = channel1.our_state.balance_proof.get_lock_by_hashlock(hashlock)
+    assert sha3(secret) == hashlock
     unlock_proof = channel1.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
     root = channel1.our_state.balance_proof.merkleroot_for_unclaimed()
@@ -100,27 +106,39 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     # a ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
     channel1.external_state.netting_channel.close(
-        app0.raiden.address,
+        app1.raiden.address,
         transfermessage,
         None,
     )
-    wait_until_block(chain0, chain0.block_number() + 5)
+    wait_until_block(chain0, chain0.block_number() + 1)
     assert channel0.external_state.closed_block != 0
+    assert channel1.external_state.closed_block != 0
+    assert channel0.external_state.settled_block == 0
+    assert channel1.external_state.settled_block == 0
 
     # unlock will not be called by Channel.channel_closed because we did not
     # register the secret
-    channel0.external_state.netting_channel.unlock(
-        app0.raiden.address,
+    assert lock.expiration > app0.raiden.chain.block_number()
+    assert lock.hashlock == sha3(secret)
+
+    channel1.external_state.netting_channel.unlock(
+        app1.raiden.address,
         [unlock_proof],
     )
 
-    settle_expiration = chain0.block_number() + settle_timeout
-    wait_until_block(chain0, settle_expiration + 1)
+    settle_expiration = chain0.block_number() + settle_timeout + 2
+    wait_until_block(chain0, settle_expiration)
 
     # settle must be called by the apps triggered by the ChannelClose event,
     # and the channels must update it's state based on the ChannelSettled event
     assert channel0.external_state.settled_block != 0
     assert channel1.external_state.settled_block != 0
+
+    address0 = app0.raiden.address
+    address1 = app1.raiden.address
+
+    assert token.balance_of(address0.encode('hex')) == balance0 + deposit0 + amount
+    assert token.balance_of(address1.encode('hex')) == balance1 + deposit1 - amount
 
 
 @pytest.mark.timeout(240)
