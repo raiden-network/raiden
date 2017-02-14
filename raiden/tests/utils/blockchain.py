@@ -47,6 +47,8 @@ def wait_until_block(chain, block):
     curr_block = chain.block_number()
     while curr_block < block:
         curr_block = chain.next_block()
+    # ctx switch to allow background tasks to proceed:
+    gevent.sleep(1)
 
 
 def geth_to_cmd(node, datadir, verbosity):
