@@ -410,6 +410,7 @@ class ChannelExternalState(object):
         return self._settled_block
 
     def set_opened(self, block_number):
+        # TODO: ensure the same callback logic as in set_settled
         if self._opened_block != 0:
             raise RuntimeError('channel is already open')
 
@@ -419,6 +420,7 @@ class ChannelExternalState(object):
             callback(block_number)
 
     def set_closed(self, block_number):
+        # TODO: ensure the same callback logic as in set_settled
         if self._closed_block != 0:
             raise RuntimeError('channel is already closed')
 
@@ -428,13 +430,14 @@ class ChannelExternalState(object):
             callback(block_number)
 
     def set_settled(self, block_number):
-        if self._settled_block != 0:
-            raise RuntimeError('channel is already settled')
+        # ensure callbacks are only called once
+        if self._settled_block != 0 and self._settled_block != block_number:
+            raise RuntimeError('channel is already settled on different block')
+        else:
+            self._settled_block = block_number
 
-        self._settled_block = block_number
-
-        for callback in self.callbacks_settled:
-            callback(block_number)
+            for callback in self.callbacks_settled:
+                callback(block_number)
 
     def query_settled(self):
         return self.netting_channel.settled()
@@ -619,7 +622,7 @@ class Channel(object):
                 # do not call settle if already settled, the event polling
                 # might be lagging behind.
                 settled_block = self.external_state.query_settled()
-                if settled_block != 0 and self.external_state._settled_block != 0:
+                if settled_block != 0:
                     self.external_state.set_settled(settled_block)
                     log.info('channel automatically settled')
                     return
