@@ -432,7 +432,8 @@ class ChannelExternalState(object):
     def set_settled(self, block_number):
         # ensure callbacks are only called once
         if self._settled_block != 0 and self._settled_block != block_number:
-            raise RuntimeError('channel is already settled on different block')
+            raise RuntimeError('channel is already settled on different block %s %s'
+                               % self._settled_block, block_number)
         else:
             self._settled_block = block_number
 
