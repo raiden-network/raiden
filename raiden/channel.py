@@ -642,7 +642,7 @@ class Channel(object):
                 # do not call settle if already settled, the event polling
                 # might be lagging behind.
                 settled_block = self.external_state.query_settled()
-                if settled_block != 0:
+                if settled_block != 0 and self.external_state._settled_block != 0:
                     self.external_state.set_settled(settled_block)
                     log.info('channel automatically settled')
                     return
