@@ -52,10 +52,10 @@ contract NettingChannelContract {
     }
 
     /// @notice Get the address of the channel partner.
-    /// @param one_address The address of partner 1.
-    /// @return The address of partner 2.
-    function partner(address one_address) constant returns (address) {
-        return data.partner(one_address);
+    /// @param participant_address The address of one participant.
+    /// @return The address of the partner to that participant.
+    function partner(address participant_address) constant returns (address) {
+        return data.partner(participant_address);
     }
 
     /// @notice Get the address and balance of both partners in a channel.
@@ -71,22 +71,22 @@ contract NettingChannelContract {
         return data.addressAndBalance();
     }
 
-    /// @notice Get the amount one partner has sent/transferred to the other partner.
+    /// @notice Get the amount one partner has transferred to the other partner.
     /// @param participant The address of one partner.
-    /// @return The amount one partner has sent to the other.
+    /// @return The amount one partner has transferred to the other.
     function transferredAmount(address participant) constant returns (uint) {
         return data.transferredAmount(participant);
     }
 
     /// @notice Close the channel. Can only be called by a participant in the channel.
-    /// @param theirs_encoded The state of the partner's transfers.
-    /// @param ours_encoded The state of the caller's transfers.
+    /// @param theirs_encoded The last transfer recieved from our partner.
+    /// @param ours_encoded The last transfer sent to our partner.
     function close(bytes theirs_encoded, bytes ours_encoded) {
         data.close(msg.sender, theirs_encoded, ours_encoded);
         ChannelClosed(msg.sender, data.closed);
     }
 
-    /// @notice Dispute the state after closing, called by a counterparty (the
+    /// @notice Dispute the state after closing, called by the counterparty (the
     ///         participant who did not close the channel).
     /// @param theirs_encoded The transfer the counterparty believes is the valid
     ///                       state of the first participant.
@@ -102,7 +102,9 @@ contract NettingChannelContract {
     }
 
     /// @notice Settle the transfers and balances of the channel and pay out to
-    ///         each participant. Must be called by a participating address.
+    ///         each participant. Can only be called after the channel is closed
+    ///         and only after the number of blocks in the settlement timeout
+    ///         have passed.
     function settle() {
         data.settle(msg.sender);
         ChannelSettled(data.settled);
@@ -138,6 +140,5 @@ contract NettingChannelContract {
         return data.closing_address;
     }
 
-    /// @notice All other attempted functions are thrown. (Wasted gas.)
     function () { throw; }
 }
