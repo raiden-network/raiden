@@ -2,6 +2,7 @@
 import pytest
 
 from ethereum import slogging
+import gevent
 
 from raiden.mtree import check_proof
 from raiden.tests.utils.blockchain import wait_until_block
@@ -128,6 +129,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     settle_expiration = chain0.block_number() + settle_timeout + 2
     wait_until_block(chain0, settle_expiration)
+    gevent.sleep(1)
 
     # settle must be called by the apps triggered by the ChannelClose event,
     # and the channels must update it's state based on the ChannelSettled event
