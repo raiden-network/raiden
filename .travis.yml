@@ -1,5 +1,5 @@
 dist: trusty
-sudo: false
+sudo: required
 
 language: python
 python:
@@ -30,6 +30,12 @@ before_install:
   - export PATH=$PATH:$HOME/.bin
   - ./.travis/download_geth.sh
   - ./.travis/download_solc.sh
+  # Tweaking TCP parameters for socket TIME_WAIT
+  # Sources:
+  # http://stackoverflow.com/questions/6426253/tcp-tw-reuse-vs-tcp-tw-recycle-which-to-use-or-both
+  # http://www.speedguide.net/articles/linux-tweaking-121
+  - sudo sysctl -w net.ipv4.tcp_fin_timeout=15
+  - sudo sysctl -w net.ipv4.tcp_tw_reuse=1
 
 install:
   - pip install -U pip wheel coveralls
