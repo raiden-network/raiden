@@ -620,30 +620,29 @@ class Channel(object):
 
     def blockalarm_for_settle(self, block_number):
         def _settle():
-            for _ in range(3):
-                # do not call settle if already settled, the event polling
-                # might be lagging behind.
-                settled_block = self.external_state.query_settled()
-                if settled_block != 0:
-                    self.external_state.set_settled(settled_block)
-                    log.info('channel automatically settled')
-                    return
+            # do not call settle if already settled, the event polling
+            # might be lagging behind.
+            settled_block = self.external_state.query_settled()
+            if settled_block != 0:
+                self.external_state.set_settled(settled_block)
+                log.info('channel automatically settled')
+                return
 
-                try:
-                    # TODO: to remove unecessary JSON-RPC calls, change to an
-                    # async version of settle and stop polling if the
-                    # settle_event was set
-                    self.external_state.settle()
-                except:
-                    log.exception('Timedout while calling settle')
+            try:
+                # TODO: to remove unecessary JSON-RPC calls, change to an
+                # async version of settle and stop polling if the
+                # settle_event was set
+                self.external_state.settle()
+            except:
+                log.exception('Timedout while calling settle')
 
-                # wait for the settle event, it could be our transaction or our
-                # partner's
-                self.settle_event.wait(0.5)
+            # wait for the settle event, it could be our transaction or our
+            # partner's
+            self.settle_event.wait(0.5)
 
-                if self.settle_event.is_set():
-                    log.info('channel automatically settled')
-                    return
+            if self.settle_event.is_set():
+                log.info('channel automatically settled')
+                return
 
         if (self.external_state.closed_block != 0 and block_number >= (
                 self.external_state.closed_block + self.settle_timeout)):
