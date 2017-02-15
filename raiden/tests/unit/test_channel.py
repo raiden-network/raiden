@@ -2,7 +2,6 @@
 from __future__ import division
 
 import pytest
-import gevent
 from ethereum import slogging
 
 from raiden.tests.utils.blockchain import wait_until_block
@@ -670,9 +669,9 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     initial_balance1 = token.balance_of(address1.encode('hex'))
 
     # Alice sends Bob 10 tokens
-    amount = 10
+    amount_alice1 = 10
     direct_transfer = channel0.create_directtransfer(
-        amount,
+        amount_alice1,
         1  # TODO: fill in identifier
     )
     direct_transfer.sign(privatekey0, address0)
@@ -681,9 +680,9 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     alice_old_transaction = direct_transfer
 
     # Bob sends Alice 50 tokens
-    amount = 50
+    amount_bob1 = 50
     direct_transfer = channel1.create_directtransfer(
-        amount,
+        amount_bob1,
         1  # TODO: fill in identifier
     )
     direct_transfer.sign(privatekey1, address1)
@@ -692,9 +691,9 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     bob_last_transaction = direct_transfer
 
     # Finally Alice sends Bob 60 tokens
-    amount = 60
+    amount_alice2 = 60
     direct_transfer = channel0.create_directtransfer(
-        amount,
+        amount_alice2,
         1  # TODO: fill in identifier
     )
     direct_transfer.sign(privatekey0, address0)
@@ -710,18 +709,19 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     chain0 = app0.raiden.chain
     wait_until_block(chain0, chain0.block_number() + 1)
 
-    # wait until the settle timeout has passed
-    settle_expiration = chain0.block_number() + settle_timeout
+    assert channel0.external_state.closed_block != 0
+    assert channel1.external_state.closed_block != 0
+
+    # wait until the settle timeout has passed + time to mine/propagate the tx
+    settle_expiration = chain0.block_number() + settle_timeout + 3
     wait_until_block(chain0, settle_expiration)
-    # manually call settle (automatic settling does not seem to work)
-    # TODO: ^ Find out why
-    channel1.external_state.settle()
-    gevent.sleep(1)
 
     # check that the channel is properly settled and that Bob's client
     # automatically called updateTransfer() to reflect the actual transactions
     assert channel0.external_state.settled_block != 0
     assert channel1.external_state.settled_block != 0
     assert token.balance_of(channel0.external_state.netting_channel.address.encode('hex')) == 0
-    assert token.balance_of(address0.encode('hex')) == initial_balance0 + deposit - 70 + 50
-    assert token.balance_of(address1.encode('hex')) == initial_balance1 + deposit + 70 - 50
+    total_alice = amount_alice1 + amount_alice2
+    total_bob = amount_bob1
+    assert token.balance_of(address0.encode('hex')) == initial_balance0 + deposit - total_alice + total_bob
+    assert token.balance_of(address1.encode('hex')) == initial_balance1 + deposit + total_alice - total_bob

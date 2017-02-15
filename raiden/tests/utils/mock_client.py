@@ -407,13 +407,19 @@ class NettingChannelMock(object):
         return self.contract._get_transferred_amount(None, None)
 
     def opened(self):
-        return self.contract.opened
+        num = self.contract.opened
+        assert num is not None
+        return num
 
     def closed(self):
-        return self.contract.closed
+        num = self.contract.closed
+        assert num is not None
+        return num
 
     def settled(self):
-        return self.contract.settled
+        num = self.contract.settled
+        assert num is not None
+        return num
 
     def detail(self, our_address):
         partner_address = self.contract.partner(our_address)

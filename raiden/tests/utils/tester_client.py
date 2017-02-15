@@ -605,16 +605,19 @@ class NettingChannelTesterMock(object):
     def opened(self):
         opened = self.proxy.opened()
         self.tester_state.mine(number_of_blocks=1)
+        assert opened is not None
         return opened
 
     def closed(self):
         closed = self.proxy.closed()
         self.tester_state.mine(number_of_blocks=1)
+        assert closed is not None
         return closed
 
     def settled(self):
         settled = self.proxy.settled()
         self.tester_state.mine(number_of_blocks=1)
+        assert settled is not None
         return settled
 
     def detail(self, our_address):

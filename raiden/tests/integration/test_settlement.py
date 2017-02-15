@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import pytest
-import os
 
 from ethereum import slogging
+import gevent
 
 from raiden.mtree import check_proof
 from raiden.tests.utils.blockchain import wait_until_block
@@ -23,11 +23,7 @@ from raiden.utils import sha3
 slogging.configure(':DEBUG')
 
 
-@pytest.mark.skipif(
-    'TRAVIS' in os.environ,
-    reason='Flaky test due to mark.timeout not being scheduled. Issue #319'
-)
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(240)
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_settlement(raiden_network, settle_timeout, reveal_timeout):
@@ -37,22 +33,27 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     token_manager0 = app0.raiden.managers_by_token_address.values()[0]
     token_manager1 = app1.raiden.managers_by_token_address.values()[0]
-
-    chain0 = app0.raiden.chain
+    assert token_manager0.token_address == token_manager1.token_address
 
     channel0 = token_manager0.partneraddress_channel[app1.raiden.address]
     channel1 = token_manager1.partneraddress_channel[app0.raiden.address]
 
-    balance0 = channel0.balance
-    balance1 = channel1.balance
+    deposit0 = channel0.balance
+    deposit1 = channel1.balance
+
+    token = app0.raiden.chain.token(channel0.token_address)
+
+    balance0 = token.balance_of(app0.raiden.address)
+    balance1 = token.balance_of(app1.raiden.address)
+
+    chain0 = app0.raiden.chain
 
     amount = 10
     expiration = app0.raiden.chain.block_number() + reveal_timeout + 1
-    secret = 'secret'
+    secret = 'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
     assert app1.raiden.address in token_manager0.partneraddress_channel
-    assert token_manager0.token_address == token_manager1.token_address
 
     nettingaddress0 = channel0.external_state.netting_channel.address
     nettingaddress1 = channel1.external_state.netting_channel.address
@@ -74,8 +75,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     channel1.register_transfer(transfermessage)
 
     assert_synched_channels(
-        channel0, balance0, [],
-        channel1, balance1, [transfermessage.lock],
+        channel0, deposit0, [],
+        channel1, deposit1, [transfermessage.lock],
     )
 
     # At this point we are assuming the following:
@@ -90,6 +91,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
     lock = channel1.our_state.balance_proof.get_lock_by_hashlock(hashlock)
+    assert sha3(secret) == hashlock
     unlock_proof = channel1.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
     root = channel1.our_state.balance_proof.merkleroot_for_unclaimed()
@@ -104,29 +106,44 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # a ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
-    channel0.external_state.netting_channel.close(
-        app0.raiden.address,
+    channel1.external_state.netting_channel.close(
+        app1.raiden.address,
         transfermessage,
         None,
     )
+    wait_until_block(chain0, chain0.block_number() + 1)
+    assert channel0.external_state.closed_block != 0
+    assert channel1.external_state.closed_block != 0
+    assert channel0.external_state.settled_block == 0
+    assert channel1.external_state.settled_block == 0
 
     # unlock will not be called by Channel.channel_closed because we did not
     # register the secret
-    channel0.external_state.netting_channel.unlock(
-        app0.raiden.address,
+    assert lock.expiration > app0.raiden.chain.block_number()
+    assert lock.hashlock == sha3(secret)
+
+    channel1.external_state.netting_channel.unlock(
+        app1.raiden.address,
         [unlock_proof],
     )
 
-    settle_expiration = chain0.block_number() + settle_timeout
+    settle_expiration = chain0.block_number() + settle_timeout + 2
     wait_until_block(chain0, settle_expiration)
+    gevent.sleep(1)
 
     # settle must be called by the apps triggered by the ChannelClose event,
     # and the channels must update it's state based on the ChannelSettled event
     assert channel0.external_state.settled_block != 0
     assert channel1.external_state.settled_block != 0
 
+    address0 = app0.raiden.address
+    address1 = app1.raiden.address
 
-@pytest.mark.timeout(60)
+    assert token.balance_of(address0.encode('hex')) == balance0 + deposit0 + amount
+    assert token.balance_of(address1.encode('hex')) == balance1 + deposit1 - amount
+
+
+@pytest.mark.timeout(240)
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -197,18 +214,18 @@ def test_settled_lock(tokens_addresses, raiden_network, settle_timeout, reveal_t
     assert participant1.netted == participant1.deposit + amount * 2
 
 
-@pytest.mark.xfail()
-@pytest.mark.timeout(60)
+@pytest.mark.timeout(240)
+@pytest.mark.xfail(reason="test incomplete")
 @pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_start_end_attack(token_address, raiden_chain, deposit):
+def test_start_end_attack(tokens_addresses, raiden_chain, deposit, reveal_timeout):
     """ An attacker can try to steal tokens from a hub or the last node in a
     path.
 
     The attacker needs to use two addresses (A1 and A2) and connect both to the
     hub H, once connected a mediated transfer is initialized from A1 to A2
     through H, once the node A2 receives the mediated transfer the attacker
-    uses the it's know secret and reveal to close and settles the channel H-A2,
+    uses the know secret and reveal to close and settles the channel H-A2,
     without revealing the secret to H's raiden node.
 
     The intention is to make the hub transfer the token but for him to be
@@ -216,15 +233,18 @@ def test_start_end_attack(token_address, raiden_chain, deposit):
     """
     amount = 30
 
-    token = token_address[0]
+    token = tokens_addresses[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     # the attacker owns app0 and app2 and creates a transfer throught app1
+    identifier = 1
+    expiration = reveal_timeout + 5
     secret = pending_mediated_transfer(
         raiden_chain,
         token,
         amount,
-        1  # TODO: fill in identifier
+        identifier,
+        expiration
     )
     hashlock = sha3(secret)
 

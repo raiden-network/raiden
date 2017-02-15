@@ -410,6 +410,7 @@ class ChannelExternalState(object):
         return self._settled_block
 
     def set_opened(self, block_number):
+        # TODO: ensure the same callback logic as in set_settled
         if self._opened_block != 0:
             raise RuntimeError('channel is already open')
 
@@ -419,6 +420,7 @@ class ChannelExternalState(object):
             callback(block_number)
 
     def set_closed(self, block_number):
+        # TODO: ensure the same callback logic as in set_settled
         if self._closed_block != 0:
             raise RuntimeError('channel is already closed')
 
@@ -428,16 +430,19 @@ class ChannelExternalState(object):
             callback(block_number)
 
     def set_settled(self, block_number):
-        if self._settled_block != 0:
-            raise RuntimeError('channel is already settled')
+        # ensure callbacks are only called once
+        if self._settled_block != 0 and self._settled_block != block_number:
+            raise RuntimeError('channel is already settled on different block %s %s'
+                               % (self._settled_block, block_number))
+        else:
+            self._settled_block = block_number
 
-        self._settled_block = block_number
-
-        for callback in self.callbacks_settled:
-            callback(block_number)
+            for callback in self.callbacks_settled:
+                callback(block_number)
 
     def query_settled(self):
-        return self.netting_channel.settled()
+        # FIXME: the if None: return 0 constraint should be ensured on the proxy side
+        return self.netting_channel.settled() or 0
 
     def query_transferred_amount(self, participant_address):
         return self.netting_channel.transferred_amount(participant_address)
@@ -638,32 +643,33 @@ class Channel(object):
 
     def blockalarm_for_settle(self, block_number):
         def _settle():
-            for _ in range(3):
-                # do not call settle if already settled, the event polling
-                # might be lagging behind.
-                settled_block = self.external_state.query_settled()
-                if settled_block != 0:
-                    self.external_state.set_settled(settled_block)
-                    log.info('channel automatically settled')
-                    return
+            # do not call settle if already settled, the event polling
+            # might be lagging behind.
+            settled_block = self.external_state.query_settled()
+            if settled_block != 0:
+                self.external_state.set_settled(settled_block)
+                log.info('channel automatically settled')
+                return
 
-                try:
-                    # TODO: to remove unecessary JSON-RPC calls, change to an
-                    # async version of settle and stop polling if the
-                    # settle_event was set
-                    self.external_state.settle()
-                except:
-                    log.exception('Timedout while calling settle')
+            try:
+                # TODO: to remove unecessary JSON-RPC calls, change to an
+                # async version of settle and stop polling if the
+                # settle_event was set
+                self.external_state.settle()
+            except:
+                log.exception('Timedout while calling settle')
 
-                # wait for the settle event, it could be our transaction or our
-                # partner's
-                self.settle_event.wait(0.5)
+            # wait for the settle event, it could be our transaction or our
+            # partner's
+            self.settle_event.wait(0.5)
 
-                if self.settle_event.is_set():
-                    log.info('channel automatically settled')
-                    return
+            if self.settle_event.is_set():
+                log.info('channel automatically settled')
+                return
 
-        if self.external_state.closed_block + self.settle_timeout >= block_number:
+        if (self.external_state.closed_block != 0 and block_number >= (
+                self.external_state.closed_block + self.settle_timeout)):
+
             gevent.spawn(_settle)  # don't block the alarm
             return REMOVE_CALLBACK
 
