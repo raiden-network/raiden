@@ -871,13 +871,19 @@ class NettingChannel(object):
         return self.proxy.transferredAmount(participant_address)
 
     def opened(self):
-        return self.proxy.opened.call()
+        num = self.proxy.opened.call()
+        assert num is not None
+        return num
 
     def closed(self):
-        return self.proxy.closed.call()
+        num = self.proxy.closed.call()
+        assert num is not None
+        return num
 
     def settled(self):
-        return self.proxy.settled.call()
+        num = self.proxy.settled.call()
+        assert num is not None
+        return num
 
     def close(self, our_address, their_transfer, our_transfer):
         """`our_address` is an argument used only in mock_client.py but is also
