@@ -712,9 +712,13 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     assert channel0.external_state.closed_block != 0
     assert channel1.external_state.closed_block != 0
 
-    # wait until the settle timeout has passed + time to mine/propagate the tx
-    settle_expiration = chain0.block_number() + settle_timeout + 3
+    # wait until the settle timeout has passed
+    settle_expiration = chain0.block_number() + settle_timeout
     wait_until_block(chain0, settle_expiration)
+
+    # the settle event must be set
+    assert channel0.settle_event.wait(timeout=60)
+    assert channel1.settle_event.wait(timeout=60)
 
     # check that the channel is properly settled and that Bob's client
     # automatically called updateTransfer() to reflect the actual transactions
