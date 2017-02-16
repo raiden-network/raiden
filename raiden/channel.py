@@ -652,20 +652,9 @@ class Channel(object):
                 return
 
             try:
-                # TODO: to remove unecessary JSON-RPC calls, change to an
-                # async version of settle and stop polling if the
-                # settle_event was set
                 self.external_state.settle()
             except:
                 log.exception('Timedout while calling settle')
-
-            # wait for the settle event, it could be our transaction or our
-            # partner's
-            self.settle_event.wait(0.5)
-
-            if self.settle_event.is_set():
-                log.info('channel automatically settled')
-                return
 
         if (self.external_state.closed_block != 0 and block_number >= (
                 self.external_state.closed_block + self.settle_timeout)):
