@@ -111,6 +111,10 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
         None,
     )
     wait_until_block(chain0, chain0.block_number() + 1)
+
+    assert channel0.close_event.wait(timeout=15)
+    assert channel1.close_event.wait(timeout=15)
+
     assert channel0.external_state.closed_block != 0
     assert channel1.external_state.closed_block != 0
     assert channel0.external_state.settled_block == 0
@@ -129,6 +133,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     settle_expiration = chain0.block_number() + settle_timeout + 2
     wait_until_block(chain0, settle_expiration)
 
+    assert channel0.settle_event.wait(timeout=15)
+    assert channel1.settle_event.wait(timeout=15)
     # settle must be called by the apps triggered by the ChannelClose event,
     # and the channels must update it's state based on the ChannelSettled event
     assert channel0.external_state.settled_block != 0

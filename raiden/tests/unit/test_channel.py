@@ -709,6 +709,9 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     chain0 = app0.raiden.chain
     wait_until_block(chain0, chain0.block_number() + 1)
 
+    assert channel0.close_event.wait(timeout=25)
+    assert channel1.close_event.wait(timeout=25)
+
     assert channel0.external_state.closed_block != 0
     assert channel1.external_state.closed_block != 0
 

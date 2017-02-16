@@ -753,6 +753,9 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         app1.raiden.chain.block_number() + 1
     )
 
+    assert channel0.close_event.wait(timeout=25)
+    assert channel1.close_event.wait(timeout=25)
+
     assert channel0.external_state.closed_block != 0
     assert channel1.external_state.closed_block != 0
 
@@ -760,6 +763,9 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         app0.raiden.chain,
         app0.raiden.chain.block_number() + settle_timeout,
     )
+
+    assert channel0.settle_event.wait(timeout=25)
+    assert channel1.settle_event.wait(timeout=25)
 
     assert channel0.external_state.settled_block != 0
     assert channel1.external_state.settled_block != 0
