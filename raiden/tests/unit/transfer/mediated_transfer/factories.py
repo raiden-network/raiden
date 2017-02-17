@@ -32,7 +32,7 @@ def make_route(node_address,
                available_balance,
                settle_timeout=UNIT_SETTLE_TIMEOUT,
                reveal_timeout=UNIT_REVEAL_TIMEOUT,
-               blocks_until_settlement=UNIT_SETTLE_TIMEOUT,
+               close_block=None,
                channel_address=None):
     """ Helper for creating a route.
 
@@ -54,6 +54,6 @@ def make_route(node_address,
         available_balance,
         settle_timeout,
         reveal_timeout,
-        blocks_until_settlement,
+        close_block,
     )
     return route

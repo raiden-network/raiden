@@ -4,6 +4,7 @@ from raiden.transfer.mediated_transfer.transition import update_route
 from raiden.transfer.mediated_transfer.state import (
     MediatorState,
     MediationPairState,
+    LockedTransferState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ReceiveBalanceProof,
@@ -17,9 +18,10 @@ from raiden.transfer.state_change import (
     ActionRouteChange,
 )
 from raiden.transfer.mediated_transfer.events import (
+    mediatedtransfer,
+
     ContractSendWithdraw,
     SendBalanceProof,
-    SendMediatedTransfer,
     SendRefundTransfer,
     SendRevealSecret,
 )
@@ -64,7 +66,7 @@ STATE_TRANSFER_FINAL = (
 
 def is_lock_valid(block_number, transfer):
     """ True if the lock has not expired. """
-    return transfer.expiration < block_number
+    return block_number <= transfer.expiration
 
 
 def is_safe_to_wait(block_number, transfer, reveal_timeout):
@@ -72,27 +74,74 @@ def is_safe_to_wait(block_number, transfer, reveal_timeout):
     waiting is safe.
     """
     # A node may wait for a new balance proof while there are reveal_timeout
-    # left, after that block it is not safe to wait.
-    return block_number >= transfer.expiration - reveal_timeout
+    # left, at that block and onwards it is not safe to wait.
+    return block_number < transfer.expiration - reveal_timeout
 
 
-def is_valid_refund(original_transfer, refund_transfer):
+def is_valid_refund(original_transfer, refund_sender, refund_transfer):
     """ True if the refund transfer matches the original transfer. """
     # Ignore a refund from the target
-    if refund_transfer.node_address == original_transfer.target:
+    if refund_sender == original_transfer.target:
         return False
 
     return (
         original_transfer.identifier == refund_transfer.identifier and
         original_transfer.amount == refund_transfer.amount and
         original_transfer.hashlock == refund_transfer.hashlock and
-        original_transfer.sender == refund_transfer.node_address and
+        original_transfer.target == refund_transfer.target and
 
         # A larger-or-equal expiration is byzantine behavior that favors this
         # node, neverthless it's being ignored since the only reason for the
         # other node to use an invalid expiration is to play the protocol.
         original_transfer.expiration > refund_transfer.expiration
     )
+
+
+def get_pending_transfer_pairs(transfers_pair):
+    """ Return the transfer pairs that han't reached a final state. """
+    pending_pairs = list(
+        pair
+        for pair in transfers_pair
+        if pair.payee_state not in STATE_TRANSFER_FINAL or
+        pair.payer_state not in STATE_TRANSFER_FINAL
+    )
+    return pending_pairs
+
+
+def get_timeout_blocks(payer_route, payer_transfer, block_number):
+    """ Return the timeout blocks, it's the base value from which the payee's
+    lock timeout must be computed.
+
+    The payee lock timeout is crucial for safety of the mediate transfer, the
+    value must be choosen so that the payee hop is forced to reveal the secret
+    with sufficient time for this node to claim the received lock from the
+    payer hop.
+
+    The timeout blocks must be the smallest of:
+
+    - payer_transfer.expiration: The payer lock expiration, to force the payee
+      to reveal the secret before the lock expires.
+    - payer_route.settle_timeout: Lock expiration must be lower than
+      the settlement period since the lock cannot be claimed after the channel is
+      settled.
+    - payer_route.close_block: If the block is closed the settlement period is
+      running and the lock expiration must be lower than number of blocks left.
+    """
+    blocks_until_settlement = payer_route.settle_timeout
+
+    if payer_route.close_block is not None:
+        assert block_number >= payer_route.close_block
+
+        elapsed_blocks = block_number - payer_route.close_block
+        blocks_until_settlement -= elapsed_blocks
+
+    safe_payer_timeout = min(
+        blocks_until_settlement,
+        payer_transfer.expiration - block_number,
+    )
+    timeout_blocks = safe_payer_timeout - TRANSIT_BLOCKS
+
+    return timeout_blocks
 
 
 def clear_if_finalized(iteration):
@@ -112,15 +161,92 @@ def clear_if_finalized(iteration):
     return iteration
 
 
-def get_pending_transfer_pairs(transfers_pair):
-    """ Return the transfer pairs that han't reached a final state. """
-    pending_pairs = list(
-        pair
-        for pair in transfers_pair
-        if pair.payee_state not in STATE_TRANSFER_FINAL or
-        pair.payer_state not in STATE_TRANSFER_FINAL
+def next_route(routes_state, timeout_blocks, transfer_amount):
+    """ Finds the route first route available that can be used.
+
+    Args:
+        routes_state (RoutesState): The route states to do the search, it's
+            assume thet available_routes is ordered from best to worst route.
+        timeout_blocks (int): Base number of available blocks used to compute
+            the lock timeout.
+        transfer_amount (int): The amount of tokens that will be transferred
+            through the given route.
+
+    Returns:
+        (RouteState): The next route.
+    """
+    while routes_state.available_routes:
+        route = routes_state.available_routes.pop(0)
+
+        lock_timeout = timeout_blocks - route.reveal_timeout
+        enough_balance = route.available_balance >= transfer_amount
+
+        if enough_balance and lock_timeout > 0:
+            return route
+        else:
+            routes_state.ignored_routes.append(route)
+
+    return None
+
+
+def next_transfer_pair(payer_route, payer_transfer, routes_state, timeout_blocks, block_number):
+    """ Given a mediation payer route tries a new route to proceed with the
+    mediation.
+
+    Args:
+        payer_route (RouteState): The previous route in the path that provides
+            the token for the mediation.
+        payer_transfer (LockedTransferState): The transfer received from the
+            payer_route.
+        routes_state (RoutesState): The route states to do the search, it's
+            assume thet available_routes is ordered from best to worst route.
+        timeout_blocks (int): Base number of available blocks used to compute
+            the lock timeout.
+        block_number (int): The current block number.
+    """
+    assert timeout_blocks > 0
+    assert timeout_blocks <= payer_transfer.expiration - block_number
+
+    transfer_pair = None
+    mediated_events = list()
+
+    payee_route = next_route(
+        routes_state,
+        timeout_blocks,
+        payer_transfer.amount,
     )
-    return pending_pairs
+
+    if payee_route:
+        assert payee_route.reveal_timeout < timeout_blocks
+
+        lock_timeout = timeout_blocks - payee_route.reveal_timeout
+        lock_expiration = lock_timeout + block_number
+
+        payee_transfer = LockedTransferState(
+            payer_transfer.identifier,
+            payer_transfer.amount,
+            payer_transfer.token,
+            payer_transfer.target,
+            lock_expiration,
+            payer_transfer.hashlock,
+            payer_transfer.secret,
+        )
+
+        transfer_pair = MediationPairState(
+            payer_route,
+            payer_transfer,
+            payee_route,
+            payee_transfer,
+        )
+
+        mediated_events = [
+            mediatedtransfer(payee_transfer, payer_route.node_address),
+        ]
+
+    return (
+        transfer_pair,
+        mediated_events,
+    )
 
 
 def set_secret(state, secret):
@@ -139,7 +265,7 @@ def set_secret(state, secret):
         pair.payee_transfer.secret = secret
 
 
-def set_payee_state_and_check_reveal_order(transfers_pair,
+def set_payee_state_and_check_reveal_order(transfers_pair,  # pylint: disable=invalid-name
                                            payee_address,
                                            new_payee_state):
     """ Set the state of a transfer *sent* to a payee and check the secret is
@@ -164,6 +290,48 @@ def set_payee_state_and_check_reveal_order(transfers_pair,
         # TODO: append an event for byzantine behavior
         return list()
 
+    return list()
+
+
+def events_for_refund_transfer(refund_route, refund_transfer, timeout_blocks, block_number):
+    """ Refund the transfer.
+
+    Args:
+        refund_route (RouteState): The original route that sent the mediated
+            transfer to this node.
+        refund_transfer (LockedTransferState): The original mediated transfer
+            from the refund_route.
+        timeout_blocks (int): The number of blocks available from the /latest
+            transfer/ received by this node, this transfer might be the
+            refund_transfer (if no route was available) or a refund transfer from a
+            down stream node.
+        block_number (int): The current block number.
+
+    Returns:
+        An empty list if there are not enough blocks to safely create a refund,
+        or a list with an refund event.
+    """
+    # A refund transfer works like a special SendMediatedTransfer, so it must
+    # follow the same rules and decrement reveal_timeout from the
+    # payee_transfer.
+    new_lock_timeout = timeout_blocks - refund_route.reveal_timeout
+
+    if new_lock_timeout > 0:
+        new_lock_expiration = new_lock_timeout + block_number
+
+        refund_transfer = SendRefundTransfer(
+            refund_transfer.identifier,
+            refund_transfer.token,
+            refund_transfer.amount,
+            refund_transfer.hashlock,
+            new_lock_expiration,
+            refund_route.node_address,
+        )
+
+        return [refund_transfer]
+
+    # Can not create a refund lock with a safe expiration, so don't do anything
+    # and wait for the received lock to expire.
     return list()
 
 
@@ -212,11 +380,11 @@ def events_for_balanceproof(state):
 
     events = list()
     for pair in reversed(state.transfers_pair):
-        payee_secret = pair.payee_transfer.state in STATE_SECRET_KNOWN
+        payee_knows_secret = pair.payee_transfer.state in STATE_SECRET_KNOWN
         payee_payed = pair.payee_transfer.state in STATE_TRANSFER_PAYED
         lock_valid = is_lock_valid(state.block_number, pair.payee_transfer)
 
-        if payee_secret and not payee_payed and lock_valid:
+        if payee_knows_secret and not payee_payed and lock_valid:
             pair.payee_transfer.state = 'payee_balance_proof'
             balance_proof = SendBalanceProof(
                 pair.payee_transfer.identifier,
@@ -267,126 +435,46 @@ def secret_learned(state, secret, payee_address, new_payee_state):
 
 
 def mediate_transfer(state, payer_route, payer_transfer):
-    """ Given a mediation payer route tries a new route to proceed with the
-    mediation.
+    transfer_pair = None
+    mediated_events = list()
 
-    A node might participate in mediated transfer more than once because of
-    refund transfers, eg. A-B-C-B-D-T, B tried to mediated the transfer through
-    C, which didn't have a available route to proceed and refunds B, at this
-    point B is part of the path again and will try a new partner to proceed
-    with the mediation through D, D finally reaches the target T.
+    timeout_blocks = get_timeout_blocks(
+        payer_route,
+        payer_transfer,
+        state.block_number,
+    )
 
-    In the above scenario B has two pairs of payer and payee transfers:
-
-        payer:A payee:C from the first SendMediatedTransfer
-        payer:C payee:D from the following SendRefundTransfer
-
-    Args:
-        state (MediatorState): The current state of the task.
-        payer_route (RouteState): The previous route in the path that provides
-            the token for the mediation.
-        payer_transfer (LockedTransferState): The transfer received from the
-            payer_route.
-    """
-    assert state.route is None, 'New path allowed only if the previous have a refund'
-
-    # The payee lock timeout is crucial for safety of the mediate transfer, the
-    # value must be choosen so that the next hop is forced to reveal the secret
-    # with sufficient time for this node to claim the received lock from the
-    # previous hop.
-    #
-    # The lock timeout must be the smallest of:
-    #
-    # - payer_transfer.expiration: The payer lock expiration, to force the
-    #   payee to reveal the secret in due time.
-    # - payer_route.blocks_until_settlement: Lock expiration must be lower than
-    #   the settlement period since the lock cannot be claimed after the channel
-    #   is settled, this might be the settlement_timeout if the payer_route is
-    #   not in the close state or the number of blocks left.
-    #
-    settle_timeout = payer_route.blocks_until_settlement
-    lock_timeout = payer_transfer.expiration - state.block_number
-    timeout = min(settle_timeout, lock_timeout)
-
-    try_route = None
-
-    while state.routes.available_routes:
-        route = state.routes.available_routes.pop()
-
-        # reveal_timeout is the number of blocks to learn the secret from the
-        # blockchain (revealed by the next hop when unlocking on chain) and
-        # call close+unlock on-chain.
-        lock_timeout = timeout - route.reveal_timeout
-        lock_timeout -= TRANSIT_BLOCKS
-
-        enough_balance = route.available_balance >= payer_transfer.amount
-
-        if enough_balance and lock_timeout > 0:
-            try_route = route
-            break
-        else:
-            state.routes.ignored_routes.append(route)
-
-    if try_route is None:
-        if state.transfers_pair:
-            original_route = state.transfers_pair[0].payer_transfer
-        else:
-            original_route = payer_route
-
-        # No route available, refund the original_route hop so that it can try a
-        # new route.
-        #
-        # A refund transfer works like a special SendMediatedTransfer, so it must
-        # follow the same rules and decrement reveal_timeout from the
-        # payee_transfer.
-        new_lock_timeout = timeout - original_route.reveal_timeout
-        new_lock_timeout -= TRANSIT_BLOCKS
-
-        if new_lock_timeout > 0:
-            new_lock_expiration = new_lock_timeout + state.block_number
-
-            refund_transfer = SendRefundTransfer(
-                payer_transfer.identifier,
-                payer_transfer.token,
-                payer_transfer.amount,
-                payer_transfer.hashlock,
-                new_lock_expiration,
-                original_route.node_address,
-            )
-
-            iteration = Iteration(state, [refund_transfer])
-        else:
-            # Can not create a refund lock with a safe expiration, so don't do
-            # anything and wait for the received lock to expire.
-            iteration = Iteration(state, list())
-
-    else:
-        lock_expiration = lock_timeout + state.block_number
-
-        mediated_transfer = SendMediatedTransfer(
-            payer_transfer.identifier,
-            payer_transfer.token,
-            payer_transfer.amount,
-            payer_transfer.hashlock,
-            payer_transfer.target,
-            lock_expiration,
-            try_route.node_address,
-        )
-
-        transfer_pair = MediationPairState(
+    if timeout_blocks > 0:
+        transfer_pair, mediated_events = next_transfer_pair(
             payer_route,
             payer_transfer,
-            try_route,
-            mediated_transfer,
+            state.routes,
+            timeout_blocks,
+            state.block_number,
         )
 
-        state.route = try_route
+    if transfer_pair is None:
+        if state.transfers_pair:
+            original_transfer = state.transfers_pair[0].payer_transfer
+            original_route = state.transfers_pair[0].payer_route
+        else:
+            original_route = payer_route
+            original_transfer = payer_transfer
 
+        refund_events = events_for_refund_transfer(
+            original_route,
+            original_transfer,
+            timeout_blocks,
+            state.block_number,
+        )
+
+        iteration = Iteration(state, refund_events)
+
+    else:
         # the list must be ordered from high to low expiration, expiration
         # handling depends on it
         state.transfers_pair.append(transfer_pair)
-
-        iteration = Iteration(state, [mediated_transfer])
+        iteration = Iteration(state, mediated_events)
 
     return iteration
 
@@ -442,6 +530,17 @@ def handle_block(state, state_change):
 def handle_refundtransfer(state, state_change):
     """ Validate and handle a ReceiveTransferRefund state change.
 
+    A node might participate in mediated transfer more than once because of
+    refund transfers, eg. A-B-C-B-D-T, B tried to mediated the transfer through
+    C, which didn't have a available route to proceed and refunds B, at this
+    point B is part of the path again and will try a new partner to proceed
+    with the mediation through D, D finally reaches the target T.
+
+    In the above scenario B has two pairs of payer and payee transfers:
+
+        payer:A payee:C from the first SendMediatedTransfer
+        payer:C payee:D from the following SendRefundTransfer
+
     Args:
         state (MediatorState): Current state.
         state_change (ReceiveTransferRefund): The state change.
@@ -456,16 +555,14 @@ def handle_refundtransfer(state, state_change):
     transfer_pair = state.transfers_pair[-1]
     payee_transfer = transfer_pair.payee_transfer
 
-    if is_valid_refund(payee_transfer, state_change.message):
-        payee_route = transfer_pair.payee_route
-
-        state.routes.refund_routes.append(state.route)
-        state.route = None
-
+    if is_valid_refund(payee_transfer, state_change.sender, state_change.transfer):
+        payer_route = transfer_pair.payee_route
+        payer_transfer = state_change.transfer
+        state.routes.refund_routes.append(payer_route)
         iteration = mediate_transfer(
             state,
-            payee_route,
-            payee_transfer,
+            payer_route,
+            payer_transfer,
         )
 
     else:
@@ -502,7 +599,7 @@ def handle_secretreveal(state, state_change):
 
 def handle_contractwithdraw(state, state_change):
     """ Handle a NettingChannelUnlock state change. """
-    assert sha3(state.secret) == state.hashlock, 'the secret must be validated by the smart contract'
+    assert sha3(state.secret) == state.hashlock, 'secret must be validated by the smart contract'
 
     for pair in state.transfers_pair:
         if pair.payer_route.channel_address == state_change.channel_address:
@@ -539,6 +636,7 @@ def handle_routechange(state, state_change):
 
 def state_transition(state, state_change):
     """ State machine for a node mediating a transfer. """
+    # pylint: disable=too-many-branches
     # Notes:
     # - A user cannot cancel a mediated transfer after it was initiated, she
     #   may only reject to mediate before hand. This is because the mediator

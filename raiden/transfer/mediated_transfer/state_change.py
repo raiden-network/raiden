@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-from raiden.transfer.architecture import StateChange
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
+from __future__ import absolute_import
+
+from raiden.transfer.architecture import StateChange
+from .state import LockedTransferState
 
 
 # Note: The init states must contain all the required data for trying doing
@@ -115,11 +118,12 @@ class ReceiveSecretReveal(StateChange):
 
 class ReceiveTransferRefund(StateChange):
     """ A RefundTransfer message received. """
-    def __init__(self, identifier, hashlock, amount, sender):
-        self.identifier = identifier
-        self.amount = amount
-        self.hashlock = hashlock
+    def __init__(self, sender, transfer):
+        if not isinstance(transfer, LockedTransferState):
+            raise ValueError('transfer must be an instance of LockedTransferState')
+
         self.sender = sender
+        self.transfer = transfer
 
 
 class ReceiveBalanceProof(StateChange):
