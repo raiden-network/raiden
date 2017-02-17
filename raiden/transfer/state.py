@@ -17,6 +17,8 @@ class RouteState(State):
         settle_timeout (int): The settle_timeout of the channel set in the
             smart contract.
         reveal_timeout (int): The channel configured reveal_timeout.
+        close_block (Nullable[int]): None if the channel is open, otherwise
+            the block number at which the channel was closed.
     """
 
     valid_states = (
@@ -32,7 +34,7 @@ class RouteState(State):
                  available_balance,
                  settle_timeout,
                  reveal_timeout,
-                 blocks_until_settlement):
+                 close_block):
 
         if state not in self.valid_states:
             raise ValueError('invalid value for state')
@@ -43,7 +45,7 @@ class RouteState(State):
         self.available_balance = available_balance
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
-        self.blocks_until_settlement = blocks_until_settlement
+        self.close_block = close_block
 
     def __repr__(self):
         return (

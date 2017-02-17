@@ -3,6 +3,19 @@ from raiden.transfer.architecture import Event
 # pylint: disable=too-many-arguments,too-few-public-methods
 
 
+def mediatedtransfer(transfer, recipient):
+    """ Create SendMediatedTransfer from LockedTransferState. """
+    return SendMediatedTransfer(
+        transfer.identifier,
+        transfer.token,
+        transfer.amount,
+        transfer.hashlock,
+        transfer.target,
+        transfer.expiration,
+        recipient,
+    )
+
+
 class SendMediatedTransfer(Event):
     """ A mediated transfer that must be sent to `node_address`. """
     def __init__(self,

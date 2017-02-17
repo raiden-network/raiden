@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=invalid-name
+from __future__ import division
+
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.state import (
     RoutesState,
@@ -34,6 +37,24 @@ def make_init_statechange(from_transfer,
     return init_state_change
 
 
+def make_transfer(amount,
+                  target,
+                  expiration,
+                  identifier=1,
+                  hashlock=factories.UNIT_HASHLOCK):
+
+    transfer = LockedTransferState(
+        identifier,
+        amount,
+        factories.UNIT_TOKEN_ADDRESS,
+        target,
+        expiration,
+        hashlock=hashlock,
+        secret=None,
+    )
+    return transfer
+
+
 def make_from(amount, target, from_expiration):
     from_route = factories.make_route(
         factories.HOP1,
@@ -41,17 +62,264 @@ def make_from(amount, target, from_expiration):
     )
 
     identifier = 0
-    from_transfer = LockedTransferState(
-        identifier,
+    from_transfer = make_transfer(
         amount,
-        factories.UNIT_TOKEN_ADDRESS,
         target,
         from_expiration,
+        identifier=identifier,
+    )
+
+    return from_route, from_transfer
+
+
+def test_is_lock_valid():
+    """ A hash time lock is valid up to the expiraiton block. """
+    amount = 10
+    expiration = 10
+    transfer = make_transfer(amount, factories.HOP1, expiration)
+
+    assert mediator.is_lock_valid(5, transfer) is True
+    assert mediator.is_lock_valid(10, transfer) is True, 'lock is expired at the next block'
+    assert mediator.is_lock_valid(11, transfer) is False
+
+
+def test_is_safe_to_wait():
+    """ It's safe to wait for a secret while there are more than reveal timeout
+    blocks until the lock expiration.
+    """
+    amount = 10
+    expiration = 40
+    transfer = make_transfer(amount, factories.HOP1, expiration)
+
+    # expiration is in 30 blocks, 19 blocks safe for waiting
+    block_number = 10
+    reveal_timeout = 10
+    assert mediator.is_safe_to_wait(block_number, transfer, reveal_timeout) is True
+
+    # expiration is in 30 blocks, 09 blocks safe for waiting
+    block_number = 20
+    reveal_timeout = 10
+    assert mediator.is_safe_to_wait(block_number, transfer, reveal_timeout) is True
+
+    # expiration is in 30 blocks, 1 block safe for waiting
+    block_number = 29
+    reveal_timeout = 10
+    assert mediator.is_safe_to_wait(block_number, transfer, reveal_timeout) is True
+
+    # at the block 30 it's not safe to wait anymore
+    block_number = 30
+    reveal_timeout = 10
+    assert mediator.is_safe_to_wait(block_number, transfer, reveal_timeout) is False
+
+    block_number = 40
+    reveal_timeout = 10
+    assert mediator.is_safe_to_wait(block_number, transfer, reveal_timeout) is False
+
+    block_number = 50
+    reveal_timeout = 10
+    assert mediator.is_safe_to_wait(block_number, transfer, reveal_timeout) is False
+
+
+def test_is_valid_refund():
+    target = factories.HOP1
+    valid_sender = factories.HOP2
+
+    transfer = LockedTransferState(
+        identifier=20,
+        amount=30,
+        token=factories.UNIT_TOKEN_ADDRESS,
+        target=target,
+        expiration=50,
         hashlock=factories.UNIT_HASHLOCK,
         secret=None,
     )
 
-    return from_route, from_transfer
+    refund_lower_expiration = LockedTransferState(
+        identifier=20,
+        amount=30,
+        token=factories.UNIT_TOKEN_ADDRESS,
+        target=target,
+        expiration=35,
+        hashlock=factories.UNIT_HASHLOCK,
+        secret=None,
+    )
+
+    assert mediator.is_valid_refund(transfer, valid_sender, refund_lower_expiration) is True
+
+    # target cannot refund
+    assert mediator.is_valid_refund(transfer, target, refund_lower_expiration) is False
+
+    refund_same_expiration = LockedTransferState(
+        identifier=20,
+        amount=30,
+        token=factories.UNIT_TOKEN_ADDRESS,
+        target=factories.HOP1,
+        expiration=50,
+        hashlock=factories.UNIT_HASHLOCK,
+        secret=None,
+    )
+    assert mediator.is_valid_refund(transfer, valid_sender, refund_same_expiration) is False
+
+
+def test_get_timeout_blocks():
+    amount = 10
+    address = factories.HOP1
+
+    settle_timeout = 30
+    block_number = 5
+
+    route = factories.make_route(
+        address,
+        amount,
+        settle_timeout=settle_timeout,
+    )
+
+    early_expire = 10
+    early_transfer = make_transfer(amount, address, early_expire)
+    early_block = mediator.get_timeout_blocks(route, early_transfer, block_number)
+    assert early_block == 5 - mediator.TRANSIT_BLOCKS, 'must use the lock expiration'
+
+    equal_expire = 30
+    equal_transfer = make_transfer(amount, address, equal_expire)
+    equal_block = mediator.get_timeout_blocks(route, equal_transfer, block_number)
+    assert equal_block == 25 - mediator.TRANSIT_BLOCKS
+
+    large_expire = 70
+    large_transfer = make_transfer(amount, address, large_expire)
+    large_block = mediator.get_timeout_blocks(route, large_transfer, block_number)
+    assert large_block == 30 - mediator.TRANSIT_BLOCKS, 'must use the settle timeout'
+
+    closed_route = factories.make_route(
+        address,
+        amount,
+        settle_timeout=settle_timeout,
+        close_block=2,
+    )
+
+    large_block = mediator.get_timeout_blocks(closed_route, large_transfer, block_number)
+    assert large_block == 27 - mediator.TRANSIT_BLOCKS, 'must use the close block'
+
+    # the computed timeout may be negative, in which case the calling code must /not/ use it
+    negative_block_number = large_expire
+    negative_block = mediator.get_timeout_blocks(route, large_transfer, negative_block_number)
+    assert negative_block == -mediator.TRANSIT_BLOCKS
+
+
+def test_next_route_amount():
+    """ Routes that dont have enough available_balance must be ignored. """
+    amount = 10
+    reveal_timeout = 30
+    timeout_blocks = reveal_timeout + 10
+    routes = [
+        factories.make_route(
+            factories.HOP2,
+            available_balance=amount * 2,
+            reveal_timeout=reveal_timeout,
+        ),
+        factories.make_route(
+            factories.HOP1,
+            available_balance=amount + 1,
+            reveal_timeout=reveal_timeout,
+        ),
+        factories.make_route(
+            factories.HOP3,
+            available_balance=amount // 2,
+            reveal_timeout=reveal_timeout,
+        ),
+        factories.make_route(
+            factories.HOP4,
+            available_balance=amount,
+            reveal_timeout=reveal_timeout,
+        ),
+    ]
+
+    routes_state = RoutesState(list(routes))  # copy because the list will be modified inplace
+
+    route1 = mediator.next_route(routes_state, timeout_blocks, amount)
+    assert route1 == routes[0]
+    assert routes_state.available_routes == routes[1:]
+    assert routes_state.ignored_routes == list()
+
+    route2 = mediator.next_route(routes_state, timeout_blocks, amount)
+    assert route2 == routes[1]
+    assert routes_state.available_routes == routes[2:]
+    assert routes_state.ignored_routes == list()
+
+    route3 = mediator.next_route(routes_state, timeout_blocks, amount)
+    assert route3 == routes[3]
+    assert routes_state.available_routes == list()
+    assert routes_state.ignored_routes == [routes[2]]
+
+    assert mediator.next_route(routes_state, timeout_blocks, amount) is None
+
+
+def test_next_route_reveal_timeout():
+    """ Routes with a larger reveal timeout than timeout_blocks must be ignored. """
+    amount = 10
+    balance = 20
+    timeout_blocks = 10
+    routes = [
+        factories.make_route(
+            factories.HOP1,
+            available_balance=balance,
+            reveal_timeout=timeout_blocks * 2,
+        ),
+        factories.make_route(
+            factories.HOP2,
+            available_balance=balance,
+            reveal_timeout=timeout_blocks + 1,
+        ),
+        factories.make_route(
+            factories.HOP3,
+            available_balance=balance,
+            reveal_timeout=timeout_blocks // 2,
+        ),
+        factories.make_route(
+            factories.HOP4,
+            available_balance=balance,
+            reveal_timeout=timeout_blocks,
+        ),
+    ]
+
+    routes_state = RoutesState(list(routes))  # copy because the list will be modified inplace
+    route1 = mediator.next_route(routes_state, timeout_blocks, amount)
+    assert route1 == routes[2]
+    assert routes_state.available_routes == [routes[3], ]
+    assert routes_state.ignored_routes == [routes[0], routes[1]]
+
+    assert mediator.next_route(routes_state, timeout_blocks, amount) is None
+    assert routes_state.available_routes == list()
+    assert routes_state.ignored_routes == [routes[0], routes[1], routes[3]]
+
+
+def test_next_transfer_pair():
+    timeout_blocks = 47
+    block_number = 3
+    balance = 10
+
+    payer_route = factories.make_route(factories.HOP1, balance)
+    payer_transfer = make_transfer(balance, factories.ADDR, expiration=50)
+
+    routes = [
+        factories.make_route(factories.HOP2, available_balance=balance),
+    ]
+    routes_state = RoutesState(list(routes))  # copy because the list will be modified inplace
+
+    pair, events = mediator.next_transfer_pair(
+        payer_route,
+        payer_transfer,
+        routes_state,
+        timeout_blocks,
+        block_number,
+    )
+
+    assert pair.payer_route == payer_route
+    assert pair.payer_transfer == payer_transfer
+    assert pair.payee_route == routes[0]
+    assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
+
+    assert isinstance(events[0], SendMediatedTransfer)
+    assert len(routes_state.available_routes) == 0
 
 
 def test_init_mediator():
