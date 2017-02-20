@@ -240,7 +240,7 @@ def test_start_end_attack(tokens_addresses, raiden_chain, deposit, reveal_timeou
     token = tokens_addresses[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
-    # the attacker owns app0 and app2 and creates a transfer throught app1
+    # the attacker owns app0 and app2 and creates a transfer through app1
     identifier = 1
     expiration = reveal_timeout + 5
     secret = pending_mediated_transfer(

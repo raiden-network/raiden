@@ -441,7 +441,8 @@ class ChannelExternalState(object):
                 callback(block_number)
 
     def query_settled(self):
-        # FIXME: the if None: return 0 constraint should be ensured on the proxy side
+        # FIXME: the if None: return 0 constraint should be ensured on the
+        # proxy side; see also #394
         return self.netting_channel.settled() or 0
 
     def query_transferred_amount(self, participant_address):
@@ -658,7 +659,8 @@ class Channel(object):
 
         closed = self.external_state.closed_block != 0
         after_settle_timeout = block_number >= (
-            self.external_state.closed_block + self.settle_timeout)
+            self.external_state.closed_block + self.settle_timeout
+        )
 
         if closed and after_settle_timeout:
             gevent.spawn(_settle)  # don't block the alarm
