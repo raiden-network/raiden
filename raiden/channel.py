@@ -656,9 +656,11 @@ class Channel(object):
             except:
                 log.exception('Timedout while calling settle')
 
-        if (self.external_state.closed_block != 0 and block_number >= (
-                self.external_state.closed_block + self.settle_timeout)):
+        closed = self.external_state.closed_block != 0
+        after_settle_timeout = block_number >= (
+            self.external_state.closed_block + self.settle_timeout)
 
+        if closed and after_settle_timeout:
             gevent.spawn(_settle)  # don't block the alarm
             return REMOVE_CALLBACK
 
