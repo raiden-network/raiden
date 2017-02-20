@@ -665,8 +665,8 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     address0 = privatekey_to_address(privatekey0.private_key)
     address1 = privatekey_to_address(privatekey1.private_key)
     token = app0.raiden.chain.token(channel0.token_address)
-    initial_balance0 = token.balance_of(address0.encode('hex'))
-    initial_balance1 = token.balance_of(address1.encode('hex'))
+    initial_balance0 = token.balance_of(address0)
+    initial_balance1 = token.balance_of(address1)
 
     # Alice sends Bob 10 tokens
     amount_alice1 = 10
@@ -727,8 +727,8 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     # automatically called updateTransfer() to reflect the actual transactions
     assert channel0.external_state.settled_block != 0
     assert channel1.external_state.settled_block != 0
-    assert token.balance_of(channel0.external_state.netting_channel.address.encode('hex')) == 0
+    assert token.balance_of(channel0.external_state.netting_channel.address) == 0
     total_alice = amount_alice1 + amount_alice2
     total_bob = amount_bob1
-    assert token.balance_of(address0.encode('hex')) == initial_balance0 + deposit - total_alice + total_bob
-    assert token.balance_of(address1.encode('hex')) == initial_balance1 + deposit + total_alice - total_bob
+    assert token.balance_of(address0) == initial_balance0 + deposit - total_alice + total_bob
+    assert token.balance_of(address1) == initial_balance1 + deposit + total_alice - total_bob
