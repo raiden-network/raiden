@@ -27,6 +27,7 @@ from raiden.tests.utils.transfer import assert_synched_channels, channel, direct
 from raiden.tests.utils.network import CHAIN
 from raiden.utils import pex, sha3, privatekey_to_address
 from raiden.raiden_service import NoPathError
+from raiden.tests.utils.blockchain import wait_until_block
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 slogging.configure(':DEBUG')
@@ -720,7 +721,6 @@ def test_transfer_to_unknownchannel(raiden_network, private_keys):
 @pytest.mark.parametrize('settle_timeout', [30])
 def test_transfer_from_outdated(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-    tester_state = app0.raiden.chain.tester_state
 
     token_manager0 = app0.raiden.managers_by_token_address.values()[0]
     token_manager1 = app1.raiden.managers_by_token_address.values()[0]
@@ -740,7 +740,6 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         amount,
         target=app1.raiden.address,
     )
-    gevent.sleep(1)
 
     assert_synched_channels(
         channel0, balance0 - amount, [],
@@ -748,11 +747,25 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
     )
 
     app1.raiden.api.close(token_manager0.token_address, app0.raiden.address)
-    tester_state.mine(1)
-    gevent.sleep(.5)
-    tester_state.mine(number_of_blocks=settle_timeout + 1)
-    app0.raiden.api.settle(token_manager0.token_address, app1.raiden.address)
-    gevent.sleep(.5)
+
+    wait_until_block(
+        app1.raiden.chain,
+        app1.raiden.chain.block_number() + 1
+    )
+
+    assert channel0.close_event.wait(timeout=25)
+    assert channel1.close_event.wait(timeout=25)
+
+    assert channel0.external_state.closed_block != 0
+    assert channel1.external_state.closed_block != 0
+
+    wait_until_block(
+        app0.raiden.chain,
+        app0.raiden.chain.block_number() + settle_timeout,
+    )
+
+    assert channel0.settle_event.wait(timeout=25)
+    assert channel1.settle_event.wait(timeout=25)
 
     assert channel0.external_state.settled_block != 0
     assert channel1.external_state.settled_block != 0
