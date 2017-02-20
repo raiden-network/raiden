@@ -229,7 +229,7 @@ def test_start_end_attack(tokens_addresses, raiden_chain, deposit, reveal_timeou
     The attacker needs to use two addresses (A1 and A2) and connect both to the
     hub H, once connected a mediated transfer is initialized from A1 to A2
     through H, once the node A2 receives the mediated transfer the attacker
-    uses the know secret and reveal to close and settles the channel H-A2,
+    uses the known secret and reveal to close and settles the channel H-A2,
     without revealing the secret to H's raiden node.
 
     The intention is to make the hub transfer the token but for him to be
