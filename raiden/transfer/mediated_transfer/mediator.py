@@ -55,6 +55,7 @@ STATE_TRANSFER_PAYED = (
     'payer_contract_withdraw',
     'payer_balance_proof',
 )
+# TODO: fix expired state, it is not final
 STATE_TRANSFER_FINAL = (
     'payee_contract_withdraw',
     'payee_balance_proof',
@@ -173,8 +174,10 @@ def clear_if_finalized(iteration):
     """ Clear the state if all transfer pairs have finalized. """
     state = iteration.new_state
 
+    # TODO: clear the expired transfer, this needs will need synchronization
+    # messages
     all_finalized = all(
-        pair.payee_state in STATE_TRANSFER_FINAL and pair.payer_state in STATE_TRANSFER_FINAL
+        pair.payee_state in STATE_TRANSFER_PAYED and pair.payer_state in STATE_TRANSFER_PAYED
         for pair in state.transfers_pair
     )
 
@@ -368,18 +371,21 @@ def events_for_revealsecret(transfers_pair, our_address):
 
         A-N-B...B-N-C..C-N-D
 
-    Under normal operation this will first learn the secret from D, then
-    reveal to C, wait for C to tell us that it knows the secret then reveal
-    it to B, and again wait for B before revealing the secret to A.
+    Under normal operation N will first learn the secret from D, then reveal to
+    C, wait for C to inform the secret is known before revealing it to B, and
+    again wait for B before revealing the secret to A.
 
     If B somehow sent a reveal secret before C and D, then the secret will be
     revealed to A, but not C and D, meaning the secret won't be propagate
-    forward.
+    forward. Even if D sent a reveal secret at about the same time, the secret
+    will only be revealed to B upon confirmation from C.
 
-    If B and D sent a reveal secret at about the same time, the secret will
-    only be revealed to B upon confirmation from C. B should not have learnt
-    the secret before time but since it knows it may withdraw on-chain, so N
-    needs to proceed with the protol backwards to stay even.
+    Even though B somehow learnt the secret out-of-order N is safe to proceed
+    with the protocol, the TRANSIT_BLOCKS configuration adds enough time for
+    the reveal secrets to propagate backwards and for B to send the balance
+    proof. If the proof doesn't arrive in time and the lock's expiration is at
+    risk, N won't lose tokens since it knows the secret can go on-chain at any
+    time.
     """
     events = list()
     for pair in reversed(transfers_pair):
@@ -399,17 +405,24 @@ def events_for_revealsecret(transfers_pair, our_address):
     return events
 
 
-def events_for_balanceproof(state):
+def events_for_balanceproof(transfers_pair, block_number):
     """ Send the balance proof to nodes that know the secret. """
 
     events = list()
-    for pair in reversed(state.transfers_pair):
-        payee_knows_secret = pair.payee_transfer.state in STATE_SECRET_KNOWN
-        payee_payed = pair.payee_transfer.state in STATE_TRANSFER_PAYED
-        lock_valid = is_lock_valid(state.block_number, pair.payee_transfer)
+    for pair in reversed(transfers_pair):
+        payee_knows_secret = pair.payee_state in STATE_SECRET_KNOWN
+        payee_payed = pair.payee_state in STATE_TRANSFER_PAYED
+        payee_channel_open = pair.payee_route.state == 'available'
 
-        if payee_knows_secret and not payee_payed and lock_valid:
-            pair.payee_transfer.state = 'payee_balance_proof'
+        # XXX: All nodes must close the channel and withdraw on-chain if the
+        # lock is nearing it's expiration block, what should be the strategy
+        # for sending a balance proof to a node that knowns the secret but has
+        # not gone on-chain while near the expiration? (The problem is how to
+        # define the unsafe region, since that is a local configuration)
+        lock_valid = is_lock_valid(block_number, pair.payee_transfer)
+
+        if payee_channel_open and payee_knows_secret and not payee_payed and lock_valid:
+            pair.payee_state = 'payee_balance_proof'
             balance_proof = SendBalanceProof(
                 pair.payee_transfer.identifier,
                 pair.payee_route.node_address,
@@ -448,7 +461,8 @@ def secret_learned(state, secret, payee_address, new_payee_state):
     # send the balance proof to payee that knows the secret but is not payed
     # yet
     balance_proof = events_for_balanceproof(
-        state
+        state.transfers_pair,
+        state.block_number,
     )
 
     iteration = Iteration(
@@ -676,7 +690,23 @@ def handle_balanceproof(state, state_change):
 
 def handle_routechange(state, state_change):
     """ Hande a ActionRouteChange state change. """
-    update_route(state, state_change)
+    # TODO: `update_route` only changes the RoutesState, instead of moving the
+    # routes to the MediationPairState use identifier to reference the routes
+    new_route = state_change.route
+    used = False
+
+    for pair in state.transfers_pair:
+        if pair.payee_route.node_address == new_route.node_address:
+            pair.payee_route = new_route
+            used = True
+
+        if pair.payer_route.node_address == new_route.node_address:
+            pair.payer_route = new_route
+            used = True
+
+    if not used:
+        update_route(state, state_change)
+
     iteration = Iteration(state, list())
     return iteration
 

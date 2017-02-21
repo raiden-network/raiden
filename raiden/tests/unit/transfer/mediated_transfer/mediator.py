@@ -92,6 +92,8 @@ def make_transfer_pairs(hops,
     for payer, payee in zip(hops[:-1], hops[1:]):
         assert expiration > 0
 
+        # regardless of the secret being known, the payee_state and payer_state
+        # need to be in their initial state.
         pair = MediationPairState(
             factories.make_route(payer, amount),
             make_transfer(amount, target, expiration, secret=secret),
@@ -571,6 +573,159 @@ def test_events_for_revealsecret_all_states():
 
         assert events[0].secret == secret
         assert events[0].target == factories.HOP1
+
+
+def test_events_for_balancaproof():
+    """ Test the simple case were the last hop has learned the secret and sent
+    to the mediator node.
+    """
+    transfer_pairs = make_transfer_pairs(
+        [factories.HOP1, factories.HOP2],
+        factories.HOP6,
+        amount=10,
+        secret=factories.UNIT_SECRET,
+    )
+
+    last_pair = transfer_pairs[-1]
+    last_pair.payee_state = 'payee_secret_revealed'
+
+    # the lock has not expired yet
+    block_number = last_pair.payee_transfer.expiration
+
+    events = mediator.events_for_balanceproof(
+        transfer_pairs,
+        block_number,
+    )
+
+    assert len(events) == 1
+    assert events[0].target == last_pair.payee_route.node_address
+
+
+def test_events_for_balanceproof_channel_closed():
+    """ Balance proofs are useless if the channel is closed/settled, the payee
+    needs to go on-chain and use the latest known balance proof which includes
+    this lock in the locksroot.
+    """
+
+    for invalid_state in ('closed', 'settled'):
+        transfer_pairs = make_transfer_pairs(
+            [factories.HOP1, factories.HOP2],
+            factories.HOP6,
+            amount=10,
+            secret=factories.UNIT_SECRET,
+        )
+
+        block_number = 5
+        last_pair = transfer_pairs[-1]
+        last_pair.payee_route.state = invalid_state
+        last_pair.payee_route.close_block = block_number
+        last_pair.payee_state = 'payee_secret_revealed'
+
+        events = mediator.events_for_balanceproof(
+            transfer_pairs,
+            block_number,
+        )
+
+        assert len(events) == 0
+
+
+def test_events_for_balanceproof_middle_secret():
+    """ Even though the secret should only propagate from the end of the chain
+    to the front, if there is a payee node in the middle that knows the secret
+    the Balance Proof is sent neverthless.
+
+    This can be done safely because the secret is know to the mediator and
+    there is reveal_timeout blocks to withdraw the lock on-chain with the payer.
+    """
+    transfer_pairs = make_transfer_pairs(
+        [factories.HOP1, factories.HOP2, factories.HOP3, factories.HOP4],
+        factories.HOP6,
+        amount=10,
+        secret=factories.UNIT_SECRET,
+    )
+
+    block_number = 1
+    middle_pair = transfer_pairs[1]
+    middle_pair.payee_state = 'payee_secret_revealed'
+
+    events = mediator.events_for_balanceproof(
+        transfer_pairs,
+        block_number,
+    )
+
+    assert len(events) == 1
+    assert events[0].target == middle_pair.payee_route.node_address
+
+
+def test_events_for_balanceproof_secret_unknow():
+    """ Nothing to do if the secret is not known. """
+    block_number = 1
+
+    transfer_pairs = make_transfer_pairs(
+        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP6,
+        amount=10,
+    )
+
+    # the secret is not known, so no event should be used
+    events = mediator.events_for_balanceproof(
+        transfer_pairs,
+        block_number,
+    )
+    assert len(events) == 0
+
+    transfer_pairs = make_transfer_pairs(
+        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP6,
+        amount=10,
+        secret=factories.UNIT_SECRET,
+    )
+
+    # Even though the secret is set, there is not a single transfer pair with a
+    # 'secret known' state, so nothing should be done. This state is impossible
+    # to reach, in reality someone needs to reveal the secret to the mediator,
+    # so at least one other node knows the secret.
+    events = mediator.events_for_balanceproof(
+        transfer_pairs,
+        block_number,
+    )
+    assert len(events) == 0
+
+
+def test_events_for_balanceproof_lock_expired():
+    """ The balance proof should not be sent if the lock has expird. """
+    transfer_pairs = make_transfer_pairs(
+        [factories.HOP1, factories.HOP2, factories.HOP3, factories.HOP4],
+        factories.HOP6,
+        amount=10,
+        secret=factories.UNIT_SECRET,
+    )
+
+    last_pair = transfer_pairs[-1]
+    last_pair.payee_state = 'payee_secret_revealed'
+    block_number = last_pair.payee_transfer.expiration + 1
+
+    # the lock has expired, do not send a balance proof
+    events = mediator.events_for_balanceproof(
+        transfer_pairs,
+        block_number,
+    )
+    assert len(events) == 0
+
+    middle_pair = transfer_pairs[-2]
+    middle_pair.payee_state = 'payee_secret_revealed'
+
+    # Even though the last node did not receive the payment we should send the
+    # balance proof to the middle node to avoid unnecessarely closing the
+    # middle channel. This state should not be reached under normal operation,
+    # the last hop needs to choose a proper reveal_timeout and must go on-chain
+    # to withdraw the asset before the lock expires.
+    events = mediator.events_for_balanceproof(
+        transfer_pairs,
+        block_number,
+    )
+    assert len(events) == 1
+    assert events[0].target == middle_pair.payee_route.node_address
 
 
 def test_init_mediator():

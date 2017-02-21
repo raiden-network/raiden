@@ -44,7 +44,7 @@ class State(object):
       objects as immutable.
     - This class is used as a marker for states.
     """
-    pass
+    __slots__ = ()
 
 
 class StateChange(object):
@@ -64,7 +64,7 @@ class StateChange(object):
     - These objects don't have logic by design.
     - This class is used as a marker for state changes.
     """
-    pass
+    __slots__ = ()
 
 
 class Event(object):
@@ -81,13 +81,17 @@ class Event(object):
     - Separate events are preferred because there is a decoupling of what the
       upper layer will use the events for.
     """
-    pass
+    __slots__ = ()
 
 
 class StateManager(object):
     """ The mutable storage for the application state, this storage can do
     state transitions by applying the StateChanges to the current State.
     """
+    __slots__ = (
+        'state_transition',
+        'current_state',
+    )
 
     def __init__(self, state_transition, current_state):
         """ Initialize the state manager.
