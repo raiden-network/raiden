@@ -151,7 +151,7 @@ Possible Responses
 
 
 
-Querying all traded Assets
+Querying all traded Tokens
 --------------------------
 
 By making a ``GET`` request to ``/api/<version>/tokens`` you can get a list of addresses of all
