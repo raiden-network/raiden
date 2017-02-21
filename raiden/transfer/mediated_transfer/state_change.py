@@ -135,11 +135,20 @@ class ReceiveBalanceProof(StateChange):
 
 
 class ContractReceiveWithdraw(StateChange):
-    """ Our partner withdrawned the lock throught the blockchain.
+    """ A lock was withdrawned throught the blockchain.
 
     Used when a hash time lock was withdrawn and a log ChannelSecretRevealed is
     emited by the netting channel.
+
+    Note:
+        For this state change the contract caller is not important but only the
+        receiving address. `receiver` is the address to which the lock's token
+        was transferred, this may be either of the channel participants.
+
+        If the channel was used for a mediated transfer that was refunded, this
+        event must be used twice, once for each receiver.
     """
-    def __init__(self, secret, channel_address):
+    def __init__(self, secret, receiver, channel_address):
         self.secret = secret
+        self.receiver = receiver
         self.channel_address = channel_address

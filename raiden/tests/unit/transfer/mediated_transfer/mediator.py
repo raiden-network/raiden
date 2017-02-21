@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=invalid-name
+# pylint: disable=invalid-name,too-many-locals,too-many-arguments
 from __future__ import division
 
 from raiden.transfer.architecture import StateManager
@@ -8,8 +8,9 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.mediated_transfer import mediator
 from raiden.transfer.mediated_transfer.state import (
-    MediatorState,
     LockedTransferState,
+    MediationPairState,
+    MediatorState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
@@ -40,8 +41,12 @@ def make_init_statechange(from_transfer,
 def make_transfer(amount,
                   target,
                   expiration,
-                  identifier=1,
-                  hashlock=factories.UNIT_HASHLOCK):
+                  secret=None,
+                  hashlock=factories.UNIT_HASHLOCK,
+                  identifier=1):
+
+    if secret is not None:
+        assert factories.sha3(secret) == hashlock
 
     transfer = LockedTransferState(
         identifier,
@@ -50,7 +55,7 @@ def make_transfer(amount,
         target,
         expiration,
         hashlock=hashlock,
-        secret=None,
+        secret=secret,
     )
     return transfer
 
@@ -61,15 +66,43 @@ def make_from(amount, target, from_expiration):
         available_balance=amount,
     )
 
-    identifier = 0
     from_transfer = make_transfer(
         amount,
         target,
         from_expiration,
-        identifier=identifier,
+        identifier=0,
     )
 
     return from_route, from_transfer
+
+
+def make_transfer_pairs(hops,
+                        target,
+                        amount,
+                        secret=None,
+                        initial_expiration=None,
+                        reveal_timeout=factories.UNIT_REVEAL_TIMEOUT):
+
+    if initial_expiration is None:
+        initial_expiration = (1 + len(hops)) * reveal_timeout
+
+    expiration = initial_expiration
+    transfers_pair = list()
+
+    for payer, payee in zip(hops[:-1], hops[1:]):
+        assert expiration > 0
+
+        pair = MediationPairState(
+            factories.make_route(payer, amount),
+            make_transfer(amount, target, expiration, secret=secret),
+            factories.make_route(payee, amount),
+            make_transfer(amount, target, expiration, secret=secret),
+        )
+        transfers_pair.append(pair)
+
+        expiration -= reveal_timeout
+
+    return transfers_pair
 
 
 def test_is_lock_valid():
@@ -320,6 +353,224 @@ def test_next_transfer_pair():
 
     assert isinstance(events[0], SendMediatedTransfer)
     assert len(routes_state.available_routes) == 0
+
+
+def test_set_secret():
+    amount = 10
+    block_number = 7
+    routes = []
+    routes_state = RoutesState(routes)
+
+    state = MediatorState(
+        factories.ADDR,
+        routes_state,
+        block_number,
+        factories.UNIT_HASHLOCK,
+    )
+
+    state.transfers_pair = make_transfer_pairs(
+        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP6,
+        amount,
+    )
+
+    mediator.set_secret(state, factories.UNIT_SECRET)
+    assert state.secret == factories.UNIT_SECRET
+
+    for pair in state.transfers_pair:
+        assert pair.payer_transfer.secret == factories.UNIT_SECRET
+        assert pair.payee_transfer.secret == factories.UNIT_SECRET
+
+
+def test_set_payee():
+    transfers_pair = make_transfer_pairs(
+        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP6,
+        amount=10,
+    )
+
+    # assert pre conditions
+    assert transfers_pair[0].payer_state == 'payer_pending'
+    assert transfers_pair[0].payee_state == 'payee_pending'
+
+    assert transfers_pair[1].payer_state == 'payer_pending'
+    assert transfers_pair[1].payee_state == 'payee_pending'
+
+    mediator.set_payee_state_and_check_reveal_order(
+        transfers_pair,
+        factories.HOP1,
+        'payee_secret_revealed',
+    )
+
+    # payer address was used, no payee state should change
+    assert transfers_pair[0].payer_state == 'payer_pending'
+    assert transfers_pair[0].payee_state == 'payee_pending'
+
+    assert transfers_pair[1].payer_state == 'payer_pending'
+    assert transfers_pair[1].payee_state == 'payee_pending'
+
+    mediator.set_payee_state_and_check_reveal_order(
+        transfers_pair,
+        factories.HOP2,
+        'payee_secret_revealed',
+    )
+
+    # only the transfer where the address is a payee should change
+    assert transfers_pair[0].payer_state == 'payer_pending'
+    assert transfers_pair[0].payee_state == 'payee_secret_revealed'
+
+    assert transfers_pair[1].payer_state == 'payer_pending'
+    assert transfers_pair[1].payee_state == 'payee_pending'
+
+
+def test_events_for_refund():
+    amount = 10
+    expiration = 30
+    reveal_timeout = 17
+    timeout_blocks = expiration
+    block_number = 1
+
+    refund_route = factories.make_route(
+        factories.HOP1,
+        amount,
+        reveal_timeout=reveal_timeout,
+    )
+
+    refund_transfer = make_transfer(
+        amount,
+        factories.HOP6,
+        expiration,
+    )
+
+    small_timeout_blocks = reveal_timeout
+    small_refund_events = mediator.events_for_refund_transfer(
+        refund_route,
+        refund_transfer,
+        small_timeout_blocks,
+        block_number,
+    )
+    assert len(small_refund_events) == 0
+
+    refund_events = mediator.events_for_refund_transfer(
+        refund_route,
+        refund_transfer,
+        timeout_blocks,
+        block_number,
+    )
+    assert refund_events[0].expiration < block_number + timeout_blocks
+    assert refund_events[0].amount == amount
+    assert refund_events[0].hashlock == refund_transfer.hashlock
+    assert refund_events[0].node_address == refund_route.node_address
+
+
+def test_events_for_revealsecret():
+    """ The secret is revealed backwards to the payer once the payee sent the
+    SecretReveal.
+    """
+    secret = factories.UNIT_SECRET
+    our_address = factories.ADDR
+
+    transfer_pairs = make_transfer_pairs(
+        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP6,
+        amount=10,
+        secret=secret,
+    )
+
+    events = mediator.events_for_revealsecret(
+        transfer_pairs,
+        our_address,
+    )
+
+    # the secret is known by this node, but no other payee is at a secret known
+    # state, do nothing
+    assert len(events) == 0
+
+    first_pair = transfer_pairs[0]
+    last_pair = transfer_pairs[1]
+
+    last_pair.payee_state = 'payee_secret_revealed'
+    events = mediator.events_for_revealsecret(
+        transfer_pairs,
+        our_address,
+    )
+
+    # the last known hop sent a secret reveal message, this node learned the
+    # secret and now must reveal to the payer node from the transfer pair
+    assert len(events) == 1
+    assert events[0].secret == secret
+    assert events[0].target == last_pair.payer_route.node_address
+    assert last_pair.payer_state == 'payer_secret_revealed'
+
+    events = mediator.events_for_revealsecret(
+        transfer_pairs,
+        our_address,
+    )
+
+    # the payeee from the first_pair did not send a secret reveal message, do
+    # nothing
+    assert len(events) == 0
+
+    first_pair.payee_state = 'payee_secret_revealed'
+    events = mediator.events_for_revealsecret(
+        transfer_pairs,
+        our_address,
+    )
+
+    assert len(events) == 1
+    assert events[0].secret == secret
+    assert events[0].target == first_pair.payer_route.node_address
+    assert first_pair.payer_state == 'payer_secret_revealed'
+
+
+def test_events_for_revealsecret_secret_unknown():
+    """ When the secret is not know there is nothing to do. """
+    transfer_pairs = make_transfer_pairs(
+        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP6,
+        amount=10,
+    )
+
+    events = mediator.events_for_revealsecret(
+        transfer_pairs,
+        factories.ADDR,
+    )
+
+    assert len(events) == 0
+
+
+def test_events_for_revealsecret_all_states():
+    """ The secret must be revealed backwards to the payer if the payee knows
+    the secret.
+    """
+    secret = factories.UNIT_SECRET
+    our_address = factories.ADDR
+
+    payee_secret_known = (
+        'payee_secret_revealed',
+        'payee_refund_withdraw',
+        'payee_contract_withdraw',
+        'payee_balance_proof',
+    )
+
+    for state in payee_secret_known:
+        transfer_pairs = make_transfer_pairs(
+            [factories.HOP1, factories.HOP2],
+            factories.HOP6,
+            amount=10,
+            secret=secret,
+        )
+
+        pair = transfer_pairs[0]
+        pair.payee_state = state
+
+        events = mediator.events_for_revealsecret(
+            transfer_pairs,
+            our_address,
+        )
+
+        assert events[0].secret == secret
+        assert events[0].target == factories.HOP1
 
 
 def test_init_mediator():
