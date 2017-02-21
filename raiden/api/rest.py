@@ -59,7 +59,7 @@ class APIServer(object):
         self.flask_api_middleware = Api(app)
 
         self._register_type_converters()
-        # self._add_default_resources()
+        self._add_default_resources()
 
     def _add_default_resources(self):
         for klass in self._default_resource_classes:
@@ -81,7 +81,7 @@ class APIServer(object):
 
         self.flask_api_middleware.add_resource(
             resource_cls,
-            resource_cls._route
+            "/api/{}/{}".format(self.rest_api.version, resource_cls._route)
         )
 
     def run(self, port, debug=False):
@@ -94,6 +94,7 @@ class RestAPI(object):
     It will provide the additional, neccessary RESTful logic and
     the proper JSON-encoding of the Objects provided by the RaidenAPI
     """
+    version = 1
 
     def __init__(self, raiden_api):
         self.raiden_api = raiden_api

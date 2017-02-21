@@ -1,8 +1,7 @@
-from webargs import fields, validate
-from webargs.flaskparser import use_kwargs, use_args
+from webargs.flaskparser import use_kwargs
 from flask_restful import Resource
 
-from raiden.api.encoding import AddressField, ChannelSchema, ChannelRequestSchema
+from raiden.api.encoding import AddressField, ChannelRequestSchema
 
 
 class BaseResource(Resource):
@@ -13,14 +12,13 @@ class BaseResource(Resource):
 class ChannelsResource(BaseResource):
 
     # define the route of the resource here:
-    _route = '/api/channels'
+    _route = 'channels'
 
     # has to be set externally via dependency injection
     rest_api = None
     put_schema = ChannelRequestSchema(
         exclude=('channel_address', 'status'),
     )
-
 
     delete_schema = dict(
 
@@ -52,23 +50,20 @@ class ChannelsResource(BaseResource):
         return self.rest_api.deposit(**kwargs)
 
 
-class ChannelsResourceByAsset(ChannelsResource):
-    _route = '/api/assets/<hexaddress:asset_address>/channels'
-    rest_api = None
-
 class ChannelsResourceByChannelAddress(Resource):
-    _route = '/api/channels/<hexaddress:channel_address>'
+    _route = 'channels/<hexaddress:channel_address>'
     rest_api = None
 
     patch_schema = ChannelRequestSchema(
-        exclude=('channel_address', 'asset_address', 'partner_address'),
+        exclude=('channel_address', 'token_address', 'partner_address'),
     )
 
     @use_kwargs(patch_schema)
     def patch(self, **kwargs):
         # the channel_address kwarg is automatically included in the kwargs,
-        # because there is a argument placeholder in the route!
+        # because there is an argument placeholder in the route!
         return self.rest_api.patch_channel(**kwargs)
+
 
 class ChannelsByPartner(BaseResource):
     """
@@ -79,7 +74,10 @@ class ChannelsByPartner(BaseResource):
 
     @use_kwargs({'asset_address': AddressField()})
     def get(self, partner_address, args):
-        channel_list = self.rest_api.get_channel_list(asset_address=None, partner_address=partner_address)
+        channel_list = self.rest_api.get_channel_list(
+            asset_address=None,
+            partner_address=partner_address
+        )
 
         return channel_list
 
