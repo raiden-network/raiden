@@ -39,10 +39,12 @@ TRANSIT_BLOCKS = 2  # TODO: make this a configuration variable
 
 STATE_SECRET_KNOWN = (
     'payee_secret_revealed',
+    'payee_refund_withdraw',
     'payee_contract_withdraw',
     'payee_balance_proof',
 
     'payer_secret_revealed',
+    'payer_waiting_withdraw',
     'payer_contract_withdraw',
     'payer_balance_proof',
 )
@@ -142,6 +144,29 @@ def get_timeout_blocks(payer_route, payer_transfer, block_number):
     timeout_blocks = safe_payer_timeout - TRANSIT_BLOCKS
 
     return timeout_blocks
+
+
+def sanity_check(state):
+    """ Check invariants that must hold. """
+
+    # bellow "transitivity" for these values is checked
+    if state.transfers_pair:
+        first_pair = state.transfers_pair[0]
+        assert state.hashlock == first_pair.payer_transfer.hashlock
+        if state.secret is not None:
+            assert first_pair.payer_transfer.secret == state.secret
+
+    for pair in state.transfers_pair:
+        assert pair.payer_transfer.almost_equal(pair.payee_transfer)
+        assert pair.payer_transfer.expiration > pair.payee_transfer.expiration
+
+        assert pair.payer_state in pair.valid_payer_states
+        assert pair.payee_state in pair.valid_payee_states
+
+    for original, refund in zip(state.transfers_pair[:-1], state.transfers_pair[1:]):
+        assert original.payee_transfer.almost_equal(refund.payer_transfer)
+        assert original.payee_route.node_address == refund.payer_route.node_address
+        assert original.payee_transfer.expiration > refund.payer_transfer.expiration
 
 
 def clear_if_finalized(iteration):
@@ -335,7 +360,7 @@ def events_for_refund_transfer(refund_route, refund_transfer, timeout_blocks, bl
     return list()
 
 
-def events_for_revealsecret(state):
+def events_for_revealsecret(transfers_pair, our_address):
     """ Reveal the secret backwards.
 
     This node is named N, suppose there is a mediated transfer with two
@@ -356,19 +381,18 @@ def events_for_revealsecret(state):
     the secret before time but since it knows it may withdraw on-chain, so N
     needs to proceed with the protol backwards to stay even.
     """
-
     events = list()
-    for pair in reversed(state.transfers_pair):
-        payee_secret = pair.payee_transfer.state in STATE_SECRET_KNOWN
-        payer_secret = pair.payer_transfer.state in STATE_SECRET_KNOWN
+    for pair in reversed(transfers_pair):
+        payee_secret = pair.payee_state in STATE_SECRET_KNOWN
+        payer_secret = pair.payer_state in STATE_SECRET_KNOWN
 
         if payee_secret and not payer_secret:
-            pair.payer_transfer.state = 'payer_secret_revealed'
+            pair.payer_state = 'payer_secret_revealed'
             reveal_secret = SendRevealSecret(
                 pair.payer_transfer.identifier,
                 pair.payer_transfer.secret,
                 pair.payer_route.node_address,
-                state.our_address,
+                our_address,
             )
             events.append(reveal_secret)
 
@@ -417,7 +441,8 @@ def secret_learned(state, secret, payee_address, new_payee_state):
 
     # reveal the secret backwards
     secret_reveal = events_for_revealsecret(
-        state
+        state.transfer_pair,
+        state.our_address,
     )
 
     # send the balance proof to payee that knows the secret but is not payed
@@ -601,17 +626,39 @@ def handle_contractwithdraw(state, state_change):
     """ Handle a NettingChannelUnlock state change. """
     assert sha3(state.secret) == state.hashlock, 'secret must be validated by the smart contract'
 
-    for pair in state.transfers_pair:
-        if pair.payer_route.channel_address == state_change.channel_address:
-            pair.payer_state = 'payer_contract_withdraw'
-            break
+    # For all but the last pair in transfer pair a refund transfer ocurred,
+    # meaning the same channel was used twice, once when this node sent the
+    # mediated transfer and once when the refund transfer was received. A
+    # ContractReceiveWithdraw state change may be used for each.
+
+    # This node withdrew the refund
+    if state_change.receiver == state.our_address:
+        for previous_pos, pair in enumerate(state.transfers_pair, -1):
+            if pair.payer_route.channel_address == state_change.channel_address:
+                # always set the contract_withdraw regardless of the previous
+                # state (even expired)
+                pair.payer_state = 'payer_contract_withdraw'
+
+                # if the current pair is backed by a refund set the sent
+                # mediated transfer to a 'secret know' state
+                if previous_pos > -1:
+                    previous_pair = state.transfers_pair[previous_pos]
+
+                    if previous_pair.payee_state not in STATE_TRANSFER_FINAL:
+                        previous_pair.payee_state = 'payee_refund_withdraw'
+
+    # A partner withdrew the mediated transfer
     else:
-        iteration = secret_learned(
-            state,
-            state_change.secret,
-            state_change.sender,
-            'payee_contract_withdraw',
-        )
+        for pair in state.transfers_pair:
+            if pair.payer_route.channel_address == state_change.channel_address:
+                pair.payee_state = 'payee_contract_withdraw'
+
+    iteration = secret_learned(
+        state,
+        state_change.secret,
+        state_change.receiver,
+        'payee_contract_withdraw',
+    )
 
     return iteration
 
@@ -687,5 +734,8 @@ def state_transition(state, state_change):
 
         elif isinstance(state_change, ContractReceiveWithdraw):
             iteration = handle_contractwithdraw(state, state_change)
+
+    # this is the place for paranoia
+    sanity_check(iteration.new_state)
 
     return clear_if_finalized(iteration)

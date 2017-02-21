@@ -45,10 +45,10 @@ class MediatorState(State):
         self.our_address = our_address
         self.routes = routes
         self.block_number = block_number
-        self.hashlock = hashlock  # for convenience
 
+        # for convenience
+        self.hashlock = hashlock
         self.secret = None
-        self.route = None  #: current route being used
 
         # keeping all transfers in a single list byzantine behavior for secret
         # reveal and simplifies secret setting
@@ -112,16 +112,24 @@ class LockedTransferState(State):
             self.hashlock,
         )
 
-    def __eq__(self, other):
+    def almost_equal(self, other):
+        """ True if both transfers are for the same mediated transfer. """
         if isinstance(other, LockedTransferState):
+            # the only value that may change for each hop is the expiration
             return (
                 self.identifier == other.identifier and
                 self.amount == other.amount and
                 self.token == other.token and
                 self.target == other.target and
-                self.expiration == other.expiration and
                 self.hashlock == other.hashlock and
                 self.secret == other.secret
+            )
+
+    def __eq__(self, other):
+        if isinstance(other, LockedTransferState):
+            return (
+                self.almost_equal(other) and
+                self.expiration == other.expiration
             )
 
         return False
@@ -133,19 +141,49 @@ class MediationPairState(State):
     A mediator will pay payee node knowing that there is a payer node to cover
     the token expenses. This state keeps track of the routes and transfer for
     the payer and payee, and the current state of the payment.
+
+    Note:
+        Payee is keeping track of the transfer the mediator is paying while the
+        payer receveving transfer.
     """
 
+    # payee_pending:
+    #   Initial state.
+    #
+    # payee_secret_revealed:
+    #   The payee is following the raiden protocol and has sent a SecretReveal.
+    #
+    # payee_refund_withdraw:
+    #   The corresponding refund transfer was withdrawn on-chain, the payee has
+    #   /not/ withdrawn the lock yet, it only learned the secret through the
+    #   blockchain.
+    #   Note: This state is reachable only if there is a refund transfer, that
+    #   is represented by a different MediationPairState, and the refund
+    #   transfer is at 'payer_contract_withdraw'.
+    #
+    # payee_contract_withdraw:
+    #   The payee received the token on-chain. A transition to this state is
+    #   valid from all but the `payee_expired` state.
+    #
+    # payee_balance_proof:
+    #   This node has sent a SendBalanceProof to the payee with the balance
+    #   updated.
+    #
+    # payee_expired:
+    #   The lock has expired.
     valid_payee_states = (
         'payee_pending',
-        'payee_secret_revealed',  # reached on a ReceiveSecretReveal
-        'payee_contract_withdraw',  # reached when the /partner/ node unlocks
-        'payee_balance_proof',  # reached when this node sends SendBalanceProof
+        'payee_secret_revealed',
+        'payee_refund_withdraw',
+        'payee_contract_withdraw',
+        'payee_balance_proof',
         'payee_expired',
     )
 
     valid_payer_states = (
         'payer_pending',
         'payer_secret_revealed',  # reached on a SendRevealSecret
+        'payer_contract_revealed',  # reached when the partner unlocked on-chain
         'payer_waiting_withdraw',  # reached when unlock is called
         'payer_contract_withdraw',  # this state is reached the unlock from /this/ node completes
         'payer_balance_proof',  # reached on a ReceiveBalanceProof
@@ -169,8 +207,11 @@ class MediationPairState(State):
         """
         self.payer_route = payer_route
         self.payer_transfer = payer_transfer
-        self.payer_state = 'payer_pending'
 
         self.payee_route = payee_route
         self.payee_transfer = payee_transfer
+
+        # this transfers are settled on different payment channels, these are
+        # the state this mediated transfre in respect to each channel.
+        self.payer_state = 'payer_pending'
         self.payee_state = 'payee_pending'
