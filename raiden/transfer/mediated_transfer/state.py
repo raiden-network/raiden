@@ -13,12 +13,25 @@ class InitiatorState(State):
         block_number (int): Latest known block number.
         random_generator (generator): A generator that yields valid secrets.
     """
+    __slots__ = (
+        'our_address',
+        'transfer',
+        'routes',
+        'random_generator',
+        'block_number',
+        'message',
+        'route',
+        'secretrequest',
+        'revealsecret',
+        'canceled_transfers',
+    )
+
     def __init__(self, our_address, transfer, routes, block_number, random_generator):
         self.our_address = our_address
         self.transfer = transfer
         self.routes = routes
-        self.random_generator = random_generator
         self.block_number = block_number
+        self.random_generator = random_generator
 
         self.message = None  #: current message in-transit
         self.route = None  #: current route being used
@@ -36,6 +49,15 @@ class MediatorState(State):
         block_number (int): Latest known block number.
         hashlock (bin): The hashlock used for this transfer.
     """
+    __slots__ = (
+        'our_address',
+        'routes',
+        'block_number',
+        'hashlock',
+        'secret',
+        'transfers_pair',
+    )
+
     def __init__(self,
                  our_address,
                  routes,
@@ -57,6 +79,14 @@ class MediatorState(State):
 
 class TargetState(State):
     """ State of mediated transfer target.  """
+    __slots__ = (
+        'our_address',
+        'from_route',
+        'from_transfer',
+        'hashlock',
+        'block_number',
+    )
+
     def __init__(self,
                  our_address,
                  from_route,
@@ -85,6 +115,16 @@ class LockedTransferState(State):
         hashlock (bin): The hashlock.
         secret (bin): The secret that unlocks the lock, may be None.
     """
+    __slots__ = (
+        'identifier',
+        'amount',
+        'token',
+        'target',
+        'expiration',
+        'hashlock',
+        'secret',
+    )
+
     def __init__(self,
                  identifier,
                  amount,
@@ -146,6 +186,15 @@ class MediationPairState(State):
         Payee is keeping track of the transfer the mediator is paying while the
         payer receveving transfer.
     """
+    __slots__ = (
+        'payee_route',
+        'payee_transfer',
+        'payee_state',
+
+        'payer_route',
+        'payer_transfer',
+        'payer_state',
+    )
 
     # payee_pending:
     #   Initial state.

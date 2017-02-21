@@ -7,7 +7,7 @@ def update_route(next_state, route_state_change):
     available_idx = None
     available_routes = list(next_state.routes.available_routes)
     for available_idx, old_route in enumerate(available_routes):
-        if new_route.next_hop == old_route.next_hop:
+        if new_route.node_address == old_route.node_address:
             break
 
     # TODO: what if the route that changed is the current route?
@@ -23,12 +23,12 @@ def update_route(next_state, route_state_change):
         else:
             # TODO: re-add the new_route into the available_routes list if it can be used.
             ignored = any(
-                route.next_hop == route.next_hop
+                route.node_address == new_route.node_address
                 for route in next_state.routes.ignored_routes
             )
 
             canceled = any(
-                route.next_hop == route.next_hop
+                route.node_address == new_route.node_address
                 for route in next_state.routes.canceled_routes
             )
 

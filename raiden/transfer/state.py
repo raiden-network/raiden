@@ -20,6 +20,15 @@ class RouteState(State):
         close_block (Nullable[int]): None if the channel is open, otherwise
             the block number at which the channel was closed.
     """
+    __slots__ = (
+        'state',
+        'node_address',
+        'channel_address',
+        'available_balance',
+        'settle_timeout',
+        'reveal_timeout',
+        'close_block',
+    )
 
     valid_states = (
         'available',
@@ -77,6 +86,13 @@ class RoutesState(State):
     Args:
         available_routes (list): A list of RouteState instances.
     """
+    __slots__ = (
+        'available_routes',
+        'ignored_routes',
+        'refunded_routes',
+        'canceled_routes',
+    )
+
     def __init__(self, available_routes):
         if not all(isinstance(r, RouteState) for r in available_routes):
             raise ValueError('available_routes must be comprised of RouteState objects only.')
