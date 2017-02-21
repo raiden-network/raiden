@@ -9,10 +9,11 @@ from raiden.api.encoding import (
     ChannelListSchema,
     HexAddressConverter
 )
-from raiden.api.resources import (
+from raiden.api.v1.resources import (
+    v1_resources_blueprint,
     ChannelsResource,
-    ChannelsByPartner,
-    ChannelsResourceByChannelAddress
+    ChannelsResourceByChannelAddress,
+    TokensResource
 )
 from raiden.api.objects import EventsList, ChannelList
 
@@ -46,20 +47,28 @@ class APIServer(object):
         'hexaddress': HexAddressConverter
     }
 
-    # default resource classes will be added to the routes on initialisation and will be exposed
-    # once the RestfulAPI is running
+    # default resource classes will be added to the routes on initialisation
+    # and will be exposed once the RestfulAPI is running
     _default_resource_classes = [
         ChannelsResource,
-        ChannelsByPartner,
-        ChannelsResourceByChannelAddress
+        ChannelsResourceByChannelAddress,
+        TokensResource
     ]
 
     def __init__(self, rest_api):
         self.rest_api = rest_api
-        self.flask_api_middleware = Api(app)
+        if self.rest_api.version == 1:
+            self.flask_api_middleware = Api(
+                v1_resources_blueprint,
+                prefix="/api/1"
+            )
+            blueprint = v1_resources_blueprint
+        else:
+            raise ValueError('Inalid api version: {}'.format(self.rest_api.version))
 
-        self._register_type_converters()
         self._add_default_resources()
+        self._register_type_converters()
+        app.register_blueprint(blueprint)
 
     def _add_default_resources(self):
         for klass in self._default_resource_classes:
@@ -81,7 +90,7 @@ class APIServer(object):
 
         self.flask_api_middleware.add_resource(
             resource_cls,
-            "/api/{}/{}".format(self.rest_api.version, resource_cls._route)
+            resource_cls._route
         )
 
     def run(self, port, debug=False):

@@ -1,7 +1,12 @@
 from webargs.flaskparser import use_kwargs
 from flask_restful import Resource
+from flask import Blueprint
 
-from raiden.api.encoding import AddressField, ChannelRequestSchema
+from raiden.api.encoding import ChannelRequestSchema
+
+# Take a look at this SO question on hints how to organize versioned
+# API with flask:  http://stackoverflow.com/questions/28795561/support-multiple-api-versions-in-flask#28797512
+v1_resources_blueprint = Blueprint('v1_resources', __name__)
 
 
 class BaseResource(Resource):
@@ -12,7 +17,7 @@ class BaseResource(Resource):
 class ChannelsResource(BaseResource):
 
     # define the route of the resource here:
-    _route = 'channels'
+    _route = '/channels'
 
     # has to be set externally via dependency injection
     rest_api = None
@@ -51,7 +56,7 @@ class ChannelsResource(BaseResource):
 
 
 class ChannelsResourceByChannelAddress(Resource):
-    _route = 'channels/<hexaddress:channel_address>'
+    _route = '/channels/<hexaddress:channel_address>'
     rest_api = None
 
     patch_schema = ChannelRequestSchema(
@@ -65,28 +70,23 @@ class ChannelsResourceByChannelAddress(Resource):
         return self.rest_api.patch_channel(**kwargs)
 
 
-class ChannelsByPartner(BaseResource):
-    """
-    this translates to 'All channel the node is connected with and have the specified asset
-    """
-    _route = '/api/partner/<hexaddress:partner_address>/channels'
+class TokensResource(BaseResource):
+    _route = '/tokens'
     rest_api = None
 
-    @use_kwargs({'asset_address': AddressField()})
-    def get(self, partner_address, args):
-        channel_list = self.rest_api.get_channel_list(
-            asset_address=None,
-            partner_address=partner_address
-        )
+    patch_schema = ChannelRequestSchema(
+        exclude=('channel_address', 'token_address', 'partner_address'),
+    )
 
-        return channel_list
+    def get(self):
+        """
+        this translates to 'get all token addresses we have channels open for
+        """
+        # TODO
+        pass
 
 
 class Partner(BaseResource):
-    pass
-
-
-class Asset(BaseResource):
     pass
 
 
