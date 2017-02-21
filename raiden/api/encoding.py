@@ -1,5 +1,5 @@
 from werkzeug.routing import BaseConverter
-from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load, pre_dump
+from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load
 from marshmallow_polyfield import PolyField
 from webargs import validate
 from marshmallow import fields
@@ -19,6 +19,7 @@ from raiden.api.objects import (
     ChannelSecretRevealed,
     TransferReceived
 )
+
 
 def serialize_schema_selector(list_element, list_obj):
     schema = None

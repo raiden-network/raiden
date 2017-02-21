@@ -4,7 +4,7 @@ from time import sleep
 from collections import defaultdict
 
 from raiden.api.objects import ChannelList, Channel, ChannelNew
-from raiden.api.resources import EventsResoure, ChannelsResource, ChannelsResourceByAsset, ChannelsResourceByChannelAddress
+from raiden.api.resources import EventsResoure, ChannelsResource, ChannelsResourceByChannelAddress
 from raiden.api.rest import APIServer, RestAPI
 from raiden.settings import (
     DEFAULT_REVEAL_TIMEOUT,
@@ -177,6 +177,4 @@ if __name__ == '__main__':
     rest_api = RestAPI(mock_api)
 
     api_server = APIServer(rest_api)
-    api_server._add_default_resources()
     api_server.run(5001, debug=True)
-

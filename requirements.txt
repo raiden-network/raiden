@@ -16,3 +16,4 @@ cachetools>=2.0.0,<3.0.0
 Flask>=0.11.1
 flask-restful
 webargs
+marshmallow_polyfield

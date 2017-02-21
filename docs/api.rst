@@ -82,7 +82,7 @@ Querying Information About Channels and Assets
 Querying specific channel
 --------------------------
 
-There are multiple ways to query information about your channels. The most direct, if you know the channel address, is to query the channel master resource endpoint ``/api/<version>/channels/<channel_address`` with a ``GET`` request.
+There are multiple ways to query information about your channels. The most direct, if you know the channel address, is to query the channel master resource endpoint ``/api/<version>/channels/<channel_address>`` with a ``GET`` request.
 
 Example Request
 ^^^^^^^^^^^^^^^
