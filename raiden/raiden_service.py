@@ -986,7 +986,6 @@ class RaidenEventHandler(object):
             callback = self.get_on_event_callback(event)
             if callback:
                 callback(
-                    manager_address_bin,
                     netting_channel_address_bin,
                     participant1,
                     participant2,
