@@ -454,7 +454,7 @@ def secret_learned(state, secret, payee_address, new_payee_state):
 
     # reveal the secret backwards
     secret_reveal = events_for_revealsecret(
-        state.transfer_pair,
+        state.transfers_pair,
         state.our_address,
     )
 
