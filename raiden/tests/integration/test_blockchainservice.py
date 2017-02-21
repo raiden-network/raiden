@@ -145,11 +145,10 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 
     # open channel with same peer again after settling
     netting_channel_01.close(peer1_address, 0, 0)
-    settle = app0.raiden.chain.block_number() + 10
-    wait_until_block(app0.raiden.chain, settle)
+    wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + settle_timeout + 1)
+    netting_channel_01.settle()
     assert netting_channel_01.isopen() is False
     assert netting_channel_01.closed() != 0
-    netting_channel_01.settle()
 
     # open channel with same peer again
     netting_address_01_reopened = manager0.new_netting_channel(
