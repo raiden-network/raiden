@@ -23,9 +23,9 @@ class EventsList(FlatList):
 
 
 class Channel(object):
-    def __init__(self, channel_address, asset_address, partner_address, settle_timeout, reveal_timeout, deposit, status):
+    def __init__(self, channel_address, token_address, partner_address, settle_timeout, reveal_timeout, deposit, status):
         self.channel_address = channel_address
-        self.asset_address = asset_address
+        self.token_address = token_address
         self.partner_address = partner_address
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
@@ -34,8 +34,8 @@ class Channel(object):
 
 
 class TransferReceived(object):
-    def __init__(self, asset_address, recipient_address, initiator_address, transferred_amount, hashlock, identifier):
-        self.asset_address = asset_address,
+    def __init__(self, token_address, recipient_address, initiator_address, transferred_amount, hashlock, identifier):
+        self.token_address = token_address,
         self.recipient_address = recipient_address,
         self.initiator_address = initiator_address,
         self.transferred_amount = transferred_amount,
@@ -43,11 +43,11 @@ class TransferReceived(object):
         self.identifier = identifier
 
 
-class AssetAdded(object):
+class TokenAdded(object):
 
-    def __init__(self, registry_address, asset_address, channel_manager_address):
+    def __init__(self, registry_address, token_address, channel_manager_address):
         self.registry_address = registry_address
-        self.asset_address = asset_address
+        self.token_address = token_address
         self.channel_manager_address = channel_manager_address
 
 
@@ -62,9 +62,9 @@ class ChannelNew(object):
 
 class ChannelNewBalance(object):
 
-    def __init__(self, netting_channel_address, asset_address, participant_address, new_balance, block_number):
+    def __init__(self, netting_channel_address, token_address, participant_address, new_balance, block_number):
         self.netting_channel_address = netting_channel_address
-        self.asset_address = asset_address
+        self.token_address = token_address
         self.participant_address = participant_address
         self.new_balance = new_balance
         self.block_number = block_number

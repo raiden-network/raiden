@@ -3,7 +3,7 @@ from flask_restful import Api, abort
 
 from webargs.flaskparser import parser
 
-from raiden.api.encoding import (
+from raiden.api.v1.encoding import (
     EventsListSchema,
     ChannelSchema,
     ChannelListSchema,
@@ -111,17 +111,17 @@ class RestAPI(object):
         self.channel_list_schema = ChannelListSchema()
         self.events_list_schema = EventsListSchema()
 
-    def open(self, partner_address, asset_address, deposit=None):
-
+    def open(self, partner_address, token_address, settle_timeout, deposit=None):
         api_result = self.raiden_api.open(
-            asset_address,
+            token_address,
             partner_address,
+            settle_timeout
         )
 
         if deposit:
             # make initial deposit
             api_result = self.raiden_api.deposit(
-                asset_address,
+                token_address,
                 partner_address,
                 deposit
             )
@@ -129,10 +129,10 @@ class RestAPI(object):
         result = self.channel_schema.dumps(api_result)
         return result
 
-    def deposit(self, asset_address, partner_address, amount):
+    def deposit(self, token_address, partner_address, amount):
 
         api_result = self.raiden_api.deposit(
-            asset_address,
+            token_address,
             partner_address,
             amount
         )
@@ -140,18 +140,18 @@ class RestAPI(object):
         result = self.channel_schema.dumps(api_result)
         return result
 
-    def close(self, asset_address, partner_address):
+    def close(self, token_address, partner_address):
 
         api_result = self.raiden_api.close(
-            asset_address,
+            token_address,
             partner_address
         )
 
         result = self.channel_schema.dumps(api_result)
         return result
 
-    def get_channel_list(self, asset_address=None, partner_address=None):
-        api_result = self.raiden_api.get_channel_list(asset_address, partner_address)
+    def get_channel_list(self, token_address=None, partner_address=None):
+        api_result = self.raiden_api.get_channel_list(token_address, partner_address)
         assert isinstance(api_result, list)
 
         # wrap in ChannelList:

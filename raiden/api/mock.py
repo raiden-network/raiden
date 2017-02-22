@@ -4,7 +4,7 @@ from time import sleep
 from collections import defaultdict
 
 from raiden.api.objects import ChannelList, Channel, ChannelNew
-from raiden.api.resources import EventsResoure, ChannelsResource, ChannelsResourceByChannelAddress
+from raiden.api.v1.resources import EventsResoure, ChannelsResource, ChannelsResourceByChannelAddress
 from raiden.api.rest import APIServer, RestAPI
 from raiden.settings import (
     DEFAULT_REVEAL_TIMEOUT,
@@ -33,7 +33,7 @@ class MockAPI(object):
     """
     channel_by_address = dict() # 1:1
     all_channel = [] # N
-    channels_by_asset = defaultdict(list) # 1:N
+    channels_by_token = defaultdict(list) # 1:N
     channels_by_partner = defaultdict(list) # 1:N
     event_queue = Queue()
     block_number = 0
@@ -45,8 +45,8 @@ class MockAPI(object):
         if success == True:
             self.block_number += 1
 
-    def _get_channel_by_asset_and_partner(self, asset, partner):
-        list_ = self.channels_by_asset[asset]
+    def _get_channel_by_token_and_partner(self, token, partner):
+        list_ = self.channels_by_token[token]
         for channel in list_:
             if channel.partner_address == partner:
                 return channel
@@ -54,8 +54,8 @@ class MockAPI(object):
     def _add_channel(self, channel):
         self.channel_by_address[channel.channel_address] = channel
 
-        channels_by_asset_list = self.channels_by_asset[channel.asset_address]
-        channels_by_asset_list.append(channel)
+        channels_by_token_list = self.channels_by_token[channel.token_address]
+        channels_by_token_list.append(channel)
 
         channels_by_partner_list = self.channels_by_partner[channel.partner_address]
         channels_by_partner_list.append(channel)
@@ -82,15 +82,15 @@ class MockAPI(object):
 
         return event_list
 
-    def open(self, asset_address, partner_address, settle_timeout=None,reveal_timeout=None):
-        existing_channel = self._get_channel_by_asset_and_partner(asset_address, partner_address)
+    def open(self, token_address, partner_address, settle_timeout=None, reveal_timeout=None):
+        existing_channel = self._get_channel_by_token_and_partner(token_address, partner_address)
         if existing_channel:
             channel = existing_channel
         else:
             netting_channel_address = make_address() # the new channel address
             channel = Channel(
                 netting_channel_address,
-                asset_address,
+                token_address,
                 partner_address,
                 settle_timeout or DEFAULT_SETTLE_TIMEOUT,
                 reveal_timeout or DEFAULT_REVEAL_TIMEOUT,
@@ -100,7 +100,7 @@ class MockAPI(object):
 
             self._add_channel(channel)
 
-            event = ChannelNew(netting_channel_address, asset_address, partner_address, self.block_number)
+            event = ChannelNew(netting_channel_address, token_address, partner_address, self.block_number)
 
             self._queue_event(event)
 
@@ -116,10 +116,10 @@ class MockAPI(object):
         self._mine_new_block_try()
         return existing_channel
 
-    def deposit(self, asset_address, partner_address, deposit):
+    def deposit(self, token_address, partner_address, deposit):
         channel = None
         successful = False
-        existing_channel = self._get_channel_by_asset_and_partner(asset_address, partner_address)
+        existing_channel = self._get_channel_by_token_and_partner(token_address, partner_address)
         if existing_channel:
             if existing_channel.deposit < deposit:
                 existing_channel.deposit = deposit
@@ -131,16 +131,16 @@ class MockAPI(object):
         self._mine_new_block_try()
         return channel
 
-    def get_channel_list(self, asset_address=None, partner_address=None):
+    def get_channel_list(self, token_address=None, partner_address=None):
         channels = list()
 
-        if asset_address is not None:
-            channels = self.channels_by_asset[asset_address]
+        if token_address is not None:
+            channels = self.channels_by_token[token_address]
 
         if partner_address is not None:
             channels = self.channels_by_partner[partner_address]
 
-        if asset_address is None and partner_address is None:
+        if token_address is None and partner_address is None:
             channels = self.all_channel
 
         self._mine_new_block_try()

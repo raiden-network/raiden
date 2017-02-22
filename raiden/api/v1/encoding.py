@@ -11,7 +11,7 @@ from raiden.api.objects import (
     Channel,
     ChannelList,
     EventsList,
-    AssetAdded,
+    TokenAdded,
     ChannelClosed,
     ChannelSettled,
     ChannelNew,
@@ -19,7 +19,7 @@ from raiden.api.objects import (
     ChannelSecretRevealed,
     TransferReceived
 )
-
+from raiden.raiden_service import DEFAULT_SETTLE_TIMEOUT
 
 def serialize_schema_selector(list_element, list_obj):
     schema = None
@@ -29,6 +29,7 @@ def serialize_schema_selector(list_element, list_obj):
     except Exception as e:
         raise e
     return schema
+
 
 def deserialize_schema_selector(element_dict, base_dict):
     event_type = element_dict['event_type']
@@ -87,7 +88,7 @@ class BaseSchema(Schema):
 
     @post_load
     def make_object(self, data):
-        # this will depend on the Schema used, which has it's object class in the class Meta attributes
+        # this will depend on the Schema used, which has its object class in the class Meta attributes
         decoding_class = self.opts.decoding_class
         return decoding_class(**data)
 
@@ -96,7 +97,7 @@ class BaseListSchema(Schema):
     OPTIONS_CLASS = BaseOpts
 
     @pre_load
-    def wrap_data_envelope(self,data):
+    def wrap_data_envelope(self, data):
         # because the EventListSchema and ChannelListSchema ojects need to have some field ('data'),
         # the data has to be enveloped in the internal representation to comply with the Schema
         data = dict(data=data)
@@ -138,7 +139,7 @@ class EventsListSchema(BaseListSchema):
 
 class ChannelSchema(BaseSchema):
     channel_address = AddressField()
-    asset_address = AddressField()
+    token_address = AddressField()
     partner_address = AddressField()
     settle_timeout = fields.Integer()
     reveal_timeout = fields.Integer()
@@ -149,10 +150,12 @@ class ChannelSchema(BaseSchema):
         strict= True
         decoding_class = Channel
 
+
 class ChannelRequestSchema(BaseSchema):
     channel_address = AddressField(missing=None)
-    asset_address = AddressField(required=True)
+    token_address = AddressField(required=True)
     partner_address = AddressField(required=True)
+    settle_timeout = fields.Integer(missing=DEFAULT_SETTLE_TIMEOUT)
     deposit = fields.Integer(default=None, missing=None)
     status = fields.String(default=None, missing=None, validate=validate.OneOf(['closed', 'open', 'settled']))
 
@@ -160,6 +163,7 @@ class ChannelRequestSchema(BaseSchema):
         strict = True
         # decoding to a dict is required by the @use_kwargs decorator from webargs:
         decoding_class = dict
+
 
 class ChannelListSchema(BaseListSchema):
     data = fields.Nested(ChannelSchema, many=True)
@@ -180,19 +184,19 @@ class ChannelNewSchema(EventSchema):
         decoding_class = ChannelNew
 
 
-class AssetAddedSchema(EventSchema):
+class TokenAddedSchema(EventSchema):
     registry_address = AddressField()
-    asset_address = AddressField()
+    token_address = AddressField()
     channel_manager_address = AddressField()
 
     class Meta:
         strict = True
-        decoding_class = AssetAdded
+        decoding_class = TokenAdded
 
 
 class ChannelNewBalanceSchema(EventSchema):
     netting_channel_address = AddressField()
-    asset_address = AddressField()
+    token_address = AddressField()
     participant_address = AddressField()
     new_balance = fields.Integer()
     block_number = fields.Integer()
@@ -231,7 +235,7 @@ class ChannelSecretRevealedSchema(EventSchema):
 
 
 class TransferReceivedSchema(EventSchema):
-    asset_address = AddressField()
+    token_address = AddressField()
     initiator_address = AddressField()
     recipient_address = AddressField()
     transferred_amount = AddressField()
@@ -244,7 +248,7 @@ class TransferReceivedSchema(EventSchema):
 
 
 event_class_name_to_schema = dict(
-    AssetAdded=AssetAddedSchema,
+    TokenAdded=TokenAddedSchema,
     ChannelNew=ChannelNewSchema,
     ChannelClosed=ChannelClosedSchema,
     ChannelSettled=ChannelSettledSchema,
@@ -252,4 +256,3 @@ event_class_name_to_schema = dict(
     ChannelNewBalance=ChannelNewBalanceSchema,
     TransferReceived=TransferReceivedSchema,
 )
-
