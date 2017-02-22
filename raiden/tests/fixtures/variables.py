@@ -156,7 +156,7 @@ def blockchain_number_of_nodes():
     nodes. Used for all geth clusters and ignored for tester and
     mock.
     """
-    return 3
+    return 1
 
 
 @pytest.fixture
