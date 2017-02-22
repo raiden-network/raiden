@@ -470,7 +470,7 @@ class RaidenAPI(object):
 
     def get_channel_list(self, token_address=None, partner_address=None):
         """Returns a list of channels associated with the optionally given
-        `token_address` and/or `partner_address`.
+           `token_address` and/or `partner_address`.
 
         Args:
             token_address (bin): an optionally provided token address

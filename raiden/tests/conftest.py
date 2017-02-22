@@ -22,6 +22,7 @@ from raiden.tests.fixtures import (
 
     raiden_chain,
     raiden_network,
+    raiden_service,
 
     tester_blockgas_limit,
     tester_events,
@@ -76,6 +77,7 @@ __all__ = (
 
     'raiden_chain',
     'raiden_network',
+    'raiden_service',
 
     'tester_blockgas_limit',
     'tester_events',
