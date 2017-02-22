@@ -5,7 +5,7 @@ from __future__ import print_function, division
 import copy
 from ethereum import slogging
 
-from raiden.app import App, INITIAL_PORT
+from raiden.app import App
 from raiden.network.discovery import Discovery
 from raiden.network.transport import DummyPolicy
 from raiden.utils import privatekey_to_address

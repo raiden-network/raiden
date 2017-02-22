@@ -396,7 +396,7 @@ def _jsonrpc_services(
 
 def _mock_services(deploy_key, private_keys, request):
     # make sure we are getting and leaving a clean state, just in case the
-    # BlockChainServiceMock wasn't instantiate through the proper fixture.
+    # BlockChainServiceMock wasn't instantiated through the proper fixture.
 
     @request.addfinalizer
     def _cleanup():

@@ -377,8 +377,12 @@ class ChannelEndState(object):
 
 
 class ChannelExternalState(object):
-    def __init__(self, register_block_alarm, register_channel_for_hashlock,
-                 get_block_number, netting_channel):
+    def __init__(
+            self,
+            register_block_alarm,
+            register_channel_for_hashlock,
+            get_block_number,
+            netting_channel):
         self.register_block_alarm = register_block_alarm
         self.register_channel_for_hashlock = register_channel_for_hashlock
         self.get_block_number = get_block_number
@@ -490,8 +494,14 @@ class ChannelExternalState(object):
 class Channel(object):
     # pylint: disable=too-many-instance-attributes,too-many-arguments
 
-    def __init__(self, our_state, partner_state, external_state,
-                 token_address, reveal_timeout, settle_timeout):
+    def __init__(
+            self,
+            our_state,
+            partner_state,
+            external_state,
+            token_address,
+            reveal_timeout,
+            settle_timeout):
 
         if settle_timeout <= reveal_timeout:
             # reveal_timeout must be a fraction of the settle_timeout
