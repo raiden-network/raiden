@@ -12,6 +12,7 @@ from ethereum import tester
 from raiden.network.rpc.client import GAS_LIMIT
 
 from raiden.tests.fixtures import (
+    api_test_context,
     token_abi,
     registry_abi,
     channel_manager_abi,
@@ -67,6 +68,7 @@ from raiden.tests.fixtures import (
 )
 
 __all__ = (
+    'api_test_context',
     'token_abi',
     'registry_abi',
     'channel_manager_abi',

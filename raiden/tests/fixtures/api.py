@@ -6,6 +6,7 @@ import copy
 from raiden.app import App
 from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
+from raiden.tests.utils.apitestcontext import ApiTestContext
 
 
 # TODO: This fixture could be perhaps be abstracted out and combined partly
@@ -34,3 +35,8 @@ def raiden_service(
         Discovery(),
         config
     )
+
+
+@pytest.fixture
+def api_test_context():
+    return ApiTestContext()
