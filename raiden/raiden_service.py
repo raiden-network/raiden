@@ -773,19 +773,11 @@ class RaidenMessageHandler(object):
         elif cmdid == messages.TRANSFERTIMEOUT:
             self.message_transfertimeout(message)
 
-        elif cmdid == messages.CONFIRMTRANSFER:
-            self.message_confirmtransfer(message)
-
         else:
             raise Exception("Unhandled message cmdid '{}'.".format(cmdid))
 
     def message_ping(self, message):  # pylint: disable=unused-argument,no-self-use
         log.info('ping received')
-
-    def message_confirmtransfer(self, message):
-        # TODO: Whenever this is implemented, don't forget to edit the
-        # corresponding test in test_transfer.py
-        pass
 
     def message_revealsecret(self, message):
         self.raiden.message_for_task(message, message.hashlock)

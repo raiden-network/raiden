@@ -21,7 +21,6 @@ __all__ = (
     'MediatedTransfer',
     'RefundTransfer',
     'TransferTimeout',
-    'ConfirmTransfer',
 )
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
@@ -716,27 +715,6 @@ class TransferTimeout(SignedMessage):
         packed.signature = self.signature
 
 
-class ConfirmTransfer(SignedMessage):
-    """ `ConfirmTransfer` which signs, that `target` has received a transfer. """
-    cmdid = messages.CONFIRMTRANSFER
-
-    def __init__(self, hashlock):
-        super(ConfirmTransfer, self).__init__()
-        self.hashlock = hashlock
-
-    @staticmethod
-    def unpack(packed):
-        confirm_transfer = ConfirmTransfer(
-            packed.hashlock,
-        )
-        confirm_transfer.signature = packed.signature
-        return confirm_transfer
-
-    def pack(self, packed):
-        packed.hashlock = self.hashlock
-        packed.signature = self.signature
-
-
 CMDID_TO_CLASS = {
     messages.ACK: Ack,
     messages.PING: Ping,
@@ -751,7 +729,6 @@ CMDID_TO_CLASS = {
     messages.MEDIATEDTRANSFER: MediatedTransfer,
     messages.REFUNDTRANSFER: RefundTransfer,
     messages.TRANSFERTIMEOUT: TransferTimeout,
-    messages.CONFIRMTRANSFER: ConfirmTransfer,
 }
 
 

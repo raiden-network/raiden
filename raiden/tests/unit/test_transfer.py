@@ -9,7 +9,6 @@ from secp256k1 import PrivateKey
 from raiden.encoding.signing import GLOBAL_CTX
 from raiden.messages import (
     Ack,
-    ConfirmTransfer,
     decode,
     DirectTransfer,
     Lock,
@@ -461,12 +460,6 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
 
     reveal_secret = RevealSecret(HASH)
     sign_and_send(reveal_secret, other_key, other_address, app0)
-
-    # Whenever processing of ConfirmTransfer is implemented test it here
-    # too by removing the expectation of an exception
-    with pytest.raises(KeyError):
-        confirm_transfer = ConfirmTransfer(HASH)
-        sign_and_send(confirm_transfer, other_key, other_address, app0)
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
