@@ -3,14 +3,12 @@
 import logging
 import random
 import time
+from random import randint
 
 import gevent
 from gevent.event import AsyncResult
 from gevent.queue import Empty, Queue
 from gevent.timeout import Timeout
-
-from random import randint
-
 from ethereum import slogging
 from ethereum.utils import sha3
 
@@ -20,6 +18,11 @@ from raiden.messages import (
     RevealSecret,
     Secret,
     SecretRequest,
+)
+from raiden.constants import (
+    DEFAULT_HEALTHCHECK_POLL_TIMEOUT,
+    DEFAULT_EVENTS_POLL_TIMEOUT,
+    ESTIMATED_BLOCK_TIME,
 )
 from raiden.utils import lpex, pex
 
@@ -31,9 +34,6 @@ __all__ = (
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 REMOVE_CALLBACK = object()
-DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
-DEFAULT_HEALTHCHECK_POLL_TIMEOUT = 1
-ESTIMATED_BLOCK_TIME = 7
 TIMEOUT = object()
 
 
@@ -264,7 +264,7 @@ class BaseMediatedTransferTask(Task):
         while current_block < expiration_block:
             try:
                 response = self.response_queue.get(
-                    timeout=DEFAULT_EVENTS_POLL_TIMEOUT
+                    timeout=DEFAULT_EVENTS_POLL_TIMEOUT,
                 )
             except Empty:
                 pass

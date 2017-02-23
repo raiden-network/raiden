@@ -5,13 +5,11 @@ from itertools import count
 import pytest
 from ethereum.utils import sha3
 
-from raiden.tasks import DEFAULT_EVENTS_POLL_TIMEOUT
-from raiden.network.rpc.client import DEFAULT_POLL_TIMEOUT
+from raiden.constants import (
+    DEFAULT_EVENTS_POLL_TIMEOUT,
+    DEFAULT_POLL_TIMEOUT,
+)
 from raiden.network.transport import UDPTransport
-
-# Arbitrary initial balance for each channel, using a small number to tractable
-# numbers during testing
-DEFAULT_DEPOSIT = 200
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)
@@ -51,7 +49,9 @@ def events_poll_timeout():
 @pytest.fixture
 def deposit():
     """ Raiden chain default deposit. """
-    return DEFAULT_DEPOSIT
+    # Arbitrary initial balance for each channel, using a small number to tractable
+    # numbers during testing
+    return 200
 
 
 @pytest.fixture

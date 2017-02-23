@@ -38,8 +38,6 @@ from raiden.api.objects import (
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
-DEFAULT_REVEAL_TIMEOUT = 30
-DEFAULT_SETTLE_TIMEOUT = DEFAULT_REVEAL_TIMEOUT * 20
 
 EventListener = namedtuple('EventListener', ('event_name', 'filter_', 'translator'))
 

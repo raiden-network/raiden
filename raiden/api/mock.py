@@ -6,7 +6,10 @@ from collections import defaultdict
 from raiden.api.objects import ChannelList, Channel, ChannelNew
 from raiden.api.resources import EventsResoure, ChannelsResource, ChannelsResourceByAsset, ChannelsResourceByChannelAddress
 from raiden.api.rest import APIServer, RestAPI
-from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
+from raiden.constants import (
+    DEFAULT_REVEAL_TIMEOUT,
+    DEFAULT_SETTLE_TIMEOUT,
+)
 
 from raiden.utils import make_address
 

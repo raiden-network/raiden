@@ -5,7 +5,7 @@ from collections import namedtuple
 
 from ethereum import slogging
 
-from raiden.app import DEFAULT_SETTLE_TIMEOUT
+from raiden.constants import DEFAULT_SETTLE_TIMEOUT
 from raiden.utils import sha3, profiling
 from raiden.tests.utils.network import create_network
 from raiden.network.transport import UDPTransport

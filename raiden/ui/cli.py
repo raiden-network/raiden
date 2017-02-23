@@ -9,6 +9,9 @@ from ethereum import slogging
 from ethereum.utils import encode_hex, decode_hex
 
 from raiden.app import App
+from raiden.constants import (
+    INITIAL_PORT,
+)
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import BlockChainService
 from raiden.ui.console import Console
@@ -16,9 +19,6 @@ from raiden.utils import split_endpoint
 from raiden.accounts import AccountManager
 
 gevent.monkey.patch_all()
-
-INITIAL_PORT = 40001
-DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
 
 
 OPTIONS = [
@@ -104,7 +104,7 @@ def options(func):
 
 @options
 @click.command()
-def app(address,
+def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         keystore_path,
         eth_rpc_endpoint,
         registry_contract_address,
