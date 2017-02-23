@@ -23,7 +23,24 @@ from raiden.tasks import AlarmTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
-from raiden.utils import privatekey_to_address, isaddress, pex, GLOBAL_CTX
+from raiden.utils import (
+    privatekey_to_address,
+    isaddress,
+    pex,
+    GLOBAL_CTX,
+    camel_to_snake_case,
+    netting_channel_to_api_dict
+)
+
+from raiden.api.objects import (
+    TransferReceived,
+    ChannelClosed,
+    ChannelNew,
+    ChannelNewBalance,
+    ChannelSecretRevealed,
+    ChannelSettled
+)
+
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -366,8 +383,12 @@ class RaidenAPI(object):
 
         return event_list
 
-    def open(self, token_address, partner_address,
-             settle_timeout=None, reveal_timeout=None):
+    def open(
+            self,
+            token_address,
+            partner_address,
+            settle_timeout=None,
+            reveal_timeout=None):
         """ Open a channel with the peer at `partner_address`
         with the given `token_address`.
         """
@@ -391,7 +412,7 @@ class RaidenAPI(object):
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         token_manager.register_channel(netting_channel, reveal_timeout)
 
-        return netting_channel
+        return netting_channel_to_api_dict(netting_channel, self.raiden.address)
 
     def deposit(self, token_address, partner_address, amount):
         """ Deposit `amount` in the channel with the peer at `partner_address` and the
@@ -418,7 +439,7 @@ class RaidenAPI(object):
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         netting_channel.deposit(self.raiden.address, amount)
 
-        return netting_channel
+        return netting_channel_to_api_dict(netting_channel, self.raiden.address)
 
     def exchange(self, from_token, from_amount, to_token, to_amount, target_address):
         from_token_bin = safe_address_decode(from_token)
