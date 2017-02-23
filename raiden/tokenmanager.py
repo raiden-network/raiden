@@ -46,18 +46,6 @@ class TokenManager(object):  # pylint: disable=too-many-instance-attributes
         transfermanager = TransferManager(self)
         self.transfermanager = transfermanager
 
-    def has_path(self, source, target):
-        """ True if there is a path from `source` to `target`. """
-        return self.channelgraph.has_path(source, target)
-
-    def get_channel_by_partner_address(self, partner_address_bin):
-        """ Return the channel with `partner_address_bin`.
-
-        Raises:
-            KeyError: If there is no channel with partner_address_bin.
-        """
-        return self.partneraddress_channel[partner_address_bin]
-
     def get_channel_by_contract_address(self, netting_channel_address_bin):
         """ Return the channel with `netting_channel_address_bin`.
 
@@ -293,7 +281,7 @@ class TokenManager(object):  # pylint: disable=too-many-instance-attributes
     def channel_isactive(self, partner_address):
         """ True if the channel with `partner_address` is open. """
         # TODO: check if the partner's network is alive
-        return self.get_channel_by_partner_address(partner_address).isopen
+        return self.partneraddress_channel[partner_address].isopen
 
     def get_best_routes(self, amount, target, lock_timeout=None):
         """ Yield a two-tuple (path, channel) that can be used to mediate the

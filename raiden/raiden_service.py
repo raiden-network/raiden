@@ -97,12 +97,13 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.protocol = RaidenProtocol(transport, discovery, self)
         transport.protocol = self.protocol
 
+        blockchain_log_handler = BlockchainEventsHandler(self)
         message_handler = RaidenMessageHandler(self)
-        event_handler = RaidenEventHandler(self)
+        state_machine_event_handler = StateMachineEventHandler(self)
 
         alarm = AlarmTask(chain)
         # ignore the blocknumber
-        alarm.register_callback(lambda _: event_handler.poll_all_event_listeners())
+        alarm.register_callback(lambda _: blockchain_log_handler.poll_all_event_listeners())
         alarm.start()
 
         self._blocknumber = alarm.last_block_number
@@ -120,12 +121,14 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         self.api = RaidenAPI(self)
         self.alarm = alarm
-        self.event_handler = event_handler
+        self.blockchain_log_handler = blockchain_log_handler
         self.message_handler = message_handler
-        self.start_event_listener = event_handler.start_event_listener
+        self.state_machine_event_handler = state_machine_event_handler
+        self.start_event_listener = blockchain_log_handler.start_event_listener
 
         self.on_message = message_handler.on_message
-        self.on_event = event_handler.on_event
+        self.on_log = blockchain_log_handler.on_log
+        self.on_event = state_machine_event_handler.on_event
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -325,7 +328,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         for token_manager in self.managers_by_token_address.itervalues():
             wait_for.extend(token_manager.transfermanager.transfertasks.itervalues())
 
-        self.event_handler.uninstall_listeners()
+        self.blockchain_log_handler.uninstall_listeners()
         gevent.wait(wait_for)
 
 
@@ -412,7 +415,7 @@ class RaidenAPI(object):
         given `token_address` in order to be able to do transfers.
         """
         token_manager = self.raiden.get_manager_by_token_address(token_address.decode('hex'))
-        channel = token_manager.get_channel_by_partner_address(partner_address.decode('hex'))
+        channel = token_manager.partneraddress_channel[partner_address.decode('hex')]
         netcontract_address = channel.channel_address
         assert len(netcontract_address)
 
@@ -569,7 +572,7 @@ class RaidenAPI(object):
             raise InvalidAddress('target address is not valid.')
 
         token_manager = self.raiden.get_manager_by_token_address(token_address_bin)
-        if not token_manager.has_path(self.raiden.address, target_bin):
+        if not token_manager.channelgraph.has_path(self.raiden.address, target_bin):
             raise NoPathError('No path to address found')
 
         transfer_manager = token_manager.transfermanager
@@ -592,7 +595,7 @@ class RaidenAPI(object):
             raise InvalidAddress('partner_address is not valid.')
 
         manager = self.raiden.get_manager_by_token_address(token_address_bin)
-        channel = manager.get_channel_by_partner_address(partner_address_bin)
+        channel = manager.partneraddress_channel[partner_address]
 
         first_transfer = None
         if channel.received_transfers:
@@ -618,7 +621,7 @@ class RaidenAPI(object):
             raise InvalidAddress('partner_address is not valid.')
 
         manager = self.raiden.get_manager_by_token_address(token_address_bin)
-        channel = manager.get_channel_by_partner_address(partner_address_bin)
+        channel = manager.partneraddress_channel[partner_address]
 
         if channel.isopen:
             raise InvalidState('channel is still open.')
@@ -737,7 +740,36 @@ class RaidenMessageHandler(object):
         token_manager.transfermanager.on_mediatedtransfer_message(message)
 
 
-class RaidenEventHandler(object):
+class StateMachineEventHandler(object):
+    def __init__(self, raiden):
+        self.raiden = raiden
+
+    def on_event(self, event):
+        if isinstance(event, SendMediatedTransfer):
+            next_hop = event.node_address
+            fee = 0
+
+            manager = self.raiden.get_manager_by_token_address(event.token)
+            channel = manager.partneraddress_channel[next_hop]
+
+            mediated_transfer = channel.create_mediatedtransfer(
+                self.raiden.address,
+                event.target,
+                fee,
+                event.amount,
+                event.message_id,
+                event.expiration,
+                event.hashlock,
+            )
+
+            self.raiden.sign(mediated_transfer)
+            self.raiden.send_async(next_hop, mediated_transfer)
+
+            # TODO: implement the network timeout raiden.config['msg_timeout']
+            # and cancel the current transfer it hapens
+
+
+class BlockchainEventsHandler(object):
     """ Class responsible to handle all the blockchain events.
 
     Note:
@@ -838,7 +870,7 @@ class RaidenEventHandler(object):
                 try:
                     # intentionally forcing all the events to go through
                     # the event handler
-                    self.on_event(originating_contract, event)
+                    self.on_log(originating_contract, event)
                 except:  # pylint: disable=bare-except
                     log.exception('unexpected exception on log listener')
 
@@ -854,7 +886,7 @@ class RaidenEventHandler(object):
 
         self.event_listeners = list()
 
-    def on_event(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
+    def on_log(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
                 'event received',

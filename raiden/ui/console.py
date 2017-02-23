@@ -288,7 +288,7 @@ class ConsoleTools(object):
         assert token_manager
 
         # Get the channel
-        channel = token_manager.get_channel_by_partner_address(peer_bin)
+        channel = token_manager.partneraddress_channel[peer_bin]
         assert channel
 
         # Collect data
@@ -333,8 +333,8 @@ class ConsoleTools(object):
         token_manager = self._raiden.get_manager_by_token_address(token_address.decode('hex'))
         assert token_manager
         # Get the address for the netting contract
-        netcontract_address = token_manager.get_channel_by_partner_address(
-            peer.decode('hex')).external_state.netting_channel.address
+        channel = token_manager.partneraddress_channel[peer.decode('hex')]
+        netcontract_address = channel.external_state.netting_channel.address
         assert len(netcontract_address)
         # Get the netting_channel instance
         netting_channel = self._chain.netting_channel(netcontract_address)
