@@ -41,7 +41,6 @@ LOCKEDTRANSFER_CMDID = 6
 MEDIATEDTRANSFER_CMDID = 7
 REFUNDTRANSFER_CMDID = 8
 TRANSFERTIMEOUT_CMDID = 9
-CONFIRMTRANSFER_CMDID = 10
 REVEALSECRET_CMDID = 11
 
 ACK = to_bigendian(ACK_CMDID)
@@ -55,7 +54,6 @@ LOCKEDTRANSFER = to_bigendian(LOCKEDTRANSFER_CMDID)
 MEDIATEDTRANSFER = to_bigendian(MEDIATEDTRANSFER_CMDID)
 REFUNDTRANSFER = to_bigendian(REFUNDTRANSFER_CMDID)
 TRANSFERTIMEOUT = to_bigendian(TRANSFERTIMEOUT_CMDID)
-CONFIRMTRANSFER = to_bigendian(CONFIRMTRANSFER_CMDID)
 
 
 # pylint: disable=invalid-name
@@ -239,16 +237,6 @@ TransferTimeout = namedbuffer(
     ]
 )
 
-ConfirmTransfer = namedbuffer(
-    'confirm_transfer',
-    [
-        cmdid(CONFIRMTRANSFER),  # [0:1]
-        pad(3),                  # [1:4]
-        hashlock,                # [4:36]
-        signature,               # [36:101]
-    ]
-)
-
 Lock = namedbuffer(
     'lock',
     [
@@ -271,7 +259,6 @@ CMDID_MESSAGE = {
     MEDIATEDTRANSFER: MediatedTransfer,
     REFUNDTRANSFER: RefundTransfer,
     TRANSFERTIMEOUT: TransferTimeout,
-    CONFIRMTRANSFER: ConfirmTransfer,
 }
 
 
@@ -304,7 +291,7 @@ def wrap_and_validate(data):
 
     try:
         publickey = recover_publickey(message_data, message_signature)
-    except (ValueError, Exception):
+    except Exception:
         log.error('invalid signature')
         return
 

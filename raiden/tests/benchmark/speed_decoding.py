@@ -9,7 +9,7 @@ import secp256k1
 from raiden.utils import sha3, privatekey_to_address
 from raiden.messages import decode
 from raiden.messages import (
-    Ack, ConfirmTransfer, DirectTransfer, Lock, MediatedTransfer, Ping,
+    Ack, DirectTransfer, Lock, MediatedTransfer, Ping,
     RefundTransfer, Secret, SecretRequest, TransferTimeout,
 )
 
@@ -54,9 +54,11 @@ def test_ping(iterations=ITERATIONS):
 def test_secret_request(iterations=ITERATIONS):
     identifier = 1
     hashlock = HASH
+    amount = 1
     msg = SecretRequest(
         identifier,
-        hashlock
+        hashlock,
+        amount,
     )
     msg.sign(PRIVKEY, ADDRESS)
     run_timeit('SecretRequest', msg, iterations=iterations)
@@ -65,9 +67,11 @@ def test_secret_request(iterations=ITERATIONS):
 def test_secret(iterations=ITERATIONS):
     identifier = 1
     secret = HASH
+    amount = 1
     msg = Secret(
         identifier,
-        secret
+        secret,
+        amount,
     )
     msg.sign(PRIVKEY, ADDRESS)
     run_timeit('Secret', msg, iterations=iterations)
@@ -157,13 +161,6 @@ def test_transfer_timeout(iterations=ITERATIONS):
     run_timeit('TransferTimeout', msg, iterations=iterations)
 
 
-def test_confirm_transfer(iterations=ITERATIONS):
-    hashlock = HASH
-    msg = ConfirmTransfer(hashlock)
-    msg.sign(PRIVKEY, ADDRESS)
-    run_timeit('ConfirmTransfer', msg, iterations=iterations)
-
-
 def test_all(iterations=ITERATIONS):
     test_mediated_transfer(iterations=iterations)
     test_ack(iterations=iterations)
@@ -172,7 +169,6 @@ def test_all(iterations=ITERATIONS):
     test_direct_transfer(iterations=iterations)
     test_cancel_transfer(iterations=iterations)
     test_transfer_timeout(iterations=iterations)
-    test_confirm_transfer(iterations=iterations)
 
     # LockedTransfer cannot be encoded/decoded
     # LocksrootRejected needs an additional argument
