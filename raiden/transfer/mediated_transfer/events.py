@@ -125,6 +125,17 @@ class EventTransferCompleted(Event):
         self.hashlock = hashlock
 
 
+class ContractSendChannelClose(Event):
+    """ Event emitted when the channel.
+
+    This event is used when a node needs to prepared the channel to withdraw
+    on-chain.
+    """
+
+    def __init__(self, channel_address):
+        self.channel_address = channel_address
+
+
 class ContractSendWithdraw(Event):
     """ Event emitted when the lock must withdrawn on-chain. """
 
