@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 from ethereum.utils import decode_hex
 
-from raiden.raiden_service import RaidenService, DEFAULT_REVEAL_TIMEOUT, DEFAULT_SETTLE_TIMEOUT
+from raiden.raiden_service import RaidenService
+from raiden.constants import (
+    INITIAL_PORT,
+    DEFAULT_REVEAL_TIMEOUT,
+    DEFAULT_SETTLE_TIMEOUT,
+)
 from raiden.network.transport import UDPTransport, TokenBucket
 from raiden.utils import pex
-
-INITIAL_PORT = 40001
-DEFAULT_EVENTS_POLL_TIMEOUT = 0.5
 
 
 class App(object):  # pylint: disable=too-few-public-methods

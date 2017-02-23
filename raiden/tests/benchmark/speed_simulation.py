@@ -14,11 +14,13 @@ import yaml
 import gevent
 import networkx
 
-from raiden.app import App, DEFAULT_SETTLE_TIMEOUT
+from raiden.constants import (
+    DEFAULT_SETTLE_TIMEOUT,
+)
+from raiden.app import App
 from raiden.network.discovery import Discovery
 from raiden.network.rpc.client import BlockChainService
 from raiden.utils import sha3, privatekey_to_address
-from raiden.tests.fixtures.variables import DEFAULT_DEPOSIT
 
 TRANSFER_AMOUNT = 1
 ASSET_ADDRESS = sha3('tps')[:20]
@@ -249,12 +251,13 @@ def main():
             args.parallel,
         )
     elif args.kind == 'setup':
+        deposit = 200
         setup_tps(
             args.rpc_server,
             args.config,
             args.channelmanager_address,
             ASSET_ADDRESS,
-            DEFAULT_DEPOSIT,
+            deposit,
             DEFAULT_SETTLE_TIMEOUT,
         )
 

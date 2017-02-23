@@ -3,16 +3,18 @@ from __future__ import print_function
 
 import time
 
-from raiden.app import DEFAULT_SETTLE_TIMEOUT
+from raiden.constants import (
+    DEFAULT_SETTLE_TIMEOUT,
+    DEFAULT_POLL_TIMEOUT,
+    DEFAULT_REVEAL_TIMEOUT,
+)
 from raiden.network.rpc.client import (
     BlockChainServiceMock,
-    DEFAULT_POLL_TIMEOUT,
     MOCK_REGISTRY_ADDRESS,
 )
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import create_network
 from raiden.utils import sha3
-from raiden.raiden_service import DEFAULT_REVEAL_TIMEOUT
 from raiden.tests.benchmark.utils import (
     print_serialization,
     print_slow_function,

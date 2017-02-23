@@ -5,7 +5,7 @@ from ethereum import slogging
 from ethereum import _solidity
 from ethereum.exceptions import InvalidTransaction
 from ethereum.transactions import Transaction
-from ethereum.utils import denoms, int_to_big_endian, encode_hex, normalize_address
+from ethereum.utils import encode_hex, normalize_address
 from pyethapp.jsonrpc import (
     address_encoder,
     address_decoder,
@@ -17,6 +17,11 @@ from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 import requests
 
 from raiden import messages
+from raiden.constants import (
+    DEFAULT_POLL_TIMEOUT,
+    GAS_LIMIT,
+    GAS_PRICE,
+)
 from raiden.utils import (
     get_contract_path,
     isaddress,
@@ -36,11 +41,6 @@ from raiden.blockchain.abi import (
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
-GAS_LIMIT = 3141592  # Morden's gasLimit.
-GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
-GAS_PRICE = denoms.shannon * 20
-
-DEFAULT_POLL_TIMEOUT = 60
 
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
@@ -72,6 +72,7 @@ def patch_send_transaction(client, nonce_offset=0):
     If not, replace the `send_transaction` method with a more generic one.
     """
     patch_necessary = False
+
     try:
         client.call('eth_nonce', encode_hex(client.sender), 'pending')
     except:
