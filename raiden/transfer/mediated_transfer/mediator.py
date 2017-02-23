@@ -704,7 +704,6 @@ def handle_refundtransfer(state, state_change):
     if is_valid_refund(payee_transfer, state_change.sender, state_change.transfer):
         payer_route = transfer_pair.payee_route
         payer_transfer = state_change.transfer
-        state.routes.refund_routes.append(payer_route)
         iteration = mediate_transfer(
             state,
             payer_route,
