@@ -13,7 +13,6 @@ from raiden.messages import (
     DirectTransfer,
     Lock,
     LockedTransfer,
-    TransferTimeout,
 )
 from raiden.mtree import merkleroot, get_proof
 from raiden.utils import sha3, pex, lpex
@@ -1174,15 +1173,3 @@ class Channel(object):
         cancel_transfer = locked_transfer.to_refundtransfer()
 
         return cancel_transfer
-
-    def create_timeouttransfer_for(self, transfer):
-        """ Return a TransferTimeout for `transfer`. """
-        lock = transfer.lock
-
-        if not self.our_state.balance_proof.is_pending(lock.hashlock):
-            raise ValueError('Unknow hashlock')
-
-        return TransferTimeout(
-            transfer.hash,
-            lock.hashlock,
-        )

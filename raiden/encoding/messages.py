@@ -40,7 +40,6 @@ DIRECTTRANSFER_CMDID = 5
 LOCKEDTRANSFER_CMDID = 6
 MEDIATEDTRANSFER_CMDID = 7
 REFUNDTRANSFER_CMDID = 8
-TRANSFERTIMEOUT_CMDID = 9
 REVEALSECRET_CMDID = 11
 
 ACK = to_bigendian(ACK_CMDID)
@@ -53,7 +52,6 @@ DIRECTTRANSFER = to_bigendian(DIRECTTRANSFER_CMDID)
 LOCKEDTRANSFER = to_bigendian(LOCKEDTRANSFER_CMDID)
 MEDIATEDTRANSFER = to_bigendian(MEDIATEDTRANSFER_CMDID)
 REFUNDTRANSFER = to_bigendian(REFUNDTRANSFER_CMDID)
-TRANSFERTIMEOUT = to_bigendian(TRANSFERTIMEOUT_CMDID)
 
 
 # pylint: disable=invalid-name
@@ -226,17 +224,6 @@ RefundTransfer = namedbuffer(
     ]
 )
 
-TransferTimeout = namedbuffer(
-    'transfer_timeout',
-    [
-        cmdid(TRANSFERTIMEOUT),  # [0:1]
-        pad(3),                  # [1:4]
-        hashlock,                # [4:36]
-        echo,                    # [36:68]
-        signature,               # [68:133]
-    ]
-)
-
 Lock = namedbuffer(
     'lock',
     [
@@ -258,7 +245,6 @@ CMDID_MESSAGE = {
     LOCKEDTRANSFER: LockedTransfer,
     MEDIATEDTRANSFER: MediatedTransfer,
     REFUNDTRANSFER: RefundTransfer,
-    TRANSFERTIMEOUT: TransferTimeout,
 }
 
 

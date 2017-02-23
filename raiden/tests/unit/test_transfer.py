@@ -18,7 +18,6 @@ from raiden.messages import (
     RevealSecret,
     Secret,
     SecretRequest,
-    TransferTimeout
 )
 from raiden.network.transport import UnreliableTransport
 from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
@@ -448,9 +447,6 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
         lock=lock
     )
     sign_and_send(refund_transfer, other_key, other_address, app0)
-
-    transfer_timeout = TransferTimeout(HASH, HASH)
-    sign_and_send(transfer_timeout, other_key, other_address, app0)
 
     secret = Secret(1, HASH, token_manager0.token_address)
     sign_and_send(secret, other_key, other_address, app0)
