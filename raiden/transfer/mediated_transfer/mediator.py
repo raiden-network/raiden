@@ -22,6 +22,7 @@ from raiden.transfer.state_change import (
 from raiden.transfer.mediated_transfer.events import (
     mediatedtransfer,
 
+    ContractSendChannelClose,
     ContractSendWithdraw,
     SendBalanceProof,
     SendRefundTransfer,
@@ -46,6 +47,7 @@ STATE_SECRET_KNOWN = (
     'payee_balance_proof',
 
     'payer_secret_revealed',
+    'payer_waiting_close',
     'payer_waiting_withdraw',
     'payer_contract_withdraw',
     'payer_balance_proof',
@@ -69,12 +71,12 @@ STATE_TRANSFER_FINAL = (
 )
 
 
-def is_lock_valid(block_number, transfer):
+def is_lock_valid(transfer, block_number):
     """ True if the lock has not expired. """
     return block_number <= transfer.expiration
 
 
-def is_safe_to_wait(block_number, transfer, reveal_timeout):
+def is_safe_to_wait(transfer, reveal_timeout, block_number):
     """ True if there are more than enough blocks to safely settle on chain and
     waiting is safe.
     """
@@ -99,6 +101,35 @@ def is_valid_refund(original_transfer, refund_sender, refund_transfer):
         # node, neverthless it's being ignored since the only reason for the
         # other node to use an invalid expiration is to play the protocol.
         original_transfer.expiration > refund_transfer.expiration
+    )
+
+
+def is_channel_close_needed(transfer_pair, block_number):
+    """ True if this node needs to close the channel to withdraw on-chain.
+
+    Only close to withdraw on chain if the corresponding payee node has
+    received, this prevents attacks were the payee node burns it's payment to
+    force a close with the payer channel.
+    """
+    payee_received = transfer_pair.payee_state in STATE_TRANSFER_PAYED
+    payer_payed = transfer_pair.payer_state in STATE_TRANSFER_PAYED
+
+    payer_channel_open = transfer_pair.payer_route.state == 'available'
+    already_closing = transfer_pair.payer_state == 'payer_waiting_close'
+
+    safe_to_wait = is_safe_to_wait(
+        transfer_pair.payer_transfer,
+        transfer_pair.payer_route.reveal_timeout,
+        block_number,
+    )
+
+    return (
+        payee_received and
+        not payer_payed and
+
+        payer_channel_open and
+        not already_closing and
+        not safe_to_wait
     )
 
 
@@ -185,15 +216,16 @@ def clear_if_finalized(iteration):
     """ Clear the state if all transfer pairs have finalized. """
     state = iteration.new_state
 
-    # TODO: clear the expired transfer, this needs will need synchronization
-    # messages
+    # TODO: clear the expired transfer, this will need some sort of
+    # synchronization among the nodes
     all_finalized = all(
         pair.payee_state in STATE_TRANSFER_PAYED and pair.payer_state in STATE_TRANSFER_PAYED
         for pair in state.transfers_pair
     )
 
-    # TODO: how do we define success and failure for a mediator since the state
-    # of individual paths may differ?
+    # TODO: how to define a mediator's transfer result (success/failure) since
+    # the state of individual paths may differ? Perhaps individual/additional
+    # events for each transfer/pair?
 
     if all_finalized:
         return Iteration(None, iteration.events)
@@ -201,7 +233,7 @@ def clear_if_finalized(iteration):
 
 
 def next_route(routes_state, timeout_blocks, transfer_amount):
-    """ Finds the route first route available that can be used.
+    """ Finds the first route available that can be used.
 
     Args:
         routes_state (RoutesState): The route states to do the search, it's
@@ -229,8 +261,7 @@ def next_route(routes_state, timeout_blocks, transfer_amount):
 
 
 def next_transfer_pair(payer_route, payer_transfer, routes_state, timeout_blocks, block_number):
-    """ Given a mediation payer route tries a new route to proceed with the
-    mediation.
+    """ Given a payer transfer tries a new route to proceed with the mediation.
 
     Args:
         payer_route (RouteState): The previous route in the path that provides
@@ -326,10 +357,29 @@ def set_payee_state_and_check_reveal_order(transfers_pair,  # pylint: disable=in
             wrong_reveal_order = True
 
     if wrong_reveal_order:
-        # TODO: append an event for byzantine behavior
+        # TODO: Append an event for byzantine behavior.
+        # XXX: With the current events_for_withdraw implementation this may
+        # happen, should the notification about byzantine behavior removed or
+        # fix the events_for_withdraw function fixed?
         return list()
 
     return list()
+
+
+def set_expired_pairs(transfers_pair, block_number):
+    """ Set the state of expired transfers. """
+    pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
+
+    for pair in pending_transfers_pairs:
+        if block_number > pair.payer_transfer.expiration:
+            assert pair.payee_state == 'payee_expired'
+            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
+            pair.payer_state = 'payer_expired'
+
+        elif block_number > pair.payee_transfer.expiration:
+            assert pair.payee_state not in STATE_TRANSFER_PAYED
+            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
+            pair.payee_state = 'payee_expired'
 
 
 def events_for_refund_transfer(refund_route, refund_transfer, timeout_blocks, block_number):
@@ -430,7 +480,7 @@ def events_for_balanceproof(transfers_pair, block_number):
         # for sending a balance proof to a node that knowns the secret but has
         # not gone on-chain while near the expiration? (The problem is how to
         # define the unsafe region, since that is a local configuration)
-        lock_valid = is_lock_valid(block_number, pair.payee_transfer)
+        lock_valid = is_lock_valid(pair.payee_transfer, block_number)
 
         if payee_channel_open and payee_knows_secret and not payee_payed and lock_valid:
             pair.payee_state = 'payee_balance_proof'
@@ -443,54 +493,61 @@ def events_for_balanceproof(transfers_pair, block_number):
     return events
 
 
-def events_for_expiration(transfers_pair, block_number):
-    """ Requests for settlement on-chain if the hash time lock reached the
-    limit block to safely withdraw on-chain.
+def events_for_close(transfers_pair, block_number):
+    """ Close the channels that are in the unsafe region prior to a on-chain
+    withdraw.
     """
     events = list()
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
     for pair in reversed(pending_transfers_pairs):
-        # Only withdraw on chain if the corresponding payee transfer is payed,
-        # this prevents attacks were tokens are burned to force a channel close.
-        payee_payed = pair.payee_state in STATE_TRANSFER_PAYED
-        payer_payed = pair.payer_state in STATE_TRANSFER_PAYED
-        witdrawing = pair.payer_state == 'payer_waiting_withdraw'
+        if is_channel_close_needed(pair, block_number):
+            pair.payer_state = 'payer_waiting_close'
+            channel_close = ContractSendChannelClose(pair.payer_route.channel_address)
+            events.append(channel_close)
 
-        if payee_payed and not payer_payed and not witdrawing:
-            safe_to_wait = is_safe_to_wait(
-                block_number,
+    return events
+
+
+def events_for_withdraw(transfers_pair):
+    """ Withdraw on any payer channel that is closed and the secret is known.
+
+    If a channel is closed because of another task a balance proof will not be
+    received, so there is no reason to wait for the unsafe region before
+    calling close.
+
+    This may break the reverse reveal order:
+
+        Path: A -- B -- C -- B -- D
+
+        B learned the secret from D and has revealed to C.
+        C has not confirmed yet.
+        channel(A, B).closed is True.
+        B will withdraw on channel(A, B) before C's confirmation.
+        A may learn the secret faster than other nodes.
+    """
+    events = list()
+    pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
+
+    for pair in pending_transfers_pairs:
+        payer_channel_open = pair.payer_route.state == 'available'
+        secret_known = pair.payer_transfer.secret is not None
+
+        if not payer_channel_open and secret_known:
+            pair.payer_state = 'payer_waiting_withdraw'
+            settle_channel = ContractSendWithdraw(
                 pair.payer_transfer,
-                pair.payer_route.reveal_timeout,
+                pair.payer_route.channel_address,
             )
-
-            if not safe_to_wait:
-                pair.payer_state = 'payer_waiting_withdraw'
-                settle_channel = ContractSendWithdraw(
-                    pair.payer_transfer,
-                    pair.payer_route.channel_address,
-                )
-                events.append(settle_channel)
-
-        # NOTE: order of elif is important, payer test is first because it's
-        # expiration block is always larger
-        elif block_number > pair.payer_transfer.expiration:
-            assert pair.payee_state == 'payee_expired'
-            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
-            pair.payer_state = 'payer_expired'
-
-        elif block_number > pair.payee_transfer.expiration:
-            assert pair.payee_state not in STATE_TRANSFER_PAYED
-            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
-            pair.payee_state = 'payee_expired'
+            events.append(settle_channel)
 
     return events
 
 
 def secret_learned(state, secret, payee_address, new_payee_state):
     """ Set the state of the `payee_address` transfer, check the secret is
-    being revealed backwards, and if necessary send out RevealSecret and
-    BalanceProof.
+    being revealed backwards, and if necessary send out RevealSecret,
+    BalanceProof, and Withdraws.
     """
     assert new_payee_state in STATE_SECRET_KNOWN
 
@@ -500,29 +557,29 @@ def secret_learned(state, secret, payee_address, new_payee_state):
     if state.secret is None:
         set_secret(state, secret)
 
-    # change the payee state
     wrong_order = set_payee_state_and_check_reveal_order(
         state.transfers_pair,
         payee_address,
         new_payee_state,
     )
 
-    # reveal the secret backwards
     secret_reveal = events_for_revealsecret(
         state.transfers_pair,
         state.our_address,
     )
 
-    # send the balance proof to payee that knows the secret but is not payed
-    # yet
     balance_proof = events_for_balanceproof(
         state.transfers_pair,
         state.block_number,
     )
 
+    withdraw = events_for_withdraw(
+        state.transfers_pair,
+    )
+
     iteration = Iteration(
         state,
-        wrong_order + secret_reveal + balance_proof,
+        wrong_order + secret_reveal + balance_proof + withdraw,
     )
 
     return iteration
@@ -594,12 +651,24 @@ def handle_block(state, state_change):
     block_number = state_change.block_number
     state.block_number = block_number
 
-    events = events_for_expiration(
+    close_events = events_for_close(
         state.transfers_pair,
         block_number,
     )
 
-    iteration = Iteration(state, events)
+    withdraw_events = events_for_withdraw(
+        state.transfers_pair,
+    )
+
+    set_expired_pairs(
+        state.transfers_pair,
+        block_number,
+    )
+
+    iteration = Iteration(
+        state,
+        close_events + withdraw_events,
+    )
 
     return iteration
 
@@ -747,7 +816,15 @@ def handle_routechange(state, state_change):
     if not used:
         update_route(state, state_change)
 
-    iteration = Iteration(state, list())
+    # a route might be closed by another task
+    withdraw_events = events_for_withdraw(
+        state.transfers_pair,
+    )
+
+    iteration = Iteration(
+        state,
+        withdraw_events,
+    )
     return iteration
 
 

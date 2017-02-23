@@ -85,6 +85,7 @@ class TargetState(State):
         'from_transfer',
         'hashlock',
         'block_number',
+        'secret',
     )
 
     def __init__(self,
@@ -231,12 +232,12 @@ class MediationPairState(State):
 
     valid_payer_states = (
         'payer_pending',
-        'payer_secret_revealed',  # reached on a SendRevealSecret
-        'payer_contract_revealed',  # reached when the partner unlocked on-chain
-        'payer_waiting_withdraw',  # reached when unlock is called
-        'payer_contract_withdraw',  # this state is reached the unlock from /this/ node completes
-        'payer_balance_proof',  # reached on a ReceiveBalanceProof
-        'payer_expired',
+        'payer_secret_revealed',    # SendRevealSecret was sent
+        'payer_waiting_close',      # ContractSendChannelClose was sent
+        'payer_waiting_withdraw',   # ContractSendWithdraw was sent
+        'payer_contract_withdraw',  # ContractReceiveWithdraw for the above send received
+        'payer_balance_proof',      # ReceiveBalanceProof was received
+        'payer_expired',            # None of the above happened and the lock expired
     )
 
     def __init__(self,
