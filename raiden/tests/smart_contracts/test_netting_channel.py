@@ -1020,6 +1020,7 @@ def test_settlement_with_unauthorized_token_transfer(
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == extra_amount
 
 
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 def test_netting(
         deposit,
         settle_timeout,
@@ -1027,6 +1028,19 @@ def test_netting(
         tester_state,
         tester_events,
         tester_token):
+    """
+    This test ensures that Alice can send payments to Bob exceeding her initial deposit.
+    A.sent > A.deposit
+    the condition for this to work is that Bob has also sent payments to Alice in the meantime, so that
+    B.sent >= (A.sent - A.deposit)
+    A sample use case:
+    A.deposit = 10
+    B.deposit = 10
+    A.send(10)  # at this point Alice's deposit is exhausted
+    A.send(5) --> fail
+    B.send(5)  # this replenishes the available tokens for Alice
+    A.send(5)  # is now possible
+    """
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
     privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
     privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
@@ -1127,14 +1141,18 @@ def test_netting(
         'block_number': block_number,
     }
 
-    assert tester_token.balanceOf(address0, sender=privatekey0_raw) == initial_balance0 \
-                                                                       + deposit \
-                                                                       - transfer_amount0  \
-                                                                       - second_transfer_amount0 \
-                                                                       + transfer_amount1  # noqa
-    assert tester_token.balanceOf(address1, sender=privatekey1_raw) == initial_balance1 \
-                                                                       + deposit \
-                                                                       + transfer_amount0 \
-                                                                       + second_transfer_amount0 \
-                                                                       - transfer_amount1  # noqa
+    assert tester_token.balanceOf(address0, sender=privatekey0_raw) == (
+            initial_balance0
+            + deposit
+            - transfer_amount0
+            - second_transfer_amount0
+            + transfer_amount1
+        )
+    assert tester_token.balanceOf(address1, sender=privatekey1_raw) == (
+            initial_balance1
+            + deposit
+            + transfer_amount0
+            + second_transfer_amount0
+            - transfer_amount1
+        )
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == 0
