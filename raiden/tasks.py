@@ -20,7 +20,6 @@ from raiden.messages import (
     RevealSecret,
     Secret,
     SecretRequest,
-    TransferTimeout,
 )
 from raiden.utils import lpex, pex
 
@@ -97,6 +96,7 @@ class HealthcheckTask(Task):
         self.sleep_time = sleep_time
         self.send_ping_time = send_ping_time
         self.max_unresponsive_time = max_unresponsive_time
+        self.timeout = None
 
     def _run(self):  # pylint: disable=method-hidden
         stop = None
@@ -536,7 +536,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
 
         for response in response_iterator:
             refund_or_timeout = (
-                isinstance(response, (RefundTransfer, TransferTimeout)) and
+                isinstance(response, RefundTransfer) and
                 response.sender == next_hop
             )
 
@@ -798,7 +798,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
             secret = isinstance(response, (Secret, RevealSecret))
 
             refund_or_timeout = (
-                isinstance(response, (RefundTransfer, TransferTimeout)) and
+                isinstance(response, RefundTransfer) and
                 response.sender == path[0]
             )
 
@@ -1066,7 +1066,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
         Returns:
             None: when the timeout was reached.
             MediatedTransfer: when a valid state is reached.
-            RefundTransfer/TransferTimeout: when an invalid state is reached by
+            RefundTransfer: when an invalid state is reached by
                 our partner.
         """
         # pylint: disable=too-many-arguments
@@ -1113,7 +1113,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             # next_hop could send the MediatedTransfer, this is handled in a
             # previous if
             elif response.sender == next_hop:
-                if isinstance(response, (RefundTransfer, TransferTimeout)):
+                if isinstance(response, RefundTransfer):
                     return response
                 else:
                     if log.isEnabledFor(logging.INFO):

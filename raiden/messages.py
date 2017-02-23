@@ -20,7 +20,6 @@ __all__ = (
     'LockedTransfer',
     'MediatedTransfer',
     'RefundTransfer',
-    'TransferTimeout',
 )
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
@@ -683,38 +682,6 @@ class RefundTransfer(LockedTransfer):
         packed.signature = self.signature
 
 
-class TransferTimeout(SignedMessage):
-    """
-    Indicates a timeout happened during a mediated transfer.
-
-    This message is used when a node in a mediated chain doesn't consider any
-    of its following nodes available. If node `A` is trying to send a transfer
-    to `C` through `B` and `B` considers all candidates for `C` unavailable
-    it will send a TransferTimeout back to `A`. `A` can then try all other
-    candidates for `C` until it considers all it's paths unavailable.
-    """
-    cmdid = messages.TRANSFERTIMEOUT
-
-    def __init__(self, echo, hashlock):
-        super(TransferTimeout, self).__init__()
-        self.echo = echo
-        self.hashlock = hashlock
-
-    @staticmethod
-    def unpack(packed):
-        transfer_timeout = TransferTimeout(
-            packed.echo,
-            packed.hashlock,
-        )
-        transfer_timeout.signature = packed.signature
-        return transfer_timeout
-
-    def pack(self, packed):
-        packed.echo = self.echo
-        packed.hashlock = self.hashlock
-        packed.signature = self.signature
-
-
 CMDID_TO_CLASS = {
     messages.ACK: Ack,
     messages.PING: Ping,
@@ -728,7 +695,6 @@ CMDID_TO_CLASS = {
     # messages.LOCKEDTRANSFER: LockedTransfer,
     messages.MEDIATEDTRANSFER: MediatedTransfer,
     messages.REFUNDTRANSFER: RefundTransfer,
-    messages.TRANSFERTIMEOUT: TransferTimeout,
 }
 
 

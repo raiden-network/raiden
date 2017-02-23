@@ -10,7 +10,7 @@ from raiden.utils import sha3, privatekey_to_address
 from raiden.messages import decode
 from raiden.messages import (
     Ack, DirectTransfer, Lock, MediatedTransfer, Ping,
-    RefundTransfer, Secret, SecretRequest, TransferTimeout,
+    RefundTransfer, Secret, SecretRequest,
 )
 
 GLOBAL_CTX = secp256k1.lib.secp256k1_context_create(secp256k1.ALL_FLAGS)
@@ -153,14 +153,6 @@ def test_cancel_transfer(iterations=ITERATIONS):
     run_timeit('RefundTransfer', msg, iterations=iterations)
 
 
-def test_transfer_timeout(iterations=ITERATIONS):
-    echo = HASH
-    hashlock = HASH
-    msg = TransferTimeout(echo, hashlock)
-    msg.sign(PRIVKEY, ADDRESS)
-    run_timeit('TransferTimeout', msg, iterations=iterations)
-
-
 def test_all(iterations=ITERATIONS):
     test_mediated_transfer(iterations=iterations)
     test_ack(iterations=iterations)
@@ -168,7 +160,6 @@ def test_all(iterations=ITERATIONS):
     test_secret_request(iterations=iterations)
     test_direct_transfer(iterations=iterations)
     test_cancel_transfer(iterations=iterations)
-    test_transfer_timeout(iterations=iterations)
 
     # LockedTransfer cannot be encoded/decoded
     # LocksrootRejected needs an additional argument

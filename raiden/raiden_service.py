@@ -770,9 +770,6 @@ class RaidenMessageHandler(object):
         elif cmdid == messages.REFUNDTRANSFER:
             self.message_refundtransfer(message)
 
-        elif cmdid == messages.TRANSFERTIMEOUT:
-            self.message_transfertimeout(message)
-
         else:
             raise Exception("Unhandled message cmdid '{}'.".format(cmdid))
 
@@ -807,9 +804,6 @@ class RaidenMessageHandler(object):
 
     def message_refundtransfer(self, message):
         self.raiden.message_for_task(message, message.lock.hashlock)
-
-    def message_transfertimeout(self, message):
-        self.raiden.message_for_task(message, message.hashlock)
 
     def message_directtransfer(self, message):
         token_manager = self.raiden.get_manager_by_token_address(message.token)
