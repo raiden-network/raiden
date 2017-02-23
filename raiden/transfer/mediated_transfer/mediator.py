@@ -535,11 +535,11 @@ def events_for_withdraw(transfers_pair):
 
         if not payer_channel_open and secret_known:
             pair.payer_state = 'payer_waiting_withdraw'
-            settle_channel = ContractSendWithdraw(
+            withdraw = ContractSendWithdraw(
                 pair.payer_transfer,
                 pair.payer_route.channel_address,
             )
-            events.append(settle_channel)
+            events.append(withdraw)
 
     return events
 
@@ -795,7 +795,7 @@ def handle_balanceproof(state, state_change):
 
 
 def handle_routechange(state, state_change):
-    """ Hande a ActionRouteChange state change. """
+    """ Handle a ActionRouteChange state change. """
     # TODO: `update_route` only changes the RoutesState, instead of moving the
     # routes to the MediationPairState use identifier to reference the routes
     new_route = state_change.route
@@ -871,6 +871,9 @@ def state_transition(state, state_change):
     else:
         if isinstance(state_change, Block):
             iteration = handle_block(state, state_change)
+
+        elif isinstance(state_change, ActionRouteChange):
+            iteration = handle_routechange(state, state_change)
 
         if isinstance(state_change, ReceiveSecretReveal):
             iteration = handle_secretreveal(state, state_change)

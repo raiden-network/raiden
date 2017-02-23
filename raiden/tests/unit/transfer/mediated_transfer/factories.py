@@ -1,7 +1,11 @@
 # -*- coding: utf8 -*-
+# pylint: disable=too-many-arguments
 from raiden.utils import sha3
 from raiden.transfer.state import (
     RouteState,
+)
+from raiden.transfer.mediated_transfer.state import (
+    LockedTransferState,
 )
 
 # prefixing with UNIT_ to differ from the default globals
@@ -57,3 +61,25 @@ def make_route(node_address,
         close_block,
     )
     return route
+
+
+def make_transfer(amount,
+                  target,
+                  expiration,
+                  secret=None,
+                  hashlock=UNIT_HASHLOCK,
+                  identifier=1):
+
+    if secret is not None:
+        assert sha3(secret) == hashlock
+
+    transfer = LockedTransferState(
+        identifier,
+        amount,
+        UNIT_TOKEN_ADDRESS,
+        target,
+        expiration,
+        hashlock=hashlock,
+        secret=secret,
+    )
+    return transfer

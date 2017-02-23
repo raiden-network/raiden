@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+# pylint: disable=invalid-name,too-few-public-methods,too-many-arguments,too-many-locals
 from copy import deepcopy
 
 import pytest
@@ -133,7 +134,7 @@ def test_next_route():
 
     state = make_initiator_state(routes, target)
 
-    assert state.route == routes[0], 'a initialized state must be in use and with the first route in use'
+    assert state.route == routes[0], 'a initialized state must use the first valid route'
 
     assert state.routes.available_routes == routes[1:]
     assert len(state.routes.ignored_routes) == 0
@@ -406,11 +407,15 @@ def test_refund_transfer_next_route():
         identifier=identifier,
     )
 
+    transfer = factories.make_transfer(
+        amount,
+        target_address,
+        block_number + factories.UNIT_SETTLE_TIMEOUT,
+    )
+
     state_change = ReceiveTransferRefund(
-        identifier=None,
-        amount=None,
-        hashlock=None,
         sender=mediator_address,
+        transfer=transfer,
     )
 
     prior_state = deepcopy(current_state)
@@ -448,11 +453,15 @@ def test_refund_transfer_no_more_routes():
         identifier=identifier,
     )
 
+    transfer = factories.make_transfer(
+        amount,
+        target_address,
+        block_number + factories.UNIT_SETTLE_TIMEOUT,
+    )
+
     state_change = ReceiveTransferRefund(
-        identifier=None,
-        amount=None,
-        hashlock=None,
         sender=mediator_address,
+        transfer=transfer,
     )
 
     initiator_state_machine = StateManager(
@@ -487,11 +496,15 @@ def test_refund_transfer_invalid_sender():
         identifier=identifier,
     )
 
+    transfer = factories.make_transfer(
+        amount,
+        target_address,
+        block_number + factories.UNIT_SETTLE_TIMEOUT,
+    )
+
     state_change = ReceiveTransferRefund(
-        identifier=None,
-        amount=None,
-        hashlock=None,
-        sender=our_address,  # is not a valid ReceiveTransferRefund
+        sender=our_address,
+        transfer=transfer,
     )
 
     prior_state = deepcopy(current_state)

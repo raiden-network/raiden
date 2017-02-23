@@ -86,6 +86,13 @@ class TargetState(State):
         'hashlock',
         'block_number',
         'secret',
+        'state',
+    )
+
+    valid_states = (
+        'secret_request',
+        'reveal_secret',
+        'balance_proof',
     )
 
     def __init__(self,
@@ -101,7 +108,7 @@ class TargetState(State):
         self.hashlock = hashlock
         self.block_number = block_number
 
-        self.secret = None
+        self.state = 'secret_request'
 
 
 class LockedTransferState(State):

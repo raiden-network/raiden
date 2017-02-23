@@ -65,22 +65,22 @@ class ActionInitTarget(StateChange):
 
     Args:
         target: The mediated transfer target.
-        originating_route: The route from which the MediatedTransfer was received.
-        originating_transfer: The received MediatedTransfer.
+        from_route: The route from which the MediatedTransfer was received.
+        from_transfer: The received MediatedTransfer.
         block_number: The current block number.
         config (dict): This node configuration.
     """
 
     def __init__(self,
                  our_address,
-                 originating_route,
-                 originating_transfer,
+                 from_route,
+                 from_transfer,
                  hashlock,
                  block_number):
 
         self.our_address = our_address
-        self.originating_route = originating_route
-        self.originating_transfer = originating_transfer
+        self.from_route = from_route
+        self.from_transfer = from_transfer
         self.hashlock = hashlock
         self.block_number = block_number
 

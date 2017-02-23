@@ -42,35 +42,13 @@ def make_init_statechange(from_transfer,
     return init_state_change
 
 
-def make_transfer(amount,
-                  target,
-                  expiration,
-                  secret=None,
-                  hashlock=factories.UNIT_HASHLOCK,
-                  identifier=1):
-
-    if secret is not None:
-        assert factories.sha3(secret) == hashlock
-
-    transfer = LockedTransferState(
-        identifier,
-        amount,
-        factories.UNIT_TOKEN_ADDRESS,
-        target,
-        expiration,
-        hashlock=hashlock,
-        secret=secret,
-    )
-    return transfer
-
-
 def make_from(amount, target, from_expiration):
     from_route = factories.make_route(
         factories.HOP1,
         available_balance=amount,
     )
 
-    from_transfer = make_transfer(
+    from_transfer = factories.make_transfer(
         amount,
         target,
         from_expiration,
@@ -93,9 +71,9 @@ def make_transfer_pair(payer,
 
     return MediationPairState(
         factories.make_route(payer, amount),
-        make_transfer(amount, target, payer_expiration, secret=secret),
+        factories.make_transfer(amount, target, payer_expiration, secret=secret),
         factories.make_route(payee, amount),
-        make_transfer(amount, target, payee_expiration, secret=secret),
+        factories.make_transfer(amount, target, payee_expiration, secret=secret),
     )
 
 
@@ -157,7 +135,7 @@ def test_is_lock_valid():
     """ A hash time lock is valid up to the expiraiton block. """
     amount = 10
     expiration = 10
-    transfer = make_transfer(amount, factories.HOP1, expiration)
+    transfer = factories.make_transfer(amount, factories.HOP1, expiration)
 
     assert mediator.is_lock_valid(transfer, 5) is True
     assert mediator.is_lock_valid(transfer, 10) is True, 'lock is expired at the next block'
@@ -170,7 +148,7 @@ def test_is_safe_to_wait():
     """
     amount = 10
     expiration = 40
-    transfer = make_transfer(amount, factories.HOP1, expiration)
+    transfer = factories.make_transfer(amount, factories.HOP1, expiration)
 
     # expiration is in 30 blocks, 19 blocks safe for waiting
     block_number = 10
@@ -360,17 +338,17 @@ def test_get_timeout_blocks():
     )
 
     early_expire = 10
-    early_transfer = make_transfer(amount, address, early_expire)
+    early_transfer = factories.make_transfer(amount, address, early_expire)
     early_block = mediator.get_timeout_blocks(route, early_transfer, block_number)
     assert early_block == 5 - mediator.TRANSIT_BLOCKS, 'must use the lock expiration'
 
     equal_expire = 30
-    equal_transfer = make_transfer(amount, address, equal_expire)
+    equal_transfer = factories.make_transfer(amount, address, equal_expire)
     equal_block = mediator.get_timeout_blocks(route, equal_transfer, block_number)
     assert equal_block == 25 - mediator.TRANSIT_BLOCKS
 
     large_expire = 70
-    large_transfer = make_transfer(amount, address, large_expire)
+    large_transfer = factories.make_transfer(amount, address, large_expire)
     large_block = mediator.get_timeout_blocks(route, large_transfer, block_number)
     assert large_block == 30 - mediator.TRANSIT_BLOCKS, 'must use the settle timeout'
 
@@ -483,7 +461,7 @@ def test_next_transfer_pair():
     balance = 10
 
     payer_route = factories.make_route(factories.HOP1, balance)
-    payer_transfer = make_transfer(balance, factories.ADDR, expiration=50)
+    payer_transfer = factories.make_transfer(balance, factories.ADDR, expiration=50)
 
     routes = [
         factories.make_route(factories.HOP2, available_balance=balance),
@@ -642,7 +620,7 @@ def test_events_for_refund():
         reveal_timeout=reveal_timeout,
     )
 
-    refund_transfer = make_transfer(
+    refund_transfer = factories.make_transfer(
         amount,
         factories.HOP6,
         expiration,
