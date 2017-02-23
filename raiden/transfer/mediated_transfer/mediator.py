@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import itertools
+
 from raiden.transfer.architecture import Iteration
 from raiden.transfer.mediated_transfer.transition import update_route
 from raiden.transfer.mediated_transfer.state import (
@@ -150,7 +152,16 @@ def get_timeout_blocks(payer_route, payer_transfer, block_number):
 def sanity_check(state):
     """ Check invariants that must hold. """
 
-    # bellow "transitivity" for these values is checked
+    # if a transfer is paid we must know the secret
+    all_transfers_states = itertools.chain(
+        (pair.payee_state for pair in state.transfers_pair),
+        (pair.payer_state for pair in state.transfers_pair),
+    )
+    if any(state in STATE_TRANSFER_PAYED for state in all_transfers_states):
+        assert state.secret is not None
+
+    # the "transitivity" for these values is checked bellow as part of
+    # almost_equal check
     if state.transfers_pair:
         first_pair = state.transfers_pair[0]
         assert state.hashlock == first_pair.payer_transfer.hashlock
@@ -432,6 +443,50 @@ def events_for_balanceproof(transfers_pair, block_number):
     return events
 
 
+def events_for_expiration(transfers_pair, block_number):
+    """ Requests for settlement on-chain if the hash time lock reached the
+    limit block to safely withdraw on-chain.
+    """
+    events = list()
+    pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
+
+    for pair in reversed(pending_transfers_pairs):
+        # Only withdraw on chain if the corresponding payee transfer is payed,
+        # this prevents attacks were tokens are burned to force a channel close.
+        payee_payed = pair.payee_state in STATE_TRANSFER_PAYED
+        payer_payed = pair.payer_state in STATE_TRANSFER_PAYED
+        witdrawing = pair.payer_state == 'payer_waiting_withdraw'
+
+        if payee_payed and not payer_payed and not witdrawing:
+            safe_to_wait = is_safe_to_wait(
+                block_number,
+                pair.payer_transfer,
+                pair.payer_route.reveal_timeout,
+            )
+
+            if not safe_to_wait:
+                pair.payer_state = 'payer_waiting_withdraw'
+                settle_channel = ContractSendWithdraw(
+                    pair.payer_transfer,
+                    pair.payer_route.channel_address,
+                )
+                events.append(settle_channel)
+
+        # NOTE: order of elif is important, payer test is first because it's
+        # expiration block is always larger
+        elif block_number > pair.payer_transfer.expiration:
+            assert pair.payee_state == 'payee_expired'
+            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
+            pair.payer_state = 'payer_expired'
+
+        elif block_number > pair.payee_transfer.expiration:
+            assert pair.payee_state not in STATE_TRANSFER_PAYED
+            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
+            pair.payee_state = 'payee_expired'
+
+    return events
+
+
 def secret_learned(state, secret, payee_address, new_payee_state):
     """ Set the state of the `payee_address` transfer, check the secret is
     being revealed backwards, and if necessary send out RevealSecret and
@@ -474,6 +529,14 @@ def secret_learned(state, secret, payee_address, new_payee_state):
 
 
 def mediate_transfer(state, payer_route, payer_transfer):
+    """ Try a new route or fail back to a refund.
+
+    The mediator can safely try a new route knowing that the tokens from
+    payer_transfer will cover the expenses of the mediation. If there is no
+    route available that may be used at the moment of the call the mediator may
+    send a refund back to the payer, allowing the payer to try a different
+    route.
+    """
     transfer_pair = None
     mediated_events = list()
 
@@ -531,35 +594,10 @@ def handle_block(state, state_change):
     block_number = state_change.block_number
     state.block_number = block_number
 
-    events = list()
-    pending_transfers_pairs = get_pending_transfer_pairs(state.transfers_pair)
-
-    for pair in reversed(pending_transfers_pairs):
-        # Only withdraw on chain if the corresponding payee transfer is payed,
-        # this prevents attacks were tokens are burned to force a channel close.
-        payee_payed = pair.payee_transfer.state in STATE_TRANSFER_PAYED
-        payer_payed = pair.payer_transfer.state in STATE_TRANSFER_PAYED
-        witdrawing = pair.payer_state == 'payer_waiting_withdraw'
-
-        if payee_payed and not payer_payed and not witdrawing:
-            safe_to_wait = is_safe_to_wait(
-                block_number,
-                pair.payer_transfer,
-                pair.payer_route.reveal_timeout,
-            )
-
-            if not safe_to_wait:
-                pair.payer_state = 'payer_waiting_withdraw'
-                settle_channel = ContractSendWithdraw(
-                    pair.payer_transfer,
-                    pair.payer_route.channel_address,
-                )
-                events.append(settle_channel)
-
-        if pair.payer_transfer.expiration > block_number:
-            assert pair.payee_state not in STATE_TRANSFER_PAYED
-            pair.payee_state = 'payee_expired'
-            pair.payer_state = 'payer_expired'
+    events = events_for_expiration(
+        state.transfers_pair,
+        block_number,
+    )
 
     iteration = Iteration(state, events)
 
@@ -695,6 +733,8 @@ def handle_routechange(state, state_change):
     new_route = state_change.route
     used = False
 
+    # a route in use might be closed because of another task, update the pair
+    # state in-place
     for pair in state.transfers_pair:
         if pair.payee_route.node_address == new_route.node_address:
             pair.payee_route = new_route

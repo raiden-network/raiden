@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=invalid-name,too-many-locals,too-many-arguments
+# pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 from __future__ import division
 
 from raiden.transfer.architecture import StateManager
@@ -16,6 +16,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ActionInitMediator,
 )
 from raiden.transfer.mediated_transfer.events import (
+    ContractSendWithdraw,
     SendBalanceProof,
     SendMediatedTransfer,
     SendRefundTransfer,
@@ -86,25 +87,30 @@ def make_transfers_pair(hops,
                         reveal_timeout=factories.UNIT_REVEAL_TIMEOUT):
 
     if initial_expiration is None:
-        initial_expiration = (1 + len(hops)) * reveal_timeout
+        initial_expiration = (2 * len(hops) + 1) * reveal_timeout
 
-    expiration = initial_expiration
     transfers_pair = list()
 
+    next_expiration = initial_expiration
     for payer, payee in zip(hops[:-1], hops[1:]):
-        assert expiration > 0
+        assert next_expiration > 0
 
-        # regardless of the secret being known, the payee_state and payer_state
-        # need to be in their initial state.
+        payer_expiration = next_expiration
+        payee_expiration = payer_expiration - reveal_timeout
+
+        # for simplicity factory doesn't have a facility to each transfer
+        # state, so even the secret might be known the state is kept at pending
         pair = MediationPairState(
             factories.make_route(payer, amount),
-            make_transfer(amount, target, expiration, secret=secret),
+            make_transfer(amount, target, payer_expiration, secret=secret),
             factories.make_route(payee, amount),
-            make_transfer(amount, target, expiration, secret=secret),
+            make_transfer(amount, target, payee_expiration, secret=secret),
         )
         transfers_pair.append(pair)
 
-        expiration -= reveal_timeout
+        # assumes that the node sending the refund will follow the protocol and
+        # decrement the expiration for it's lock
+        next_expiration = payee_expiration - reveal_timeout
 
     return transfers_pair
 
@@ -118,14 +124,13 @@ def make_mediator_state(from_transfer,
         from_transfer,
         from_route,
         routes,
-        our_address=factories.ADDR,
+        our_address=our_address,
     )
 
     initial_state = None
     iteration = mediator.state_transition(initial_state, state_change)
 
     return iteration.new_state
-
 
 
 def test_is_lock_valid():
@@ -752,6 +757,150 @@ def test_events_for_balanceproof_lock_expired():
     assert middle_pair.payee_state == 'payee_balance_proof'
 
 
+def test_events_for_expiration():
+    """ The node must unlock on-chain if the payee was payed. """
+
+    for payee_state in ('payee_balance_proof', 'payee_contract_withdraw'):
+        transfers_pair = make_transfers_pair(
+            [factories.HOP1, factories.HOP2],
+            factories.HOP6,
+            amount=10,
+            secret=factories.UNIT_SECRET,
+        )
+
+        pair = transfers_pair[0]
+        pair.payee_state = payee_state
+
+        block_number = (
+            pair.payer_transfer.expiration - pair.payer_route.reveal_timeout
+        )
+
+        events = mediator.events_for_expiration(
+            transfers_pair,
+            block_number,
+        )
+
+        assert isinstance(events[0], ContractSendWithdraw)
+        assert events[0].channel_address == pair.payer_route.channel_address
+        assert pair.payer_state == 'payer_waiting_withdraw'
+
+
+def test_events_for_expiration_unknown_secret():
+    """ The transfer pair must switch to expired at the right block. """
+    transfers_pair = make_transfers_pair(
+        [factories.HOP1, factories.HOP2],
+        factories.HOP6,
+        amount=10,
+    )
+
+    pair = transfers_pair[0]
+
+    # preconditions
+    assert pair.payer_transfer.secret is None
+    assert pair.payee_transfer.secret is None
+
+    # do not generate events if the secret is not known
+    first_unsafe_block = pair.payer_transfer.expiration - pair.payer_route.reveal_timeout
+    events = mediator.events_for_expiration(
+        transfers_pair,
+        first_unsafe_block,
+    )
+
+    assert len(events) == 0
+    assert pair.payee_state == 'payee_pending'
+    assert pair.payer_state == 'payer_pending'
+
+    # edge case for the payee lock expiration
+    payee_expiration_block = pair.payee_transfer.expiration
+    events = mediator.events_for_expiration(
+        transfers_pair,
+        payee_expiration_block,
+    )
+
+    assert len(events) == 0
+    assert pair.payee_state == 'payee_pending'
+    assert pair.payer_state == 'payer_pending'
+
+    # payee lock expired
+    events = mediator.events_for_expiration(
+        transfers_pair,
+        payee_expiration_block + 1,
+    )
+
+    assert len(events) == 0
+    assert pair.payee_state == 'payee_expired'
+    assert pair.payer_state == 'payer_pending'
+
+    # edge case for the payer lock expiration
+    payer_expiration_block = pair.payer_transfer.expiration
+    events = mediator.events_for_expiration(
+        transfers_pair,
+        payer_expiration_block,
+    )
+    assert len(events) == 0
+    assert pair.payee_state == 'payee_expired'
+    assert pair.payer_state == 'payer_pending'
+
+    # payer lock has expired
+    events = mediator.events_for_expiration(
+        transfers_pair,
+        payer_expiration_block + 1,
+    )
+    assert len(events) == 0
+    assert pair.payee_state == 'payee_expired'
+    assert pair.payer_state == 'payer_expired'
+
+
+def test_events_for_expiration_hold_withdraw_for_unpayed_payee():
+    """ If the secret is known but the payee transfer has not being paid the
+    node must not settle on-chain, otherwise the payee can burn tokens to
+    induce the mediator to close a channel.
+    """
+
+    transfers_pair = make_transfers_pair(
+        [factories.HOP1, factories.HOP2],
+        factories.HOP6,
+        amount=10,
+        secret=factories.UNIT_SECRET,
+    )
+
+    pair = transfers_pair[0]
+
+    # preconditions
+    assert pair.payer_transfer.secret == factories.UNIT_SECRET
+    assert pair.payee_transfer.secret == factories.UNIT_SECRET
+    assert pair.payee_state not in mediator.STATE_TRANSFER_PAYED
+
+    # do not generate events if the secret is known AND the payee is not payed
+    first_unsafe_block = pair.payer_transfer.expiration - pair.payer_route.reveal_timeout
+    events = mediator.events_for_expiration(
+        transfers_pair,
+        first_unsafe_block,
+    )
+
+    assert len(events) == 0
+    assert pair.payee_state not in mediator.STATE_TRANSFER_PAYED
+    assert pair.payer_state not in mediator.STATE_TRANSFER_PAYED
+
+    payer_expiration_block = pair.payer_transfer.expiration
+    events = mediator.events_for_expiration(
+        transfers_pair,
+        payer_expiration_block,
+    )
+    assert len(events) == 0
+    assert pair.payee_state not in mediator.STATE_TRANSFER_PAYED
+    assert pair.payer_state not in mediator.STATE_TRANSFER_PAYED
+
+    payer_expiration_block = pair.payer_transfer.expiration
+    events = mediator.events_for_expiration(
+        transfers_pair,
+        payer_expiration_block + 1,
+    )
+    assert len(events) == 0
+    assert pair.payee_state not in mediator.STATE_TRANSFER_PAYED
+    assert pair.payer_state not in mediator.STATE_TRANSFER_PAYED
+
+
 def test_secret_learned():
     from_route, from_transfer = make_from(
         amount=factories.UNIT_TRANSFER_AMOUNT,
@@ -799,6 +948,48 @@ def test_secret_learned():
 
     balance_events = [e for e in iteration.events if isinstance(e, SendBalanceProof)]
     assert len(balance_events) == 1
+
+
+def test_mediate_transfer():
+    amount = 10
+    block_number = 5
+    expiration = 30
+
+    routes = [
+        factories.make_route(factories.HOP2, available_balance=factories.UNIT_TRANSFER_AMOUNT),
+    ]
+
+    routes_state = RoutesState(routes)
+    state = MediatorState(
+        factories.ADDR,
+        routes_state,
+        block_number,
+        factories.UNIT_HASHLOCK,
+    )
+
+    payer_route, payer_transfer = make_from(amount, factories.HOP6, expiration)
+
+    iteration = mediator.mediate_transfer(
+        state,
+        payer_route,
+        payer_transfer,
+    )
+
+    events_mediated = [
+        e
+        for e in iteration.events
+        if isinstance(e, SendMediatedTransfer)
+    ]
+
+    assert len(events_mediated) == 1
+    transfer = events_mediated[0]
+    assert transfer.identifier == payer_transfer.identifier
+    assert transfer.token == payer_transfer.token
+    assert transfer.amount == payer_transfer.amount
+    assert transfer.hashlock == payer_transfer.hashlock
+    assert transfer.target == payer_transfer.target
+    assert payer_transfer.expiration > transfer.expiration
+    assert transfer.node_address == payer_route.node_address
 
 
 def test_init_mediator():
