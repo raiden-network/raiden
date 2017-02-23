@@ -182,7 +182,7 @@ class TransferManager(object):
         raiden = self.tokenmanager.raiden
         token_address = self.tokenmanager.token_address
 
-        channel = self.tokenmanager.get_channel_by_partner_address(transfer.sender)
+        channel = self.tokenmanager.partneraddress_channel[transfer.sender]
         if not channel.isopen:
             if log.isEnabledFor(logging.WARN):
                 log.warn(

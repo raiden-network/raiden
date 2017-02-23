@@ -836,9 +836,7 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
 
         tokenmanager = raiden.get_manager_by_token_address(self.token_address)
         transfermanager = tokenmanager.transfermanager
-        originating_channel = tokenmanager.get_channel_by_partner_address(
-            originating_transfer.sender,
-        )
+        originating_channel = tokenmanager.partneraddress_channel[originating_transfer.sender]
 
         transfermanager.register_task_for_hashlock(self, hashlock)
         tokenmanager.register_channel_for_hashlock(originating_channel, hashlock)
@@ -1030,9 +1028,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
                     exchange_node=target,
                 )
 
-                to_channel = to_tokenmanager.get_channel_by_partner_address(
-                    to_mediated_transfer.sender
-                )
+                to_channel = to_tokenmanager.partneraddress_channel[to_mediated_transfer.sender]
 
                 # now the secret can be revealed forward (`from_hop`)
                 from_tokenmanager.handle_secret(identifier, secret)
@@ -1204,9 +1200,7 @@ class ExchangeTask(BaseMediatedTransferTask):
         from_tokenmanager = raiden.get_manager_by_token_address(from_token)
         from_transfermanager = from_tokenmanager.transfermanager
 
-        from_channel = from_tokenmanager.get_channel_by_partner_address(
-            from_mediated_transfer.sender,
-        )
+        from_channel = from_tokenmanager.partneraddress_channel[from_mediated_transfer.sender]
 
         from_transfermanager.register_task_for_hashlock(self, hashlock)
         from_tokenmanager.register_channel_for_hashlock(from_channel, hashlock)
