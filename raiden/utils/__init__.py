@@ -160,3 +160,29 @@ def camel_to_snake_case(name):
 
 def snake_to_camel_case(snake_string):
     return snake_string.title().replace("_", "")
+
+
+def netting_channel_to_api_dict(nettingchannel, our_address):
+    """Takes in a NettingChannel Object and turns it into a dictionary for
+    usage in the REST API.
+
+    Note: `our_address` is required since it's not part of either the mock or
+          tester implementation of NettingChannel. Only the rpc NettingChannel
+          knows its node address.
+    """
+
+    status = 'open'
+    if not nettingchannel.isopen():
+        status = 'closed'
+    if nettingchannel.settled():
+        status = 'settled'
+
+    details = nettingchannel.detail(our_address)
+    return {
+        "channel_address": '0x' + nettingchannel.address.encode('hex'),
+        "token_address": '0x' + nettingchannel.token_address().encode('hex'),
+        "partner_address": '0x' + details['partner_address'].encode('hex'),
+        "settle_timeout": details['settle_timeout'],
+        "balance": details['our_balance'],
+        "status": status
+    }
