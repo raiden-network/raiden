@@ -140,5 +140,8 @@ class ContractSendWithdraw(Event):
     """ Event emitted when the lock must withdrawn on-chain. """
 
     def __init__(self, transfer, channel_address):
+        if transfer.secret is None:
+            raise ValueError('transfer must have the secret set.')
+
         self.transfer = transfer
         self.channel_address = channel_address
