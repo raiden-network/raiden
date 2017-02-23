@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from gevent import monkey
+monkey.patch_all()
 import pytest
 import gevent
 import gevent.monkey
@@ -123,7 +125,6 @@ __all__ = (
     'enable_greenlet_debugger',
 )
 
-gevent.monkey.patch_socket()
 gevent.get_hub().SYSTEM_ERROR = BaseException
 PBKDF2_CONSTANTS['c'] = 100
 
