@@ -18,7 +18,7 @@ from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
 from raiden.utils import privatekey_to_address
-from raiden.constants import GAS_LIMIT_HEX
+from raiden.settings import GAS_LIMIT_HEX
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 

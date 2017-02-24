@@ -7,7 +7,7 @@ import gevent
 from ethereum import slogging
 from ethereum.utils import sha3
 
-from raiden.constants import DEFAULT_SETTLE_TIMEOUT
+from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.tests.utils.mock_client import (
     BlockChainServiceMock,
     MOCK_REGISTRY_ADDRESS,

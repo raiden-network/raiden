@@ -17,7 +17,7 @@ from pyethapp.rpc_client import topic_encoder, JSONRPCClient
 import requests
 
 from raiden import messages
-from raiden.constants import (
+from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
     GAS_LIMIT,
     GAS_PRICE,

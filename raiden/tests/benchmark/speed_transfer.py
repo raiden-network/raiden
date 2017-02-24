@@ -3,7 +3,7 @@ from __future__ import print_function
 
 import time
 
-from raiden.constants import (
+from raiden.settings import (
     DEFAULT_SETTLE_TIMEOUT,
     DEFAULT_POLL_TIMEOUT,
     DEFAULT_REVEAL_TIMEOUT,

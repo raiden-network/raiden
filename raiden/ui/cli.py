@@ -9,9 +9,7 @@ from ethereum import slogging
 from ethereum.utils import encode_hex, decode_hex
 
 from raiden.app import App
-from raiden.constants import (
-    INITIAL_PORT,
-)
+from raiden.settings import INITIAL_PORT
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import BlockChainService
 from raiden.ui.console import Console

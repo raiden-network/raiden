@@ -19,7 +19,7 @@ from raiden.messages import (
     Secret,
     SecretRequest,
 )
-from raiden.constants import (
+from raiden.settings import (
     DEFAULT_HEALTHCHECK_POLL_TIMEOUT,
     DEFAULT_EVENTS_POLL_TIMEOUT,
     ESTIMATED_BLOCK_TIME,

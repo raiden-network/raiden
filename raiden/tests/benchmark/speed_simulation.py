@@ -14,9 +14,7 @@ import yaml
 import gevent
 import networkx
 
-from raiden.constants import (
-    DEFAULT_SETTLE_TIMEOUT,
-)
+from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.app import App
 from raiden.network.discovery import Discovery
 from raiden.network.rpc.client import BlockChainService

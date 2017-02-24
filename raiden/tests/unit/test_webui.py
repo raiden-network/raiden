@@ -5,9 +5,7 @@ import pytest
 from ethereum.utils import sha3
 from ethereum import slogging
 
-from raiden.constants import (
-    DEFAULT_SETTLE_TIMEOUT,
-)
+from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.messages import setup_messages_cb
 from raiden.tests.utils.network import create_apps, create_network_channels
