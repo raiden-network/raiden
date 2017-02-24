@@ -544,8 +544,6 @@ class Channel(object):
 
         self.received_transfers = []
         self.sent_transfers = []  #: transfers that were sent, required for settling
-        self.on_withdrawable_callbacks = list()  # mapping of transfer to callback list
-        self.on_task_completed_callbacks = list()  # XXX naming
 
     @property
     def status(self):
@@ -613,9 +611,6 @@ class Channel(object):
     @property
     def outstanding(self):
         return self.our_state.locked()
-
-    def register_withdrawable_callback(self, callback):
-        self.on_withdrawable_callbacks.append(callback)
 
     def channel_closed(self, block_number):
         self.external_state.register_block_alarm(self.blockalarm_for_settle)
@@ -988,32 +983,6 @@ class Channel(object):
 
         from_state.transferred_amount = transfer.transferred_amount
         from_state.nonce += 1
-
-        if isinstance(transfer, DirectTransfer):
-            # if we are the recipient, spawn callback for incoming transfers
-            if transfer.recipient == self.our_state.address:
-                for callback in self.on_withdrawable_callbacks:
-                    gevent.spawn(
-                        callback,
-                        transfer.token,
-                        transfer.recipient,
-                        transfer.sender,  # 'initiator' is sender here
-                        transfer.transferred_amount,
-                        None,  # no hashlock in DirectTransfer
-                        transfer.identifier
-                    )
-
-            # if we are the sender, call the 'success' callback
-            elif from_state.address == self.our_state.address:
-                callbacks_to_remove = list()
-                for callback in self.on_task_completed_callbacks:
-                    result = callback(task=None, success=True)  # XXX maybe use gevent.spawn()
-
-                    if result is True:
-                        callbacks_to_remove.append(callback)
-
-                for callback in callbacks_to_remove:
-                    self.on_task_completed_callbacks.remove(callback)
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(

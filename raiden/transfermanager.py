@@ -53,12 +53,11 @@ class TransferManager(object):
     def __init__(self, tokenmanager):
         self.tokenmanager = tokenmanager
 
+        # map hashlock to a task, this dictionary is used to dispatch protocol
+        # messages
         self.transfertasks = dict()
         self.exchanges = dict()  #: mapping for pending exchanges
         self.endtask_transfer_mapping = dict()
-
-        self.on_task_completed_callbacks = list()
-        self.on_result_callbacks = list()
 
     # TODO: Move registration to raiden_service.py:Raiden. This is used to
     # dispatch messages by hashlock and to expose callbacks to applications
@@ -80,42 +79,8 @@ class TransferManager(object):
         self.transfertasks[hashlock] = task
 
     def on_hashlock_result(self, hashlock, success):
-        """ Set the result for a transfer based on hashlock.
-
-        This function will also call the registered callbacks and de-register
-        the task.
-        """
-        task = self.transfertasks[hashlock]
+        """ Called once a task reaches a final state. """
         del self.transfertasks[hashlock]
-
-        callbacks_to_remove = list()
-        for callback in self.on_task_completed_callbacks:
-            result = callback(task, success)
-
-            if result is True:
-                callbacks_to_remove.append(callback)
-
-        for callback in callbacks_to_remove:
-            self.on_task_completed_callbacks.remove(callback)
-
-        if task in self.endtask_transfer_mapping:
-            if task in self.endtask_transfer_mapping:
-                transfer = self.endtask_transfer_mapping[task]
-                for callback in self.on_result_callbacks:
-                    gevent.spawn(
-                        callback(
-                            transfer.token,
-                            transfer.recipient,
-                            transfer.initiator,
-                            transfer.transferred_amount,
-                            hashlock,
-                            transfer.identifier
-                        )
-                    )
-            del self.endtask_transfer_mapping[task]
-
-    def register_callback_for_result(self, callback):
-        self.on_result_callbacks.append(callback)
 
     def create_default_identifier(self, target):
         """
@@ -133,7 +98,7 @@ class TransferManager(object):
         ))
         return int(hash_[0:8].encode('hex'), 16)
 
-    def transfer_async(self, amount, target, identifier=None, callback=None):
+    def transfer_async(self, amount, target, identifier=None):
         """ Transfer `amount` between this node and `target`.
 
         This method will start an asyncronous transfer, the transfer might fail
@@ -155,7 +120,6 @@ class TransferManager(object):
                 amount,
                 identifier,
                 direct_channel,
-                callback,
             )
             return async_result
 
@@ -164,12 +128,11 @@ class TransferManager(object):
                 amount,
                 identifier,
                 target,
-                callback,
             )
 
             return async_result
 
-    def _direct_or_mediated_transfer(self, amount, identifier, direct_channel, callback):
+    def _direct_or_mediated_transfer(self, amount, identifier, direct_channel):
         """ Check the direct channel and if possible use it, otherwise start a
         mediated transfer.
         """
@@ -185,7 +148,6 @@ class TransferManager(object):
                 amount,
                 identifier,
                 direct_channel.partner_state.address,
-                callback,
             )
             return async_result
 
@@ -201,7 +163,6 @@ class TransferManager(object):
                 amount,
                 identifier,
                 direct_channel.partner_state.address,
-                callback,
             )
             return async_result
 
@@ -210,16 +171,13 @@ class TransferManager(object):
             self.tokenmanager.raiden.sign(direct_transfer)
             direct_channel.register_transfer(direct_transfer)
 
-            if callback:
-                direct_channel.on_task_completed_callbacks.append(callback)
-
             async_result = self.tokenmanager.raiden.protocol.send_async(
                 direct_channel.partner_state.address,
                 direct_transfer,
             )
             return async_result
 
-    def _mediated_transfer(self, amount, identifier, target, callback):
+    def _mediated_transfer(self, amount, identifier, target):
         asunc_result = AsyncResult()
         task = StartMediatedTransferTask(
             self.tokenmanager.raiden,
@@ -230,9 +188,6 @@ class TransferManager(object):
             asunc_result,
         )
         task.start()
-
-        if callback:
-            self.on_task_completed_callbacks.append(callback)
 
         return asunc_result
 
