@@ -3,7 +3,6 @@ import logging
 from collections import namedtuple
 
 import gevent
-from gevent.queue import Queue
 from gevent.queue import Empty as QueueEmpty
 from ethereum import slogging
 from ethereum.abi import ContractTranslator
@@ -24,16 +23,7 @@ from raiden.tasks import AlarmTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
-from raiden.utils import privatekey_to_address, isaddress, pex, GLOBAL_CTX, camel_to_snake_case
-
-from raiden.api.objects import (
-    TransferReceived,
-    ChannelClosed,
-    ChannelNew,
-    ChannelNewBalance,
-    ChannelSecretRevealed,
-    ChannelSettled
-)
+from raiden.utils import privatekey_to_address, isaddress, pex, GLOBAL_CTX
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -133,8 +123,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.on_message = message_handler.on_message
         self.on_event = event_handler.on_event
 
-        self.api_event_manager = APIEventManager(self)
-
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
@@ -143,10 +131,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
     def get_block_number(self):
         return self._blocknumber
-
-    @property
-    def event_queue(self):
-        return self.api_event_manager.event_queue
 
     def get_manager_by_token_address(self, token_address_bin):
         """ Return the manager for the given `token_address_bin`.  """
@@ -633,63 +617,6 @@ class RaidenAPI(object):
 
         netting_channel.settle()
         return netting_channel
-
-
-class APIEventManager(object):
-    """
-    The EventManager holds the Queue where the Events are put in order to pass them to a client
-    via the API.
-
-    The current approach is very simplistic, since it puts every event that the raiden-node
-    receives (blockchain_events) or creates (raiden_events) in a simple Queue, which doesn't
-    allow filtering of Events.
-    """
-
-    blockchain_events = [
-        ChannelNew,
-        ChannelClosed,
-        ChannelSettled,
-        ChannelSecretRevealed,
-        ChannelNewBalance
-    ]
-
-    raiden_events = [
-        TransferReceived
-    ]
-
-    def __init__(self, raiden):
-        self.raiden = raiden
-        self.event_queue = Queue()
-
-    def get_method_for_event(self, klass):
-        klass_name = klass.__name__
-        func_name = 'on_' + camel_to_snake_case(klass_name)
-        func = getattr(self, func_name)
-        return func
-
-    def on_channel_closed(self, *args, **kwargs):
-        event = ChannelClosed(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_channel_new(self, *args, **kwargs):
-        event = ChannelNew(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_channel_new_balance(self, *args, **kwargs):
-        event = ChannelNewBalance(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_channel_settled(self, *args, **kwargs):
-        event = ChannelSettled(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_channel_secret_revealed(self, *args, **kwargs):
-        event = ChannelSecretRevealed(*args, **kwargs)
-        self.event_queue.put(event)
-
-    def on_transfer_received(self, *args, **kwargs):
-        event = TransferReceived(*args, **kwargs)
-        self.event_queue.put(event)
 
 
 class RaidenMessageHandler(object):
