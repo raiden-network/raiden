@@ -1142,17 +1142,17 @@ def test_netting(
     }
 
     assert tester_token.balanceOf(address0, sender=privatekey0_raw) == (
-            initial_balance0
-            + deposit
-            - transfer_amount0
-            - second_transfer_amount0
-            + transfer_amount1
-        )
+        initial_balance0 +
+        deposit -
+        transfer_amount0 -
+        second_transfer_amount0 +
+        + transfer_amount1
+    )
     assert tester_token.balanceOf(address1, sender=privatekey1_raw) == (
-            initial_balance1
-            + deposit
-            + transfer_amount0
-            + second_transfer_amount0
-            - transfer_amount1
-        )
+        initial_balance1 +
+        deposit +
+        transfer_amount0 +
+        second_transfer_amount0 -
+        transfer_amount1
+    )
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == 0
