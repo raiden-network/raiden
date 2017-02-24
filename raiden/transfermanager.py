@@ -178,18 +178,18 @@ class TransferManager(object):
             return async_result
 
     def _mediated_transfer(self, amount, identifier, target):
-        asunc_result = AsyncResult()
+        async_result = AsyncResult()
         task = StartMediatedTransferTask(
             self.tokenmanager.raiden,
             self.tokenmanager.token_address,
             amount,
             identifier,
             target,
-            asunc_result,
+            async_result,
         )
         task.start()
 
-        return asunc_result
+        return async_result
 
     def on_mediatedtransfer_message(self, transfer):
         if transfer.sender not in self.tokenmanager.partneraddress_channel:
