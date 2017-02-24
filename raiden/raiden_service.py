@@ -87,7 +87,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.registries = list()
         self.managers_by_token_address = dict()
         self.managers_by_address = dict()
-        self.transfertasks = defaultdict(list)
+        self.transfertasks = defaultdict(dict)
 
         self.chain = chain
         self.config = config
@@ -227,7 +227,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
                 # error in a channel to mess the state from others.
                 log.error('programming error')
 
-    def register_task_for_hashlock(self, task, hashlock):
+    def register_task_for_hashlock(self, task, token, hashlock):
         """ Register the task to receive messages based on hashlock.
 
         Registration is required otherwise the task won't receive any messages
@@ -240,12 +240,11 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             content, eg.  RevealSecret), this means the sender needs to be
             checked for the received messages.
         """
-        if task not in self.transfertasks[hashlock]:
-            self.transfertasks[hashlock].append(task)
+        self.transfertasks[hashlock][token] = task
 
-    def on_hashlock_result(self, hashlock, success):
+    def on_hashlock_result(self, token, hashlock, success):
         """ Clear the task when it's finished. """
-        del self.transfertasks[hashlock]
+        del self.transfertasks[hashlock][token]
 
     def message_for_task(self, message, hashlock):
         """ Sends the message to the corresponding task.
@@ -257,7 +256,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         """
 
         if self.transfertasks[hashlock]:
-            for task in self.transfertasks[hashlock]:
+            for task in self.transfertasks[hashlock].itervalues():
                 task.on_response(message)
 
         else:
@@ -331,11 +330,11 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     def stop(self):
         wait_for = [self.alarm]
 
-        for task_list in self.transfertasks.itervalues():
-            for task in task_list:
+        for token_task in self.transfertasks.itervalues():
+            for task in token_task.itervalues():
                 task.kill()
 
-            wait_for.extend(task_list)
+            wait_for.extend(token_task.itervalues())
 
         self.alarm.stop_async()
         if self.healthcheck is not None:
@@ -344,7 +343,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.protocol.stop_async()
 
         wait_for.extend(self.protocol.address_greenlet.itervalues())
-
 
         self.blockchain_log_handler.uninstall_listeners()
         gevent.wait(wait_for)
@@ -461,11 +459,13 @@ class RaidenAPI(object):
         except UnknownTokenAddress as e:
             log.error(
                 'no token manager for %s',
-                e.token_address,
+                e.address,
             )
             return
 
+        identifier = None  # TODO: fix identifier
         task = StartExchangeTask(
+            identifier,
             self.raiden,
             from_token,
             from_amount,
