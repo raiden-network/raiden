@@ -4,9 +4,11 @@ from flask import Blueprint
 
 from raiden.api.v1.encoding import ChannelRequestSchema
 
-# Take a look at this SO question on hints how to organize versioned
-# API with flask:  http://stackoverflow.com/questions/28795561/support-multiple-api-versions-in-flask#28797512
-v1_resources_blueprint = Blueprint('v1_resources', __name__)
+
+def create_blueprint():
+    # Take a look at this SO question on hints how to organize versioned
+    # API with flask:  http://stackoverflow.com/questions/28795561/support-multiple-api-versions-in-flask#28797512
+    return Blueprint('v1_resources', __name__)
 
 
 class BaseResource(Resource):

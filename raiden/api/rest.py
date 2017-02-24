@@ -10,7 +10,7 @@ from raiden.api.v1.encoding import (
     HexAddressConverter
 )
 from raiden.api.v1.resources import (
-    v1_resources_blueprint,
+    create_blueprint,
     ChannelsResource,
     ChannelsResourceByChannelAddress,
     TokensResource
@@ -54,12 +54,12 @@ class APIServer(object):
 
     def __init__(self, rest_api):
         self.rest_api = rest_api
+        blueprint = create_blueprint()
         if self.rest_api.version == 1:
             self.flask_api_middleware = Api(
-                v1_resources_blueprint,
+                blueprint,
                 prefix="/api/1"
             )
-            blueprint = v1_resources_blueprint
         else:
             raise ValueError('Inalid api version: {}'.format(self.rest_api.version))
 
@@ -91,8 +91,8 @@ class APIServer(object):
             resource_cls._route
         )
 
-    def run(self, port, debug=False):
-        self.flask_app.run(port=port, debug=debug)
+    def run(self, port, **kwargs):
+        self.flask_app.run(port=port, **kwargs)
 
 
 class RestAPI(object):
