@@ -1018,3 +1018,141 @@ def test_settlement_with_unauthorized_token_transfer(
     assert tester_token.balanceOf(address1, sender=privatekey1_raw) == initial_balance1 + deposit + transfer_amount0 - transfer_amount1  # noqa
     # Make sure that the extra amount is burned/locked in the netting channel
     assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == extra_amount
+
+
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+def test_netting(
+        deposit,
+        settle_timeout,
+        tester_channels,
+        tester_state,
+        tester_events,
+        tester_token):
+    """
+    This test ensures that Alice can send payments to Bob exceeding her initial deposit.
+    A.sent > A.deposit
+    the condition for this to work is that Bob has also sent payments to Alice in the meantime, so that
+    B.sent >= (A.sent - A.deposit)
+    A sample use case:
+    A.deposit = 10
+    B.deposit = 10
+    A.send(10)  # at this point Alice's deposit is exhausted
+    A.send(5) --> fail
+    B.send(5)  # this replenishes the available tokens for Alice
+    A.send(5)  # is now possible
+    """
+    privatekey0_raw, privatekey1_raw, nettingchannel, channel0, channel1 = tester_channels[0]
+    privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
+    privatekey1 = PrivateKey(privatekey1_raw, ctx=GLOBAL_CTX, raw=True)
+    address0 = privatekey_to_address(privatekey0_raw)
+    address1 = privatekey_to_address(privatekey1_raw)
+    unknown_key = tester.k3
+
+    initial_balance0 = tester_token.balanceOf(address0, sender=privatekey0_raw)
+    initial_balance1 = tester_token.balanceOf(address1, sender=privatekey1_raw)
+
+    transfer_amount0 = deposit
+    first_direct_transfer0 = channel0.create_directtransfer(
+        transfer_amount0,
+        1  # TODO: fill in identifier
+    ) # at this point address0 deposit is exhausted
+    first_direct_transfer0.sign(privatekey0, address0)
+    first_direct_transfer0_data = str(first_direct_transfer0.packed().data)
+
+    channel0.register_transfer(first_direct_transfer0)
+    channel1.register_transfer(first_direct_transfer0)
+
+    transfer_amount_failed = 5
+    with pytest.raises(ValueError):
+        second_direct_transfer0 = channel0.create_directtransfer(
+            transfer_amount_failed,
+            1  # TODO: fill in identifier
+        ) # This will raise Insufficient funds Value error
+
+    transfer_amount1 = 30
+    direct_transfer1 = channel1.create_directtransfer(
+        transfer_amount1,
+        1  # TODO: fill in identifier
+    ) # Replenishes tokens in the address0
+
+    direct_transfer1.sign(privatekey1, address1)
+    direct_transfer1_data = str(direct_transfer1.packed().data)
+
+    channel0.register_transfer(direct_transfer1)
+    channel1.register_transfer(direct_transfer1)
+
+    second_transfer_amount0 = 5
+    second_direct_transfer0 = channel0.create_directtransfer(
+        second_transfer_amount0,
+        1  # TODO: fill in identifier
+    )
+    second_direct_transfer0.sign(privatekey0, address0)
+    second_direct_transfer0_data = str(second_direct_transfer0.packed().data)
+
+    channel0.register_transfer(second_direct_transfer0)
+    channel1.register_transfer(second_direct_transfer0)
+
+    previous_events = list(tester_events)
+    nettingchannel.close(
+        second_direct_transfer0_data,
+        direct_transfer1_data,
+        sender=privatekey1_raw,
+    )
+    assert len(previous_events) + 1 == len(tester_events)
+
+    block_number = tester_state.block.number
+
+    close_event = tester_events[-1]
+    assert close_event == {
+        '_event_type': 'ChannelClosed',
+        'closing_address': encode_hex(address1),
+        'block_number': block_number,
+    }
+
+    assert nettingchannel.closed(sender=privatekey0_raw) == block_number
+    assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address1)
+
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+
+    previous_events = list(tester_events)
+    nettingchannel.settle(sender=privatekey0_raw)
+    assert len(previous_events) + 3 == len(tester_events)
+
+    block_number = tester_state.block.number
+    transfer0_event = tester_events[-3]
+    assert transfer0_event == {
+        '_event_type': 'Transfer',
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address0),
+        '_value': deposit - transfer_amount0 - second_transfer_amount0 + transfer_amount1,
+    }
+
+    transfer1_event = tester_events[-2]
+    assert transfer1_event == {
+        '_event_type': 'Transfer',
+        '_from': nettingchannel.address,
+        '_to': encode_hex(address1),
+        '_value': deposit + transfer_amount0 + second_transfer_amount0 - transfer_amount1,
+    }
+
+    settle_event = tester_events[-1]
+    assert settle_event == {
+        '_event_type': 'ChannelSettled',
+        'block_number': block_number,
+    }
+
+    assert tester_token.balanceOf(address0, sender=privatekey0_raw) == (
+        initial_balance0 +
+        deposit -
+        transfer_amount0 -
+        second_transfer_amount0 +
+        + transfer_amount1
+    )
+    assert tester_token.balanceOf(address1, sender=privatekey1_raw) == (
+        initial_balance1 +
+        deposit +
+        transfer_amount0 +
+        second_transfer_amount0 -
+        transfer_amount1
+    )
+    assert tester_token.balanceOf(nettingchannel.address, sender=privatekey1_raw) == 0
