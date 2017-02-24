@@ -19,7 +19,8 @@ from raiden.api.objects import (
     ChannelSecretRevealed,
     TransferReceived
 )
-from raiden.raiden_service import DEFAULT_SETTLE_TIMEOUT
+from raiden.settings import DEFAULT_SETTLE_TIMEOUT
+
 
 def serialize_schema_selector(list_element, list_obj):
     schema = None

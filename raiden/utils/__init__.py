@@ -162,6 +162,10 @@ def snake_to_camel_case(snake_string):
     return snake_string.title().replace("_", "")
 
 
+def bytes_to_hexstr(b):
+    return '0x' + b.encode('hex')
+
+
 def netting_channel_to_api_dict(nettingchannel, our_address):
     """Takes in a NettingChannel Object and turns it into a dictionary for
     usage in the REST API.
@@ -179,9 +183,9 @@ def netting_channel_to_api_dict(nettingchannel, our_address):
 
     details = nettingchannel.detail(our_address)
     return {
-        "channel_address": '0x' + nettingchannel.address.encode('hex'),
-        "token_address": '0x' + nettingchannel.token_address().encode('hex'),
-        "partner_address": '0x' + details['partner_address'].encode('hex'),
+        "channel_address": bytes_to_hexstr(nettingchannel.address),
+        "token_address": bytes_to_hexstr(nettingchannel.token_address()),
+        "partner_address": bytes_to_hexstr(details['partner_address']),
         "settle_timeout": details['settle_timeout'],
         "balance": details['our_balance'],
         "status": status
