@@ -7,7 +7,11 @@ from raiden.tests.fixtures.abi import (
     netting_channel_abi,
 )
 
-from raiden.tests.fixtures.api import raiden_service, api_test_context
+from raiden.tests.fixtures.api import (
+    api_raiden_service,
+    api_test_context,
+    api_test_server
+)
 
 from raiden.tests.fixtures.blockchain import (
     tokens_addresses,
@@ -65,7 +69,9 @@ from raiden.tests.fixtures.variables import (
 )
 
 __all__ = (
+    'api_raiden_service',
     'api_test_context',
+    'api_test_server',
     'token_abi',
     'registry_abi',
     'channel_manager_abi',
@@ -77,7 +83,6 @@ __all__ = (
 
     'raiden_chain',
     'raiden_network',
-    'raiden_service',
 
     'tester_blockgas_limit',
     'tester_events',

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
+import pytest
 import grequests
-from gevent import Greenlet
-from raiden.api.rest import RestAPI, APIServer
+
 from raiden.tests.utils.apitestcontext import decode_response
 from raiden.utils import netting_channel_to_api_dict
 from raiden.tests.utils.transfer import channel
@@ -27,15 +27,41 @@ def test_netting_channel_to_api_dict(raiden_network, tokens_addresses, settle_ti
     }
     assert result == expected_result
 
+
+def test_api_query_channels(api_test_server, api_test_context, api_raiden_service):
+    api_test_server.raiden_api = api_raiden_service.api
+    responses = grequests.map([grequests.get('http://localhost:5001/api/1/channels')])
+    response = responses[0]
+    assert response and response.status_code == 200
+    assert decode_response(response) == api_test_context.expect_channels()
+
+    api_test_context.make_channel_and_add()
     responses = grequests.map([grequests.get('http://localhost:5001/api/1/channels')])
     response = responses[0]
     assert response.status_code == 200
     assert decode_response(response) == api_test_context.expect_channels()
 
-    api_test_context.make_channel()
-    responses = grequests.map([grequests.get('http://localhost:5001/api/1/channels')])
-    response = responses[0]
-    assert response.status_code == 200
-    assert decode_response(response) == api_test_context.expect_channels()
 
-    g.kill(block=True, timeout=10)
+def test_api_open_channel(api_test_server, api_test_context, api_raiden_service, reveal_timeout):
+    api_test_server.raiden_api = api_raiden_service.api
+    partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    settle_timeout = 1650
+    channel_data_obj = {
+        "partner_address": partner_address,
+        "token_address": token_address,
+        "settle_timeout": settle_timeout
+    }
+
+    responses = grequests.map([grequests.put(
+        'http://localhost:5001/api/1/channels',
+        data=channel_data_obj
+    )])
+    response = responses[0]
+    assert response and response.status_code == 200
+    expected_response = channel_data_obj
+    expected_response['reveal_timeout'] = reveal_timeout
+    expected_response['balance'] = 0
+    expected_response['status'] = 'open'
+
+    assert decode_response(response) == expected_response

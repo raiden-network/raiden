@@ -47,8 +47,7 @@ A channel object consists of a
 - ``token_address`` should be a ``string`` containing the hexadecimal address of the
   token we are trading in the channel.
 
-- ``balance`` should be an integer of the amount of the ``token_address`` token we have
-  deposited in the channel.
+- ``balance`` should be an integer of the amount of the ``token_address`` token we have available for transferring.
 
 - ``state`` should be the current state of the channel represented by a string.
   Possible value are:
