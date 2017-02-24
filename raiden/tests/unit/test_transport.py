@@ -59,7 +59,7 @@ def test_throttle_policy_ping(monkeypatch, raiden_network):
     # additional time for the Ack, let's allow for a 10% difference of the
     # "perfect" value of a message every 0.5s
     token_refill = 0.5
-    tolerance = 0.05
+    tolerance = 0.07
 
     # time sensitive test, the interval is instantiated just before the protocol
     # is used.
