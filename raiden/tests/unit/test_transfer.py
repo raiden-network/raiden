@@ -42,8 +42,7 @@ def sign_and_send(message, key, address, app):
     gevent.sleep(3)
 
 
-class MediatedTransferTestHelper:
-
+class MediatedTransferTestHelper(object):
     def __init__(self, raiden_network, token_manager):
         self.raiden_network = raiden_network
         self.token_manager = token_manager
@@ -255,7 +254,7 @@ def test_cancel_transfer(raiden_chain, token, deposit):
 
     # app1 -> app3 is the only available path but app2 -> app3 doesnt have
     # resources and needs to send a RefundTransfer down the path
-    transfer(app0, app3, token, 50)
+    transfer(app0, app3, token, amount=50, identifier=1)
 
     assert_synched_channels(
         channel(app0, app1, token), deposit, [],
@@ -491,11 +490,12 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
 
     # and now send one more direct transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
+    identifier = app0.raiden.create_default_identifier(
+        token_manager0.token_address,
+        app1.raiden.address,
+    )
     direct_transfer = DirectTransfer(
-        identifier=app0.raiden.api.create_default_identifier(
-            app1.raiden.address,
-            token_manager0.token_address
-        ),
+        identifier=identifier,
         nonce=1,
         token=token_manager0.token_address,
         transferred_amount=10,
@@ -533,11 +533,12 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     # an out-of-order/resent message that arrives late
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
+    identifier = alice_app.raiden.create_default_identifier(
+        token_manager.token_address,
+        charlie_address,
+    )
     mediated_transfer = MediatedTransfer(
-        identifier=alice_app.raiden.api.create_default_identifier(
-            charlie_address,
-            token_address
-        ),
+        identifier=identifier,
         nonce=1,
         token=token_address,
         transferred_amount=amount,
@@ -580,11 +581,12 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     # an out-of-order/resent message that arrives late
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
+    identifier = alice_app.raiden.create_default_identifier(
+        token_manager.token_address,
+        charlie_address,
+    )
     mediated_transfer = MediatedTransfer(
-        identifier=alice_app.raiden.api.create_default_identifier(
-            charlie_address,
-            token_address
-        ),
+        identifier=identifier,
         nonce=1,
         token=token_address,
         transferred_amount=amount,
@@ -636,11 +638,12 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     )
 
     # and now send one more direct transfer with a mistaken token address
+    identifier = app0.raiden.create_default_identifier(
+        token_manager0.token_address,
+        app1.raiden.address,
+    )
     direct_transfer = DirectTransfer(
-        identifier=app0.raiden.api.create_default_identifier(
-            app1.raiden.address,
-            HASH[0:20]
-        ),
+        identifier=identifier,
         nonce=2,
         token=HASH[0:20],
         transferred_amount=10,
@@ -683,11 +686,12 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     )
 
     # and now send one more direct transfer with the locksroot not set correctly
+    identifier = app0.raiden.create_default_identifier(
+        token_manager0.token_address,
+        app1.raiden.address,
+    )
     direct_transfer = DirectTransfer(
-        identifier=app0.raiden.api.create_default_identifier(
-            app1.raiden.address,
-            token_manager0.token_address,
-        ),
+        identifier=identifier,
         nonce=2,
         token=token_manager0.token_address,
         transferred_amount=10,
@@ -701,7 +705,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
-def test_transfer_to_unknownchannel(raiden_network, private_keys):
+def test_transfer_to_unknownchannel(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     token_manager0 = app0.raiden.managers_by_token_address.values()[0]

@@ -8,7 +8,6 @@ from ethereum.utils import sha3
 
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.blockchain.abi import NETTING_CHANNEL_ABI
-from raiden.transfermanager import TransferManager
 from raiden.messages import Secret, RevealSecret
 from raiden.utils import isaddress, pex
 
@@ -42,9 +41,6 @@ class TokenManager(object):  # pylint: disable=too-many-instance-attributes
         self.channel_manager_address = channel_manager_address
         self.channelgraph = channel_graph
         self.raiden = raiden
-
-        transfermanager = TransferManager(self)
-        self.transfermanager = transfermanager
 
     def get_channel_by_contract_address(self, netting_channel_address_bin):
         """ Return the channel with `netting_channel_address_bin`.

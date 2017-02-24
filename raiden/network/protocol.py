@@ -10,8 +10,8 @@ from gevent.queue import Queue
 from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
+from raiden.exceptions import UnknownAddress, UnknownTokenAddress, TransferWhenClosed
 from raiden.messages import decode, Ack, Ping, SignedMessage
-from raiden.transfermanager import UnknownAddress, UnknownTokenAddress, TransferWhenClosed
 from raiden.channel import InvalidLocksRoot, InvalidNonce
 from raiden.utils import isaddress, sha3, pex
 
