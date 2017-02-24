@@ -40,6 +40,7 @@ class TransferWhenClosed(Exception):
 
 class UnknownTokenAddress(Exception):
     def __init__(self, address):
+        self.address = address
         Exception.__init__(
             self,
             'Message with unknown token address {} received'.format(pex(address))
@@ -52,34 +53,8 @@ class TransferManager(object):
     def __init__(self, tokenmanager):
         self.tokenmanager = tokenmanager
 
-        # map hashlock to a task, this dictionary is used to dispatch protocol
-        # messages
-        self.transfertasks = dict()
         self.exchanges = dict()  #: mapping for pending exchanges
         self.endtask_transfer_mapping = dict()
-
-    # TODO: Move registration to raiden_service.py:Raiden. This is used to
-    # dispatch messages by hashlock and to expose callbacks to applications
-    # built on top of raiden, since hashlocks can be shared among tokens this
-    # should be moved to an upper layer.
-    def register_task_for_hashlock(self, task, hashlock):
-        """ Register the task to receive messages based on hashlock.
-
-        Registration is required otherwise the task won't receive any messages
-        from the protocol, un-registering is done by the `on_hashlock_result`
-        function.
-
-        Note:
-            Messages are dispatched solely on the hashlock value (being part of
-            the message, eg. SecretRequest, or calculated from the message
-            content, eg.  RevealSecret), this means the sender needs to be
-            checked for the received messages.
-        """
-        self.transfertasks[hashlock] = task
-
-    def on_hashlock_result(self, hashlock, success):
-        """ Called once a task reaches a final state. """
-        del self.transfertasks[hashlock]
 
     def transfer_async(self, amount, target, identifier=None):
         """ Transfer `amount` between this node and `target`.

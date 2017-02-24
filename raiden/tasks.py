@@ -3,7 +3,6 @@
 import logging
 import random
 import time
-from random import randint
 
 import gevent
 from gevent.event import AsyncResult
@@ -110,7 +109,7 @@ class HealthcheckTask(Task):
                         time.time() - self.protocol.last_received_time[receiver_address]
                     )
                     # Add a randomized delay in the loop to not clog the network
-                    gevent.sleep(randint(0, int(0.2 * self.send_ping_time)))
+                    gevent.sleep(random.randint(0, int(0.2 * self.send_ping_time)))
                     if elapsed_time > self.max_unresponsive_time:
                         # remove the node from the graph
                         token_manager = self.raiden.get_manager_by_token_address(
@@ -408,7 +407,6 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
 
         node_address = raiden.address
         tokenmanager = raiden.get_manager_by_token_address(self.token_address)
-        transfermanager = tokenmanager.transfermanager
 
         fee = 0
         # there are no guarantees that the next_hop will follow the same route
@@ -437,7 +435,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
                     pex(hashlock),
                 )
 
-            transfermanager.register_task_for_hashlock(self, hashlock)
+            raiden.register_task_for_hashlock(self, hashlock)
             tokenmanager.register_channel_for_hashlock(forward_channel, hashlock)
 
             lock_timeout = forward_channel.settle_timeout - forward_channel.reveal_timeout
@@ -487,7 +485,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
                     )
 
                     # call the callbacks and unregister the task
-                    transfermanager.on_hashlock_result(hashlock, True)
+                    raiden.on_hashlock_result(hashlock, True)
 
                     # the transfer is done when the lock is unlocked and the Secret
                     # message is sent (doesn't imply the other nodes in the chain
@@ -501,7 +499,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
                 else:
                     # the initiator can unregister right away because it knowns
                     # no one else can reveal the secret
-                    transfermanager.on_hashlock_result(hashlock, False)
+                    raiden.on_hashlock_result(hashlock, False)
                     del tokenmanager.hashlock_channel[hashlock]
                     break
 
@@ -582,12 +580,11 @@ class MediateTransferTask(BaseMediatedTransferTask):
 
         raiden = self.raiden
         tokenmanager = raiden.get_manager_by_token_address(self.token_address)
-        transfermanager = tokenmanager.transfermanager
         from_address = originating_transfer.sender
         originating_channel = tokenmanager.partneraddress_channel[from_address]
         hashlock = originating_transfer.lock.hashlock
 
-        transfermanager.register_task_for_hashlock(self, hashlock)
+        raiden.register_task_for_hashlock(self, hashlock)
         tokenmanager.register_channel_for_hashlock(originating_channel, hashlock)
 
         # there are no guarantees that the next_hop will follow the same route
@@ -734,7 +731,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
                         originating_transfer,
                     )
 
-                    transfermanager.on_hashlock_result(hashlock, True)
+                    raiden.on_hashlock_result(hashlock, True)
                     return
 
                 elif valid_refund:
@@ -754,7 +751,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
                         raiden,
                         originating_transfer,
                     )
-                    transfermanager.on_hashlock_result(hashlock, False)
+                    raiden.on_hashlock_result(hashlock, False)
 
                     return
 
@@ -782,7 +779,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
             raiden,
             originating_transfer,
         )
-        transfermanager.on_hashlock_result(hashlock, False)
+        raiden.on_hashlock_result(hashlock, False)
 
     def send_and_iter_valid(self, raiden, path, mediated_transfer):
         response_iterator = self._send_and_wait_time(
@@ -838,7 +835,7 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
         transfermanager = tokenmanager.transfermanager
         originating_channel = tokenmanager.partneraddress_channel[originating_transfer.sender]
 
-        transfermanager.register_task_for_hashlock(self, hashlock)
+        raiden.register_task_for_hashlock(self, hashlock)
         tokenmanager.register_channel_for_hashlock(originating_channel, hashlock)
 
         if log.isEnabledFor(logging.DEBUG):
@@ -882,13 +879,13 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
                     originating_channel,
                     originating_transfer,
                 )
-                transfermanager.on_hashlock_result(hashlock, True)
+                raiden.on_hashlock_result(hashlock, True)
                 return
 
             elif response is TIMEOUT:
                 # this task timeouts on a blocknumber, at this point all the other
                 # nodes have timedout
-                transfermanager.on_hashlock_result(originating_transfer.lock.hashlock, False)
+                raiden.on_hashlock_result(originating_transfer.lock.hashlock, False)
                 break
 
     def send_secretrequest_and_iter_valid(self, raiden, originating_transfer, secret_request):
@@ -967,8 +964,6 @@ class StartExchangeTask(BaseMediatedTransferTask):
         from_tokenmanager = raiden.get_manager_by_token_address(from_token)
         to_tokenmanager = raiden.get_manager_by_token_address(to_token)
 
-        from_transfermanager = from_tokenmanager.transfermanager
-
         from_routes = from_tokenmanager.get_best_routes(
             from_amount,
             target,
@@ -981,7 +976,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             secret = sha3(hex(random.getrandbits(256)))
             hashlock = sha3(secret)
 
-            from_transfermanager.register_task_for_hashlock(self, hashlock)
+            raiden.register_task_for_hashlock(self, hashlock)
             from_tokenmanager.register_channel_for_hashlock(from_channel, hashlock)
 
             lock_expiration = (
@@ -1014,7 +1009,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             if to_mediated_transfer is None:
                 # the initiator can unregister right away since it knows the
                 # secret wont be revealed
-                from_transfermanager.on_hashlock_result(hashlock, False)
+                raiden.on_hashlock_result(hashlock, False)
                 del from_tokenmanager.hashlock_channel[hashlock]
 
             elif isinstance(to_mediated_transfer, MediatedTransfer):
@@ -1041,7 +1036,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
                     to_mediated_transfer,
                 )
 
-                from_transfermanager.on_hashlock_result(hashlock, True)
+                raiden.on_hashlock_result(hashlock, True)
                 self.done_result.set(True)
 
     def send_and_wait_valid_state(  # noqa
@@ -1198,11 +1193,10 @@ class ExchangeTask(BaseMediatedTransferTask):
 
         to_tokenmanager = raiden.get_manager_by_token_address(to_token)
         from_tokenmanager = raiden.get_manager_by_token_address(from_token)
-        from_transfermanager = from_tokenmanager.transfermanager
 
         from_channel = from_tokenmanager.partneraddress_channel[from_mediated_transfer.sender]
 
-        from_transfermanager.register_task_for_hashlock(self, hashlock)
+        raiden.register_task_for_hashlock(self, hashlock)
         from_tokenmanager.register_channel_for_hashlock(from_channel, hashlock)
 
         lock_expiration = from_mediated_transfer.lock.expiration - raiden.config['reveal_timeout']
@@ -1279,7 +1273,7 @@ class ExchangeTask(BaseMediatedTransferTask):
                         from_mediated_transfer
                     )
                     raiden.send_async(from_mediated_transfer.sender, timeout_message)
-                    self.transfermanager.on_hashlock_result(hashlock, False)
+                    raiden.on_hashlock_result(hashlock, False)
                     return
                 else:
                     to_channel.register_transfer(response)
