@@ -16,7 +16,13 @@ from raiden.transfermanager import (
     Exchange,
     ExchangeKey,
     UnknownAddress,
-    UnknownTokenAddress
+    UnknownTokenAddress,
+    TransferWhenClosed,
+)
+from raiden.tasks import (
+    MediateTransferTask,
+    EndMediatedTransferTask,
+    ExchangeTask,
 )
 from raiden.blockchain.abi import (
     CHANNEL_MANAGER_ABI,
@@ -88,6 +94,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.managers_by_token_address = dict()
         self.managers_by_address = dict()
         self.transfertasks = defaultdict(dict)
+        self.exchanges = dict()
 
         self.chain = chain
         self.config = config
@@ -346,6 +353,124 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         self.blockchain_log_handler.uninstall_listeners()
         gevent.wait(wait_for)
+
+    def on_directtransfer_message(self, transfer):
+        token_manager = self.get_manager_by_token_address(transfer.token)
+
+        if transfer.sender not in token_manager.partneraddress_channel:
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received direct transfer message from unknown sender %s',
+                    pex(transfer.sender),
+                )
+            raise UnknownAddress
+
+        channel = token_manager.partneraddress_channel[transfer.sender]
+
+        if not channel.isopen:
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received direct transfer message from %s after channel closing',
+                    pex(transfer.sender),
+                )
+            raise TransferWhenClosed
+        channel.register_transfer(transfer)
+
+    def on_mediatedtransfer_message(self, transfer):
+        token_address = transfer.token
+        token_manager = self.get_manager_by_token_address(token_address)
+
+        if transfer.sender not in token_manager.partneraddress_channel:
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received mediated transfer message from unknown channel.'
+                    'Sender: %s',
+                    pex(transfer.sender),
+                )
+            raise UnknownAddress
+
+        channel = token_manager.partneraddress_channel[transfer.sender]
+        if not channel.isopen:
+            if log.isEnabledFor(logging.WARN):
+                log.warn(
+                    'Received mediated transfer message from %s after channel closing',
+                    pex(transfer.sender),
+                )
+            raise TransferWhenClosed
+        channel.register_transfer(transfer)  # raises if the transfer is invalid
+
+        exchange_key = ExchangeKey(transfer.token, transfer.lock.amount)
+        if exchange_key in self.exchanges:
+            exchange = self.exchanges[exchange_key]
+
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'EXCHANGE TRANSFER RECEIVED node:%s %s > %s hashlock:%s'
+                    ' from_token:%s from_amount:%s to_token:%s to_amount:%s [%s]',
+                    pex(self.address),
+                    pex(transfer.sender),
+                    pex(self.address),
+                    pex(transfer.lock.hashlock),
+                    pex(exchange.from_token),
+                    exchange.from_amount,
+                    pex(exchange.to_token),
+                    exchange.to_amount,
+                    repr(transfer),
+                )
+
+            exchange_task = ExchangeTask(
+                self,
+                from_mediated_transfer=transfer,
+                to_token=exchange.to_token,
+                to_amount=exchange.to_amount,
+                target=exchange.from_nodeaddress,
+            )
+            exchange_task.start()
+
+        elif transfer.target == token_manager.raiden.address:
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'MEDIATED TRANSFER RECEIVED node:%s %s > %s hashlock:%s [%s]',
+                    pex(token_manager.raiden.address),
+                    pex(transfer.sender),
+                    pex(token_manager.raiden.address),
+                    pex(transfer.lock.hashlock),
+                    repr(transfer),
+                )
+
+            try:
+                token_manager.raiden.message_for_task(
+                    transfer,
+                    transfer.lock.hashlock
+                )
+            except UnknownAddress:
+                # assumes that the registered task(s) tooks care of the message
+                # (used for exchanges)
+                secret_request_task = EndMediatedTransferTask(
+                    self,
+                    token_address,
+                    transfer,
+                )
+                secret_request_task.start()
+
+        else:
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'TRANSFER TO BE MEDIATED RECEIVED node:%s %s > %s hashlock:%s [%s]',
+                    pex(token_manager.raiden.address),
+                    pex(transfer.sender),
+                    pex(token_manager.raiden.address),
+                    pex(transfer.lock.hashlock),
+                    repr(transfer),
+                )
+
+            transfer_task = MediateTransferTask(
+                self,
+                token_address,
+                transfer,
+                0,  # TODO: calculate the fee
+            )
+            transfer_task.start()
 
 
 class RaidenAPI(object):
@@ -750,12 +875,10 @@ class RaidenMessageHandler(object):
         self.raiden.message_for_task(message, message.lock.hashlock)
 
     def message_directtransfer(self, message):
-        token_manager = self.raiden.get_manager_by_token_address(message.token)
-        token_manager.transfermanager.on_directtransfer_message(message)
+        self.raiden.on_directtransfer_message(message)
 
     def message_mediatedtransfer(self, message):
-        token_manager = self.raiden.get_manager_by_token_address(message.token)
-        token_manager.transfermanager.on_mediatedtransfer_message(message)
+        self.raiden.on_mediatedtransfer_message(message)
 
 
 class StateMachineEventHandler(object):
