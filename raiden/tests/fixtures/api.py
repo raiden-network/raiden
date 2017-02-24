@@ -10,9 +10,29 @@ from raiden.network.discovery import Discovery
 from raiden.tests.utils.apitestcontext import ApiTestContext
 
 
+# TODO: Figure out why this fixture can't work as session scoped
+#       What happens is that after one test is done, in the next one
+#       the server is no longer running even though the teardown has not
+#       been invoked.
+# @pytest.fixture(scope='session')
+@pytest.fixture()
+def api_test_server():
+    # Initializing it without raiden_service.api here since that is a
+    # function scope fixture. We will inject it to rest_api object later
+    rest_api = RestAPI(None)
+    api_server = APIServer(rest_api)
+    g = Greenlet.spawn(api_server.run, 5001, debug=False, use_evalex=False)
+    yield rest_api
+    # At sessions teardown kill the greenlet
+    g.kill(block=True, timeout=10)
+    del rest_api
+    del api_server
+
+
 @pytest.fixture
 def api_raiden_service(
         monkeypatch,
+        api_test_server,
         api_test_context,
         blockchain_services,
         transport_class,
@@ -46,21 +66,17 @@ def api_raiden_service(
         'open',
         api_test_context.open_channel
     )
+
+    # also make sure that the test server's raiden_api uses this mock
+    # raiden service
+    monkeypatch.setattr(
+        api_test_server,
+        'raiden_api',
+        raiden_service.api
+    )
     return raiden_service
 
 
 @pytest.fixture
 def api_test_context(reveal_timeout):
     return ApiTestContext(reveal_timeout)
-
-
-@pytest.fixture(scope='session')
-def api_test_server():
-    # Initializing it without raiden_service.api here since that is a
-    # function scope fixture. We will inject it to rest_api object later
-    rest_api = RestAPI(None)
-    api_server = APIServer(rest_api)
-    g = Greenlet.spawn(api_server.run, 5001, debug=False)
-    yield rest_api
-    # At sessions teardown kill the greenlet
-    g.kill(block=True, timeout=10)
