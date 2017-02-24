@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 import logging
+import random
 from collections import namedtuple, defaultdict
 
 import gevent
-import random
 
+from gevent.queue import Empty as QueueEmpty
+from gevent.event import AsyncResult
 from ethereum import slogging
 from ethereum.abi import ContractTranslator
 from ethereum.utils import encode_hex
@@ -12,14 +14,8 @@ from pyethapp.jsonrpc import address_decoder
 from secp256k1 import PrivateKey
 
 from raiden.tokenmanager import TokenManager
-from raiden.transfermanager import (
-    Exchange,
-    ExchangeKey,
-    UnknownAddress,
-    UnknownTokenAddress,
-    TransferWhenClosed,
-)
 from raiden.tasks import (
+    StartMediatedTransferTask,
     MediateTransferTask,
     EndMediatedTransferTask,
     ExchangeTask,
@@ -28,6 +24,16 @@ from raiden.blockchain.abi import (
     CHANNEL_MANAGER_ABI,
     REGISTRY_ABI,
     NETTING_CHANNEL_ABI
+)
+from raiden.exceptions import (
+    UnknownAddress,
+    TransferWhenClosed,
+    UnknownTokenAddress,
+    NoPathError,
+    InvalidAddress,
+    InvalidAmount,
+    InvalidState,
+    InsufficientFunds,
 )
 from raiden.network.channelgraph import ChannelGraph
 from raiden.tasks import AlarmTask, StartExchangeTask, HealthcheckTask
@@ -43,35 +49,25 @@ from raiden.utils import (
     sha3,
 )
 
+from raiden.transfer.mediated_transfer.events import SendMediatedTransfer
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 EventListener = namedtuple('EventListener', ('event_name', 'filter_', 'translator'))
-
-
-class RaidenError(Exception):
-    pass
-
-
-class NoPathError(RaidenError):
-    pass
-
-
-class InvalidAddress(RaidenError):
-    pass
-
-
-class InvalidAmount(RaidenError):
-    pass
-
-
-class InvalidState(RaidenError):
-    pass
-
-
-class InsufficientFunds(RaidenError):
-    pass
+Exchange = namedtuple('Exchange', (
+    'identifier',
+    'from_token',
+    'from_amount',
+    'from_nodeaddress',  # the node' address of the owner of the `from_token`
+    'to_token',
+    'to_amount',
+    'to_nodeaddress',  # the node' address of the owner of the `to_token`
+))
+ExchangeKey = namedtuple('ExchangeKey', (
+    'from_token',
+    'from_amount',
+))
 
 
 class RaidenService(object):  # pylint: disable=too-many-instance-attributes
@@ -472,6 +468,119 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             )
             transfer_task.start()
 
+    def create_default_identifier(self, token_address, target):
+        """
+        The default message identifier value is the first 8 bytes of the sha3 of:
+            - Our Address
+            - Our target address
+            - The token address
+            - A random 8 byte number for uniqueness
+        """
+        hash_ = sha3("{}{}{}{}".format(
+            self.address,
+            target,
+            token_address,
+            random.randint(0, 18446744073709551614L)
+        ))
+        return int(hash_[0:8].encode('hex'), 16)
+
+    def transfer_async(self, token_address, amount, target, identifier=None):
+        """ Transfer `amount` between this node and `target`.
+
+        This method will start an asyncronous transfer, the transfer might fail
+        or succeed depending on a couple of factors:
+            - Existence of a path that can be used, through the usage of direct
+            or intermediary channels.
+            - Network speed, making the transfer suficiently fast so it doesn't
+            timeout.
+        """
+        token_manager = self.get_manager_by_token_address(token_address)
+
+        # Create a default identifier value
+        if identifier is None:
+            identifier = self.create_default_identifier(token_address, target)
+
+        direct_channel = token_manager.partneraddress_channel.get(target)
+        if direct_channel:
+            async_result = self._direct_or_mediated_transfer(
+                token_address,
+                amount,
+                identifier,
+                direct_channel,
+            )
+            return async_result
+
+        else:
+            async_result = self._mediated_transfer(
+                token_address,
+                amount,
+                identifier,
+                target,
+            )
+
+            return async_result
+
+    def _direct_or_mediated_transfer(self, token_address, amount, identifier, direct_channel):
+        """ Check the direct channel and if possible use it, otherwise start a
+        mediated transfer.
+        """
+
+        if not direct_channel.isopen:
+            log.info(
+                'DIRECT CHANNEL %s > %s is closed',
+                pex(direct_channel.our_state.address),
+                pex(direct_channel.partner_state.address),
+            )
+
+            async_result = self._mediated_transfer(
+                token_address,
+                amount,
+                identifier,
+                direct_channel.partner_state.address,
+            )
+            return async_result
+
+        elif amount > direct_channel.distributable:
+            log.info(
+                'DIRECT CHANNEL %s > %s doesnt have enough funds [%s]',
+                pex(direct_channel.our_state.address),
+                pex(direct_channel.partner_state.address),
+                amount,
+            )
+
+            async_result = self._mediated_transfer(
+                token_address,
+                amount,
+                identifier,
+                direct_channel.partner_state.address,
+            )
+            return async_result
+
+        else:
+            direct_transfer = direct_channel.create_directtransfer(amount, identifier)
+            self.sign(direct_transfer)
+            direct_channel.register_transfer(direct_transfer)
+
+            async_result = self.protocol.send_async(
+                direct_channel.partner_state.address,
+                direct_transfer,
+            )
+            return async_result
+
+    def _mediated_transfer(self, token_address, amount, identifier, target):
+        async_result = AsyncResult()
+        task = StartMediatedTransferTask(
+            self,
+            token_address,
+            amount,
+            identifier,
+            target,
+            async_result,
+        )
+        task.start()
+
+        return async_result
+
 
 class RaidenAPI(object):
     """ CLI interface. """
@@ -511,13 +620,7 @@ class RaidenAPI(object):
             - The token address
             - A random 8 byte number for uniqueness
         """
-        hash_ = sha3("{}{}{}{}".format(
-            self.raiden.address,
-            target,
-            token_address,
-            random.randint(0, 18446744073709551614L)
-        ))
-        return int(hash_[0:8].encode('hex'), 16)
+        return self.raiden.create_default_identifier(target, token_address)
 
     def open(
             self,
@@ -702,9 +805,6 @@ class RaidenAPI(object):
         if amount <= 0:
             raise InvalidAmount('Amount negative')
 
-        if identifier is None:
-            identifier = self.create_default_identifier(target, token_address)
-
         token_address_bin = safe_address_decode(token_address)
         target_bin = safe_address_decode(target)
 
@@ -718,8 +818,8 @@ class RaidenAPI(object):
         if not token_manager.channelgraph.has_path(self.raiden.address, target_bin):
             raise NoPathError('No path to address found')
 
-        transfer_manager = token_manager.transfermanager
-        async_result = transfer_manager.transfer_async(
+        async_result = self.raiden.transfer_async(
+            token_address_bin,
             amount,
             target_bin,
             identifier=identifier,

@@ -17,7 +17,7 @@ from raiden.messages import (
 from raiden.mtree import merkleroot, get_proof
 from raiden.utils import sha3, pex, lpex
 from raiden.tasks import REMOVE_CALLBACK
-from raiden.transfermanager import UnknownAddress
+from raiden.exceptions import UnknownAddress
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
