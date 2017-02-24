@@ -2,7 +2,7 @@
 from ethereum.utils import decode_hex
 
 from raiden.raiden_service import RaidenService
-from raiden.constants import (
+from raiden.settings import (
     INITIAL_PORT,
     DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_SETTLE_TIMEOUT,
