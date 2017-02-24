@@ -3,7 +3,7 @@ import pytest
 import grequests
 
 from raiden.tests.utils.apitestcontext import decode_response
-from raiden.utils import netting_channel_to_api_dict
+from raiden.utils import netting_channel_to_api_dict, bytes_to_hexstr
 from raiden.tests.utils.transfer import channel
 
 
@@ -18,9 +18,9 @@ def test_netting_channel_to_api_dict(raiden_network, tokens_addresses, settle_ti
 
     result = netting_channel_to_api_dict(netting_channel, app0.raiden.address)
     expected_result = {
-        "channel_address": '0x' + netting_channel.address.encode('hex'),
-        "token_address": '0x' + channel0.token_address.encode('hex'),
-        "partner_address": '0x' + app1.raiden.address.encode('hex'),
+        "channel_address": bytes_to_hexstr(netting_channel.address),
+        "token_address": bytes_to_hexstr(channel0.token_address),
+        "partner_address": bytes_to_hexstr(app1.raiden.address),
         "settle_timeout": settle_timeout,
         "balance": channel0.contract_balance,
         "status": "open"
@@ -57,6 +57,7 @@ def test_api_open_channel(api_test_server, api_test_context, api_raiden_service,
         'http://localhost:5001/api/1/channels',
         data=channel_data_obj
     )])
+
     response = responses[0]
     assert response and response.status_code == 200
     expected_response = channel_data_obj
