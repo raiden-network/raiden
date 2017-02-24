@@ -491,13 +491,19 @@ class RaidenAPI(object):
         Args:
             token_address (bin): an optionally provided token address
             partner_address (bin): an optionally provided partner address
+
         Return:
             A list containing all channels the node participates. Optionally
-            filtered by an token address and/or partner address.
+            filtered by a token address and/or partner address.
+
         Raises:
-            UnknownTokenAddress: An error occurred when the token address is
-            unknown to the node.  KeyError: An error occurred when the given
-            partner address isn't associated with the given token address.
+            UnknownTokenAddress:
+                An error occurred when the token address is unknown to the
+                node.
+
+            KeyError:
+                An error occurred when the given partner address isn't associated
+                with the given token address.
         """
         if token_address:
             token_manager = self.raiden.get_manager_by_token_address(token_address)
