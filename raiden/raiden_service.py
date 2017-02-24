@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 
 import gevent
 import random
@@ -87,6 +87,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.registries = list()
         self.managers_by_token_address = dict()
         self.managers_by_address = dict()
+        self.transfertasks = defaultdict(list)
 
         self.chain = chain
         self.config = config
@@ -226,6 +227,26 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
                 # error in a channel to mess the state from others.
                 log.error('programming error')
 
+    def register_task_for_hashlock(self, task, hashlock):
+        """ Register the task to receive messages based on hashlock.
+
+        Registration is required otherwise the task won't receive any messages
+        from the protocol, un-registering is done by the `on_hashlock_result`
+        function.
+
+        Note:
+            Messages are dispatched solely on the hashlock value (being part of
+            the message, eg. SecretRequest, or calculated from the message
+            content, eg.  RevealSecret), this means the sender needs to be
+            checked for the received messages.
+        """
+        if task not in self.transfertasks[hashlock]:
+            self.transfertasks[hashlock].append(task)
+
+    def on_hashlock_result(self, hashlock, success):
+        """ Clear the task when it's finished. """
+        del self.transfertasks[hashlock]
+
     def message_for_task(self, message, hashlock):
         """ Sends the message to the corresponding task.
 
@@ -234,16 +255,12 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         Return:
             Nothing if a corresponding task is found,raise Exception otherwise
         """
-        found = False
-        for token_manager in self.managers_by_token_address.values():
-            task = token_manager.transfermanager.transfertasks.get(hashlock)
 
-            if task is not None:
+        if self.transfertasks[hashlock]:
+            for task in self.transfertasks[hashlock]:
                 task.on_response(message)
-                found = True
 
-        if not found:
-            # Log a warning and don't process further
+        else:
             if log.isEnabledFor(logging.WARN):
                 log.warn(
                     'Received %s hashlock message from unknown channel.'
@@ -312,11 +329,14 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             )
 
     def stop(self):
-        for token_manager in self.managers_by_token_address.itervalues():
-            for task in token_manager.transfermanager.transfertasks.itervalues():
+        wait_for = [self.alarm]
+
+        for task_list in self.transfertasks.itervalues():
+            for task in task_list:
                 task.kill()
 
-        wait_for = [self.alarm]
+            wait_for.extend(task_list)
+
         self.alarm.stop_async()
         if self.healthcheck is not None:
             self.healthcheck.stop_async()
@@ -325,8 +345,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         wait_for.extend(self.protocol.address_greenlet.itervalues())
 
-        for token_manager in self.managers_by_token_address.itervalues():
-            wait_for.extend(token_manager.transfermanager.transfertasks.itervalues())
 
         self.blockchain_log_handler.uninstall_listeners()
         gevent.wait(wait_for)
