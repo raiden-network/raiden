@@ -143,7 +143,7 @@ class ChannelSchema(BaseSchema):
     partner_address = AddressField()
     settle_timeout = fields.Integer()
     reveal_timeout = fields.Integer()
-    deposit = fields.Integer()
+    balance = fields.Integer()
     status = fields.String(validate=validate.OneOf(['closed', 'open', 'settled']))
 
     class Meta:
@@ -156,7 +156,7 @@ class ChannelRequestSchema(BaseSchema):
     token_address = AddressField(required=True)
     partner_address = AddressField(required=True)
     settle_timeout = fields.Integer(missing=DEFAULT_SETTLE_TIMEOUT)
-    deposit = fields.Integer(default=None, missing=None)
+    balance = fields.Integer(default=None, missing=None)
     status = fields.String(default=None, missing=None, validate=validate.OneOf(['closed', 'open', 'settled']))
 
     class Meta:

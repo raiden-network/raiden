@@ -18,9 +18,6 @@ from raiden.api.v1.resources import (
 from raiden.api.objects import EventsList, ChannelList
 
 
-app = Flask(__name__)
-
-
 class APIServer(object):
     """
     Runs the API-server that routes the endpoint to the resources.
@@ -66,9 +63,10 @@ class APIServer(object):
         else:
             raise ValueError('Inalid api version: {}'.format(self.rest_api.version))
 
+        self.flask_app = Flask(__name__)
         self._add_default_resources()
         self._register_type_converters()
-        app.register_blueprint(blueprint)
+        self.flask_app.register_blueprint(blueprint)
 
     def _add_default_resources(self):
         for klass in self._default_resource_classes:
@@ -82,7 +80,7 @@ class APIServer(object):
             mapping = self._type_converter_mapping
 
         for key, value in mapping.items():
-            app.url_map.converters[key] = value
+            self.flask_app.url_map.converters[key] = value
 
     def add_resource(self, resource_cls):
         # inject rest_api
@@ -94,7 +92,7 @@ class APIServer(object):
         )
 
     def run(self, port, debug=False):
-        app.run(port=port, debug=debug)
+        self.flask_app.run(port=port, debug=debug)
 
 
 class RestAPI(object):
@@ -111,78 +109,78 @@ class RestAPI(object):
         self.channel_list_schema = ChannelListSchema()
         self.events_list_schema = EventsListSchema()
 
-    def open(self, partner_address, token_address, settle_timeout, deposit=None):
-        api_result = self.raiden_api.open(
+    def open(self, partner_address, token_address, settle_timeout, balance=None):
+        raiden_service_result = self.raiden_api.open(
             token_address,
             partner_address,
             settle_timeout
         )
 
-        if deposit:
+        if balance:
             # make initial deposit
-            api_result = self.raiden_api.deposit(
+            raiden_service_result = self.raiden_api.deposit(
                 token_address,
                 partner_address,
-                deposit
+                balance
             )
 
-        result = self.channel_schema.dumps(api_result)
+        result = self.channel_schema.dumps(raiden_service_result)
         return result
 
     def deposit(self, token_address, partner_address, amount):
 
-        api_result = self.raiden_api.deposit(
+        raiden_service_result = self.raiden_api.deposit(
             token_address,
             partner_address,
             amount
         )
 
-        result = self.channel_schema.dumps(api_result)
+        result = self.channel_schema.dumps(raiden_service_result)
         return result
 
     def close(self, token_address, partner_address):
 
-        api_result = self.raiden_api.close(
+        raiden_service_result = self.raiden_api.close(
             token_address,
             partner_address
         )
 
-        result = self.channel_schema.dumps(api_result)
+        result = self.channel_schema.dumps(raiden_service_result)
         return result
 
     def get_channel_list(self, token_address=None, partner_address=None):
-        api_result = self.raiden_api.get_channel_list(token_address, partner_address)
-        assert isinstance(api_result, list)
+        raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
+        assert isinstance(raiden_service_result, list)
 
         # wrap in ChannelList:
-        channel_list = ChannelList(api_result)
+        channel_list = ChannelList(raiden_service_result)
         result = self.channel_list_schema.dumps(channel_list)
         return result
 
     def get_new_events(self):
-        api_result = self.get_new_events()
-        assert isinstance(api_result, list)
+        raiden_service_result = self.get_new_events()
+        assert isinstance(raiden_service_result, list)
 
         # wrap in EventsList:
-        events_list = EventsList(api_result)
+        events_list = EventsList(raiden_service_result)
         result = self.events_list_schema.dumps(events_list)
         return result
 
     def patch_channel(self, channel_address, deposit=None, status=None):
 
         if deposit is not None and status is None:
-            api_result = self.raiden_api.deposit(deposit)
-            return self.channel_schema.dumps(api_result)
+            raiden_service_result = self.raiden_api.deposit(deposit)
+            return self.channel_schema.dumps(raiden_service_result)
 
         elif status is not None and deposit is None:
 
             if status == 'closed':
-                api_result = self.raiden_api.close(channel_address)
-                return self.channel_schema.dumps(api_result)
+                raiden_service_result = self.raiden_api.close(channel_address)
+                return self.channel_schema.dumps(raiden_service_result)
 
             if status == 'settled':
-                api_result = self.raiden_api.close(channel_address)
-                return self.channel_schema.dumps(api_result)
+                raiden_service_result = self.raiden_api.close(channel_address)
+                return self.channel_schema.dumps(raiden_service_result)
 
             if status == 'open':
                 raise Exception('nothing to do here')
