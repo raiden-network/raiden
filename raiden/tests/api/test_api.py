@@ -111,6 +111,7 @@ def test_api_open_and_deposit_channel(
         "partner_address": firt_partner_address,
         "token_address": token_address,
         "settle_timeout": settle_timeout,
+        "reveal_timeout": reveal_timeout,
         "state": 'open',
         "balance": balance
     }

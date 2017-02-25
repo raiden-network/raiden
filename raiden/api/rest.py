@@ -149,8 +149,6 @@ class RestAPI(object):
         return result
 
     def get_channel_list(self, token_address=None, partner_address=None):
-        import pdb
-        pdb.set_trace()
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
         assert isinstance(raiden_service_result, list)
 

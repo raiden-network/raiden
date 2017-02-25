@@ -175,11 +175,11 @@ def netting_channel_to_api_dict(nettingchannel, our_address):
           knows its node address.
     """
 
-    status = 'open'
+    state = 'open'
     if not nettingchannel.isopen():
-        status = 'closed'
+        state = 'closed'
     if nettingchannel.settled():
-        status = 'settled'
+        state = 'settled'
 
     details = nettingchannel.detail(our_address)
     return {
@@ -188,5 +188,5 @@ def netting_channel_to_api_dict(nettingchannel, our_address):
         "partner_address": bytes_to_hexstr(details['partner_address']),
         "settle_timeout": details['settle_timeout'],
         "balance": details['our_balance'],
-        "status": status
+        "state": state
     }
