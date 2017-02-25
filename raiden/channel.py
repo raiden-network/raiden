@@ -556,7 +556,7 @@ class Channel(object):
         self.sent_transfers = []  #: transfers that were sent, required for settling
 
     @property
-    def status(self):
+    def state(self):
         if self.isopen:
             return 'open'
         elif self.external_state.settled_block != 0:

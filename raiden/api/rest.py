@@ -54,19 +54,19 @@ class APIServer(object):
 
     def __init__(self, rest_api):
         self.rest_api = rest_api
-        blueprint = create_blueprint()
+        self.blueprint = create_blueprint()
         if self.rest_api.version == 1:
             self.flask_api_middleware = Api(
-                blueprint,
+                self.blueprint,
                 prefix="/api/1"
             )
         else:
-            raise ValueError('Inalid api version: {}'.format(self.rest_api.version))
+            raise ValueError('Invalid api version: {}'.format(self.rest_api.version))
 
         self.flask_app = Flask(__name__)
         self._add_default_resources()
         self._register_type_converters()
-        self.flask_app.register_blueprint(blueprint)
+        self.flask_app.register_blueprint(self.blueprint)
 
     def _add_default_resources(self):
         for klass in self._default_resource_classes:
@@ -149,6 +149,8 @@ class RestAPI(object):
         return result
 
     def get_channel_list(self, token_address=None, partner_address=None):
+        import pdb
+        pdb.set_trace()
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
         assert isinstance(raiden_service_result, list)
 
@@ -166,24 +168,30 @@ class RestAPI(object):
         result = self.events_list_schema.dumps(events_list)
         return result
 
-    def patch_channel(self, channel_address, deposit=None, status=None):
+    def patch_channel(self, channel_address, balance=None, state=None):
+        # find the channel
+        channel = self.raiden_api.get_channel(channel_address)
 
-        if deposit is not None and status is None:
-            raiden_service_result = self.raiden_api.deposit(deposit)
+        # if we patch with `balance` it's a deposit
+        if balance is not None and state is None:
+            raiden_service_result = self.raiden_api.deposit(
+                channel.token_address,
+                channel.partner_address,
+                balance
+            )
             return self.channel_schema.dumps(raiden_service_result)
 
-        elif status is not None and deposit is None:
+        elif state is not None and balance is None:
 
-            if status == 'closed':
+            if state == 'closed':
                 raiden_service_result = self.raiden_api.close(channel_address)
                 return self.channel_schema.dumps(raiden_service_result)
-
-            if status == 'settled':
+            elif state == 'settled':
                 raiden_service_result = self.raiden_api.close(channel_address)
                 return self.channel_schema.dumps(raiden_service_result)
-
-            if status == 'open':
+            elif state == 'open':
                 raise Exception('nothing to do here')
+
         raise Exception()
 
 
