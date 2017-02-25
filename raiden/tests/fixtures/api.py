@@ -21,6 +21,7 @@ def api_test_server():
     # function scope fixture. We will inject it to rest_api object later
     rest_api = RestAPI(None)
     api_server = APIServer(rest_api)
+    # TODO: Find out why tests fail with debug=True
     g = Greenlet.spawn(api_server.run, 5001, debug=False, use_evalex=False)
     yield rest_api
     # At sessions teardown kill the greenlet
@@ -65,6 +66,11 @@ def api_raiden_service(
         raiden_service.api,
         'open',
         api_test_context.open_channel
+    )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'deposit',
+        api_test_context.deposit
     )
 
     # also make sure that the test server's raiden_api uses this mock

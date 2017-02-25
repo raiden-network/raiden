@@ -23,14 +23,22 @@ class EventsList(FlatList):
 
 
 class Channel(object):
-    def __init__(self, channel_address, token_address, partner_address, settle_timeout, reveal_timeout, deposit, status):
+    def __init__(
+            self,
+            channel_address,
+            token_address,
+            partner_address,
+            settle_timeout,
+            reveal_timeout,
+            balance,
+            state):
         self.channel_address = channel_address
         self.token_address = token_address
         self.partner_address = partner_address
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
-        self.deposit = deposit
-        self.status = status
+        self.balance = balance
+        self.state = state
 
 
 class TransferReceived(object):

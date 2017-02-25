@@ -364,7 +364,12 @@ class RaidenAPI(object):
         raise NotImplementedError()
 
     def get_channel(self, channel_address):
-        raise NotImplementedError()
+        channel_list = self.get_channel_list()
+        for channel in channel_list:
+            if channel_address == channel.channel_address:
+                return channel
+
+        raise ValueError("Channel not found")
 
     def get_new_events(self):
         queue = self.raiden.event_queue

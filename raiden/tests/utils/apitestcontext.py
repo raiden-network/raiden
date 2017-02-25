@@ -10,17 +10,21 @@ from raiden.api.v1.encoding import (
 )
 
 
-# TODO: this is ripped from unit/test_channel.py. Abstract it out somewhere.
 class NettingChannelMock(object):
+
+    def __init__(self, channel_address):
+        self.address = channel_address
+        self.state = 'open'
+
     # pylint: disable=no-self-use
     def opened(self):
-        return 1
+        return self.state == 'open'
 
     def closed(self):
-        return 0
+        return self.state == 'closed' or self.state == 'settled'
 
     def settled(self):
-        return 0
+        return self.state == 'settled'
 
 
 def decode_response(response):
@@ -52,7 +56,7 @@ class ApiTestContext():
 
         block_alarm = list()
         channel_for_hashlock = list()
-        netting_channel = NettingChannelMock()
+        netting_channel = NettingChannelMock(make_address())
         external_state = ChannelExternalState(
             block_alarm.append,
             lambda *args: channel_for_hashlock.append(args),
@@ -71,6 +75,14 @@ class ApiTestContext():
     def make_channel_and_add(self):
         channel = self.make_channel()
         self.channels.append(channel)
+
+    def find_channel(self, token_address, partner_address):
+        for channel in self.channels:
+            if (channel.token_address == token_address and
+                    channel.partner_state.address == partner_address):
+                return channel
+
+        raise ValueError("Could not find channel")
 
     def query_channels(self, token_address=None, partner_address=None):
         return self.channels
@@ -94,4 +106,9 @@ class ApiTestContext():
             reveal_timeout=reveal_value
         )
         self.channels.append(channel)
+        return channel
+
+    def deposit(self, token_address, partner_address, amount):
+        channel = self.find_channel(token_address, partner_address)
+        channel.our_state.contract_balance += amount
         return channel

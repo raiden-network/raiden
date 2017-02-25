@@ -53,7 +53,6 @@ class HexAddressConverter(BaseConverter):
 
     def to_url(self, value):
         value = address_encoder(value)
-
         return BaseConverter.to_url(value)
 
 
@@ -120,7 +119,7 @@ class EventSchema(BaseSchema):
     @pre_load
     def unwrap_envelope(self, data):
         # exclude the event_type from the dict, since this is irrelevant internally
-        data = {key:data[key] for key in data if key !='event_type'}
+        data = {key: data[key] for key in data if key != 'event_type'}
         return data
 
     @post_dump
@@ -145,7 +144,7 @@ class ChannelSchema(BaseSchema):
     settle_timeout = fields.Integer()
     reveal_timeout = fields.Integer()
     balance = fields.Integer()
-    status = fields.String(validate=validate.OneOf(['closed', 'open', 'settled']))
+    state = fields.String(validate=validate.OneOf(['closed', 'open', 'settled']))
 
     class Meta:
         strict= True
@@ -158,7 +157,7 @@ class ChannelRequestSchema(BaseSchema):
     partner_address = AddressField(required=True)
     settle_timeout = fields.Integer(missing=DEFAULT_SETTLE_TIMEOUT)
     balance = fields.Integer(default=None, missing=None)
-    status = fields.String(default=None, missing=None, validate=validate.OneOf(['closed', 'open', 'settled']))
+    state = fields.String(default=None, missing=None, validate=validate.OneOf(['closed', 'open', 'settled']))
 
     class Meta:
         strict = True

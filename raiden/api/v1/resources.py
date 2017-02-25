@@ -24,15 +24,7 @@ class ChannelsResource(BaseResource):
     # has to be set externally via dependency injection
     rest_api = None
     put_schema = ChannelRequestSchema(
-        exclude=('channel_address', 'status'),
-    )
-
-    delete_schema = dict(
-
-    )
-
-    update_schema = dict(
-
+        exclude=('channel_address', 'state'),
     )
 
     def get(self):
@@ -48,24 +40,16 @@ class ChannelsResource(BaseResource):
     def put(self, **kwargs):
         return self.rest_api.open(**kwargs)
 
-    @use_kwargs(delete_schema)
-    def delete(self, **kwargs):
-        return self.rest_api.close(**kwargs)
-
-    @use_kwargs(update_schema)
-    def update(self, **kwargs):
-        return self.rest_api.deposit(**kwargs)
-
 
 class ChannelsResourceByChannelAddress(Resource):
     _route = '/channels/<hexaddress:channel_address>'
     rest_api = None
 
     patch_schema = ChannelRequestSchema(
-        exclude=('channel_address', 'token_address', 'partner_address'),
+        exclude=('token_address', 'partner_address', 'settle_timeout'),
     )
 
-    @use_kwargs(patch_schema)
+    @use_kwargs(patch_schema, locations=('json', 'form', 'query'))
     def patch(self, **kwargs):
         # the channel_address kwarg is automatically included in the kwargs,
         # because there is an argument placeholder in the route!
