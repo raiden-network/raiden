@@ -140,30 +140,6 @@ class TokenManager(object):  # pylint: disable=too-many-instance-attributes
         if channel not in channels_registered:
             channels_registered.append(channel)
 
-    def register_secret(self, secret):
-        """ Register the secret with the interested channels.
-
-        Note:
-            The channel needs to be registered with
-            `register_channel_for_hashlock`.
-        """
-        hashlock = sha3(secret)
-        revealsecret_message = RevealSecret(secret)
-        self.raiden.sign(revealsecret_message)
-
-        channels_list = self.hashlock_channel[hashlock]
-        for channel in channels_list:
-            channel.register_secret(secret)
-
-            # This will potentially be executed multiple times and could suffer
-            # from amplification, the protocol will ignore messages that were
-            # already registered and send it only until a first Ack is
-            # received.
-            self.raiden.send_async(
-                channel.partner_state.address,
-                revealsecret_message,
-            )
-
     def handle_secret(self, identifier, secret):
         """ Unlock locks, register the secret, and send Secret messages as
         necessary.
