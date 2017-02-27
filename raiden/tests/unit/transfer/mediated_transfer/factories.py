@@ -32,12 +32,13 @@ HOP2_TIMEOUT = HOP1_TIMEOUT - UNIT_REVEAL_TIMEOUT
 HOP3_TIMEOUT = HOP2_TIMEOUT - UNIT_REVEAL_TIMEOUT
 
 
-def make_route(node_address,
-               available_balance,
-               settle_timeout=UNIT_SETTLE_TIMEOUT,
-               reveal_timeout=UNIT_REVEAL_TIMEOUT,
-               close_block=None,
-               channel_address=None):
+def make_route(
+        node_address,
+        available_balance,
+        settle_timeout=UNIT_SETTLE_TIMEOUT,
+        reveal_timeout=UNIT_REVEAL_TIMEOUT,
+        close_block=None,
+        channel_address=None):
     """ Helper for creating a route.
 
     Args:
@@ -63,12 +64,13 @@ def make_route(node_address,
     return route
 
 
-def make_transfer(amount,
-                  target,
-                  expiration,
-                  secret=None,
-                  hashlock=UNIT_HASHLOCK,
-                  identifier=1):
+def make_transfer(
+        amount,
+        target,
+        expiration,
+        secret=None,
+        hashlock=UNIT_HASHLOCK,
+        identifier=1):
 
     if secret is not None:
         assert sha3(secret) == hashlock

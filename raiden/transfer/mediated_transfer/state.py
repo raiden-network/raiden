@@ -58,11 +58,12 @@ class MediatorState(State):
         'transfers_pair',
     )
 
-    def __init__(self,
-                 our_address,
-                 routes,
-                 block_number,
-                 hashlock):
+    def __init__(
+            self,
+            our_address,
+            routes,
+            block_number,
+            hashlock):
 
         self.our_address = our_address
         self.routes = routes
@@ -95,12 +96,13 @@ class TargetState(State):
         'balance_proof',
     )
 
-    def __init__(self,
-                 our_address,
-                 from_route,
-                 from_transfer,
-                 hashlock,
-                 block_number):
+    def __init__(
+            self,
+            our_address,
+            from_route,
+            from_transfer,
+            hashlock,
+            block_number):
 
         self.our_address = our_address
         self.from_route = from_route
@@ -133,14 +135,15 @@ class LockedTransferState(State):
         'secret',
     )
 
-    def __init__(self,
-                 identifier,
-                 amount,
-                 token,
-                 target,
-                 expiration,
-                 hashlock,
-                 secret):
+    def __init__(
+            self,
+            identifier,
+            amount,
+            token,
+            target,
+            expiration,
+            hashlock,
+            secret):
 
         self.identifier = identifier
         self.amount = amount
@@ -189,10 +192,6 @@ class MediationPairState(State):
     A mediator will pay payee node knowing that there is a payer node to cover
     the token expenses. This state keeps track of the routes and transfer for
     the payer and payee, and the current state of the payment.
-
-    Note:
-        Payee is keeping track of the transfer the mediator is paying while the
-        payer receveving transfer.
     """
     __slots__ = (
         'payee_route',
@@ -247,11 +246,12 @@ class MediationPairState(State):
         'payer_expired',            # None of the above happened and the lock expired
     )
 
-    def __init__(self,
-                 payer_route,
-                 payer_transfer,
-                 payee_route,
-                 payee_transfer):
+    def __init__(
+            self,
+            payer_route,
+            payer_transfer,
+            payee_route,
+            payee_transfer):
         """
         Args:
             payer_route (RouteState): The details of the route with the payer.
@@ -268,7 +268,7 @@ class MediationPairState(State):
         self.payee_route = payee_route
         self.payee_transfer = payee_transfer
 
-        # this transfers are settled on different payment channels, these are
-        # the state this mediated transfre in respect to each channel.
+        # these transfers are settled on different payment channels. These are
+        # the states of each mediated transfer in respect to each channel.
         self.payer_state = 'payer_pending'
         self.payee_state = 'payee_pending'

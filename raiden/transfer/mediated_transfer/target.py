@@ -24,8 +24,8 @@ from raiden.transfer.mediated_transfer.mediator import (
 
 
 def events_for_close(from_transfer, from_route, block_number):
-    """ Close the from_channel if the unsafe region prior to a on-chain
-    withdraw.
+    """ Emits the event for closing the netting channel if from_transfer needs
+    to be settled on-chain.
     """
     safe_to_wait = is_safe_to_wait(
         from_transfer,
@@ -57,7 +57,7 @@ def events_for_withdraw(from_transfer, from_route):
 
 
 def handle_inittarget(state_change):
-    """ Handle a ActionInitTarget state change. """
+    """ Handle an ActionInitTarget state change. """
     from_transfer = state_change.from_transfer
     from_route = state_change.from_route
     block_number = state_change.block_number
@@ -143,7 +143,7 @@ def handle_block(state, state_change):
 
 
 def handle_routechange(state, state_change):
-    """ Handle a ActionRouteChange state change. """
+    """ Handle an ActionRouteChange state change. """
     updated_route = state_change.route
     assert updated_route.node_address == state.from_route.node_address
 

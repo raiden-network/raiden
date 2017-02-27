@@ -15,7 +15,7 @@ def update_route(next_state, route_state_change):
     if new_route.state == 'unavailable':
         available_routes.pop(available_idx)
 
-    elif new_route.state == 'avaiable':
+    elif new_route.state == 'available':
         if available_idx:
             # overwrite it, balance might have changed
             available_routes[available_idx] = new_route
@@ -33,7 +33,7 @@ def update_route(next_state, route_state_change):
             )
 
             if not canceled and not ignored:
-                # new channel openned, add the route for use
+                # new channel opened, add the route for use
                 available_routes.append(new_route)
 
     next_state.routes.available_routes = available_routes

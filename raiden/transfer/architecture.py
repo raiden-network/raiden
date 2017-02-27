@@ -52,15 +52,14 @@ class StateChange(object):
 
     StateChanges are incoming events that change this node state (eg. a
     blockchain event, a new packet, an error). It is not used for the node to
-    comunicate with the outer world.
+    communicate with the outer world.
 
-    Nomenclature convetion:
+    Nomenclature convention:
     - 'Receive' prefix for protocol messages.
     - 'ContractReceive' prefix for smart contract logs.
     - 'Action' prefix for other interactions.
 
     Notes:
-    - A message changes a single State object.
     - These objects don't have logic by design.
     - This class is used as a marker for state changes.
     """
@@ -70,7 +69,7 @@ class StateChange(object):
 class Event(object):
     """ Events produced by the execution of a state change.
 
-    Nomenclature convetion:
+    Nomenclature convention:
     - 'Send' prefix for protocol messages.
     - 'ContractSend' prefix for smart contract function calls.
     - 'Event' for node events.
@@ -97,8 +96,7 @@ class StateManager(object):
         """ Initialize the state manager.
 
         Args:
-            state_transition: function that can apply the a StateChange
-            message.
+            state_transition: function that can apply a StateChange message.
             current_state: current application state.
         """
         if not callable(state_transition):
@@ -112,12 +110,12 @@ class StateManager(object):
         resulting events.
 
         Args:
-            state_change (StateChange): An object represention of a state
+            state_change (StateChange): An object representation of a state
             change.
 
         Return:
             Event: A list of events produced by the state transition, it's
-            the upper layer responsability to decided how to handle these
+            the upper layer's responsability to decided how to handle these
             events.
         """
         assert isinstance(state_change, StateChange)

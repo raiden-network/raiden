@@ -50,10 +50,11 @@ class SequenceGenerator(object):
     next = __next__
 
 
-def make_hashlock_transfer(amount,
-                           target,
-                           identifier=0,
-                           token=factories.UNIT_TOKEN_ADDRESS):
+def make_hashlock_transfer(
+        amount,
+        target,
+        identifier=0,
+        token=factories.UNIT_TOKEN_ADDRESS):
     """ Helper for creating a hashlocked transfer.
 
     Args:
@@ -78,13 +79,14 @@ def make_hashlock_transfer(amount,
     return transfer
 
 
-def make_init_statechange(routes,
-                          target,
-                          amount=factories.UNIT_TRANSFER_AMOUNT,
-                          block_number=1,
-                          our_address=factories.ADDR,
-                          secret_generator=None,
-                          identifier=0):
+def make_init_statechange(
+        routes,
+        target,
+        amount=factories.UNIT_TRANSFER_AMOUNT,
+        block_number=1,
+        our_address=factories.ADDR,
+        secret_generator=None,
+        identifier=0):
 
     if secret_generator is None:
         secret_generator = SequenceGenerator()
@@ -100,13 +102,14 @@ def make_init_statechange(routes,
     return init_state_change
 
 
-def make_initiator_state(routes,
-                         target,
-                         amount=factories.UNIT_TRANSFER_AMOUNT,
-                         block_number=1,
-                         our_address=factories.ADDR,
-                         secret_generator=None,
-                         identifier=0):
+def make_initiator_state(
+        routes,
+        target,
+        amount=factories.UNIT_TRANSFER_AMOUNT,
+        block_number=1,
+        our_address=factories.ADDR,
+        secret_generator=None,
+        identifier=0):
 
     init_state_change = make_init_statechange(
         routes,
@@ -559,7 +562,7 @@ def test_cancel_transfer():
 
 
 def assert_state_equal(state1, state2):
-    """ Weak equality check between to InitiatorState instances """
+    """ Weak equality check between two InitiatorState instances """
     assert state1.__class__ == state2.__class__
     assert state1.our_address == state2.our_address
     assert state1.block_number == state2.block_number

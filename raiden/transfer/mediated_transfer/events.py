@@ -18,14 +18,15 @@ def mediatedtransfer(transfer, recipient):
 
 class SendMediatedTransfer(Event):
     """ A mediated transfer that must be sent to `node_address`. """
-    def __init__(self,
-                 identifier,
-                 token,
-                 amount,
-                 hashlock,
-                 target,
-                 expiration,
-                 node_address):
+    def __init__(
+            self,
+            identifier,
+            token,
+            amount,
+            hashlock,
+            target,
+            expiration,
+            node_address):
 
         self.identifier = identifier
         self.token = token
@@ -44,7 +45,7 @@ class SendRevealSecret(Event):
 
     Note:
         The payee must only update it's local balance once the payer sends an
-        update message with a balance-proof, this is a requirement for keeping
+        update message with a balance-proof. This is a requirement for keeping
         the nodes synchronized. The reveal secret message flows from the
         receiver to the sender, so when the secret is learned it is not yet
         time to update the balance.
@@ -63,7 +64,7 @@ class SendBalanceProof(Event):
     Used by payers: The initiator and mediator nodes.
 
     Note:
-        This is event has a dual role, it serves as a synchronization and as
+        This event has a dual role, it serves as a synchronization and as
         balance-proof for the netting channel smart contract.
     """
     def __init__(self, identifier, target):
@@ -86,13 +87,14 @@ class SendRefundTransfer(Event):
     the sender, allowing the sender to try a different route without the risk
     of losing token.
     """
-    def __init__(self,
-                 identifier,
-                 token,
-                 amount,
-                 hashlock,
-                 expiration,
-                 node_address):
+    def __init__(
+            self,
+            identifier,
+            token,
+            amount,
+            hashlock,
+            expiration,
+            node_address):
 
         self.identifier = identifier
         self.token = token
@@ -126,9 +128,9 @@ class EventTransferCompleted(Event):
 
 
 class ContractSendChannelClose(Event):
-    """ Event emitted when the channel.
+    """ Event emitted to close the netting channel.
 
-    This event is used when a node needs to prepared the channel to withdraw
+    This event is used when a node needs to prepare the channel to withdraw
     on-chain.
     """
 
@@ -137,11 +139,11 @@ class ContractSendChannelClose(Event):
 
 
 class ContractSendWithdraw(Event):
-    """ Event emitted when the lock must withdrawn on-chain. """
+    """ Event emitted when the lock must be withdrawn on-chain. """
 
     def __init__(self, transfer, channel_address):
         if transfer.secret is None:
-            raise ValueError('transfer must have the secret set.')
+            raise ValueError('Transfer must have the secret set.')
 
         self.transfer = transfer
         self.channel_address = channel_address
