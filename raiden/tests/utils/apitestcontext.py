@@ -112,3 +112,15 @@ class ApiTestContext():
         channel = self.find_channel(token_address, partner_address)
         channel.our_state.contract_balance += amount
         return channel
+
+    def close(self, token_address, partner_address):
+        channel = self.find_channel(token_address, partner_address)
+        channel.external_state.netting_channel.state = 'closed'
+        channel.external_state._closed_block = 1
+        return channel
+
+    def settle(self, token_address, partner_address):
+        channel = self.find_channel(token_address, partner_address)
+        channel.external_state.netting_channel.state = 'settled'
+        channel.external_state._settled_block = 1
+        return channel

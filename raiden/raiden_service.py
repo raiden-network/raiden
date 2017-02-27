@@ -615,7 +615,7 @@ class RaidenAPI(object):
             second_transfer,
         )
 
-        return netting_channel
+        return netting_channel_to_api_dict(netting_channel, self.raiden.address)
 
     def settle(self, token_address, partner_address):
         """ Settle a closed channel with `partner_address` for the given `token_address`. """
@@ -642,7 +642,7 @@ class RaidenAPI(object):
             raise InvalidState('settlement period is not yet over.')
 
         netting_channel.settle()
-        return netting_channel
+        return netting_channel_to_api_dict(netting_channel, self.raiden.address)
 
 
 class RaidenMessageHandler(object):

@@ -182,10 +182,16 @@ class RestAPI(object):
         elif state is not None and balance is None:
 
             if state == 'closed':
-                raiden_service_result = self.raiden_api.close(channel_address)
+                raiden_service_result = self.raiden_api.close(
+                    channel.token_address,
+                    channel.partner_address
+                )
                 return self.channel_schema.dumps(raiden_service_result)
             elif state == 'settled':
-                raiden_service_result = self.raiden_api.close(channel_address)
+                raiden_service_result = self.raiden_api.settle(
+                    channel.token_address,
+                    channel.partner_address
+                )
                 return self.channel_schema.dumps(raiden_service_result)
             elif state == 'open':
                 raise Exception('nothing to do here')

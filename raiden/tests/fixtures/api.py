@@ -72,6 +72,16 @@ def api_raiden_service(
         'deposit',
         api_test_context.deposit
     )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'close',
+        api_test_context.close
+    )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'settle',
+        api_test_context.settle
+    )
 
     # also make sure that the test server's raiden_api uses this mock
     # raiden service
