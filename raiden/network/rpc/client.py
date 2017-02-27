@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import gevent
+from gevent.lock import Semaphore
+from time import time as now
 import rlp
 from ethereum import slogging
 from ethereum import _solidity
@@ -77,6 +79,9 @@ def patch_send_transaction(client, nonce_offset=0):
         client.call('eth_nonce', encode_hex(client.sender), 'pending')
     except:
         patch_necessary = True
+        client.last_nonce_update = 0
+        client.current_nonce = None
+        client.nonce_lock = Semaphore()
 
     def send_transaction(sender, to, value=0, data='', startgas=GAS_LIMIT,
                          gasprice=GAS_PRICE, nonce=None):
@@ -84,13 +89,54 @@ def patch_send_transaction(client, nonce_offset=0):
         This is necessary to support other remotes that don't support pyethapp's extended specs.
         @see https://github.com/ethereum/pyethapp/blob/develop/pyethapp/rpc_client.py#L359
         """
-        pending_transactions_hex = client.call(
-            'eth_getTransactionCount',
-            address_encoder(sender),
-            'pending',
-        )
-        pending_transactions = int(pending_transactions_hex, 16)
-        nonce = pending_transactions + nonce_offset
+        def get_nonce():
+            """Eventually syncing nonce counter.
+            This will keep a local nonce counter that is only syncing against
+            the remote every `UPDATE_INTERVAL`.
+
+            If the remote counter is lower than the current local counter,
+            it will wait for the remote to catch up.
+            """
+            client.nonce_lock.acquire()
+            UPDATE_INTERVAL = 5.
+            query_time = now()
+            needs_update = abs(query_time - client.last_nonce_update) > UPDATE_INTERVAL
+            not_initialized = client.current_nonce is None
+            log.DEV(
+                "get_nonce called",
+                needs_update=needs_update,
+                not_initialized=not_initialized,
+                current=client.current_nonce,
+                instance=hex(id(client))[-4:]
+            )
+            if needs_update or not_initialized:
+                nonce = _query_nonce()
+                while nonce < client.current_nonce:
+                    log.DEV(
+                        "nonce on server too low",
+                        server=nonce,
+                        local=client.current_nonce
+                    )
+                    nonce = _query_nonce()
+                    query_time = now()
+                client.current_nonce = nonce
+                client.last_nonce_update = query_time
+            else:
+                client.current_nonce += 1
+            client.nonce_lock.release()
+            return client.current_nonce
+
+        def _query_nonce():
+            pending_transactions_hex = client.call(
+                'eth_getTransactionCount',
+                address_encoder(sender),
+                'pending',
+            )
+            pending_transactions = int(pending_transactions_hex, 16)
+            nonce = pending_transactions + nonce_offset
+            return nonce
+
+        nonce = get_nonce()
 
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
         assert hasattr(client, 'privkey') and client.privkey
