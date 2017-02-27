@@ -38,7 +38,10 @@ from raiden.exceptions import (
 from raiden.network.channelgraph import ChannelGraph
 from raiden.tasks import AlarmTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
-from raiden.messages import SignedMessage
+from raiden.messages import (
+    SignedMessage,
+    RevealSecret,
+)
 from raiden.network.protocol import RaidenProtocol
 from raiden.utils import (
     isaddress,
@@ -219,16 +222,32 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         and ignoring the tokens. Useful for refund transfer, split transfer,
         and exchanges.
         """
+        hashlock = sha3(secret)
+        revealsecret_message = RevealSecret(secret)
+        self.sign(revealsecret_message)
+
         for token_manager in self.managers_by_token_address.values():
-            try:
-                token_manager.register_secret(secret)
-            except:  # pylint: disable=bare-except
-                # Only channels that care about the given secret can be
-                # registered and channels that have claimed the lock must
-                # be removed, so an exception should not happen at this
-                # point, nevertheless handle it because we dont want a
-                # error in a channel to mess the state from others.
-                log.error('programming error')
+            channels_list = token_manager.hashlock_channel[hashlock]
+
+            for channel in channels_list:
+                try:
+                    channel.register_secret(secret)
+
+                    # This will potentially be executed multiple times and could suffer
+                    # from amplification, the protocol will ignore messages that were
+                    # already registered and send it only until a first Ack is
+                    # received.
+                    self.send_async(
+                        channel.partner_state.address,
+                        revealsecret_message,
+                    )
+                except:  # pylint: disable=bare-except
+                    # Only channels that care about the given secret can be
+                    # registered and channels that have claimed the lock must
+                    # be removed, so an exception should not happen at this
+                    # point, nevertheless handle it because we dont want a
+                    # error in a channel to mess the state from others.
+                    log.error('programming error')
 
     def register_task_for_hashlock(self, task, token, hashlock):
         """ Register the task to receive messages based on hashlock.
@@ -871,9 +890,11 @@ class RaidenAPI(object):
 
         netting_channel = channel.external_state.netting_channel
 
-        if (self.raiden.chain.block_number() <=
-            (channel.external_state.closed_block +
-             netting_channel.detail(self.raiden.address)['settle_timeout'])):
+        current_block = self.raiden.chain.block_number()
+        settle_timeout = netting_channel.detail(self.raiden.address)['settle_timeout']
+        settle_expiration = channel.external_state.closed_block + settle_timeout
+
+        if current_block <= settle_expiration:
             raise InvalidState('settlement period is not yet over.')
 
         netting_channel.settle()
