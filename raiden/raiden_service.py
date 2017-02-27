@@ -41,6 +41,7 @@ from raiden.encoding import messages
 from raiden.messages import (
     SignedMessage,
     RevealSecret,
+    Secret,
 )
 from raiden.network.protocol import RaidenProtocol
 from raiden.utils import (
@@ -92,8 +93,15 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.registries = list()
         self.managers_by_token_address = dict()
         self.managers_by_address = dict()
+
         self.transfertasks = defaultdict(dict)
         self.exchanges = dict()
+
+        # This is a map from a hashlock to a list of channels, the same
+        # hashlock can be used in more than one token (for exchanges), a
+        # channel should be removed from this list only when the lock is
+        # released/withdrawed but not when the secret is registered.
+        self.hashlock_channel = defaultdict(lambda: defaultdict(list))
 
         self.chain = chain
         self.config = config
@@ -227,7 +235,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.sign(revealsecret_message)
 
         for token_manager in self.managers_by_token_address.values():
-            channels_list = token_manager.hashlock_channel[hashlock]
+            channels_list = self.hashlock_channel[token_manager.token_address][hashlock]
 
             for channel in channels_list:
                 try:
@@ -263,6 +271,66 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             checked for the received messages.
         """
         self.transfertasks[hashlock][token] = task
+
+    def register_channel_for_hashlock(self, token_address, channel, hashlock):
+        channels_registered = self.hashlock_channel[token_address][hashlock]
+
+        if channel not in channels_registered:
+            channels_registered.append(channel)
+
+    def handle_secret(self, identifier, token_address, secret, partner_secret_message, hashlock):
+        channels_list = self.hashlock_channel[token_address][hashlock]
+        channels_to_remove = list()
+
+        # Dont use the partner_secret_message.token since it might not match with the
+        # current token manager
+        our_secret_message = Secret(
+            identifier,
+            secret,
+            token_address,
+        )
+        self.sign(our_secret_message)
+
+        revealsecret_message = RevealSecret(secret)
+        self.sign(revealsecret_message)
+
+        for channel in channels_list:
+            # unlock a sent lock
+            if channel.partner_state.balance_proof.is_unclaimed(hashlock):
+                channel.release_lock(secret)
+                self.send_async(
+                    channel.partner_state.address,
+                    our_secret_message,
+                )
+                channels_to_remove.append(channel)
+
+            # withdraw a pending lock
+            if channel.our_state.balance_proof.is_unclaimed(hashlock):
+                if partner_secret_message:
+                    valid_sender = partner_secret_message.sender == channel.partner_state.address
+                    valid_token = partner_secret_message.token == channel.token_address
+
+                    if valid_sender and valid_token:
+                        channel.withdraw_lock(secret)
+                        channels_to_remove.append(channel)
+                    else:
+                        channel.register_secret(secret)
+                        self.send_async(
+                            channel.partner_state.address,
+                            revealsecret_message,
+                        )
+                else:
+                    channel.register_secret(secret)
+                    self.send_async(
+                        channel.partner_state.address,
+                        revealsecret_message,
+                    )
+
+        for channel in channels_to_remove:
+            channels_list.remove(channel)
+
+        if len(channels_list) == 0:
+            del self.hashlock_channel[token_address][hashlock]
 
     def on_hashlock_result(self, token, hashlock, success):
         """ Clear the task when it's finished. """

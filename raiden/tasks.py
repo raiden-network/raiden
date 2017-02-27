@@ -436,7 +436,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
                 )
 
             raiden.register_task_for_hashlock(self, self.token_address, hashlock)
-            tokenmanager.register_channel_for_hashlock(forward_channel, hashlock)
+            raiden.register_channel_for_hashlock(self.token_address, forward_channel, hashlock)
 
             lock_timeout = forward_channel.settle_timeout - forward_channel.reveal_timeout
             lock_expiration = raiden.get_block_number() + lock_timeout
@@ -500,7 +500,6 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
                     # the initiator can unregister right away because it knowns
                     # no one else can reveal the secret
                     raiden.on_hashlock_result(self.token_address, hashlock, False)
-                    del tokenmanager.hashlock_channel[hashlock]
                     break
 
         if log.isEnabledFor(logging.DEBUG):
@@ -585,7 +584,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
         hashlock = originating_transfer.lock.hashlock
 
         raiden.register_task_for_hashlock(self, self.token_address, hashlock)
-        tokenmanager.register_channel_for_hashlock(originating_channel, hashlock)
+        raiden.register_channel_for_hashlock(self.token_address, originating_channel, hashlock)
 
         # there are no guarantees that the next_hop will follow the same route
         routes = tokenmanager.get_best_routes(
@@ -694,10 +693,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
                     pex(hashlock),
                 )
 
-            tokenmanager.register_channel_for_hashlock(
-                forward_channel,
-                hashlock,
-            )
+            raiden.register_channel_for_hashlock(self.token_address, forward_channel, hashlock)
             forward_channel.register_transfer(mediated_transfer)
 
             for response in self.send_and_iter_valid(raiden, path, mediated_transfer):
@@ -835,7 +831,7 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
         originating_channel = tokenmanager.partneraddress_channel[originating_transfer.sender]
 
         raiden.register_task_for_hashlock(self, self.token_address, hashlock)
-        tokenmanager.register_channel_for_hashlock(originating_channel, hashlock)
+        raiden.register_channel_for_hashlock(self.token_address, originating_channel, hashlock)
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
@@ -976,7 +972,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             hashlock = sha3(secret)
 
             raiden.register_task_for_hashlock(self, from_token, hashlock)
-            from_tokenmanager.register_channel_for_hashlock(from_channel, hashlock)
+            raiden.register_channel_for_hashlock(self.token_address, from_channel, hashlock)  # from_token
 
             lock_expiration = (
                 raiden.get_block_number() +
@@ -1009,7 +1005,6 @@ class StartExchangeTask(BaseMediatedTransferTask):
                 # the initiator can unregister right away since it knows the
                 # secret wont be revealed
                 raiden.on_hashlock_result(from_token, hashlock, False)
-                del from_tokenmanager.hashlock_channel[hashlock]
 
             elif isinstance(to_mediated_transfer, MediatedTransfer):
                 to_hop = to_mediated_transfer.sender
@@ -1196,7 +1191,7 @@ class ExchangeTask(BaseMediatedTransferTask):
         from_channel = from_tokenmanager.partneraddress_channel[from_mediated_transfer.sender]
 
         raiden.register_task_for_hashlock(from_token, self, hashlock)
-        from_tokenmanager.register_channel_for_hashlock(from_channel, hashlock)
+        raiden.register_channel_for_hashlock(from_token, from_channel, hashlock)
 
         lock_expiration = from_mediated_transfer.lock.expiration - raiden.config['reveal_timeout']
         lock_timeout = lock_expiration - raiden.get_block_number()
@@ -1246,10 +1241,7 @@ class ExchangeTask(BaseMediatedTransferTask):
 
             # Using tokenmanager to register the interest because it outlives
             # this task, the secret handling will happen only _once_
-            to_tokenmanager.register_channel_for_hashlock(
-                to_channel,
-                hashlock,
-            )
+            raiden.register_channel_for_hashlock(to_token, to_channel, hashlock)
             to_channel.register_transfer(to_mediated_transfer)
 
             response = self.send_and_wait_valid(raiden, to_mediated_transfer)
