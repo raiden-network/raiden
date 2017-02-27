@@ -46,11 +46,11 @@ def test_api_open_and_deposit_channel(
         api_raiden_service,
         reveal_timeout):
     # let's create a new channel
-    firt_partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    first_partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
     token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
     settle_timeout = 1650
     channel_data_obj = {
-        "partner_address": firt_partner_address,
+        "partner_address": first_partner_address,
         "token_address": token_address,
         "settle_timeout": settle_timeout
     }
@@ -108,11 +108,83 @@ def test_api_open_and_deposit_channel(
     response = decode_response(response)
     expected_response = {
         "channel_address": first_channel_address,
-        "partner_address": firt_partner_address,
+        "partner_address": first_partner_address,
         "token_address": token_address,
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
         "state": 'open',
+        "balance": balance
+    }
+    assert response == expected_response
+
+
+def test_api_open_close_and_settle_channel(
+        api_test_server,
+        api_test_context,
+        api_raiden_service,
+        reveal_timeout):
+    # let's create a new channel
+    partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    settle_timeout = 1650
+    channel_data_obj = {
+        "partner_address": partner_address,
+        "token_address": token_address,
+        "settle_timeout": settle_timeout
+    }
+    request = grequests.put(
+        'http://localhost:5001/api/1/channels',
+        data=channel_data_obj
+    )
+    response = request.send().response
+
+    balance = 0
+    assert response and response.status_code == 200
+    response = decode_response(response)
+    expected_response = channel_data_obj
+    expected_response['reveal_timeout'] = reveal_timeout
+    expected_response['balance'] = balance
+    expected_response['state'] = 'open'
+    # can't know the channel address beforehand but make sure we get one
+    assert 'channel_address' in response
+    channel_address = response['channel_address']
+    expected_response['channel_address'] = response['channel_address']
+    assert response == expected_response
+
+    # let's the close the channel
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        data={'state': 'closed'}
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+    response = decode_response(response)
+    expected_response = {
+        "channel_address": channel_address,
+        "partner_address": partner_address,
+        "token_address": token_address,
+        "settle_timeout": settle_timeout,
+        "reveal_timeout": reveal_timeout,
+        "state": 'closed',
+        "balance": balance
+    }
+    assert response == expected_response
+
+    # let's settle the channel
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        data={'state': 'settled'}
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+    response = decode_response(response)
+    expected_response = {
+        "channel_address": channel_address,
+        "partner_address": partner_address,
+        "token_address": token_address,
+        "settle_timeout": settle_timeout,
+        "reveal_timeout": reveal_timeout,
+        "state": 'settled',
         "balance": balance
     }
     assert response == expected_response
