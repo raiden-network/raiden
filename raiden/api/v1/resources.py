@@ -77,6 +77,10 @@ class ChannelsResourceByChannelAddress(Resource):
         args.update(kwargs)
         return self.rest_api.patch_channel(**args)
 
+    @use_kwargs({'channel_address': AddressField()}, locations=('query',))
+    def get(self, **kwargs):
+        return self.rest_api.get_channel(**kwargs)
+
 
 class TokensResource(BaseResource):
     _route = '/tokens'

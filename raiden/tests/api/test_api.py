@@ -73,10 +73,10 @@ def test_api_open_and_deposit_channel(
     assert response == expected_response
 
     # now let's open a channel and make a deposit too
-    partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
+    second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
     balance = 100
     channel_data_obj = {
-        "partner_address": partner_address,
+        "partner_address": second_partner_address,
         "token_address": token_address,
         "settle_timeout": settle_timeout,
         "balance": balance
@@ -96,9 +96,10 @@ def test_api_open_and_deposit_channel(
     # can't know the channel address beforehand but make sure we get one
     assert 'channel_address' in response
     expected_response['channel_address'] = response['channel_address']
+    second_channel_address = response['channel_address']
     assert response == expected_response
 
-    # finally let's deposit on the first channel
+    # let's deposit on the first channel
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(first_channel_address),
         data={'balance': balance}
@@ -109,6 +110,24 @@ def test_api_open_and_deposit_channel(
     expected_response = {
         "channel_address": first_channel_address,
         "partner_address": first_partner_address,
+        "token_address": token_address,
+        "settle_timeout": settle_timeout,
+        "reveal_timeout": reveal_timeout,
+        "state": 'open',
+        "balance": balance
+    }
+    assert response == expected_response
+
+    # finall let's try querying for the second channel
+    request = grequests.get(
+        'http://localhost:5001/api/1/channels/{}'.format(second_channel_address)
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+    response = decode_response(response)
+    expected_response = {
+        "channel_address": second_channel_address,
+        "partner_address": second_partner_address,
         "token_address": token_address,
         "settle_timeout": settle_timeout,
         "reveal_timeout": reveal_timeout,
