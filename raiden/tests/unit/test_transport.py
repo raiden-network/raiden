@@ -1,30 +1,39 @@
 # -*- coding: utf-8 -*-
-import time
-
 import pytest
 
 from raiden.utils import sha3
 from raiden.messages import Ping, Ack, decode
+import raiden.network.transport
 from raiden.network.transport import UDPTransport, TokenBucket, DummyPolicy
 from raiden.tests.utils.messages import setup_messages_cb
 
 
-class IntervalCheck(object):
-    """ Helper class to check the timespan between events.
+class sleeper(object):
+    """Mock class to provide a `sleep` method that tracks sleep times.
+    """
 
-    An instance of this class will keep track of the last event time and
-    provide utility functions to assert on the time intervals.
+    def __init__(self):
+        self.sleeptimes = []
+
+    def sleep(self, amount):
+        self.sleeptimes.append(amount)
+
+
+class fake_time(object):
+    """Mock class to provide an alternative `time` module for deterministic
+    test timing.
     """
     def __init__(self):
-        self.last_event_time = time.time()
+        self.count = 1.
 
-    def elapsed(self, seconds, tolerance):
-        """ Assert the difference from the last event to now is at least
-        `seconds` with `tolerance` of difference.
-        """
-        now = time.time()
-        assert abs(now - (self.last_event_time + seconds)) < tolerance
-        self.last_event_time = now
+    def time(self):
+        return self.count
+
+    def now(self):
+        return self.count
+
+    def progress(self, amount):
+        self.count += amount
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -35,6 +44,21 @@ def test_throttle_policy_ping(monkeypatch, raiden_network):
 
     # initial policy is DummyPolicy
     assert isinstance(app0.raiden.protocol.transport.throttle_policy, DummyPolicy)
+
+    test_time = fake_time()
+
+    sleeps = sleeper()
+
+    monkeypatch.setattr(
+        raiden.network.transport,
+        'time',
+        test_time
+    )
+    monkeypatch.setattr(
+        raiden.network.transport.gevent,
+        'sleep',
+        sleeps.sleep
+    )
 
     for app in (app0, app1):
         monkeypatch.setattr(
@@ -55,15 +79,9 @@ def test_throttle_policy_ping(monkeypatch, raiden_network):
         app0.raiden.sign(ping)
         packets.append(ping)
 
-    # We need to take into account some indeterminism of task switching and the
-    # additional time for the Ack, let's allow for a 10% difference of the
-    # "perfect" value of a message every 0.5s
-    token_refill = 0.5
-    tolerance = 0.07
-
-    # time sensitive test, the interval is instantiated just before the protocol
-    # is used.
-    check = IntervalCheck()
+    # the token refill rate is 1s / 2 = 0.5s per token
+    token_refill = 1. / app0.raiden.protocol.transport.throttle_policy.fill_rate
+    assert token_refill == 0.5
 
     # send all the packets, the throughput must be limited by the policy
     events = [
@@ -74,14 +92,17 @@ def test_throttle_policy_ping(monkeypatch, raiden_network):
     # Each token corresponds to a single message, the initial capacity is 2
     # meaning the first burst is of 2 packets.
     events[1].wait()
-    check.elapsed(seconds=0, tolerance=tolerance)
 
     assert len(messages) == 4  # two Pings and the corresponding Acks
 
     # Now check the fill_rate for the remaining packets
     for i in range(2, 10):
         events[i].wait()
-        check.elapsed(token_refill, tolerance)
+        test_time.progress(token_refill)
+
+    # The initial sequence Ping, Ack, Ping, Ack has no sleeptimes/throttling
+    assert all(t == 0.0 for t in sleeps.sleeptimes[:4]), sleeps.sleeptimes
+    assert all(t == token_refill for t in sleeps.sleeptimes[4:]), sleeps.sleeptimes
 
     # all 10 Pings and their Acks
     assert len(messages) == 20
