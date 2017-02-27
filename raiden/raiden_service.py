@@ -279,6 +279,29 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             channels_registered.append(channel)
 
     def handle_secret(self, identifier, token_address, secret, partner_secret_message, hashlock):
+        """ Unlock/Witdraws locks, register the secret, and send Secret
+        messages as necessary.
+
+        This function will:
+            - Unlock the locks created by this node and send a Secret message to
+            the corresponding partner so that she can withdraw the token.
+            - Withdraw the lock from sender.
+            - Register the secret for the locks received and reveal the secret
+            to the senders
+
+        Note:
+            The channel needs to be registered with
+            `raiden.register_channel_for_hashlock`.
+        """
+        # handling the secret needs to:
+        # - unlock the token for all `forward_channel` (the current one
+        #   and the ones that failed with a refund)
+        # - send a message to each of the forward nodes allowing them
+        #   to withdraw the token
+        # - register the secret for the `originating_channel` so that a
+        #   proof can be made, if necessary
+        # - reveal the secret to the `sender` node (otherwise we
+        #   cannot withdraw the token)
         channels_list = self.hashlock_channel[token_address][hashlock]
         channels_to_remove = list()
 
@@ -1054,9 +1077,19 @@ class RaidenMessageHandler(object):
                 # flow in the wrong order in the path)
                 self.raiden.register_secret(message.secret)
 
-                # make sure we have a proper state change
-                token_manager = self.raiden.get_manager_by_token_address(message.token)
-                token_manager.handle_secretmessage(message)
+                secret = message.secret
+                identifier = message.identifier
+                token = message.token
+                secret = message.secret
+                hashlock = sha3(secret)
+
+                self.raiden.handle_secret(
+                    identifier,
+                    token,
+                    secret,
+                    message,
+                    hashlock,
+                )
             except:  # pylint: disable=bare-except
                 log.exception('Unhandled exception')
 

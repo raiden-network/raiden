@@ -329,10 +329,26 @@ class BaseMediatedTransferTask(Task):
                 pass
             else:
                 if isinstance(response, Secret):
+                    secret = response.secret
+                    hashlock = sha3(secret)
+
                     if response.identifier == identifier and response.token == token:
-                        tokenmanager.handle_secretmessage(response)
+                        raiden.handle_secret(
+                            identifier,
+                            tokenmanager.token_address,
+                            secret,
+                            response,
+                            hashlock,
+                        )
                     else:
-                        tokenmanager.handle_secret(identifier, response.secret)
+                        # cannot use the message but the secret is okay
+                        raiden.handle_secret(
+                            identifier,
+                            tokenmanager.token_address,
+                            secret,
+                            None,
+                            hashlock,
+                        )
 
                         if log.isEnabledFor(logging.ERROR):
                             log.error(
@@ -342,8 +358,17 @@ class BaseMediatedTransferTask(Task):
                                 identifier,
                                 response,
                             )
+
                 elif isinstance(response, RevealSecret):
-                    tokenmanager.handle_secret(identifier, response.secret)
+                    secret = response.secret
+                    hashlock = sha3(secret)
+                    raiden.handle_secret(
+                        identifier,
+                        tokenmanager.token_address,
+                        secret,
+                        None,
+                        hashlock,
+                    )
 
                 elif log.isEnabledFor(logging.ERROR):
                     log.error(
@@ -479,9 +504,13 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
 
                     # target has acknowledged the RevealSecret, we can update
                     # the chain in the forward direction
-                    tokenmanager.handle_secret(
+                    hashlock = sha3(secret)
+                    raiden.handle_secret(
                         identifier,
+                        tokenmanager.token_address,
                         secret,
+                        None,
+                        hashlock,
                     )
 
                     # call the callbacks and unregister the task
@@ -703,9 +732,15 @@ class MediateTransferTask(BaseMediatedTransferTask):
                 )
 
                 if isinstance(response, RevealSecret):
-                    tokenmanager.handle_secret(
+                    secret = response.secret
+                    hashlock = sha3(secret)
+
+                    raiden.handle_secret(
                         originating_transfer.identifier,
-                        response.secret,
+                        tokenmanager.token_address,
+                        secret,
+                        None,
+                        hashlock,
                     )
 
                     self._wait_for_unlock_or_close(
@@ -716,7 +751,16 @@ class MediateTransferTask(BaseMediatedTransferTask):
                     )
 
                 elif isinstance(response, Secret):
-                    tokenmanager.handle_secretmessage(response)
+                    secret = response.secret
+                    hashlock = sha3(secret)
+
+                    raiden.handle_secret(
+                        originating_transfer.identifier,
+                        tokenmanager.token_address,
+                        secret,
+                        response,
+                        hashlock,
+                    )
 
                     # Secret might be from a different node, wait for the
                     # update from `from_address`
@@ -863,9 +907,15 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
 
             # at this point a Secret message is not valid
             if isinstance(response, RevealSecret):
-                tokenmanager.handle_secret(
+                secret = response.secret
+                hashlock = sha3(secret)
+
+                raiden.handle_secret(
                     originating_transfer.identifier,
-                    response.secret,
+                    tokenmanager.token_address,
+                    secret,
+                    None,
+                    hashlock,
                 )
 
                 self._wait_for_unlock_or_close(
@@ -972,7 +1022,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             hashlock = sha3(secret)
 
             raiden.register_task_for_hashlock(self, from_token, hashlock)
-            raiden.register_channel_for_hashlock(self.token_address, from_channel, hashlock)  # from_token
+            raiden.register_channel_for_hashlock(from_token, from_channel, hashlock)
 
             lock_expiration = (
                 raiden.get_block_number() +
@@ -1019,9 +1069,21 @@ class StartExchangeTask(BaseMediatedTransferTask):
 
                 to_channel = to_tokenmanager.partneraddress_channel[to_mediated_transfer.sender]
 
-                # now the secret can be revealed forward (`from_hop`)
-                from_tokenmanager.handle_secret(identifier, secret)
-                to_tokenmanager.handle_secret(identifier, secret)
+                raiden.handle_secret(
+                    identifier,
+                    to_token,
+                    secret,
+                    None,
+                    hashlock,
+                )
+
+                raiden.handle_secret(
+                    identifier,
+                    from_token,
+                    secret,
+                    None,
+                    hashlock,
+                )
 
                 self._wait_for_unlock_or_close(
                     raiden,
@@ -1270,11 +1332,23 @@ class ExchangeTask(BaseMediatedTransferTask):
                     to_channel.register_transfer(response)
 
             elif isinstance(response, Secret):
-                # this node is receiving the from_token and sending the
-                # to_token, meaning that it can claim the to_token but it needs
-                # a Secret message to claim the from_token
-                to_tokenmanager.handle_secretmessage(response)
-                from_tokenmanager.handle_secretmessage(response)
+                # claim the from_token
+                raiden.handle_secret(
+                    response.identifier,
+                    from_token,
+                    response.secret,
+                    response,
+                    hashlock,
+                )
+
+                # unlock the to_token
+                raiden.handle_secret(
+                    response.identifier,
+                    to_token,
+                    response.secret,
+                    response,
+                    hashlock,
+                )
 
                 self._wait_for_unlock_or_close(
                     raiden,
