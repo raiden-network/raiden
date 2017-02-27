@@ -135,64 +135,6 @@ class TokenManager(object):  # pylint: disable=too-many-instance-attributes
             translator,
         )
 
-    def handle_secret(self, identifier, secret):
-        """ Unlock locks, register the secret, and send Secret messages as
-        necessary.
-
-        This function will:
-            - Unlock the locks created by this node and send a Secret message to
-            the corresponding partner so that she can withdraw the token.
-            - Register the secret for the locks received and reveal the secret
-            to the senders
-
-        Note:
-            The channel needs to be registered with
-            `raiden.register_channel_for_hashlock`.
-        """
-        # handling the secret needs to:
-        # - unlock the token for all `forward_channel` (the current one
-        #   and the ones that failed with a refund)
-        # - send a message to each of the forward nodes allowing them
-        #   to withdraw the token
-        # - register the secret for the `originating_channel` so that a
-        #   proof can be made, if necessary
-        # - reveal the secret to the `sender` node (otherwise we
-        #   cannot withdraw the token)
-        hashlock = sha3(secret)
-        self.raiden.handle_secret(
-            identifier,
-            self.token_address,
-            secret,
-            None,
-            hashlock,
-        )
-
-    def handle_secretmessage(self, partner_secret_message):
-        """ Unlock locks, register the secret, and send Secret messages as
-        necessary.
-
-        This function will:
-            - Withdraw the lock from sender.
-            - Unlock the locks created by this node and send a Secret message to
-            the corresponding partner so that she can withdraw the token.
-            - Register the secret for the locks received and reveal the secret
-            to the senders
-
-        Note:
-            The channel needs to be registered with
-            `raiden.register_channel_for_hashlock`.
-        """
-        secret = partner_secret_message.secret
-        identifier = partner_secret_message.identifier
-        hashlock = sha3(secret)
-        self.raiden.handle_secret(
-            identifier,
-            self.token_address,
-            secret,
-            partner_secret_message,
-            hashlock,
-        )
-
     def channel_isactive(self, partner_address):
         """ True if the channel with `partner_address` is open. """
         # TODO: check if the partner's network is alive
