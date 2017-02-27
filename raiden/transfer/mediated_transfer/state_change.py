@@ -21,12 +21,13 @@ class ActionInitInitiator(StateChange):
         block_number (int): The current block number.
     """
 
-    def __init__(self,
-                 our_address,
-                 transfer,
-                 routes,
-                 random_generator,
-                 block_number):
+    def __init__(
+            self,
+            our_address,
+            transfer,
+            routes,
+            random_generator,
+            block_number):
 
         self.our_address = our_address
         self.transfer = transfer
@@ -39,19 +40,20 @@ class ActionInitMediator(StateChange):
     """ Initial state for a new mediator.
 
     Args:
-        our_address (address): This node address.
+        our_address (address): This node's address.
         from_transfer (LockedTransferState): The received MediatedTransfer.
         routes (RoutesState): The current available routes.
         from_route (RouteState): The route from which the MediatedTransfer was received.
         block_number (int): The current block number.
     """
 
-    def __init__(self,
-                 our_address,
-                 from_transfer,
-                 routes,
-                 from_route,
-                 block_number):
+    def __init__(
+            self,
+            our_address,
+            from_transfer,
+            routes,
+            from_route,
+            block_number):
 
         self.our_address = our_address
         self.from_transfer = from_transfer
@@ -135,7 +137,7 @@ class ReceiveBalanceProof(StateChange):
 
 
 class ContractReceiveWithdraw(StateChange):
-    """ A lock was withdrawned throught the blockchain.
+    """ A lock was withdrawn via the blockchain.
 
     Used when a hash time lock was withdrawn and a log ChannelSecretRevealed is
     emited by the netting channel.

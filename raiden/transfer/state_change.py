@@ -20,7 +20,7 @@ class ActionRouteChange(StateChange):
 
     State change used for:
         - when a new route is added.
-        - when the counter party is unresponsive (fails the healtcheck) and the
+        - when the counter party is unresponsive (fails the healthcheck) and the
           route cannot be used.
         - when a different transfer uses the channel, changing the available
           balance.
@@ -35,7 +35,7 @@ class ActionRouteChange(StateChange):
 
 
 class ActionCancelTransfer(StateChange):
-    """ The user request the transfer to be cancelled.
+    """ The user requests the transfer to be cancelled.
 
     This state change can fail, it depends on the node's role and the current
     state of the transfer.

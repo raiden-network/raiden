@@ -2,6 +2,8 @@
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
 from __future__ import division
 
+import pytest
+
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.state import (
     RoutesState,
@@ -26,10 +28,11 @@ from raiden.transfer.mediated_transfer.events import (
 from . import factories
 
 
-def make_init_statechange(from_transfer,
-                          from_route,
-                          routes,
-                          our_address=factories.ADDR):
+def make_init_statechange(
+        from_transfer,
+        from_route,
+        routes,
+        our_address=factories.ADDR):
 
     block_number = 1
     init_state_change = ActionInitMediator(
@@ -58,13 +61,14 @@ def make_from(amount, target, from_expiration):
     return from_route, from_transfer
 
 
-def make_transfer_pair(payer,
-                       payee,
-                       target,
-                       amount,
-                       expiration,
-                       secret=None,
-                       reveal_timeout=factories.UNIT_REVEAL_TIMEOUT):
+def make_transfer_pair(
+        payer,
+        payee,
+        target,
+        amount,
+        expiration,
+        secret=None,
+        reveal_timeout=factories.UNIT_REVEAL_TIMEOUT):
 
     payer_expiration = expiration
     payee_expiration = expiration - reveal_timeout
@@ -77,12 +81,13 @@ def make_transfer_pair(payer,
     )
 
 
-def make_transfers_pair(hops,
-                        target,
-                        amount,
-                        secret=None,
-                        initial_expiration=None,
-                        reveal_timeout=factories.UNIT_REVEAL_TIMEOUT):
+def make_transfers_pair(
+        hops,
+        target,
+        amount,
+        secret=None,
+        initial_expiration=None,
+        reveal_timeout=factories.UNIT_REVEAL_TIMEOUT):
 
     if initial_expiration is None:
         initial_expiration = (2 * len(hops) + 1) * reveal_timeout
@@ -113,10 +118,11 @@ def make_transfers_pair(hops,
     return transfers_pair
 
 
-def make_mediator_state(from_transfer,
-                        from_route,
-                        routes,
-                        our_address=factories.ADDR):
+def make_mediator_state(
+        from_transfer,
+        from_route,
+        routes,
+        our_address=factories.ADDR):
 
     state_change = make_init_statechange(
         from_transfer,
@@ -180,12 +186,12 @@ def test_is_safe_to_wait():
 
 
 def test_is_channel_close_needed_unpaid():
-    """ Don't close the channel if the payee transfer is not payed. """
+    """ Don't close the channel if the payee transfer is not paid. """
     amount = 10
     expiration = 10
     reveal_timeout = 5
 
-    # even if the secret is known by the payee, the transfer is payed only if a
+    # even if the secret is known by the payee, the transfer is paid only if a
     # withdraw on-chain happened or if the mediator has sent a balance proof
     for unpaid_state in ('payee_pending', 'payee_secret_revealed', 'payee_refund_withdraw'):
         unpaid_pair = make_transfer_pair(
@@ -208,12 +214,12 @@ def test_is_channel_close_needed_unpaid():
 
 
 def test_is_channel_close_needed_paid():
-    """ Close the channel if the payee transfer is payed but the payer has not payed. """
+    """ Close the channel if the payee transfer is paid but the payer has not paid. """
     amount = 10
     expiration = 10
     reveal_timeout = 5
 
-    for payed_state in ('payee_contract_withdraw', 'payee_balance_proof'):
+    for paid_state in ('payee_contract_withdraw', 'payee_balance_proof'):
         paid_pair = make_transfer_pair(
             payer=factories.HOP1,
             payee=factories.HOP2,
@@ -223,7 +229,7 @@ def test_is_channel_close_needed_paid():
             reveal_timeout=reveal_timeout,
         )
 
-        paid_pair.payee_state = payed_state
+        paid_pair.payee_state = paid_state
         assert paid_pair.payer_route.state == 'available'
 
         safe_block = expiration - reveal_timeout - 1
@@ -757,7 +763,7 @@ def test_events_for_revealsecret_all_states():
         assert events[0].target == factories.HOP1
 
 
-def test_events_for_balancaproof():
+def test_events_for_balanceproof():
     """ Test the simple case were the last hop has learned the secret and sent
     to the mediator node.
     """
@@ -841,7 +847,7 @@ def test_events_for_balanceproof_middle_secret():
     assert middle_pair.payee_state == 'payee_balance_proof'
 
 
-def test_events_for_balanceproof_secret_unknow():
+def test_events_for_balanceproof_secret_unknown():
     """ Nothing to do if the secret is not known. """
     block_number = 1
 
@@ -914,7 +920,7 @@ def test_events_for_balanceproof_lock_expired():
 
 
 def test_events_for_close():
-    """ The node must close to unlock on-chain if the payee was payed. """
+    """ The node must close to unlock on-chain if the payee was paid. """
 
     for payee_state in ('payee_balance_proof', 'payee_contract_withdraw'):
         transfers_pair = make_transfers_pair(
@@ -941,7 +947,7 @@ def test_events_for_close():
         assert pair.payer_state == 'payer_waiting_close'
 
 
-def test_events_for_close_hold_for_unpayed_payee():
+def test_events_for_close_hold_for_unpaid_payee():
     """ If the secret is known but the payee transfer has not being paid the
     node must not settle on-chain, otherwise the payee can burn tokens to
     induce the mediator to close a channel.
@@ -959,9 +965,9 @@ def test_events_for_close_hold_for_unpayed_payee():
     # preconditions
     assert pair.payer_transfer.secret == factories.UNIT_SECRET
     assert pair.payee_transfer.secret == factories.UNIT_SECRET
-    assert pair.payee_state not in mediator.STATE_TRANSFER_PAYED
+    assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
 
-    # do not generate events if the secret is known AND the payee is not payed
+    # do not generate events if the secret is known AND the payee is not paid
     first_unsafe_block = pair.payer_transfer.expiration - pair.payer_route.reveal_timeout
     events = mediator.events_for_close(
         transfers_pair,
@@ -969,8 +975,8 @@ def test_events_for_close_hold_for_unpayed_payee():
     )
 
     assert len(events) == 0
-    assert pair.payee_state not in mediator.STATE_TRANSFER_PAYED
-    assert pair.payer_state not in mediator.STATE_TRANSFER_PAYED
+    assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
+    assert pair.payer_state not in mediator.STATE_TRANSFER_PAID
 
     payer_expiration_block = pair.payer_transfer.expiration
     events = mediator.events_for_close(
@@ -978,8 +984,8 @@ def test_events_for_close_hold_for_unpayed_payee():
         payer_expiration_block,
     )
     assert len(events) == 0
-    assert pair.payee_state not in mediator.STATE_TRANSFER_PAYED
-    assert pair.payer_state not in mediator.STATE_TRANSFER_PAYED
+    assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
+    assert pair.payer_state not in mediator.STATE_TRANSFER_PAID
 
     payer_expiration_block = pair.payer_transfer.expiration
     events = mediator.events_for_close(
@@ -987,8 +993,8 @@ def test_events_for_close_hold_for_unpayed_payee():
         payer_expiration_block + 1,
     )
     assert len(events) == 0
-    assert pair.payee_state not in mediator.STATE_TRANSFER_PAYED
-    assert pair.payer_state not in mediator.STATE_TRANSFER_PAYED
+    assert pair.payee_state not in mediator.STATE_TRANSFER_PAID
+    assert pair.payer_state not in mediator.STATE_TRANSFER_PAID
 
 
 def test_events_for_withdraw_channel_closed():
@@ -1204,6 +1210,7 @@ def test_no_valid_routes():
     assert isinstance(events[0], SendRefundTransfer)
 
 
+@pytest.mark.xfail(reason='Not implemented')
 def test_lock_timeout_lower_than_previous_channel_settlement_period():
     # For a path A-B-C, B cannot forward a mediated transfer to C with
     # a lock timeout larger than the settlement timeout of the A-B
@@ -1230,9 +1237,10 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     # (block=5) C call unlock on channel B-C (C is forced to unlock)
     # (block=6) B learns the secret
     # (block=7) B call unlock on channel A-B (settle_timeout is over)
-    pass
+    raise NotImplementedError()
 
 
+@pytest.mark.xfail(reason='Not implemented')
 def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     # For a path A1-B-C-A2, an attacker controlling A1 and A2 should not be
     # able to force B-C to close the channel by burning token.
@@ -1257,16 +1265,18 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     # - C should only close the channel B-C if he has paid A2, since this may
     #   only happen if the lock for the transfer C-A2 has not yet expired then C
     #   has enough time to follow the protocol without closing the channel B-C.
-    pass
+    raise NotImplementedError()
 
 
+@pytest.mark.xfail(reason='Not implemented')
 def mediate_transfer_payee_timeout_must_be_lower_than_settlement_and_payer_timeout():
     # Test:
     # - the current payer route/transfer is the reference, not the from_route / from_transfer
     # - the lowest value from blocks_until_settlement and lock expiration must be used
-    pass
+    raise NotImplementedError()
 
 
+@pytest.mark.xfail(reason='Not implemented')
 def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     # The payee could reveal the secret on it's lock expiration block, the
     # mediator node will respond with a balance-proof to the payee since the
@@ -1290,11 +1300,11 @@ def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     #
     # Race:
     #  1> Secret is learned
-    #  2> balance-proof is sent to payee (payee transfer is payed)
+    #  2> balance-proof is sent to payee (payee transfer is paid)
     #  3! New block is mined and Raiden learns about it
-    #  4> Now the secret is know, the payee is payed, and the current block is
+    #  4> Now the secret is know, the payee is paid, and the current block is
     #     equal to the payer.expiration - reveal-timeout -> withdraw on chain
     #
     # The race is depending on the handling of 3 before 4.
     #
-    pass
+    raise NotImplementedError()

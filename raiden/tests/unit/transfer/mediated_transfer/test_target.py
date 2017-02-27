@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=invalid-name
+import pytest
+
 from raiden.transfer.mediated_transfer import target
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitTarget,
@@ -137,6 +139,7 @@ def test_handle_inittarget_bad_expiration():
     assert len(iteration.events) == 0
 
 
+@pytest.mark.xfail(reason='Not implemented')
 def test_transfer_succesful_after_secret_learned():
     # TransferCompleted event must be used only after the secret is learned and
     # there is enough time to unlock the lock on chain.
@@ -145,4 +148,4 @@ def test_transfer_succesful_after_secret_learned():
     # current channel, the secret request is sent to the initiator and at time
     # the secret is revealed there might not be enough time to safely unlock
     # the asset on-chain.
-    pass
+    raise NotImplementedError()
