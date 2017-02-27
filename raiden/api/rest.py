@@ -166,6 +166,10 @@ class RestAPI(object):
         result = self.events_list_schema.dumps(events_list)
         return result
 
+    def get_channel(self, channel_address):
+        channel = self.raiden_api.get_channel(channel_address)
+        return self.channel_schema.dumps(channel)
+
     def patch_channel(self, channel_address, balance=None, state=None):
         # find the channel
         channel = self.raiden_api.get_channel(channel_address)

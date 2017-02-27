@@ -82,6 +82,11 @@ def api_raiden_service(
         'settle',
         api_test_context.settle
     )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'get_channel',
+        api_test_context.get_channel
+    )
 
     # also make sure that the test server's raiden_api uses this mock
     # raiden service

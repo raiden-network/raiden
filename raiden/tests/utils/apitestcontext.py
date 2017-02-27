@@ -84,6 +84,13 @@ class ApiTestContext():
 
         raise ValueError("Could not find channel")
 
+    def find_channel_by_address(self, channel_address):
+        for channel in self.channels:
+            if channel.channel_address == channel_address:
+                return channel
+
+        raise ValueError("Could not find channel")
+
     def query_channels(self, token_address=None, partner_address=None):
         return self.channels
 
@@ -124,3 +131,6 @@ class ApiTestContext():
         channel.external_state.netting_channel.state = 'settled'
         channel.external_state._settled_block = 1
         return channel
+
+    def get_channel(self, channel_address):
+        return self.find_channel_by_address(channel_address)
