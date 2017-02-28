@@ -11,16 +11,16 @@ from raiden.tasks import StartMediatedTransferTask
 
 def channel(app0, app1, token):
     """ Nice to read shortcut to get the channel. """
-    token_manager = app0.raiden.managers_by_token_address[token]
-    return token_manager.partneraddress_channel[app1.raiden.address]
+    graph = app0.raiden.channelgraphs[token]
+    return graph.partneraddress_channel[app1.raiden.address]
 
 
 def sleep(initiator_app, target_app, token, multiplier=1):
     """ Sleep long enough to conclude a transfer from `initiator_app` to
     `target_app`.
     """
-    tokenmanager = initiator_app.raiden.managers_by_token_address[token]
-    path = list(tokenmanager.channelgraph.get_shortest_paths(
+    graph = initiator_app.raiden.channelgraphs[token]
+    path = list(graph.channelgraph.get_shortest_paths(
         initiator_app.raiden.address,
         target_app.raiden.address,
     ))
@@ -57,8 +57,8 @@ def transfer(initiator_app, target_app, token, amount, identifier):
 
 def direct_transfer(initiator_app, target_app, token, amount, identifier=None):
     """ Nice to read shortcut to make a DirectTransfer. """
-    tokenmanager = initiator_app.raiden.managers_by_token_address[token]
-    has_channel = target_app.raiden.address in tokenmanager.partneraddress_channel
+    graph = initiator_app.raiden.channelgraphs[token]
+    has_channel = target_app.raiden.address in graph.partneraddress_channel
     assert has_channel, 'there is not a direct channel'
 
     initiator_app.raiden.api.transfer(
@@ -76,23 +76,23 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
     """
     # pylint: disable=too-many-arguments
 
-    tokenmanager = initiator_app.raiden.managers_by_token_address[token]
-    has_channel = initiator_app.raiden.address in tokenmanager.partneraddress_channel
+    graph = initiator_app.raiden.channelgraphs[token]
+    has_channel = initiator_app.raiden.address in graph.partneraddress_channel
 
     # api.transfer() would do a DirectTransfer
     if has_channel:
-        transfermanager = tokenmanager.transfermanager
         # Explicitly call the default identifier creation since this mock
         # function here completely skips the `transfer_async()` call.
         if not identifier:
-            identifier = initiator_app.raiden.api.create_default_identifier(
+            identifier = initiator_app.create_default_identifier(
+                token,
                 target_app.raiden.address,
-                token
             )
 
         result = AsyncResult()
         task = StartMediatedTransferTask(
-            transfermanager,
+            initiator_app.raiden,
+            token,
             amount,
             identifier,
             target_app.raiden.address,
@@ -168,7 +168,7 @@ def claim_lock(app_chain, token, secret):
 
 
 def assert_identifier_correct(initiator_app, token, target, expected_id):
-    got_id = initiator_app.raiden.api.create_default_identifier(target, token)
+    got_id = initiator_app.raiden.create_default_identifier(token, target)
     assert got_id == expected_id
 
 

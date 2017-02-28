@@ -27,7 +27,7 @@ def test_get_channel_list(raiden_network, tokens_addresses):
         partner_address=app2.raiden.address
     )
     pytest.raises(
-        UnknownTokenAddress,
+        KeyError,
         app2.raiden.api.get_channel_list,
         token_address=app2.raiden.address
     )

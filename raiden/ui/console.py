@@ -284,11 +284,11 @@ class ConsoleTools(object):
         token = self._chain.token(token_address_bin)
 
         # Obtain the token manager
-        token_manager = self._raiden.managers_by_token_address[token_address_bin]
-        assert token_manager
+        graph = self._raiden.channelgraphs[token_address.decode('hex')]
+        assert graph
 
         # Get the channel
-        channel = token_manager.partneraddress_channel[peer_bin]
+        channel = graph.partneraddress_channel[peer.decode('hex')]
         assert channel
 
         # Collect data
@@ -330,10 +330,10 @@ class ConsoleTools(object):
             events (list)
         """
         # Obtain the token manager
-        token_manager = self._raiden.get_manager_by_token_address(token_address.decode('hex'))
-        assert token_manager
+        graph = self._raiden.channelgraphs[token_address.decode('hex')]
+        assert graph
         # Get the address for the netting contract
-        channel = token_manager.partneraddress_channel[peer.decode('hex')]
+        channel = graph.partneraddress_channel[peer.decode('hex')]
         netcontract_address = channel.external_state.netting_channel.address
         assert len(netcontract_address)
         # Get the netting_channel instance

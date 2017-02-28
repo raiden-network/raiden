@@ -211,12 +211,12 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
     main_api = main_app.raiden.api
 
     # channels
-    main_tokenmanager = main_app.raiden.get_manager_by_token_address(tokens[0])
+    main_graph = main_app.raiden.channelgraphs[tokens[0]]
 
     # search for a path of length=2 A > B > C
     num_hops = 2
     source = main_app.raiden.address
-    paths = main_tokenmanager.channelgraph.get_paths_of_length(source, num_hops)
+    paths = main_graph.get_paths_of_length(source, num_hops)
 
     # sanity check
     assert len(paths)
@@ -226,7 +226,7 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
 
     # addresses
     a, b, c = path
-    token_address = main_tokenmanager.token_address
+    token_address = main_graph.token_address
 
     amount = 10
 

@@ -30,12 +30,12 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     setup_messages_cb()
 
-    token_manager0 = app0.raiden.managers_by_token_address.values()[0]
-    token_manager1 = app1.raiden.managers_by_token_address.values()[0]
-    assert token_manager0.token_address == token_manager1.token_address
+    graph0 = app0.raiden.channelgraphs.values()[0]
+    graph1 = app1.raiden.channelgraphs.values()[0]
+    assert graph0.token_address == graph1.token_address
 
-    channel0 = token_manager0.partneraddress_channel[app1.raiden.address]
-    channel1 = token_manager1.partneraddress_channel[app0.raiden.address]
+    channel0 = graph0.partneraddress_channel[app1.raiden.address]
+    channel1 = graph1.partneraddress_channel[app0.raiden.address]
 
     deposit0 = channel0.balance
     deposit1 = channel1.balance
@@ -52,7 +52,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     secret = 'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
-    assert app1.raiden.address in token_manager0.partneraddress_channel
+    assert app1.raiden.address in graph0.partneraddress_channel
 
     nettingaddress0 = channel0.external_state.netting_channel.address
     nettingaddress1 = channel1.external_state.netting_channel.address
@@ -312,8 +312,8 @@ def test_start_end_attack(tokens_addresses, raiden_chain, deposit, reveal_timeou
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeout):
     app0, app1 = raiden_network
-    channel0 = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
+    channel0 = app0.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]
     privatekey0 = app0.raiden.private_key
     privatekey1 = app1.raiden.private_key
     address0 = privatekey_to_address(privatekey0.private_key)
