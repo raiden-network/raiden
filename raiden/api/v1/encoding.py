@@ -19,7 +19,9 @@ from raiden.api.objects import (
     ChannelNew,
     ChannelNewBalance,
     ChannelSecretRevealed,
-    TransferReceived
+    TransferReceived,
+    PartnersPerToken,
+    PartnersPerTokenList
 )
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 
@@ -155,6 +157,23 @@ class TokensListSchema(BaseListSchema):
     class Meta:
         strict = True
         decoding_class = TokensList
+
+
+class PartnersPerTokenSchema(BaseSchema):
+    partner_address = AddressField()
+    channel = fields.String()
+
+    class Meta:
+        strict = True
+        decoding_class = PartnersPerToken
+
+
+class PartnersPerTokenListSchema(BaseListSchema):
+    data = fields.Nested(PartnersPerTokenSchema, many=True)
+
+    class Meta:
+        strict = True
+        decoding_class = PartnersPerTokenList
 
 
 class ChannelSchema(BaseSchema):

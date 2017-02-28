@@ -208,7 +208,7 @@ Example Response
     [
         {
             'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',,
-            'channel': '/api/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+            'channel': '/api/<version>/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226'
         }, {
             ...
         }

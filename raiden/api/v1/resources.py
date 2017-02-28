@@ -93,8 +93,12 @@ class TokensResource(BaseResource):
         return self.rest_api.get_tokens_list()
 
 
-class Partner(BaseResource):
-    pass
+class PartnersResourceByTokenAddress(BaseResource):
+    _route = '/tokens/<hexaddress:token_address>/partners'
+    rest_api = None
+
+    def get(self, **kwargs):
+        return self.rest_api.get_partners_by_token(**kwargs)
 
 
 class EventsResoure(BaseResource):

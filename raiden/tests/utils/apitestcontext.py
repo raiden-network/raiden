@@ -94,7 +94,15 @@ class ApiTestContext():
         raise ValueError("Could not find channel")
 
     def query_channels(self, token_address=None, partner_address=None):
-        return self.channels
+        if not token_address:
+            return self.channels
+
+        new_list = []
+        for channel in self.channels:
+            if channel.token_address == token_address:
+                new_list.append(channel)
+
+        return new_list
 
     def query_tokens(self):
         return list(self.tokens)
