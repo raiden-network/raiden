@@ -28,17 +28,7 @@ from raiden.utils import (
     isaddress,
     pex,
     GLOBAL_CTX,
-    camel_to_snake_case,
     netting_channel_to_api_dict
-)
-
-from raiden.api.objects import (
-    TransferReceived,
-    ChannelClosed,
-    ChannelNew,
-    ChannelNewBalance,
-    ChannelSecretRevealed,
-    ChannelSettled
 )
 
 
