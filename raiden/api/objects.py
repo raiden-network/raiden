@@ -18,8 +18,17 @@ class ChannelList(FlatList):
     pass
 
 
+class TokensList(FlatList):
+    pass
+
+
 class EventsList(FlatList):
     pass
+
+
+class Token(object):
+    def __init__(self, token_address):
+        self.address = token_address
 
 
 class Channel(object):

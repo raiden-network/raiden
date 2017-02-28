@@ -1,5 +1,5 @@
 from werkzeug.routing import BaseConverter
-from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load
+from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load, MarshalResult
 from marshmallow_polyfield import PolyField
 from webargs import validate
 from marshmallow import fields
@@ -11,6 +11,8 @@ from raiden.api.objects import (
     Channel,
     ChannelList,
     EventsList,
+    Token,
+    TokensList,
     TokenAdded,
     ChannelClosed,
     ChannelSettled,
@@ -137,6 +139,24 @@ class EventsListSchema(BaseListSchema):
         decoding_class = EventsList
 
 
+class TokenSchema(BaseSchema):
+    """Simple token schema only with an address field. In the future we could
+add other attributes like 'name'"""
+    address = AddressField()
+
+    class Meta:
+        strict = True
+        decoding_class = Token
+
+
+class TokensListSchema(BaseListSchema):
+    data = fields.Nested(TokenSchema, many=True)
+
+    class Meta:
+        strict = True
+        decoding_class = TokensList
+
+
 class ChannelSchema(BaseSchema):
     channel_address = AddressField()
     token_address = AddressField()
@@ -147,7 +167,7 @@ class ChannelSchema(BaseSchema):
     state = fields.String(validate=validate.OneOf(['closed', 'open', 'settled']))
 
     class Meta:
-        strict= True
+        strict = True
         decoding_class = Channel
 
 
@@ -169,7 +189,7 @@ class ChannelListSchema(BaseListSchema):
     data = fields.Nested(ChannelSchema, many=True)
 
     class Meta:
-        strict= True
+        strict = True
         decoding_class = ChannelList
 
 

@@ -169,8 +169,8 @@ Example Response
 ::
 
     {
-        ['0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-         '0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6',
+        [{'address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'},
+         {'address': '0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6'},
          ...
         ]
     }

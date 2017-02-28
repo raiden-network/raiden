@@ -7,6 +7,7 @@ from raiden.api.v1.encoding import (
     EventsListSchema,
     ChannelSchema,
     ChannelListSchema,
+    TokensListSchema,
     HexAddressConverter
 )
 from raiden.api.v1.resources import (
@@ -15,7 +16,7 @@ from raiden.api.v1.resources import (
     ChannelsResourceByChannelAddress,
     TokensResource
 )
-from raiden.api.objects import EventsList, ChannelList
+from raiden.api.objects import EventsList, ChannelList, TokensList
 
 
 class APIServer(object):
@@ -108,6 +109,7 @@ class RestAPI(object):
         self.channel_schema = ChannelSchema()
         self.channel_list_schema = ChannelListSchema()
         self.events_list_schema = EventsListSchema()
+        self.tokens_list_schema = TokensListSchema()
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
         raiden_service_result = self.raiden_api.open(
@@ -155,6 +157,18 @@ class RestAPI(object):
         # wrap in ChannelList:
         channel_list = ChannelList(raiden_service_result)
         result = self.channel_list_schema.dumps(channel_list)
+        return result
+
+    def get_tokens_list(self):
+        raiden_service_result = self.raiden_api.get_tokens_list()
+        assert isinstance(raiden_service_result, list)
+
+        new_list = []
+        for result in raiden_service_result:
+            new_list.append({'address': result})
+        # wrap in TokensList
+        tokens_list = TokensList(new_list)
+        result = self.tokens_list_schema.dumps(tokens_list)
         return result
 
     def get_new_events(self):

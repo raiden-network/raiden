@@ -207,3 +207,52 @@ def test_api_open_close_and_settle_channel(
         "balance": balance
     }
     assert response == expected_response
+
+
+def test_api_tokens(
+        api_test_server,
+        api_test_context,
+        api_raiden_service,
+        reveal_timeout):
+    # let's create 2 new channels for 2 different tokens
+    partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    settle_timeout = 1650
+    channel_data_obj = {
+        "partner_address": partner_address,
+        "token_address": token_address,
+        "settle_timeout": settle_timeout
+    }
+    request = grequests.put(
+        'http://localhost:5001/api/1/channels',
+        data=channel_data_obj
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+
+    partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    token_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    settle_timeout = 1650
+    channel_data_obj = {
+        "partner_address": partner_address,
+        "token_address": token_address,
+        "settle_timeout": settle_timeout
+    }
+    request = grequests.put(
+        'http://localhost:5001/api/1/channels',
+        data=channel_data_obj
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+
+    # and now let's get the token list
+    request = grequests.get(
+        'http://localhost:5001/api/1/tokens',
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+    response = decode_response(response)
+    assert response == [
+        {"address": "0x61c808d82a3ac53231750dadc13c777b59310bd9"},
+        {"address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"},
+    ]

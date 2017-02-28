@@ -35,6 +35,7 @@ class ApiTestContext():
 
     def __init__(self, reveal_timeout):
         self.channels = []
+        self.tokens = set()
         self.channel_schema = ChannelSchema()
         self.channel_list_schema = ChannelListSchema()
         self.events_list_schema = EventsListSchema()
@@ -63,6 +64,7 @@ class ApiTestContext():
             lambda: 1,
             netting_channel,
         )
+        self.tokens.add(token_address)
         return Channel(
             our_state,
             partner_state,
@@ -93,6 +95,9 @@ class ApiTestContext():
 
     def query_channels(self, token_address=None, partner_address=None):
         return self.channels
+
+    def query_tokens(self):
+        return list(self.tokens)
 
     def expect_channels(self):
         channel_list = ChannelList(self.channels)

@@ -531,6 +531,12 @@ class RaidenAPI(object):
                 channel_list.extend(manager.address_channel.values())
             return channel_list
 
+    def get_tokens_list(self):
+        """Returns a list of tokens the node knows about"""
+        tokens_list = []
+        for token_address in self.managers_by_token_address:
+            tokens_list.append(token_address)
+
     def transfer_and_wait(
             self,
             token_address,
