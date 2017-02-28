@@ -86,16 +86,11 @@ class TokensResource(BaseResource):
     _route = '/tokens'
     rest_api = None
 
-    patch_schema = ChannelRequestSchema(
-        exclude=('channel_address', 'token_address', 'partner_address'),
-    )
-
     def get(self):
         """
-        this translates to 'get all token addresses we have channels open for
+        this translates to 'get all token addresses we have channels open for'
         """
-        # TODO
-        pass
+        return self.rest_api.get_tokens_list()
 
 
 class Partner(BaseResource):

@@ -64,6 +64,11 @@ def api_raiden_service(
     )
     monkeypatch.setattr(
         raiden_service.api,
+        'get_tokens_list',
+        api_test_context.query_tokens
+    )
+    monkeypatch.setattr(
+        raiden_service.api,
         'open',
         api_test_context.open_channel
     )
