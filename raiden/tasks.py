@@ -47,10 +47,6 @@ class Task(gevent.Greenlet):
         super(Task, self).__init__()
         self.response_queue = Queue()
 
-    def on_completion(self, success):
-        self.transfermanager.on_task_completed(self, success)
-        return success
-
     def on_response(self, response):
         """ Add a new response message to the task queue. """
         if log.isEnabledFor(logging.DEBUG):
@@ -111,14 +107,8 @@ class HealthcheckTask(Task):
                     # Add a randomized delay in the loop to not clog the network
                     gevent.sleep(random.randint(0, int(0.2 * self.send_ping_time)))
                     if elapsed_time > self.max_unresponsive_time:
-                        # remove the node from the graph
-                        token_manager = self.raiden.get_manager_by_token_address(
-                            token_address
-                        )
-                        token_manager.channelgraph.remove_path(
-                            self.protocol.raiden.address,
-                            receiver_address
-                        )
+                        graph = self.raiden.channelgraphs[token_address]
+                        graph.remove_path(self.protocol.raiden.address, receiver_address)
                         # remove the node from the queue
                         keys_to_remove.append(key)
                     elif elapsed_time > self.send_ping_time:
@@ -283,7 +273,7 @@ class BaseMediatedTransferTask(Task):
 
         yield TIMEOUT
 
-    def _wait_for_unlock_or_close(self, raiden, tokenmanager, channel, mediated_transfer):  # noqa
+    def _wait_for_unlock_or_close(self, raiden, graph, channel, mediated_transfer):  # noqa
         """ Wait for a Secret message from our partner to update the local
         state, if the Secret message is not sent within time the channel will
         be closed.
@@ -335,7 +325,7 @@ class BaseMediatedTransferTask(Task):
                     if response.identifier == identifier and response.token == token:
                         raiden.handle_secret(
                             identifier,
-                            tokenmanager.token_address,
+                            graph.token_address,
                             secret,
                             response,
                             hashlock,
@@ -344,7 +334,7 @@ class BaseMediatedTransferTask(Task):
                         # cannot use the message but the secret is okay
                         raiden.handle_secret(
                             identifier,
-                            tokenmanager.token_address,
+                            graph.token_address,
                             secret,
                             None,
                             hashlock,
@@ -364,7 +354,7 @@ class BaseMediatedTransferTask(Task):
                     hashlock = sha3(secret)
                     raiden.handle_secret(
                         identifier,
-                        tokenmanager.token_address,
+                        graph.token_address,
                         secret,
                         None,
                         hashlock,
@@ -382,9 +372,8 @@ class BaseMediatedTransferTask(Task):
 
         For a chain A-B-C, if an attacker controls A and C a mediated transfer
         can be done through B and C will wait for/send a timeout, for that
-        reason B must not unregister the hashlock from the transfermanager
-        until the lock has expired, otherwise the revealed secret wouldnt be
-        caught.
+        reason B must not unregister the hashlock until the lock has expired,
+        otherwise the revealed secret wouldnt be caught.
         """
         # pylint: disable=no-self-use
 
@@ -431,13 +420,14 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
         target = self.target
 
         node_address = raiden.address
-        tokenmanager = raiden.get_manager_by_token_address(self.token_address)
+        graph = raiden.channelgraphs[self.token_address]
 
         fee = 0
         # there are no guarantees that the next_hop will follow the same route
-        routes = tokenmanager.get_best_routes(
-            amount,
+        routes = graph.get_best_routes(
+            raiden.address,
             target,
+            amount,
             lock_timeout=None,
         )
 
@@ -507,7 +497,7 @@ class StartMediatedTransferTask(BaseMediatedTransferTask):
                     hashlock = sha3(secret)
                     raiden.handle_secret(
                         identifier,
-                        tokenmanager.token_address,
+                        graph.token_address,
                         secret,
                         None,
                         hashlock,
@@ -607,18 +597,20 @@ class MediateTransferTask(BaseMediatedTransferTask):
         originating_transfer = self.originating_transfer
 
         raiden = self.raiden
-        tokenmanager = raiden.get_manager_by_token_address(self.token_address)
+        graph = raiden.channelgraphs[self.token_address]
         from_address = originating_transfer.sender
-        originating_channel = tokenmanager.partneraddress_channel[from_address]
+        originating_channel = graph.partneraddress_channel[from_address]
         hashlock = originating_transfer.lock.hashlock
 
         raiden.register_task_for_hashlock(self, self.token_address, hashlock)
         raiden.register_channel_for_hashlock(self.token_address, originating_channel, hashlock)
 
         # there are no guarantees that the next_hop will follow the same route
-        routes = tokenmanager.get_best_routes(
-            originating_transfer.lock.amount,
+        routes = graph.get_best_routes(
+            raiden.address,
             originating_transfer.target,
+            originating_transfer.lock.amount,
+            lock_timeout=None,
         )
 
         if log.isEnabledFor(logging.DEBUG):
@@ -737,7 +729,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
 
                     raiden.handle_secret(
                         originating_transfer.identifier,
-                        tokenmanager.token_address,
+                        graph.token_address,
                         secret,
                         None,
                         hashlock,
@@ -745,7 +737,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
 
                     self._wait_for_unlock_or_close(
                         raiden,
-                        tokenmanager,
+                        graph,
                         originating_channel,
                         originating_transfer,
                     )
@@ -756,7 +748,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
 
                     raiden.handle_secret(
                         originating_transfer.identifier,
-                        tokenmanager.token_address,
+                        graph.token_address,
                         secret,
                         response,
                         hashlock,
@@ -766,7 +758,7 @@ class MediateTransferTask(BaseMediatedTransferTask):
                     # update from `from_address`
                     self._wait_for_unlock_or_close(
                         raiden,
-                        tokenmanager,
+                        graph,
                         originating_channel,
                         originating_transfer,
                     )
@@ -871,8 +863,8 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
         originating_transfer = self.originating_transfer
         hashlock = originating_transfer.lock.hashlock
 
-        tokenmanager = raiden.get_manager_by_token_address(self.token_address)
-        originating_channel = tokenmanager.partneraddress_channel[originating_transfer.sender]
+        graph = raiden.channelgraphs[self.token_address]
+        originating_channel = graph.partneraddress_channel[originating_transfer.sender]
 
         raiden.register_task_for_hashlock(self, self.token_address, hashlock)
         raiden.register_channel_for_hashlock(self.token_address, originating_channel, hashlock)
@@ -912,7 +904,7 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
 
                 raiden.handle_secret(
                     originating_transfer.identifier,
-                    tokenmanager.token_address,
+                    graph.token_address,
                     secret,
                     None,
                     hashlock,
@@ -920,7 +912,7 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
 
                 self._wait_for_unlock_or_close(
                     raiden,
-                    tokenmanager,
+                    graph,
                     originating_channel,
                     originating_transfer,
                 )
@@ -1006,12 +998,13 @@ class StartExchangeTask(BaseMediatedTransferTask):
         to_amount = self.to_amount
         target = self.target
 
-        from_tokenmanager = raiden.get_manager_by_token_address(from_token)
-        to_tokenmanager = raiden.get_manager_by_token_address(to_token)
+        from_graph = raiden.channelgraphs[from_token]
+        to_graph = raiden.channelgraphs[to_token]
 
-        from_routes = from_tokenmanager.get_best_routes(
-            from_amount,
+        from_routes = from_graph.get_best_routes(
+            raiden.address,
             target,
+            from_amount,
             lock_timeout=None,
         )
         fee = 0
@@ -1067,7 +1060,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
                     exchange_node=target,
                 )
 
-                to_channel = to_tokenmanager.partneraddress_channel[to_mediated_transfer.sender]
+                to_channel = to_graph.partneraddress_channel[to_mediated_transfer.sender]
 
                 raiden.handle_secret(
                     identifier,
@@ -1087,7 +1080,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
 
                 self._wait_for_unlock_or_close(
                     raiden,
-                    to_tokenmanager,
+                    to_graph,
                     to_channel,
                     to_mediated_transfer,
                 )
@@ -1247,10 +1240,10 @@ class ExchangeTask(BaseMediatedTransferTask):
         to_token = self.to_token
         to_amount = self.to_amount
 
-        to_tokenmanager = raiden.get_manager_by_token_address(to_token)
-        from_tokenmanager = raiden.get_manager_by_token_address(from_token)
+        to_graph = raiden.channelgraphs[to_token]
+        from_graph = raiden.channelgraphs[from_token]
 
-        from_channel = from_tokenmanager.partneraddress_channel[from_mediated_transfer.sender]
+        from_channel = from_graph.partneraddress_channel[from_mediated_transfer.sender]
 
         raiden.register_task_for_hashlock(from_token, self, hashlock)
         raiden.register_channel_for_hashlock(from_token, from_channel, hashlock)
@@ -1258,9 +1251,10 @@ class ExchangeTask(BaseMediatedTransferTask):
         lock_expiration = from_mediated_transfer.lock.expiration - raiden.config['reveal_timeout']
         lock_timeout = lock_expiration - raiden.get_block_number()
 
-        to_routes = to_tokenmanager.get_best_routes(
-            from_mediated_transfer.lock.amount,
+        to_routes = to_graph.get_best_routes(
+            raiden.addres,
             from_mediated_transfer.initiator,  # route back to the initiator
+            from_mediated_transfer.lock.amount,
             lock_timeout,
         )
 
@@ -1301,8 +1295,8 @@ class ExchangeTask(BaseMediatedTransferTask):
                     pex(from_mediated_transfer.lock.hashlock),
                 )
 
-            # Using tokenmanager to register the interest because it outlives
-            # this task, the secret handling will happen only _once_
+            # The interest on the hashlock outlives this task, the secret
+            # handling will happen only _once_
             raiden.register_channel_for_hashlock(to_token, to_channel, hashlock)
             to_channel.register_transfer(to_mediated_transfer)
 
@@ -1352,7 +1346,7 @@ class ExchangeTask(BaseMediatedTransferTask):
 
                 self._wait_for_unlock_or_close(
                     raiden,
-                    from_tokenmanager,
+                    from_graph,
                     from_channel,
                     from_mediated_transfer,
                 )

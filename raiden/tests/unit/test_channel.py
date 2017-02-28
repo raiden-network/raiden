@@ -353,8 +353,8 @@ def test_python_channel():
 def test_setup(raiden_network, deposit, tokens_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    tokens0 = app0.raiden.managers_by_token_address.keys()
-    tokens1 = app1.raiden.managers_by_token_address.keys()
+    tokens0 = app0.raiden.channelgraphs.keys()
+    tokens1 = app1.raiden.channelgraphs.keys()
 
     assert len(tokens0) == 1
     assert len(tokens1) == 1
@@ -402,8 +402,11 @@ def test_interwoven_transfers(number_of_transfers, raiden_network,
 
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
+    graph0 = app0.raiden.channelgraphs.values()[0]
+    graph1 = app1.raiden.channelgraphs.values()[0]
+
+    channel0 = graph0.partneraddress_channel.values()[0]
+    channel1 = graph1.partneraddress_channel.values()[0]
 
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
@@ -492,11 +495,14 @@ def test_transfer(raiden_network, tokens_addresses):
     address0 = channel0.our_state.address
     address1 = channel1.our_state.address
 
-    app0_token = app0.raiden.managers_by_token_address.keys()[0]
-    app1_token = app1.raiden.managers_by_token_address.keys()[0]
+    app0_token = app0.raiden.channelgraphs.keys()[0]
+    app1_token = app1.raiden.channelgraphs.keys()[0]
 
-    app0_partners = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.keys()
-    app1_partners = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.keys()
+    graph0 = app0.raiden.channelgraphs.values()[0]
+    graph1 = app1.raiden.channelgraphs.values()[0]
+
+    app0_partners = graph0.partneraddress_channel.keys()
+    app1_partners = graph1.partneraddress_channel.keys()
 
     assert channel0.token_address == channel1.token_address
     assert app0_token == app1_token
@@ -546,8 +552,11 @@ def test_transfer(raiden_network, tokens_addresses):
 def test_locked_transfer(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
+    graph0 = app0.raiden.channelgraphs.values()[0]
+    graph1 = app1.raiden.channelgraphs.values()[0]
+
+    channel0 = graph0.partneraddress_channel.values()[0]
+    channel1 = graph1.partneraddress_channel.values()[0]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
@@ -599,8 +608,11 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     """
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = app0.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.managers_by_token_address.values()[0].partneraddress_channel.values()[0]
+    graph0 = app0.raiden.channelgraphs.values()[0]
+    graph1 = app1.raiden.channelgraphs.values()[0]
+
+    channel0 = graph0.partneraddress_channel.values()[0]
+    channel1 = graph1.partneraddress_channel.values()[0]
 
     balance0 = channel0.balance
     balance1 = channel1.balance

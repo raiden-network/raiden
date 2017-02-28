@@ -349,6 +349,8 @@ class RaidenProtocol(object):
                 if log.isEnabledFor(logging.WARN):
                     log.warn(str(e))
                 return
+            except:
+                log.exception('unexpected exception raised.')
 
             # only send the Ack if the message was handled without exceptions
             ack = Ack(
