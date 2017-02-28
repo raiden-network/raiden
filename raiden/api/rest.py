@@ -2,21 +2,23 @@ from flask import Flask
 from flask_restful import Api, abort
 
 from webargs.flaskparser import parser
-
+from pyethapp.jsonrpc import address_encoder
 from raiden.api.v1.encoding import (
     EventsListSchema,
     ChannelSchema,
     ChannelListSchema,
     TokensListSchema,
+    PartnersPerTokenListSchema,
     HexAddressConverter
 )
 from raiden.api.v1.resources import (
     create_blueprint,
     ChannelsResource,
     ChannelsResourceByChannelAddress,
-    TokensResource
+    TokensResource,
+    PartnersResourceByTokenAddress,
 )
-from raiden.api.objects import EventsList, ChannelList, TokensList
+from raiden.api.objects import EventsList, ChannelList, TokensList, PartnersPerTokenList
 
 
 class APIServer(object):
@@ -50,7 +52,8 @@ class APIServer(object):
     _default_resource_classes = [
         ChannelsResource,
         ChannelsResourceByChannelAddress,
-        TokensResource
+        TokensResource,
+        PartnersResourceByTokenAddress
     ]
 
     def __init__(self, rest_api):
@@ -110,6 +113,7 @@ class RestAPI(object):
         self.channel_list_schema = ChannelListSchema()
         self.events_list_schema = EventsListSchema()
         self.tokens_list_schema = TokensListSchema()
+        self.partner_per_token_list_schema = PartnersPerTokenListSchema()
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
         raiden_service_result = self.raiden_api.open(
@@ -166,7 +170,7 @@ class RestAPI(object):
         new_list = []
         for result in raiden_service_result:
             new_list.append({'address': result})
-        # wrap in TokensList
+        # wrap in the list Schema
         tokens_list = TokensList(new_list)
         result = self.tokens_list_schema.dumps(tokens_list)
         return result
@@ -183,6 +187,22 @@ class RestAPI(object):
     def get_channel(self, channel_address):
         channel = self.raiden_api.get_channel(channel_address)
         return self.channel_schema.dumps(channel)
+
+    def get_partners_by_token(self, token_address):
+        return_list = []
+        raiden_service_result = self.raiden_api.get_channel_list(token_address)
+        for result in raiden_service_result:
+            return_list.append({
+                'partner_address': result.partner_address,
+                'channel': '/api/{}/channels/{}'.format(
+                    self.version,
+                    address_encoder(result.channel_address)
+                )
+            })
+        # wrap in the list schema
+        schema_list = PartnersPerTokenList(return_list)
+        result = self.partner_per_token_list_schema.dumps(schema_list)
+        return result
 
     def patch_channel(self, channel_address, balance=None, state=None):
         # find the channel

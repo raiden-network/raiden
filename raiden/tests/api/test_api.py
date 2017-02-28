@@ -256,3 +256,65 @@ def test_api_tokens(
         {"address": "0x61c808d82a3ac53231750dadc13c777b59310bd9"},
         {"address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"},
     ]
+
+
+def test_query_partners_by_token(
+        api_test_server,
+        api_test_context,
+        api_raiden_service,
+        reveal_timeout):
+    # let's create 2 new channels for the same token
+    first_partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
+    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    settle_timeout = 1650
+    channel_data_obj = {
+        "partner_address": first_partner_address,
+        "token_address": token_address,
+        "settle_timeout": settle_timeout
+    }
+    request = grequests.put(
+        'http://localhost:5001/api/1/channels',
+        data=channel_data_obj
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+    response = decode_response(response)
+    first_channel_address = response['channel_address']
+
+    channel_data_obj['partner_address'] = second_partner_address
+    request = grequests.put(
+        'http://localhost:5001/api/1/channels',
+        data=channel_data_obj
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+    response = decode_response(response)
+    second_channel_address = response['channel_address']
+
+    # and a channel for another token
+    channel_data_obj['partner_address'] = '0xb07937AbA15304FBBB0Bf6454a9377a76E3dD39E'
+    channel_data_obj['token_address'] = '0x70faa28A6B8d6829a4b1E649d26eC9a2a39ba413'
+    request = grequests.put(
+        'http://localhost:5001/api/1/channels',
+        data=channel_data_obj
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+
+    # and now let's query our partners per token for the first token
+    request = grequests.get(
+        'http://localhost:5001/api/1/tokens/0xea674fdde714fd979de3edf0f56aa9716b898ec8/partners',
+    )
+    response = request.send().response
+    assert response and response.status_code == 200
+    response = decode_response(response)
+    assert response == [
+        {
+            "partner_address": first_partner_address,
+            "channel": "/api/1/channels/{}".format(first_channel_address)
+        }, {
+            "partner_address": second_partner_address,
+            "channel": "/api/1/channels/{}".format(second_channel_address)
+        }
+    ]
