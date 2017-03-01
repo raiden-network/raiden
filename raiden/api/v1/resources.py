@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from webargs.flaskparser import use_args, use_kwargs, parser
 from flask_restful import Resource
 from flask import Blueprint
@@ -13,7 +15,7 @@ def create_blueprint():
 
 class BaseResource(Resource):
     def __init__(self, **kwargs):
-        return
+        super(BaseResource, self).__init__(**kwargs)
 
 
 @parser.location_handler('query')

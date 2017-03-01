@@ -60,16 +60,6 @@ class Channel(object):
         self.state = state
 
 
-class TransferReceived(object):
-    def __init__(self, token_address, recipient_address, initiator_address, transferred_amount, hashlock, identifier):
-        self.token_address = token_address,
-        self.recipient_address = recipient_address,
-        self.initiator_address = initiator_address,
-        self.transferred_amount = transferred_amount,
-        self.hashlock = hashlock
-        self.identifier = identifier
-
-
 class TokenAdded(object):
 
     def __init__(self, registry_address, token_address, channel_manager_address):
