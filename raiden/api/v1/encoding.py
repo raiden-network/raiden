@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from werkzeug.routing import BaseConverter
 from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load, MarshalResult
 from marshmallow_polyfield import PolyField

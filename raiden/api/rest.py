@@ -1,7 +1,9 @@
+# -*- coding: utf-8 -*-
+
 from flask import Flask
 from flask_restful import Api, abort
-
 from webargs.flaskparser import parser
+
 from pyethapp.jsonrpc import address_encoder
 from raiden.api.v1.encoding import (
     EventsListSchema,
@@ -9,7 +11,7 @@ from raiden.api.v1.encoding import (
     ChannelListSchema,
     TokensListSchema,
     PartnersPerTokenListSchema,
-    HexAddressConverter
+    HexAddressConverter,
 )
 from raiden.api.v1.resources import (
     create_blueprint,
@@ -158,7 +160,6 @@ class RestAPI(object):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
         assert isinstance(raiden_service_result, list)
 
-        # wrap in ChannelList:
         channel_list = ChannelList(raiden_service_result)
         result = self.channel_list_schema.dumps(channel_list)
         return result
@@ -170,7 +171,7 @@ class RestAPI(object):
         new_list = []
         for result in raiden_service_result:
             new_list.append({'address': result})
-        # wrap in the list Schema
+
         tokens_list = TokensList(new_list)
         result = self.tokens_list_schema.dumps(tokens_list)
         return result
@@ -179,7 +180,6 @@ class RestAPI(object):
         raiden_service_result = self.get_new_events()
         assert isinstance(raiden_service_result, list)
 
-        # wrap in EventsList:
         events_list = EventsList(raiden_service_result)
         result = self.events_list_schema.dumps(events_list)
         return result
@@ -199,7 +199,7 @@ class RestAPI(object):
                     address_encoder(result.channel_address)
                 )
             })
-        # wrap in the list schema
+
         schema_list = PartnersPerTokenList(return_list)
         result = self.partner_per_token_list_schema.dumps(schema_list)
         return result
