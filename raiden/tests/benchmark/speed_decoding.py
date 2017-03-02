@@ -48,8 +48,6 @@ def test_ping(iterations=ITERATIONS):
     run_timeit('Ping', msg, iterations=iterations)
 
 
-# TODO: LOCKSROOT_REJECTED
-
 
 def test_secret_request(iterations=ITERATIONS):
     identifier = 1
@@ -162,7 +160,6 @@ def test_all(iterations=ITERATIONS):
     test_cancel_transfer(iterations=iterations)
 
     # LockedTransfer cannot be encoded/decoded
-    # LocksrootRejected needs an additional argument
 
 
 def benchmark_alternatives():

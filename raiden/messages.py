@@ -4,7 +4,6 @@ from ethereum.utils import big_endian_to_int
 
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
-from raiden.encoding.messages import LocksrootRejected as LocksrootRejectedNamedbuffer
 from raiden.encoding.messages import secret as secret_field
 from raiden.encoding.messages import signature as signature_field
 from raiden.utils import publickey_to_address, sha3, ishash, pex
@@ -12,7 +11,6 @@ from raiden.utils import publickey_to_address, sha3, ishash, pex
 __all__ = (
     'Ack',
     'Ping',
-    'LocksrootRejected',
     'SecretRequest',
     'Secret',
     'DirectTransfer',
@@ -154,73 +152,6 @@ class Ping(SignedMessage):
     def pack(self, packed):
         packed.nonce = self.nonce
         packed.signature = self.signature
-
-
-class LocksrootRejected(SignedMessage):
-    """ If there is a locksroot mismatch this message needs to be sent to
-    inform the partner.
-
-    Upon receiving this message a node must update all it's secrets and
-    recreating all transfers that are pending Acknowledgment.
-    """
-
-    cmdid = messages.LOCKSROOT_REJECTED
-
-    def __init__(self, echo):
-        super(LocksrootRejected, self).__init__()
-        self.echo = echo
-        self.secrets = list()
-
-    @staticmethod
-    def unpack(packed):
-        rejected = LocksrootRejected(packed.echo)
-
-        # this slice must be from the end of the buffer
-        rejected.signature = packed.data[-signature_field.size_bytes:]
-
-        # LocksrootRejected.size includes the signature size
-        start = LocksrootRejectedNamedbuffer.size - signature_field.size_bytes
-
-        while start < len(packed.data) - signature_field.size_bytes:
-            end = start + secret_field.size_bytes
-            secret = packed.data[start:end]
-            rejected.secrets.append(secret)
-            start = end
-
-        return rejected
-
-    def pack(self, packed):
-        packed.echo = self.echo
-
-    def packed(self):
-        size = LocksrootRejectedNamedbuffer.size + len(self.secrets) * secret_field.size_bytes
-
-        if size > 1200:  # RaidenProtocol.max_message_size:
-            msg = (
-                'cannot encode all the secrets, the resulting packed would be'
-                ' too large and ignored'
-            )
-            log.error(msg)
-            raise RuntimeError(msg)
-
-        data = bytearray(size)
-        data[0] = self.cmdid
-
-        if self.signature:
-            data[-signature_field.size_bytes:] = self.signature
-
-        packed = LocksrootRejectedNamedbuffer(data)
-        self.pack(packed)
-
-        # LocksrootRejectedNamedbuffer.size includes the signature size
-        start = LocksrootRejectedNamedbuffer.size - signature_field.size_bytes
-
-        for pos, secret in enumerate(self.secrets):
-            end = start + secret_field.size_bytes
-            data[start:end] = secret
-            start = end
-
-        return packed
 
 
 class SecretRequest(SignedMessage):
@@ -685,7 +616,6 @@ class RefundTransfer(LockedTransfer):
 CMDID_TO_CLASS = {
     messages.ACK: Ack,
     messages.PING: Ping,
-    messages.LOCKSROOT_REJECTED: LocksrootRejected,
     messages.SECRETREQUEST: SecretRequest,
     messages.SECRET: Secret,
     messages.REVEALSECRET: RevealSecret,
