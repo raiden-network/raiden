@@ -89,20 +89,27 @@ def test_throttle_policy_ping(monkeypatch, raiden_network):
         for p in packets
     ]
 
+    events[-1].wait()
     # Each token corresponds to a single message, the initial capacity is 2
     # meaning the first burst is of 2 packets.
-    events[1].wait()
-
-    assert len(messages) == 4  # two Pings and the corresponding Acks
-
-    # Now check the fill_rate for the remaining packets
-    for i in range(2, 10):
-        events[i].wait()
-        test_time.progress(token_refill)
+    node_count = 2
+    initial_packets = 2
 
     # The initial sequence Ping, Ack, Ping, Ack has no sleeptimes/throttling
-    assert all(t == 0.0 for t in sleeps.sleeptimes[:4]), sleeps.sleeptimes
-    assert all(t == token_refill for t in sleeps.sleeptimes[4:]), sleeps.sleeptimes
+    assert all(
+        t == 0.0
+        for t in sleeps.sleeptimes[:node_count * initial_packets]
+    ), sleeps.sleeptimes
+
+    # the pattern of sleeps is the same for pinging and acking node:
+    ping_sleeps = [sleeps.sleeptimes[i] for i in range(0, len(messages), 2)]
+    ack_sleeps = [sleeps.sleeptimes[i + 1] for i in range(0, len(messages), 2)]
+
+    assert ping_sleeps == ack_sleeps
+
+    # since we didn't progress time in test, the sleep times will add up:
+    for num, t in enumerate(ping_sleeps[initial_packets:], 1):
+        assert num * token_refill == t
 
     # all 10 Pings and their Acks
     assert len(messages) == 20
