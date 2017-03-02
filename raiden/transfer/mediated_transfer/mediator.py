@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import itertools
 
-from raiden.transfer.architecture import Iteration
+from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.mediated_transfer.transition import update_route
 from raiden.transfer.mediated_transfer.state import (
     MediatorState,
@@ -229,7 +229,7 @@ def clear_if_finalized(iteration):
     # events for each transfer/pair?
 
     if all_finalized:
-        return Iteration(None, iteration.events)
+        return TransitionResult(None, iteration.events)
     return iteration
 
 
@@ -578,7 +578,7 @@ def secret_learned(state, secret, payee_address, new_payee_state):
         state.transfers_pair,
     )
 
-    iteration = Iteration(
+    iteration = TransitionResult(
         state,
         wrong_order + secret_reveal + balance_proof + withdraw,
     )
@@ -628,13 +628,13 @@ def mediate_transfer(state, payer_route, payer_transfer):
             state.block_number,
         )
 
-        iteration = Iteration(state, refund_events)
+        iteration = TransitionResult(state, refund_events)
 
     else:
         # the list must be ordered from high to low expiration, expiration
         # handling depends on it
         state.transfers_pair.append(transfer_pair)
-        iteration = Iteration(state, mediated_events)
+        iteration = TransitionResult(state, mediated_events)
 
     return iteration
 
@@ -647,7 +647,7 @@ def handle_block(state, state_change):
         state (MediatorState): The current state.
 
     Return:
-        Iteration: The resulting iteration
+        TransitionResult: The resulting iteration
     """
     block_number = state_change.block_number
     state.block_number = block_number
@@ -666,7 +666,7 @@ def handle_block(state, state_change):
         block_number,
     )
 
-    iteration = Iteration(
+    iteration = TransitionResult(
         state,
         close_events + withdraw_events,
     )
@@ -693,7 +693,7 @@ def handle_refundtransfer(state, state_change):
         state_change (ReceiveTransferRefund): The state change.
 
     Returns:
-        Iteration: The resulting iteration.
+        TransitionResult: The resulting iteration.
     """
     assert state.secret is None, 'refunds are not allowed if the secret is revealed'
 
@@ -713,7 +713,7 @@ def handle_refundtransfer(state, state_change):
 
     else:
         # TODO: Use an event to notify about byzantine behavior
-        iteration = Iteration(state, list())
+        iteration = TransitionResult(state, list())
 
     return iteration
 
@@ -738,7 +738,7 @@ def handle_secretreveal(state, state_change):
 
     else:
         # TODO: event for byzantine behavior
-        iteration = Iteration(state, list())
+        iteration = TransitionResult(state, list())
 
     return iteration
 
@@ -790,7 +790,7 @@ def handle_balanceproof(state, state_change):
         if pair.payer_route.channel_address == state_change.node_address:
             pair.payer_state = 'payer_balance_proof'
 
-    iteration = Iteration(state, list())
+    iteration = TransitionResult(state, list())
 
     return iteration
 
@@ -821,7 +821,7 @@ def handle_routechange(state, state_change):
         state.transfers_pair,
     )
 
-    iteration = Iteration(
+    iteration = TransitionResult(
         state,
         withdraw_events,
     )

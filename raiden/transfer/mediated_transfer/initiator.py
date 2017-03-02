@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from copy import deepcopy
 
-from raiden.transfer.architecture import Iteration
+from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.mediated_transfer.state import (
     InitiatorState,
     LockedTransferState,
@@ -63,7 +63,7 @@ def user_cancel_transfer(state):
         identifier=state.transfer.identifier,
         reason='user canceled transfer',
     )
-    iteration = Iteration(None, [cancel])
+    iteration = TransitionResult(None, [cancel])
 
     return iteration
 
@@ -105,7 +105,7 @@ def try_new_route(state):
             identifier=state.transfer.identifier,
             reason='no route available',
         )
-        iteration = Iteration(None, [cancel])
+        iteration = TransitionResult(None, [cancel])
 
     else:
         state.route = try_route
@@ -145,20 +145,20 @@ def try_new_route(state):
         state.transfer = transfer
         state.message = message
 
-        iteration = Iteration(state, [message])
+        iteration = TransitionResult(state, [message])
 
     return iteration
 
 
 def handle_block(state, state_change):
     state.block_number = state_change.block_number
-    iteration = Iteration(state, list())
+    iteration = TransitionResult(state, list())
     return iteration
 
 
 def handle_routechange(state, state_change):
     update_route(state, state_change)
-    iteration = Iteration(state, list())
+    iteration = TransitionResult(state, list())
     return iteration
 
 
@@ -166,7 +166,7 @@ def handle_transferrefund(state, state_change):
     if state_change.sender == state.route.node_address:
         iteration = cancel_current_route(state)
     else:
-        iteration = Iteration(state, list())
+        iteration = TransitionResult(state, list())
 
     return iteration
 
@@ -175,7 +175,7 @@ def handle_cancelroute(state, state_change):
     if state_change.identifier == state.transfer.identifier:
         iteration = cancel_current_route(state)
     else:
-        iteration = Iteration(state, list())
+        iteration = TransitionResult(state, list())
 
     return iteration
 
@@ -214,7 +214,7 @@ def handle_secretrequest(state, state_change):
         )
 
         state.revealsecret = reveal_secret
-        iteration = Iteration(state, [reveal_secret])
+        iteration = TransitionResult(state, [reveal_secret])
 
     elif invalid_secretrequest:
         iteration = cancel_current_route(state)
@@ -233,9 +233,9 @@ def handle_secretreveal(state, state_change):
             state.our_address,
         )
 
-        iteration = Iteration(None, [unlock_lock])
+        iteration = TransitionResult(None, [unlock_lock])
     else:
-        iteration = Iteration(state, list())
+        iteration = TransitionResult(state, list())
 
     return iteration
 

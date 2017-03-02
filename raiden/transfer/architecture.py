@@ -4,7 +4,7 @@ import types
 from collections import namedtuple
 from copy import deepcopy
 
-Iteration = namedtuple('Iteration', ('new_state', 'events'))
+TransitionResult = namedtuple('TransitionResult', ('new_state', 'events'))
 
 
 # Quick overview
@@ -130,7 +130,7 @@ class StateManager(object):
             state_change,
         )
 
-        assert isinstance(iteration, Iteration)
+        assert isinstance(iteration, TransitionResult)
 
         self.current_state, events = iteration
 
