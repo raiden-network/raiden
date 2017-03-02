@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from raiden.utils import sha3
-from raiden.transfer.architecture import Iteration
+from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.mediated_transfer.state import TargetState
 from raiden.transfer.state_change import (
     Block,
@@ -85,9 +85,9 @@ def handle_inittarget(state_change):
             from_transfer.hashlock,
         )
 
-        iteration = Iteration(state, [secret_request])
+        iteration = TransitionResult(state, [secret_request])
     else:
-        iteration = Iteration(state, list())
+        iteration = TransitionResult(state, list())
 
     return iteration
 
@@ -106,18 +106,18 @@ def handle_secretreveal(state, state_change):
             state.our_address,
         )
 
-        iteration = Iteration(state, [reveal])
+        iteration = TransitionResult(state, [reveal])
 
     else:
         # TODO: event for byzantine behavior
-        iteration = Iteration(state, list())
+        iteration = TransitionResult(state, list())
 
     return iteration
 
 
 def handle_balanceproof(state, state_change):
     """ Handle a ReceiveBalanceProof state change. """
-    iteration = Iteration(state, list())
+    iteration = TransitionResult(state, list())
 
     # TODO: byzantine behavior event when the sender doesn't match
     if state_change.sender == state.from_transfer.sender:
@@ -137,7 +137,7 @@ def handle_block(state, state_change):
         state.from_route,
         state.block_number,
     )
-    iteration = Iteration(state, close_events)
+    iteration = TransitionResult(state, close_events)
 
     return iteration
 
@@ -154,7 +154,7 @@ def handle_routechange(state, state_change):
         state.from_route,
     )
 
-    iteration = Iteration(
+    iteration = TransitionResult(
         state,
         withdraw_events,
     )
@@ -171,7 +171,7 @@ def clear_if_finalized(iteration):
             identifier=state.transfer.identifier,
             reason='lock expired',
         )
-        iteration = Iteration(None, [failed])
+        iteration = TransitionResult(None, [failed])
 
     elif state.state == 'balance_proof':
         completed = EventTransferCompleted(
@@ -179,7 +179,7 @@ def clear_if_finalized(iteration):
             state.from_transfer.secret,
             state.from_transfer.hashlock,
         )
-        iteration = Iteration(None, completed)
+        iteration = TransitionResult(None, completed)
 
     return iteration
 
