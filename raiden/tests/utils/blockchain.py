@@ -22,8 +22,8 @@ from raiden.settings import GAS_LIMIT_HEX
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
-DEFAULT_BALANCE = denoms.turing * 1
-DEFAULT_BALANCE_BIN = str(denoms.turing * 1)
+DEFAULT_BALANCE = denoms.ether * 10000000
+DEFAULT_BALANCE_BIN = str(denoms.ether * 10000000)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 
 GENESIS_STUB = {
