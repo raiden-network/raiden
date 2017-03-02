@@ -32,9 +32,6 @@ class fake_time(object):
     def now(self):
         return self.count
 
-    def progress(self, amount):
-        self.count += amount
-
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
