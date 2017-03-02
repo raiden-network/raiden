@@ -33,7 +33,6 @@ def make_message(message, **attrs):
 
 ACK_CMDID = 0
 PING_CMDID = 1
-LOCKSROOT_REJECTED_CMDID = 2
 SECRETREQUEST_CMDID = 3
 SECRET_CMDID = 4
 DIRECTTRANSFER_CMDID = 5
@@ -44,7 +43,6 @@ REVEALSECRET_CMDID = 11
 
 ACK = to_bigendian(ACK_CMDID)
 PING = to_bigendian(PING_CMDID)
-LOCKSROOT_REJECTED = to_bigendian(LOCKSROOT_REJECTED_CMDID)
 SECRETREQUEST = to_bigendian(SECRETREQUEST_CMDID)
 SECRET = to_bigendian(SECRET_CMDID)
 REVEALSECRET = to_bigendian(REVEALSECRET_CMDID)
@@ -98,22 +96,6 @@ Ping = namedbuffer(
         pad(3),       # [1:4]
         nonce,        # [4:12]
         signature,    # [12:77]
-    ]
-)
-
-LocksrootRejected = namedbuffer(
-    'locksroot_rejected',
-    [
-        cmdid(LOCKSROOT_REJECTED),
-        pad(3),
-        echo,
-
-        # secret*
-
-        # HACK: `wrap_and_validate` and `SignedMessage.sign` are using slices
-        # from the end of the buffer [:-65] to ignore the space used for the
-        # secrets
-        signature,
     ]
 )
 
@@ -237,7 +219,6 @@ Lock = namedbuffer(
 CMDID_MESSAGE = {
     ACK: Ack,
     PING: Ping,
-    LOCKSROOT_REJECTED: LocksrootRejected,
     SECRETREQUEST: SecretRequest,
     SECRET: Secret,
     REVEALSECRET: RevealSecret,
