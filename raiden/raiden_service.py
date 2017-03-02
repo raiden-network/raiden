@@ -93,6 +93,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.transfertasks = defaultdict(dict)
         self.exchanges = dict()
         self.channelgraphs = dict()
+        self.manager_token = dict()
 
         # This is a map from a hashlock to a list of channels, the same
         # hashlock can be used in more than one token (for exchanges), a
@@ -430,36 +431,41 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     def register_channel_manager(self, channel_manager):
         """ Discover and register the channels for the given token. """
         token = channel_manager.token_address()
-        assert token not in self.channelgraphs
+        manager_address_bin = channel_manager.address
 
-        translator = ContractTranslator(CHANNEL_MANAGER_ABI)
+        assert token not in self.channelgraphs
+        assert manager_address_bin not in self.manager_token
 
         # To avoid missing changes, first create the filter, call the
         # contract and then start polling.
         channelnew = channel_manager.channelnew_filter()
 
         all_netting_contracts = channel_manager.channels_by_participant(self.address)
-
+        manager_translator = ContractTranslator(CHANNEL_MANAGER_ABI)
         self.start_event_listener(
-            'ChannelManager {}'.format(pex(channel_manager.address)),
+            'ChannelManager {}'.format(pex(manager_address_bin)),
             channelnew,
-            translator,
+            manager_translator,
         )
 
         token_address_bin = channel_manager.token_address()
         edge_list = channel_manager.channels_addresses()
 
-        translator = ContractTranslator(NETTING_CHANNEL_ABI)
+        netting_translator = ContractTranslator(NETTING_CHANNEL_ABI)
 
         channels_detail = list()
+        netting_translator = ContractTranslator(NETTING_CHANNEL_ABI)
+
         for netting_contract_address_bin in all_netting_contracts:
             netting_channel = self.chain.netting_channel(netting_contract_address_bin)
             netting_channel_events = netting_channel.all_events_filter()
+
             self.start_event_listener(
-                'NettingChannel Event {}'.format(pex(netting_contract_address_bin)),
+                'NettingChannel Event {}'.format(pex(netting_channel.address)),
                 netting_channel_events,
-                translator,
+                netting_translator,
             )
+
             detail = self.get_channel_detail(token_address_bin, netting_channel)
             channels_detail.append(detail)
 
@@ -470,7 +476,23 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             channels_detail
         )
 
+        self.manager_token[manager_address_bin] = token_address_bin
         self.channelgraphs[token] = graph
+
+    def register_netting_channel(self, token_address_bin, netting_channel):
+        netting_translator = ContractTranslator(NETTING_CHANNEL_ABI)
+        netting_channel_events = netting_channel.all_events_filter()
+
+        self.start_event_listener(
+            'NettingChannel Event {}'.format(pex(netting_channel.address)),
+            netting_channel_events,
+            netting_translator,
+        )
+
+        detail = self.get_channel_detail(token_address_bin, netting_channel)
+        self.channelgraphs[token_address_bin].add_channel(detail)
+
+        return detail
 
     def stop(self):
         wait_for = [self.alarm]
@@ -1300,7 +1322,8 @@ class BlockchainEventsHandler(object):
 
     def event_channelnew(self, manager_address_bin, event):  # pylint: disable=unused-argument
         # should not raise, filters are installed only for registered managers
-        graph = self.raiden.channelgraphs[manager_address_bin]
+        token_address_bin = self.raiden.manager_token[manager_address_bin]
+        graph = self.raiden.channelgraphs[token_address_bin]
 
         participant1 = address_decoder(event['participant1'])
         participant2 = address_decoder(event['participant2'])
@@ -1310,11 +1333,12 @@ class BlockchainEventsHandler(object):
 
         if participant1 == self.raiden.address or participant2 == self.raiden.address:
             netting_channel_address_bin = address_decoder(event['netting_channel'])
+            netting_channel = self.raiden.chain.netting_channel(netting_channel_address_bin)
 
             try:
-                self.raiden.register_channel_by_address(
-                    netting_channel_address_bin,
-                    self.raiden.config['reveal_timeout'],
+                self.raiden.register_netting_channel(
+                    token_address_bin,
+                    netting_channel,
                 )
             except ValueError:
                 # This can happen if the new channel's settle_timeout is

@@ -59,31 +59,31 @@ class ChannelGraph(object):
         if not isaddress(token_address_bin):
             raise ValueError('token_address_bin must be a valid address')
 
-        address_channel = dict()
         graph = make_graph(edge_list)
-        partneraddress_channel = dict()
-
-        for detail in channels_detail:
-            channel_address = detail.channel_address
-            partner_state = detail.partner_state
-
-            channel = Channel(
-                detail.our_state,
-                partner_state,
-                detail.external_state,
-                token_address_bin,
-                detail.reveal_timeout,
-                detail.settle_timeout,
-            )
-
-            partneraddress_channel[partner_state.address] = channel
-            address_channel[channel_address] = channel
-
-        self.address_channel = address_channel
+        self.address_channel = dict()
         self.graph = graph
         self.our_address_bin = our_address_bin
-        self.partneraddress_channel = partneraddress_channel
+        self.partneraddress_channel = dict()
         self.token_address = token_address_bin
+
+        for detail in channels_detail:
+            self.add_channel(detail)
+
+    def add_channel(self, detail):
+        channel_address = detail.channel_address
+        partner_state = detail.partner_state
+
+        channel = Channel(
+            detail.our_state,
+            partner_state,
+            detail.external_state,
+            self.token_address,
+            detail.reveal_timeout,
+            detail.settle_timeout,
+        )
+
+        self.partneraddress_channel[partner_state.address] = channel
+        self.address_channel[channel_address] = channel
 
     def get_channel_by_contract_address(self, netting_channel_address_bin):
         """ Return the channel with `netting_channel_address_bin`.
