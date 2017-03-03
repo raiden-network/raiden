@@ -509,30 +509,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.pyethapp_blockchain_events.uninstall_all_event_listeners()
         gevent.wait(wait_for)
 
-    def on_directtransfer_message(self, transfer):
-        if transfer.token not in self.channelgraphs:
-            raise UnknownTokenAddress('Unknow token address {}'.format(pex(transfer.token)))
-
-        graph = self.channelgraphs[transfer.token]
-
-        if not graph.has_channel(self.address, transfer.sender):
-            raise UnknownAddress(
-                'Direct transfer from node without an existing channel: {}'.format(
-                    pex(transfer.sender),
-                )
-            )
-
-        channel = graph.partneraddress_channel[transfer.sender]
-
-        if not channel.isopen:
-            raise TransferWhenClosed(
-                'Direct transfer received for a closed channel: {}'.format(
-                    pex(channel.channel_address),
-                )
-            )
-
-        channel.register_transfer(transfer)
-
     def on_mediatedtransfer_message(self, transfer):
         token_address = transfer.token
         graph = self.channelgraphs[transfer.token]
@@ -1142,7 +1118,28 @@ class RaidenMessageHandler(object):
         self.raiden.message_for_task(message, message.lock.hashlock)
 
     def message_directtransfer(self, message):
-        self.raiden.on_directtransfer_message(message)
+        if message.token not in self.raiden.channelgraphs:
+            raise UnknownTokenAddress('Unknow token address {}'.format(pex(message.token)))
+
+        graph = self.raiden.channelgraphs[message.token]
+
+        if not graph.has_channel(self.raiden.address, message.sender):
+            raise UnknownAddress(
+                'Direct transfer from node without an existing channel: {}'.format(
+                    pex(message.sender),
+                )
+            )
+
+        channel = graph.partneraddress_channel[message.sender]
+
+        if not channel.isopen:
+            raise TransferWhenClosed(
+                'Direct transfer received for a closed channel: {}'.format(
+                    pex(channel.channel_address),
+                )
+            )
+
+        channel.register_transfer(message)
 
     def message_mediatedtransfer(self, message):
         self.raiden.on_mediatedtransfer_message(message)
