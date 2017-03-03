@@ -71,7 +71,7 @@ def raiden_chain(
         )
 
     for app in raiden_apps:
-        app.raiden.register_registry(app.raiden.chain.default_registry)
+        app.raiden.register_registry(app.raiden.chain.default_registry.address)
 
     _raiden_cleanup(request, raiden_apps)
 
@@ -115,7 +115,7 @@ def raiden_network(
         )
 
     for app in raiden_apps:
-        app.raiden.register_registry(app.raiden.chain.default_registry)
+        app.raiden.register_registry(app.raiden.chain.default_registry.address)
 
     _raiden_cleanup(request, raiden_apps)
 

@@ -103,7 +103,7 @@ def run(privatekey,
         listen_port,
     )
 
-    app.raiden.register_registry(app.raiden.chain.default_registry)
+    app.raiden.register_registry(app.raiden.chain.default_registry.address)
 
     if scenario:
         script = json.load(scenario)

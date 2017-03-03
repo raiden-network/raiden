@@ -6,11 +6,18 @@ from collections import namedtuple, defaultdict
 import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
-from ethereum.abi import ContractTranslator
 from ethereum.utils import encode_hex
 from pyethapp.jsonrpc import address_decoder
 from secp256k1 import PrivateKey
 
+from raiden.blockchain.events import (
+    ALL_EVENTS,
+    get_relevant_proxies,
+    get_all_channel_manager_events,
+    get_all_registry_events,
+    get_all_netting_channel_events,
+    PyethappBlockchainEvents,
+)
 from raiden.tasks import (
     StartMediatedTransferTask,
     MediateTransferTask,
@@ -18,11 +25,6 @@ from raiden.tasks import (
     ExchangeTask,
 )
 from raiden.channel import ChannelEndState, ChannelExternalState
-from raiden.blockchain.abi import (
-    CHANNEL_MANAGER_ABI,
-    REGISTRY_ABI,
-    NETTING_CHANNEL_ABI
-)
 from raiden.exceptions import (
     UnknownAddress,
     TransferWhenClosed,
@@ -57,7 +59,6 @@ from raiden.transfer.mediated_transfer.events import SendMediatedTransfer
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-EventListener = namedtuple('EventListener', ('event_name', 'filter_', 'translator'))
 Exchange = namedtuple('Exchange', (
     'identifier',
     'from_token',
@@ -89,7 +90,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         )
         pubkey = private_key.pubkey.serialize(compressed=False)
 
-        self.registries = list()
         self.transfertasks = defaultdict(dict)
         self.exchanges = dict()
         self.channelgraphs = dict()
@@ -113,10 +113,11 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         blockchain_log_handler = BlockchainEventsHandler(self)
         message_handler = RaidenMessageHandler(self)
         state_machine_event_handler = StateMachineEventHandler(self)
+        pyethapp_blockchain_events = PyethappBlockchainEvents()
 
         alarm = AlarmTask(chain)
         # ignore the blocknumber
-        alarm.register_callback(lambda _: blockchain_log_handler.poll_all_event_listeners())
+        alarm.register_callback(self.poll_blockchain_events)
         alarm.start()
 
         self._blocknumber = alarm.last_block_number
@@ -137,7 +138,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.blockchain_log_handler = blockchain_log_handler
         self.message_handler = message_handler
         self.state_machine_event_handler = state_machine_event_handler
-        self.start_event_listener = blockchain_log_handler.start_event_listener
+        self.pyethapp_blockchain_events = pyethapp_blockchain_events
 
         self.on_message = message_handler.on_message
         self.on_log = blockchain_log_handler.on_log
@@ -151,6 +152,13 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
     def get_block_number(self):
         return self._blocknumber
+
+    def poll_blockchain_events(self, block_number):
+        for event in self.pyethapp_blockchain_events.poll_all_event_listeners():
+            self.on_log(
+                event.originating_contract,
+                event.event_data,
+            )
 
     def find_channel_by_address(self, netting_channel_address_bin):
         for graph in self.channelgraphs.itervalues():
@@ -406,93 +414,44 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
                 pex(message.sender),
             ))
 
-    def register_registry(self, registry):
-        """ Register the registry and intialize all the related tokens and
-        channels.
-        """
-        translator = ContractTranslator(REGISTRY_ABI)
-
-        tokenadded = registry.tokenadded_filter()
-
-        all_manager_addresses = registry.manager_addresses()
-
-        self.start_event_listener(
-            'Registry {}'.format(pex(registry.address)),
-            tokenadded,
-            translator,
+    def register_registry(self, registry_address):
+        proxies = get_relevant_proxies(
+            self.chain,
+            self.address,
+            registry_address,
         )
 
-        self.registries.append(registry)
+        # Install the filters first to avoid missing changes, as a consequence
+        # some events might be applied twice.
+        self.pyethapp_blockchain_events.add_proxies_listeners(proxies)
 
-        for manager_address in all_manager_addresses:
-            channel_manager = self.chain.manager(manager_address)
-            self.register_channel_manager(channel_manager)
+        for manager in proxies.channel_managers:
+            token_address = manager.token_address()
+            manager_address = manager.address
 
-    def register_channel_manager(self, channel_manager):
-        """ Discover and register the channels for the given token. """
-        token = channel_manager.token_address()
-        manager_address_bin = channel_manager.address
+            channels_detail = list()
+            netting_channels = proxies.channelmanager_nettingchannels[manager_address]
+            for channel in netting_channels:
+                detail = self.get_channel_detail(token_address, channel)
+                channels_detail.append(detail)
 
-        assert token not in self.channelgraphs
-        assert manager_address_bin not in self.manager_token
-
-        # To avoid missing changes, first create the filter, call the
-        # contract and then start polling.
-        channelnew = channel_manager.channelnew_filter()
-
-        all_netting_contracts = channel_manager.channels_by_participant(self.address)
-        manager_translator = ContractTranslator(CHANNEL_MANAGER_ABI)
-        self.start_event_listener(
-            'ChannelManager {}'.format(pex(manager_address_bin)),
-            channelnew,
-            manager_translator,
-        )
-
-        token_address_bin = channel_manager.token_address()
-        edge_list = channel_manager.channels_addresses()
-
-        netting_translator = ContractTranslator(NETTING_CHANNEL_ABI)
-
-        channels_detail = list()
-        netting_translator = ContractTranslator(NETTING_CHANNEL_ABI)
-
-        for netting_contract_address_bin in all_netting_contracts:
-            netting_channel = self.chain.netting_channel(netting_contract_address_bin)
-            netting_channel_events = netting_channel.all_events_filter()
-
-            self.start_event_listener(
-                'NettingChannel Event {}'.format(pex(netting_channel.address)),
-                netting_channel_events,
-                netting_translator,
+            edge_list = manager.channels_addresses()
+            graph = ChannelGraph(
+                self.address,
+                manager_address,
+                token_address,
+                edge_list,
+                channels_detail
             )
 
-            detail = self.get_channel_detail(token_address_bin, netting_channel)
-            channels_detail.append(detail)
+            self.manager_token[manager_address] = token_address
+            self.channelgraphs[token_address] = graph
 
-        graph = ChannelGraph(
-            self.address,
-            token_address_bin,
-            edge_list,
-            channels_detail
-        )
-
-        self.manager_token[manager_address_bin] = token_address_bin
-        self.channelgraphs[token] = graph
-
-    def register_netting_channel(self, token_address_bin, netting_channel):
-        netting_translator = ContractTranslator(NETTING_CHANNEL_ABI)
-        netting_channel_events = netting_channel.all_events_filter()
-
-        self.start_event_listener(
-            'NettingChannel Event {}'.format(pex(netting_channel.address)),
-            netting_channel_events,
-            netting_translator,
-        )
-
-        detail = self.get_channel_detail(token_address_bin, netting_channel)
-        self.channelgraphs[token_address_bin].add_channel(detail)
-
-        return detail
+    def register_netting_channel(self, token_address, netting_channel):
+        self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
+        detail = self.get_channel_detail(token_address, netting_channel)
+        graph = self.channelgraphs[token_address]
+        graph.add_channel(detail)
 
     def stop(self):
         wait_for = [self.alarm]
@@ -511,7 +470,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         wait_for.extend(self.protocol.address_greenlet.itervalues())
 
-        self.blockchain_log_handler.uninstall_listeners()
+        self.pyethapp_blockchain_events.uninstall_listeners()
         gevent.wait(wait_for)
 
     def on_directtransfer_message(self, transfer):
@@ -1028,24 +987,37 @@ class RaidenAPI(object):
         netting_channel.settle()
         return channel
 
-    def get_token_network_events(self, token_address, from_block, to_block=''):
-        return self.raiden.event_handler.get_token_network_events(
-            token_address,
-            from_block,
-            to_block
+    def get_token_network_events(self, token_address, from_block, to_block):
+        token_address = address_decoder(token_address)
+        graph = self.raiden.channelgraphs[token_address]
+        graph.channelmanager_address
+
+        return get_all_channel_manager_events(
+            self.raiden.chain,
+            graph.channelmanager_address,
+            events=ALL_EVENTS,
+            from_block=from_block,
+            to_block=to_block,
         )
 
-    def get_network_events(self, from_block, to_block=''):
-        return self.raiden.event_handler.get_network_events(
-            from_block,
-            to_block
+    def get_network_events(self, from_block, to_block):
+        registry_address = self.raiden.chain.default_registry.address
+
+        return get_all_registry_events(
+            self.raiden.chain,
+            registry_address,
+            events=ALL_EVENTS,
+            from_block=from_block,
+            to_block=to_block,
         )
 
-    def get_channel_events(self, channel_address, from_block, to_block=''):
-        return self.raiden.event_handler.get_channel_events(
+    def get_channel_events(self, channel_address, from_block, to_block):
+        return get_all_netting_channel_events(
+            self.raiden.chain,
             channel_address,
-            from_block,
-            to_block
+            events=ALL_EVENTS,
+            from_block=from_block,
+            to_block=to_block,
         )
 
 
@@ -1177,114 +1149,8 @@ class BlockchainEventsHandler(object):
         instead.
     """
 
-    blockchain_event_types = [
-        'TokenAdded',
-        'ChannelNew',
-        'ChannelNewBalance',
-        'ChannelClosed',
-        'ChannelSettled',
-        'ChannelSecretRevealed'
-    ]
-
     def __init__(self, raiden):
         self.raiden = raiden
-        self.event_listeners = list()
-        self.logged_events = dict()
-
-    def get_token_network_events(self, token_address, from_block, to_block=''):
-        # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
-        # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
-        # one using `eth_getLogs`. It will require changes in all testing frameworks
-        # to be implemented though.
-        translator = ContractTranslator(CHANNEL_MANAGER_ABI)
-        token_address_bin = address_decoder(token_address)
-        channel_manager = self.raiden.chain.manager_by_token(token_address_bin)
-        filter_ = None
-        try:
-            filter_ = channel_manager.channelnew_filter(from_block, to_block)
-            events = filter_.getall()
-        finally:
-            if filter_ is not None:
-                filter_.uninstall()
-        return [translator.decode_event(event['topics'], event['data']) for event in events]
-
-    def get_network_events(self, from_block, to_block=''):
-        # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
-        # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
-        # one using `eth_getLogs`. It will require changes in all testing frameworks
-        # to be implemented though.
-
-        # Assuming only one token registry for the moment
-        translator = ContractTranslator(REGISTRY_ABI)
-        filter_ = None
-        try:
-            filter_ = self.raiden.registries[0].tokenadded_filter(from_block, to_block)
-            events = filter_.getall()
-        finally:
-            if filter_ is not None:
-                filter_.uninstall()
-        return [translator.decode_event(event['topics'], event['data']) for event in events]
-
-    def get_channel_events(self, channel_address, event_id, from_block, to_block=''):
-        # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
-        # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
-        # one using `eth_getLogs`. It will require changes in all testing frameworks
-        # to be implemented though.
-        translator = ContractTranslator(NETTING_CHANNEL_ABI)
-        channel = self.raiden.api.get_channel(channel_address)
-        filter_ = None
-        try:
-            filter_ = channel.external_state.netting_channel.events_filter(
-                [event_id],
-                from_block,
-                to_block,
-            )
-            events = filter_.getall()
-        finally:
-            if filter_ is not None:
-                filter_.uninstall()
-        return [translator.decode_event(event['topics'], event['data']) for event in events]
-
-    def start_event_listener(self, event_name, filter_, translator):
-        event = EventListener(
-            event_name,
-            filter_,
-            translator,
-        )
-        self.event_listeners.append(event)
-
-        self.poll_event_listener(event_name, filter_, translator)
-
-    def poll_event_listener(self, event_name, filter_, translator):
-        for log_event in filter_.changes():
-            log.debug('New Events', task=event_name)
-
-            event = translator.decode_event(
-                log_event['topics'],
-                log_event['data'],
-            )
-
-            if event is not None:
-                originating_contract = log_event['address']
-
-                try:
-                    # intentionally forcing all the events to go through
-                    # the event handler
-                    self.on_log(originating_contract, event)
-                except:  # pylint: disable=bare-except
-                    log.exception('unexpected exception on log listener')
-
-    def poll_all_event_listeners(self):
-        for event_listener in self.event_listeners:
-            self.poll_event_listener(*event_listener)
-
-    def uninstall_listeners(self):
-        chain = self.raiden.chain
-
-        for listener in self.event_listeners:
-            chain.uninstall_filter(listener.filter_.filter_id_raw)
-
-        self.event_listeners = list()
 
     def on_log(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
         if log.isEnabledFor(logging.DEBUG):

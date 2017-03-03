@@ -17,6 +17,9 @@ from raiden.blockchain.abi import (
     CHANNELCLOSED_EVENTID,
     CHANNELSETTLED_EVENTID,
 )
+from raiden.blockchain.events import (
+    get_all_netting_channel_events,
+)
 
 
 def event_dicts_are_equal(dict1, dict2):
@@ -129,7 +132,10 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     token0 = app0.raiden.chain.token(token_address)
     manager0 = app0.raiden.chain.manager_by_token(token_address)
 
-    events = app0.raiden.event_handler.get_network_events(from_block=0)
+    events = app0.raiden.api.get_network_events(
+        from_block=0,
+        to_block='latest',
+    )
 
     assert len(events) == 1
     assert event_dicts_are_equal(events[0], {
@@ -144,10 +150,12 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
         settle_timeout,
     )
 
-    events = app0.raiden.event_handler.get_token_network_events(
+    events = app0.raiden.api.get_token_network_events(
         token_address=address_encoder(token_address),
-        from_block=0
+        from_block=0,
+        to_block='latest',
     )
+
     assert len(events) == 1
     assert event_dicts_are_equal(events[0], {
         '_event_type': 'ChannelNew',
@@ -175,49 +183,85 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     token0.approve(netcontract_address, deposit)
     netting_channel0.deposit(app0.raiden.address, deposit)
 
-    gevent.sleep(events_poll_timeout)
-
-    events = app0.raiden.event_handler.get_channel_events(
+    all_netting_channel_events = app0.raiden.api.get_channel_events(
         channel_address=address_encoder(netcontract_address),
-        event_id=CHANNELNEWBALANCE_EVENTID,
-        from_block=0
+        from_block=0,
+        to_block='latest',
     )
+
+    events = get_all_netting_channel_events(
+        app0.raiden.chain,
+        netcontract_address,
+        events=[CHANNELNEWBALANCE_EVENTID],
+    )
+
+    assert len(all_netting_channel_events) == 1
     assert len(events) == 1
-    assert event_dicts_are_equal(events[0], {
+
+    new_balance_event = {
         '_event_type': 'ChannelNewBalance',
         'token_address': address_encoder(token_address),
         'participant': address_encoder(app0.raiden.address),
         'balance': deposit,
         'block_number': 'ignore',
-    })
+    }
+
+    assert event_dicts_are_equal(all_netting_channel_events[-1], new_balance_event)
+    assert event_dicts_are_equal(events[0], new_balance_event)
 
     channel0.external_state.close(app0.raiden.address, '')
-    events = app0.raiden.event_handler.get_channel_events(
+
+    all_netting_channel_events = app0.raiden.api.get_channel_events(
         channel_address=address_encoder(netcontract_address),
-        event_id=CHANNELCLOSED_EVENTID,
-        from_block=0
+        from_block=0,
+        to_block='latest',
     )
+
+    events = get_all_netting_channel_events(
+        app0.raiden.chain,
+        netcontract_address,
+        events=[CHANNELCLOSED_EVENTID],
+    )
+
+    assert len(all_netting_channel_events) == 2
     assert len(events) == 1
-    assert event_dicts_are_equal(events[0], {
+
+    closed_event = {
         '_event_type': 'ChannelClosed',
         'closing_address': address_encoder(app0.raiden.address),
         'block_number': 'ignore',
-    })
+    }
+
+    assert event_dicts_are_equal(all_netting_channel_events[-1], closed_event)
+    assert event_dicts_are_equal(events[0], closed_event)
 
     settle_expiration = app0.raiden.chain.block_number() + settle_timeout + 1
     wait_until_block(app0.raiden.chain, settle_expiration)
 
     channel1.external_state.settle()
-    events = app0.raiden.event_handler.get_channel_events(
+
+    all_netting_channel_events = app0.raiden.api.get_channel_events(
         channel_address=address_encoder(netcontract_address),
-        event_id=CHANNELSETTLED_EVENTID,
-        from_block=0
+        from_block=0,
+        to_block='latest',
     )
+
+    events = get_all_netting_channel_events(
+        app0.raiden.chain,
+        netcontract_address,
+        events=[CHANNELSETTLED_EVENTID],
+    )
+
+    assert len(all_netting_channel_events) == 3
     assert len(events) == 1
-    assert event_dicts_are_equal(events[0], {
+
+    settled_event = {
         '_event_type': 'ChannelSettled',
         'block_number': 'ignore',
-    })
+    }
+
+    assert event_dicts_are_equal(all_netting_channel_events[-1], settled_event)
+    assert event_dicts_are_equal(events[0], settled_event)
 
 
 @pytest.mark.timeout(60)
@@ -234,11 +278,15 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_time
     channel21 = channel(app2, app1, token_address)
     netting_channel = channel21.external_state.netting_channel
 
+    identifier = 1
+    expiration = app2.raiden.get_block_number() + settle_timeout - 3
+
     secret = pending_mediated_transfer(
         raiden_chain,
         token_address,
         amount,
-        1  # TODO: fill in identifier
+        identifier,
+        expiration,
     )
     hashlock = sha3(secret)
 

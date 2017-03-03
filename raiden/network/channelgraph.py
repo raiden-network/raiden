@@ -55,16 +55,17 @@ def make_graph(edge_list):
 class ChannelGraph(object):
     """ Has Graph based on the channels and can find path between participants. """
 
-    def __init__(self, our_address_bin, token_address_bin, edge_list, channels_detail):
-        if not isaddress(token_address_bin):
-            raise ValueError('token_address_bin must be a valid address')
+    def __init__(self, our_address, channelmanager_address, token_address, edge_list, channels_detail):
+        if not isaddress(token_address):
+            raise ValueError('token_address must be a valid address')
 
         graph = make_graph(edge_list)
         self.address_channel = dict()
         self.graph = graph
-        self.our_address_bin = our_address_bin
+        self.our_address = our_address
         self.partneraddress_channel = dict()
-        self.token_address = token_address_bin
+        self.token_address = token_address
+        self.channelmanager_address = channelmanager_address
 
         for detail in channels_detail:
             self.add_channel(detail)
@@ -123,12 +124,12 @@ class ChannelGraph(object):
             if len(path) == num_hops + 1
         ]
 
-    def get_best_routes(self, our_address_bin, target_address_bin, amount, lock_timeout=None):
+    def get_best_routes(self, our_address, target_address_bin, amount, lock_timeout=None):
         """ Yield a two-tuple (path, channel) that can be used to mediate the
         transfer. The result is ordered from the best to worst path.
         """
         available_paths = self.get_shortest_paths(
-            our_address_bin,
+            our_address,
             target_address_bin,
         )
 

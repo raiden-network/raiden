@@ -276,7 +276,7 @@ def run(ctx, external_listen_address, **kwargs):
         *split_endpoint(external_listen_address)
     )
 
-    app_.raiden.register_registry(app_.raiden.chain.default_registry)
+    app_.raiden.register_registry(app_.raiden.chain.default_registry.address)
 
     if ctx.params['rpc']:
         # instance of the raiden-api
