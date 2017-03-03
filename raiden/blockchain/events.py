@@ -2,6 +2,8 @@
 import itertools
 from collections import namedtuple, defaultdict
 
+from pyethapp.jsonrpc import address_decoder
+
 from raiden.blockchain.abi import (
     REGISTRY_TRANSLATOR,
     CHANNEL_MANAGER_TRANSLATOR,
@@ -9,6 +11,15 @@ from raiden.blockchain.abi import (
 )
 from raiden.utils import pex
 from raiden.network.rpc.client import new_filter, Filter
+
+from raiden.transfer.mediated_transfer.state_change import (
+    ContractReceiveTokenAdded,
+    ContractReceiveBalance,
+    ContractReceiveClosed,
+    ContractReceiveNewChannel,
+    ContractReceiveSettled,
+    ContractReceiveWithdraw,
+)
 
 PyethappEventListener = namedtuple(
     'EventListener',
@@ -172,6 +183,63 @@ def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
     return proxies
 
 
+def pyethapp_event_to_state_change(pyethapp_event):  # pylint: disable=too-many-return-statements
+    contract_address = pyethapp_event.originating_contract
+    event = pyethapp_event.event_data
+
+    # Raiden uses the binary representation of address internally, pyethapp
+    # keeps the addresses in hex representation inside the events, so al
+    # addresses inside the event_data must be decoded.
+
+    if event['_event_type'] == 'TokenAdded':
+        return ContractReceiveTokenAdded(
+            contract_address,
+            address_decoder(event['token_address']),
+            address_decoder(event['channel_manager_address']),
+        )
+
+    elif event['_event_type'] == 'ChannelNew':
+        return ContractReceiveNewChannel(
+            contract_address,
+            address_decoder(event['netting_channel']),
+            address_decoder(event['participant1']),
+            address_decoder(event['participant2']),
+            event['settle_timeout'],
+        )
+
+    elif event['_event_type'] == 'ChannelNewBalance':
+        return ContractReceiveBalance(
+            contract_address,
+            address_decoder(event['token_address']),
+            address_decoder(event['participant']),
+            event['balance'],
+            event['block_number'],
+        )
+
+    elif event['_event_type'] == 'ChannelClosed':
+        return ContractReceiveClosed(
+            contract_address,
+            address_decoder(event['closing_address']),
+            event['block_number'],
+        )
+
+    elif event['_event_type'] == 'ChannelSettled':
+        return ContractReceiveSettled(
+            contract_address,
+            event['block_number'],
+        )
+
+    elif event['_event_type'] == 'ChannelSecretRevealed':
+        return ContractReceiveWithdraw(
+            contract_address,
+            event['secret'],
+            event['receiver_address'],
+        )
+
+    else:
+        return None
+
+
 class PyethappBlockchainEvents(object):
     """ Pyethapp events polling. """
 
@@ -190,7 +258,11 @@ class PyethappBlockchainEvents(object):
 
         return result
 
-    def uninstall_listeners(self):
+    def poll_state_change(self):
+        for event in self.poll_all_event_listeners():
+            yield pyethapp_event_to_state_change(event)
+
+    def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:
             listener.pyethapp_filter.uninstall()
 

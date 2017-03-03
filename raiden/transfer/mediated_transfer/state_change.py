@@ -150,7 +150,59 @@ class ContractReceiveWithdraw(StateChange):
         If the channel was used for a mediated transfer that was refunded, this
         event must be used twice, once for each receiver.
     """
-    def __init__(self, secret, receiver, channel_address):
+    def __init__(self, channel_address, secret, receiver):
+        self.channel_address = channel_address
         self.secret = secret
         self.receiver = receiver
+
+
+class ContractReceiveClosed(StateChange):
+    def __init__(self, channel_address, closing_address, block_number):
         self.channel_address = channel_address
+        self.closing_address = closing_address
+        self.block_number = block_number
+
+
+class ContractReceiveSettled(StateChange):
+    def __init__(self, channel_address, block_number):
+        self.channel_address = channel_address
+        self.block_number = block_number
+
+
+class ContractReceiveBalance(StateChange):
+    def __init__(
+            self,
+            channel_address,
+            token_address,
+            participant_address,
+            balance,
+            block_number):
+
+        self.channel_address = channel_address
+        self.token_address = token_address
+        self.participant_address = participant_address
+        self.balance = balance
+        self.block_number = block_number
+
+
+class ContractReceiveNewChannel(StateChange):
+    def __init__(
+            self,
+            manager_address,
+            channel_address,
+            participant1,
+            participant2,
+            settle_timeout):
+
+        self.manager_address = manager_address
+        self.channel_address = channel_address
+        self.participant1 = participant1
+        self.participant2 = participant2
+        self.settle_timeout = settle_timeout
+
+
+class ContractReceiveTokenAdded(StateChange):
+    def __init__(self, registry_address, token_address, manager_address):
+        self.registry_address = registry_address
+        self.token_address = token_address
+        self.manager_address = manager_address
