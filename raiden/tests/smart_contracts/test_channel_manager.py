@@ -177,7 +177,6 @@ def test_reopen_channel(
     # settle the channel should not change the channel manager state
     nettingchannel.close(
         direct_transfer_data,
-        "",
         sender=privatekey1_raw,
     )
     tester_state.mine(number_of_blocks=settle_timeout + 1)
@@ -214,7 +213,6 @@ def test_reopen_channel(
     with pytest.raises(TransactionFailed):
         netting_contract_proxy1.close(
             direct_transfer_data,
-            "",
             sender=privatekey0_raw,
         )
 

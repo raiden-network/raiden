@@ -80,9 +80,8 @@ contract NettingChannelContract {
 
     /// @notice Close the channel. Can only be called by a participant in the channel.
     /// @param theirs_encoded The last transfer recieved from our partner.
-    /// @param ours_encoded The last transfer sent to our partner.
-    function close(bytes theirs_encoded, bytes ours_encoded) {
-        data.close(msg.sender, theirs_encoded, ours_encoded);
+    function close(bytes theirs_encoded) {
+        data.close(msg.sender, theirs_encoded);
         ChannelClosed(msg.sender, data.closed);
     }
 
