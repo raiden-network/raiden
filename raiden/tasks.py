@@ -962,6 +962,9 @@ class EndMediatedTransferTask(BaseMediatedTransferTask):
                 )
 
 
+# TODO:
+# - reinterate exchange tasks under the current architecture
+# - add a separate message for exchanges to simplify message handling
 class StartExchangeTask(BaseMediatedTransferTask):
     """ Initiator task, responsible to choose a random secret, initiate the
     token exchange by sending a mediated transfer to the counterparty and
