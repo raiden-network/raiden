@@ -7,8 +7,8 @@ import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
 from ethereum.utils import encode_hex
-from pyethapp.jsonrpc import address_decoder
 from secp256k1 import PrivateKey
+from pyethapp.jsonrpc import address_decoder
 
 from raiden.blockchain.events import (
     ALL_EVENTS,
@@ -23,6 +23,14 @@ from raiden.tasks import (
     MediateTransferTask,
     EndMediatedTransferTask,
     ExchangeTask,
+)
+from raiden.transfer.mediated_transfer.state_change import (
+    ContractReceiveTokenAdded,
+    ContractReceiveBalance,
+    ContractReceiveClosed,
+    ContractReceiveNewChannel,
+    ContractReceiveSettled,
+    ContractReceiveWithdraw,
 )
 from raiden.channel import ChannelEndState, ChannelExternalState
 from raiden.exceptions import (
@@ -110,7 +118,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.protocol = RaidenProtocol(transport, discovery, self)
         transport.protocol = self.protocol
 
-        blockchain_log_handler = BlockchainEventsHandler(self)
         message_handler = RaidenMessageHandler(self)
         state_machine_event_handler = StateMachineEventHandler(self)
         pyethapp_blockchain_events = PyethappBlockchainEvents()
@@ -135,14 +142,11 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         self.api = RaidenAPI(self)
         self.alarm = alarm
-        self.blockchain_log_handler = blockchain_log_handler
         self.message_handler = message_handler
         self.state_machine_event_handler = state_machine_event_handler
         self.pyethapp_blockchain_events = pyethapp_blockchain_events
 
         self.on_message = message_handler.on_message
-        self.on_log = blockchain_log_handler.on_log
-        self.on_event = state_machine_event_handler.on_event
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -154,11 +158,10 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         return self._blocknumber
 
     def poll_blockchain_events(self, block_number):
-        for event in self.pyethapp_blockchain_events.poll_all_event_listeners():
-            self.on_log(
-                event.originating_contract,
-                event.event_data,
-            )
+        on_statechange = self.state_machine_event_handler.on_blockchain_statechange
+
+        for state_change in self.pyethapp_blockchain_events.poll_state_change():
+            on_statechange(state_change)
 
     def find_channel_by_address(self, netting_channel_address_bin):
         for graph in self.channelgraphs.itervalues():
@@ -447,8 +450,41 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             self.manager_token[manager_address] = token_address
             self.channelgraphs[token_address] = graph
 
-    def register_netting_channel(self, token_address, netting_channel):
+    def register_channel_manager(self, manager_address):
+        manager = self.chain.manager(manager_address)
+        netting_channels = [
+            self.chain.netting_channel(channel_address)
+            for channel_address in manager.channels_by_participant(self.address)
+        ]
+
+        # Install the filters first to avoid missing changes, as a consequence
+        # some events might be applied twice.
+        self.pyethapp_blockchain_events.add_channel_manager_listener(manager)
+        for channel in netting_channels:
+            self.pyethapp_blockchain_events.add_netting_channel_listener(channel)
+
+        token_address = manager.token_address()
+        edge_list = manager.channels_addresses()
+        channels_detail = [
+            self.get_channel_detail(token_address, channel)
+            for channel in netting_channels
+        ]
+
+        graph = ChannelGraph(
+            self.address,
+            manager_address,
+            token_address,
+            edge_list,
+            channels_detail,
+        )
+
+        self.manager_token[manager_address] = token_address
+        self.channelgraphs[token_address] = graph
+
+    def register_netting_channel(self, token_address, channel_address):
+        netting_channel = self.chain.netting_channel(channel_address)
         self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
+
         detail = self.get_channel_detail(token_address, netting_channel)
         graph = self.channelgraphs[token_address]
         graph.add_channel(detail)
@@ -470,7 +506,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         wait_for.extend(self.protocol.address_greenlet.itervalues())
 
-        self.pyethapp_blockchain_events.uninstall_listeners()
+        self.pyethapp_blockchain_events.uninstall_all_event_listeners()
         gevent.wait(wait_for)
 
     def on_directtransfer_message(self, transfer):
@@ -1140,124 +1176,83 @@ class StateMachineEventHandler(object):
             # TODO: implement the network timeout raiden.config['msg_timeout']
             # and cancel the current transfer it hapens
 
-
-class BlockchainEventsHandler(object):
-    """ Class responsible to handle all the blockchain events.
-
-    Note:
-        This class is not intended to be used standalone, use RaidenService
-        instead.
-    """
-
-    def __init__(self, raiden):
-        self.raiden = raiden
-
-    def on_log(self, emitting_contract_address_bin, event):  # pylint: disable=unused-argument
+    def on_blockchain_statechange(self, state_change):
         if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'event received',
-                type=event['_event_type'],
-                contract=pex(emitting_contract_address_bin),
-            )
+            log.debug('state_change received', state_change=state_change)
 
-        if event['_event_type'] == 'TokenAdded':
-            self.event_tokenadded(emitting_contract_address_bin, event)
+        if isinstance(state_change, ContractReceiveTokenAdded):
+            self.handle_tokenadded(state_change)
 
-        elif event['_event_type'] == 'ChannelNew':
-            self.event_channelnew(emitting_contract_address_bin, event)
+        if isinstance(state_change, ContractReceiveNewChannel):
+            self.handle_channelnew(state_change)
 
-        elif event['_event_type'] == 'ChannelNewBalance':
-            self.event_channelnewbalance(emitting_contract_address_bin, event)
+        if isinstance(state_change, ContractReceiveBalance):
+            self.handle_balance(state_change)
 
-        elif event['_event_type'] == 'ChannelClosed':
-            self.event_channelclosed(emitting_contract_address_bin, event)
+        if isinstance(state_change, ContractReceiveClosed):
+            self.handle_closed(state_change)
 
-        elif event['_event_type'] == 'ChannelSettled':
-            self.event_channelsettled(emitting_contract_address_bin, event)
+        if isinstance(state_change, ContractReceiveSettled):
+            self.handle_settled(state_change)
 
-        elif event['_event_type'] == 'ChannelSecretRevealed':
-            self.event_channelsecretrevealed(emitting_contract_address_bin, event)
+        if isinstance(state_change, ContractReceiveWithdraw):
+            self.handle_withdraw(state_change)
 
         else:
-            log.error('Unknown event %s', repr(event))
+            if log.isEnabledFor(logging.ERROR):
+                log.error('Unknown state_change', state_change=state_change)
 
-    def event_tokenadded(self, registry_address_bin, event):  # pylint: disable=unused-argument
-        manager_address_bin = address_decoder(event['channel_manager_address'])
-        manager = self.raiden.chain.manager(manager_address_bin)
-        self.raiden.register_channel_manager(manager)
+    def handle_tokenadded(self, state_change):
+        manager_address = state_change.manager_address
+        self.raiden.register_channel_manager(manager_address)
 
-    def event_channelnew(self, manager_address_bin, event):  # pylint: disable=unused-argument
-        # should not raise, filters are installed only for registered managers
-        token_address_bin = self.raiden.manager_token[manager_address_bin]
-        graph = self.raiden.channelgraphs[token_address_bin]
+    def handle_channelnew(self, state_change):
+        manager_address = state_change.manager_address
+        channel_address = state_change.channel_address
+        participant1 = state_change.participant1
+        participant2 = state_change.participant2
 
-        participant1 = address_decoder(event['participant1'])
-        participant2 = address_decoder(event['participant2'])
-
-        # update our global network graph for routing
+        token_address = self.raiden.manager_token[manager_address]
+        graph = self.raiden.channelgraphs[token_address]
         graph.add_path(participant1, participant2)
 
         if participant1 == self.raiden.address or participant2 == self.raiden.address:
-            netting_channel_address_bin = address_decoder(event['netting_channel'])
-            netting_channel = self.raiden.chain.netting_channel(netting_channel_address_bin)
-
-            try:
-                self.raiden.register_netting_channel(
-                    token_address_bin,
-                    netting_channel,
-                )
-            except ValueError:
-                # This can happen if the new channel's settle_timeout is
-                # smaller than raiden.config['reveal_timeout']
-                log.exception('Channel registration failed.')
-            else:
-                if log.isEnabledFor(logging.INFO):
-                    log.info(
-                        'New channel created',
-                        channel_address=event['netting_channel'],
-                        manager_address=pex(manager_address_bin),
-                    )
-
-        else:
-            log.info('ignoring new channel, this node is not a participant.')
-
-    def event_channelnewbalance(self, netting_contract_address_bin, event):
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'channel new balance event received',
-                netting_contract=pex(netting_contract_address_bin),
-                event=event,
+            self.raiden.register_netting_channel(
+                token_address,
+                channel_address,
             )
 
-        token_address_bin = address_decoder(event['token_address'])
-        participant_address_bin = address_decoder(event['participant'])
+    def handle_balance(self, state_change):
+        channel_address = state_change.channel_address
+        token_address = state_change.token_address
+        participant_address = state_change.participant_address
+        balance = state_change.balance
+        block_number = state_change.block_number
 
-        # should not raise, all three addresses need to be registered
-        graph = self.raiden.channelgraphs[token_address_bin]
-        channel = graph.address_channel[netting_contract_address_bin]
-        channel_state = channel.get_state_for(participant_address_bin)
+        graph = self.raiden.channelgraphs[token_address]
+        channel = graph.address_channel[channel_address]
+        channel_state = channel.get_state_for(participant_address)
 
-        if channel_state.contract_balance != event['balance']:
-            channel_state.update_contract_balance(event['balance'])
+        if channel_state.contract_balance != balance:
+            channel_state.update_contract_balance(balance)
 
         if channel.external_state.opened_block == 0:
-            channel.external_state.set_opened(event['block_number'])
+            channel.external_state.set_opened(block_number)
 
-    def event_channelclosed(self, netting_contract_address_bin, event):
-        channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.set_closed(event['block_number'])
+    def handle_closed(self, state_change):
+        channel_address = state_change.channel_address
+        block_number = state_change.block_number
 
-    def event_channelsettled(self, netting_contract_address_bin, event):
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'channel settle event received',
-                netting_contract=pex(netting_contract_address_bin),
-                event=event,
-            )
+        channel = self.raiden.find_channel_by_address(channel_address)
+        channel.external_state.set_closed(block_number)
 
-        channel = self.raiden.find_channel_by_address(netting_contract_address_bin)
-        channel.external_state.set_settled(event['block_number'])
+    def handle_settled(self, state_change):
+        channel_address = state_change.channel_address
+        block_number = state_change.block_number
 
-    def event_channelsecretrevealed(self, netting_contract_address_bin, event):
-        # pylint: disable=unused-argument
-        self.raiden.register_secret(event['secret'])
+        channel = self.raiden.find_channel_by_address(channel_address)
+        channel.external_state.set_settled(block_number)
+
+    def handle_withdraw(self, state_change):
+        secret = state_change.secret
+        self.raiden.register_secret(secret)

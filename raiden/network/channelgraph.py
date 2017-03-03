@@ -55,7 +55,14 @@ def make_graph(edge_list):
 class ChannelGraph(object):
     """ Has Graph based on the channels and can find path between participants. """
 
-    def __init__(self, our_address, channelmanager_address, token_address, edge_list, channels_detail):
+    def __init__(
+            self,
+            our_address,
+            channelmanager_address,
+            token_address,
+            edge_list,
+            channels_detail):
+
         if not isaddress(token_address):
             raise ValueError('token_address must be a valid address')
 
