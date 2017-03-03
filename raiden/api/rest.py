@@ -89,12 +89,10 @@ class APIServer(object):
             self.flask_app.url_map.converters[key] = value
 
     def add_resource(self, resource_cls):
-        # inject rest_api
-        resource_cls.rest_api = self.rest_api
-
         self.flask_api_middleware.add_resource(
             resource_cls,
-            resource_cls._route
+            resource_cls._route,
+            resource_class_kwargs={'rest_api_object': self.rest_api}
         )
 
     def run(self, port, **kwargs):
