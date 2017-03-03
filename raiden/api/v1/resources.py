@@ -15,7 +15,8 @@ def create_blueprint():
 
 class BaseResource(Resource):
     def __init__(self, **kwargs):
-        super(BaseResource, self).__init__(**kwargs)
+        super(BaseResource, self).__init__()
+        self.rest_api = kwargs['rest_api_object']
 
 
 @parser.location_handler('query')
@@ -41,11 +42,12 @@ class ChannelsResource(BaseResource):
     # define the route of the resource here:
     _route = '/channels'
 
-    # has to be set externally via dependency injection
-    rest_api = None
     put_schema = ChannelRequestSchema(
         exclude=('channel_address', 'state'),
     )
+
+    def __init__(self, **kwargs):
+        super(ChannelsResource, self).__init__(**kwargs)
 
     def get(self):
         """
@@ -61,13 +63,15 @@ class ChannelsResource(BaseResource):
         return self.rest_api.open(**kwargs)
 
 
-class ChannelsResourceByChannelAddress(Resource):
+class ChannelsResourceByChannelAddress(BaseResource):
     _route = '/channels/<hexaddress:channel_address>'
-    rest_api = None
 
     patch_schema = ChannelRequestSchema(
         exclude=('token_address', 'partner_address', 'settle_timeout'),
     )
+
+    def __init__(self, **kwargs):
+        super(ChannelsResourceByChannelAddress, self).__init__(**kwargs)
 
     @use_args(patch_schema, locations=('form',))
     @use_kwargs({'channel_address': AddressField()}, locations=('query',))
@@ -76,7 +80,7 @@ class ChannelsResourceByChannelAddress(Resource):
         #      channel address does not appear twice and we don't need to combine
         #      dictionaries like this.
         args = args[0]
-        args.update(kwargs)
+        args.update(**kwargs)
         return self.rest_api.patch_channel(**args)
 
     @use_kwargs({'channel_address': AddressField()}, locations=('query',))
@@ -86,7 +90,9 @@ class ChannelsResourceByChannelAddress(Resource):
 
 class TokensResource(BaseResource):
     _route = '/tokens'
-    rest_api = None
+
+    def __init__(self, **kwargs):
+        super(TokensResource, self).__init__(**kwargs)
 
     def get(self):
         """
@@ -97,19 +103,21 @@ class TokensResource(BaseResource):
 
 class PartnersResourceByTokenAddress(BaseResource):
     _route = '/tokens/<hexaddress:token_address>/partners'
-    rest_api = None
+
+    def __init__(self, **kwargs):
+        super(PartnersResourceByTokenAddress, self).__init__(**kwargs)
 
     def get(self, **kwargs):
         return self.rest_api.get_partners_by_token(**kwargs)
 
 
 class EventsResoure(BaseResource):
-    """
-    no args, since we are filtering in the client for now
-    """
+    """no args, since we are filtering in the client for now"""
 
     _route = '/api/events'
-    rest_api = None
+
+    def __init__(self, **kwargs):
+        super(EventsResoure, self).__init__(**kwargs)
 
     def get(self):
         return self.rest_api.get_new_events()
