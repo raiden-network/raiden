@@ -49,8 +49,8 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
     safe_address_decode,
-    GLOBAL_CTX,
     sha3,
+    GLOBAL_CTX,
 )
 
 from raiden.transfer.mediated_transfer.events import SendMediatedTransfer
