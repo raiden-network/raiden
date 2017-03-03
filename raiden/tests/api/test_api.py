@@ -252,10 +252,11 @@ def test_api_tokens(
     response = request.send().response
     assert response and response.status_code == 200
     response = decode_response(response)
-    assert response == [
+    expected_response = [
         {"address": "0x61c808d82a3ac53231750dadc13c777b59310bd9"},
         {"address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"},
     ]
+    assert all(r in response for r in expected_response)
 
 
 def test_query_partners_by_token(
@@ -309,7 +310,7 @@ def test_query_partners_by_token(
     response = request.send().response
     assert response and response.status_code == 200
     response = decode_response(response)
-    assert response == [
+    expected_response = [
         {
             "partner_address": first_partner_address,
             "channel": "/api/1/channels/{}".format(first_channel_address)
@@ -318,3 +319,4 @@ def test_query_partners_by_token(
             "channel": "/api/1/channels/{}".format(second_channel_address)
         }
     ]
+    assert all(r in response for r in expected_response)

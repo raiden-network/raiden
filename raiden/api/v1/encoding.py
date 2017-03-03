@@ -21,7 +21,6 @@ from raiden.api.objects import (
     ChannelNew,
     ChannelNewBalance,
     ChannelSecretRevealed,
-    TransferReceived,
     PartnersPerToken,
     PartnersPerTokenList
 )
@@ -275,19 +274,6 @@ class ChannelSecretRevealedSchema(EventSchema):
         decoding_class = ChannelSecretRevealed
 
 
-class TransferReceivedSchema(EventSchema):
-    token_address = AddressField()
-    initiator_address = AddressField()
-    recipient_address = AddressField()
-    transferred_amount = AddressField()
-    identifier = fields.Integer()
-    hashlock = DataField()
-
-    class Meta:
-        strict = True
-        decoding_class = TransferReceived
-
-
 event_class_name_to_schema = dict(
     TokenAdded=TokenAddedSchema,
     ChannelNew=ChannelNewSchema,
@@ -295,5 +281,4 @@ event_class_name_to_schema = dict(
     ChannelSettled=ChannelSettledSchema,
     ChannelSecretRevealed=ChannelSecretRevealedSchema,
     ChannelNewBalance=ChannelNewBalanceSchema,
-    TransferReceived=TransferReceivedSchema,
 )
