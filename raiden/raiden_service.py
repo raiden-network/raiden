@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import random
-from collections import namedtuple, defaultdict
+from collections import defaultdict
 
 import gevent
 from gevent.event import AsyncResult
@@ -19,10 +19,11 @@ from raiden.blockchain.events import (
     PyethappBlockchainEvents,
 )
 from raiden.tasks import (
-    StartMediatedTransferTask,
-    MediateTransferTask,
+    AlarmTask,
     EndMediatedTransferTask,
-    ExchangeTask,
+    HealthcheckTask,
+    MediateTransferTask,
+    StartMediatedTransferTask,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveTokenAdded,
@@ -44,7 +45,6 @@ from raiden.exceptions import (
     InsufficientFunds,
 )
 from raiden.network.channelgraph import ChannelGraph, ChannelDetail
-from raiden.tasks import AlarmTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
 from raiden.messages import (
     SignedMessage,
@@ -67,21 +67,6 @@ from raiden.transfer.mediated_transfer.events import SendMediatedTransfer
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-Exchange = namedtuple('Exchange', (
-    'identifier',
-    'from_token',
-    'from_amount',
-    'from_nodeaddress',  # the node' address of the owner of the `from_token`
-    'to_token',
-    'to_amount',
-    'to_nodeaddress',  # the node' address of the owner of the `to_token`
-))
-ExchangeKey = namedtuple('ExchangeKey', (
-    'from_token',
-    'from_amount',
-))
-
-
 class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     """ A Raiden node. """
 
@@ -99,7 +84,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         pubkey = private_key.pubkey.serialize(compressed=False)
 
         self.transfertasks = defaultdict(dict)
-        self.exchanges = dict()
         self.channelgraphs = dict()
         self.manager_token = dict()
 
@@ -509,66 +493,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.pyethapp_blockchain_events.uninstall_all_event_listeners()
         gevent.wait(wait_for)
 
-    def on_mediatedtransfer_message(self, transfer):
-        token_address = transfer.token
-        graph = self.channelgraphs[transfer.token]
-
-        if not graph.has_channel(self.address, transfer.sender):
-            raise UnknownAddress(
-                'Direct transfer from node without an existing channel: {}'.format(
-                    pex(transfer.sender),
-                )
-            )
-
-        channel = graph.partneraddress_channel[transfer.sender]
-
-        if not channel.isopen:
-            raise TransferWhenClosed(
-                'Direct transfer received for a closed channel: {}'.format(
-                    pex(channel.channel_address),
-                )
-            )
-
-        channel.register_transfer(transfer)  # raises if the transfer is invalid
-
-        exchange_key = ExchangeKey(transfer.token, transfer.lock.amount)
-        if exchange_key in self.exchanges:
-            exchange = self.exchanges[exchange_key]
-
-            exchange_task = ExchangeTask(
-                self,
-                from_mediated_transfer=transfer,
-                to_token=exchange.to_token,
-                to_amount=exchange.to_amount,
-                target=exchange.from_nodeaddress,
-            )
-            exchange_task.start()
-
-        elif transfer.target == self.address:
-            try:
-                self.message_for_task(
-                    transfer,
-                    transfer.lock.hashlock
-                )
-            except UnknownAddress:
-                # assumes that the registered task(s) tooks care of the message
-                # (used for exchanges)
-                secret_request_task = EndMediatedTransferTask(
-                    self,
-                    token_address,
-                    transfer,
-                )
-                secret_request_task.start()
-
-        else:
-            transfer_task = MediateTransferTask(
-                self,
-                token_address,
-                transfer,
-                0,  # TODO: calculate the fee
-            )
-            transfer_task.start()
-
     def create_default_identifier(self, token_address, target):
         """
         The default message identifier value is the first 8 bytes of the sha3 of:
@@ -786,56 +710,6 @@ class RaidenAPI(object):
         netting_channel.deposit(self.raiden.address, amount)
 
         return channel
-
-    def exchange(self, from_token, from_amount, to_token, to_amount, target_address):
-        try:
-            self.raiden.channelgraphs[from_token]
-            self.raiden.channelgraphs[to_token]
-        except KeyError as exception:
-            log.error(
-                'no token manager for %s',
-                exception.args,
-            )
-            return
-
-        identifier = None  # TODO: fix identifier
-        task = StartExchangeTask(
-            identifier,
-            self.raiden,
-            from_token,
-            from_amount,
-            to_token,
-            to_amount,
-            target_address,
-        )
-        task.start()
-        return task
-
-    def expect_exchange(
-            self,
-            identifier,
-            from_token,
-            from_amount,
-            to_token,
-            to_amount,
-            target_address):
-
-        key = ExchangeKey(
-            from_token,
-            from_amount,
-        )
-
-        exchange = Exchange(
-            identifier,
-            from_token,
-            from_amount,
-            target_address,
-            to_token,
-            to_amount,
-            self.raiden.address,
-        )
-
-        self.raiden.exchanges[key] = exchange
 
     def get_channel_list(self, token_address=None, partner_address=None):
         """Returns a list of channels associated with the optionally given
@@ -1142,7 +1016,51 @@ class RaidenMessageHandler(object):
         channel.register_transfer(message)
 
     def message_mediatedtransfer(self, message):
-        self.raiden.on_mediatedtransfer_message(message)
+        token_address = message.token
+        graph = self.raiden.channelgraphs[message.token]
+
+        if not graph.has_channel(self.raiden.address, message.sender):
+            raise UnknownAddress(
+                'Direct transfer from node without an existing channel: {}'.format(
+                    pex(message.sender),
+                )
+            )
+
+        channel = graph.partneraddress_channel[message.sender]
+
+        if not channel.isopen:
+            raise TransferWhenClosed(
+                'Direct transfer received for a closed channel: {}'.format(
+                    pex(channel.channel_address),
+                )
+            )
+
+        channel.register_transfer(message)  # raises if the message is invalid
+
+        if message.target == self.raiden.address:
+            try:
+                self.raiden.message_for_task(
+                    message,
+                    message.lock.hashlock
+                )
+            except UnknownAddress:
+                # assumes that the registered task(s) tooks care of the message
+                # (used for exchanges)
+                secret_request_task = EndMediatedTransferTask(
+                    self.raiden,
+                    token_address,
+                    message,
+                )
+                secret_request_task.start()
+
+        else:
+            transfer_task = MediateTransferTask(
+                self.raiden,
+                token_address,
+                message,
+                0,  # TODO: calculate the fee
+            )
+            transfer_task.start()
 
 
 class StateMachineEventHandler(object):
