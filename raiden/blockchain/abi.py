@@ -4,7 +4,8 @@ import json
 import hashlib
 
 from ethereum import _solidity
-from ethereum.abi import event_id, normalize_name
+from ethereum.abi import event_id, normalize_name, ContractTranslator
+
 from raiden.utils import get_contract_path
 
 __all__ = (
@@ -27,6 +28,10 @@ __all__ = (
     'CHANNELSETTLED_EVENTID',
 
     'HUMAN_TOKEN_ABI',
+
+    'REGISTRY_TRANSLATOR',
+    'CHANNEL_MANAGER_TRANSLATOR',
+    'NETTING_CHANNEL_TRANSLATOR',
 )
 
 
@@ -166,3 +171,7 @@ CHANNELSECRETREVEALED_EVENTID = event_id(*get_eventname_types(CHANNELSECRETREVEA
 
 CHANNELSETTLED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelSettled')
 CHANNELSETTLED_EVENTID = event_id(*get_eventname_types(CHANNELSETTLED_EVENT))
+
+REGISTRY_TRANSLATOR = ContractTranslator(REGISTRY_ABI)
+CHANNEL_MANAGER_TRANSLATOR = ContractTranslator(CHANNEL_MANAGER_ABI)
+NETTING_CHANNEL_TRANSLATOR = ContractTranslator(NETTING_CHANNEL_ABI)

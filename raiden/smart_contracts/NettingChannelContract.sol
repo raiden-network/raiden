@@ -10,7 +10,7 @@ contract NettingChannelContract {
     event ChannelClosed(address closing_address, uint block_number);
     event TransferUpdated(address node_address, uint block_number);
     event ChannelSettled(uint block_number);
-    event ChannelSecretRevealed(bytes32 secret);
+    event ChannelSecretRevealed(bytes32 secret, address receiver_address);
 
     modifier settleTimeoutNotTooLow(uint t) {
         if (t < 6) throw;
@@ -102,7 +102,9 @@ contract NettingChannelContract {
     /// @param secret The secret to unlock the locked transfer.
     function unlock(bytes locked_encoded, bytes merkle_proof, bytes32 secret) {
         data.unlock(msg.sender, locked_encoded, merkle_proof, secret);
-        ChannelSecretRevealed(secret);
+
+        // Note: this is only valid as long as msg.sender is one of the participants
+        ChannelSecretRevealed(secret, msg.sender);
     }
 
     /// @notice Settle the transfers and balances of the channel and pay out to
