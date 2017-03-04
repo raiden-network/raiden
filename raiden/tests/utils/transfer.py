@@ -4,6 +4,7 @@ from __future__ import print_function
 import gevent
 from gevent.event import AsyncResult
 
+from raiden.raiden_service import create_default_identifier
 from raiden.utils import sha3
 from raiden.mtree import merkleroot
 from raiden.tasks import StartMediatedTransferTask
@@ -84,7 +85,8 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
         # Explicitly call the default identifier creation since this mock
         # function here completely skips the `transfer_async()` call.
         if not identifier:
-            identifier = initiator_app.create_default_identifier(
+            identifier = create_default_identifier(
+                initiator_app.address,
                 token,
                 target_app.raiden.address,
             )
@@ -168,7 +170,7 @@ def claim_lock(app_chain, token, secret):
 
 
 def assert_identifier_correct(initiator_app, token, target, expected_id):
-    got_id = initiator_app.raiden.create_default_identifier(token, target)
+    got_id = create_default_identifier(initiator_app.raiden.address, token, target)
     assert got_id == expected_id
 
 

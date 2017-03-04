@@ -24,7 +24,7 @@ from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
 from raiden.tests.utils.network import CHAIN
 from raiden.utils import pex, sha3, privatekey_to_address
-from raiden.raiden_service import NoPathError
+from raiden.raiden_service import NoPathError, create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
@@ -490,7 +490,8 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
 
     # and now send one more direct transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
-    identifier = app0.raiden.create_default_identifier(
+    identifier = create_default_identifier(
+        app0.raiden.address,
         graph0.token_address,
         app1.raiden.address,
     )
@@ -533,7 +534,8 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     # an out-of-order/resent message that arrives late
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
-    identifier = alice_app.raiden.create_default_identifier(
+    identifier = create_default_identifier(
+        alice_app.raiden.address,
         graph.token_address,
         charlie_address,
     )
@@ -581,7 +583,8 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     # an out-of-order/resent message that arrives late
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
-    identifier = alice_app.raiden.create_default_identifier(
+    identifier = create_default_identifier(
+        alice_app.raiden.address,
         graph.token_address,
         charlie_address,
     )
@@ -638,7 +641,8 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     )
 
     # and now send one more direct transfer with a mistaken token address
-    identifier = app0.raiden.create_default_identifier(
+    identifier = create_default_identifier(
+        app0.raiden.address,
         graph0.token_address,
         app1.raiden.address,
     )
@@ -686,7 +690,8 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     )
 
     # and now send one more direct transfer with the locksroot not set correctly
-    identifier = app0.raiden.create_default_identifier(
+    identifier = create_default_identifier(
+        app0.raiden.address,
         graph0.token_address,
         app1.raiden.address,
     )
