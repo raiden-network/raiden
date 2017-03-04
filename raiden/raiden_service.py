@@ -67,6 +67,23 @@ from raiden.transfer.mediated_transfer.events import SendMediatedTransfer
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
+def create_default_identifier(node_address, token_address, target):
+    """
+    The default message identifier value is the first 8 bytes of the sha3 of:
+        - Our Address
+        - Our target address
+        - The token address
+        - A random 8 byte number for uniqueness
+    """
+    hash_ = sha3("{}{}{}{}".format(
+        node_address,
+        target,
+        token_address,
+        random.randint(0, 18446744073709551614L)
+    ))
+    return int(hash_[0:8].encode('hex'), 16)
+
+
 class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     """ A Raiden node. """
 
@@ -493,22 +510,6 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.pyethapp_blockchain_events.uninstall_all_event_listeners()
         gevent.wait(wait_for)
 
-    def create_default_identifier(self, token_address, target):
-        """
-        The default message identifier value is the first 8 bytes of the sha3 of:
-            - Our Address
-            - Our target address
-            - The token address
-            - A random 8 byte number for uniqueness
-        """
-        hash_ = sha3("{}{}{}{}".format(
-            self.address,
-            target,
-            token_address,
-            random.randint(0, 18446744073709551614L)
-        ))
-        return int(hash_[0:8].encode('hex'), 16)
-
     def transfer_async(self, token_address, amount, target, identifier=None):
         """ Transfer `amount` between this node and `target`.
 
@@ -521,9 +522,8 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         """
         graph = self.channelgraphs[token_address]
 
-        # Create a default identifier value
         if identifier is None:
-            identifier = self.create_default_identifier(token_address, target)
+            identifier = create_default_identifier(self.address, token_address, target)
 
         direct_channel = graph.partneraddress_channel.get(target)
         if direct_channel:
@@ -919,6 +919,9 @@ class RaidenMessageHandler(object):
 
     def on_message(self, message, msghash):  # noqa pylint: disable=unused-argument
         """ Handles `message` and sends an ACK on success. """
+        if log.isEnabledFor(logging.INFO):
+            log.info('message received', message=message)
+
         cmdid = message.cmdid
 
         # using explicity dispatch to make the code grepable
@@ -926,7 +929,7 @@ class RaidenMessageHandler(object):
             pass
 
         elif cmdid == messages.PING:
-            self.message_ping(message)
+            pass
 
         elif cmdid == messages.SECRETREQUEST:
             self.message_secretrequest(message)
@@ -948,9 +951,6 @@ class RaidenMessageHandler(object):
 
         else:
             raise Exception("Unhandled message cmdid '{}'.".format(cmdid))
-
-    def message_ping(self, message):  # pylint: disable=unused-argument,no-self-use
-        log.info('ping received')
 
     def message_revealsecret(self, message):
         self.raiden.message_for_task(message, message.hashlock)
@@ -1092,8 +1092,8 @@ class StateMachineEventHandler(object):
             # and cancel the current transfer it hapens
 
     def on_blockchain_statechange(self, state_change):
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug('state_change received', state_change=state_change)
+        if log.isEnabledFor(logging.INFO):
+            log.info('state_change received', state_change=state_change)
 
         if isinstance(state_change, ContractReceiveTokenAdded):
             self.handle_tokenadded(state_change)

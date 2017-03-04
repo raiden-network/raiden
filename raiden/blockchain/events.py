@@ -233,7 +233,7 @@ def pyethapp_event_to_state_change(pyethapp_event):  # pylint: disable=too-many-
         return ContractReceiveWithdraw(
             contract_address,
             event['secret'],
-            event['receiver_address'],
+            address_decoder(event['receiver_address']),
         )
 
     else:
