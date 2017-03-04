@@ -58,7 +58,7 @@ class HexAddressConverter(BaseConverter):
 
     def to_url(self, value):
         value = address_encoder(value)
-        return BaseConverter.to_url(value)
+        return value
 
 
 class AddressField(fields.Field):
