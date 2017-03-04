@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import httplib
-from flask import Flask, make_response
+from flask import Flask, make_response, url_for
 from flask_restful import Api, abort
 from webargs.flaskparser import parser
 
@@ -194,10 +194,11 @@ class RestAPI(object):
         for result in raiden_service_result:
             return_list.append({
                 'partner_address': result.partner_address,
-                'channel': '/api/{}/channels/{}'.format(
-                    self.version,
-                    address_encoder(result.channel_address)
-                )
+                'channel': url_for(
+                    # TODO: Somehow nicely parameterize this for future versions
+                    'v1_resources.channelsresourcebychanneladdress',
+                    channel_address=result.channel_address
+                ),
             })
 
         schema_list = PartnersPerTokenList(return_list)
