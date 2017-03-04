@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from flask import Flask
+import httplib
+from flask import Flask, make_response
 from flask_restful import Api, abort
 from webargs.flaskparser import parser
+
 
 from pyethapp.jsonrpc import address_encoder
 from raiden.api.v1.encoding import (
@@ -64,7 +66,7 @@ class APIServer(object):
         if self.rest_api.version == 1:
             self.flask_api_middleware = Api(
                 self.blueprint,
-                prefix="/api/1"
+                prefix="/api/1",
             )
         else:
             raise ValueError('Invalid api version: {}'.format(self.rest_api.version))
@@ -205,7 +207,6 @@ class RestAPI(object):
     def patch_channel(self, channel_address, balance=None, state=None):
         # find the channel
         channel = self.raiden_api.get_channel(channel_address)
-
         # if we patch with `balance` it's a deposit
         if balance is not None and state is None:
             raiden_service_result = self.raiden_api.deposit(
@@ -216,25 +217,43 @@ class RestAPI(object):
             return self.channel_schema.dumps(raiden_service_result)
 
         elif state is not None and balance is None:
-
+            current_state = channel.state
             if state == 'closed':
+                if current_state != 'open':
+                    return make_response(
+                        httplib.CONFLICT,
+                        'Attempted to close an already closed channel'
+                    )
                 raiden_service_result = self.raiden_api.close(
                     channel.token_address,
                     channel.partner_address
                 )
                 return self.channel_schema.dumps(raiden_service_result)
             elif state == 'settled':
+                if current_state == 'settled' or current_state == 'open':
+                    return make_response(
+                        'Attempted to settle a channel at its {} state'.format(current_state),
+                        httplib.CONFLICT,
+                    )
                 raiden_service_result = self.raiden_api.settle(
                     channel.token_address,
                     channel.partner_address
                 )
                 return self.channel_schema.dumps(raiden_service_result)
-            elif state == 'open':
-                raise Exception('nothing to do here')
+            else:
+                return make_response(
+                    'Provided invalid channel state {}'.format(state),
+                    httplib.BAD_REQUEST,
+                )
 
-        raise Exception()
+        return make_response(
+            'Can not update balance and change channel state at the same time',
+            httplib.CONFLICT,
+        )
 
 
 @parser.error_handler
 def handle_request_parsing_error(err):
-    abort(422, errors=err.messages)
+    """ This handles request parsing errors generated for example by schema
+    field validation failing."""
+    abort(httplib.BAD_REQUEST, errors=err.messages)

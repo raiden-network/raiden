@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 import grequests
+import httplib
 
 from raiden.tests.utils.apitestcontext import decode_response
 from raiden.utils import netting_channel_to_api_dict, bytes_to_hexstr
@@ -31,12 +32,12 @@ def test_netting_channel_to_api_dict(raiden_network, tokens_addresses, settle_ti
 def test_api_query_channels(api_test_server, api_test_context, api_raiden_service):
     request = grequests.get('http://localhost:5001/api/1/channels')
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     assert decode_response(response) == api_test_context.expect_channels()
 
     api_test_context.make_channel_and_add()
     response = request.send().response
-    assert response.status_code == 200
+    assert response.status_code == httplib.OK
     assert decode_response(response) == api_test_context.expect_channels()
 
 
@@ -60,7 +61,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = channel_data_obj
     expected_response['reveal_timeout'] = reveal_timeout
@@ -87,7 +88,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = channel_data_obj
     expected_response['reveal_timeout'] = reveal_timeout
@@ -105,7 +106,7 @@ def test_api_open_and_deposit_channel(
         data={'balance': balance}
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = {
         "channel_address": first_channel_address,
@@ -123,7 +124,7 @@ def test_api_open_and_deposit_channel(
         'http://localhost:5001/api/1/channels/{}'.format(second_channel_address)
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = {
         "channel_address": second_channel_address,
@@ -158,7 +159,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
 
     balance = 0
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = channel_data_obj
     expected_response['reveal_timeout'] = reveal_timeout
@@ -176,7 +177,7 @@ def test_api_open_close_and_settle_channel(
         data={'state': 'closed'}
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = {
         "channel_address": channel_address,
@@ -195,7 +196,7 @@ def test_api_open_close_and_settle_channel(
         data={'state': 'settled'}
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = {
         "channel_address": channel_address,
@@ -207,6 +208,67 @@ def test_api_open_close_and_settle_channel(
         "balance": balance
     }
     assert response == expected_response
+
+
+def test_api_channel_state_change_errors(
+        api_test_server,
+        api_test_context,
+        api_raiden_service,
+        reveal_timeout):
+    # let's create a new channel
+    partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    settle_timeout = 1650
+    channel_data_obj = {
+        "partner_address": partner_address,
+        "token_address": token_address,
+        "settle_timeout": settle_timeout
+    }
+    request = grequests.put(
+        'http://localhost:5001/api/1/channels',
+        data=channel_data_obj
+    )
+    response = request.send().response
+    assert response and response.status_code == httplib.OK
+    response = decode_response(response)
+    channel_address = response['channel_address']
+
+    # let's try to settle the channel (we are bad!)
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        data={'state': 'settled'}
+    )
+    response = request.send().response
+    assert response is not None and response.status_code == httplib.CONFLICT
+    # let's try to set a random state
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        data={'state': 'inlimbo'}
+    )
+    response = request.send().response
+    assert response is not None and response.status_code == httplib.BAD_REQUEST
+
+    # ok now let's close and settle for real
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        data={'state': 'closed'}
+    )
+    response = request.send().response
+    assert response and response.status_code == httplib.OK
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        data={'state': 'settled'}
+    )
+    response = request.send().response
+    assert response and response.status_code == httplib.OK
+
+    # and now let's try to settle again
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        data={'state': 'settled'}
+    )
+    response = request.send().response
+    assert response is not None and response.status_code == httplib.CONFLICT
 
 
 def test_api_tokens(
@@ -228,7 +290,7 @@ def test_api_tokens(
         data=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
 
     partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
     token_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
@@ -243,14 +305,14 @@ def test_api_tokens(
         data=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
 
     # and now let's get the token list
     request = grequests.get(
         'http://localhost:5001/api/1/tokens',
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = [
         {"address": "0x61c808d82a3ac53231750dadc13c777b59310bd9"},
@@ -279,7 +341,7 @@ def test_query_partners_by_token(
         data=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     first_channel_address = response['channel_address']
 
@@ -289,7 +351,7 @@ def test_query_partners_by_token(
         data=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     second_channel_address = response['channel_address']
 
@@ -301,14 +363,14 @@ def test_query_partners_by_token(
         data=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
 
     # and now let's query our partners per token for the first token
     request = grequests.get(
         'http://localhost:5001/api/1/tokens/0xea674fdde714fd979de3edf0f56aa9716b898ec8/partners',
     )
     response = request.send().response
-    assert response and response.status_code == 200
+    assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = [
         {
