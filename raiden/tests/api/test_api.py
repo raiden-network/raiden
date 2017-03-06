@@ -57,7 +57,7 @@ def test_api_open_and_deposit_channel(
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
-        data=channel_data_obj
+        json=channel_data_obj
     )
     response = request.send().response
 
@@ -84,7 +84,7 @@ def test_api_open_and_deposit_channel(
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
-        data=channel_data_obj
+        json=channel_data_obj
     )
     response = request.send().response
 
@@ -103,7 +103,7 @@ def test_api_open_and_deposit_channel(
     # let's deposit on the first channel
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(first_channel_address),
-        data={'balance': balance}
+        json={'balance': balance}
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
@@ -154,7 +154,7 @@ def test_api_open_close_and_settle_channel(
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
-        data=channel_data_obj
+        json=channel_data_obj
     )
     response = request.send().response
 
@@ -174,7 +174,7 @@ def test_api_open_close_and_settle_channel(
     # let's the close the channel
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(channel_address),
-        data={'state': 'closed'}
+        json={'state': 'closed'}
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
@@ -193,7 +193,7 @@ def test_api_open_close_and_settle_channel(
     # let's settle the channel
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(channel_address),
-        data={'state': 'settled'}
+        json={'state': 'settled'}
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
@@ -226,7 +226,7 @@ def test_api_channel_state_change_errors(
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
-        data=channel_data_obj
+        json=channel_data_obj
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
@@ -236,14 +236,14 @@ def test_api_channel_state_change_errors(
     # let's try to settle the channel (we are bad!)
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(channel_address),
-        data={'state': 'settled'}
+        json={'state': 'settled'}
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.CONFLICT
     # let's try to set a random state
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(channel_address),
-        data={'state': 'inlimbo'}
+        json={'state': 'inlimbo'}
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.BAD_REQUEST
@@ -251,13 +251,13 @@ def test_api_channel_state_change_errors(
     # ok now let's close and settle for real
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(channel_address),
-        data={'state': 'closed'}
+        json={'state': 'closed'}
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(channel_address),
-        data={'state': 'settled'}
+        json={'state': 'settled'}
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
@@ -265,7 +265,7 @@ def test_api_channel_state_change_errors(
     # and now let's try to settle again
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(channel_address),
-        data={'state': 'settled'}
+        json={'state': 'settled'}
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.CONFLICT
@@ -287,7 +287,7 @@ def test_api_tokens(
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
-        data=channel_data_obj
+        json=channel_data_obj
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
@@ -302,7 +302,7 @@ def test_api_tokens(
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
-        data=channel_data_obj
+        json=channel_data_obj
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
@@ -338,7 +338,7 @@ def test_query_partners_by_token(
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
-        data=channel_data_obj
+        json=channel_data_obj
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
@@ -348,7 +348,7 @@ def test_query_partners_by_token(
     channel_data_obj['partner_address'] = second_partner_address
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
-        data=channel_data_obj
+        json=channel_data_obj
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
@@ -360,7 +360,7 @@ def test_query_partners_by_token(
     channel_data_obj['token_address'] = '0x70faa28A6B8d6829a4b1E649d26eC9a2a39ba413'
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
-        data=channel_data_obj
+        json=channel_data_obj
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK

@@ -55,10 +55,7 @@ class ChannelsResource(BaseResource):
         """
         return self.rest_api.get_channel_list()
 
-    # e.g. this endpoint will accept the args from all locations:
-    # as JSON object, via form data. or as query string
-    # change according to what is desired here
-    @use_kwargs(put_schema, locations=('form',))
+    @use_kwargs(put_schema, locations=('json',))
     def put(self, **kwargs):
         return self.rest_api.open(**kwargs)
 
@@ -67,21 +64,16 @@ class ChannelsResourceByChannelAddress(BaseResource):
     _route = '/channels/<hexaddress:channel_address>'
 
     patch_schema = ChannelRequestSchema(
-        exclude=('token_address', 'partner_address', 'settle_timeout'),
+        exclude=('token_address', 'partner_address', 'settle_timeout', 'channel_address'),
     )
 
     def __init__(self, **kwargs):
         super(ChannelsResourceByChannelAddress, self).__init__(**kwargs)
 
-    @use_args(patch_schema, locations=('form',))
     @use_kwargs({'channel_address': AddressField()}, locations=('query',))
-    def patch(self, *args, **kwargs):
-        # TODO: Perhaps use a different schema here for patching so that the
-        #      channel address does not appear twice and we don't need to combine
-        #      dictionaries like this.
-        args = args[0]
-        args.update(**kwargs)
-        return self.rest_api.patch_channel(**args)
+    @use_kwargs(patch_schema, locations=('json',))
+    def patch(self, **kwargs):
+        return self.rest_api.patch_channel(**kwargs)
 
     @use_kwargs({'channel_address': AddressField()}, locations=('query',))
     def get(self, **kwargs):
