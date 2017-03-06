@@ -26,12 +26,12 @@ Channel Object
 ::
 
     {
-       'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-       'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-       'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-       'balance': 35000000,
-       'state': 'open',
-       'settle_timeout': 100
+       "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+       "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+       "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+       "balance": 35000000,
+       "state": "open",
+       "settle_timeout": 100
     }
 
 
@@ -93,12 +93,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-        'balance': 35000000,
-        'state': 'open',
-        'settle_timeout': 100
+        "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "balance": 35000000,
+        "state": "open",
+        "settle_timeout": 100
     }
 
 
@@ -126,12 +126,12 @@ Example Response
 
     [
         {
-            'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-            'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-            'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-            'balance': 35000000,
-            'state': 'open',
-            'settle_timeout': 100
+            "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+            "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+            "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+            "balance": 35000000,
+            "state": "open",
+            "settle_timeout": 100
         }, {
             ...
         }
@@ -168,12 +168,11 @@ Example Response
 
 ::
 
-    {
-        [{'address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'},
-         {'address': '0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6'},
+    [
+        {"address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"},
+        {"address": "0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6"},
          ...
-        ]
-    }
+    ]
 
 Possible Responses
 ^^^^^^^^^^^^^^^^^^
@@ -207,8 +206,8 @@ Example Response
 
     [
         {
-            'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',,
-            'channel': '/api/<version>/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+            "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",,
+            "channel": "/api/<version>/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226"
         }, {
             ...
         }
@@ -254,10 +253,10 @@ Example Request
 
 
     {
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-        'balance': 35000000,
-        'settle_timeout': 100
+        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "balance": 35000000,
+        "settle_timeout": 100
     }
 
 
@@ -273,12 +272,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-        'balance': 35000000,
-        'state': 'open',
-        'settle_timeout': 100
+        "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "balance": 35000000,
+        "state": "open",
+        "settle_timeout": 100
     }
 
 Possible Responses
@@ -309,7 +308,7 @@ Example Request
 ``PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/``
 
 with payload
-``{'state':'closed'}``
+``{"state":"closed"}``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -317,12 +316,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-        'balance': 35000000,
-        'state': 'closed',
-        'settle_timeout': 100
+        "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "balance": 35000000,
+        "state": "closed",
+        "settle_timeout": 100
     }
 
 Possible Responses
@@ -353,7 +352,7 @@ Example Request
 ``PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/``
 
 with payload
-``{'state':'settled'}``
+``{"state":"settled"}``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -361,12 +360,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-        'balance': 0,
-        'state': 'settled',
-        'settle_timeout': 100
+        "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "balance": 0,
+        "state": "settled",
+        "settle_timeout": 100
     }
 
 Possible Responses
@@ -398,7 +397,7 @@ Example Request
 
 with payload
 
-``{'balance': 100}``
+``{"balance": 100}``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -406,12 +405,12 @@ Example Response
 ::
 
     {
-        'channel_address': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
-        'partner_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-        'balance': 100,
-        'state': 'open',
-        'settle_timeout': 100
+        "channel_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "balance": 100,
+        "state": "open",
+        "settle_timeout": 100
     }
 
 Possible Responses
@@ -459,13 +458,13 @@ Example Response
 
     [
         {
-            'event_type': 'AssetAdded',
-            'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-            'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
+            "event_type": "AssetAdded",
+            "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+            "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
         }, {
-            'event_type': 'AssetAdded',
-            'token_address': '0x91337a300e0361bddb2e377dd4e88ccb7796663d'
-            'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
+            "event_type": "AssetAdded",
+            "token_address": "0x91337a300e0361bddb2e377dd4e88ccb7796663d"
+            "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
         }, {
             ...
         }
@@ -503,14 +502,14 @@ Example Response
 
     [
         {
-            'event_type': 'ChannelNewBalance',
-            'participant': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
-            'balance': 150000,
-            'block_number': 54388
+            "event_type": "ChannelNewBalance",
+            "participant": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+            "balance": 150000,
+            "block_number": 54388
         }, {
-            'event_type': 'TransferUpdated',
-            'token_address': '0x91337a300e0361bddb2e377dd4e88ccb7796663d',
-            'channel_manager_address': '0xc0ea08a2d404d3172d2add29a45be56da40e2949'
+            "event_type": "TransferUpdated",
+            "token_address": "0x91337a300e0361bddb2e377dd4e88ccb7796663d",
+            "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
         },
         ...
     ]
