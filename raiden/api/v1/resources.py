@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from webargs.flaskparser import use_args, use_kwargs, parser
+from webargs.flaskparser import use_kwargs, parser
 from flask_restful import Resource
 from flask import Blueprint
 from pyethapp.jsonrpc import address_encoder
-from raiden.api.v1.encoding import ChannelRequestSchema, AddressField
+from raiden.api.v1.encoding import ChannelRequestSchema
 
 
 def create_blueprint():
@@ -39,9 +39,6 @@ def parse_query_data(request, name, field):
 
 class ChannelsResource(BaseResource):
 
-    # define the route of the resource here:
-    _route = '/channels'
-
     put_schema = ChannelRequestSchema(
         exclude=('channel_address', 'state'),
     )
@@ -61,7 +58,6 @@ class ChannelsResource(BaseResource):
 
 
 class ChannelsResourceByChannelAddress(BaseResource):
-    _route = '/channels/<hexaddress:channel_address>'
 
     patch_schema = ChannelRequestSchema(
         exclude=('token_address', 'partner_address', 'settle_timeout', 'channel_address'),
@@ -79,7 +75,6 @@ class ChannelsResourceByChannelAddress(BaseResource):
 
 
 class TokensResource(BaseResource):
-    _route = '/tokens'
 
     def __init__(self, **kwargs):
         super(TokensResource, self).__init__(**kwargs)
@@ -92,7 +87,6 @@ class TokensResource(BaseResource):
 
 
 class PartnersResourceByTokenAddress(BaseResource):
-    _route = '/tokens/<hexaddress:token_address>/partners'
 
     def __init__(self, **kwargs):
         super(PartnersResourceByTokenAddress, self).__init__(**kwargs)

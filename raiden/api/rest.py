@@ -5,8 +5,6 @@ from flask import Flask, make_response, url_for
 from flask_restful import Api, abort
 from webargs.flaskparser import parser
 
-
-from pyethapp.jsonrpc import address_encoder
 from raiden.api.v1.encoding import (
     EventsListSchema,
     ChannelSchema,
@@ -51,20 +49,11 @@ class APIServer(object):
         'hexaddress': HexAddressConverter
     }
 
-    # default resource classes will be added to the routes on initialisation
-    # and will be exposed once the RestfulAPI is running
-    _default_resource_classes = [
-        ChannelsResource,
-        ChannelsResourceByChannelAddress,
-        TokensResource,
-        PartnersResourceByTokenAddress
-    ]
-
     def __init__(self, rest_api):
         self.rest_api = rest_api
         self.blueprint = create_blueprint()
         if self.rest_api.version == 1:
-            self.flask_api_middleware = Api(
+            self.flask_api_context = Api(
                 self.blueprint,
                 prefix="/api/1",
             )
@@ -77,8 +66,16 @@ class APIServer(object):
         self.flask_app.register_blueprint(self.blueprint)
 
     def _add_default_resources(self):
-        for klass in self._default_resource_classes:
-            self.add_resource(klass)
+        self.add_resource(ChannelsResource, '/channels')
+        self.add_resource(
+            ChannelsResourceByChannelAddress,
+            '/channels/<hexaddress:channel_address>'
+        )
+        self.add_resource(TokensResource, '/tokens')
+        self.add_resource(
+            PartnersResourceByTokenAddress,
+            '/tokens/<hexaddress:token_address>/partners'
+        )
 
     def _register_type_converters(self, additional_mapping=None):
         # an additional mapping concats to class-mapping and will overwrite existing keys
@@ -90,15 +87,17 @@ class APIServer(object):
         for key, value in mapping.items():
             self.flask_app.url_map.converters[key] = value
 
-    def add_resource(self, resource_cls):
-        self.flask_api_middleware.add_resource(
+    def add_resource(self, resource_cls, route):
+        self.flask_api_context.add_resource(
             resource_cls,
-            resource_cls._route,
+            route,
             resource_class_kwargs={'rest_api_object': self.rest_api}
         )
 
     def run(self, port, **kwargs):
-        self.flask_app.run(port=port, **kwargs)
+        if 'host' in kwargs:
+            raise ValueError('The server host is hardcoded, can\'t set it')
+        self.flask_app.run(port=port, host='localhost', **kwargs)
 
 
 class RestAPI(object):
