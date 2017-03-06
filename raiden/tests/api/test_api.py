@@ -247,6 +247,19 @@ def test_api_channel_state_change_errors(
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.BAD_REQUEST
+    # let's try to set both new state and balance
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        json={'state': 'closed', 'balance': 200}
+    )
+    response = request.send().response
+    assert response is not None and response.status_code == httplib.CONFLICT
+    # let's try to path with no arguments
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+    )
+    response = request.send().response
+    assert response is not None and response.status_code == httplib.BAD_REQUEST
 
     # ok now let's close and settle for real
     request = grequests.patch(
@@ -261,6 +274,14 @@ def test_api_channel_state_change_errors(
     )
     response = request.send().response
     assert response and response.status_code == httplib.OK
+
+    # let's try to deposit to a settled channel
+    request = grequests.patch(
+        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        json={'balance': 500}
+    )
+    response = request.send().response
+    assert response is not None and response.status_code == httplib.CONFLICT
 
     # and now let's try to settle again
     request = grequests.patch(
