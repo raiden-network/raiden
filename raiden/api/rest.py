@@ -206,10 +206,27 @@ class RestAPI(object):
         return result
 
     def patch_channel(self, channel_address, balance=None, state=None):
+        if balance is not None and state is not None:
+            return make_response(
+                'Can not update balance and change channel state at the same time',
+                httplib.CONFLICT,
+            )
+        elif balance is None and state is None:
+            return make_response(
+                'Nothing to do. Should either provide \'balance\' or \'state\' argument',
+                httplib.BAD_REQUEST,
+            )
+
         # find the channel
         channel = self.raiden_api.get_channel(channel_address)
+        current_state = channel.state
         # if we patch with `balance` it's a deposit
-        if balance is not None and state is None:
+        if balance is not None:
+            if current_state != 'open':
+                return make_response(
+                    'Can\'t deposit on a closed channel',
+                    httplib.CONFLICT,
+                )
             raiden_service_result = self.raiden_api.deposit(
                 channel.token_address,
                 channel.partner_address,
@@ -217,8 +234,7 @@ class RestAPI(object):
             )
             return self.channel_schema.dumps(raiden_service_result)
 
-        elif state is not None and balance is None:
-            current_state = channel.state
+        else:
             if state == 'closed':
                 if current_state != 'open':
                     return make_response(
@@ -246,11 +262,6 @@ class RestAPI(object):
                     'Provided invalid channel state {}'.format(state),
                     httplib.BAD_REQUEST,
                 )
-
-        return make_response(
-            'Can not update balance and change channel state at the same time',
-            httplib.CONFLICT,
-        )
 
 
 @parser.error_handler
