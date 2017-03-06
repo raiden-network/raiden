@@ -70,12 +70,10 @@ class ChannelsResourceByChannelAddress(BaseResource):
     def __init__(self, **kwargs):
         super(ChannelsResourceByChannelAddress, self).__init__(**kwargs)
 
-    @use_kwargs({'channel_address': AddressField()}, locations=('query',))
     @use_kwargs(patch_schema, locations=('json',))
     def patch(self, **kwargs):
         return self.rest_api.patch_channel(**kwargs)
 
-    @use_kwargs({'channel_address': AddressField()}, locations=('query',))
     def get(self, **kwargs):
         return self.rest_api.get_channel(**kwargs)
 
