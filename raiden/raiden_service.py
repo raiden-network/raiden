@@ -28,7 +28,7 @@ from raiden.utils import (
     isaddress,
     pex,
     GLOBAL_CTX,
-    netting_channel_to_api_dict
+    channel_to_api_dict
 )
 
 
@@ -407,7 +407,8 @@ class RaidenAPI(object):
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         token_manager.register_channel(netting_channel, reveal_timeout)
 
-        return netting_channel_to_api_dict(netting_channel, self.raiden.address)
+        channel = token_manager.get_channel_by_contract_address(netcontract_address)
+        return channel_to_api_dict(channel)
 
     def deposit(self, token_address, partner_address, amount):
         """ Deposit `amount` in the channel with the peer at `partner_address` and the
@@ -415,7 +416,7 @@ class RaidenAPI(object):
         """
         token_manager = self.raiden.get_manager_by_token_address(token_address.decode('hex'))
         channel = token_manager.get_channel_by_partner_address(partner_address.decode('hex'))
-        netcontract_address = channel.external_state.netting_channel.address
+        netcontract_address = channel.channel_address
         assert len(netcontract_address)
 
         # Obtain a reference to the token and approve the amount for funding
@@ -434,7 +435,7 @@ class RaidenAPI(object):
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         netting_channel.deposit(self.raiden.address, amount)
 
-        return netting_channel_to_api_dict(netting_channel, self.raiden.address)
+        return channel_to_api_dict(channel)
 
     def exchange(self, from_token, from_amount, to_token, to_amount, target_address):
         from_token_bin = safe_address_decode(from_token)
@@ -611,7 +612,7 @@ class RaidenAPI(object):
             second_transfer,
         )
 
-        return netting_channel_to_api_dict(netting_channel, self.raiden.address)
+        return channel_to_api_dict(channel)
 
     def settle(self, token_address, partner_address):
         """ Settle a closed channel with `partner_address` for the given `token_address`. """
@@ -638,7 +639,7 @@ class RaidenAPI(object):
             raise InvalidState('settlement period is not yet over.')
 
         netting_channel.settle()
-        return netting_channel_to_api_dict(netting_channel, self.raiden.address)
+        return channel_to_api_dict(channel)
 
 
 class RaidenMessageHandler(object):

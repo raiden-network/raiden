@@ -4,20 +4,20 @@ import grequests
 import httplib
 
 from raiden.tests.utils.apitestcontext import decode_response
-from raiden.utils import netting_channel_to_api_dict, bytes_to_hexstr
+from raiden.utils import channel_to_api_dict, bytes_to_hexstr
 from raiden.tests.utils.transfer import channel
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_netting_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
+def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
     channel0 = channel(app0, app1, tokens_addresses[0])
 
     netting_address = channel0.external_state.netting_channel.address
     netting_channel = app0.raiden.chain.netting_channel(netting_address)
 
-    result = netting_channel_to_api_dict(netting_channel, app0.raiden.address)
+    result = channel_to_api_dict(channel0)
     expected_result = {
         "channel_address": bytes_to_hexstr(netting_channel.address),
         "token_address": bytes_to_hexstr(channel0.token_address),

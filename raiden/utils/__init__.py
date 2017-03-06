@@ -166,27 +166,15 @@ def bytes_to_hexstr(b):
     return '0x' + b.encode('hex')
 
 
-def netting_channel_to_api_dict(nettingchannel, our_address):
-    """Takes in a NettingChannel Object and turns it into a dictionary for
+def channel_to_api_dict(channel):
+    """Takes in a Channel Object and turns it into a dictionary for
     usage in the REST API.
-
-    Note: `our_address` is required since it's not part of either the mock or
-          tester implementation of NettingChannel. Only the rpc NettingChannel
-          knows its node address.
     """
-
-    state = 'open'
-    if not nettingchannel.isopen():
-        state = 'closed'
-    if nettingchannel.settled():
-        state = 'settled'
-
-    details = nettingchannel.detail(our_address)
     return {
-        "channel_address": bytes_to_hexstr(nettingchannel.address),
-        "token_address": bytes_to_hexstr(nettingchannel.token_address()),
-        "partner_address": bytes_to_hexstr(details['partner_address']),
-        "settle_timeout": details['settle_timeout'],
-        "balance": details['our_balance'],
-        "state": state
+        "channel_address": bytes_to_hexstr(channel.channel_address),
+        "token_address": bytes_to_hexstr(channel.token_address),
+        "partner_address": bytes_to_hexstr(channel.partner_address),
+        "settle_timeout": channel.settle_timeout,
+        "balance": channel.contract_balance,
+        "state": channel.state
     }
