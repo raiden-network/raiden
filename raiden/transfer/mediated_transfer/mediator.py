@@ -114,7 +114,7 @@ def is_channel_close_needed(transfer_pair, block_number):
     payee_received = transfer_pair.payee_state in STATE_TRANSFER_PAID
     payer_payed = transfer_pair.payer_state in STATE_TRANSFER_PAID
 
-    payer_channel_open = transfer_pair.payer_route.state == 'available'
+    payer_channel_open = transfer_pair.payer_route.state == 'opened'
     already_closing = transfer_pair.payer_state == 'payer_waiting_close'
 
     safe_to_wait = is_safe_to_wait(
@@ -456,10 +456,13 @@ def events_for_revealsecret(transfers_pair, our_address):
 
         if payee_secret and not payer_secret:
             pair.payer_state = 'payer_secret_revealed'
+            payer_transfer = pair.payer_transfer
+            payer_route = pair.payer_route
             reveal_secret = SendRevealSecret(
-                pair.payer_transfer.identifier,
-                pair.payer_transfer.secret,
-                pair.payer_route.node_address,
+                payer_transfer.identifier,
+                payer_transfer.secret,
+                payer_transfer.token,
+                payer_route.node_address,
                 our_address,
             )
             events.append(reveal_secret)
@@ -474,7 +477,7 @@ def events_for_balanceproof(transfers_pair, block_number):
     for pair in reversed(transfers_pair):
         payee_knows_secret = pair.payee_state in STATE_SECRET_KNOWN
         payee_payed = pair.payee_state in STATE_TRANSFER_PAID
-        payee_channel_open = pair.payee_route.state == 'available'
+        payee_channel_open = pair.payee_route.state == 'opened'
 
         # XXX: All nodes must close the channel and withdraw on-chain if the
         # lock is nearing it's expiration block, what should be the strategy
@@ -487,7 +490,10 @@ def events_for_balanceproof(transfers_pair, block_number):
             pair.payee_state = 'payee_balance_proof'
             balance_proof = SendBalanceProof(
                 pair.payee_transfer.identifier,
+                pair.payee_route.channel_address,
+                pair.payee_transfer.token,
                 pair.payee_route.node_address,
+                pair.payee_transfer.secret,
             )
             events.append(balance_proof)
 
@@ -531,7 +537,7 @@ def events_for_withdraw(transfers_pair):
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
     for pair in pending_transfers_pairs:
-        payer_channel_open = pair.payer_route.state == 'available'
+        payer_channel_open = pair.payer_route.state == 'opened'
         secret_known = pair.payer_transfer.secret is not None
 
         if not payer_channel_open and secret_known:

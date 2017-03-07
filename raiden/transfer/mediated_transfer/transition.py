@@ -12,10 +12,10 @@ def update_route(next_state, route_state_change):
 
     # TODO: what if the route that changed is the current route?
 
-    if new_route.state == 'unavailable':
+    if new_route.state != 'opened':
         available_routes.pop(available_idx)
 
-    elif new_route.state == 'available':
+    elif new_route.state == 'opened':
         if available_idx:
             # overwrite it, balance might have changed
             available_routes[available_idx] = new_route

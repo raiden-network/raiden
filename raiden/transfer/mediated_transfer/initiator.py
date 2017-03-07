@@ -20,7 +20,9 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.mediated_transfer.events import (
+    EventTransferCompleted,
     EventTransferFailed,
+    SendBalanceProof,
     SendMediatedTransfer,
     SendRevealSecret,
 )
@@ -206,10 +208,12 @@ def handle_secretrequest(state, state_change):
         #
         # Note: The target might be the first hop
         #
+        transfer = state.transfer
         reveal_secret = SendRevealSecret(
-            state.transfer.identifier,
-            state.transfer.secret,
-            state.transfer.target,
+            transfer.identifier,
+            transfer.secret,
+            transfer.token,
+            transfer.target,
             state.our_address,
         )
 
@@ -223,17 +227,31 @@ def handle_secretrequest(state, state_change):
 
 
 def handle_secretreveal(state, state_change):
+    """ Send a balance proof to the next hop with the current mediated transfer
+    lock removed and the balance updated.
+
+    Wait for the node to notify it knowns the secret and then send a new merkle
+    tree with the lock from the current mediated transfer removed.
+    """
     if state_change.sender == state.route.node_address:
         # next hop learned the secret, unlock the token locally and send the
         # withdraw message to next hop
-        unlock_lock = SendRevealSecret(
-            state.transfer.identifier,
-            state.transfer.secret,
+        transfer = state.transfer
+        unlock_lock = SendBalanceProof(
+            transfer.identifier,
+            state.route.channel_address,
+            transfer.token,
             state.route.node_address,
-            state.our_address,
+            transfer.secret,
         )
 
-        iteration = TransitionResult(None, [unlock_lock])
+        completed = EventTransferCompleted(
+            transfer.identifier,
+            transfer.secret,
+            transfer.hashlock,
+        )
+
+        iteration = TransitionResult(None, [unlock_lock, completed])
     else:
         iteration = TransitionResult(state, list())
 
@@ -247,6 +265,13 @@ def state_transition(state, state_change):
         state: The current State that is transitioned from.
         state_change: The state_change that will be applied.
     """
+
+    # TODO: Add synchronization for expired locks.
+    # Transfers added to the canceled list by an ActionCancelRoute are stale in
+    # the channels merkle tree, while this doesn't increase the messages sizes
+    # nor does it interfere with the guarantees of finality it increases memory
+    # usage for each end, since the full merkle tree must be saved to compute
+    # it's root.
 
     if state is None:
         if isinstance(state_change, ActionInitInitiator):

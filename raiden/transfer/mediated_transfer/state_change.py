@@ -111,10 +111,8 @@ class ReceiveSecretRequest(StateChange):
 
 class ReceiveSecretReveal(StateChange):
     """ A SecretReveal message received. """
-    def __init__(self, identifier, secret, target, sender):
-        self.identifier = identifier
+    def __init__(self, secret, sender):
         self.secret = secret
-        self.target = target
         self.sender = sender
 
 

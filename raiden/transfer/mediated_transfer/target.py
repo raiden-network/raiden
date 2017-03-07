@@ -44,7 +44,7 @@ def events_for_close(from_transfer, from_route, block_number):
 
 def events_for_withdraw(from_transfer, from_route):
     """ Withdraw on the from_channel if it is closed and the secret is known. """
-    channel_open = from_route.state == 'available'
+    channel_open = from_route.state == 'opened'
 
     if not channel_open and from_transfer.secret is not None:
         withdraw = ContractSendWithdraw(
@@ -99,10 +99,8 @@ def handle_secretreveal(state, state_change):
     if valid_secret:
         state.from_transfer.secret = state_change.secret
         state.state = 'reveal_secret'
-        reveal = ReceiveSecretReveal(
-            state.from_transfer.identifier,
+        reveal = ReceiveSecretReveal(  # FIXME: this should be SendSecretReval
             state.from_transfer.secret,
-            state.from_route.node_address,
             state.our_address,
         )
 

@@ -293,7 +293,7 @@ class RestAPI(object):
         current_state = channel.state
         # if we patch with `balance` it's a deposit
         if balance is not None:
-            if current_state != 'open':
+            if current_state != 'opened':
                 return make_response(
                     "Can't deposit on a closed channel",
                     httplib.CONFLICT,
@@ -307,7 +307,7 @@ class RestAPI(object):
 
         else:
             if state == 'closed':
-                if current_state != 'open':
+                if current_state != 'opened':
                     return make_response(
                         httplib.CONFLICT,
                         'Attempted to close an already closed channel'

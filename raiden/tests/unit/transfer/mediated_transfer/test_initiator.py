@@ -24,7 +24,9 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
 )
 from raiden.transfer.mediated_transfer.events import (
+    EventTransferCompleted,
     EventTransferFailed,
+    SendBalanceProof,
     SendMediatedTransfer,
     SendRevealSecret,
 )
@@ -86,14 +88,15 @@ def make_init_statechange(
         block_number=1,
         our_address=factories.ADDR,
         secret_generator=None,
-        identifier=0):
+        identifier=0,
+        token=factories.UNIT_TOKEN_ADDRESS):
 
     if secret_generator is None:
         secret_generator = SequenceGenerator()
 
     init_state_change = ActionInitInitiator(
         our_address,
-        make_hashlock_transfer(amount, target=target, identifier=identifier),
+        make_hashlock_transfer(amount, target=target, identifier=identifier, token=token),
         RoutesState(routes),
         secret_generator,
         block_number,
@@ -109,7 +112,8 @@ def make_initiator_state(
         block_number=1,
         our_address=factories.ADDR,
         secret_generator=None,
-        identifier=0):
+        identifier=0,
+        token=factories.UNIT_TOKEN_ADDRESS):
 
     init_state_change = make_init_statechange(
         routes,
@@ -118,7 +122,8 @@ def make_initiator_state(
         block_number,
         our_address,
         secret_generator,
-        identifier=identifier
+        identifier=identifier,
+        token=token,
     )
 
     inital_state = None
@@ -294,13 +299,14 @@ def test_state_wait_secretrequest_valid():
 
 
 def test_state_wait_unlock_valid():
-    identifier = identifier = 1
+    identifier = 1
     amount = factories.UNIT_TRANSFER_AMOUNT
     block_number = 1
     mediator_address = factories.HOP1
     target_address = factories.HOP2
     our_address = factories.ADDR
     secret_generator = SequenceGenerator()
+    token = factories.UNIT_TOKEN_ADDRESS
 
     routes = [factories.make_route(mediator_address, available_balance=amount)]
     current_state = make_initiator_state(
@@ -309,6 +315,8 @@ def test_state_wait_unlock_valid():
         block_number=block_number,
         our_address=our_address,
         secret_generator=secret_generator,
+        identifier=identifier,
+        token=token,
     )
 
     secret = secret_generator.secrets[0]
@@ -318,6 +326,7 @@ def test_state_wait_unlock_valid():
     current_state.revealsecret = SendRevealSecret(
         identifier,
         secret,
+        token,
         target_address,
         our_address,
     )
@@ -328,15 +337,22 @@ def test_state_wait_unlock_valid():
     )
 
     state_change = ReceiveSecretReveal(
-        identifier=identifier,
         secret=secret,
-        target=our_address,
         sender=mediator_address,
     )
     events = initiator_state_machine.dispatch(state_change)
-    assert len(events) == 1
-    assert isinstance(events[0], SendRevealSecret)
-    assert events[0].target == mediator_address
+    assert len(events) == 2
+
+    # The initiator must send a synchronizing message to it's partner
+    assert any(isinstance(e, SendBalanceProof) for e in events)
+    # Once the transfer is completed a notifing event must be emitted
+    assert any(isinstance(e, EventTransferCompleted) for e in events)
+
+    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
+    complete = next(e for e in events if isinstance(e, EventTransferCompleted))
+
+    assert balance_proof.target == mediator_address
+    assert complete.identifier == identifier
     assert initiator_state_machine.current_state is None, 'state must be cleaned'
 
 
@@ -348,6 +364,7 @@ def test_state_wait_unlock_invalid():
     target_address = factories.HOP2
     our_address = factories.ADDR
     secret_generator = SequenceGenerator()
+    token = factories.UNIT_TOKEN_ADDRESS
 
     routes = [factories.make_route(mediator_address, available_balance=amount)]
     current_state = make_initiator_state(
@@ -356,6 +373,7 @@ def test_state_wait_unlock_invalid():
         block_number=block_number,
         our_address=our_address,
         secret_generator=secret_generator,
+        token=token,
     )
 
     secret = secret_generator.secrets[0]
@@ -364,6 +382,7 @@ def test_state_wait_unlock_invalid():
     current_state.revealsecret = SendRevealSecret(
         identifier,
         secret,
+        token,
         target_address,
         our_address,
     )
@@ -376,10 +395,7 @@ def test_state_wait_unlock_invalid():
     )
 
     state_change = ReceiveSecretReveal(
-        identifier=identifier,
         secret=secret,
-        # would need to be mediator_address
-        target=our_address,
         sender=factories.ADDR,
     )
     events = initiator_state_machine.dispatch(state_change)
