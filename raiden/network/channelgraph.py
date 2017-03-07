@@ -55,11 +55,15 @@ def make_graph(edge_list):
     return graph
 
 
-def route_to_state(route):
+def route_to_routestate(route):
     path = route.path
+    next_hop = path[1]
     channel = route.channel
 
-    next_hop = path[1]
+    return channel_to_routestate(channel, next_hop)
+
+
+def channel_to_routestate(channel, node_address):
     state = channel.state
     chanel_address = channel.external_state.netting_channel.address
     distributable = channel.distributable
@@ -73,7 +77,7 @@ def route_to_state(route):
 
     state = RouteState(
         state=state,
-        node_address=next_hop,
+        node_address=node_address,
         chanel_address=chanel_address,
         available_balance=distributable,
         settle_timeout=settle_timeout,

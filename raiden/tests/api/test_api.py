@@ -36,7 +36,7 @@ def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
         'partner_address': app1.raiden.address,
         'settle_timeout': settle_timeout,
         'balance': channel0.contract_balance,
-        'state': 'open'
+        'state': 'opened'
     }
     assert result == expected_result
 
@@ -76,7 +76,7 @@ def test_api_open_and_deposit_channel(
     response = decode_response(response)
     expected_response = channel_data_obj
     expected_response['balance'] = 0
-    expected_response['state'] = 'open'
+    expected_response['state'] = 'opened'
     # can't know the channel address beforehand but make sure we get one
     assert 'channel_address' in response
     first_channel_address = response['channel_address']
@@ -102,7 +102,7 @@ def test_api_open_and_deposit_channel(
     response = decode_response(response)
     expected_response = channel_data_obj
     expected_response['balance'] = balance
-    expected_response['state'] = 'open'
+    expected_response['state'] = 'opened'
     # can't know the channel address beforehand but make sure we get one
     assert 'channel_address' in response
     expected_response['channel_address'] = response['channel_address']
@@ -122,7 +122,7 @@ def test_api_open_and_deposit_channel(
         'partner_address': first_partner_address,
         'token_address': token_address,
         'settle_timeout': settle_timeout,
-        'state': 'open',
+        'state': 'opened',
         'balance': balance
     }
     assert response == expected_response
@@ -139,7 +139,7 @@ def test_api_open_and_deposit_channel(
         'partner_address': second_partner_address,
         'token_address': token_address,
         'settle_timeout': settle_timeout,
-        'state': 'open',
+        'state': 'opened',
         'balance': balance
     }
     assert response == expected_response
@@ -169,7 +169,7 @@ def test_api_open_close_and_settle_channel(
     response = decode_response(response)
     expected_response = channel_data_obj
     expected_response['balance'] = balance
-    expected_response['state'] = 'open'
+    expected_response['state'] = 'opened'
     # can't know the channel address beforehand but make sure we get one
     assert 'channel_address' in response
     channel_address = response['channel_address']

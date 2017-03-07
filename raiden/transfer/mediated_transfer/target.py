@@ -186,6 +186,8 @@ def state_transition(state, state_change):
     """ State machine for the target node of a mediated transfer. """
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 
+    iteration = TransitionResult(state, list())
+
     if state is None:
         if isinstance(state_change, ActionInitTarget):
             iteration = handle_inittarget(state_change)

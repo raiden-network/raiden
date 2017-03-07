@@ -66,11 +66,13 @@ def make_route(
 
 def make_transfer(
         amount,
+        initiator,
         target,
         expiration,
         secret=None,
         hashlock=UNIT_HASHLOCK,
-        identifier=1):
+        identifier=1,
+        token=UNIT_TOKEN_ADDRESS):
 
     if secret is not None:
         assert sha3(secret) == hashlock
@@ -78,7 +80,8 @@ def make_transfer(
     transfer = LockedTransferState(
         identifier,
         amount,
-        UNIT_TOKEN_ADDRESS,
+        token,
+        initiator,
         target,
         expiration,
         hashlock=hashlock,

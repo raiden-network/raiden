@@ -93,6 +93,10 @@ class RoutesState(State):
     )
 
     def __init__(self, available_routes):
+        # consume possible generators and make a copy of the routes since the
+        # tasks will modify this list in-place
+        available_routes = list(available_routes)
+
         if not all(isinstance(r, RouteState) for r in available_routes):
             raise ValueError('available_routes must be comprised of RouteState objects only.')
 

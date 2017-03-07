@@ -2,12 +2,10 @@
 from __future__ import print_function
 
 import gevent
-from gevent.event import AsyncResult
 
 from raiden.raiden_service import create_default_identifier
 from raiden.utils import sha3
 from raiden.mtree import merkleroot
-from raiden.tasks import StartMediatedTransferTask
 
 
 def channel(app0, app1, token):
@@ -80,28 +78,9 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
     graph = initiator_app.raiden.channelgraphs[token]
     has_channel = initiator_app.raiden.address in graph.partneraddress_channel
 
-    # api.transfer() would do a DirectTransfer
     if has_channel:
-        # Explicitly call the default identifier creation since this mock
-        # function here completely skips the `transfer_async()` call.
-        if not identifier:
-            identifier = create_default_identifier(
-                initiator_app.address,
-                token,
-                target_app.raiden.address,
-            )
+        raise NotImplementedError("There is a direct channel, the mediated transfer won't be used")
 
-        result = AsyncResult()
-        task = StartMediatedTransferTask(
-            initiator_app.raiden,
-            token,
-            amount,
-            identifier,
-            target_app.raiden.address,
-            result,
-        )
-        task.start()
-        result.wait()
     else:
         initiator_app.raiden.api.transfer(
             token,

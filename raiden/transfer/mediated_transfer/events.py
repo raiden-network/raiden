@@ -10,6 +10,7 @@ def mediatedtransfer(transfer, recipient):
         transfer.token,
         transfer.amount,
         transfer.hashlock,
+        transfer.initiator,
         transfer.target,
         transfer.expiration,
         recipient,
@@ -24,6 +25,7 @@ class SendMediatedTransfer(Event):
             token,
             amount,
             hashlock,
+            initiator,
             target,
             expiration,
             node_address):
@@ -32,6 +34,7 @@ class SendMediatedTransfer(Event):
         self.token = token
         self.amount = amount
         self.hashlock = hashlock
+        self.initiator = initiator
         self.target = target
         self.expiration = expiration
         self.node_address = node_address
@@ -50,11 +53,11 @@ class SendRevealSecret(Event):
         receiver to the sender, so when the secret is learned it is not yet
         time to update the balance.
     """
-    def __init__(self, identifier, secret, token, target, sender):
+    def __init__(self, identifier, secret, token, receiver, sender):
         self.identifier = identifier
         self.secret = secret
         self.token = token
-        self.target = target
+        self.receiver = receiver
         self.sender = sender
 
 
@@ -76,11 +79,11 @@ class SendBalanceProof(Event):
         the merkle root is only update by the receiver once a balance proof
         message is received.
     """
-    def __init__(self, identifier, channel_address, token, target, secret):
+    def __init__(self, identifier, channel_address, token, receiver, secret):
         self.identifier = identifier
         self.channel_address = channel_address
         self.token = token
-        self.target = target
+        self.receiver = receiver
 
         # XXX: Secret is not required for the balance proof to dispatch the message
         self.secret = secret
