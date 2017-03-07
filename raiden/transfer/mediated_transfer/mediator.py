@@ -299,6 +299,7 @@ def next_transfer_pair(payer_route, payer_transfer, routes_state, timeout_blocks
             payer_transfer.identifier,
             payer_transfer.amount,
             payer_transfer.token,
+            payer_transfer.initiator,
             payer_transfer.target,
             lock_expiration,
             payer_transfer.hashlock,
@@ -313,7 +314,7 @@ def next_transfer_pair(payer_route, payer_transfer, routes_state, timeout_blocks
         )
 
         mediated_events = [
-            mediatedtransfer(payee_transfer, payer_route.node_address),
+            mediatedtransfer(payee_transfer, payee_route.node_address),
         ]
 
     return (
@@ -842,6 +843,8 @@ def state_transition(state, state_change):
     #   may only reject to mediate before hand. This is because the mediator
     #   doesn't control the secret reveal and needs to wait for the lock
     #   expiration before safely discarding the transfer.
+
+    iteration = TransitionResult(state, list())
 
     if state is None:
         if isinstance(state_change, ActionInitMediator):

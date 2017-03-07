@@ -128,6 +128,7 @@ def try_new_route(state):
             identifier,
             state.transfer.amount,
             state.transfer.token,
+            state.transfer.initiator,
             state.transfer.target,
             lock_expiration,
             hashlock,
@@ -139,6 +140,7 @@ def try_new_route(state):
             transfer.token,
             transfer.amount,
             transfer.hashlock,
+            state.our_address,
             transfer.target,
             lock_expiration,
             try_route.node_address,
@@ -223,6 +225,9 @@ def handle_secretrequest(state, state_change):
     elif invalid_secretrequest:
         iteration = cancel_current_route(state)
 
+    else:
+        iteration = TransitionResult(state, list())
+
     return iteration
 
 
@@ -272,6 +277,8 @@ def state_transition(state, state_change):
     # nor does it interfere with the guarantees of finality it increases memory
     # usage for each end, since the full merkle tree must be saved to compute
     # it's root.
+
+    iteration = TransitionResult(state, list())
 
     if state is None:
         if isinstance(state_change, ActionInitInitiator):

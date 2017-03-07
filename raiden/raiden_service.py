@@ -3,7 +3,7 @@
 import logging
 import random
 import itertools
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 
 import gevent
 from gevent.event import AsyncResult
@@ -24,7 +24,6 @@ from raiden.tasks import (
     AlarmTask,
     EndMediatedTransferTask,
     HealthcheckTask,
-    MediateTransferTask,
 )
 from raiden.transfer.architecture import (
     StateManager,
@@ -34,12 +33,17 @@ from raiden.transfer.state import (
 )
 from raiden.transfer.mediated_transfer import (
     initiator,
+    mediator,
 )
 from raiden.transfer.mediated_transfer.state import (
+    lockedtransfer_from_message,
+    InitiatorState,
+    MediatorState,
     LockedTransferState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
+    ActionInitMediator,
     ContractReceiveBalance,
     ContractReceiveClosed,
     ContractReceiveNewChannel,
@@ -71,7 +75,8 @@ from raiden.exceptions import (
     InsufficientFunds,
 )
 from raiden.network.channelgraph import (
-    route_to_state,
+    channel_to_routestate,
+    route_to_routestate,
     ChannelGraph,
     ChannelDetail,
 )
@@ -119,8 +124,9 @@ class RandomSecretGenerator(object):  # pylint: disable=too-few-public-methods
     next = __next__
 
 
-class RaidenService(object):  # pylint: disable=too-many-instance-attributes
+class RaidenService(object):
     """ A Raiden node. """
+    # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
     def __init__(self, chain, private_key_bin, transport, discovery, config):
         # pylint: disable=too-many-arguments
@@ -640,6 +646,9 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             return async_result
 
     def _mediated_transfer(self, token_address, amount, identifier, target):
+        return self.start_mediated_transfer(token_address, amount, identifier, target)
+
+    def start_mediated_transfer(self, token_address, amount, identifier, target):
         # pylint: disable=too-many-locals
         graph = self.channelgraphs[token_address]
         routes = graph.get_best_routes(
@@ -651,7 +660,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         available_routes = [
             route
-            for route in map(route_to_state, routes)
+            for route in map(route_to_routestate, routes)
             if route.state == 'opened'
         ]
 
@@ -664,6 +673,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             identifier=identifier,
             amount=amount,
             token=token_address,
+            initiator=self.address,
             target=target,
             expiration=None,
             hashlock=None,
@@ -706,6 +716,50 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         self.identifier_result[identifier].append(async_result)
 
         return async_result
+
+    def mediate_mediated_transfer(self, message):
+        # pylint: disable=too-many-locals
+        identifier = message.identifier
+        amount = message.lock.amount
+        target = message.target
+        token = message.token
+        graph = self.channelgraphs[token]
+        routes = graph.get_best_routes(
+            self.address,
+            target,
+            amount,
+            lock_timeout=None,
+        )
+
+        available_routes = [
+            route
+            for route in map(route_to_routestate, routes)
+            if route.state == 'opened'
+        ]
+
+        from_channel = graph.partneraddress_channel[message.sender]
+        from_route = channel_to_routestate(from_channel, message.sender)
+
+        our_address = self.address
+        from_transfer = lockedtransfer_from_message(message)
+        route_state = RoutesState(available_routes)
+        block_number = self.get_block_number()
+
+        init_mediator = ActionInitMediator(
+            our_address,
+            from_transfer,
+            route_state,
+            from_route,
+            block_number,
+        )
+
+        state_manager = StateManager(mediator.state_transition, None)
+        all_events = state_manager.dispatch(init_mediator)
+
+        for event in all_events:
+            self.state_machine_event_handler.on_event(event)
+
+        self.identifier_statemanager[identifier].append(state_manager)
 
 
 class RaidenAPI(object):
@@ -1069,7 +1123,12 @@ class RaidenMessageHandler(object):
             for graph in self.raiden.channelgraphs.itervalues():
                 channel = graph.partneraddress_channel.get(sender)
 
-                if channel is not None and channel.partner_state.balance_proof.is_unclaimed(hashlock):
+                unclaimed = (
+                    channel is not None and
+                    channel.partner_state.balance_proof.is_unclaimed(hashlock)
+                )
+
+                if unclaimed:
                     channel.release_lock(secret)
 
             state_change = ReceiveSecretReveal(secret, sender)
@@ -1147,10 +1206,23 @@ class RaidenMessageHandler(object):
             expiration = message.lock.expiration
             hashlock = message.lock.hashlock
 
+            manager = self.raiden.identifier_statemanager[identifier]
+
+            if isinstance(manager.current_state, InitiatorState):
+                initiator = self.raiden.address
+
+            elif isinstance(manager.current_state, MediatorState):
+                initiator = manager.current_state.transfers_pair[0].payee_transfer.initiator
+
+            else:
+                # TODO: emit a proper event for the reject message
+                return
+
             transfer_state = LockedTransferState(
                 identifier=identifier,
                 amount=amount,
                 token=token_address,
+                initiator=initiator,
                 target=target,
                 expiration=expiration,
                 hashlock=hashlock,
@@ -1190,6 +1262,9 @@ class RaidenMessageHandler(object):
         channel.register_transfer(message)
 
     def message_mediatedtransfer(self, message):
+        # TODO: reject mediated transfer that the hashlock/identifier is known,
+        # this is a downstream bug and the transfer is doing cycles
+
         token_address = message.token
         graph = self.raiden.channelgraphs[message.token]
 
@@ -1228,13 +1303,7 @@ class RaidenMessageHandler(object):
                 secret_request_task.start()
 
         else:
-            transfer_task = MediateTransferTask(
-                self.raiden,
-                token_address,
-                message,
-                0,  # TODO: calculate the fee
-            )
-            transfer_task.start()
+            self.raiden.mediate_mediated_transfer(message)
 
 
 class StateMachineEventHandler(object):
@@ -1268,7 +1337,7 @@ class StateMachineEventHandler(object):
             channel = graph.partneraddress_channel[next_hop]
 
             mediated_transfer = channel.create_mediatedtransfer(
-                self.raiden.address,
+                event.initiator,
                 event.target,
                 fee,
                 event.amount,
@@ -1284,7 +1353,7 @@ class StateMachineEventHandler(object):
         elif isinstance(event, SendRevealSecret):
             reveal_message = RevealSecret(event.secret)
             self.raiden.sign(reveal_message)
-            self.raiden.send_async(event.target, reveal_message)
+            self.raiden.send_async(event.receiver, reveal_message)
 
         elif isinstance(event, SendBalanceProof):
             # TODO: issue #189
@@ -1294,7 +1363,7 @@ class StateMachineEventHandler(object):
                 event.token,
             )
             self.raiden.sign(secret_message)
-            self.raiden.send_async(event.target, secret_message)
+            self.raiden.send_async(event.receiver, secret_message)
 
         elif isinstance(event, SendSecretRequest):
             pass

@@ -3,6 +3,22 @@ from raiden.transfer.architecture import State
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
+def lockedtransfer_from_message(message):
+    """ Create LockedTransferState from a MediatedTransfer message. """
+    transfer_state = LockedTransferState(
+        identifier=message.identifier,
+        amount=message.lock.amount,
+        token=message.token,
+        initiator=message.initiator,
+        target=message.target,
+        expiration=message.lock.expiration,
+        hashlock=message.lock.hashlock,
+        secret=None,
+    )
+
+    return transfer_state
+
+
 class InitiatorState(State):
     """ State of a node initiating a mediated transfer.
 
@@ -129,6 +145,7 @@ class LockedTransferState(State):
         'identifier',
         'amount',
         'token',
+        'initiator',
         'target',
         'expiration',
         'hashlock',
@@ -140,6 +157,7 @@ class LockedTransferState(State):
             identifier,
             amount,
             token,
+            initiator,
             target,
             expiration,
             hashlock,
@@ -148,6 +166,7 @@ class LockedTransferState(State):
         self.identifier = identifier
         self.amount = amount
         self.token = token
+        self.initiator = initiator
         self.target = target
         self.expiration = expiration
         self.hashlock = hashlock

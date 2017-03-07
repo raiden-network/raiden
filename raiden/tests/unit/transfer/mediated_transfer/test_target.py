@@ -18,14 +18,16 @@ def test_events_for_close():
     """ Channel must be closed when the unsafe region is reached. """
     amount = 3
     expire = 10
+    initiator = factories.HOP1
 
     transfer = factories.make_transfer(
         amount,
+        initiator,
         factories.ADDR,
         expire,
     )
     route = factories.make_route(
-        factories.HOP1,
+        initiator,
         amount,
     )
 
@@ -53,15 +55,17 @@ def test_events_for_withdraw():
     """
     amount = 3
     expire = 10
+    initiator = factories.HOP1
 
     transfer = factories.make_transfer(
         amount,
+        initiator,
         factories.ADDR,
         expire,
         secret=factories.UNIT_SECRET,
     )
     route = factories.make_route(
-        factories.HOP1,
+        initiator,
         amount,
     )
 
@@ -85,14 +89,16 @@ def test_handle_inittarget():
     block_number = 1
     amount = 3
     expire = factories.UNIT_REVEAL_TIMEOUT + block_number + 1
+    initiator = factories.HOP1
 
     from_transfer = factories.make_transfer(
         amount,
+        initiator,
         factories.ADDR,
         expire,
     )
     from_route = factories.make_route(
-        factories.HOP1,
+        initiator,
         amount,
     )
     state_change = ActionInitTarget(
@@ -117,14 +123,16 @@ def test_handle_inittarget_bad_expiration():
     block_number = 1
     amount = 3
     expire = factories.UNIT_REVEAL_TIMEOUT + block_number
+    initiator = factories.HOP1
 
     from_transfer = factories.make_transfer(
         amount,
+        initiator,
         factories.ADDR,
         expire,
     )
     from_route = factories.make_route(
-        factories.HOP1,
+        initiator,
         amount,
     )
     state_change = ActionInitTarget(

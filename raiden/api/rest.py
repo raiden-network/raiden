@@ -318,7 +318,7 @@ class RestAPI(object):
                 )
                 return self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
             elif state == 'settled':
-                if current_state == 'settled' or current_state == 'open':
+                if current_state == 'settled' or current_state == 'opened':
                     return make_response(
                         'Attempted to settle a channel at its {} state'.format(current_state),
                         httplib.CONFLICT,

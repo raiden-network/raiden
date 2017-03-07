@@ -52,35 +52,6 @@ class SequenceGenerator(object):
     next = __next__
 
 
-def make_hashlock_transfer(
-        amount,
-        target,
-        identifier=0,
-        token=factories.UNIT_TOKEN_ADDRESS):
-    """ Helper for creating a hashlocked transfer.
-
-    Args:
-        amount (int): Amount of token being transferred.
-        target (address): Transfer target.
-        expiration (int): Block number
-    """
-    # the initiator machine populates these values
-    secret = None
-    hashlock = None
-    expiration = None
-
-    transfer = LockedTransferState(
-        identifier,
-        amount,
-        token,
-        target,
-        expiration,
-        hashlock,
-        secret,
-    )
-    return transfer
-
-
 def make_init_statechange(
         routes,
         target,
@@ -94,9 +65,20 @@ def make_init_statechange(
     if secret_generator is None:
         secret_generator = SequenceGenerator()
 
+    transfer = factories.make_transfer(
+        amount,
+        initiator=our_address,
+        target=target,
+        identifier=identifier,
+        token=token,
+        secret=None,
+        hashlock=None,
+        expiration=None,
+    )
+
     init_state_change = ActionInitInitiator(
         our_address,
-        make_hashlock_transfer(amount, target=target, identifier=identifier, token=token),
+        transfer,
         RoutesState(routes),
         secret_generator,
         block_number,
@@ -233,9 +215,13 @@ def test_init_without_routes():
     our_address, target_address = factories.HOP1, factories.HOP3
     routes = []
 
-    transfer = make_hashlock_transfer(
+    transfer = factories.make_transfer(
         amount,
+        initiator=our_address,
         target=target_address,
+        secret=None,
+        hashlock=None,
+        expiration=None,
     )
     init_state_change = ActionInitInitiator(
         our_address,
@@ -351,7 +337,7 @@ def test_state_wait_unlock_valid():
     balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
     complete = next(e for e in events if isinstance(e, EventTransferCompleted))
 
-    assert balance_proof.target == mediator_address
+    assert balance_proof.receiver == mediator_address
     assert complete.identifier == identifier
     assert initiator_state_machine.current_state is None, 'state must be cleaned'
 
@@ -428,6 +414,7 @@ def test_refund_transfer_next_route():
 
     transfer = factories.make_transfer(
         amount,
+        our_address,
         target_address,
         block_number + factories.UNIT_SETTLE_TIMEOUT,
     )
@@ -474,6 +461,7 @@ def test_refund_transfer_no_more_routes():
 
     transfer = factories.make_transfer(
         amount,
+        our_address,
         target_address,
         block_number + factories.UNIT_SETTLE_TIMEOUT,
     )
@@ -517,6 +505,7 @@ def test_refund_transfer_invalid_sender():
 
     transfer = factories.make_transfer(
         amount,
+        our_address,
         target_address,
         block_number + factories.UNIT_SETTLE_TIMEOUT,
     )

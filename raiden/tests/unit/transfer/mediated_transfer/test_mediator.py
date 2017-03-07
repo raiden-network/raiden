@@ -45,14 +45,17 @@ def make_init_statechange(
     return init_state_change
 
 
-def make_from(amount, target, from_expiration):
+def make_from(amount, target, from_expiration, initiator=factories.HOP6):
+    initiator = factories.HOP1
+
     from_route = factories.make_route(
-        factories.HOP1,
+        initiator,
         available_balance=amount,
     )
 
     from_transfer = factories.make_transfer(
         amount,
+        initiator,
         target,
         from_expiration,
         identifier=0,
@@ -64,6 +67,7 @@ def make_from(amount, target, from_expiration):
 def make_transfer_pair(
         payer,
         payee,
+        initiator,
         target,
         amount,
         expiration,
@@ -75,13 +79,14 @@ def make_transfer_pair(
 
     return MediationPairState(
         factories.make_route(payer, amount),
-        factories.make_transfer(amount, target, payer_expiration, secret=secret),
+        factories.make_transfer(amount, initiator, target, payer_expiration, secret=secret),
         factories.make_route(payee, amount),
-        factories.make_transfer(amount, target, payee_expiration, secret=secret),
+        factories.make_transfer(amount, initiator, target, payee_expiration, secret=secret),
     )
 
 
 def make_transfers_pair(
+        initiator,
         hops,
         target,
         amount,
@@ -103,11 +108,12 @@ def make_transfers_pair(
         pair = make_transfer_pair(
             payer,
             payee,
+            initiator,
             target,
             amount,
             next_expiration,
-            secret=secret,
-            reveal_timeout=reveal_timeout,
+            secret,
+            reveal_timeout,
         )
         transfers_pair.append(pair)
 
@@ -141,7 +147,9 @@ def test_is_lock_valid():
     """ A hash time lock is valid up to the expiraiton block. """
     amount = 10
     expiration = 10
-    transfer = factories.make_transfer(amount, factories.HOP1, expiration)
+    initiator = factories.HOP1
+    target = factories.HOP2
+    transfer = factories.make_transfer(amount, initiator, target, expiration)
 
     assert mediator.is_lock_valid(transfer, 5) is True
     assert mediator.is_lock_valid(transfer, 10) is True, 'lock is expired at the next block'
@@ -154,7 +162,9 @@ def test_is_safe_to_wait():
     """
     amount = 10
     expiration = 40
-    transfer = factories.make_transfer(amount, factories.HOP1, expiration)
+    initiator = factories.HOP1
+    target = factories.HOP2
+    transfer = factories.make_transfer(amount, initiator, target, expiration)
 
     # expiration is in 30 blocks, 19 blocks safe for waiting
     block_number = 10
@@ -197,7 +207,8 @@ def test_is_channel_close_needed_unpaid():
         unpaid_pair = make_transfer_pair(
             payer=factories.HOP1,
             payee=factories.HOP2,
-            target=factories.HOP3,
+            initiator=factories.HOP3,
+            target=factories.HOP4,
             amount=amount,
             expiration=expiration,
             reveal_timeout=reveal_timeout,
@@ -223,7 +234,8 @@ def test_is_channel_close_needed_paid():
         paid_pair = make_transfer_pair(
             payer=factories.HOP1,
             payee=factories.HOP2,
-            target=factories.HOP3,
+            initiator=factories.HOP3,
+            target=factories.HOP4,
             amount=amount,
             expiration=expiration,
             reveal_timeout=reveal_timeout,
@@ -249,7 +261,8 @@ def test_is_channel_close_need_channel_closed():
         pair = make_transfer_pair(
             payer=factories.HOP1,
             payee=factories.HOP2,
-            target=factories.HOP3,
+            initiator=factories.HOP3,
+            target=factories.HOP4,
             amount=amount,
             expiration=expiration,
             reveal_timeout=reveal_timeout,
@@ -273,7 +286,8 @@ def test_is_channel_close_needed_closed():
     paid_pair = make_transfer_pair(
         payer=factories.HOP1,
         payee=factories.HOP2,
-        target=factories.HOP3,
+        initiator=factories.HOP3,
+        target=factories.HOP4,
         amount=amount,
         expiration=expiration,
         reveal_timeout=reveal_timeout,
@@ -290,6 +304,7 @@ def test_is_channel_close_needed_closed():
 
 
 def test_is_valid_refund():
+    initiator = factories.ADDR
     target = factories.HOP1
     valid_sender = factories.HOP2
 
@@ -297,6 +312,7 @@ def test_is_valid_refund():
         identifier=20,
         amount=30,
         token=factories.UNIT_TOKEN_ADDRESS,
+        initiator=initiator,
         target=target,
         expiration=50,
         hashlock=factories.UNIT_HASHLOCK,
@@ -307,6 +323,7 @@ def test_is_valid_refund():
         identifier=20,
         amount=30,
         token=factories.UNIT_TOKEN_ADDRESS,
+        initiator=initiator,
         target=target,
         expiration=35,
         hashlock=factories.UNIT_HASHLOCK,
@@ -322,6 +339,7 @@ def test_is_valid_refund():
         identifier=20,
         amount=30,
         token=factories.UNIT_TOKEN_ADDRESS,
+        initiator=initiator,
         target=factories.HOP1,
         expiration=50,
         hashlock=factories.UNIT_HASHLOCK,
@@ -332,34 +350,35 @@ def test_is_valid_refund():
 
 def test_get_timeout_blocks():
     amount = 10
-    address = factories.HOP1
+    initiator = factories.HOP1
+    next_hop = factories.HOP2
 
     settle_timeout = 30
     block_number = 5
 
     route = factories.make_route(
-        address,
+        next_hop,
         amount,
         settle_timeout=settle_timeout,
     )
 
     early_expire = 10
-    early_transfer = factories.make_transfer(amount, address, early_expire)
+    early_transfer = factories.make_transfer(amount, initiator, next_hop, early_expire)
     early_block = mediator.get_timeout_blocks(route, early_transfer, block_number)
     assert early_block == 5 - mediator.TRANSIT_BLOCKS, 'must use the lock expiration'
 
     equal_expire = 30
-    equal_transfer = factories.make_transfer(amount, address, equal_expire)
+    equal_transfer = factories.make_transfer(amount, initiator, next_hop, equal_expire)
     equal_block = mediator.get_timeout_blocks(route, equal_transfer, block_number)
     assert equal_block == 25 - mediator.TRANSIT_BLOCKS
 
     large_expire = 70
-    large_transfer = factories.make_transfer(amount, address, large_expire)
+    large_transfer = factories.make_transfer(amount, initiator, next_hop, large_expire)
     large_block = mediator.get_timeout_blocks(route, large_transfer, block_number)
     assert large_block == 30 - mediator.TRANSIT_BLOCKS, 'must use the settle timeout'
 
     closed_route = factories.make_route(
-        address,
+        next_hop,
         amount,
         settle_timeout=settle_timeout,
         close_block=2,
@@ -465,9 +484,11 @@ def test_next_transfer_pair():
     timeout_blocks = 47
     block_number = 3
     balance = 10
+    initiator = factories.HOP1
+    target = factories.ADDR
 
-    payer_route = factories.make_route(factories.HOP1, balance)
-    payer_transfer = factories.make_transfer(balance, factories.ADDR, expiration=50)
+    payer_route = factories.make_route(initiator, balance)
+    payer_transfer = factories.make_transfer(balance, initiator, target, expiration=50)
 
     routes = [
         factories.make_route(factories.HOP2, available_balance=balance),
@@ -488,6 +509,16 @@ def test_next_transfer_pair():
     assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
 
     assert isinstance(events[0], SendMediatedTransfer)
+    transfer = events[0]
+    assert transfer.identifier == payer_transfer.identifier
+    assert transfer.token == payer_transfer.token
+    assert transfer.amount == payer_transfer.amount
+    assert transfer.hashlock == payer_transfer.hashlock
+    assert transfer.initiator == payer_transfer.initiator
+    assert transfer.target == payer_transfer.target
+    assert transfer.expiration < payer_transfer.expiration
+    assert transfer.node_address == pair.payee_route.node_address
+
     assert len(routes_state.available_routes) == 0
 
 
@@ -505,7 +536,8 @@ def test_set_secret():
     )
 
     state.transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3, factories.HOP4],
         factories.HOP6,
         amount,
     )
@@ -520,7 +552,8 @@ def test_set_secret():
 
 def test_set_payee():
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3, factories.HOP4],
         factories.HOP6,
         amount=10,
     )
@@ -534,7 +567,7 @@ def test_set_payee():
 
     mediator.set_payee_state_and_check_reveal_order(
         transfers_pair,
-        factories.HOP1,
+        factories.HOP2,
         'payee_secret_revealed',
     )
 
@@ -547,7 +580,7 @@ def test_set_payee():
 
     mediator.set_payee_state_and_check_reveal_order(
         transfers_pair,
-        factories.HOP2,
+        factories.HOP3,
         'payee_secret_revealed',
     )
 
@@ -562,7 +595,8 @@ def test_set_payee():
 def test_set_expired_pairs():
     """ The transfer pair must switch to expired at the right block. """
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3],
         factories.HOP6,
         amount=10,
     )
@@ -619,16 +653,19 @@ def test_events_for_refund():
     reveal_timeout = 17
     timeout_blocks = expiration
     block_number = 1
+    initiator = factories.HOP1
+    target = factories.HOP6
 
     refund_route = factories.make_route(
-        factories.HOP1,
+        initiator,
         amount,
         reveal_timeout=reveal_timeout,
     )
 
     refund_transfer = factories.make_transfer(
         amount,
-        factories.HOP6,
+        initiator,
+        target,
         expiration,
     )
 
@@ -661,7 +698,8 @@ def test_events_for_revealsecret():
     our_address = factories.ADDR
 
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3, factories.HOP4],
         factories.HOP6,
         amount=10,
         secret=secret,
@@ -689,7 +727,7 @@ def test_events_for_revealsecret():
     # secret and now must reveal to the payer node from the transfer pair
     assert len(events) == 1
     assert events[0].secret == secret
-    assert events[0].target == last_pair.payer_route.node_address
+    assert events[0].receiver == last_pair.payer_route.node_address
     assert last_pair.payer_state == 'payer_secret_revealed'
 
     events = mediator.events_for_revealsecret(
@@ -709,14 +747,15 @@ def test_events_for_revealsecret():
 
     assert len(events) == 1
     assert events[0].secret == secret
-    assert events[0].target == first_pair.payer_route.node_address
+    assert events[0].receiver == first_pair.payer_route.node_address
     assert first_pair.payer_state == 'payer_secret_revealed'
 
 
 def test_events_for_revealsecret_secret_unknown():
     """ When the secret is not know there is nothing to do. """
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3, factories.HOP4],
         factories.HOP6,
         amount=10,
     )
@@ -745,7 +784,8 @@ def test_events_for_revealsecret_all_states():
 
     for state in payee_secret_known:
         transfers_pair = make_transfers_pair(
-            [factories.HOP1, factories.HOP2],
+            factories.HOP1,
+            [factories.HOP2, factories.HOP3],
             factories.HOP6,
             amount=10,
             secret=secret,
@@ -760,7 +800,7 @@ def test_events_for_revealsecret_all_states():
         )
 
         assert events[0].secret == secret
-        assert events[0].target == factories.HOP1
+        assert events[0].receiver == factories.HOP2
 
 
 def test_events_for_balanceproof():
@@ -768,7 +808,8 @@ def test_events_for_balanceproof():
     to the mediator node.
     """
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3],
         factories.HOP6,
         amount=10,
         secret=factories.UNIT_SECRET,
@@ -786,7 +827,7 @@ def test_events_for_balanceproof():
     )
 
     assert len(events) == 1
-    assert events[0].target == last_pair.payee_route.node_address
+    assert events[0].receiver == last_pair.payee_route.node_address
     assert last_pair.payee_state == 'payee_balance_proof'
 
 
@@ -798,7 +839,8 @@ def test_events_for_balanceproof_channel_closed():
 
     for invalid_state in ('closed', 'settled'):
         transfers_pair = make_transfers_pair(
-            [factories.HOP1, factories.HOP2],
+            factories.HOP1,
+            [factories.HOP2, factories.HOP3],
             factories.HOP6,
             amount=10,
             secret=factories.UNIT_SECRET,
@@ -827,7 +869,8 @@ def test_events_for_balanceproof_middle_secret():
     there is reveal_timeout blocks to withdraw the lock on-chain with the payer.
     """
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2, factories.HOP3, factories.HOP4],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3, factories.HOP4, factories.HOP5],
         factories.HOP6,
         amount=10,
         secret=factories.UNIT_SECRET,
@@ -843,7 +886,7 @@ def test_events_for_balanceproof_middle_secret():
     )
 
     assert len(events) == 1
-    assert events[0].target == middle_pair.payee_route.node_address
+    assert events[0].receiver == middle_pair.payee_route.node_address
     assert middle_pair.payee_state == 'payee_balance_proof'
 
 
@@ -852,7 +895,8 @@ def test_events_for_balanceproof_secret_unknown():
     block_number = 1
 
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3, factories.HOP4],
         factories.HOP6,
         amount=10,
     )
@@ -865,7 +909,8 @@ def test_events_for_balanceproof_secret_unknown():
     assert len(events) == 0
 
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2, factories.HOP3],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3, factories.HOP4],
         factories.HOP6,
         amount=10,
         secret=factories.UNIT_SECRET,
@@ -885,7 +930,8 @@ def test_events_for_balanceproof_secret_unknown():
 def test_events_for_balanceproof_lock_expired():
     """ The balance proof should not be sent if the lock has expird. """
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2, factories.HOP3, factories.HOP4],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3, factories.HOP4, factories.HOP5],
         factories.HOP6,
         amount=10,
         secret=factories.UNIT_SECRET,
@@ -915,7 +961,7 @@ def test_events_for_balanceproof_lock_expired():
         block_number,
     )
     assert len(events) == 1
-    assert events[0].target == middle_pair.payee_route.node_address
+    assert events[0].receiver == middle_pair.payee_route.node_address
     assert middle_pair.payee_state == 'payee_balance_proof'
 
 
@@ -924,7 +970,8 @@ def test_events_for_close():
 
     for payee_state in ('payee_balance_proof', 'payee_contract_withdraw'):
         transfers_pair = make_transfers_pair(
-            [factories.HOP1, factories.HOP2],
+            factories.HOP1,
+            [factories.HOP2, factories.HOP3],
             factories.HOP6,
             amount=10,
             secret=factories.UNIT_SECRET,
@@ -954,7 +1001,8 @@ def test_events_for_close_hold_for_unpaid_payee():
     """
 
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3],
         factories.HOP6,
         amount=10,
         secret=factories.UNIT_SECRET,
@@ -1000,7 +1048,8 @@ def test_events_for_close_hold_for_unpaid_payee():
 def test_events_for_withdraw_channel_closed():
     """ The withdraw is done regardless of the current block. """
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3],
         factories.HOP6,
         amount=10,
         secret=factories.UNIT_SECRET,
@@ -1021,7 +1070,8 @@ def test_events_for_withdraw_channel_closed():
 def test_events_for_withdraw_channel_open():
     """ The withdraw is done regardless of the current block. """
     transfers_pair = make_transfers_pair(
-        [factories.HOP1, factories.HOP2],
+        factories.HOP1,
+        [factories.HOP2, factories.HOP3],
         factories.HOP6,
         amount=10,
         secret=factories.UNIT_SECRET,
@@ -1122,7 +1172,7 @@ def test_mediate_transfer():
     assert transfer.hashlock == payer_transfer.hashlock
     assert transfer.target == payer_transfer.target
     assert payer_transfer.expiration > transfer.expiration
-    assert transfer.node_address == payer_route.node_address
+    assert transfer.node_address == routes[0].node_address
 
 
 def test_init_mediator():
