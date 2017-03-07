@@ -148,7 +148,7 @@ class ChannelSchema(BaseSchema):
     settle_timeout = fields.Integer()
     reveal_timeout = fields.Integer()
     balance = fields.Integer()
-    state = fields.String(validate=validate.OneOf(['closed', 'openen', 'settled']))
+    state = fields.String(validate=validate.OneOf(['closed', 'opened', 'settled']))
 
     class Meta:
         strict = True

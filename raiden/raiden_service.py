@@ -1209,10 +1209,11 @@ class RaidenMessageHandler(object):
             manager = self.raiden.identifier_statemanager[identifier]
 
             if isinstance(manager.current_state, InitiatorState):
-                initiator = self.raiden.address
+                initiator_address = self.raiden.address
 
             elif isinstance(manager.current_state, MediatorState):
-                initiator = manager.current_state.transfers_pair[0].payee_transfer.initiator
+                last_pair = manager.current_state.transfers_pair[-1]
+                initiator_address = last_pair.payee_transfer.initiator
 
             else:
                 # TODO: emit a proper event for the reject message
@@ -1222,7 +1223,7 @@ class RaidenMessageHandler(object):
                 identifier=identifier,
                 amount=amount,
                 token=token_address,
-                initiator=initiator,
+                initiator=initiator_address,
                 target=target,
                 expiration=expiration,
                 hashlock=hashlock,
@@ -1263,7 +1264,7 @@ class RaidenMessageHandler(object):
 
     def message_mediatedtransfer(self, message):
         # TODO: reject mediated transfer that the hashlock/identifier is known,
-        # this is a downstream bug and the transfer is doing cycles
+        # this is a downstream bug and the transfer is going in cycles
 
         token_address = message.token
         graph = self.raiden.channelgraphs[message.token]
