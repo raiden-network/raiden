@@ -60,6 +60,14 @@ docs:
 	$(MAKE) -C docs html
 	open docs/_build/html/index.html
 
+bundle:
+	docker build -t raidenbundler -f docker/build.Dockerfile docker
+	docker run --name bundler --privileged --entrypoint /AppImageAssistant raidenbundler /raiden.AppDir /raiden.AppImage
+	mkdir -p dist
+	docker cp bundler:/raiden.AppImage dist/raiden.AppImage
+	docker rm bundler
+
+
 release: clean
 	python setup.py sdist upload
 	python setup.py bdist_wheel upload

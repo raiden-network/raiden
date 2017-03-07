@@ -1,0 +1,7 @@
+[Desktop Entry]
+Version=1.0
+Icon=raiden
+Type=raiden
+Name=raiden
+Exec=raiden
+StartupNotify=true
