@@ -5,6 +5,7 @@ from raiden.utils import (
     pex,
     split_endpoint,
 )
+from raiden.exceptions import InvalidAddress
 
 
 class Discovery(object):
@@ -21,7 +22,7 @@ class Discovery(object):
         try:
             return self.nodeid_hostport[nodeid]
         except KeyError:
-            raise KeyError('Unknown address {}'.format(pex(nodeid)))
+            raise InvalidAddress('Unknown address {}'.format(pex(nodeid)))
 
     def nodeid_by_host_port(self, host_port):
         for nodeid, value_hostport in self.nodeid_hostport.items():

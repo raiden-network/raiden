@@ -186,15 +186,23 @@ def test_mediated_transfer(raiden_network):
 
     amount = 10
 
-    alice_app.raiden.api.transfer(
+    result = alice_app.raiden.api.transfer_async(
         token_address,
         amount,
         charlie_address,
     )
 
-    gevent.sleep(1.)
+    assert channel_ab.locked == amount
 
+    # cannot do these assertions because the message has not been processed yet
+    # assert channel_ba.outstanding == amount
+    # assert channel_bc.locked == amount
+    # assert channel_cb.outstanding == amount
+
+    result.wait()
     assert initial_balance_ab - amount == channel_ab.balance
+
+    gevent.sleep(.1)  # wait for the other nodes to sync
     assert initial_balance_ba + amount == channel_ba.balance
     assert initial_balance_bc - amount == channel_bc.balance
     assert initial_balance_cb + amount == channel_cb.balance

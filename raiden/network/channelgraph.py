@@ -7,8 +7,10 @@ from ethereum import slogging
 
 from raiden.utils import isaddress, pex
 from raiden.channel import Channel
+from raiden.transfer.state import RouteState
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+
 ChannelDetail = namedtuple(
     'ChannelDetail',
     (
@@ -20,6 +22,7 @@ ChannelDetail = namedtuple(
         'settle_timeout',
     )
 )
+Route = namedtuple('Route', ('path', 'channel'))
 
 
 def make_graph(edge_list):
@@ -50,6 +53,35 @@ def make_graph(edge_list):
         graph.add_edge(first, second)
 
     return graph
+
+
+def route_to_state(route):
+    path = route.path
+    channel = route.channel
+
+    next_hop = path[1]
+    state = channel.state
+    chanel_address = channel.external_state.netting_channel.address
+    distributable = channel.distributable
+    settle_timeout = channel.settle_timeout
+    reveal_timeout = channel.reveal_timeout
+
+    if state == 'closed':
+        close_block = channel.external_state.closed_block
+    else:
+        close_block = None
+
+    state = RouteState(
+        state=state,
+        node_address=next_hop,
+        chanel_address=chanel_address,
+        available_balance=distributable,
+        settle_timeout=settle_timeout,
+        reveal_timeout=reveal_timeout,
+        close_block=close_block,
+    )
+
+    return state
 
 
 class ChannelGraph(object):
@@ -196,7 +228,7 @@ class ChannelGraph(object):
                 if not valid_timeout:
                     continue
 
-            yield (path, channel)
+            yield Route(path, channel)
 
     def has_path(self, source_address_bin, target_address_bin):
         """ True if there is a connecting path regarless of number of hops. """

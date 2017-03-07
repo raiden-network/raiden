@@ -558,7 +558,7 @@ class Channel(object):
     @property
     def state(self):
         if self.isopen:
-            return 'open'
+            return 'opened'
         elif self.external_state.settled_block != 0:
             return 'settled'
         elif self.external_state.closed_block != 0:
@@ -916,7 +916,7 @@ class Channel(object):
             # As a receiver: If the lock expiration is larger than the settling
             # time a secret could be revealed after the channel is settled and
             # we won't be able to claim the token
-            if not transfer.lock.expiration - block_number < self.settle_timeout:
+            if self.settle_timeout < transfer.lock.expiration - block_number:
                 log.error(
                     "Transfer expiration doesn't allow for correct settlement.",
                     lock_expiration=transfer.lock.expiration,
@@ -1056,7 +1056,7 @@ class Channel(object):
 
         # the lock timeout cannot be larger than the settle timeout (otherwise
         # the smart contract cannot check the locks)
-        if timeout >= self.settle_timeout:
+        if timeout > self.settle_timeout:
             log.debug(
                 'Lock expiration is larger than settle timeout.',
                 expiration=expiration,

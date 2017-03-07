@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 import logging
 import random
-from collections import defaultdict
+import itertools
+from collections import defaultdict, namedtuple
 
 import gevent
 from gevent.event import AsyncResult
@@ -23,15 +25,39 @@ from raiden.tasks import (
     EndMediatedTransferTask,
     HealthcheckTask,
     MediateTransferTask,
-    StartMediatedTransferTask,
+)
+from raiden.transfer.architecture import (
+    StateManager,
+)
+from raiden.transfer.state import (
+    RoutesState,
+)
+from raiden.transfer.mediated_transfer import (
+    initiator,
+)
+from raiden.transfer.mediated_transfer.state import (
+    LockedTransferState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ContractReceiveTokenAdded,
+    ActionInitInitiator,
     ContractReceiveBalance,
     ContractReceiveClosed,
     ContractReceiveNewChannel,
     ContractReceiveSettled,
+    ContractReceiveTokenAdded,
     ContractReceiveWithdraw,
+    ReceiveSecretRequest,
+    ReceiveSecretReveal,
+    ReceiveTransferRefund,
+)
+from raiden.transfer.mediated_transfer.events import (
+    EventTransferCompleted,
+    EventTransferFailed,
+    SendBalanceProof,
+    SendMediatedTransfer,
+    SendRefundTransfer,
+    SendRevealSecret,
+    SendSecretRequest,
 )
 from raiden.channel import ChannelEndState, ChannelExternalState
 from raiden.exceptions import (
@@ -44,7 +70,11 @@ from raiden.exceptions import (
     InvalidState,
     InsufficientFunds,
 )
-from raiden.network.channelgraph import ChannelGraph, ChannelDetail
+from raiden.network.channelgraph import (
+    route_to_state,
+    ChannelGraph,
+    ChannelDetail,
+)
 from raiden.encoding import messages
 from raiden.messages import (
     SignedMessage,
@@ -60,9 +90,6 @@ from raiden.utils import (
     sha3,
     GLOBAL_CTX,
 )
-
-from raiden.transfer.mediated_transfer.events import SendMediatedTransfer
-
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -84,6 +111,14 @@ def create_default_identifier(node_address, token_address, target):
     return int(hash_[0:8].encode('hex'), 16)
 
 
+class RandomSecretGenerator(object):  # pylint: disable=too-few-public-methods
+    def __next__(self):  # pylint: disable=no-self-use
+        secret = sha3(hex(random.getrandbits(256)))
+        return secret
+
+    next = __next__
+
+
 class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     """ A Raiden node. """
 
@@ -100,9 +135,12 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         )
         pubkey = private_key.pubkey.serialize(compressed=False)
 
-        self.transfertasks = defaultdict(dict)
         self.channelgraphs = dict()
         self.manager_token = dict()
+
+        self.hashlock_token_task = defaultdict(dict)
+        self.identifier_statemanager = defaultdict(list)
+        self.identifier_result = defaultdict(list)
 
         # This is a map from a hashlock to a list of channels, the same
         # hashlock can be used in more than one token (for exchanges), a
@@ -158,7 +196,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     def get_block_number(self):
         return self._blocknumber
 
-    def poll_blockchain_events(self, block_number):
+    def poll_blockchain_events(self, block_number):  # pylint: disable=unused-argument
         on_statechange = self.state_machine_event_handler.on_blockchain_statechange
 
         for state_change in self.pyethapp_blockchain_events.poll_state_change():
@@ -268,7 +306,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             content, eg.  RevealSecret), this means the sender needs to be
             checked for the received messages.
         """
-        self.transfertasks[hashlock][token] = task
+        self.hashlock_token_task[hashlock][token] = task
 
     def register_channel_for_hashlock(self, token_address, channel, hashlock):
         channels_registered = self.hashlock_channel[token_address][hashlock]
@@ -276,7 +314,13 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
         if channel not in channels_registered:
             channels_registered.append(channel)
 
-    def handle_secret(self, identifier, token_address, secret, partner_secret_message, hashlock):
+    def handle_secret(  # pylint: disable=too-many-arguments
+            self,
+            identifier,
+            token_address,
+            secret,
+            partner_secret_message,
+            hashlock):
         """ Unlock/Witdraws locks, register the secret, and send Secret
         messages as necessary.
 
@@ -395,9 +439,12 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
 
         return channel_detail
 
-    def on_hashlock_result(self, token, hashlock, success):
+    def on_hashlock_result(self, token, hashlock, success):  # pylint: disable=unused-argument
         """ Clear the task when it's finished. """
-        del self.transfertasks[hashlock][token]
+        del self.hashlock_token_task[hashlock][token]
+
+        if len(self.hashlock_token_task[hashlock]) == 0:
+            del self.hashlock_token_task[hashlock]
 
     def message_for_task(self, message, hashlock):
         """ Sends the message to the corresponding task.
@@ -408,12 +455,12 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             Nothing if a corresponding task is found,raise Exception otherwise
         """
 
-        if self.transfertasks[hashlock]:
-            for task in self.transfertasks[hashlock].itervalues():
+        if self.hashlock_token_task[hashlock]:
+            for task in self.hashlock_token_task[hashlock].itervalues():
                 task.on_response(message)
 
         else:
-            raise UnknownAddress('Received {} from unknown channel, sender: {}'.format(
+            raise UnknownAddress('Received unexpected {}, sender: {}'.format(
                 message.__class__.__name__,
                 pex(message.sender),
             ))
@@ -493,7 +540,7 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
     def stop(self):
         wait_for = [self.alarm]
 
-        for token_task in self.transfertasks.itervalues():
+        for token_task in self.hashlock_token_task.itervalues():
             for task in token_task.itervalues():
                 task.kill()
 
@@ -593,16 +640,70 @@ class RaidenService(object):  # pylint: disable=too-many-instance-attributes
             return async_result
 
     def _mediated_transfer(self, token_address, amount, identifier, target):
-        async_result = AsyncResult()
-        task = StartMediatedTransferTask(
-            self,
-            token_address,
-            amount,
-            identifier,
+        # pylint: disable=too-many-locals
+        graph = self.channelgraphs[token_address]
+        routes = graph.get_best_routes(
+            self.address,
             target,
-            async_result,
+            amount,
+            lock_timeout=None,
         )
-        task.start()
+
+        available_routes = [
+            route
+            for route in map(route_to_state, routes)
+            if route.state == 'opened'
+        ]
+
+        identifier = create_default_identifier(self.address, token_address, target)
+        route_state = RoutesState(available_routes)
+        our_address = self.address
+        block_number = self.get_block_number()
+
+        transfer_state = LockedTransferState(
+            identifier=identifier,
+            amount=amount,
+            token=token_address,
+            target=target,
+            expiration=None,
+            hashlock=None,
+            secret=None,
+        )
+
+        # Raiden might fail after a state change that uses the random generator
+        # and it's events are processed but before the snapshot is taken. If
+        # that happens on the next initialization when raiden is recovering and
+        # applying the pending state changes a new secret will be generated and
+        # the resulting events won't match, this breaks the architecture model,
+        # since it's assumed the re-execution of a state change will always
+        # produce the same events.
+        #
+        # TODO: Removed the secret generator from the InitiatorState and add
+        # the secret into all state changes that required one, this way the
+        # secret will be serialized with the state change and the recovery will
+        # use the same /random/ secret.
+        random_generator = RandomSecretGenerator()
+
+        init_initiator = ActionInitInitiator(
+            our_address=our_address,
+            transfer=transfer_state,
+            routes=route_state,
+            random_generator=random_generator,
+            block_number=block_number,
+        )
+
+        state_manager = StateManager(initiator.state_transition, None)
+        all_events = state_manager.dispatch(init_initiator)
+
+        for event in all_events:
+            self.state_machine_event_handler.on_event(event)
+
+        async_result = AsyncResult()
+
+        # TODO: implement the network timeout raiden.config['msg_timeout'] and
+        # cancel the current transfer it hapens
+        self.identifier_statemanager[identifier].append(state_manager)
+        self.identifier_result[identifier].append(async_result)
 
         return async_result
 
@@ -953,10 +1054,45 @@ class RaidenMessageHandler(object):
             raise Exception("Unhandled message cmdid '{}'.".format(cmdid))
 
     def message_revealsecret(self, message):
-        self.raiden.message_for_task(message, message.hashlock)
+        hashlock = message.hashlock
+        secret = message.secret
+        sender = message.sender
+
+        try:
+            self.raiden.message_for_task(message, hashlock)
+        except UnknownAddress:
+            # No gevent task registered for the given hashlock, trying state task
+
+            # A payee node knows the secret, release the lock and update the
+            # balance locally, next transfer message will have an updated
+            # transferred_amount and merkle tree root
+            for graph in self.raiden.channelgraphs.itervalues():
+                channel = graph.partneraddress_channel.get(sender)
+
+                if channel is not None and channel.partner_state.balance_proof.is_unclaimed(hashlock):
+                    channel.release_lock(secret)
+
+            state_change = ReceiveSecretReveal(secret, sender)
+            self.raiden.state_machine_event_handler.dispatch_to_all_tasks(state_change)
 
     def message_secretrequest(self, message):
-        self.raiden.message_for_task(message, message.hashlock)
+        try:
+            self.raiden.message_for_task(message, message.hashlock)
+        except UnknownAddress:
+            # No gevent task registered for the given hashlock, trying state task
+
+            if message.identifier in self.raiden.identifier_statemanager:
+                state_change = ReceiveSecretRequest(
+                    message.identifier,
+                    message.amount,
+                    message.hashlock,
+                    message.sender,
+                )
+
+                self.raiden.state_machine_event_handler.dispatch_by_identifier(
+                    message.identifier,
+                    state_change,
+                )
 
     def message_secret(self, message):
         # notify the waiting tasks about the message (multiple tasks could
@@ -988,8 +1124,46 @@ class RaidenMessageHandler(object):
             except:  # pylint: disable=bare-except
                 log.exception('Unhandled exception')
 
+        if message.identifier in self.raiden.identifier_statemanager:
+            state_change = ReceiveSecretReveal(
+                message.secret,
+                message.sender,
+            )
+
+            self.raiden.state_machine_event_handler.dispatch_by_identifier(
+                message.identifier,
+                state_change,
+            )
+
     def message_refundtransfer(self, message):
+        # compat: dispatch to existing tasks
         self.raiden.message_for_task(message, message.lock.hashlock)
+
+        if message.identifier in self.raiden.identifier_statemanager:
+            identifier = message.identifier
+            token_address = message.token
+            target = message.target
+            amount = message.lock.amount
+            expiration = message.lock.expiration
+            hashlock = message.lock.hashlock
+
+            transfer_state = LockedTransferState(
+                identifier=identifier,
+                amount=amount,
+                token=token_address,
+                target=target,
+                expiration=expiration,
+                hashlock=hashlock,
+                secret=None,
+            )
+            state_change = ReceiveTransferRefund(
+                message.sender,
+                transfer_state,
+            )
+            self.raiden.state_machine_event_handler.dispatch_by_identifier(
+                message.identifier,
+                state_change,
+            )
 
     def message_directtransfer(self, message):
         if message.token not in self.raiden.channelgraphs:
@@ -1067,6 +1241,24 @@ class StateMachineEventHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
 
+    def dispatch_to_all_tasks(self, state_change):
+        manager_lists = self.raiden.identifier_statemanager.itervalues()
+
+        for manager in itertools.chain(*manager_lists):
+            self.dispatch(manager, state_change)
+
+    def dispatch_by_identifier(self, identifier, state_change):
+        manager_list = self.raiden.identifier_statemanager[identifier]
+
+        for manager in manager_list:
+            self.dispatch(manager, state_change)
+
+    def dispatch(self, state_manager, state_change):
+        all_events = state_manager.dispatch(state_change)
+
+        for event in all_events:
+            self.on_event(event)
+
     def on_event(self, event):
         if isinstance(event, SendMediatedTransfer):
             next_hop = event.node_address
@@ -1080,16 +1272,43 @@ class StateMachineEventHandler(object):
                 event.target,
                 fee,
                 event.amount,
-                event.message_id,
+                event.identifier,
                 event.expiration,
                 event.hashlock,
             )
 
             self.raiden.sign(mediated_transfer)
+            channel.register_transfer(mediated_transfer)
             self.raiden.send_async(next_hop, mediated_transfer)
 
-            # TODO: implement the network timeout raiden.config['msg_timeout']
-            # and cancel the current transfer it hapens
+        elif isinstance(event, SendRevealSecret):
+            reveal_message = RevealSecret(event.secret)
+            self.raiden.sign(reveal_message)
+            self.raiden.send_async(event.target, reveal_message)
+
+        elif isinstance(event, SendBalanceProof):
+            # TODO: issue #189
+            secret_message = Secret(
+                event.identifier,
+                event.secret,
+                event.token,
+            )
+            self.raiden.sign(secret_message)
+            self.raiden.send_async(event.target, secret_message)
+
+        elif isinstance(event, SendSecretRequest):
+            pass
+
+        elif isinstance(event, SendRefundTransfer):
+            pass
+
+        elif isinstance(event, EventTransferCompleted):
+            for result in self.raiden.identifier_result[event.identifier]:
+                result.set(True)
+
+        elif isinstance(event, EventTransferFailed):
+            for result in self.raiden.identifier_result[event.identifier]:
+                result.set(True)
 
     def on_blockchain_statechange(self, state_change):
         if log.isEnabledFor(logging.INFO):

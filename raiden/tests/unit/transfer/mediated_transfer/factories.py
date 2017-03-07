@@ -51,7 +51,7 @@ def make_route(
     if channel_address is None:
         channel_address = ('channel' + node_address)[:40]
 
-    state = 'available'
+    state = 'opened'
     route = RouteState(
         state,
         node_address,

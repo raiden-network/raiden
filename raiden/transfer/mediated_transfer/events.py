@@ -50,9 +50,10 @@ class SendRevealSecret(Event):
         receiver to the sender, so when the secret is learned it is not yet
         time to update the balance.
     """
-    def __init__(self, identifier, secret, target, sender):
+    def __init__(self, identifier, secret, token, target, sender):
         self.identifier = identifier
         self.secret = secret
+        self.token = token
         self.target = target
         self.sender = sender
 
@@ -66,10 +67,23 @@ class SendBalanceProof(Event):
     Note:
         This event has a dual role, it serves as a synchronization and as
         balance-proof for the netting channel smart contract.
+
+        Nodes need to keep synchronized the latest known merkle root, this is
+        required by the receiving end of a transfer in order to properly
+        validate the received transfer. The rule is "only the party that own
+        the current payment channel may change it" (remember that a netting
+        channel is composed of two uni-directional channels), as a consequence
+        the merkle root is only update by the receiver once a balance proof
+        message is received.
     """
-    def __init__(self, identifier, target):
+    def __init__(self, identifier, channel_address, token, target, secret):
         self.identifier = identifier
+        self.channel_address = channel_address
+        self.token = token
         self.target = target
+
+        # XXX: Secret is not required for the balance proof to dispatch the message
+        self.secret = secret
 
 
 class SendSecretRequest(Event):

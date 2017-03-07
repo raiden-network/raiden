@@ -1,9 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from werkzeug.routing import BaseConverter
-from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load
+from marshmallow import (
+    fields,
+    post_dump,
+    post_load,
+    pre_load,
+    Schema,
+    SchemaOpts,
+)
 from webargs import validate
-from marshmallow import fields
+from werkzeug.routing import BaseConverter
 
 from pyethapp.jsonrpc import address_encoder, address_decoder, data_encoder, data_decoder
 
@@ -62,8 +68,8 @@ class BaseSchema(Schema):
 
     @post_load
     def make_object(self, data):
-        # this will depend on the Schema used, which has its object class
-        # in the class Meta attributes
+        # this will depend on the Schema used, which has its object class in
+        # the class Meta attributes
         decoding_class = self.opts.decoding_class
         return decoding_class(**data)
 
@@ -74,8 +80,8 @@ class BaseListSchema(Schema):
     @pre_load
     def wrap_data_envelope(self, data):
         # because the EventListSchema and ChannelListSchema objects need to
-        # have some field ('data'), the data has to be enveloped in the internal
-        # representation to comply with the Schema
+        # have some field ('data'), the data has to be enveloped in the
+        # internal representation to comply with the Schema
         data = dict(data=data)
         return data
 
@@ -142,7 +148,7 @@ class ChannelSchema(BaseSchema):
     settle_timeout = fields.Integer()
     reveal_timeout = fields.Integer()
     balance = fields.Integer()
-    state = fields.String(validate=validate.OneOf(['closed', 'open', 'settled']))
+    state = fields.String(validate=validate.OneOf(['closed', 'openen', 'settled']))
 
     class Meta:
         strict = True
@@ -158,7 +164,7 @@ class ChannelRequestSchema(BaseSchema):
     state = fields.String(
         default=None,
         missing=None,
-        validate=validate.OneOf(['closed', 'open', 'settled'])
+        validate=validate.OneOf(['closed', 'opened', 'settled'])
     )
 
     class Meta:

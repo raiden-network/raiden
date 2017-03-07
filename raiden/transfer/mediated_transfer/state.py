@@ -8,7 +8,7 @@ class InitiatorState(State):
 
     Args:
         our_address (address): This node address.
-        transfer (TransferState): The description of the mediated transfer.
+        transfer (LockedTransferState): The description of the mediated transfer.
         routes (RoutesState): Routes available for this transfer.
         block_number (int): Latest known block number.
         random_generator (generator): A generator that yields valid secrets.

@@ -95,7 +95,7 @@ class MockAPI(object):
                 settle_timeout or DEFAULT_SETTLE_TIMEOUT,
                 reveal_timeout or DEFAULT_REVEAL_TIMEOUT,
                 deposit=0,
-                status='open'
+                status='opened'
             )
 
             self._add_channel(channel)

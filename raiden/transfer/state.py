@@ -8,8 +8,7 @@ class RouteState(State):
     """ Route state.
 
     Args:
-        state (string): The current state of the route (available or
-            unavailable).
+        state (string): The current state of the route (opened, closed or settled).
         node_address (address): The address of the next_hop.
         channel_address (address): The address of the on chain netting channel.
         available_balance (int): The current available balance that can be transferred
@@ -31,7 +30,7 @@ class RouteState(State):
     )
 
     valid_states = (
-        'available',
+        'opened',
         'closed',
         'settled',
     )

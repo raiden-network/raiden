@@ -771,14 +771,6 @@ class MediateTransferTask(BaseMediatedTransferTask):
                     break
 
                 else:
-                    timeout_message = originating_channel.create_timeouttransfer_for(
-                        originating_transfer,
-                    )
-                    raiden.send_async(
-                        originating_transfer.sender,
-                        timeout_message,
-                    )
-
                     self._wait_expiration(
                         raiden,
                         originating_transfer,
@@ -1319,10 +1311,6 @@ class ExchangeTask(BaseMediatedTransferTask):
                         'Partner %s sent an invalid refund message with an invalid amount',
                         pex(to_next_hop),
                     )
-                    timeout_message = from_channel.create_timeouttransfer_for(
-                        from_mediated_transfer
-                    )
-                    raiden.send_async(from_mediated_transfer.sender, timeout_message)
                     raiden.on_hashlock_result(from_token, hashlock, False)
                     return
                 else:

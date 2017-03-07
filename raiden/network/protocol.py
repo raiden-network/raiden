@@ -10,7 +10,12 @@ from gevent.queue import Queue
 from gevent.event import AsyncResult, Event
 from ethereum import slogging
 
-from raiden.exceptions import UnknownAddress, UnknownTokenAddress, TransferWhenClosed
+from raiden.exceptions import (
+    InvalidAddress,
+    TransferWhenClosed,
+    UnknownAddress,
+    UnknownTokenAddress,
+)
 from raiden.messages import decode, Ack, Ping, SignedMessage
 from raiden.channel import InvalidLocksRoot, InvalidNonce
 from raiden.utils import isaddress, sha3, pex
@@ -358,10 +363,13 @@ class RaidenProtocol(object):
                 echohash,
             )
 
-            self.send_ack(
-                message.sender,
-                ack,
-            )
+            try:
+                self.send_ack(
+                    message.sender,
+                    ack,
+                )
+            except InvalidAddress:
+                return
 
         else:  # payload was not a valid message and decoding failed
             if log.isEnabledFor(logging.ERROR):

@@ -204,7 +204,7 @@ def test_is_channel_close_needed_unpaid():
         )
 
         unpaid_pair.payer_state = unpaid_state
-        assert unpaid_pair.payer_route.state == 'available'
+        assert unpaid_pair.payer_route.state == 'opened'
 
         safe_block = expiration - reveal_timeout - 1
         assert mediator.is_channel_close_needed(unpaid_pair, safe_block) is False
@@ -230,7 +230,7 @@ def test_is_channel_close_needed_paid():
         )
 
         paid_pair.payee_state = paid_state
-        assert paid_pair.payer_route.state == 'available'
+        assert paid_pair.payer_route.state == 'opened'
 
         safe_block = expiration - reveal_timeout - 1
         assert mediator.is_channel_close_needed(paid_pair, safe_block) is False
@@ -280,7 +280,7 @@ def test_is_channel_close_needed_closed():
     )
     paid_pair.payee_state = 'payee_balance_proof'
 
-    assert paid_pair.payer_route.state == 'available'
+    assert paid_pair.payer_route.state == 'opened'
 
     safe_block = expiration - reveal_timeout - 1
     assert mediator.is_channel_close_needed(paid_pair, safe_block) is False
