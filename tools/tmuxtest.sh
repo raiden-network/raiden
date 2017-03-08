@@ -154,9 +154,14 @@ am2=raiden.get_manager_by_asset_address('${TOKEN2}'.decode('hex'))
     tmux send-keys -t raiden:2 "geth --datadir ${TEMP} --password ${TEMP}/password account new" C-m
     tmux send-keys -t raiden:2 "geth --minerthreads 1 --nodiscover --rpc --rpcport ${GETHPORT} --mine --etherbase 0 --datadir ${TEMP}" C-m
 
-    tmux send-keys -t raiden:3 "$(printf "$RAIDEN_TEMPLATE" 40001 "${PRIVKEY1}" "${LOG1}")" C-m
-    tmux send-keys -t raiden:4 "$(printf "$RAIDEN_TEMPLATE" 40002 "${PRIVKEY2}" "${LOG2}")" C-m
-    tmux send-keys -t raiden:5 "$(printf "$RAIDEN_TEMPLATE" 40003 "${PRIVKEY3}" "${LOG3}")" C-m
+    tmux send-keys -t raiden:3 "$(printf "$RAIDEN_TEMPLATE" 40001 "${KEYSTORE1}" "${ADDRESS1}" "${LOG1}")" C-m
+    tmux send-keys -t raiden:4 "$(printf "$RAIDEN_TEMPLATE" 40002 "${KEYSTORE2}" "${ADDRESS2}" "${LOG2}")" C-m
+    tmux send-keys -t raiden:5 "$(printf "$RAIDEN_TEMPLATE" 40003 "${KEYSTORE3}" "${ADDRESS3}" "${LOG3}")" C-m
+    # wait for all password prompts to appear:
+    sleep 20
+    tmux send-keys -t raiden:3 "$(printf "nopassword")" C-m
+    tmux send-keys -t raiden:4 "$(printf "nopassword")" C-m
+    tmux send-keys -t raiden:5 "$(printf "nopassword")" C-m
 
     followlog raiden:3 $LOG1
     followlog raiden:4 $LOG2

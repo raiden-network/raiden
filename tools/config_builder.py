@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import json
-import random
 
 import click
 
@@ -93,6 +92,21 @@ def accounts(ctx, hosts, nodes_per_host):
 
 
 @click.argument(
+    'password',
+    type=str,
+)
+@click.argument(
+    'privatekey',
+    type=str,
+)
+@cli.command()
+@click.pass_context
+def private_to_account(ctx, privatekey, password):
+    account = Account.new(password.encode('ascii'), key=privatekey.encode('ascii'))
+    print account.dump()
+
+
+@click.argument(
     'hosts',
     nargs=-1,
     type=str,
@@ -136,7 +150,7 @@ def build_scenario(ctx, hosts, nodes_per_host, nodes_per_transfer):
     for asset_num in range(total_assets):
         data_for_asset = {
             "name": str(asset_num),
-            "channels": addresses[index : index + nodes_per_transfer],
+            "channels": addresses[index:index + nodes_per_transfer],
             "transfers_with_amount": {
                 addresses[index + nodes_per_transfer - 1]: 3000,
             }
@@ -315,10 +329,13 @@ config_builder.py account_file
 
 config_builder.py merge state_dump.json genesis.json
 -> merge the deployed contracts of state_dump.json into genesis.json and create
-a new genesis.json."""
+a new genesis.json.
+
+config_builder.py private_to_account deadbeef...feedbead password
+-> encrypt the privatekey "deadbeef...feadbead" with "password" and print json accountfile.
+"""
 
     print usage_text
-
 
 if __name__ == '__main__':
     cli(obj={})  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
