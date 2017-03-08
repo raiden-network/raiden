@@ -7,6 +7,7 @@ import gevent
 import gevent.monkey
 from ethereum import slogging
 from ethereum.utils import decode_hex
+from pyethapp.jsonrpc import address_decoder
 
 from raiden.app import App
 from raiden.settings import INITIAL_PORT
@@ -169,20 +170,18 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         rpc_host, rpc_port = split_endpoint(endpoint)
 
     # user may have provided registry and discovery contracts with leading 0x
-    registry_contract_address = registry_contract_address.strip('0x')
-    discovery_contract_address = discovery_contract_address.strip('0x')
+    registry_contract_address = address_decoder(registry_contract_address)
+    discovery_contract_address = address_decoder(discovery_contract_address)
     blockchain_service = BlockChainService(
         privatekey,
-        decode_hex(registry_contract_address),
+        registry_contract_address,
         host=rpc_host,
         port=rpc_port,
     )
 
     discovery = ContractDiscovery(
         blockchain_service.node_address,
-        blockchain_service.discovery(
-            decode_hex(discovery_contract_address)
-        )
+        blockchain_service.discovery(discovery_contract_address)
     )
 
     return App(config, blockchain_service, discovery)
