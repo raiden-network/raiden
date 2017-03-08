@@ -155,7 +155,10 @@ def try_new_route(state):
 
 
 def handle_block(state, state_change):
-    state.block_number = state_change.block_number
+    state.block_number = max(
+        state.block_number,
+        state_change.block_number,
+    )
     iteration = TransitionResult(state, list())
     return iteration
 

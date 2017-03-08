@@ -16,6 +16,7 @@ from raiden.transfer.mediated_transfer.events import (
     ContractSendWithdraw,
     EventTransferCompleted,
     EventTransferFailed,
+    SendRevealSecret,
     SendSecretRequest,
 )
 from raiden.transfer.mediated_transfer.mediator import (
@@ -32,8 +33,9 @@ def events_for_close(from_transfer, from_route, block_number):
         from_route.reveal_timeout,
         block_number,
     )
+    secret_known = from_transfer.secret is not None
 
-    if not safe_to_wait:
+    if not safe_to_wait and secret_known:
         channel_close = ContractSendChannelClose(
             from_route.channel_address,
         )
@@ -66,7 +68,6 @@ def handle_inittarget(state_change):
         state_change.our_address,
         from_route,
         from_transfer,
-        state_change.hashlock,
         block_number,
     )
 
@@ -83,6 +84,7 @@ def handle_inittarget(state_change):
             from_transfer.identifier,
             from_transfer.amount,
             from_transfer.hashlock,
+            from_transfer.initiator,
         )
 
         iteration = TransitionResult(state, [secret_request])
@@ -94,13 +96,19 @@ def handle_inittarget(state_change):
 
 def handle_secretreveal(state, state_change):
     """ Validate and handle a ReceiveSecretReveal state change. """
-    valid_secret = sha3(state_change.secret) == state.hashlock
+    valid_secret = sha3(state_change.secret) == state.from_transfer.hashlock
 
     if valid_secret:
-        state.from_transfer.secret = state_change.secret
+        from_transfer = state.from_transfer
+        from_route = state.from_route
+
         state.state = 'reveal_secret'
-        reveal = ReceiveSecretReveal(  # FIXME: this should be SendSecretReval
-            state.from_transfer.secret,
+        from_transfer.secret = state_change.secret
+        reveal = SendRevealSecret(
+            from_transfer.identifier,
+            from_transfer.secret,
+            from_transfer.token,
+            from_route.node_address,
             state.our_address,
         )
 
@@ -118,7 +126,7 @@ def handle_balanceproof(state, state_change):
     iteration = TransitionResult(state, list())
 
     # TODO: byzantine behavior event when the sender doesn't match
-    if state_change.sender == state.from_transfer.sender:
+    if state_change.node_address == state.from_route.node_address:
         state.state = 'balance_proof'
 
     return iteration
@@ -128,7 +136,10 @@ def handle_block(state, state_change):
     """ After Raiden learns about a new block this function must be called to
     handle expiration of the hash time lock.
     """
-    state.block_number = state_change.block_number
+    state.block_number = max(
+        state.block_number,
+        state_change.block_number,
+    )
 
     close_events = events_for_close(
         state.from_transfer,
@@ -162,11 +173,11 @@ def handle_routechange(state, state_change):
 
 def clear_if_finalized(iteration):
     """ Clear the state if the transfer was either completed or failed. """
-    state = iteration.state
+    state = iteration.new_state
 
     if state.from_transfer.secret is None and state.block_number > state.from_transfer.expiration:
         failed = EventTransferFailed(
-            identifier=state.transfer.identifier,
+            identifier=state.from_transfer.identifier,
             reason='lock expired',
         )
         iteration = TransitionResult(None, [failed])
@@ -192,14 +203,14 @@ def state_transition(state, state_change):
         if isinstance(state_change, ActionInitTarget):
             iteration = handle_inittarget(state_change)
 
-    elif state.secret is None:
+    elif state.from_transfer.secret is None:
         if isinstance(state_change, ReceiveSecretReveal):
             iteration = handle_secretreveal(state, state_change)
 
         elif isinstance(state_change, Block):
             iteration = handle_block(state, state_change)
 
-    elif state.secret is not None:
+    elif state.from_transfer.secret is not None:
         if isinstance(state_change, ReceiveBalanceProof):
             iteration = handle_balanceproof(state, state_change)
 

@@ -45,25 +45,6 @@ def make_init_statechange(
     return init_state_change
 
 
-def make_from(amount, target, from_expiration, initiator=factories.HOP6):
-    initiator = factories.HOP1
-
-    from_route = factories.make_route(
-        initiator,
-        available_balance=amount,
-    )
-
-    from_transfer = factories.make_transfer(
-        amount,
-        initiator,
-        target,
-        from_expiration,
-        identifier=0,
-    )
-
-    return from_route, from_transfer
-
-
 def make_transfer_pair(
         payer,
         payee,
@@ -517,7 +498,7 @@ def test_next_transfer_pair():
     assert transfer.initiator == payer_transfer.initiator
     assert transfer.target == payer_transfer.target
     assert transfer.expiration < payer_transfer.expiration
-    assert transfer.node_address == pair.payee_route.node_address
+    assert transfer.receiver == pair.payee_route.node_address
 
     assert len(routes_state.available_routes) == 0
 
@@ -687,7 +668,7 @@ def test_events_for_refund():
     assert refund_events[0].expiration < block_number + timeout_blocks
     assert refund_events[0].amount == amount
     assert refund_events[0].hashlock == refund_transfer.hashlock
-    assert refund_events[0].node_address == refund_route.node_address
+    assert refund_events[0].receiver == refund_route.node_address
 
 
 def test_events_for_revealsecret():
@@ -1085,7 +1066,7 @@ def test_events_for_withdraw_channel_open():
 
 
 def test_secret_learned():
-    from_route, from_transfer = make_from(
+    from_route, from_transfer = factories.make_from(
         amount=factories.UNIT_TRANSFER_AMOUNT,
         target=factories.HOP2,
         from_expiration=factories.HOP1_TIMEOUT,
@@ -1150,7 +1131,7 @@ def test_mediate_transfer():
         factories.UNIT_HASHLOCK,
     )
 
-    payer_route, payer_transfer = make_from(amount, factories.HOP6, expiration)
+    payer_route, payer_transfer = factories.make_from(amount, factories.HOP6, expiration)
 
     iteration = mediator.mediate_transfer(
         state,
@@ -1172,11 +1153,11 @@ def test_mediate_transfer():
     assert transfer.hashlock == payer_transfer.hashlock
     assert transfer.target == payer_transfer.target
     assert payer_transfer.expiration > transfer.expiration
-    assert transfer.node_address == routes[0].node_address
+    assert transfer.receiver == routes[0].node_address
 
 
 def test_init_mediator():
-    from_route, from_transfer = make_from(
+    from_route, from_transfer = factories.make_from(
         amount=factories.UNIT_TRANSFER_AMOUNT,
         target=factories.HOP2,
         from_expiration=factories.HOP1_TIMEOUT,
@@ -1226,7 +1207,7 @@ def test_init_mediator():
 
 
 def test_no_valid_routes():
-    from_route, from_transfer = make_from(
+    from_route, from_transfer = factories.make_from(
         amount=factories.UNIT_TRANSFER_AMOUNT,
         target=factories.HOP2,
         from_expiration=factories.HOP1_TIMEOUT,

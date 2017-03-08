@@ -88,3 +88,20 @@ def make_transfer(
         secret=secret,
     )
     return transfer
+
+
+def make_from(amount, target, from_expiration, initiator=HOP6):
+    from_route = make_route(
+        initiator,
+        available_balance=amount,
+    )
+
+    from_transfer = make_transfer(
+        amount,
+        initiator,
+        target,
+        from_expiration,
+        identifier=0,
+    )
+
+    return from_route, from_transfer

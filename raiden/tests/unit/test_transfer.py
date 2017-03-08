@@ -157,6 +157,7 @@ def test_transfer(raiden_network):
     assert isinstance(a1_recv_messages[0], DirectTransfer)
 
 
+@pytest.mark.timeout(10)
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('number_of_nodes', [10])

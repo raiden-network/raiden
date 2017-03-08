@@ -22,7 +22,6 @@ from raiden.blockchain.events import (
 )
 from raiden.tasks import (
     AlarmTask,
-    EndMediatedTransferTask,
     HealthcheckTask,
 )
 from raiden.transfer.architecture import (
@@ -34,6 +33,7 @@ from raiden.transfer.state import (
 from raiden.transfer.mediated_transfer import (
     initiator,
     mediator,
+    target,
 )
 from raiden.transfer.mediated_transfer.state import (
     lockedtransfer_from_message,
@@ -44,6 +44,7 @@ from raiden.transfer.mediated_transfer.state import (
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
+    ActionInitTarget,
     ContractReceiveBalance,
     ContractReceiveClosed,
     ContractReceiveNewChannel,
@@ -82,9 +83,10 @@ from raiden.network.channelgraph import (
 )
 from raiden.encoding import messages
 from raiden.messages import (
-    SignedMessage,
     RevealSecret,
     Secret,
+    SecretRequest,
+    SignedMessage,
 )
 from raiden.network.protocol import RaidenProtocol
 from raiden.utils import (
@@ -761,6 +763,31 @@ class RaidenService(object):
 
         self.identifier_statemanager[identifier].append(state_manager)
 
+    def target_mediated_transfer(self, message):
+        graph = self.channelgraphs[message.token]
+        from_channel = graph.partneraddress_channel[message.sender]
+        from_route = channel_to_routestate(from_channel, message.sender)
+
+        from_transfer = lockedtransfer_from_message(message)
+        our_address = self.address
+        block_number = self.get_block_number()
+
+        init_target = ActionInitTarget(
+            our_address,
+            from_route,
+            from_transfer,
+            block_number,
+        )
+
+        state_manager = StateManager(target.state_transition, None)
+        all_events = state_manager.dispatch(init_target)
+
+        for event in all_events:
+            self.state_machine_event_handler.on_event(event)
+
+        identifier = message.identifier
+        self.identifier_statemanager[identifier].append(state_manager)
+
 
 class RaidenAPI(object):
     """ CLI interface. """
@@ -1266,7 +1293,6 @@ class RaidenMessageHandler(object):
         # TODO: reject mediated transfer that the hashlock/identifier is known,
         # this is a downstream bug and the transfer is going in cycles
 
-        token_address = message.token
         graph = self.raiden.channelgraphs[message.token]
 
         if not graph.has_channel(self.raiden.address, message.sender):
@@ -1288,20 +1314,7 @@ class RaidenMessageHandler(object):
         channel.register_transfer(message)  # raises if the message is invalid
 
         if message.target == self.raiden.address:
-            try:
-                self.raiden.message_for_task(
-                    message,
-                    message.lock.hashlock
-                )
-            except UnknownAddress:
-                # assumes that the registered task(s) tooks care of the message
-                # (used for exchanges)
-                secret_request_task = EndMediatedTransferTask(
-                    self.raiden,
-                    token_address,
-                    message,
-                )
-                secret_request_task.start()
+            self.raiden.target_mediated_transfer(message)
 
         else:
             self.raiden.mediate_mediated_transfer(message)
@@ -1331,11 +1344,10 @@ class StateMachineEventHandler(object):
 
     def on_event(self, event):
         if isinstance(event, SendMediatedTransfer):
-            next_hop = event.node_address
+            receiver = event.receiver
             fee = 0
-
             graph = self.raiden.channelgraphs[event.token]
-            channel = graph.partneraddress_channel[next_hop]
+            channel = graph.partneraddress_channel[receiver]
 
             mediated_transfer = channel.create_mediatedtransfer(
                 event.initiator,
@@ -1349,7 +1361,7 @@ class StateMachineEventHandler(object):
 
             self.raiden.sign(mediated_transfer)
             channel.register_transfer(mediated_transfer)
-            self.raiden.send_async(next_hop, mediated_transfer)
+            self.raiden.send_async(receiver, mediated_transfer)
 
         elif isinstance(event, SendRevealSecret):
             reveal_message = RevealSecret(event.secret)
@@ -1367,7 +1379,13 @@ class StateMachineEventHandler(object):
             self.raiden.send_async(event.receiver, secret_message)
 
         elif isinstance(event, SendSecretRequest):
-            pass
+            secret_request = SecretRequest(
+                event.identifier,
+                event.hashlock,
+                event.amount,
+            )
+            self.raiden.sign(secret_request)
+            self.raiden.send_async(event.receiver, secret_request)
 
         elif isinstance(event, SendRefundTransfer):
             pass
