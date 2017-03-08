@@ -6,7 +6,7 @@ import click
 import gevent
 import gevent.monkey
 from ethereum import slogging
-from ethereum.utils import encode_hex, decode_hex
+from ethereum.utils import decode_hex
 
 from raiden.app import App
 from raiden.settings import INITIAL_PORT
@@ -150,8 +150,9 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
 
         address = addresses[idx]
 
-    privatekey = accmgr.get_privkey(address)
-    config['privatekey_hex'] = encode_hex(privatekey)
+    privatekey_hex = accmgr.get_privkey(address)
+    config['privatekey_hex'] = privatekey_hex
+    privatekey = decode_hex(privatekey_hex)
 
     endpoint = eth_rpc_endpoint
 
@@ -176,14 +177,16 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
 
     discovery = ContractDiscovery(
         blockchain_service.node_address,
-        blockchain_service.discovery(discovery_contract_address)
+        blockchain_service.discovery(
+            decode_hex(discovery_contract_address)
+        )
     )
 
     return App(config, blockchain_service, discovery)
 
 
 @click.option(  # FIXME: implement NAT-punching
-    '--external_listen_address',
+    '--external-listen-address',
     help='external "host:port" where the raiden service can be contacted on (through NAT).',
     default='',
     type=str,
