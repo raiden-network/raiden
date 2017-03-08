@@ -99,8 +99,8 @@ def deploy_all(token_groups=None):
             account_alloc[key] = safe_lstrip_hex(value)
 
     raiden_flags = (
-        '--registry_contract_address {Registry}'
-        ' --discovery_contract_address {EndpointRegistry}'
+        '--registry-contract-address {Registry}'
+        ' --discovery-contract-address {EndpointRegistry}'
     ).format(**deployed)
 
     blockchain_config = dict(

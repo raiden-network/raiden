@@ -91,7 +91,7 @@
 
     - name: execute raidens asynchronously
       shell:
-        cmd: "{{ ansible_env.HOME }}/raidenvenv/bin/python {{ scenario_runner }} $(cat {{ ansible_env.HOME }}/raiden_flags.txt) --privatekey=$(cat {{ ansible_env.HOME }}/{{ item }}/privatekey.txt) --listen_address={{ ansible_ec2_local_ipv4 }}:{{ item }} --scenario={{ ansible_env.HOME }}/{{ item }}/scenario.json --logging=':WARNING' --logfile=raiden-{{ item }}.log --stage_prefix=raiden-{{ item }} --results_filename={{ ansible_ec2_public_ipv4 }}-{{ item }}.json"
+        cmd: "{{ ansible_env.HOME }}/raidenvenv/bin/python {{ scenario_runner }} $(cat {{ ansible_env.HOME }}/raiden_flags.txt) --privatekey=$(cat {{ ansible_env.HOME }}/{{ item }}/privatekey.txt) --listen-address={{ ansible_ec2_local_ipv4 }}:{{ item }} --scenario={{ ansible_env.HOME }}/{{ item }}/scenario.json --logging=':WARNING' --logfile=raiden-{{ item }}.log --stage-prefix=raiden-{{ item }} --results-filename={{ ansible_ec2_public_ipv4 }}-{{ item }}.json"
         chdir: "{{ user_home }}"
       async: 1200
       poll: 0

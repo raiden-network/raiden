@@ -99,16 +99,27 @@ TOKEN1=$(jq -r ".config.token_groups[\"${ADDRESS1}\"]" $GENESIS)
 TOKEN2=$(jq -r ".config.token_groups[\"${ADDRESS2}\"]" $GENESIS)
 TOKEN3=$(jq -r ".config.token_groups[\"${ADDRESS3}\"]" $GENESIS)
 
-LOG1=${TEMP}/node1
-LOG2=${TEMP}/node2
-LOG3=${TEMP}/node3
+mkdir -p ${TEMP}/node{1..3}/keystore
+
+KEYSTORE1=${TEMP}/node1/keystore
+KEYSTORE2=${TEMP}/node2/keystore
+KEYSTORE3=${TEMP}/node3/keystore
+
+tools/config_builder.py private_to_account $PRIVKEY1 nopassword > ${KEYSTORE1}/raidenaccount.json
+tools/config_builder.py private_to_account $PRIVKEY2 nopassword > ${KEYSTORE2}/raidenaccount.json
+tools/config_builder.py private_to_account $PRIVKEY3 nopassword > ${KEYSTORE3}/raidenaccount.json
+
+LOG1=${TEMP}/node1/raiden.log
+LOG2=${TEMP}/node2/raiden.log
+LOG3=${TEMP}/node3/raiden.log
 
 RAIDEN_CONTRACTS=$(jq -r .config.raidenFlags $GENESIS)
 
-RAIDEN_TEMPLATE="python raiden/app.py \
-    --eth_rpc_endpoint 127.0.0.1:${GETHPORT} \
-    --listen_address 0.0.0.0:%s \
-    --privatekey=%s \
+RAIDEN_TEMPLATE="raiden \
+    --eth-rpc-endpoint 127.0.0.1:${GETHPORT} \
+    --listen-address 0.0.0.0:%s \
+    --keystore-path=%s \
+    --address=%s \
     $RAIDEN_CONTRACTS \
     --logging ':DEBUG' \
     --logfile %s"
