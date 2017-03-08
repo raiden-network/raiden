@@ -41,8 +41,15 @@ def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
     assert result == expected_result
 
 
-def test_api_query_channels(api_test_server, api_test_context, api_raiden_service):
-    request = grequests.get('http://localhost:5001/api/1/channels')
+def test_api_query_channels(
+        api_test_server,
+        api_test_context,
+        api_raiden_service,
+        rest_api_port_number):
+
+    request = grequests.get(
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number)
+    )
     response = request.send().response
     assert_proper_response(response)
     assert decode_response(response) == api_test_context.expect_channels()
@@ -56,7 +63,8 @@ def test_api_query_channels(api_test_server, api_test_context, api_raiden_servic
 def test_api_open_and_deposit_channel(
         api_test_server,
         api_test_context,
-        api_raiden_service):
+        api_raiden_service,
+        rest_api_port_number):
     # let's create a new channel
     first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
@@ -67,7 +75,7 @@ def test_api_open_and_deposit_channel(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:5001/api/1/channels',
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
         json=channel_data_obj
     )
     response = request.send().response
@@ -93,7 +101,7 @@ def test_api_open_and_deposit_channel(
         'balance': balance
     }
     request = grequests.put(
-        'http://localhost:5001/api/1/channels',
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
         json=channel_data_obj
     )
     response = request.send().response
@@ -111,7 +119,10 @@ def test_api_open_and_deposit_channel(
 
     # let's deposit on the first channel
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(first_channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=first_channel_address,
+        ),
         json={'balance': balance}
     )
     response = request.send().response
@@ -129,7 +140,11 @@ def test_api_open_and_deposit_channel(
 
     # finall let's try querying for the second channel
     request = grequests.get(
-        'http://localhost:5001/api/1/channels/{}'.format(second_channel_address)
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=second_channel_address,
+        ),
+        json=channel_data_obj
     )
     response = request.send().response
     assert_proper_response(response)
@@ -148,7 +163,8 @@ def test_api_open_and_deposit_channel(
 def test_api_open_close_and_settle_channel(
         api_test_server,
         api_test_context,
-        api_raiden_service):
+        api_raiden_service,
+        rest_api_port_number):
     # let's create a new channel
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
@@ -159,7 +175,7 @@ def test_api_open_close_and_settle_channel(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:5001/api/1/channels',
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
         json=channel_data_obj
     )
     response = request.send().response
@@ -178,7 +194,10 @@ def test_api_open_close_and_settle_channel(
 
     # let's the close the channel
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
         json={'state': 'closed'}
     )
     response = request.send().response
@@ -196,7 +215,10 @@ def test_api_open_close_and_settle_channel(
 
     # let's settle the channel
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
         json={'state': 'settled'}
     )
     response = request.send().response
@@ -216,7 +238,8 @@ def test_api_open_close_and_settle_channel(
 def test_api_channel_state_change_errors(
         api_test_server,
         api_test_context,
-        api_raiden_service):
+        api_raiden_service,
+        rest_api_port_number):
     # let's create a new channel
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
@@ -227,7 +250,7 @@ def test_api_channel_state_change_errors(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:5001/api/1/channels',
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
         json=channel_data_obj
     )
     response = request.send().response
@@ -237,41 +260,59 @@ def test_api_channel_state_change_errors(
 
     # let's try to settle the channel (we are bad!)
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
         json={'state': 'settled'}
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.CONFLICT
     # let's try to set a random state
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
         json={'state': 'inlimbo'}
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.BAD_REQUEST
     # let's try to set both new state and balance
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
         json={'state': 'closed', 'balance': 200}
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.CONFLICT
     # let's try to path with no arguments
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.BAD_REQUEST
 
     # ok now let's close and settle for real
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
         json={'state': 'closed'}
     )
     response = request.send().response
     assert_proper_response(response)
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
         json={'state': 'settled'}
     )
     response = request.send().response
@@ -279,7 +320,10 @@ def test_api_channel_state_change_errors(
 
     # let's try to deposit to a settled channel
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
         json={'balance': 500}
     )
     response = request.send().response
@@ -287,7 +331,10 @@ def test_api_channel_state_change_errors(
 
     # and now let's try to settle again
     request = grequests.patch(
-        'http://localhost:5001/api/1/channels/{}'.format(channel_address),
+        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
+            port=rest_api_port_number,
+            channel_address=channel_address,
+        ),
         json={'state': 'settled'}
     )
     response = request.send().response
@@ -297,7 +344,8 @@ def test_api_channel_state_change_errors(
 def test_api_tokens(
         api_test_server,
         api_test_context,
-        api_raiden_service):
+        api_raiden_service,
+        rest_api_port_number):
     # let's create 2 new channels for 2 different tokens
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
@@ -308,7 +356,7 @@ def test_api_tokens(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:5001/api/1/channels',
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
         json=channel_data_obj
     )
     response = request.send().response
@@ -323,7 +371,7 @@ def test_api_tokens(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:5001/api/1/channels',
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
         json=channel_data_obj
     )
     response = request.send().response
@@ -331,7 +379,7 @@ def test_api_tokens(
 
     # and now let's get the token list
     request = grequests.get(
-        'http://localhost:5001/api/1/tokens',
+        'http://localhost:{port}/api/1/tokens'.format(port=rest_api_port_number),
     )
     response = request.send().response
     assert_proper_response(response)
@@ -346,7 +394,8 @@ def test_api_tokens(
 def test_query_partners_by_token(
         api_test_server,
         api_test_context,
-        api_raiden_service):
+        api_raiden_service,
+        rest_api_port_number):
     # let's create 2 new channels for the same token
     first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
@@ -358,7 +407,7 @@ def test_query_partners_by_token(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:5001/api/1/channels',
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
         json=channel_data_obj
     )
     response = request.send().response
@@ -368,8 +417,8 @@ def test_query_partners_by_token(
 
     channel_data_obj['partner_address'] = second_partner_address
     request = grequests.put(
-        'http://localhost:5001/api/1/channels',
-        json=channel_data_obj
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        json=channel_data_obj,
     )
     response = request.send().response
     assert_proper_response(response)
@@ -380,7 +429,7 @@ def test_query_partners_by_token(
     channel_data_obj['partner_address'] = '0xb07937AbA15304FBBB0Bf6454a9377a76E3dD39E'
     channel_data_obj['token_address'] = '0x70faa28A6B8d6829a4b1E649d26eC9a2a39ba413'
     request = grequests.put(
-        'http://localhost:5001/api/1/channels',
+        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
         json=channel_data_obj
     )
     response = request.send().response
@@ -388,7 +437,9 @@ def test_query_partners_by_token(
 
     # and now let's query our partners per token for the first token
     request = grequests.get(
-        'http://localhost:5001/api/1/tokens/0xea674fdde714fd979de3edf0f56aa9716b898ec8/partners',
+        'http://localhost:{port}/api/1/tokens/0xea674fdde714fd979de3edf0f56aa9716b898ec8/partners'.format(
+            port=rest_api_port_number,
+        )
     )
     response = request.send().response
     assert_proper_response(response)
@@ -408,7 +459,9 @@ def test_query_partners_by_token(
 def test_query_blockchain_events(
         api_test_server,
         api_test_context,
-        api_raiden_service):
+        api_raiden_service,
+        rest_api_port_number):
+
     # Adding some mock events. Some of these events should not normally contain
     # a block number but for the purposes of making sure block numbers propagate
     # in the API logic I am adding them here and testing for them later.
@@ -458,7 +511,9 @@ def test_query_blockchain_events(
 
     # and now let's query the network events for 'TokenAdded' for blocks 1-10
     request = grequests.get(
-        'http://localhost:5001/api/1/events/network?from_block=0&to_block=10',
+        'http://localhost:{port}/api/1/events/network?from_block=0&to_block=10'.format(
+            port=rest_api_port_number,
+        )
     )
     response = request.send().response
     assert_proper_response(response)
@@ -474,7 +529,9 @@ def test_query_blockchain_events(
     # query ChannelNew event for a token
     api_test_context.specify_token_for_channelnew('0x61c808d82a3ac53231750dadc13c777b59310bd9')
     request = grequests.get(
-        'http://localhost:5001/api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20',
+        'http://localhost:{port}/api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20'.format(
+            port=rest_api_port_number,
+        )
     )
     response = request.send().response
     assert_proper_response(response)
@@ -494,7 +551,9 @@ def test_query_blockchain_events(
     # of `get_channel_events()` but just makes sure the proper data make it there
     api_test_context.specify_channel_for_events('0xedbaf3c5100302dcdda53269322f3730b1f0416d')
     request = grequests.get(
-        'http://localhost:5001/api/1/events/channels/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90',
+        'http://localhost:{port}/api/1/events/channels/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90'.format(
+            port=rest_api_port_number,
+        )
     )
     response = request.send().response
     assert_proper_response(response)
@@ -516,7 +575,9 @@ def test_query_blockchain_events(
 def test_break_blockchain_events(
         api_test_server,
         api_test_context,
-        api_raiden_service):
+        api_raiden_service,
+        rest_api_port_number):
+
     api_test_context.add_events([{
         '_event_type': 'ChannelNew',
         'settle_timeout': 10,
@@ -533,7 +594,9 @@ def test_break_blockchain_events(
     # the provided token_address
     api_test_context.specify_token_for_channelnew('0x61c808d82a3ac53231750dadc13c777b59310bd9')
     request = grequests.get(
-        'http://localhost:5001/api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20&token_address=0x167a9333bf582556f35bd4d16a7e80e191aa6476',
+        'http://localhost:{port}/api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20&token_address=0x167a9333bf582556f35bd4d16a7e80e191aa6476'.format(
+            port=rest_api_port_number,
+        )
     )
     response = request.send().response
     assert_proper_response(response)
@@ -551,7 +614,9 @@ def test_break_blockchain_events(
     # Assert the same for the event/channels endpoint
     api_test_context.specify_channel_for_events('0xedbaf3c5100302dcdda53269322f3730b1f0416d')
     request = grequests.get(
-        'http://localhost:5001/api/1/events/channels/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90&channel_address=0x167A9333BF582556f35Bd4d16A7E80E191aa6476',
+        'http://localhost:{port}/api/1/events/channels/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90&channel_address=0x167A9333BF582556f35Bd4d16A7E80E191aa6476'.format(
+            port=rest_api_port_number,
+        )
     )
     response = request.send().response
     assert_proper_response(response)

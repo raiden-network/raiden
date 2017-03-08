@@ -66,6 +66,7 @@ from raiden.tests.fixtures.variables import (
     blockchain_rpc_ports,
     blockchain_p2p_ports,
     raiden_udp_ports,
+    rest_api_port_number,
 )
 
 __all__ = (
@@ -123,4 +124,5 @@ __all__ = (
     'blockchain_rpc_ports',
     'blockchain_p2p_ports',
     'raiden_udp_ports',
+    'rest_api_port_number',
 )
