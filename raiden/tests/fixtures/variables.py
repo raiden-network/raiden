@@ -215,3 +215,9 @@ def raiden_udp_ports(number_of_nodes, port_generator):
         next(port_generator)
         for _ in range(number_of_nodes)
     ]
+
+
+@pytest.fixture
+def rest_api_port_number(port_generator):
+    """ Unique port for the REST API server. """
+    return next(port_generator)

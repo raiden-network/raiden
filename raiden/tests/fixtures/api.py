@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
-import pytest
+# pylint: disable=too-many-arguments,redefined-outer-name
 import copy
+
+import pytest
 from gevent import Greenlet
 
 from raiden.app import App
@@ -14,20 +16,24 @@ from raiden.tests.utils.apitestcontext import ApiTestContext
 #       What happens is that after one test is done, in the next one
 #       the server is no longer running even though the teardown has not
 #       been invoked.
-# @pytest.fixture(scope='session')
-@pytest.fixture()
-def api_test_server():
+@pytest.fixture
+def api_test_server(rest_api_port_number):
     # Initializing it without raiden_service.api here since that is a
     # function scope fixture. We will inject it to rest_api object later
     rest_api = RestAPI(None)
     api_server = APIServer(rest_api)
+
     # TODO: Find out why tests fail with debug=True
-    g = Greenlet.spawn(api_server.run, 5001, debug=False, use_evalex=False)
+    server = Greenlet.spawn(
+        api_server.run,
+        rest_api_port_number,
+        debug=False,
+        use_evalex=False,
+    )
+
     yield rest_api
-    # At sessions teardown kill the greenlet
-    g.kill(block=True, timeout=10)
-    del rest_api
-    del api_server
+
+    server.kill(block=True, timeout=10)
 
 
 @pytest.fixture
@@ -41,6 +47,7 @@ def api_raiden_service(
         send_ping_time,
         reveal_timeout,
         raiden_udp_ports):
+
     blockchain = blockchain_services[0]
     config = copy.deepcopy(App.default_config)
 
