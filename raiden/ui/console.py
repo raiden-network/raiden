@@ -206,6 +206,7 @@ class ConsoleTools(object):
             channel_manager: the channel_manager contract_proxy.
         """
         # Add the ERC20 token to the raiden registry
+        token_address = token_address.strip('0x')
         self._chain.default_registry.add_token(token_address)
 
         # Obtain the channel manager for the token
@@ -215,7 +216,7 @@ class ConsoleTools(object):
         self._raiden.register_channel_manager(channel_manager)
         return channel_manager
 
-    def ping(self, peer, timeout=0):
+    def ping(self, peer, timeout=4):
         """
         See, if a peer is discoverable and up.
            Args:
@@ -226,6 +227,7 @@ class ConsoleTools(object):
             success (boolean): True if ping succeeded, False otherwise.
         """
         # Check, if peer is discoverable
+        peer = peer.strip('0x')
         try:
             self._discovery.get(peer.decode('hex'))
         except KeyError:
@@ -235,9 +237,13 @@ class ConsoleTools(object):
         async_result = self._raiden.protocol.send_ping(peer.decode('hex'))
         return async_result.wait(timeout) is not None
 
-    def open_channel_with_funding(self, token_address, peer, amount,
-                                  settle_timeout=None,
-                                  reveal_timeout=None):
+    def open_channel_with_funding(
+            self,
+            token_address,
+            peer,
+            amount,
+            settle_timeout=None,
+            reveal_timeout=None):
         """Convenience method to open a channel.
         Args:
             token_address (str): hex encoded address of the token for the channel.
@@ -248,6 +254,8 @@ class ConsoleTools(object):
         Return:
             netting_channel: the (newly opened) netting channel object.
         """
+        peer = peer.strip('0x')
+        token_address = token_address.strip('0x')
         # Check, if peer is discoverable
         try:
             self._discovery.get(peer.decode('hex'))
@@ -275,6 +283,8 @@ class ConsoleTools(object):
             stats (dict): collected stats for the channel or None if pretty
 
         """
+        peer = peer.strip('0x')
+        token_address = token_address.strip('0x')
         # Get the token
         token = self._chain.token(token_address.decode('hex'))
 
@@ -336,6 +346,7 @@ class ConsoleTools(object):
         return events.netting_channel_events(self._chain.client, netting_channel)
 
     def wait_for_contract(self, contract_address, timeout=None):
+        contract_address = contract_address.strip('0x')
         start_time = time.time()
         result = self._raiden.chain.client.call(
             'eth_getCode',
