@@ -36,7 +36,7 @@ function followlog() {
     logfile=$2
     tmux split-window -v -t "${target}"
     tmux resize-pane -t "${target}" -y 10
-    tmux send-keys -t "${target}" "sleep 10 && tail -f ${logfile}" C-m
+    tmux send-keys -t "${target}" "touch ${logfile} && tail -f ${logfile}" C-m
 }
 
 TEMP=$(mktemp -d "/tmp/raiden.XXXXX")
