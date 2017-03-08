@@ -168,6 +168,9 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     else:
         rpc_host, rpc_port = split_endpoint(endpoint)
 
+    # user may have provided registry and discovery contracts with leading 0x
+    registry_contract_address = registry_contract_address.strip('0x')
+    discovery_contract_address = discovery_contract_address.strip('0x')
     blockchain_service = BlockChainService(
         privatekey,
         decode_hex(registry_contract_address),
