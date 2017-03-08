@@ -29,15 +29,15 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
     type=str,
 )
 @click.option(  # noqa
-    '--registry_contract_address',
+    '--registry-contract-address',
     type=str,
 )
 @click.option(  # noqa
-    '--discovery_contract_address',
+    '--discovery-contract-address',
     type=str,
 )
 @click.option(  # noqa
-    '--listen_address',
+    '--listen-address',
     type=str,
 )
 @click.option(  # noqa
@@ -55,11 +55,11 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
     type=click.File()
 )
 @click.option(  # noqa
-    '--stage_prefix',
+    '--stage-prefix',
     type=str
 )
 @click.option(  # noqa
-    '--results_filename',
+    '--results-filename',
     type=str
 )
 @click.command()
