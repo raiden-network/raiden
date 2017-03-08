@@ -3,7 +3,7 @@ from raiden.transfer.architecture import Event
 # pylint: disable=too-many-arguments,too-few-public-methods
 
 
-def mediatedtransfer(transfer, recipient):
+def mediatedtransfer(transfer, receiver):
     """ Create SendMediatedTransfer from LockedTransferState. """
     return SendMediatedTransfer(
         transfer.identifier,
@@ -13,7 +13,7 @@ def mediatedtransfer(transfer, recipient):
         transfer.initiator,
         transfer.target,
         transfer.expiration,
-        recipient,
+        receiver,
     )
 
 
@@ -28,7 +28,7 @@ class SendMediatedTransfer(Event):
             initiator,
             target,
             expiration,
-            node_address):
+            receiver):
 
         self.identifier = identifier
         self.token = token
@@ -37,7 +37,7 @@ class SendMediatedTransfer(Event):
         self.initiator = initiator
         self.target = target
         self.expiration = expiration
-        self.node_address = node_address
+        self.receiver = receiver
 
 
 class SendRevealSecret(Event):
@@ -91,10 +91,11 @@ class SendBalanceProof(Event):
 
 class SendSecretRequest(Event):
     """ Event used by a target node to request the secret from the initiator. """
-    def __init__(self, identifier, amount, hashlock):
+    def __init__(self, identifier, amount, hashlock, receiver):
         self.identifier = identifier
         self.amount = amount
         self.hashlock = hashlock
+        self.receiver = receiver
 
 
 class SendRefundTransfer(Event):
@@ -111,14 +112,14 @@ class SendRefundTransfer(Event):
             amount,
             hashlock,
             expiration,
-            node_address):
+            receiver):
 
         self.identifier = identifier
         self.token = token
         self.amount = amount
         self.hashlock = hashlock
         self.expiration = expiration
-        self.node_address = node_address
+        self.receiver = receiver
 
 
 class EventTransferFailed(Event):

@@ -200,7 +200,7 @@ def test_init_with_usable_routes():
     assert mediated_transfer.amount == amount, 'transfer amount mismatch'
     assert mediated_transfer.expiration == expiration, 'transfer expiration mismatch'
     assert mediated_transfer.hashlock == sha3(secret_generator.secrets[0]), 'wrong hashlock'
-    assert mediated_transfer.node_address == mediator_address, 'wrong mediator address'
+    assert mediated_transfer.receiver == mediator_address, 'wrong mediator address'
 
     assert initiator_state.route == routes[0]
     assert len(initiator_state.routes.available_routes) == 0

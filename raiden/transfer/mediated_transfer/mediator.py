@@ -4,24 +4,23 @@ import itertools
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.mediated_transfer.transition import update_route
 from raiden.transfer.mediated_transfer.state import (
-    MediatorState,
-    MediationPairState,
     LockedTransferState,
+    MediationPairState,
+    MediatorState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
-    ReceiveBalanceProof,
     ActionInitMediator,
     ContractReceiveWithdraw,
+    ReceiveBalanceProof,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
 from raiden.transfer.state_change import (
-    Block,
     ActionRouteChange,
+    Block,
 )
 from raiden.transfer.mediated_transfer.events import (
     mediatedtransfer,
-
     ContractSendChannelClose,
     ContractSendWithdraw,
     SendBalanceProof,
@@ -216,6 +215,9 @@ def sanity_check(state):
 def clear_if_finalized(iteration):
     """ Clear the state if all transfer pairs have finalized. """
     state = iteration.new_state
+
+    if state is None:
+        return iteration
 
     # TODO: clear the expired transfer, this will need some sort of
     # synchronization among the nodes
@@ -656,7 +658,10 @@ def handle_block(state, state_change):
     Return:
         TransitionResult: The resulting iteration
     """
-    block_number = state_change.block_number
+    block_number = max(
+        state.block_number,
+        state_change.block_number,
+    )
     state.block_number = block_number
 
     close_events = events_for_close(
@@ -895,6 +900,7 @@ def state_transition(state, state_change):
             iteration = handle_contractwithdraw(state, state_change)
 
     # this is the place for paranoia
-    sanity_check(iteration.new_state)
+    if iteration.new_state is not None:
+        sanity_check(iteration.new_state)
 
     return clear_if_finalized(iteration)

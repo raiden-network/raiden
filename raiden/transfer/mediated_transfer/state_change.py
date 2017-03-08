@@ -77,13 +77,11 @@ class ActionInitTarget(StateChange):
                  our_address,
                  from_route,
                  from_transfer,
-                 hashlock,
                  block_number):
 
         self.our_address = our_address
         self.from_route = from_route
         self.from_transfer = from_transfer
-        self.hashlock = hashlock
         self.block_number = block_number
 
 
