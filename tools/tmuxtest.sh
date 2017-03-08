@@ -128,12 +128,12 @@ RAIDEN_VARIABLE_TEMPLATE="
 raiden1='${ADDRESS1}'
 raiden2='${ADDRESS2}'
 raiden3='${ADDRESS3}'
-asset1='${TOKEN1}'
-asset2='${TOKEN2}'
-asset3='${TOKEN3}'
-am1=raiden.get_manager_by_asset_address('${TOKEN1}'.decode('hex'))
-am2=raiden.get_manager_by_asset_address('${TOKEN2}'.decode('hex'))
-# am3=raiden.get_manager_by_asset_address('${TOKEN3}'.decode('hex'))"
+token1='${TOKEN1}'
+token2='${TOKEN2}'
+token3='${TOKEN3}'
+am1=raiden.get_manager_by_token_address('${TOKEN1}'.decode('hex'))
+am2=raiden.get_manager_by_token_address('${TOKEN2}'.decode('hex'))
+# am3=raiden.get_manager_by_token_address('${TOKEN3}'.decode('hex'))"
 
 [ "$SETUP_TMUX" -eq 1 ] && {
     info "creating the tmux windows/panels"
@@ -175,18 +175,18 @@ am2=raiden.get_manager_by_asset_address('${TOKEN2}'.decode('hex'))
 [ "$SETUP_CHANNELS" -eq 1 ] && {
     info "configuring the raiden channels"
     printf "      %64s %40s %s\n" PRIVKEY ADDRESS CHANNELS
-    echo "node1 ${PRIVKEY1} ${ADDRESS1} both assets with balance"
-    echo "node2 ${PRIVKEY2} ${ADDRESS2} both assets with balance"
-    echo "node3 ${PRIVKEY3} ${ADDRESS3} both assets but asset2 has no balance"
+    echo "node1 ${PRIVKEY1} ${ADDRESS1} both tokens with balance"
+    echo "node2 ${PRIVKEY2} ${ADDRESS2} both tokens with balance"
+    echo "node3 ${PRIVKEY3} ${ADDRESS3} both tokens but token2 has no balance"
 
-    # assume the genesis file alredy has distributed asset to all nodes
+    # assume the genesis file alredy has distributed token to all nodes
 
-    tmux send-keys -t raiden:3 "tools.register_asset('${TOKEN1}')" C-m
-    tmux send-keys -t raiden:3 "tools.register_asset('${TOKEN2}')" C-m
-    # tmux send-keys -t raiden:3 "tools.register_asset('${TOKEN3}')" C-m
+    tmux send-keys -t raiden:3 "tools.register_token('${TOKEN1}')" C-m
+    tmux send-keys -t raiden:3 "tools.register_token('${TOKEN2}')" C-m
+    # tmux send-keys -t raiden:3 "tools.register_token('${TOKEN3}')" C-m
 
-    tmux send-keys -t raiden:4 "import time; time.sleep(10)  # wait for asset registration"  C-m
-    tmux send-keys -t raiden:5 "import time; time.sleep(10 + 10)  # wait for asset registration and channel openning"  C-m
+    tmux send-keys -t raiden:4 "import time; time.sleep(10)  # wait for token registration"  C-m
+    tmux send-keys -t raiden:5 "import time; time.sleep(10 + 10)  # wait for token registration and channel openning"  C-m
 
     tmux send-keys -t raiden:3 "tools.open_channel_with_funding('${TOKEN1}', '${ADDRESS2}', 100)" C-m
     tmux send-keys -t raiden:3 "tools.open_channel_with_funding('${TOKEN2}', '${ADDRESS2}', 100)" C-m
