@@ -205,11 +205,13 @@ am2=raiden.get_manager_by_token_address('${TOKEN2}'.decode('hex'))
     tmux send-keys -t raiden:4 "${RAIDEN_VARIABLE_TEMPLATE}" C-m
     tmux send-keys -t raiden:5 "${RAIDEN_VARIABLE_TEMPLATE}" C-m
 
-    tmux send-keys -t raiden:3 "identifier = 1  # change this for each new transfer"
-    tmux send-keys -t raiden:3 "raiden.api.expect_exchange(identifier, '${TOKEN1}'.decode('hex'), 100, '${TOKEN2}'.decode('hex'), 70,  '${ADDRESS3}'.decode('hex'))"
+    tmux send-keys -t raiden:3 "identifier = 1  # change this for each new transfer" C-m
+    # exchange is not yet implemented
+    # tmux send-keys -t raiden:3 "raiden.api.expect_exchange(identifier, '${TOKEN1}'.decode('hex'), 100, '${TOKEN2}'.decode('hex'), 70,  '${ADDRESS3}'.decode('hex'))"
 
-    tmux send-keys -t raiden:5 "identifier = 1  # change this for each new transfer"
-    tmux send-keys -t raiden:5 "raiden.api.exchange(identifier, '${TOKEN1}'.decode('hex'), 100, '${TOKEN2}'.decode('hex'), 70,  '${ADDRESS1}'.decode('hex'))"
+    tmux send-keys -t raiden:5 "identifier = 1  # change this for each new transfer" C-m
+    # exchange is not yet implemented
+    # tmux send-keys -t raiden:5 "raiden.api.exchange(identifier, '${TOKEN1}'.decode('hex'), 100, '${TOKEN2}'.decode('hex'), 70,  '${ADDRESS1}'.decode('hex'))"
 }
 
 echo
