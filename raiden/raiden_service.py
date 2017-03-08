@@ -454,25 +454,6 @@ class RaidenService(object):
         if len(self.hashlock_token_task[hashlock]) == 0:
             del self.hashlock_token_task[hashlock]
 
-    def message_for_task(self, message, hashlock):
-        """ Sends the message to the corresponding task.
-
-        The corresponding task is found by matching the hashlock.
-
-        Return:
-            Nothing if a corresponding task is found,raise Exception otherwise
-        """
-
-        if self.hashlock_token_task[hashlock]:
-            for task in self.hashlock_token_task[hashlock].itervalues():
-                task.on_response(message)
-
-        else:
-            raise UnknownAddress('Received unexpected {}, sender: {}'.format(
-                message.__class__.__name__,
-                pex(message.sender),
-            ))
-
     def register_registry(self, registry_address):
         proxies = get_relevant_proxies(
             self.chain,
@@ -1139,76 +1120,59 @@ class RaidenMessageHandler(object):
         secret = message.secret
         sender = message.sender
 
-        try:
-            self.raiden.message_for_task(message, hashlock)
-        except UnknownAddress:
-            # No gevent task registered for the given hashlock, trying state task
+        # A payee node knows the secret, release the lock and update the
+        # balance locally, next transfer message will have an updated
+        # transferred_amount and merkle tree root
+        for graph in self.raiden.channelgraphs.itervalues():
+            channel = graph.partneraddress_channel.get(sender)
 
-            # A payee node knows the secret, release the lock and update the
-            # balance locally, next transfer message will have an updated
-            # transferred_amount and merkle tree root
-            for graph in self.raiden.channelgraphs.itervalues():
-                channel = graph.partneraddress_channel.get(sender)
+            unclaimed = (
+                channel is not None and
+                channel.partner_state.balance_proof.is_unclaimed(hashlock)
+            )
 
-                unclaimed = (
-                    channel is not None and
-                    channel.partner_state.balance_proof.is_unclaimed(hashlock)
-                )
+            if unclaimed:
+                channel.release_lock(secret)
 
-                if unclaimed:
-                    channel.release_lock(secret)
-
-            state_change = ReceiveSecretReveal(secret, sender)
-            self.raiden.state_machine_event_handler.dispatch_to_all_tasks(state_change)
+        state_change = ReceiveSecretReveal(secret, sender)
+        self.raiden.state_machine_event_handler.dispatch_to_all_tasks(state_change)
 
     def message_secretrequest(self, message):
-        try:
-            self.raiden.message_for_task(message, message.hashlock)
-        except UnknownAddress:
-            # No gevent task registered for the given hashlock, trying state task
+        if message.identifier in self.raiden.identifier_statemanager:
+            state_change = ReceiveSecretRequest(
+                message.identifier,
+                message.amount,
+                message.hashlock,
+                message.sender,
+            )
 
-            if message.identifier in self.raiden.identifier_statemanager:
-                state_change = ReceiveSecretRequest(
-                    message.identifier,
-                    message.amount,
-                    message.hashlock,
-                    message.sender,
-                )
-
-                self.raiden.state_machine_event_handler.dispatch_by_identifier(
-                    message.identifier,
-                    state_change,
-                )
+            self.raiden.state_machine_event_handler.dispatch_by_identifier(
+                message.identifier,
+                state_change,
+            )
 
     def message_secret(self, message):
-        # notify the waiting tasks about the message (multiple tasks could
-        # happen in exchanges were a node is on both token transfers), and make
-        # sure that the secret is register if it fails (or it has exited
-        # because the transfer was considered done)
         try:
-            self.raiden.message_for_task(message, message.hashlock)
-        finally:
-            try:
-                # register the secret with all channels interested in it (this
-                # must not withdraw or unlock otherwise the state changes could
-                # flow in the wrong order in the path)
-                self.raiden.register_secret(message.secret)
+            # register the secret with all channels interested in it (this
+            # must not withdraw or unlock otherwise the state changes could
+            # flow in the wrong order in the path)
+            self.raiden.register_secret(message.secret)
 
-                secret = message.secret
-                identifier = message.identifier
-                token = message.token
-                secret = message.secret
-                hashlock = sha3(secret)
+            secret = message.secret
+            identifier = message.identifier
+            token = message.token
+            secret = message.secret
+            hashlock = sha3(secret)
 
-                self.raiden.handle_secret(
-                    identifier,
-                    token,
-                    secret,
-                    message,
-                    hashlock,
-                )
-            except:  # pylint: disable=bare-except
-                log.exception('Unhandled exception')
+            self.raiden.handle_secret(
+                identifier,
+                token,
+                secret,
+                message,
+                hashlock,
+            )
+        except:  # pylint: disable=bare-except
+            log.exception('Unhandled exception')
 
         if message.identifier in self.raiden.identifier_statemanager:
             state_change = ReceiveSecretReveal(
@@ -1222,9 +1186,6 @@ class RaidenMessageHandler(object):
             )
 
     def message_refundtransfer(self, message):
-        # compat: dispatch to existing tasks
-        self.raiden.message_for_task(message, message.lock.hashlock)
-
         if message.identifier in self.raiden.identifier_statemanager:
             identifier = message.identifier
             token_address = message.token
