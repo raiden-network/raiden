@@ -16,7 +16,7 @@ from ethereum.utils import denoms
 from gevent.event import Event
 from IPython.lib.inputhook import inputhook_manager
 from pyethapp.utils import bcolors as bc
-from pyethapp.jsonrpc import address_encoder, default_gasprice
+from pyethapp.jsonrpc import address_encoder, address_decoder, default_gasprice
 from pyethapp.console_service import GeventInputHook, SigINTHandler
 
 from raiden.utils import events, get_contract_path
@@ -206,11 +206,10 @@ class ConsoleTools(object):
             channel_manager: the channel_manager contract_proxy.
         """
         # Add the ERC20 token to the raiden registry
-        token_address = token_address.strip('0x')
         self._chain.default_registry.add_token(token_address)
 
         # Obtain the channel manager for the token
-        channel_manager = self._chain.manager_by_token(token_address.decode('hex'))
+        channel_manager = self._chain.manager_by_token(address_decoder(token_address))
 
         # Register the channel manager with the raiden registry
         self._raiden.register_channel_manager(channel_manager)
@@ -227,14 +226,14 @@ class ConsoleTools(object):
             success (boolean): True if ping succeeded, False otherwise.
         """
         # Check, if peer is discoverable
-        peer = peer.strip('0x')
+        peer_bin = address_decoder(peer)
         try:
-            self._discovery.get(peer.decode('hex'))
+            self._discovery.get(peer_bin)
         except KeyError:
             print("Error: peer {} not found in discovery".format(peer))
             return False
 
-        async_result = self._raiden.protocol.send_ping(peer.decode('hex'))
+        async_result = self._raiden.protocol.send_ping(peer_bin)
         return async_result.wait(timeout) is not None
 
     def open_channel_with_funding(
@@ -254,11 +253,9 @@ class ConsoleTools(object):
         Return:
             netting_channel: the (newly opened) netting channel object.
         """
-        peer = peer.strip('0x')
-        token_address = token_address.strip('0x')
         # Check, if peer is discoverable
         try:
-            self._discovery.get(peer.decode('hex'))
+            self._discovery.get(address_decoder(peer))
         except KeyError:
             print("Error: peer {} not found in discovery".format(peer))
             return
@@ -283,17 +280,17 @@ class ConsoleTools(object):
             stats (dict): collected stats for the channel or None if pretty
 
         """
-        peer = peer.strip('0x')
-        token_address = token_address.strip('0x')
+        peer_bin = address_decoder(peer)
+        token_address_bin = address_decoder(token_address)
         # Get the token
-        token = self._chain.token(token_address.decode('hex'))
+        token = self._chain.token(token_address_bin)
 
         # Obtain the token manager
-        token_manager = self._raiden.managers_by_token_address[token_address.decode('hex')]
+        token_manager = self._raiden.managers_by_token_address[token_address_bin]
         assert token_manager
 
         # Get the channel
-        channel = token_manager.get_channel_by_partner_address(peer.decode('hex'))
+        channel = token_manager.get_channel_by_partner_address(peer_bin)
         assert channel
 
         # Collect data
@@ -314,7 +311,7 @@ class ConsoleTools(object):
             funding=channel.external_state.netting_channel.detail(self._raiden.address),
             token=dict(
                 our_balance=token.balance_of(self._raiden.address),
-                partner_balance=token.balance_of(peer.decode('hex')),
+                partner_balance=token.balance_of(peer_bin),
                 name=token.proxy.name(),
                 symbol=token.proxy.symbol(),
             ),
@@ -346,11 +343,11 @@ class ConsoleTools(object):
         return events.netting_channel_events(self._chain.client, netting_channel)
 
     def wait_for_contract(self, contract_address, timeout=None):
-        contract_address = contract_address.strip('0x')
+        contract_address_bin = address_decoder(contract_address),
         start_time = time.time()
         result = self._raiden.chain.client.call(
             'eth_getCode',
-            address_encoder(contract_address),
+            contract_address_bin,
             'latest',
         )
 
@@ -361,7 +358,7 @@ class ConsoleTools(object):
 
             result = self._raiden.chain.client.call(
                 'eth_getCode',
-                address_encoder(contract_address),
+                contract_address_bin,
                 'latest',
             )
             gevent.sleep(0.5)
