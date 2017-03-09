@@ -1,7 +1,7 @@
 [Desktop Entry]
 Name=Raiden
 Version=1.0
-Exec=apprun.sh
+Exec=raiden
 Icon=raiden
 Type=raiden
 StartupNotify=true

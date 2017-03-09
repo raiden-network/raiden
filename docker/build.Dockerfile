@@ -42,8 +42,6 @@ WORKDIR /
 
 ADD raiden.desktop /raiden.AppDir/raiden.desktop
 ADD raiden.svg /raiden.AppDir/raiden.svg
-ADD apprun.sh /raiden.AppDir/usr/bin/apprun.sh
-RUN chmod a+x /raiden.AppDir/usr/bin/apprun.sh
 
 RUN mkdir -p /raiden.AppDir/usr/lib/x86_64-linux-gnu/ && \
     cp /lib/x86_64-linux-gnu/libssl.so.1.0.0 /raiden.AppDir/usr/lib/x86_64-linux-gnu/ && \
@@ -61,10 +59,13 @@ RUN apt-get -y install python
 
 RUN curl -L -o functions.sh "https://github.com/probonopd/AppImages/raw/master/functions.sh"
 
+ADD apprun.sh /raiden.AppDir/AppRun
+RUN chmod a+x /raiden.AppDir/AppRun
+
 RUN bash -c 'APP=Raiden LOWERAPP=raiden ARCH=x86_64 source functions.sh && \
     cd /raiden.AppDir && \
-    get_apprun && \
     copy_deps ; copy_deps ; copy_deps && \
+    delete_blacklisted && \
     move_lib'
 
 ADD raiden /raiden.AppDir/usr/bin/raiden
