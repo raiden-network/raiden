@@ -4,7 +4,6 @@ import logging
 from collections import namedtuple
 from itertools import chain
 
-import gevent
 from gevent.event import Event
 from ethereum import slogging
 from ethereum.utils import encode_hex
@@ -16,8 +15,12 @@ from raiden.messages import (
 )
 from raiden.mtree import merkleroot, get_proof
 from raiden.utils import sha3, pex, lpex
-from raiden.tasks import REMOVE_CALLBACK
 from raiden.exceptions import UnknownAddress
+from raiden.transfer.state_change import Block
+from raiden.transfer.mediated_transfer.state_change import (
+    ContractReceiveClosed,
+    ContractReceiveSettled,
+)
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -267,7 +270,7 @@ class BalanceProof(object):
 class ChannelEndState(object):
     """ Tracks the state of one of the participants in a channel. """
 
-    def __init__(self, participant_address, participant_balance, get_block_number):
+    def __init__(self, participant_address, participant_balance, opened_block):
         # since ethereum only uses integral values we cannot use float/Decimal
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
@@ -282,10 +285,7 @@ class ChannelEndState(object):
         # 0 is used in the netting contract to represent the lack of a
         # the nonce value must be inside the netting channel allowed range
         # that is defined in terms of the opened block
-        if isinstance(get_block_number, int):
-            self.nonce = 1 * (get_block_number * (2 ** 32))
-        else:
-            self.nonce = 1 * (get_block_number() * (2 ** 32))
+        self.nonce = 1 * (opened_block * (2 ** 32))
 
         # contains the last known message with a valid signature and
         # transferred_amount, the secrets revealed since that transfer, and the
@@ -377,16 +377,11 @@ class ChannelEndState(object):
 
 
 class ChannelExternalState(object):
-    def __init__(
-            self,
-            register_block_alarm,
-            register_channel_for_hashlock,
-            get_block_number,
-            netting_channel):
-        self.register_block_alarm = register_block_alarm
-        self.register_channel_for_hashlock = register_channel_for_hashlock
-        self.get_block_number = get_block_number
+    # pylint: disable=too-many-instance-attributes
 
+    def __init__(self, register_channel_for_hashlock, netting_channel):
+
+        self.register_channel_for_hashlock = register_channel_for_hashlock
         self.netting_channel = netting_channel
 
         # api design: allow the user to access these attributes as read-only
@@ -492,7 +487,7 @@ class ChannelExternalState(object):
 
 
 class Channel(object):
-    # pylint: disable=too-many-instance-attributes,too-many-arguments
+    # pylint: disable=too-many-instance-attributes,too-many-arguments,too-many-public-methods
 
     def __init__(
             self,
@@ -501,7 +496,8 @@ class Channel(object):
             external_state,
             token_address,
             reveal_timeout,
-            settle_timeout):
+            settle_timeout,
+            block_number):
 
         if settle_timeout <= reveal_timeout:
             # reveal_timeout must be a fraction of the settle_timeout
@@ -537,10 +533,12 @@ class Channel(object):
         self.our_state = our_state
         self.partner_state = partner_state
 
+        self.channel_address = external_state.netting_channel.address
         self.token_address = token_address
         self.reveal_timeout = reveal_timeout
         self.settle_timeout = settle_timeout
         self.external_state = external_state
+        self.block_number = block_number
 
         self.open_event = Event()
         self.close_event = Event()
@@ -569,10 +567,6 @@ class Channel(object):
     @property
     def partner_address(self):
         return self.partner_state.address
-
-    @property
-    def channel_address(self):
-        return self.external_state.netting_channel.address
 
     @property
     def deposit(self):
@@ -622,53 +616,27 @@ class Channel(object):
     def outstanding(self):
         return self.our_state.locked()
 
-    def channel_closed(self, block_number):
-        self.external_state.register_block_alarm(self.blockalarm_for_settle)
-
+    def channel_closed(self, block_number):  # pylint: disable=unused-argument
         balance_proof = self.our_state.balance_proof
-
         transfer = balance_proof.transfer
-        unlock_proofs = balance_proof.get_known_unlocks()
 
-        self.external_state.unlock(self.our_state.address, unlock_proofs)
-
-        # check the published messages for the correct transferred_amount
-        # and dispute if there is a discrepancy
         our_closed_transferred = self.external_state.query_transferred_amount(
             self.our_state.address
         )
         partner_closed_transferred = self.external_state.query_transferred_amount(
             self.partner_state.address
         )
-        if (
-                self.our_state.transferred_amount != our_closed_transferred or
-                self.partner_state.transferred_amount != partner_closed_transferred
-        ):
-            self.external_state.update_transfer(self.our_state.address, transfer)
 
-    def blockalarm_for_settle(self, block_number):
-        def _settle():
-            # do not call settle if already settled, the event polling
-            # might be lagging behind.
-            settled_block = self.external_state.query_settled()
-            if settled_block != 0:
-                self.external_state.set_settled(settled_block)
-                log.info('channel automatically settled')
-                return
-
-            try:
-                self.external_state.settle()
-            except:
-                log.exception('Timedout while calling settle')
-
-        closed = self.external_state.closed_block != 0
-        after_settle_timeout = block_number >= (
-            self.external_state.closed_block + self.settle_timeout
+        need_to_dispute = (
+            self.our_state.transferred_amount != our_closed_transferred or
+            self.partner_state.transferred_amount != partner_closed_transferred
         )
 
-        if closed and after_settle_timeout:
-            gevent.spawn(_settle)  # don't block the alarm
-            return REMOVE_CALLBACK
+        if need_to_dispute:
+            self.external_state.update_transfer(self.our_state.address, transfer)
+
+        unlock_proofs = balance_proof.get_known_unlocks()
+        self.external_state.unlock(self.our_state.address, unlock_proofs)
 
     def get_state_for(self, node_address_bin):
         if self.our_state.address == node_address_bin:
@@ -709,7 +677,9 @@ class Channel(object):
         partner_known = self.partner_state.balance_proof.is_known(hashlock)
 
         if not our_known and not partner_known:
-            msg = 'Secret doesn\'t correspond to a registered hashlock. hashlock:{} token:{}'.format(
+            msg = (
+                "Secret doesn't correspond to a registered hashlock. hashlock:{} token:{}"
+            ).format(
                 pex(hashlock),
                 pex(self.token_address),
             )
@@ -766,10 +736,12 @@ class Channel(object):
         hashlock = sha3(secret)
 
         if not self.partner_state.balance_proof.is_known(hashlock):
-            raise ValueError('The secret doesn\'t unlock any hashlock. hashlock:{} token:{}'.format(
+            msg = "The secret doesn't unlock any hashlock. hashlock:{} token:{}".format(
                 pex(hashlock),
                 pex(self.token_address),
-            ))
+            )
+
+            raise ValueError(msg)
 
         lock = self.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
 
@@ -889,8 +861,6 @@ class Channel(object):
         # a Secret was in traffic) the balance _will_ be wrong, so first check
         # the locksroot and then the balance
         if isinstance(transfer, LockedTransfer):
-            block_number = self.external_state.get_block_number()
-
             if to_state.balance_proof.is_pending(transfer.lock.hashlock):
                 raise ValueError('hashlock is already registered')
 
@@ -916,21 +886,21 @@ class Channel(object):
             # As a receiver: If the lock expiration is larger than the settling
             # time a secret could be revealed after the channel is settled and
             # we won't be able to claim the token
-            if self.settle_timeout < transfer.lock.expiration - block_number:
+            if self.settle_timeout < transfer.lock.expiration - self.block_number:
                 log.error(
                     "Transfer expiration doesn't allow for correct settlement.",
                     lock_expiration=transfer.lock.expiration,
-                    current_block=block_number,
+                    current_block=self.block_number,
                     settle_timeout=self.settle_timeout,
                 )
 
                 raise ValueError("Transfer expiration doesn't allow for correct settlement.")
 
-            if not transfer.lock.expiration - block_number > self.reveal_timeout:
+            if not transfer.lock.expiration - self.block_number > self.reveal_timeout:
                 log.error(
                     'Expiration smaller than the minimum required.',
                     lock_expiration=transfer.lock.expiration,
-                    current_block=block_number,
+                    current_block=self.block_number,
                     reveal_timeout=self.reveal_timeout,
                 )
 
@@ -1048,11 +1018,10 @@ class Channel(object):
 
         This message needs to be signed and registered with the channel before sent.
         """
+        timeout = expiration - self.block_number
+
         if not self.isopen:
             raise ValueError('The channel is closed.')
-
-        block_number = self.external_state.get_block_number()
-        timeout = expiration - block_number
 
         # the lock timeout cannot be larger than the settle timeout (otherwise
         # the smart contract cannot check the locks)
@@ -1060,7 +1029,7 @@ class Channel(object):
             log.debug(
                 'Lock expiration is larger than settle timeout.',
                 expiration=expiration,
-                block_number=block_number,
+                block_number=self.block_number,
                 settle_timeout=self.settle_timeout,
             )
 
@@ -1072,7 +1041,7 @@ class Channel(object):
             log.debug(
                 'Lock expiration is lower than reveal timeout.',
                 expiration=expiration,
-                block_number=block_number,
+                block_number=self.block_number,
                 reveal_timeout=self.reveal_timeout,
             )
 
@@ -1106,8 +1075,16 @@ class Channel(object):
             lock=lock,
         )
 
-    def create_mediatedtransfer(self, transfer_initiator, transfer_target, fee,
-                                amount, identifier, expiration, hashlock):
+    def create_mediatedtransfer(
+            self,
+            transfer_initiator,
+            transfer_target,
+            fee,
+            amount,
+            identifier,
+            expiration,
+            hashlock):
+
         """ Return a MediatedTransfer message.
 
         This message needs to be signed and registered with the channel before
@@ -1135,20 +1112,18 @@ class Channel(object):
         )
         return mediated_transfer
 
-    def create_refundtransfer_for(self, transfer):
-        """ Return RefundTransfer for `transfer`. """
-        lock = transfer.lock
+    def state_transition(self, state_change):
+        if isinstance(state_change, Block):
+            self.block_number = state_change.block_number
+            settlement_end = self.external_state.closed_block + self.settle_timeout
 
-        if not self.our_state.balance_proof.is_pending(lock.hashlock):
-            raise ValueError('Unknow hashlock')
+            if self.state == 'closed' and self.block_number > settlement_end:
+                self.external_state.settle()
 
-        locked_transfer = self.create_lockedtransfer(
-            lock.amount,
-            1,  # TODO: Perhaps add identifier in the refund transfer too?
-            lock.expiration,
-            lock.hashlock,
-        )
+        if isinstance(state_change, ContractReceiveClosed):
+            if state_change.channel_address == self.channel_address:
+                self.external_state.set_closed(state_change.block_number)
 
-        cancel_transfer = locked_transfer.to_refundtransfer()
-
-        return cancel_transfer
+        if isinstance(state_change, ContractReceiveSettled):
+            if state_change.channel_address == self.channel_address:
+                self.external_state.set_settled(state_change.block_number)

@@ -1,28 +1,28 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-locals,too-many-statements
 from __future__ import division
 
 import pytest
 from ethereum import slogging
 
-from raiden.tests.utils.blockchain import wait_until_block
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.messages import DirectTransfer, Lock, LockedTransfer
 from raiden.utils import (
     sha3,
     make_address,
     make_privkey_address,
-    privatekey_to_address
 )
 from raiden.tests.utils.transfer import assert_synched_channels, channel
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-slogging.configure(':DEBUG')
-
-# pylint: disable=too-many-locals,too-many-statements
 
 
 class NettingChannelMock(object):
     # pylint: disable=no-self-use
+
+    def __init__(self):
+        self.address = 'channeladdresschanneladdresschanneladdre'
+
     def opened(self):
         return 1
 
@@ -34,14 +34,11 @@ class NettingChannelMock(object):
 
 
 def make_external_state():
-    block_alarm = list()
     channel_for_hashlock = list()
     netting_channel = NettingChannelMock()
 
     external_state = ChannelExternalState(
-        block_alarm.append,
         lambda *args: channel_for_hashlock.append(args),
-        lambda: 1,
         netting_channel,
     )
 
@@ -62,8 +59,8 @@ def test_end_state():
     lock_expiration = 10
     lock_hashlock = sha3(lock_secret)
 
-    state1 = ChannelEndState(address1, balance1, netting_channel.opened)
-    state2 = ChannelEndState(address2, balance2, netting_channel.opened)
+    state1 = ChannelEndState(address1, balance1, netting_channel.opened())
+    state2 = ChannelEndState(address2, balance2, netting_channel.opened())
 
     assert state1.contract_balance == balance1
     assert state2.contract_balance == balance2
@@ -203,9 +200,10 @@ def test_invalid_timeouts():
     address2 = make_address()
     balance1 = 10
     balance2 = 10
+    block_number = 10
 
-    our_state = ChannelEndState(address1, balance1, netting_channel.opened)
-    partner_state = ChannelEndState(address2, balance2, netting_channel.opened)
+    our_state = ChannelEndState(address1, balance1, netting_channel.opened())
+    partner_state = ChannelEndState(address2, balance2, netting_channel.opened())
     external_state = make_external_state()
 
     # do not allow a reveal timeout larger than the settle timeout
@@ -220,6 +218,7 @@ def test_invalid_timeouts():
             token_address,
             large_reveal_timeout,
             small_settle_timeout,
+            block_number,
         )
 
     for invalid_value in (-1, 0, 1.1, 1.0, 'a', [], {}):
@@ -231,6 +230,7 @@ def test_invalid_timeouts():
                 token_address,
                 invalid_value,
                 settle_timeout,
+                block_number,
             )
 
         with pytest.raises(ValueError):
@@ -241,6 +241,7 @@ def test_invalid_timeouts():
                 token_address,
                 reveal_timeout,
                 invalid_value,
+                block_number,
             )
 
 
@@ -255,14 +256,20 @@ def test_python_channel():
 
     reveal_timeout = 5
     settle_timeout = 15
+    block_number = 10
 
-    our_state = ChannelEndState(address1, balance1, netting_channel.opened)
-    partner_state = ChannelEndState(address2, balance2, netting_channel.opened)
+    our_state = ChannelEndState(address1, balance1, netting_channel.opened())
+    partner_state = ChannelEndState(address2, balance2, netting_channel.opened())
     external_state = make_external_state()
 
     test_channel = Channel(
-        our_state, partner_state, external_state,
-        token_address, reveal_timeout, settle_timeout,
+        our_state,
+        partner_state,
+        external_state,
+        token_address,
+        reveal_timeout,
+        settle_timeout,
+        block_number,
     )
 
     assert test_channel.contract_balance == our_state.contract_balance
@@ -278,19 +285,19 @@ def test_python_channel():
     with pytest.raises(ValueError):
         test_channel.create_directtransfer(
             -10,
-            1  # TODO: fill in identifier
+            identifier=1,
         )
 
     with pytest.raises(ValueError):
         test_channel.create_directtransfer(
             balance1 + 10,
-            1  # TODO: fill in identifier
+            identifier=1,
         )
 
     amount1 = 10
     directtransfer = test_channel.create_directtransfer(
         amount1,
-        1  # TODO: fill in identifier
+        identifier=1,
     )
     directtransfer.sign(privkey1, address1)
     test_channel.register_transfer(directtransfer)
@@ -308,13 +315,14 @@ def test_python_channel():
     hashlock = sha3(secret)
     amount2 = 10
     fee = 0
-    expiration = settle_timeout - 5
+    expiration = block_number + settle_timeout - 5
+    identifier = 1
     mediatedtransfer = test_channel.create_mediatedtransfer(
         address1,
         address2,
         fee,
         amount2,
-        1,  # TODO: fill in identifier
+        identifier,
         expiration,
         hashlock,
     )
@@ -377,8 +385,7 @@ def test_setup(raiden_network, deposit, tokens_addresses):
 @pytest.mark.parametrize('deposit', [2 ** 30])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_transfers', [100])
-def test_interwoven_transfers(number_of_transfers, raiden_network,
-                              settle_timeout):
+def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeout):
     """ Can keep doing transaction even if not all secrets have been released. """
     def log_state():
         unclaimed = [
@@ -423,10 +430,11 @@ def test_interwoven_transfers(number_of_transfers, raiden_network,
     distributed_amount = 0
 
     for i, (amount, secret) in enumerate(zip(transfers_amount, transfers_secret)):
-        expiration = app0.raiden.chain.block_number() + settle_timeout - 1
+        block_number = app0.raiden.chain.block_number()
+        expiration = block_number + settle_timeout - 1
         locked_transfer = channel0.create_lockedtransfer(
             amount=amount,
-            identifier=1,  # TODO: fill in identifier
+            identifier=1,
             expiration=expiration,
             hashlock=sha3(secret),
         )
@@ -525,10 +533,9 @@ def test_transfer(raiden_network, tokens_addresses):
     )
 
     amount = 10
-
     direct_transfer = channel0.create_directtransfer(
         amount,
-        1  # TODO: fill in identifier
+        identifier=1,
     )
     app0.raiden.sign(direct_transfer)
     channel0.register_transfer(direct_transfer)
@@ -564,14 +571,15 @@ def test_locked_transfer(raiden_network, settle_timeout):
     amount = 10
 
     # reveal_timeout <= expiration < contract.lock_time
-    expiration = app0.raiden.chain.block_number() + settle_timeout - 1
+    block_number = app0.raiden.chain.block_number()
+    expiration = block_number + settle_timeout - 1
 
     secret = 'secret'
     hashlock = sha3(secret)
 
     locked_transfer = channel0.create_lockedtransfer(
         amount=amount,
-        identifier=1,  # TODO: fill in identifier
+        identifier=1,
         expiration=expiration,
         hashlock=hashlock,
     )
@@ -618,14 +626,15 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     balance1 = channel1.balance
 
     amount = 10
-    expiration = app0.raiden.chain.block_number() + settle_timeout - 1
+    block_number = app0.raiden.chain.block_number()
+    expiration = block_number + settle_timeout - 1
 
     secret = 'secret'
     hashlock = sha3(secret)
 
     transfer1 = channel0.create_lockedtransfer(
         amount=amount,
-        identifier=1,  # TODO: fill in identifier
+        identifier=1,
         expiration=expiration,
         hashlock=hashlock,
     )

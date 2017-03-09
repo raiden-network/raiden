@@ -27,14 +27,17 @@ from raiden.tasks import (
 from raiden.transfer.architecture import (
     StateManager,
 )
+from raiden.transfer.state_change import (
+    Block,
+)
 from raiden.transfer.state import (
     RoutesState,
 )
 from raiden.transfer.mediated_transfer import (
     initiator,
     mediator,
-    target,
 )
+from raiden.transfer.mediated_transfer import target as target_task
 from raiden.transfer.mediated_transfer.state import (
     lockedtransfer_from_message,
     InitiatorState,
@@ -200,6 +203,13 @@ class RaidenService(object):
 
     def set_block_number(self, blocknumber):
         self._blocknumber = blocknumber
+
+        state_change = Block(blocknumber)
+        self.state_machine_event_handler.dispatch_to_all_tasks(state_change)
+
+        for graph in self.channelgraphs.itervalues():
+            for channel in graph.address_channel.itervalues():
+                channel.state_transition(state_change)
 
     def get_block_number(self):
         return self._blocknumber
@@ -410,12 +420,12 @@ class RaidenService(object):
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
-            netting_channel.opened,
+            netting_channel.opened(),
         )
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
-            netting_channel.opened,
+            netting_channel.opened(),
         )
 
         def register_channel_for_hashlock(channel, hashlock):
@@ -430,9 +440,7 @@ class RaidenService(object):
         settle_timeout = channel_details['settle_timeout']
 
         external_state = ChannelExternalState(
-            self.alarm.register_callback,
             register_channel_for_hashlock,
-            self.get_block_number,
             netting_channel,
         )
 
@@ -476,12 +484,14 @@ class RaidenService(object):
                 channels_detail.append(detail)
 
             edge_list = manager.channels_addresses()
+            block_number = self.get_block_number()
             graph = ChannelGraph(
                 self.address,
                 manager_address,
                 token_address,
                 edge_list,
-                channels_detail
+                channels_detail,
+                block_number,
             )
 
             self.manager_token[manager_address] = token_address
@@ -507,12 +517,14 @@ class RaidenService(object):
             for channel in netting_channels
         ]
 
+        block_number = self.get_block_number()
         graph = ChannelGraph(
             self.address,
             manager_address,
             token_address,
             edge_list,
             channels_detail,
+            block_number,
         )
 
         self.manager_token[manager_address] = token_address
@@ -522,9 +534,10 @@ class RaidenService(object):
         netting_channel = self.chain.netting_channel(channel_address)
         self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
 
+        block_number = self.get_block_number()
         detail = self.get_channel_detail(token_address, netting_channel)
         graph = self.channelgraphs[token_address]
-        graph.add_channel(detail)
+        graph.add_channel(detail, block_number)
 
     def stop(self):
         wait_for = [self.alarm]
@@ -760,7 +773,7 @@ class RaidenService(object):
             block_number,
         )
 
-        state_manager = StateManager(target.state_transition, None)
+        state_manager = StateManager(target_task.state_transition, None)
         all_events = state_manager.dispatch(init_target)
 
         for event in all_events:
@@ -1424,17 +1437,13 @@ class StateMachineEventHandler(object):
 
     def handle_closed(self, state_change):
         channel_address = state_change.channel_address
-        block_number = state_change.block_number
-
         channel = self.raiden.find_channel_by_address(channel_address)
-        channel.external_state.set_closed(block_number)
+        channel.state_transition(state_change)
 
     def handle_settled(self, state_change):
         channel_address = state_change.channel_address
-        block_number = state_change.block_number
-
         channel = self.raiden.find_channel_by_address(channel_address)
-        channel.external_state.set_settled(block_number)
+        channel.state_transition(state_change)
 
     def handle_withdraw(self, state_change):
         secret = state_change.secret
