@@ -114,7 +114,7 @@ def tester_deploy_contract(
 class ChannelExternalStateTester(object):
     def __init__(self, tester_state, private_key, address):
         self.tester_state = tester_state
-        self.proxy = NettingChannelTesterMock(
+        self.netting_channel = NettingChannelTesterMock(
             tester_state,
             private_key,
             address,
@@ -130,25 +130,27 @@ class ChannelExternalStateTester(object):
 
     @property
     def opened_block(self):
-        return self.proxy.opened()
+        return self.netting_channel.opened()
 
+    @property
     def closed_block(self):
-        return self.proxy.closed()
+        return self.netting_channel.closed()
 
+    @property
     def settled_block(self):
-        return self.proxy.settled()
+        return self.netting_channel.settled()
 
     def isopen(self):
-        return self.proxy.isopen()
+        return self.netting_channel.isopen()
 
     def update_transfer(self, our_address, first_transfer, second_transfer=None):
-        return self.proxy.update_transfer(our_address, first_transfer, second_transfer)
+        return self.netting_channel.update_transfer(our_address, first_transfer, second_transfer)
 
     def unlock(self, our_address, unlock_proofs):
-        return self.proxy.unlock(our_address, unlock_proofs)
+        return self.netting_channel.unlock(our_address, unlock_proofs)
 
     def settle(self):
-        return self.proxy.settle()
+        return self.netting_channel.settle()
 
     def register_channel_for_hashlock(self, channel, hashlock):
         channels_registered = self.hashlock_channel[hashlock]

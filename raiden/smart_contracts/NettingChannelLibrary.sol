@@ -302,6 +302,7 @@ library NettingChannelLibrary {
 
     /// @notice Unlock a locked transfer
     /// @dev Unlock a locked transfer
+    /// @param caller_address The calling address
     /// @param locked_encoded The lock
     /// @param merkle_proof The merkle proof
     /// @param secret The secret
@@ -337,18 +338,18 @@ library NettingChannelLibrary {
         //Check if caller_address is a participant and select her partner
         uint8 index = 1 - index_or_throw(self, caller_address);
 
-        Participant storage partner = self.participants[index];
-        if (partner.locksroot == 0) {
+        Participant storage counterparty = self.participants[index];
+        if (counterparty.nonce == 0) {
             throw;
         }
 
         h = computeMerkleRoot(locked_encoded, merkle_proof);
 
-        if (partner.locksroot != h) {
+        if (counterparty.locksroot != h) {
             throw;
         }
 
-        partner.unlocked.push(Lock(expiration, amount, hashlock));
+        counterparty.unlocked.push(Lock(expiration, amount, hashlock));
         self.locks[hashlock] = true;
     }
 

@@ -97,7 +97,8 @@ class ChannelGraph(object):
             channelmanager_address,
             token_address,
             edge_list,
-            channels_detail):
+            channels_detail,
+            block_number):
 
         if not isaddress(token_address):
             raise ValueError('token_address must be a valid address')
@@ -111,9 +112,9 @@ class ChannelGraph(object):
         self.channelmanager_address = channelmanager_address
 
         for detail in channels_detail:
-            self.add_channel(detail)
+            self.add_channel(detail, block_number)
 
-    def add_channel(self, detail):
+    def add_channel(self, detail, block_number):
         channel_address = detail.channel_address
         partner_state = detail.partner_state
 
@@ -124,6 +125,7 @@ class ChannelGraph(object):
             self.token_address,
             detail.reveal_timeout,
             detail.settle_timeout,
+            block_number,
         )
 
         self.partneraddress_channel[partner_state.address] = channel

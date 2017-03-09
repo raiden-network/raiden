@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from collections import namedtuple
+
 from ethereum.slogging import getLogger
 from ethereum.utils import big_endian_to_int
 
@@ -21,7 +23,6 @@ __all__ = (
 )
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
-
 
 class MessageHashable(object):
     pass

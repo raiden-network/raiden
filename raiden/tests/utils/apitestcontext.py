@@ -134,20 +134,18 @@ class ApiTestContext():
             reveal_timeout=20,
             settle_timeout=800,
             balance=0,
-    ):
+            block_number=1):
+
         our_address = make_address()
         our_balance = balance
         partner_balance = balance
         our_state = ChannelEndState(our_address, our_balance, 1)
         partner_state = ChannelEndState(partner_address, partner_balance, 1)
 
-        block_alarm = list()
         channel_for_hashlock = list()
         netting_channel = NettingChannelMock(make_address())
         external_state = ChannelExternalState(
-            block_alarm.append,
             lambda *args: channel_for_hashlock.append(args),
-            lambda: 1,
             netting_channel,
         )
         self.tokens.add(token_address)
@@ -158,6 +156,7 @@ class ApiTestContext():
             token_address,
             reveal_timeout,
             settle_timeout,
+            block_number,
         )
 
     def make_channel_and_add(self):

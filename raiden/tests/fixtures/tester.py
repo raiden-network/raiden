@@ -285,6 +285,7 @@ def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
             nettingcontract,
             first_externalstate,
             reveal_timeout,
+            tester_state.block.number,
         )
 
         second_externalstate = ChannelExternalStateTester(
@@ -297,6 +298,7 @@ def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
             nettingcontract,
             second_externalstate,
             reveal_timeout,
+            tester_state.block.number,
         )
 
         result.append(

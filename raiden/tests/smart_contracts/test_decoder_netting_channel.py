@@ -11,15 +11,21 @@ from raiden.tests.utils.tests import get_test_contract_path
 
 
 def deploy_decoder_tester(tester_state, token_address, address1, address2, settle_timeout):
+    netting_chnanel_library_path = os.path.join(
+        get_project_root(),
+        'smart_contracts',
+        'NettingChannelLibrary.sol',
+    )
+
     nettingchannel_lib = tester_state.abi_contract(
         None,
-        path=os.path.join(get_project_root(), "smart_contracts", "NettingChannelLibrary.sol"),
+        path=netting_chnanel_library_path,
         language='solidity'
     )
     tester_state.mine(number_of_blocks=1)
     decode_tester = tester_state.abi_contract(
         None,
-        path=get_test_contract_path("DecoderTester.sol"),
+        path=get_test_contract_path('DecoderTester.sol'),
         language='solidity',
         libraries={
             'NettingChannelLibrary': nettingchannel_lib.address.encode('hex')
@@ -30,21 +36,24 @@ def deploy_decoder_tester(tester_state, token_address, address1, address2, settl
             address2,
             settle_timeout
         ),
-        extra_args="raiden={}".format(os.path.join(get_project_root(), "smart_contracts"))
+        extra_args='raiden={}'.format(os.path.join(get_project_root(), 'smart_contracts'))
     )
     tester_state.mine(number_of_blocks=1)
 
     return decode_tester
 
 
-def test_decode_direct_transfer(
-        private_keys,
-        settle_timeout,
+def test_decode_lock(tester_state):
+    dtester = deploy_decoder_tester(
         tester_state,
-        tester_token,
-        tester_events,
-        tester_registry):
+        tester_token.address,
+        address0,
+        address1,
+        settle_timeout
+    )
 
+
+def test_decode_direct_transfer(settle_timeout, tester_state, tester_token):
     privatekey0 = tester.DEFAULT_KEY
     privatekey1 = tester.k1
     address0 = privatekey_to_address(privatekey0)
@@ -58,7 +67,7 @@ def test_decode_direct_transfer(
         settle_timeout
     )
 
-    locksroot = sha3("Waldemarstr")
+    locksroot = sha3('Waldemarstr')
 
     message = DirectTransfer(
         identifier=1,
@@ -82,14 +91,7 @@ def test_decode_direct_transfer(
     assert dtester.decodedLocksroot() == locksroot
 
 
-def test_decode_mediated_transfer(
-        private_keys,
-        settle_timeout,
-        tester_state,
-        tester_token,
-        tester_events,
-        tester_registry):
-
+def test_decode_mediated_transfer(settle_timeout, tester_state, tester_token):
     privatekey0 = tester.DEFAULT_KEY
     privatekey1 = tester.k1
     privatekey2 = tester.k2
@@ -105,7 +107,7 @@ def test_decode_mediated_transfer(
         settle_timeout
     )
 
-    locksroot = sha3("Sikorka")
+    locksroot = sha3('Sikorka')
     amount = 1337
     expiration = 5
     lock = Lock(amount, expiration, locksroot)
@@ -136,14 +138,7 @@ def test_decode_mediated_transfer(
     assert dtester.decodedLocksroot() == locksroot
 
 
-def test_decode_refund_transfer(
-        private_keys,
-        settle_timeout,
-        tester_state,
-        tester_token,
-        tester_events,
-        tester_registry):
-
+def test_decode_refund_transfer(settle_timeout, tester_state, tester_token):
     privatekey0 = tester.DEFAULT_KEY
     privatekey1 = tester.k1
     address0 = privatekey_to_address(privatekey0)
@@ -157,7 +152,7 @@ def test_decode_refund_transfer(
         settle_timeout
     )
 
-    locksroot = sha3("Mainz")
+    locksroot = sha3('Mainz')
     amount = 1337
     expiration = 19
     lock = Lock(amount, expiration, locksroot)
