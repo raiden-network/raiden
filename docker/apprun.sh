@@ -1,11 +1,8 @@
 #!/bin/sh
 # from https://github.com/probonopd/AppImageKit/blob/appimagetool/master/resources/AppRun with adjusted PYTHONHOME
-echo "AppRun started"
 HERE="$(dirname "$(readlink -f "${0}")")"
 export PATH="${HERE}"/usr/bin:"${HERE}"/usr/sbin:"${HERE}"/usr/games:"${HERE}"/bin:"${HERE}"/sbin:"${PATH}"
-echo $PATH
 EXEC=$(grep -e '^Exec=.*' "${HERE}"/*.desktop | head -n 1 | cut -d "=" -f 2 | cut -d " " -f 1)
-echo $EXEC
 export LD_LIBRARY_PATH="${HERE}"/usr/lib:"${HERE}"/usr/lib/i386-linux-gnu:"${HERE}"/usr/lib/x86_64-linux-gnu:"${HERE}"/usr/lib32:"${HERE}"/usr/lib64:"${HERE}"/lib:"${HERE}"/lib/i386-linux-gnu:"${HERE}"/lib/x86_64-linux-gnu:"${HERE}"/lib32:"${HERE}"/lib64:"${LD_LIBRARY_PATH}"
 export PYTHONPATH="${HERE}"/usr/share/pyshared:"${PYTHONPATH}"
 export XDG_DATA_DIRS="${HERE}"/usr/share:"${XDG_DATA_DIRS}"
@@ -14,7 +11,5 @@ export GSETTINGS_SCHEMA_DIR="${HERE}"/usr/share/glib-2.0/schemas:"${GSETTINGS_SC
 export QT_PLUGIN_PATH="${HERE}"/usr/lib/qt4/plugins:"${HERE}"/usr/lib/i386-linux-gnu/qt4/plugins:"${HERE}"/usr/lib/x86_64-linux-gnu/qt4/plugins:"${HERE}"/usr/lib32/qt4/plugins:"${HERE}"/usr/lib64/qt4/plugins:"${HERE}"/usr/lib/qt5/plugins:"${HERE}"/usr/lib/i386-linux-gnu/qt5/plugins:"${HERE}"/usr/lib/x86_64-linux-gnu/qt5/plugins:"${HERE}"/usr/lib32/qt5/plugins:"${HERE}"/usr/lib64/qt5/plugins:"${QT_PLUGIN_PATH}"
 
 export PYTHONHOME="${HERE}"/usr
-echo $PYTHONHOME
-echo $PATH
 
 exec "${EXEC}" $@
