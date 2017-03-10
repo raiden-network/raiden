@@ -72,72 +72,67 @@ test_bundle_docker := docker run --privileged --rm -v $(shell pwd)/dist:/data
 test_bundle_exe := /data/raiden--x86_64.AppImage --help
 test_bundle_test := grep -q "Usage: raiden"
 
+# test_bundle_distro <distro_name> <pre execution commands>
+define test_bundle_distro
+	################ 
+	# Testing "$(1)"
+	docker pull $(1)
+	${test_bundle_docker} $(1) sh -c \
+		'$(2) && \
+		${test_bundle_exe}' | ${test_bundle_test}
+	# Success "$(1)"
+	# ##############
+endef
+
 test-bundle:
-	${test_bundle_docker} base/archlinux \
-		sh -c \
-		'pacman -Syy && pacman --noconfirm -S fuse grep && \
+	$(call test_bundle_distro,ubuntu:17.04,\
+		apt-get update && apt-get install -y fuse && cd /tmp/ && \
+		apt-get download libglib2.0 && dpkg -i --force-all *.deb)
+	$(call test_bundle_distro,ubuntu:16.10,\
+		apt-get update && apt-get install -y fuse && cd /tmp/ && \
+		apt-get download libglib2.0 && dpkg -i --force-all *.deb)
+	$(call test_bundle_distro,ubuntu:16.04,\
+		apt-get update && apt-get install -y fuse && cd /tmp/ && \
+		apt-get download libglib2.0 && dpkg -i --force-all *.deb)
+	$(call test_bundle_distro,ubuntu:14.04,\
+		apt-get update && apt-get install -y fuse && cd /tmp/ && \
+		apt-get download libglib2.0 && dpkg -i --force-all *.deb)
+	$(call test_bundle_distro,debian:8,\
+		apt-get update && apt-get install -y fuse && cd /tmp/ && \
+		apt-get download libglib2.0 && dpkg -i --force-all *.deb)
+	$(call test_bundle_distro,debian:9,\
+		apt-get update && apt-get install -y fuse && cd /tmp/ && \
+		apt-get download libglib2.0 && dpkg -i --force-all *.deb)
+	$(call test_bundle_distro,base/archlinux,\
+		pacman -Syy && pacman --noconfirm -S fuse grep )
+	$(call test_bundle_distro,centos:7,yum install -y fuse-libs)
+	$(call test_bundle_distro,fedora:20,yum install -y fuse-libs)
+	$(call test_bundle_distro,fedora:21,yum install -y fuse-libs)
+	$(call test_bundle_distro,fedora:22,dnf install -y fuse-libs)
+	$(call test_bundle_distro,fedora:23,dnf install -y fuse-libs)
+	$(call test_bundle_distro,fedora:24,dnf install -y fuse-libs)
+	$(call test_bundle_distro,fedora:25,dnf install -y fuse-libs)
+	$(call test_bundle_distro,fedora:rawhide,dnf install -y fuse-libs)
+
+# test_bundle_distro <distro_name> <pre execution commands>
+define test_bundle_distro_fail
+	################ 
+	# Testing "$(1)"
+	docker pull $(1)
+	! ${test_bundle_docker} $(1) sh -c \
+		'$(2) && \
 		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- success 'archlinux'
-	${test_bundle_docker} ubuntu:14.04 \
-		sh -c \
-		'apt-get update && apt-get install -y fuse && cd /tmp/ && \
-		apt-get download libglib2.0 && dpkg -i --force-all *.deb && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- success 'ubuntu:14.04'
-	${test_bundle_docker} ubuntu:16.04 \
-		sh -c \
-		'apt-get update && apt-get install -y fuse && cd /tmp/ && \
-		apt-get download libglib2.0 && dpkg -i --force-all *.deb && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- success 'ubuntu:16.04'
-	${test_bundle_docker} ubuntu:16.10 \
-		sh -c \
-		'apt-get update && apt-get install -y fuse && cd /tmp/ && \
-		apt-get download libglib2.0 && dpkg -i --force-all *.deb && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- success 'ubuntu:16.10'
-	${test_bundle_docker} ubuntu:17.04 \
-		sh -c \
-		'apt-get update && apt-get install -y fuse && cd /tmp/ && \
-		apt-get download libglib2.0 && dpkg -i --force-all *.deb && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- success 'ubuntu:17.04'
-	${test_bundle_docker} debian:8 \
-		sh -c \
-		'apt-get update && apt-get install -y fuse && cd /tmp/ && \
-		apt-get download libglib2.0 && dpkg -i --force-all *.deb && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- success 'debian:8'
-	${test_bundle_docker} debian:9 \
-		sh -c \
-		'apt-get update && apt-get install -y fuse && cd /tmp/ && \
-		apt-get download libglib2.0 && dpkg -i --force-all *.deb && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- success 'debian:9'
-	${test_bundle_docker} centos:7 \
-		sh -c \
-		'yum install -y fuse-libs && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- success 'centos:7'
+	# Not working: "$(1)"
+	################
+endef
 
 test-bundle-unsupported:
 	# not yet supported (version `GLIBC_2.14' not found):
-	! ${test_bundle_docker} centos:5 \
-		sh -c \
-		'yum install -y fuse-libs && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- failures for 'centos:5'
-	! ${test_bundle_docker} centos:6 \
-		sh -c \
-		'yum install -y fuse-libs && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- failures for 'centos:6'
-	! ${test_bundle_docker} debian:7 \
-		sh -c \
-		'apt-get update && apt-get install -y fuse && cd /tmp/ && \
-		apt-get download libglib2.0 libpcre3 && dpkg -i --force-all *.deb && \
-		${test_bundle_exe}' | ${test_bundle_test}
-	# ^-- failures for 'debian:7'
+	$(call test_bundle_distro_fail,centos:5,yum install -y fuse-libs)
+	$(call test_bundle_distro_fail,centos:6,yum install -y fuse-libs)
+	$(call test_bundle_distro_fail,debian:7,\
+		apt-get update && apt-get install -y fuse && cd /tmp/ && \
+		apt-get download libglib2.0 libpcre3 && dpkg -i --force-all *.deb)
 
 release: clean
 	python setup.py sdist upload
