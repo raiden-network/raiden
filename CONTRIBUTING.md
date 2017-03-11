@@ -125,6 +125,28 @@ function_call_with_many_arguments(
 
 Difference being that you can place the closing parentheses in the next line.
 
+**Usage of single and double quotes**
+
+All strings must use single quotes by default.
+
+Bad:
+
+```python
+s = "foo"
+```
+
+Good:
+
+```python
+s = 'foo'
+```
+
+The only reason to use double quotes is to avoid escaping the single quote in a string. So this is okay:
+
+```python
+s = "Augusto's computer is awesome"
+```
+
 
 **Naming Style**
 
