@@ -334,7 +334,7 @@ class NettingChannelContract(object):
 
         return amount1, amount2
 
-    def close(self, ctx, first_encoded, second_encoded):
+    def close(self, ctx, first_encoded):
         """" Request the closing of the channel. Can be called once by one of
         the participants. Lock period starts counting once this method is
         called.
@@ -368,7 +368,7 @@ class NettingChannelContract(object):
         partner_state = self.participants[self.partner(ctx['msg.sender'])]
 
         # may be None, a node is not required to make a transfer
-        closer, partner = self._decode(ctx['msg.sender'], first_encoded, second_encoded)
+        closer, partner = self._decode(ctx['msg.sender'], first_encoded, None)
 
         closer_state.transfer = closer
         closer_state.transfer_from_self = closer

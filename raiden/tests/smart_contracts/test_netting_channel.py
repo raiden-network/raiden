@@ -1089,7 +1089,6 @@ def test_netting(
     previous_events = list(tester_events)
     nettingchannel.close(
         second_direct_transfer0_data,
-        direct_transfer1_data,
         sender=privatekey1_raw,
     )
     assert len(previous_events) + 1 == len(tester_events)
@@ -1102,6 +1101,11 @@ def test_netting(
         'closing_address': encode_hex(address1),
         'block_number': block_number,
     }
+
+    nettingchannel.updateTransfer(
+        direct_transfer1_data,
+        sender=privatekey0_raw,
+    )
 
     assert nettingchannel.closed(sender=privatekey0_raw) == block_number
     assert nettingchannel.closingAddress(sender=privatekey0_raw) == encode_hex(address1)
