@@ -215,7 +215,7 @@ def test_closewithouttransfer_settle(
         nettingchannel.close(sender=unknown_key)
 
     previous_events = list(tester_events)
-    nettingchannel.close("", sender=privatekey0)
+    nettingchannel.close('', sender=privatekey0)
     assert len(previous_events) + 1 == len(tester_events)
 
     block_number = tester_state.block.number
@@ -312,7 +312,7 @@ def test_closewithouttransfer_badalice(
     channelBA.register_transfer(AB_Transfer1)
     AB_Transfer1_data = str(AB_Transfer1.packed().data)
 
-    nettingchannel.close("", sender=privatekeyA_raw)
+    nettingchannel.close('', sender=privatekeyA_raw)
 
     nettingchannel.updateTransfer(
         AB_Transfer1_data,
