@@ -99,8 +99,8 @@ def get_static_or_compile(
     return compiled
 
 
-def contract_checksum(contract_file):
-    with open(get_contract_path(contract_file)) as f:
+def contract_checksum(contract_path):
+    with open(contract_path) as f:
         checksum = hashlib.sha1(f.read()).hexdigest()
         return checksum
 
