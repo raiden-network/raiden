@@ -30,10 +30,14 @@ RUN curl -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
 RUN curl -L -o /raiden.AppDir/usr/bin/solc https://github.com/brainbot-com/solidity-static/releases/download/v0.4.9/solc && \
     chmod +x /raiden.AppDir/usr/bin/solc
 
+# use --build-arg RAIDEN_VERSION=v0.0.3 to build a specific (tagged) version
+ARG RAIDEN_VERSION
+
 # install raiden (replacing all --editable requirements)
 RUN mkdir -p /apps && \
     git clone https://github.com/raiden-network/raiden.git /apps/raiden && \
     cd /apps/raiden  && \ 
+    git checkout $raiden_version && \
     sed -s 's/^-e //' requirements.txt > _requirements.txt && \
     /raiden.AppDir/usr/bin/pip install -r _requirements.txt && \
     PATH=/raiden.AppDir/usr/bin:$PATH /usr/bin/env python setup.py install
@@ -42,6 +46,9 @@ WORKDIR /
 
 # add .desktop file
 ADD raiden.desktop /raiden.AppDir/raiden.desktop
+RUN cd /apps/raiden && \
+    VERSIONSTRING=${RAIDEN_VERSION:-"git-"$(git rev-parse HEAD)} && \
+    sed -s -i "s/XXVERSIONXX/$VERSIONSTRING/" /raiden.AppDir/raiden.desktop
 # add icon
 ADD raiden.svg /raiden.AppDir/raiden.svg
 

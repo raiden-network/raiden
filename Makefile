@@ -61,7 +61,8 @@ docs:
 	open docs/_build/html/index.html
 
 bundle:
-	docker build -t raidenbundler -f docker/build.Dockerfile docker
+	# pass RAIDEN_VERSION=<git version tag> to build a specific version
+	docker build -t raidenbundler --build-arg RAIDEN_VERSION=$(RAIDEN_VERSION) -f docker/build.Dockerfile docker
 	-(docker rm bundler)
 	docker run --name bundler --privileged -e ARCH=x86_64 -e APP=raiden -e LOWERAPP=raiden --workdir / --entrypoint /bin/bash raidenbundler -c 'source functions.sh && generate_appimage'
 	mkdir -p dist
