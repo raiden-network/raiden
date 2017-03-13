@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+import os
 import json
 import hashlib
 
 from ethereum import _solidity
 from ethereum.abi import event_id, normalize_name
-from raiden.utils import get_contract_path, STORE_PRECOMPILED
+from raiden.utils import get_contract_path
 
 __all__ = (
     'REGISTRY_ABI',
@@ -58,7 +59,6 @@ def get_eventname_types(event_description):
 def get_static_or_compile(
         contract_path,
         contract_name,
-        store_updated=STORE_PRECOMPILED,
         **compiler_flags):
     """Search the path of `contract_path` for a file with the same name and the
     extension `.static-abi.json`. If the file exists, and the recorded checksum
@@ -72,6 +72,8 @@ def get_static_or_compile(
         file on checksum mismatch/if file does not exist.
         **compiler_flags (dict): flags that will be passed to the compiler
     """
+    # this will be set by `setup.py compile_contracts`
+    store_updated = os.environ.get('STORE_PRECOMPILED', False)
     precompiled = None
     precompiled_path = '{}.static-abi.json'.format(contract_path)
     try:

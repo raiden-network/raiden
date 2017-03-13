@@ -30,13 +30,6 @@ __all__ = (
     'camel_to_snake_case'
 )
 
-# change this flag, if you want to raiden.blockchain.abi to store precompiled
-# ABIs:
-# >>> from raiden import utils
-# >>> utils.STORE_PRECOMPILED = True
-# >>> from raiden.blockchain import abi
-STORE_PRECOMPILED = False
-
 LETTERS = string.printable
 
 # From the secp256k1 header file:

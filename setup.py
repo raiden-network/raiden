@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 
 try:
     from setuptools import setup
@@ -35,8 +36,7 @@ class CompileContracts(Command):
         pass
 
     def run(self):
-        from raiden import utils
-        utils.STORE_PRECOMPILED = True
+        os.environ['STORE_PRECOMPILED'] = 'yes'
         from raiden.blockchain import abi
 
 
