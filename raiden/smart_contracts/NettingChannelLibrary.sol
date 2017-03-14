@@ -59,9 +59,14 @@ library NettingChannelLibrary {
         _;
     }
 
-    modifier notClosingAddress(Data storage self, address caller) {
-        if (caller == self.closing_address)
-            throw;
+    modifier isCounterParty(Data storage self, address caller) {
+        Participant storage participant = self.participants[0];
+        if (participant.node_address != self.closing_address) {
+            participant = self.participants[1];
+            if (participant.node_address != caller) {
+                throw;
+            }
+        }
         _;
     }
 
@@ -275,14 +280,9 @@ library NettingChannelLibrary {
     )
         notSettledButClosed(self)
         stillTimeout(self)
-        notClosingAddress(self, caller_address)
+        isCounterParty(self, caller_address)
         notYetUpdated(self)
     {
-        // transfer address must be from counter party
-        if (self.closing_address == caller_address) {
-            throw;
-        }
-
         Participant[2] storage participants = self.participants;
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
