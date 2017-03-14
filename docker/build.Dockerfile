@@ -26,9 +26,8 @@ RUN curl -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
     usr/bin/python get-pip.py && \
     rm get-pip.py
 
-# FIXME: we are bundling solc here; we should rather compile static ABI!
-RUN curl -L -o /raiden.AppDir/usr/bin/solc https://github.com/brainbot-com/solidity-static/releases/download/v0.4.9/solc && \
-    chmod +x /raiden.AppDir/usr/bin/solc
+RUN curl -L -o /usr/bin/solc https://github.com/brainbot-com/solidity-static/releases/download/v0.4.9/solc && \
+    chmod +x /usr/bin/solc
 
 # use --build-arg RAIDEN_VERSION=v0.0.3 to build a specific (tagged) version
 ARG RAIDEN_VERSION
@@ -37,10 +36,10 @@ ARG RAIDEN_VERSION
 RUN mkdir -p /apps && \
     git clone https://github.com/raiden-network/raiden.git /apps/raiden && \
     cd /apps/raiden  && \ 
-    git checkout $raiden_version && \
+    git checkout $RAIDEN_VERSION && \
     sed -s 's/^-e //' requirements.txt > _requirements.txt && \
     /raiden.AppDir/usr/bin/pip install -r _requirements.txt && \
-    PATH=/raiden.AppDir/usr/bin:$PATH /usr/bin/env python setup.py install
+    PATH=/raiden.AppDir/usr/bin:$PATH /usr/bin/env python setup.py compile_contracts install
 
 WORKDIR /
 
@@ -54,15 +53,12 @@ ADD raiden.svg /raiden.AppDir/raiden.svg
 
 RUN curl -L -o functions.sh "https://github.com/probonopd/AppImages/raw/master/functions.sh"
 
-# add our AppRun (with custom PYTHONHOME)
-ADD apprun.sh /raiden.AppDir/AppRun
-RUN chmod a+x /raiden.AppDir/AppRun
-
 # use AppImageKit 'functions.sh' to setup lib
 RUN bash -c 'APP=Raiden LOWERAPP=raiden ARCH=x86_64 \
     PATH=/raiden.AppDir/usr/bin:$PATH PYTHONHOME=/raiden.AppDir/usr \
     source functions.sh && \
     cd /raiden.AppDir && \
+    get_apprun && \
     copy_deps ; copy_deps ; copy_deps && \
     delete_blacklisted && \
     move_lib'
