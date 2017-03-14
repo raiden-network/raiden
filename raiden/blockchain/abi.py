@@ -65,11 +65,14 @@ def get_static_or_compile(
     matches, this will return the precompiled contract, otherwise it will
     compile it.
 
+    Writing compiled contracts to the desired file and path happens only when
+    the environment variable `STORE_PRECOMPILED` is set (to whatever value).
+    Users are not expected to ever set this value, the functionality is exposed
+    through the `setup.py compile_contracts` command.
+
     Args:
         contract_path (str): the path of the contract file
         contract_name (str): the contract name
-        store_updated (bool): if True, this will write a new `.static-abi.json`
-        file on checksum mismatch/if file does not exist.
         **compiler_flags (dict): flags that will be passed to the compiler
     """
     # this will be set by `setup.py compile_contracts`
