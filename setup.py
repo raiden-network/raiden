@@ -1,10 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 
 try:
     from setuptools import setup
+    from setuptools import Command
 except ImportError:
     from distutils.core import setup
+    from distutils.cmd import Command
 from setuptools.command.test import test as TestCommand
 
 
@@ -20,6 +23,21 @@ class PyTest(TestCommand):
         import pytest
         errno = pytest.main(self.test_args)
         raise SystemExit(errno)
+
+
+class CompileContracts(Command):
+    description = "compile contracts to json"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        os.environ['STORE_PRECOMPILED'] = 'yes'
+        from raiden.blockchain import abi
 
 
 with open('README.md') as readme_file:
@@ -73,7 +91,10 @@ setup(
         "Programming Language :: Python :: 2",
         'Programming Language :: Python :: 2.7',
     ],
-    cmdclass={'test': PyTest},
+    cmdclass={
+        'test': PyTest,
+        'compile_contracts': CompileContracts,
+    },
     install_requires=install_requires,
     tests_require=test_requirements,
     entry_points='''

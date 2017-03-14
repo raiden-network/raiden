@@ -67,3 +67,6 @@ target/
 truffle/.babel.json
 truffle/environments/development/contracts/
 truffle/.bash_history
+
+# never check in .static-abi.json files
+*.static-abi.json
