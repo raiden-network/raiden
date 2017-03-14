@@ -91,8 +91,10 @@ setup(
         "Programming Language :: Python :: 2",
         'Programming Language :: Python :: 2.7',
     ],
-    cmdclass={'test': PyTest,
-              'compile_contracts': CompileContracts},
+    cmdclass={
+        'test': PyTest,
+        'compile_contracts': CompileContracts,
+    },
     install_requires=install_requires,
     tests_require=test_requirements,
     entry_points='''
