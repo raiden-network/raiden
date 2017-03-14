@@ -775,7 +775,7 @@ class Channel(object):
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
-                'ASSET UNLOCKED %s > %s token:%s hashlock:%s lockhash:%s amount:%s',
+                'TOKEN UNLOCKED %s > %s token:%s hashlock:%s lockhash:%s amount:%s',
                 pex(self.our_state.address),
                 pex(self.partner_state.address),
                 pex(self.token_address),
@@ -803,7 +803,7 @@ class Channel(object):
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
-                'ASSET WITHDRAWN %s < %s token:%s hashlock:%s lockhash:%s amount:%s',
+                'TOKEN WITHDRAWN %s < %s token:%s hashlock:%s lockhash:%s amount:%s',
                 pex(self.our_state.address),
                 pex(self.partner_state.address),
                 pex(self.token_address),

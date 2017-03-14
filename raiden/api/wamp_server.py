@@ -185,7 +185,7 @@ class WebSocketAPI(WebSocketApplication):
             self.callback_with_exception(callback_id, publish_topic, reason='INVALID_TARGET')
         except InvalidAddress as ex:
             if ex.args[1] is 'token':
-                self.callback_with_exception(callback_id, publish_topic, reason='INVALID_ASSET')
+                self.callback_with_exception(callback_id, publish_topic, reason='INVALID_TOKEN')
             elif ex.args[1] is 'receiver':
                 self.callback_with_exception(callback_id, publish_topic, reason='INVALID_TARGET')
             else:

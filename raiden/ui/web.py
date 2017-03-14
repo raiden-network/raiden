@@ -112,7 +112,7 @@ class UIHandler(object):
             return False
         except InvalidAddress as ex:
             if ex.args[1] is 'token':
-                self.exception_handler(id, 'INVALID_ASSET')
+                self.exception_handler(id, 'INVALID_TOKEN')
             elif ex.args[1] is 'receiver':
                 self.exception_handler(id, 'INVALID_TARGET')
             else:

@@ -47,7 +47,7 @@ def channel_list_mock(num_channels):
     channel_list = []
     for _ in range(0,num_channels):
         netting_channel = NettingChannelMock()
-        asset_address = make_address()
+        token_address = make_address()
         privkey1, address1 = make_privkey_address()
         address2 = make_address()
 
@@ -63,7 +63,7 @@ def channel_list_mock(num_channels):
 
         test_channel = Channel(
             our_state, partner_state, external_state,
-            asset_address, reveal_timeout, settle_timeout,
+            token_address, reveal_timeout, settle_timeout,
         )
 
         channel_list.append(test_channel)

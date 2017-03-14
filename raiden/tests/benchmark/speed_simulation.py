@@ -21,7 +21,7 @@ from raiden.network.rpc.client import BlockChainService
 from raiden.utils import sha3, privatekey_to_address
 
 TRANSFER_AMOUNT = 1
-ASSET_ADDRESS = sha3('tps')[:20]
+TOKEN_ADDRESS = sha3('tps')[:20]
 
 
 def hostport_to_privkeyaddr(host, port):
@@ -244,7 +244,7 @@ def main():
             args.config,
             args.rpc_server,
             args.channelmanager_address,
-            ASSET_ADDRESS,
+            TOKEN_ADDRESS,
             TRANSFER_AMOUNT,
             args.parallel,
         )
@@ -254,7 +254,7 @@ def main():
             args.rpc_server,
             args.config,
             args.channelmanager_address,
-            ASSET_ADDRESS,
+            TOKEN_ADDRESS,
             deposit,
             DEFAULT_SETTLE_TIMEOUT,
         )
