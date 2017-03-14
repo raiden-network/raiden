@@ -30,7 +30,7 @@ from raiden.utils import (
     get_encoded_transfers
 )
 from raiden.blockchain.abi import (
-    ASSETADDED_EVENTID,
+    TOKENADDED_EVENTID,
     CHANNEL_MANAGER_ABI,
     CHANNELNEW_EVENTID,
     ENDPOINT_REGISTRY_ABI,
@@ -588,7 +588,7 @@ class Registry(object):
         ]
 
     def tokenadded_filter(self):
-        topics = [ASSETADDED_EVENTID]
+        topics = [TOKENADDED_EVENTID]
 
         registry_address_bin = self.proxy.address
         filter_id_raw = new_filter(self.client, registry_address_bin, topics)

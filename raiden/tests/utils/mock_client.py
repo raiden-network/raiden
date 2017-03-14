@@ -9,8 +9,8 @@ from raiden import messages
 from raiden.utils import isaddress, make_address, pex
 from raiden.blockchain.net_contract import NettingChannelContract
 from raiden.blockchain.abi import (
-    ASSETADDED_EVENT,
-    ASSETADDED_EVENTID,
+    TOKENADDED_EVENT,
+    TOKENADDED_EVENTID,
     CHANNELCLOSED_EVENT,
     CHANNELCLOSED_EVENTID,
     CHANNELNEWBALANCE_EVENT,
@@ -250,7 +250,7 @@ class RegistryMock(object):
             'token_address': token_address,
             'channel_manager_address': manager.address,
         }
-        event = ethereum_event(ASSETADDED_EVENTID, ASSETADDED_EVENT, data, self.address)
+        event = ethereum_event(TOKENADDED_EVENTID, TOKENADDED_EVENT, data, self.address)
 
         for filter_ in BlockChainServiceMock.filters[self.address]:
             filter_.event(event)
@@ -269,7 +269,7 @@ class RegistryMock(object):
         ]
 
     def tokenadded_filter(self):
-        topics = [ASSETADDED_EVENTID]
+        topics = [TOKENADDED_EVENTID]
         filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
         BlockChainServiceMock.filters[self.address].append(filter_)
         return filter_

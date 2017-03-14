@@ -117,13 +117,13 @@ def run(privatekey,
 
         transfers_by_peer = {}
 
-        tokens = script['assets']
+        tokens = script['tokens']
         token_address = None
         peer = None
         our_node = app.raiden.address.encode('hex')
         log.warning("our address is {}".format(our_node))
         for token in tokens:
-            # skip tokens/assets that we're not part of
+            # skip tokens that we're not part of
             nodes = token['channels']
             if not our_node in nodes:
                 continue
@@ -156,7 +156,7 @@ def run(privatekey,
                 our_index = nodes.index(our_node)
                 peer = nodes[our_index + 1]
 
-                channel_manager = tools.register_asset(token_address)
+                channel_manager = tools.register_token(token_address)
                 amount = transfers_with_amount[nodes[-1]]
 
                 while True:

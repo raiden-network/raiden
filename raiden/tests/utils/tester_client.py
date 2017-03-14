@@ -18,7 +18,7 @@ from raiden.utils import (
     get_encoded_transfers
 )
 from raiden.blockchain.abi import (
-    ASSETADDED_EVENTID,
+    TOKENADDED_EVENTID,
     CHANNEL_MANAGER_ABI,
     CHANNELNEW_EVENTID,
     CHANNELNEWBALANCE_EVENTID,
@@ -441,7 +441,7 @@ class RegistryTesterMock(object):
         return result
 
     def tokenadded_filter(self):
-        topics = [ASSETADDED_EVENTID]
+        topics = [TOKENADDED_EVENTID]
         filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_

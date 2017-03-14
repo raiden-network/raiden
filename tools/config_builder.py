@@ -140,22 +140,22 @@ def build_scenario(ctx, hosts, nodes_per_host, nodes_per_transfer):
                 addresses.append(v)
 
     scenario = dict()
-    scenario['assets'] = assets = list()
+    scenario['tokens'] = tokens = list()
 
     # NOTE: this builds a simple ring scenario connecting the nodes
     #       in groups of `node_per_transfer`. The setup assumes
     #       unidirectional transfer from the first node to the last.
-    total_assets = len(addresses) // nodes_per_transfer
+    total_tokens = len(addresses) // nodes_per_transfer
     index = 0
-    for asset_num in range(total_assets):
-        data_for_asset = {
-            "name": str(asset_num),
+    for token_num in range(total_tokens):
+        data_for_token = {
+            "name": str(token_num),
             "channels": addresses[index:index + nodes_per_transfer],
             "transfers_with_amount": {
                 addresses[index + nodes_per_transfer - 1]: 3000,
             }
         }
-        assets.append(data_for_asset)
+        tokens.append(data_for_token)
         index += nodes_per_transfer
 
     print json.dumps(scenario, indent=2 if pretty else None)
@@ -245,7 +245,7 @@ def merge(ctx, genesis_json, state_json):
         resolve_path=True,
     ),
     default=None,
-    help="(optional) update the assets in scenario.json with predeployed token addresses. "
+    help="(optional) update the tokens in scenario.json with predeployed token addresses. "
          "This modifies the file in place!"
 )
 @cli.command()
@@ -269,8 +269,8 @@ def full_genesis(ctx, hosts, nodes_per_host, scenario):
             script = json.load(handler)
 
         token_groups = {
-            asset['name']: asset['channels']
-            for asset in script['assets']
+            token['name']: token['channels']
+            for token in script['tokens']
         }
     else:
         # create tokens for addresses x addresses
@@ -289,8 +289,8 @@ def full_genesis(ctx, hosts, nodes_per_host, scenario):
     genesis['config']['token_groups'] = blockchain_config['token_groups']
 
     if scenario is not None:
-        for asset in script['assets']:
-            asset['token_address'] = blockchain_config['token_groups'][asset['name']]
+        for token in script['tokens']:
+            token['token_address'] = blockchain_config['token_groups'][token['name']]
 
         with open(scenario, 'w') as handler:
             json.dump(script, handler)

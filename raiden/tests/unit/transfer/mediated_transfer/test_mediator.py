@@ -909,7 +909,7 @@ def test_events_for_balanceproof_lock_expired():
     # balance proof to the middle node to avoid unnecessarely closing the
     # middle channel. This state should not be reached under normal operation,
     # the last hop needs to choose a proper reveal_timeout and must go on-chain
-    # to withdraw the asset before the lock expires.
+    # to withdraw the token before the lock expires.
     events = mediator.events_for_balanceproof(
         transfers_pair,
         block_number,
