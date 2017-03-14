@@ -3,5 +3,5 @@ Name=Raiden
 Version=XXVERSIONXX
 Exec=raiden
 Icon=raiden
-Type=raiden
+Type=Application
 StartupNotify=true
