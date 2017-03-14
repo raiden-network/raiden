@@ -7,8 +7,7 @@ secp256k1==0.12.1
 pycryptodome>=3.4.3
 miniupnpc
 networkx
-# temporary until new version of pyethereum is released, that supports solc >= v0.4.9
--e git+https://github.com/LefterisJP/pyethereum@fix_solidity_key_combinedjson#egg=ethereum
+ethereum>=1.6.1
 ethereum-serpent
 repoze.lru
 gevent-websocket==0.9.4
