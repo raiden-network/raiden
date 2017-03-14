@@ -75,7 +75,7 @@ Endpoints
 
 Following are the available API endpoints with which you can interact with Raiden.
 
-Querying Information About Channels and Assets
+Querying Information About Channels and Tokens
 ===============================================
 
 Querying specific channel
@@ -186,7 +186,7 @@ Possible Responses
 +------------------+---------------------------+
 
 
-Querying All Partners for an Asset
+Querying All Partners for a Token
 -----------------------------------
 
 By making a ``GET`` request to ``/api/<version>/tokens/<token_address>/partners`` you can get a list of all partners
@@ -458,11 +458,11 @@ Example Response
 
     [
         {
-            "event_type": "AssetAdded",
+            "event_type": "TokenAdded",
             "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
             "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
         }, {
-            "event_type": "AssetAdded",
+            "event_type": "TokenAdded",
             "token_address": "0x91337a300e0361bddb2e377dd4e88ccb7796663d"
             "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
         }, {
