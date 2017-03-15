@@ -60,12 +60,13 @@ library NettingChannelLibrary {
     }
 
     modifier isCounterParty(Data storage self, address caller) {
-        Participant storage participant = self.participants[0];
-        if (participant.node_address != self.closing_address) {
-            participant = self.participants[1];
-            if (participant.node_address != caller) {
-                throw;
-            }
+        if (caller == self.closing_address) {
+            throw;
+        }
+        address participant0 = self.participants[0].node_address;
+        address participant1 = self.participants[1].node_address;
+        if (caller != participant0 && caller != participant1) {
+            throw;
         }
         _;
     }
