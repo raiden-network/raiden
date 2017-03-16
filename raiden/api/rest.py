@@ -170,7 +170,7 @@ class RestAPI(object):
         self.transfer_schema = TransferSchema()
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
-        raiden_service_result = self.raiden_api.open(
+        channel = self.raiden_api.open(
             token_address,
             partner_address,
             settle_timeout
@@ -178,34 +178,32 @@ class RestAPI(object):
 
         if balance:
             # make initial deposit
-            raiden_service_result = self.raiden_api.deposit(
+            channel = self.raiden_api.deposit(
                 token_address,
                 partner_address,
                 balance
             )
 
-        result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
+        result = self.channel_schema.dump(channel_to_api_dict(channel))
         return jsonify(result.data)
 
     def deposit(self, token_address, partner_address, amount):
-
-        raiden_service_result = self.raiden_api.deposit(
+        channel = self.raiden_api.deposit(
             token_address,
             partner_address,
             amount
         )
 
-        result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
+        result = self.channel_schema.dump(channel_to_api_dict(channel))
         return jsonify(result.data)
 
     def close(self, token_address, partner_address):
-
-        raiden_service_result = self.raiden_api.close(
+        channel = self.raiden_api.close(
             token_address,
             partner_address
         )
 
-        result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
+        result = self.channel_schema.dump(channel_to_api_dict(channel))
         return jsonify(result.data)
 
     def connect(
@@ -223,7 +221,6 @@ class RestAPI(object):
         )
 
     def leave(self, token_address, wait_for_settle=None, timeout=None):
-
         self.raiden_api.leave_token_network(
             token_address,
             wait_for_settle,
