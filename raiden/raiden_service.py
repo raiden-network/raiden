@@ -732,6 +732,34 @@ class RaidenEventHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
         self.event_listeners = list()
+        self.logged_events = dict()
+
+    def get_channel_new_events(self, token_address, from_block, to_block):
+        token_address_bin = address_decoder(token_address)
+        channel_manager = self.raiden.chain.manager_by_token(token_address_bin)
+        filter_ = channel_manager.channelnew_filter(from_block, to_block)
+
+        events = filter_.getall()
+        filter_.uninstall()
+        return events
+
+    def get_token_added_events(self, from_block, to_block):
+        # Assuming only one token registry for the moment
+        filter_ = self.raiden.registries[0].tokenadded_filter(from_block, to_block)
+        events = filter_.getall()
+        filter_.uninstall()
+        return events
+
+    def get_channel_event(self, channel_address, event_id, from_block, to_block):
+        channel = self.raiden.api.get_channel(channel_address)
+        filter_ = channel.external_state.netting_channel.events_filter(
+            [event_id],
+            from_block,
+            to_block,
+        )
+        events = filter.getall()
+        filter_.uninstall()
+        return events
 
     def start_event_listener(self, event_name, filter_, translator):
         event = EventListener(
@@ -781,6 +809,8 @@ class RaidenEventHandler(object):
                 type=event['_event_type'],
                 contract=pex(emitting_contract_address_bin),
             )
+
+        self.logged_events[event['_event_type']]
 
         if event['_event_type'] == 'TokenAdded':
             self.event_tokenadded(emitting_contract_address_bin, event)
