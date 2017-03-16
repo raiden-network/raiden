@@ -12,6 +12,7 @@ RUN bash -c 'mkdir -p /raiden.AppDir/usr/{local,bin,share,lib}/'
 WORKDIR /raiden.AppDir/
 
 # build+install python
+# TODO: check http://www.egenix.com/products/python/PyRun/ as an alternative!
 RUN curl -o Python-2.7.12.tar.xz https://www.python.org/ftp/python/2.7.12/Python-2.7.12.tar.xz && \
     tar xf Python-2.7.12.tar.xz && \
     cd Python-2.7.12 &&\
@@ -39,7 +40,9 @@ RUN mkdir -p /apps && \
     git checkout $RAIDEN_VERSION && \
     sed -s 's/^-e //' requirements.txt > _requirements.txt && \
     /raiden.AppDir/usr/bin/pip install -r _requirements.txt && \
-    PATH=/raiden.AppDir/usr/bin:$PATH /usr/bin/env python setup.py compile_contracts install
+    PATH=/raiden.AppDir/usr/bin:$PATH /usr/bin/env python setup.py compile_contracts install && \
+    find /raiden.AppDir/ -iname '*.pyo' -exec rm {} \; && \
+    rm /raiden.AppDir/usr/lib/libpython*.a
 
 WORKDIR /
 
