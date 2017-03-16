@@ -8,7 +8,7 @@ from raiden.tests.utils.blockchain import wait_until_block
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('cached_genesis', [False])
 @pytest.mark.parametrize('settle_timeout', [5])
-def test_channel_lifecycle(raiden_network, tokens_addresses):
+def test_channel_lifecycle(raiden_network, tokens_addresses, settle_timeout):
     token = tokens_addresses[0].encode('hex')
     alice, bob = raiden_network
 
@@ -55,7 +55,7 @@ def test_channel_lifecycle(raiden_network, tokens_addresses):
 
     wait_until_block(
         bob.raiden.chain,
-        bob.raiden.chain.block_number() + 5
+        bob.raiden.chain.block_number() + settle_timeout
     )
     alice.raiden.api.settle(
         token,
