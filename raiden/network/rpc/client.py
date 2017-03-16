@@ -647,6 +647,7 @@ class ChannelManager(object):
             other = peer2
         else:
             other = peer1
+
         transaction_hash = self.proxy.newChannel.transact(
             other,
             settle_timeout,
@@ -660,6 +661,7 @@ class ChannelManager(object):
             raise e
         except InvalidTransaction as e:
             raise e
+
         if check_transaction_threw(self.client, transaction_hash):
             raise Exception('Duplicated channel')
 

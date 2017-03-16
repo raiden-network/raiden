@@ -76,6 +76,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert manager0.channels_by_participant(peer0_address) == [netting_address_01]
     assert manager0.channels_by_participant(peer1_address) == [netting_address_01]
     assert manager0.channels_by_participant(peer2_address) == []
+    # create a duplicated channel with same participants while previous channel is still open should throw an exception
     with pytest.raises(Exception):
         manager0.new_netting_channel(
             peer0_address,
@@ -191,7 +192,7 @@ def test_blockchain(
     addresses = [
         privatekey_to_address(priv)
         for priv in private_keys
-        ]
+    ]
 
     privatekey = private_keys[0]
     address = privatekey_to_address(privatekey)
@@ -271,7 +272,7 @@ def test_blockchain(
     log_topics = [
         decode_topic(topic)
         for topic in log['topics']  # pylint: disable=invalid-sequence-index
-        ]
+    ]
     log_data = log['data']
     event = registry_proxy.translator.decode_event(
         log_topics,
