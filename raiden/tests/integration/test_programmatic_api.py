@@ -1,9 +1,9 @@
 import pytest
-import gevent
 
 from raiden.tests.utils.blockchain import wait_until_block
 
 
+@pytest.mark.timeout(120)
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('cached_genesis', [False])
@@ -20,10 +20,23 @@ def test_channel_lifecycle(raiden_network, tokens_addresses, settle_timeout):
     bob_deposit = 50
     bob_transfer = 10
 
-    alice.raiden.api.open(
+    wait_until_block(
+        alice.raiden.chain,
+        alice.raiden.chain.block_number() + 1,
+    )
+
+    channel = alice.raiden.api.open(
         token,
         bob_address,
     )
+    while channel.state == 'creation_pending':
+
+        wait_until_block(
+            alice.raiden.chain,
+            alice.raiden.chain.block_number() + 1,
+        )
+
+    assert channel.state == 'open'
 
     alice.raiden.api.deposit(
         token,
