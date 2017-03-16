@@ -39,13 +39,13 @@ def test_channel_lifecycle(raiden_network, tokens_addresses, settle_timeout):
 
     alice.raiden.api.transfer(
         token,
+        alice_transfer,
         bob_address,
-        alice_transfer
     )
     bob.raiden.api.transfer(
         token,
+        bob_transfer,
         alice_address,
-        bob_transfer
     )
 
     bob.raiden.api.close(
