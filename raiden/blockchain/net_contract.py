@@ -290,39 +290,6 @@ class NettingChannelContract(object):
         all_participants.remove(address)
         return all_participants[0]
 
-    def _decode(self, closer_address, first_encoded, second_encoded):
-        transfer1 = None
-        transfer2 = None
-        closer = None
-        partner = None
-
-        if first_encoded:
-            transfer1 = decode_transfer(first_encoded)
-
-            if transfer1.sender not in self.participants:
-                raise ValueError('Invalid transfer address')
-
-            if transfer1.sender == closer_address:
-                closer = transfer1
-            else:
-                partner = transfer1
-
-        if second_encoded:
-            transfer2 = decode_transfer(second_encoded)
-
-            if transfer2.sender not in self.participants:
-                raise ValueError('Invalid transfer address')
-
-            if transfer2.sender == closer_address:
-                closer = transfer2
-            else:
-                partner = transfer2
-
-        if transfer1 and transfer2 and transfer1.sender == transfer2.sender:
-            raise ValueError('Both transfer are for the same address')
-
-        return closer, partner
-
     def _get_transferred_amount(self, transfer1, transfer2):
         amount1, amount2 = 0.0, 0.0
 
@@ -364,23 +331,21 @@ class NettingChannelContract(object):
         if ctx['msg.sender'] not in self.participants:
             raise ValueError('Caller is not a participant')
 
+        # may be None, a node is not required to make a transfer
+        transfer = decode_transfer(first_encoded)
+
         closer_state = self.participants[ctx['msg.sender']]
         partner_state = self.participants[self.partner(ctx['msg.sender'])]
 
-        # may be None, a node is not required to make a transfer
-        closer, partner = self._decode(ctx['msg.sender'], first_encoded, None)
-
-        closer_state.transfer = closer
-        closer_state.transfer_from_self = closer
         closer_state.state = STATE_PARTICIPANT
 
-        partner_state.transfer = partner
+        partner_state.transfer = transfer
         partner_state.state = STATE_THIRDPARTY
 
         self.closed = ctx['block_number']
         self.closer = closer_state
 
-        amount1, amount2 = self._get_transferred_amount(closer, partner)
+        amount1, amount2 = self._get_transferred_amount(None, transfer)
         allowance = closer_state.deposit + partner_state.deposit
         difference = abs(amount1 - amount2)
 
