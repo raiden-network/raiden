@@ -114,31 +114,37 @@ contract NettingChannelContract {
     }
 
     /// @notice Returns the number of blocks until the settlement timeout.
+    /// @return The number of blocks until the settlement timeout.
     function settleTimeout() constant returns (uint) {
         return data.settle_timeout;
     }
 
     /// @notice Returns the address of the token.
+    /// @return The address of the token.
     function tokenAddress() constant returns (address) {
         return data.token;
     }
 
     /// @notice Returns the block number for when the channel was opened.
+    /// @return The block number for when the channel was opened.
     function opened() constant returns (uint) {
         return data.opened;
     }
 
     /// @notice Returns the block number for when the channel was closed.
+    /// @return The block number for when the channel was closed.
     function closed() constant returns (uint) {
         return data.closed;
     }
 
     /// @notice Returns the block number for when the channel was settled.
+    /// @return The block number for when the channel was settled.
     function settled() constant returns (uint) {
         return data.settled;
     }
 
     /// @notice Returns the address of the closing participant.
+    /// @return The address of the closing participant.
     function closingAddress() constant returns (address) {
         return data.closing_address;
     }
