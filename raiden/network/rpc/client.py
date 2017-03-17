@@ -634,13 +634,17 @@ class Registry(object):
         topics = [TOKENADDED_EVENTID]
 
         registry_address_bin = self.proxy.address
-        filter_id_raw = new_filter(self.client, registry_address_bin, topics)
+        filter_id_raw = new_filter(
+            self.client,
+            registry_address_bin,
+            topics,
+            from_block=from_block,
+            to_block=to_block,
+        )
 
         return Filter(
             self.client,
             filter_id_raw,
-            from_block=from_block,
-            to_block=to_block,
         )
 
 
