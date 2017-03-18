@@ -17,6 +17,11 @@ and what are the requirements for a Pull Request to be opened against Raiden.
 There are two ways you can contribute to the development. You can either open
 an Issue or if you have programming abilities open a Pull Request.
 
+## Setup development environment
+- Install [solidity](https://solidity.readthedocs.io/en/latest/installing-solidity.html) and ensure that ```solc --version``` prints out something
+- Run ```make test``` before making any changes to ensure that everything works so far
+- Currently I bunch of tests are failing - *2 failed, 108 passed, 1 skipped, 6 xfailed, 37 error*
+
 ### Creating an Issue
 
 If you experience a problem while using Raiden or want to request a feature then you should open an issue against the repository. All issues should contain:
