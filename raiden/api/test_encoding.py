@@ -4,7 +4,7 @@ import pytest
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.utils import make_address, make_privkey_address
 
-from raiden.api.encoding import ChannelListSchema, ChannelSchema
+from raiden.api.v1.encoding import ChannelListSchema, ChannelSchema
 from raiden.api.objects import ChannelList
 from raiden.api.objects import Channel as ChannelContainer
 
