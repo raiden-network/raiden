@@ -17,7 +17,11 @@ from raiden.transfermanager import (
     UnknownAddress,
     UnknownTokenAddress
 )
-from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
+from raiden.blockchain.abi import (
+    CHANNEL_MANAGER_ABI,
+    REGISTRY_ABI,
+    NETTING_CHANNEL_ABI
+)
 from raiden.network.channelgraph import ChannelGraph
 from raiden.tasks import AlarmTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
@@ -346,9 +350,10 @@ class RaidenAPI(object):
         raise NotImplementedError()
 
     def get_channel(self, channel_address):
+        channel_address_bin = address_decoder(channel_address)
         channel_list = self.get_channel_list()
         for channel in channel_list:
-            if channel_address == channel.channel_address:
+            if channel_address_bin == channel.channel_address:
                 return channel
 
         raise ValueError("Channel not found")
@@ -734,32 +739,35 @@ class RaidenEventHandler(object):
         self.event_listeners = list()
         self.logged_events = dict()
 
-    def get_channel_new_events(self, token_address, from_block, to_block):
+    def get_channel_new_events(self, token_address, from_block, to_block=''):
+        translator = ContractTranslator(CHANNEL_MANAGER_ABI)
         token_address_bin = address_decoder(token_address)
         channel_manager = self.raiden.chain.manager_by_token(token_address_bin)
         filter_ = channel_manager.channelnew_filter(from_block, to_block)
 
         events = filter_.getall()
         filter_.uninstall()
-        return events
+        return [translator.decode_event(event['topics'], event['data']) for event in events]
 
-    def get_token_added_events(self, from_block, to_block):
+    def get_token_added_events(self, from_block, to_block=''):
         # Assuming only one token registry for the moment
+        translator = ContractTranslator(REGISTRY_ABI)
         filter_ = self.raiden.registries[0].tokenadded_filter(from_block, to_block)
         events = filter_.getall()
         filter_.uninstall()
-        return events
+        return [translator.decode_event(event['topics'], event['data']) for event in events]
 
-    def get_channel_event(self, channel_address, event_id, from_block, to_block):
+    def get_channel_event(self, channel_address, event_id, from_block, to_block=''):
+        translator = ContractTranslator(NETTING_CHANNEL_ABI)
         channel = self.raiden.api.get_channel(channel_address)
         filter_ = channel.external_state.netting_channel.events_filter(
             [event_id],
             from_block,
             to_block,
         )
-        events = filter.getall()
+        events = filter_.getall()
         filter_.uninstall()
-        return events
+        return [translator.decode_event(event['topics'], event['data']) for event in events]
 
     def start_event_listener(self, event_name, filter_, translator):
         event = EventListener(
