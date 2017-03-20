@@ -18,10 +18,18 @@ There are two ways you can contribute to the development. You can either open
 an Issue or if you have programming abilities open a Pull Request.
 
 ## Setup development environment
-- Run ```pip install -r requirements-dev.txt -e .``` (it is highly recommended that you use something like pyenv and pyenv-virtualenv to manage the python dependencies)
+### Installation
+- Install [pyenv](https://github.com/pyenv/pyenv) and [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv) and create a separate virtual environment for your raiden installation
+- Make sure that [tox](https://tox.readthedocs.io/en/latest/) is installed
 - Install [solidity](https://solidity.readthedocs.io/en/latest/installing-solidity.html) and ensure that ```solc --version``` prints out something
-- Run ```make test``` before making any changes to ensure that everything works so far
-- Currently I bunch of tests are failing - *2 failed, 108 passed, 1 skipped, 6 xfailed, 37 error*
+
+### Dependencies
+- Run ```pip install -e .``` to install the dependencies
+
+### Tests
+- Run ```tox``` to run the tests.
+// TODO: Fix that after this some tests are still failing. 
+
 
 ### Creating an Issue
 
