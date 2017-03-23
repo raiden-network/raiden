@@ -178,6 +178,10 @@ class FilterTesterMock(object):
         self.events = list()
         return events
 
+    def getall(self):
+        events = self.events
+        return events
+
     def event(self, event):
         # TODO: implement OR
         valid_address = event.address == self.contract_address
@@ -439,7 +443,7 @@ class RegistryTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
         return result
 
-    def tokenadded_filter(self):
+    def tokenadded_filter(self, from_block='', to_block=''):
         topics = [TOKENADDED_EVENTID]
         filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
         self.tester_state.block.log_listeners.append(filter_.event)
