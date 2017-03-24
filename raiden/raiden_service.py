@@ -601,15 +601,10 @@ class RaidenAPI(object):
         if channel.received_transfers:
             first_transfer = channel.received_transfers[-1]
 
-        second_transfer = None
-        if channel.sent_transfers:
-            second_transfer = channel.sent_transfers[-1]
-
         netting_channel = channel.external_state.netting_channel
         netting_channel.close(
             self.raiden.address,
             first_transfer,
-            second_transfer,
         )
 
         return channel_to_api_dict(channel)

@@ -880,13 +880,12 @@ class NettingChannel(object):
     def settled(self):
         return self.proxy.settled.call()
 
-    def close(self, our_address, their_transfer, our_transfer):
+    def close(self, our_address, their_transfer):
         """`our_address` is an argument used only in mock_client.py but is also
         kept here to maintain a consistent interface"""
-        their_encoded, our_encoded = get_encoded_transfers(their_transfer, our_transfer)
+        their_encoded = their_transfer.encode()
         transaction_hash = self.proxy.close.transact(
             their_encoded,
-            our_encoded,
             startgas=self.startgas,
             gasprice=self.gasprice,
         )
@@ -900,7 +899,6 @@ class NettingChannel(object):
             'close called',
             contract=pex(self.address),
             their_transfer=their_transfer,
-            our_transfer=our_transfer,
         )
 
     def update_transfer(self, our_address, their_transfer):

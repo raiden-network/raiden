@@ -108,7 +108,6 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     channel1.external_state.netting_channel.close(
         app1.raiden.address,
         transfermessage,
-        None,
     )
     wait_until_block(chain0, chain0.block_number() + 1)
 
@@ -195,7 +194,6 @@ def test_settled_lock(tokens_addresses, raiden_network, settle_timeout, reveal_t
     back_channel.external_state.netting_channel.close(
         app1.raiden.address,
         last_transfer,
-        None
     )
 
     # check that the double unlock will failed

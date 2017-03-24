@@ -704,7 +704,6 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     channel0.external_state.close(
         None,
         bob_last_transaction,
-        alice_old_transaction
     )
     chain0 = app0.raiden.chain
     wait_until_block(chain0, chain0.block_number() + 1)
@@ -714,6 +713,11 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
 
     assert channel0.external_state.closed_block != 0
     assert channel1.external_state.closed_block != 0
+
+    channel1.external_state.update_transfer(
+        None,
+        direct_transfer,
+    )
 
     # wait until the settle timeout has passed
     settle_expiration = chain0.block_number() + settle_timeout

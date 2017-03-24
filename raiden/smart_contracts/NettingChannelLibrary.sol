@@ -37,6 +37,7 @@ library NettingChannelLibrary {
         Token token;
         Participant[2] participants;
         mapping(bytes32 => bool) locks;
+        bool updated;
     }
 
 
@@ -58,9 +59,15 @@ library NettingChannelLibrary {
         _;
     }
 
-    modifier notClosingAddress(Data storage self, address caller) {
-        if (caller == self.closing_address)
+    modifier isCounterParty(Data storage self, address caller) {
+        if (caller == self.closing_address) {
             throw;
+        }
+        address participant0 = self.participants[0].node_address;
+        address participant1 = self.participants[1].node_address;
+        if (caller != participant0 && caller != participant1) {
+            throw;
+        }
         _;
     }
 
@@ -74,6 +81,12 @@ library NettingChannelLibrary {
 
     modifier channelSettled(Data storage self) {
         if (self.settled == 0)
+            throw;
+        _;
+    }
+
+    modifier notYetUpdated(Data storage self) {
+        if (self.updated)
             throw;
         _;
     }
@@ -193,16 +206,10 @@ library NettingChannelLibrary {
     ///                       to the channel. Can also be empty, in which case
     ///                       we are attempting to close a channel without any
     ///                       transfers.
-    /// @param our_transfer Optionally provide the caller's own latest transfer
-    ///                     as a courtesy to the other party in order to save
-    ///                     them a blockchain transaction. Can also be empty.
-    ///                     If `their_transfer` argument is empty then this
-    ///                     parameter will be ignored.
     function close(
         Data storage self,
         address caller_address,
-        bytes their_transfer,
-        bytes our_transfer)
+        bytes their_transfer)
     {
         // the channel can't be closed multiple times
         if (self.settled > 0 || self.closed > 0) {
@@ -234,16 +241,6 @@ library NettingChannelLibrary {
             // the sender of "their" transaction can't be ourselves
             throw;
         }
-
-        if (our_transfer.length != 0) {
-            address our_sender;
-            // we also provided a courtesy update of our own latest transfer
-            our_sender = processTransfer(self, node1, node2, our_transfer);
-            if (our_sender != caller_address) {
-                // we have to be the sender of our own transaction
-                throw;
-            }
-        }
     }
 
     function processTransfer(Data storage self, Participant storage node1, Participant storage node2, bytes transfer)
@@ -267,13 +264,6 @@ library NettingChannelLibrary {
             throw;
         }
 
-        uint64 nonce;
-        assembly {
-            nonce := mload(add(transfer, 12))  // skip cmdid and padding
-        }
-        if (nonce <= sender.nonce) {
-            throw;
-        }
         decodeAndAssign(sender, transfer_raw);
 
         return sender.node_address;
@@ -291,18 +281,15 @@ library NettingChannelLibrary {
     )
         notSettledButClosed(self)
         stillTimeout(self)
-        notClosingAddress(self, caller_address)
+        isCounterParty(self, caller_address)
+        notYetUpdated(self)
     {
-        // transfer address must be from counter party
-        if (self.closing_address == caller_address) {
-            throw;
-        }
-
         Participant[2] storage participants = self.participants;
         Participant storage node1 = participants[0];
         Participant storage node2 = participants[1];
 
         processTransfer(self, node1, node2, their_transfer);
+        self.updated = true;
 
         // TODO check if tampered and penalize
         // TODO check if outdated and penalize
