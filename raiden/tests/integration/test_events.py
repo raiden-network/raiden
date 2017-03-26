@@ -194,7 +194,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
         'block_number': 'ignore',
     })
 
-    channel0.external_state.close(app0.raiden.address, None, None)
+    channel0.external_state.close(app0.raiden.address, None)
     events = app0.raiden.event_handler.get_channel_event(
         channel_address=address_encoder(netcontract_address),
         event_id=CHANNELCLOSED_EVENTID,
