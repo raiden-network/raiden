@@ -62,7 +62,7 @@ RUN bash -c 'APP=Raiden LOWERAPP=raiden ARCH=x86_64 \
     source functions.sh && \
     cd /raiden.AppDir && \
     get_apprun && \
-    copy_deps ; copy_deps ; copy_deps && \
+    ( copy_deps ; copy_deps ; copy_deps ) && \
     delete_blacklisted && \
     move_lib'
 
