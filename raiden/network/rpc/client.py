@@ -102,17 +102,10 @@ def patch_send_transaction(client, nonce_offset=0):
             query_time = now()
             needs_update = abs(query_time - client.last_nonce_update) > UPDATE_INTERVAL
             not_initialized = client.current_nonce is None
-            log.DEV(
-                "get_nonce called",
-                needs_update=needs_update,
-                not_initialized=not_initialized,
-                current=client.current_nonce,
-                instance=hex(id(client))[-4:]
-            )
             if needs_update or not_initialized:
                 nonce = _query_nonce()
                 while nonce < client.current_nonce:
-                    log.DEV(
+                    log.debug(
                         "nonce on server too low",
                         server=nonce,
                         local=client.current_nonce
