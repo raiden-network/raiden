@@ -151,9 +151,9 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
 
         address = addresses[idx]
 
-    privatekey_hex = accmgr.get_privkey(address)
+    privatekey_bin = accmgr.get_privkey(address)
+    privatekey_hex = privatekey_bin.encode('hex')
     config['privatekey_hex'] = privatekey_hex
-    privatekey = decode_hex(privatekey_hex)
 
     endpoint = eth_rpc_endpoint
 
@@ -173,7 +173,7 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     registry_contract_address = address_decoder(registry_contract_address)
     discovery_contract_address = address_decoder(discovery_contract_address)
     blockchain_service = BlockChainService(
-        privatekey,
+        privatekey_bin,
         registry_contract_address,
         host=rpc_host,
         port=rpc_port,
