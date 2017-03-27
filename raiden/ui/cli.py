@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+import sys
+
 import signal
 import click
 import gevent
@@ -137,13 +139,15 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         ]
 
         should_prompt = True
+
+        print('The following accounts were found in your machine:')
+        print('')
+        print('\n'.join(formatted_addresses))
+        print('')
+
         while should_prompt:
-            idx = click.prompt(
-                "The following accounts were found in your machine:\n\n{}"
-                "\nSelect one of them by index to continue: ".format(
-                    "\n".join(formatted_addresses)),
-                type=int
-            )
+            idx = click.prompt('Select one of them by index to continue', type=int)
+
             if idx >= 0 and idx < len(addresses):
                 should_prompt = False
             else:
@@ -172,12 +176,17 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     # user may have provided registry and discovery contracts with leading 0x
     registry_contract_address = address_decoder(registry_contract_address)
     discovery_contract_address = address_decoder(discovery_contract_address)
-    blockchain_service = BlockChainService(
-        privatekey_bin,
-        registry_contract_address,
-        host=rpc_host,
-        port=rpc_port,
-    )
+
+    try:
+        blockchain_service = BlockChainService(
+            privatekey_bin,
+            registry_contract_address,
+            host=rpc_host,
+            port=rpc_port,
+        )
+    except ValueError as e:
+        print(e.message)
+        sys.exit(1)
 
     discovery = ContractDiscovery(
         blockchain_service.node_address,
