@@ -97,27 +97,28 @@ def patch_send_transaction(client, nonce_offset=0):
             If the remote counter is lower than the current local counter,
             it will wait for the remote to catch up.
             """
-            client.nonce_lock.acquire()
-            UPDATE_INTERVAL = 5.
-            query_time = now()
-            needs_update = abs(query_time - client.last_nonce_update) > UPDATE_INTERVAL
-            not_initialized = client.current_nonce is None
-            if needs_update or not_initialized:
-                nonce = _query_nonce()
-                while nonce < client.current_nonce:
-                    log.debug(
-                        "nonce on server too low",
-                        server=nonce,
-                        local=client.current_nonce
-                    )
+            with client.nonce_lock:
+                UPDATE_INTERVAL = 5.
+                query_time = now()
+                needs_update = abs(query_time - client.last_nonce_update) > UPDATE_INTERVAL
+                not_initialized = client.current_nonce is None
+                if needs_update or not_initialized:
                     nonce = _query_nonce()
-                    query_time = now()
-                client.current_nonce = nonce
-                client.last_nonce_update = query_time
-            else:
-                client.current_nonce += 1
-            client.nonce_lock.release()
-            return client.current_nonce
+                    # we may have hammered the server and not all tx are
+                    # registered as `pending` yet
+                    while nonce < client.current_nonce:
+                        log.debug(
+                            "nonce on server too low; retrying",
+                            server=nonce,
+                            local=client.current_nonce
+                        )
+                        nonce = _query_nonce()
+                        query_time = now()
+                    client.current_nonce = nonce
+                    client.last_nonce_update = query_time
+                else:
+                    client.current_nonce += 1
+                return client.current_nonce
 
         def _query_nonce():
             pending_transactions_hex = client.call(
