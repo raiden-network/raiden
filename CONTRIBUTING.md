@@ -59,6 +59,16 @@ you should always follow though are:
 Why are these rules important? All tools that consume git repos and show you information treat the first 80 characters as a title.
 Even Github itself does this. And the git history looks really nice and neat if these simple rules are followed.
 
+### Encoding
+
+Addresses should follow "sandwich encoding" so that each point of entry does its own encoding into binary but the core programmatic API
+accepts only binary. Thus we setup the following rules:
+
+- Programmatic API should only expect binary and break if it accepts anything else. It should do type checking on its input and provide meaningful error for hex encoded addresses
+or length mismatch.
+- All other places from which we receive addresses need to do their own encoding from whatever the input encoding is to binary. Such places are: CLI, Rest-API e.t.c.
+- All modules which generate output to the outside world should also encode from binary to whatever the expected output encoding of that module is. Such places are stdout, communication with the ethereum node e.t.c.
+
 ### Coding Style
 
 #### Python
@@ -67,7 +77,7 @@ Raiden is written in Python and we follow the official Python style guide [PEP8]
 recommended to use the [flake8](https://pypi.python.org/pypi/flake8) tool in order to automatically determine any and all style violations. The customizeable part of flake can be seen in the [configuration file](setup.cfg). For all the rest which are not
 configurable here is some general guidelines.
 
-** Line Length **
+**Line Length**
 Flake8 will warn you for 99 characters which is the hard limit on the max length. Try not to go above it. We also have a soft
 limit on 80 characters but that is not enforced and is there just to encourage short lines.
 
@@ -171,6 +181,22 @@ manager = Manager()
 balance_holder = AccountBalanceHolder()
 service = RaidenService()
 ```
+
+We try to follow a consistent naming convention throughout the codebase to make it easy for the reader of the code to understand what is going on.
+Thus we introduce the following rules:
+
+For addresses:
+
+- `<name>_address_hex` for hex encoded addresses
+- `<name>_address` for binary encoded addresses
+
+Lists of objects:
+
+- `<name>s`, e.g. `channels` for a list `Channel` object instances.
+
+Mappings/dicts:
+
+`<name>s_<name>s`, e.g. `tokenaddresses_taskmanagers`
 
 #### Solidity
 
