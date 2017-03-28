@@ -740,6 +740,10 @@ class RaidenEventHandler(object):
         self.logged_events = dict()
 
     def get_channel_new_events(self, token_address, from_block, to_block=''):
+        # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
+        # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
+        # one using `eth_getLogs`. It will require changes in all testing frameworks
+        # to be implemented though.
         translator = ContractTranslator(CHANNEL_MANAGER_ABI)
         token_address_bin = address_decoder(token_address)
         channel_manager = self.raiden.chain.manager_by_token(token_address_bin)
@@ -750,6 +754,11 @@ class RaidenEventHandler(object):
         return [translator.decode_event(event['topics'], event['data']) for event in events]
 
     def get_token_added_events(self, from_block, to_block=''):
+        # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
+        # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
+        # one using `eth_getLogs`. It will require changes in all testing frameworks
+        # to be implemented though.
+
         # Assuming only one token registry for the moment
         translator = ContractTranslator(REGISTRY_ABI)
         filter_ = self.raiden.registries[0].tokenadded_filter(from_block, to_block)
@@ -758,6 +767,10 @@ class RaidenEventHandler(object):
         return [translator.decode_event(event['topics'], event['data']) for event in events]
 
     def get_channel_event(self, channel_address, event_id, from_block, to_block=''):
+        # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
+        # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
+        # one using `eth_getLogs`. It will require changes in all testing frameworks
+        # to be implemented though.
         translator = ContractTranslator(NETTING_CHANNEL_ABI)
         channel = self.raiden.api.get_channel(channel_address)
         filter_ = channel.external_state.netting_channel.events_filter(
