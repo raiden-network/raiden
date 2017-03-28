@@ -9,14 +9,14 @@ from raiden.tests.utils.blockchain import wait_until_block
 @pytest.mark.parametrize('cached_genesis', [False])
 @pytest.mark.parametrize('settle_timeout', [5])
 def test_channel_lifecycle(raiden_network, tokens_addresses, settle_timeout):
-    token = tokens_addresses[0].encode('hex')
+    token = tokens_addresses[0]
     alice, bob = raiden_network
 
-    alice_address = alice.raiden.address.encode('hex')
+    alice_address = alice.raiden.address
     alice_deposit = 100
     alice_transfer = 60
 
-    bob_address = bob.raiden.address.encode('hex')
+    bob_address = bob.raiden.address
     bob_deposit = 50
     bob_transfer = 10
 
