@@ -36,7 +36,7 @@ GENESIS_STUB = {
     'coinbase': '0x0000000000000000000000000000000000000000',
     'timestamp': '0x00',
     'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'extraData': 'raiden',
+    'extraData': '0x' + 'raiden'.encode('hex'),
     'gasLimit': GAS_LIMIT_HEX,
 }
 
