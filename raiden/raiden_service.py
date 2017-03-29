@@ -405,7 +405,7 @@ class RaidenAPI(object):
         token_manager.register_channel(netting_channel, reveal_timeout)
 
         channel = token_manager.get_channel_by_contract_address(netcontract_address)
-        return channel_to_api_dict(channel)
+        return channel
 
     def deposit(self, token_address, partner_address, amount):
         """ Deposit `amount` in the channel with the peer at `partner_address` and the
@@ -432,7 +432,7 @@ class RaidenAPI(object):
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         netting_channel.deposit(self.raiden.address, amount)
 
-        return channel_to_api_dict(channel)
+        return channel
 
     def exchange(self, from_token, from_amount, to_token, to_amount, target_address):
         from_token_bin = safe_address_decode(from_token)
@@ -604,7 +604,7 @@ class RaidenAPI(object):
             first_transfer,
         )
 
-        return channel_to_api_dict(channel)
+        return channel
 
     def settle(self, token_address, partner_address):
         """ Settle a closed channel with `partner_address` for the given `token_address`. """
@@ -631,7 +631,7 @@ class RaidenAPI(object):
             raise InvalidState('settlement period is not yet over.')
 
         netting_channel.settle()
-        return channel_to_api_dict(channel)
+        return channel
 
 
 class RaidenMessageHandler(object):

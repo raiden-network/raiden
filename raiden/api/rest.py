@@ -21,6 +21,7 @@ from raiden.api.v1.resources import (
     PartnersResourceByTokenAddress,
 )
 from raiden.api.objects import EventsList, ChannelList, TokensList, PartnersPerTokenList
+from raiden.utils import channel_to_api_dict
 
 
 class APIServer(object):
@@ -131,7 +132,7 @@ class RestAPI(object):
                 balance
             )
 
-        result = self.channel_schema.dumps(raiden_service_result)
+        result = self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
         return result
 
     def deposit(self, token_address, partner_address, amount):
@@ -142,7 +143,7 @@ class RestAPI(object):
             amount
         )
 
-        result = self.channel_schema.dumps(raiden_service_result)
+        result = self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
         return result
 
     def close(self, token_address, partner_address):
@@ -152,7 +153,7 @@ class RestAPI(object):
             partner_address
         )
 
-        result = self.channel_schema.dumps(raiden_service_result)
+        result = self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
         return result
 
     def get_channel_list(self, token_address=None, partner_address=None):
@@ -244,7 +245,7 @@ class RestAPI(object):
                     channel.token_address,
                     channel.partner_address
                 )
-                return self.channel_schema.dumps(raiden_service_result)
+                return self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
             elif state == 'settled':
                 if current_state == 'settled' or current_state == 'open':
                     return make_response(
@@ -255,7 +256,7 @@ class RestAPI(object):
                     channel.token_address,
                     channel.partner_address
                 )
-                return self.channel_schema.dumps(raiden_service_result)
+                return self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
             else:
                 return make_response(
                     'Provided invalid channel state {}'.format(state),
