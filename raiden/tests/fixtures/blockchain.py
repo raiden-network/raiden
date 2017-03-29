@@ -175,11 +175,23 @@ def cached_genesis(request, blockchain_type):
     for account_address in tester.block.state.to_dict():
         account_alloc = tester.block.account_to_dict(account_address)
 
-        # code must be hex encoded without 0x prefix
-        account_alloc['code'] = safe_lstrip_hex(account_alloc.get('code', ''))
+        # Both keys and values of the account storage associative array
+        # must now be encoded with 64 hex digits
+        if account_alloc['storage']:
+            new_storage = dict()
+            for key, val in account_alloc['storage'].iteritems():
+                new_key = '0x%064x' % int(key, 16)
+                new_val = '0x%064x' % int(val, 16)
+                new_storage[new_key] = new_val
 
-        # account_to_dict returns accounts with nonce=0
-        account_alloc['nonce'] = tester.block.get_nonce(account_address)
+            account_alloc['storage'] = new_storage
+
+        # code must be hex encoded with 0x prefix
+        account_alloc['code'] = account_alloc.get('code', '')
+
+        # account_to_dict returns accounts with nonce=0 and the nonce must
+        # be encoded with 16 hex digits
+        account_alloc['nonce'] = '0x%016x' % tester.block.get_nonce(account_address)
 
         genesis_alloc[account_address] = account_alloc
 
@@ -192,7 +204,7 @@ def cached_genesis(request, blockchain_type):
         genesis_alloc[address]['balance'] = DEFAULT_BALANCE_BIN
 
     alloc = {
-        safe_lstrip_hex(address_encoder(address_maybe_bin)): data
+        address_encoder(address_maybe_bin): data
         for address_maybe_bin, data in genesis_alloc.iteritems()
     }
 
