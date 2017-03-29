@@ -155,7 +155,15 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
 
         address = addresses[idx]
 
-    privatekey_bin = accmgr.get_privkey(address)
+    try:
+        privatekey_bin = accmgr.get_privkey(address)
+    except ValueError as e:
+        # ValueError exception raised if the password is incorrect, print the
+        # exception message and exit the process, the user may try again by
+        # re-executing Raiden.
+        print(e.message)
+        sys.exit(1)
+
     privatekey_hex = privatekey_bin.encode('hex')
     config['privatekey_hex'] = privatekey_hex
 
@@ -185,6 +193,11 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
             port=rpc_port,
         )
     except ValueError as e:
+        # ValueError exception raised if:
+        # - The registry contract address doesn't have code, this might happen
+        # if the connected geth process is not synced or if the wrong address
+        # is provided (e.g. using the address from a smart contract deployed on
+        # ropsten with a geth node connected to morden)
         print(e.message)
         sys.exit(1)
 

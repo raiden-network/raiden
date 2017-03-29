@@ -24,11 +24,12 @@ from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
 from raiden.utils import (
-    privatekey_to_address,
+    channel_to_api_dict,
     isaddress,
     pex,
+    privatekey_to_address,
+    safe_address_decode,
     GLOBAL_CTX,
-    channel_to_api_dict
 )
 
 
@@ -36,15 +37,6 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 EventListener = namedtuple('EventListener', ('event_name', 'filter_', 'translator'))
-
-
-def safe_address_decode(address):
-    try:
-        address = address.decode('hex')
-    except TypeError:
-        pass
-
-    return address
 
 
 class RaidenError(Exception):

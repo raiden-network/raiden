@@ -2,16 +2,53 @@
 
 set -e
 
-function waitfor() {
+wait_for_file() {
     while [[ ! -s $1 ]]; do sleep 1; done
 }
 
-function info() {
+check_raiden() {
+    # Tests if raiden can be executed inside a test tmux session.
+    init=$1
+
+    session=raiden-test-$$
+    target="${session}:0"
+
+    # running raiden itself instead of using tools like command, whereis, and
+    # hash because of pyenv's shims
+    raiden_command="raiden --help"
+
+    # using tmux channels to synchronize execution
+    channel="${target}:channel"
+    set_wait_channel="tmux wait-for -S '${channel}'"
+
+    tmux new-session -d -s $session
+    tmux new-window -t $target
+
+    [ -n "${init}" ] && tmux send-keys -t "${target}" "${init}" C-m
+
+    # the tmux channel must always be set
+    test_command="${raiden_command} || {${set_wait_channel}; exit} && ${set_wait_channel}"
+    tmux send-keys -t "${target}" "${test_command}" C-m
+
+    # wait for the raiden_command to execute and the window to be killed
+    tmux wait-for "${channel}"
+    sleep 0.1
+
+    # if the window was killed, raiden cannot run
+    tmux send-keys -t "${target}" false 2> /dev/null
+    result=$?
+
+    tmux kill-session -t $session
+
+    return $result
+}
+
+info() {
     # bold and blue
     printf "$(tput bold)$(tput setaf 4) -> $1$(tput sgr0)\n" >&1
 }
 
-function msg() {
+msg() {
     # bold and green
     printf "$(tput bold)$(tput setaf 2) $1$(tput sgr0)\n" >&1
 }
@@ -27,11 +64,7 @@ die() {
     exit 1
 }
 
-function cleanup() {
-    [ -n "${TEMP}" ] && rm -rf ${TEMP}
-}
-
-function followlog() {
+followlog() {
     target=$1
     logfile=$2
     tmux split-window -v -t "${target}"
@@ -40,15 +73,13 @@ function followlog() {
 }
 
 TEMP=$(mktemp -d "/tmp/raiden.XXXXX")
-touch $TEMP/password
-GETHPORT=8101
-
+DATADIR=$TEMP/data
 SETUP_CHANNELS=1
 SETUP_VARIABLES=1
 SETUP_TMUX=1
-GENESIS=$TEMP/genesis.json
+GETHPORT=8101
 
-while getopts "cvtg:" arg; do
+while getopts "cvtd:" arg; do
     case $arg in
         c)
             SETUP_CHANNELS=0
@@ -59,8 +90,9 @@ while getopts "cvtg:" arg; do
         t)
             SETUP_TMUX=0
             ;;
-        g)
-            GENESIS=$OPTARG
+        d)
+            [ ! -d "${OPTARG}" ] && die "'${OPTARG}' is not a directory"
+            DATADIR=$OPTARG
             ;;
         \?)
             error "unknow arg $OPTARG"
@@ -70,23 +102,9 @@ while getopts "cvtg:" arg; do
 done
 
 shift $((OPTIND-1))
-
 INIT=$1
 
-# the temp directory should be remove only after the tmux session is exited
-# trap cleanup 1 2 3 9 15
-
-# this will create 3 nodes with deterministic keys, deploy raiden's smart
-# contract and create tokens for testing. The private keys are based on the ip
-# address and an incrementing port number, for each account a token will be
-# created and the distributed to _all_ the other participants. The genesis
-# block can be reused between sessions to have faster startup times.
-[ ! -e "${GENESIS}" ] && {
-    info "generating the ${GENESIS}"
-    python ./tools/config_builder.py full_genesis 3 127.0.0.1 > $GENESIS
-}
-
-# cached private keys and accounts (./tools/config_builder.py accounts 3 127.0.0.1)
+# cached private keys and accounts from the genesis command in the bottom
 PRIVKEY1=51c662cae295bdef5b0b895065aaa105089375e6541381dc17ba6d3ea0451052
 PRIVKEY2=20d8b10d23ec1f00b54d798c9120fae94cff91e8db936affe6ef9d80a74c3535
 PRIVKEY3=aa3e84aa62daa5186d75663ff09c62500b998fe143bdfbb1b7e29b8e5583970b
@@ -95,23 +113,50 @@ ADDRESS1=67febce7e8f81e6c6b6624a6cef64b4b717c0194
 ADDRESS2=01551883681ba1eedf9403f743808776cc9e509a
 ADDRESS3=397a25e3c9c66c870e2a044379da9429156aa05f
 
+# new directory for each run
+LOG1=${TEMP}/node1/raiden.log
+LOG2=${TEMP}/node2/raiden.log
+LOG3=${TEMP}/node3/raiden.log
+
+# these might be cached
+GENESIS=${DATADIR}/genesis.json
+KEYSTORE1=${DATADIR}/node1/keystore
+KEYSTORE2=${DATADIR}/node2/keystore
+KEYSTORE3=${DATADIR}/node3/keystore
+RAIDENACCOUNT1=${KEYSTORE1}/raidenaccount.json
+RAIDENACCOUNT2=${KEYSTORE2}/raidenaccount.json
+RAIDENACCOUNT3=${KEYSTORE3}/raidenaccount.json
+
+touch ${TEMP}/password
+mkdir -p ${TEMP}/node{1..3}
+mkdir -p ${DATADIR}/node{1..3}/keystore
+
+[ ! -e "${GENESIS}" ] && {
+    info "generating the ${GENESIS}"
+    # This will create 3 nodes with deterministic keys, deploy raiden's smart
+    # contract and create tokens for testing. The private keys are based on the ip
+    # address and an incrementing port number, for each account a token will be
+    # created and then distributed to _all_ the other participants. The genesis
+    # block can be reused between sessions to have faster startup times.
+    python ./tools/config_builder.py full_genesis 3 127.0.0.1 > $GENESIS
+}
+
 TOKEN1=$(jq -r ".config.token_groups[\"${ADDRESS1}\"]" $GENESIS)
 TOKEN2=$(jq -r ".config.token_groups[\"${ADDRESS2}\"]" $GENESIS)
 TOKEN3=$(jq -r ".config.token_groups[\"${ADDRESS3}\"]" $GENESIS)
 
-mkdir -p ${TEMP}/node{1..3}/keystore
-
-KEYSTORE1=${TEMP}/node1/keystore
-KEYSTORE2=${TEMP}/node2/keystore
-KEYSTORE3=${TEMP}/node3/keystore
-
-tools/config_builder.py private_to_account $PRIVKEY1 nopassword > ${KEYSTORE1}/raidenaccount.json
-tools/config_builder.py private_to_account $PRIVKEY2 nopassword > ${KEYSTORE2}/raidenaccount.json
-tools/config_builder.py private_to_account $PRIVKEY3 nopassword > ${KEYSTORE3}/raidenaccount.json
-
-LOG1=${TEMP}/node1/raiden.log
-LOG2=${TEMP}/node2/raiden.log
-LOG3=${TEMP}/node3/raiden.log
+[ ! -e "${RAIDENACCOUNT1}" ] && {
+    info "generating the ${KEYSTORE1}"
+    tools/config_builder.py private_to_account $PRIVKEY1 nopassword > ${KEYSTORE1}/raidenaccount.json
+}
+[ ! -e "${RAIDENACCOUNT2}" ] && {
+    info "generating the ${KEYSTORE2}"
+    tools/config_builder.py private_to_account $PRIVKEY2 nopassword > ${KEYSTORE2}/raidenaccount.json
+}
+[ ! -e "${RAIDENACCOUNT3}" ] && {
+    info "generating the ${KEYSTORE3}"
+    tools/config_builder.py private_to_account $PRIVKEY3 nopassword > ${KEYSTORE3}/raidenaccount.json
+}
 
 RAIDEN_CONTRACTS=$(jq -r .config.raidenFlags $GENESIS)
 
@@ -138,6 +183,8 @@ am2=raiden.get_manager_by_token_address('${TOKEN2}'.decode('hex'))
 [ "$SETUP_TMUX" -eq 1 ] && {
     info "creating the tmux windows/panels"
 
+    check_raiden "$INIT" || die "Could not execute raiden. Forgot to provide the source command for the virtualenv?"
+
     tmux new-session -d -s raiden
 
     tmux new-window -t raiden:2 -n geth
@@ -154,9 +201,9 @@ am2=raiden.get_manager_by_token_address('${TOKEN2}'.decode('hex'))
     tmux send-keys -t raiden:2 "geth --datadir ${TEMP} --password ${TEMP}/password account new" C-m
     tmux send-keys -t raiden:2 "geth --minerthreads 1 --nodiscover --rpc --rpcport ${GETHPORT} --mine --etherbase 0 --datadir ${TEMP}" C-m
 
-    tmux send-keys -t raiden:3 "$(printf "$RAIDEN_TEMPLATE" 40001 "${KEYSTORE1}" "${ADDRESS1}" "${LOG1}")" C-m
-    tmux send-keys -t raiden:4 "$(printf "$RAIDEN_TEMPLATE" 40002 "${KEYSTORE2}" "${ADDRESS2}" "${LOG2}")" C-m
-    tmux send-keys -t raiden:5 "$(printf "$RAIDEN_TEMPLATE" 40003 "${KEYSTORE3}" "${ADDRESS3}" "${LOG3}")" C-m
+    tmux send-keys -t raiden:3 "$(printf "$RAIDEN_TEMPLATE" 40001 "${KEYSTORE1}" "${ADDRESS1}" "${LOG1}") || exit" C-m
+    tmux send-keys -t raiden:4 "$(printf "$RAIDEN_TEMPLATE" 40002 "${KEYSTORE2}" "${ADDRESS2}" "${LOG2}") || exit" C-m
+    tmux send-keys -t raiden:5 "$(printf "$RAIDEN_TEMPLATE" 40003 "${KEYSTORE3}" "${ADDRESS3}" "${LOG3}") || exit" C-m
     # wait for all password prompts to appear:
     sleep 20
     tmux send-keys -t raiden:3 "$(printf "nopassword")" C-m
@@ -167,9 +214,9 @@ am2=raiden.get_manager_by_token_address('${TOKEN2}'.decode('hex'))
     followlog raiden:4 $LOG2
     followlog raiden:5 $LOG3
 
-	tmux last-pane -t raiden:3
-	tmux last-pane -t raiden:4
-	tmux last-pane -t raiden:5
+    tmux last-pane -t raiden:3
+    tmux last-pane -t raiden:4
+    tmux last-pane -t raiden:5
 }
 
 [ "$SETUP_CHANNELS" -eq 1 ] && {

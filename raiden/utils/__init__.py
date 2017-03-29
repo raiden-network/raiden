@@ -53,6 +53,15 @@ LETTERS = string.printable
 GLOBAL_CTX = secp256k1.lib.secp256k1_context_create(secp256k1.ALL_FLAGS)
 
 
+def safe_address_decode(address):
+    try:
+        address = address.decode('hex')
+    except TypeError:
+        pass
+
+    return address
+
+
 def keccak_256(data):
     return keccaklib.new(digest_bits=256, data=data)
 

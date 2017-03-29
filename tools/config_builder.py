@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-
 import json
 
 import click
-
-from genesis_builder import generate_accounts, mk_genesis
-from create_compilation_dump import deploy_all
-from startcluster import RAIDEN_PORT as START_PORT
-from startcluster import create_node_configuration, to_cmd
 from pyethapp.accounts import Account
+
+from create_compilation_dump import deploy_all
+from genesis_builder import generate_accounts, mk_genesis
+from raiden.utils import safe_address_decode
+from startcluster import create_node_configuration, to_cmd
+from startcluster import RAIDEN_PORT as START_PORT
 
 
 def build_node_list(hosts, nodes_per_host):
@@ -102,7 +102,14 @@ def accounts(ctx, hosts, nodes_per_host):
 @cli.command()
 @click.pass_context
 def private_to_account(ctx, privatekey, password):
-    account = Account.new(password.encode('ascii'), key=privatekey.encode('ascii'))
+    # privatekey is provided in the console, so it's expected to be hexadecimal
+    privatekey = safe_address_decode(privatekey)
+
+    # cast the values to bytes because it is the expected type in the Crypto library
+    password = bytes(password)
+    privkey = bytes(privatekey)
+
+    account = Account.new(password, key=privkey)
     print account.dump()
 
 
