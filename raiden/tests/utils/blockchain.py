@@ -36,7 +36,7 @@ GENESIS_STUB = {
     'coinbase': '0x0000000000000000000000000000000000000000',
     'timestamp': '0x00',
     'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'extraData': 'raiden',
+    'extraData': '0x' + 'raiden'.encode('hex'),
     'gasLimit': GAS_LIMIT_HEX,
 }
 
@@ -153,8 +153,12 @@ def geth_init_datadir(datadir, genesis_path):
     Args:
         datadir (str): the datadir in which the blockchain is initialized.
     """
-
-    subprocess.call(['geth', '--datadir', datadir, 'init', genesis_path])
+    try:
+        subprocess.check_output(['geth', '--datadir', datadir, 'init', genesis_path], stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as e:
+        raise ValueError(
+            """Initializing geth with custom genesis returned {} with error:
+{}""".format(e.returncode, e.output))
 
 
 def geth_wait_and_check(privatekeys, rpc_ports):
