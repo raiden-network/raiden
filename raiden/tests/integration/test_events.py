@@ -22,8 +22,6 @@ from raiden.blockchain.abi import (
 def event_dicts_are_equal(dict1, dict2):
     for k, v in dict1.iteritems():
         if k not in dict2:
-            import pdb
-            pdb.set_trace()
             return False
         if k == 'block_number':
             continue
@@ -34,8 +32,6 @@ def event_dicts_are_equal(dict1, dict2):
         if isinstance(v, basestring) and v.startswith('0x'):
             v = v[2:]
         if v2 != v:
-            import pdb
-            pdb.set_trace()
             return False
 
     return True
@@ -117,7 +113,7 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
 
 
 @pytest.mark.timeout(160)
-@pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
+@pytest.mark.parametrize('privatekey_seed', ['query_events:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('blockchain_type', ['geth'])
