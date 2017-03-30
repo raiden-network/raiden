@@ -176,6 +176,10 @@ class FilterMock(object):
         self.events = list()
         return events
 
+    def getall(self):
+        events = self.events
+        return events
+
     def event(self, event):
         if event['topics'] is None or event['topics'] == self.topics:
             self.events.append(event)
@@ -268,7 +272,8 @@ class RegistryMock(object):
             for manager in self.token_manager.values()
         ]
 
-    def tokenadded_filter(self):
+    def tokenadded_filter(self, **kwargs):
+        """May also receive from_block, to_block but they are not used here"""
         topics = [TOKENADDED_EVENTID]
         filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
         BlockChainServiceMock.filters[self.address].append(filter_)

@@ -17,14 +17,17 @@ from raiden.transfermanager import (
     UnknownAddress,
     UnknownTokenAddress
 )
-from raiden.blockchain.abi import CHANNEL_MANAGER_ABI, REGISTRY_ABI
+from raiden.blockchain.abi import (
+    CHANNEL_MANAGER_ABI,
+    REGISTRY_ABI,
+    NETTING_CHANNEL_ABI
+)
 from raiden.network.channelgraph import ChannelGraph
 from raiden.tasks import AlarmTask, StartExchangeTask, HealthcheckTask
 from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
 from raiden.utils import (
-    channel_to_api_dict,
     isaddress,
     pex,
     privatekey_to_address,
@@ -346,9 +349,10 @@ class RaidenAPI(object):
         raise NotImplementedError()
 
     def get_channel(self, channel_address):
+        channel_address_bin = address_decoder(channel_address)
         channel_list = self.get_channel_list()
         for channel in channel_list:
-            if channel_address == channel.channel_address:
+            if channel.channel_address == channel_address_bin:
                 return channel
 
         raise ValueError("Channel not found")
@@ -400,7 +404,7 @@ class RaidenAPI(object):
         token_manager.register_channel(netting_channel, reveal_timeout)
 
         channel = token_manager.get_channel_by_contract_address(netcontract_address)
-        return channel_to_api_dict(channel)
+        return channel
 
     def deposit(self, token_address, partner_address, amount):
         """ Deposit `amount` in the channel with the peer at `partner_address` and the
@@ -427,7 +431,7 @@ class RaidenAPI(object):
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         netting_channel.deposit(self.raiden.address, amount)
 
-        return channel_to_api_dict(channel)
+        return channel
 
     def exchange(self, from_token, from_amount, to_token, to_amount, target_address):
         from_token_bin = safe_address_decode(from_token)
@@ -599,7 +603,7 @@ class RaidenAPI(object):
             first_transfer,
         )
 
-        return channel_to_api_dict(channel)
+        return channel
 
     def settle(self, token_address, partner_address):
         """ Settle a closed channel with `partner_address` for the given `token_address`. """
@@ -626,7 +630,7 @@ class RaidenAPI(object):
             raise InvalidState('settlement period is not yet over.')
 
         netting_channel.settle()
-        return channel_to_api_dict(channel)
+        return channel
 
 
 class RaidenMessageHandler(object):
@@ -732,6 +736,61 @@ class RaidenEventHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
         self.event_listeners = list()
+        self.logged_events = dict()
+
+    def get_channel_new_events(self, token_address, from_block, to_block=''):
+        # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
+        # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
+        # one using `eth_getLogs`. It will require changes in all testing frameworks
+        # to be implemented though.
+        translator = ContractTranslator(CHANNEL_MANAGER_ABI)
+        token_address_bin = address_decoder(token_address)
+        channel_manager = self.raiden.chain.manager_by_token(token_address_bin)
+        filter_ = None
+        try:
+            filter_ = channel_manager.channelnew_filter(from_block, to_block)
+            events = filter_.getall()
+        finally:
+            if filter_ is not None:
+                filter_.uninstall()
+        return [translator.decode_event(event['topics'], event['data']) for event in events]
+
+    def get_token_added_events(self, from_block, to_block=''):
+        # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
+        # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
+        # one using `eth_getLogs`. It will require changes in all testing frameworks
+        # to be implemented though.
+
+        # Assuming only one token registry for the moment
+        translator = ContractTranslator(REGISTRY_ABI)
+        filter_ = None
+        try:
+            filter_ = self.raiden.registries[0].tokenadded_filter(from_block, to_block)
+            events = filter_.getall()
+        finally:
+            if filter_ is not None:
+                filter_.uninstall()
+        return [translator.decode_event(event['topics'], event['data']) for event in events]
+
+    def get_channel_event(self, channel_address, event_id, from_block, to_block=''):
+        # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
+        # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
+        # one using `eth_getLogs`. It will require changes in all testing frameworks
+        # to be implemented though.
+        translator = ContractTranslator(NETTING_CHANNEL_ABI)
+        channel = self.raiden.api.get_channel(channel_address)
+        filter_ = None
+        try:
+            filter_ = channel.external_state.netting_channel.events_filter(
+                [event_id],
+                from_block,
+                to_block,
+            )
+            events = filter_.getall()
+        finally:
+            if filter_ is not None:
+                filter_.uninstall()
+        return [translator.decode_event(event['topics'], event['data']) for event in events]
 
     def start_event_listener(self, event_name, filter_, translator):
         event = EventListener(
