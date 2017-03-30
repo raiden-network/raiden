@@ -443,7 +443,8 @@ class RegistryTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
         return result
 
-    def tokenadded_filter(self, from_block=None, to_block=None):
+    def tokenadded_filter(self, **kwargs):
+        """May also receive from_block, to_block but they are not used here"""
         topics = [TOKENADDED_EVENTID]
         filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
         self.tester_state.block.log_listeners.append(filter_.event)

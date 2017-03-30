@@ -28,7 +28,6 @@ from raiden.encoding import messages
 from raiden.messages import SignedMessage
 from raiden.network.protocol import RaidenProtocol
 from raiden.utils import (
-    channel_to_api_dict,
     isaddress,
     pex,
     privatekey_to_address,
@@ -353,7 +352,7 @@ class RaidenAPI(object):
         channel_address_bin = address_decoder(channel_address)
         channel_list = self.get_channel_list()
         for channel in channel_list:
-            if channel_address_bin == channel.channel_address:
+            if channel.channel_address == channel_address_bin:
                 return channel
 
         raise ValueError("Channel not found")

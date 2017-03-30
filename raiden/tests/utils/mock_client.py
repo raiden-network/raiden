@@ -272,7 +272,8 @@ class RegistryMock(object):
             for manager in self.token_manager.values()
         ]
 
-    def tokenadded_filter(self, from_block=None, to_block=None):
+    def tokenadded_filter(self, **kwargs):
+        """May also receive from_block, to_block but they are not used here"""
         topics = [TOKENADDED_EVENTID]
         filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
         BlockChainServiceMock.filters[self.address].append(filter_)
