@@ -10,6 +10,7 @@ import termios
 import time
 
 import gevent
+import psutil
 from devp2p.crypto import privtopub
 from ethereum import slogging
 from ethereum.utils import denoms, encode_hex
@@ -25,6 +26,7 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 DEFAULT_BALANCE = denoms.ether * 10000000
 DEFAULT_BALANCE_BIN = str(denoms.ether * 10000000)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
+DAGSIZE = 1073739912
 
 GENESIS_STUB = {
     'config': {
@@ -91,6 +93,8 @@ def geth_to_cmd(node, datadir, verbosity):
         '--fakepow',
         '--datadir', datadir,
     ])
+
+    log.debug('geth command: {}'.format(cmd))
 
     return cmd
 
@@ -217,6 +221,17 @@ def geth_create_blockchain(
         logdirectory=None):
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments
 
+    # the smallest DAG, the one for the first epoch should be a bit over 1GB,
+    # since the DAG is used during proof of work and the file is mmaped from
+    # disk, there must be more than 1GB of memory freely available to avoid
+    # memory paging, otherwise the proof-of-work will be extremely slow
+    # increasing the flakiness of the tests.
+    memory = psutil.virtual_memory()
+    if memory.free < DAGSIZE:
+        raise RuntimeError(
+            'To properly run the tests with a geth miner at least 1GB of free memory is required.'
+        )
+
     nodes_configuration = []
     key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports)
 
@@ -247,10 +262,16 @@ def geth_create_blockchain(
 
     cmds = []
     for i, config in enumerate(nodes_configuration):
-        nodedir = os.path.join(base_datadir, config['nodekeyhex'])
+        # HACK: Use only the first 8 characters to avoid golang's issue
+        # https://github.com/golang/go/issues/6895 (IPC bind fails with path
+        # longer than 108 characters).
+        nodekey_part = config['nodekeyhex'][:8]
+        nodedir = os.path.join(base_datadir, nodekey_part)
+        node_genesis_path = os.path.join(nodedir, 'custom_genesis.json')
+
+        assert len(nodedir + '/geth.ipc') < 108, 'geth data path is too large'
 
         os.makedirs(nodedir)
-        node_genesis_path = os.path.join(nodedir, 'custom_genesis.json')
 
         if genesis_path is None:
             geth_bare_genesis(node_genesis_path, all_keys)
