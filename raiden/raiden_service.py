@@ -746,10 +746,13 @@ class RaidenEventHandler(object):
         translator = ContractTranslator(CHANNEL_MANAGER_ABI)
         token_address_bin = address_decoder(token_address)
         channel_manager = self.raiden.chain.manager_by_token(token_address_bin)
-        filter_ = channel_manager.channelnew_filter(from_block, to_block)
-
-        events = filter_.getall()
-        filter_.uninstall()
+        filter_ = None
+        try:
+            filter_ = channel_manager.channelnew_filter(from_block, to_block)
+            events = filter_.getall()
+        finally:
+            if filter_ is not None:
+                filter_.uninstall()
         return [translator.decode_event(event['topics'], event['data']) for event in events]
 
     def get_token_added_events(self, from_block, to_block=''):
@@ -760,9 +763,13 @@ class RaidenEventHandler(object):
 
         # Assuming only one token registry for the moment
         translator = ContractTranslator(REGISTRY_ABI)
-        filter_ = self.raiden.registries[0].tokenadded_filter(from_block, to_block)
-        events = filter_.getall()
-        filter_.uninstall()
+        filter_ = None
+        try:
+            filter_ = self.raiden.registries[0].tokenadded_filter(from_block, to_block)
+            events = filter_.getall()
+        finally:
+            if filter_ is not None:
+                filter_.uninstall()
         return [translator.decode_event(event['topics'], event['data']) for event in events]
 
     def get_channel_event(self, channel_address, event_id, from_block, to_block=''):
@@ -772,13 +779,17 @@ class RaidenEventHandler(object):
         # to be implemented though.
         translator = ContractTranslator(NETTING_CHANNEL_ABI)
         channel = self.raiden.api.get_channel(channel_address)
-        filter_ = channel.external_state.netting_channel.events_filter(
-            [event_id],
-            from_block,
-            to_block,
-        )
-        events = filter_.getall()
-        filter_.uninstall()
+        filter_ = None
+        try:
+            filter_ = channel.external_state.netting_channel.events_filter(
+                [event_id],
+                from_block,
+                to_block,
+            )
+            events = filter_.getall()
+        finally:
+            if filter_ is not None:
+                filter_.uninstall()
         return [translator.decode_event(event['topics'], event['data']) for event in events]
 
     def start_event_listener(self, event_name, filter_, translator):
