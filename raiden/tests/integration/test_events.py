@@ -117,6 +117,7 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('blockchain_type', ['geth'])
+@pytest.mark.parametrize('cached_genesis', [None])
 def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
