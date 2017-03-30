@@ -6,6 +6,7 @@ pytest-timeout>=1.2.0
 pytest-random>=0.02
 pytest-cov
 grequests
+psutil
 
 # Debugging
 pdbpp>=0.8.3<1.0.0
