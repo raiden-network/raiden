@@ -177,11 +177,11 @@ def patch_send_message(client, pool_maxsize=50):
     client.transport.send_message = send_message
 
 
-def new_filter(jsonrpc_client, contract_address, topics, from_block='', to_block=''):
+def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_block=None):
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     json_data = {
-        'fromBlock': from_block,
-        'toBlock': to_block,
+        'fromBlock': from_block if from_block is not None else '',
+        'toBlock': to_block if to_block is not None else '',
         'address': address_encoder(normalize_address(contract_address)),
     }
 
@@ -630,7 +630,7 @@ class Registry(object):
             for address in self.proxy.channelManagerAddresses.call(startgas=self.startgas)
         ]
 
-    def tokenadded_filter(self, from_block='', to_block=''):
+    def tokenadded_filter(self, from_block=None, to_block=None):
         topics = [TOKENADDED_EVENTID]
 
         registry_address_bin = self.proxy.address
@@ -763,7 +763,7 @@ class ChannelManager(object):
             for address in address_list
         ]
 
-    def channelnew_filter(self, from_block='', to_block=''):  # pylint: disable=unused-argument
+    def channelnew_filter(self, from_block=None, to_block=None):  # pylint: disable=unused-argument
         """ Install a new filter for ChannelNew events.
 
         Return:
@@ -1043,7 +1043,7 @@ class NettingChannel(object):
         # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
         log.info('settle called', contract=pex(self.address))
 
-    def events_filter(self, topics, from_block='', to_block=''):
+    def events_filter(self, topics, from_block=None, to_block=None):
         """ Install a new filter for an array of topics emitted by the netting contract.
         Args:
             topics (list): A list of event ids to filter for. Can also be None,
@@ -1066,7 +1066,7 @@ class NettingChannel(object):
             filter_id_raw,
         )
 
-    def all_events_filter(self, from_block='', to_block=''):
+    def all_events_filter(self, from_block=None, to_block=None):
         """ Install a new filter for all the events emitted by the current netting channel contract
 
         Return:
