@@ -565,6 +565,10 @@ class Channel(object):
             raise Exception('invalid state')
 
     @property
+    def our_address(self):
+        return self.our_state.address
+
+    @property
     def partner_address(self):
         return self.partner_state.address
 

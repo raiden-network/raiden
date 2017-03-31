@@ -63,8 +63,8 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     channel0.external_state.close(
         None,
         bob_last_transaction,
-        alice_old_transaction
     )
+    channel1.external_state.update_transfer(None, direct_transfer)
     chain0 = app0.raiden.chain
     wait_until_block(chain0, chain0.block_number() + 1)
 
