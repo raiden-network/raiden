@@ -171,18 +171,15 @@ def snake_to_camel_case(snake_string):
     return snake_string.title().replace("_", "")
 
 
-def bytes_to_hexstr(b):
-    return '0x' + b.encode('hex')
-
-
 def channel_to_api_dict(channel):
     """Takes in a Channel Object and turns it into a dictionary for
-    usage in the REST API.
+    usage in the REST API. Decoding from binary to hex happens through
+    the marshmallow AddressField in encoding.py.
     """
     return {
-        "channel_address": bytes_to_hexstr(channel.channel_address),
-        "token_address": bytes_to_hexstr(channel.token_address),
-        "partner_address": bytes_to_hexstr(channel.partner_address),
+        "channel_address": channel.channel_address,
+        "token_address": channel.token_address,
+        "partner_address": channel.partner_address,
         "settle_timeout": channel.settle_timeout,
         "balance": channel.contract_balance,
         "state": channel.state

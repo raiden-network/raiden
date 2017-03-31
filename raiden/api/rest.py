@@ -186,7 +186,7 @@ class RestAPI(object):
 
     def get_channel(self, channel_address):
         channel = self.raiden_api.get_channel(channel_address)
-        return self.channel_schema.dumps(channel)
+        return self.channel_schema.dumps(channel_to_api_dict(channel))
 
     def get_partners_by_token(self, token_address):
         return_list = []
@@ -232,7 +232,7 @@ class RestAPI(object):
                 channel.partner_address,
                 balance
             )
-            return self.channel_schema.dumps(raiden_service_result)
+            return self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
 
         else:
             if state == 'closed':
