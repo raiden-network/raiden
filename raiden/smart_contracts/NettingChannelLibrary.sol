@@ -400,13 +400,13 @@ library NettingChannelLibrary {
         node2.netted = node2.balance + node1.transferred_amount - node2.transferred_amount;
 
         for (k = 0; k < node1.unlocked.length; k++) {
-            node1.netted += node1.unlocked[k].amount;
-            node2.netted -= node1.unlocked[k].amount;
+            node1.netted -= node1.unlocked[k].amount;
+            node2.netted += node1.unlocked[k].amount;
         }
 
         for (k = 0; k < node2.unlocked.length; k++) {
-            node2.netted += node2.unlocked[k].amount;
-            node1.netted -= node2.unlocked[k].amount;
+            node2.netted -= node2.unlocked[k].amount;
+            node1.netted += node2.unlocked[k].amount;
         }
 
         self.settled = block.number;
