@@ -4,11 +4,11 @@ import grequests
 import httplib
 
 from raiden.tests.utils.apitestcontext import decode_response
-from raiden.utils import channel_to_api_dict, bytes_to_hexstr
+from raiden.utils import channel_to_api_dict
 from raiden.tests.utils.transfer import channel
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -19,9 +19,9 @@ def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
 
     result = channel_to_api_dict(channel0)
     expected_result = {
-        "channel_address": bytes_to_hexstr(netting_channel.address),
-        "token_address": bytes_to_hexstr(channel0.token_address),
-        "partner_address": bytes_to_hexstr(app1.raiden.address),
+        "channel_address": netting_channel.address,
+        "token_address": channel0.token_address,
+        "partner_address": app1.raiden.address,
         "settle_timeout": settle_timeout,
         "balance": channel0.contract_balance,
         "state": "open"
@@ -44,8 +44,7 @@ def test_api_query_channels(api_test_server, api_test_context, api_raiden_servic
 def test_api_open_and_deposit_channel(
         api_test_server,
         api_test_context,
-        api_raiden_service,
-        reveal_timeout):
+        api_raiden_service):
     # let's create a new channel
     first_partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
     token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
@@ -64,7 +63,6 @@ def test_api_open_and_deposit_channel(
     assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = channel_data_obj
-    expected_response['reveal_timeout'] = reveal_timeout
     expected_response['balance'] = 0
     expected_response['state'] = 'open'
     # can't know the channel address beforehand but make sure we get one
@@ -91,7 +89,6 @@ def test_api_open_and_deposit_channel(
     assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = channel_data_obj
-    expected_response['reveal_timeout'] = reveal_timeout
     expected_response['balance'] = balance
     expected_response['state'] = 'open'
     # can't know the channel address beforehand but make sure we get one
@@ -113,7 +110,6 @@ def test_api_open_and_deposit_channel(
         "partner_address": first_partner_address,
         "token_address": token_address,
         "settle_timeout": settle_timeout,
-        "reveal_timeout": reveal_timeout,
         "state": 'open',
         "balance": balance
     }
@@ -131,7 +127,6 @@ def test_api_open_and_deposit_channel(
         "partner_address": second_partner_address,
         "token_address": token_address,
         "settle_timeout": settle_timeout,
-        "reveal_timeout": reveal_timeout,
         "state": 'open',
         "balance": balance
     }
@@ -141,8 +136,7 @@ def test_api_open_and_deposit_channel(
 def test_api_open_close_and_settle_channel(
         api_test_server,
         api_test_context,
-        api_raiden_service,
-        reveal_timeout):
+        api_raiden_service):
     # let's create a new channel
     partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
     token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
@@ -162,7 +156,6 @@ def test_api_open_close_and_settle_channel(
     assert response and response.status_code == httplib.OK
     response = decode_response(response)
     expected_response = channel_data_obj
-    expected_response['reveal_timeout'] = reveal_timeout
     expected_response['balance'] = balance
     expected_response['state'] = 'open'
     # can't know the channel address beforehand but make sure we get one
@@ -184,7 +177,6 @@ def test_api_open_close_and_settle_channel(
         "partner_address": partner_address,
         "token_address": token_address,
         "settle_timeout": settle_timeout,
-        "reveal_timeout": reveal_timeout,
         "state": 'closed',
         "balance": balance
     }
@@ -203,7 +195,6 @@ def test_api_open_close_and_settle_channel(
         "partner_address": partner_address,
         "token_address": token_address,
         "settle_timeout": settle_timeout,
-        "reveal_timeout": reveal_timeout,
         "state": 'settled',
         "balance": balance
     }
@@ -213,8 +204,7 @@ def test_api_open_close_and_settle_channel(
 def test_api_channel_state_change_errors(
         api_test_server,
         api_test_context,
-        api_raiden_service,
-        reveal_timeout):
+        api_raiden_service):
     # let's create a new channel
     partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
     token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
@@ -295,8 +285,7 @@ def test_api_channel_state_change_errors(
 def test_api_tokens(
         api_test_server,
         api_test_context,
-        api_raiden_service,
-        reveal_timeout):
+        api_raiden_service):
     # let's create 2 new channels for 2 different tokens
     partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
     token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
@@ -345,8 +334,7 @@ def test_api_tokens(
 def test_query_partners_by_token(
         api_test_server,
         api_test_context,
-        api_raiden_service,
-        reveal_timeout):
+        api_raiden_service):
     # let's create 2 new channels for the same token
     first_partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
     second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'

@@ -524,6 +524,8 @@ class RaidenAPI(object):
         for token_address in self.managers_by_token_address:
             tokens_list.append(token_address)
 
+        return tokens_list
+
     def transfer_and_wait(
             self,
             token_address,
