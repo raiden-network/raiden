@@ -13,11 +13,8 @@ from raiden.utils import sha3, privatekey_to_address
 from raiden.tests.utils.tester import (
     new_nettingcontract,
 )
-from raiden.messages import Lock, DirectTransfer
+from raiden.messages import Lock
 from raiden.transfer.state_change import Block
-
-log = slogging.getLogger(__name__)
-
 
 # TODO:
 # - change the hashroot and check older locks are not freed
@@ -336,11 +333,6 @@ def test_close_first_argument_is_for_partner_transfer(tester_channels):
     # and at the same pace, it cannot use a transfer of it's partner as one of it's own
     with pytest.raises(TransactionFailed):
         nettingchannel.close(transfer1_data, sender=pkey1)
-
-def test_close_accepts_only_transfer_from_participant(tester_channels):
-    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
-
-    direct_transfer = DirectTransfer()
 
 
 def test_settle_unused_channel(
@@ -892,7 +884,7 @@ def test_unlock_expired_lock(reveal_timeout, tester_channels, tester_state):
     # expire the lock
     tester_state.mine(number_of_blocks=lock_timeout + 1)
 
-    unlock_proofs = list(channel1.our_state.balance_proof.get_known_unlocks())
+    unlock_proofs = list(channel0.our_state.balance_proof.get_known_unlocks())
     proof = unlock_proofs[0]
 
     with pytest.raises(TransactionFailed):

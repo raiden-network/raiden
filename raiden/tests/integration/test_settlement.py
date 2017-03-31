@@ -142,8 +142,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     address0 = app0.raiden.address
     address1 = app1.raiden.address
 
-    assert token.balance_of(address0) == balance0 + deposit0 + amount
-    assert token.balance_of(address1) == balance1 + deposit1 - amount
+    assert token.balance_of(address0) == balance0 + deposit0 - amount
+    assert token.balance_of(address1) == balance1 + deposit1 + amount
 
 
 @pytest.mark.timeout(240)

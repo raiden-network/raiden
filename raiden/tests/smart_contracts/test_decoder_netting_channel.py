@@ -43,16 +43,6 @@ def deploy_decoder_tester(tester_state, token_address, address1, address2, settl
     return decode_tester
 
 
-def test_decode_lock(tester_state):
-    dtester = deploy_decoder_tester(
-        tester_state,
-        tester_token.address,
-        address0,
-        address1,
-        settle_timeout
-    )
-
-
 def test_decode_direct_transfer(settle_timeout, tester_state, tester_token):
     privatekey0 = tester.DEFAULT_KEY
     privatekey1 = tester.k1
