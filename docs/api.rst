@@ -11,7 +11,7 @@ Contents:
 
 Introduction
 *************
-Raiden has a Restful API with URL endpoints corresponding to actions that the user can perform with his channels. The endpoints accept and return JSON encoded objects. The api query string always contains the api version in order to differentiate queries to
+Raiden has a Restful API with URL endpoints corresponding to actions that the user can perform with his channels. The endpoints accept and return JSON encoded objects. The api url path always contains the api version in order to differentiate queries to
 different API versions. All queries start with: ``/api/<version>/``
 
 
