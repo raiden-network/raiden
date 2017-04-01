@@ -36,6 +36,7 @@ library NettingChannelLibrary {
         address closing_address;
         Token token;
         Participant[2] participants;
+        mapping(address => uint8) participant_index;
         mapping(bytes32 => bool) locks;
         bool updated;
     }
@@ -106,8 +107,7 @@ library NettingChannelLibrary {
         uint256 amount)
         returns (bool success, uint256 balance)
     {
-        uint index;
-
+     
         if (self.closed != 0) {
             throw;
         }
@@ -116,14 +116,10 @@ library NettingChannelLibrary {
             throw;
         }
 
-        Participant storage participant = self.participants[0];
-        if (participant.node_address != caller_address) {
-            participant = self.participants[1];
-            if (participant.node_address != caller_address) {
-                throw;
-            }
-        }
+        uint8 index = index_or_throw(self, caller_address);
 
+        Participant storage participant = self.participants[index];
+        
         success = self.token.transferFrom(
             caller_address,
             channel_address,
@@ -168,17 +164,9 @@ library NettingChannelLibrary {
         constant
         returns (uint)
     {
-        Participant[2] participants = self.participants;
-        Participant node1 = participants[0];
-        Participant node2 = participants[1];
-
-        if (node1.node_address == participant_address) {
-            return node1.transferred_amount;
-        } else if (node2.node_address == participant_address) {
-            return node2.transferred_amount;
-        }
-        // invalid address
-        throw;
+         uint8 index = index_or_throw(self, participant_address);
+         Participant storage participant = self.participants[index];
+         return participant.transferred_amount;
     }
 
     function addressAndBalance(Data storage self)
@@ -326,15 +314,11 @@ library NettingChannelLibrary {
 
         if (hashlock != sha3(secret))
             throw;
-
-        Participant[2] storage participants = self.participants;
-        Participant storage participant = participants[0];
-        if (participant.node_address == caller_address) {
-            participant = participants[1];
-            if (participant.node_address != caller_address) {
-                throw;
-            }
-        }
+        
+        //Check if caller_address is a participant and select her partner
+        uint8 index = 1 - index_or_throw(self, caller_address);
+        
+        Participant storage participant = self.participants[index];
 
         if (participant.nonce == 0) {
             throw;
@@ -631,6 +615,15 @@ library NettingChannelLibrary {
         for (uint i = start; i < end; i++) { //python style slice
             n[i - start] = a[i];
         }
+    }
+
+    function index_or_throw(Data storage self, address caller_address) private returns (uint8 n) {
+        // Return index of participant, or throw
+        n = self.participant_index[caller_address];
+        if (n == 0) {
+            throw;
+        }
+        return n - 1;
     }
 
     function kill(Data storage self) channelSettled(self) {

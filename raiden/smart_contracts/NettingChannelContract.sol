@@ -30,6 +30,8 @@ contract NettingChannelContract {
 
         data.participants[0].node_address = participant1;
         data.participants[1].node_address = participant2;
+        data.participant_index[participant1] = 1;
+        data.participant_index[participant2] = 2;
 
         data.token = Token(token_address);
         data.settle_timeout = timeout;
