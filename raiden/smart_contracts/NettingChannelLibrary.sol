@@ -318,9 +318,9 @@ library NettingChannelLibrary {
         //Check if caller_address is a participant and select her partner
         uint8 index = 1 - index_or_throw(self, caller_address);
         
-        Participant storage participant = self.participants[index];
+        Participant storage partner = self.participants[index];
 
-        if (participant.nonce == 0) {
+        if (partner.nonce == 0) {
             throw;
         }
 
@@ -337,10 +337,10 @@ library NettingChannelLibrary {
             }
         }
 
-        if (participant.locksroot != h)
+        if (partner.locksroot != h)
             throw;
 
-        participant.unlocked.push(Lock(expiration, amount, hashlock));
+        partner.unlocked.push(Lock(expiration, amount, hashlock));
         self.locks[hashlock] = true;
     }
 
