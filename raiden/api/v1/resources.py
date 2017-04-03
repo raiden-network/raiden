@@ -19,24 +19,6 @@ class BaseResource(Resource):
         self.rest_api = kwargs['rest_api_object']
 
 
-@parser.location_handler('query')
-def parse_query_data(request, name, field):
-    if 'channel_address' in request.view_args:
-        # TODO: channel address gets encoded into the view_args from inside
-        # the flask/webargs core code as bytes and now we encode the bytes
-        # to hex again. Feels like a waste. Find a way to fix?
-        #
-        #   Option 1: Figure out how to properly add it as an argument when appearing
-        #             as a placeholder in the variable endpoint and use it from inside
-        #             the various put/patch functions.
-        #
-        #   Option 2: Remove the hexaddress part of <hexaddress:channel_address>.
-        #             With this the conversion to bytes should not be performed,
-        #             but also we would probably need to extract the channel address
-        #             in this function here by parsing the URL string.
-        return address_encoder(request.view_args['channel_address'])
-
-
 class ChannelsResource(BaseResource):
 
     put_schema = ChannelRequestSchema(
