@@ -617,7 +617,8 @@ library NettingChannelLibrary {
         }
     }
 
-    function index_or_throw(Data storage self, address caller_address) private returns (uint8 n) {
+    function index_or_throw(Data storage self, address caller_address) private returns (uint8) {
+        uint8 n;
         // Return index of participant, or throw
         n = self.participant_index[caller_address];
         if (n == 0) {
