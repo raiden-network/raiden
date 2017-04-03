@@ -444,12 +444,12 @@ Querying general network events
 
 
 You can query for non-channel specific events by making a ``GET`` request to the
-endpoint of the token registry contract. ``GET /api/<version>/events/network/<token_registry_address>``
+following endpoint. ``GET /api/<version>/events/network``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``GET /api/1/events/network/0x4bb96091ee9d802ed039c4d1a5f6216f90f81b01``
+``GET /api/1/events/network``
 
 Example Response
 ^^^^^^^^^^^^^^^^

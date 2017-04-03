@@ -357,23 +357,6 @@ class RaidenAPI(object):
 
         raise ValueError("Channel not found")
 
-    def get_new_events(self):
-        queue = self.raiden.event_queue
-
-        while queue.empty():
-            gevent.sleep(0.5)
-            # blocks until item in queue
-
-        event_list = []
-        while True:
-            try:
-                result = queue.get(False, None)
-                event_list.append(result)
-            except QueueEmpty:
-                break
-
-        return event_list
-
     def open(
             self,
             token_address,
@@ -633,6 +616,26 @@ class RaidenAPI(object):
 
         netting_channel.settle()
         return channel
+
+    def get_channel_new_events(self, token_address, from_block, to_block=''):
+        return self.raiden.event_handler.get_channel_new_events(
+            token_address,
+            from_block,
+            to_block
+        )
+
+    def get_token_added_events(self, from_block, to_block=''):
+        return self.raiden.event_handler.get_token_added_events(
+            from_block,
+            to_block
+        )
+
+    def get_channel_events(self, channel_address, from_block, to_block=''):
+        return self.raiden.event_handler.get_channel_event(
+            channel_address,
+            from_block,
+            to_block
+        )
 
 
 class RaidenMessageHandler(object):

@@ -6,7 +6,6 @@ from flask_restful import Api, abort
 from webargs.flaskparser import parser
 
 from raiden.api.v1.encoding import (
-    EventsListSchema,
     ChannelSchema,
     ChannelListSchema,
     TokensListSchema,
@@ -19,8 +18,9 @@ from raiden.api.v1.resources import (
     ChannelsResourceByChannelAddress,
     TokensResource,
     PartnersResourceByTokenAddress,
+    NetworkEventsResoure,
 )
-from raiden.api.objects import EventsList, ChannelList, TokensList, PartnersPerTokenList
+from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
 from raiden.utils import channel_to_api_dict
 
 
@@ -77,6 +77,7 @@ class APIServer(object):
             PartnersResourceByTokenAddress,
             '/tokens/<hexaddress:token_address>/partners'
         )
+        self.add_resource(NetworkEventsResoure, '/events/network')
 
     def _register_type_converters(self, additional_mapping=None):
         # an additional mapping concats to class-mapping and will overwrite existing keys
@@ -113,7 +114,6 @@ class RestAPI(object):
         self.raiden_api = raiden_api
         self.channel_schema = ChannelSchema()
         self.channel_list_schema = ChannelListSchema()
-        self.events_list_schema = EventsListSchema()
         self.tokens_list_schema = TokensListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
 
@@ -176,13 +176,11 @@ class RestAPI(object):
         result = self.tokens_list_schema.dumps(tokens_list)
         return result
 
-    def get_new_events(self):
-        raiden_service_result = self.get_new_events()
-        assert isinstance(raiden_service_result, list)
-
-        events_list = EventsList(raiden_service_result)
-        result = self.events_list_schema.dumps(events_list)
-        return result
+    def get_network_events(self, from_block, to_block):
+        raiden_service_result = self.raiden_api.get_token_added_events(
+            from_block, to_block
+        )
+        return raiden_service_result
 
     def get_channel(self, channel_address):
         channel = self.raiden_api.get_channel(channel_address)

@@ -60,14 +60,6 @@ class Channel(object):
         self.state = state
 
 
-class TokenAdded(object):
-
-    def __init__(self, registry_address, token_address, channel_manager_address):
-        self.registry_address = registry_address
-        self.token_address = token_address
-        self.channel_manager_address = channel_manager_address
-
-
 class ChannelNew(object):
 
     def __init__(self, netting_channel_address, participant1, participant2, settle_timeout):
@@ -104,6 +96,6 @@ class ChannelSettled(object):
 
 class ChannelSecretRevealed(object):
 
-   def __init__(self, netting_channel_address, secret):
+    def __init__(self, netting_channel_address, secret):
         self.netting_channel_address = netting_channel_address
         self.secret = secret

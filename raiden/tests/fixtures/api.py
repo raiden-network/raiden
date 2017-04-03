@@ -92,6 +92,11 @@ def api_raiden_service(
         'get_channel',
         api_test_context.get_channel
     )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'get_token_added_events',
+        api_test_context.get_token_added_events
+    )
 
     # also make sure that the test server's raiden_api uses this mock
     # raiden service
