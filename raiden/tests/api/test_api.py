@@ -2,6 +2,7 @@
 import pytest
 import grequests
 import httplib
+import json
 
 from raiden.tests.utils.apitestcontext import decode_response
 from raiden.utils import channel_to_api_dict
@@ -391,3 +392,35 @@ def test_query_partners_by_token(
         }
     ]
     assert all(r in response for r in expected_response)
+
+
+def test_query_blockchain_events(
+        api_test_server,
+        api_test_context,
+        api_raiden_service):
+    # mock addition of 2 new tokens
+    api_test_context.add_events([{
+        '_event_type': 'TokenAdded',
+        'block_number': 1,
+        'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    }, {'_event_type': 'TokenAdded',
+        'block_number': 13,
+        'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'}
+    ])
+
+    # and now let's query the network events for 'TokenAdded' for blocks 1-10
+    request = grequests.get(
+        'http://localhost:5001/api/1/events/network?from_block=0&to_block=10',
+    )
+    response = request.send().response
+    assert response and response.status_code == httplib.OK
+    response = json.loads(response._content)
+    assert len(response) == 1
+    assert response[0] == {
+        '_event_type': 'TokenAdded',
+        'block_number': 1,
+        'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    }

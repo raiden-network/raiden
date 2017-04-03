@@ -4,7 +4,7 @@ from webargs.flaskparser import use_kwargs, parser
 from flask_restful import Resource
 from flask import Blueprint
 from pyethapp.jsonrpc import address_encoder
-from raiden.api.v1.encoding import ChannelRequestSchema
+from raiden.api.v1.encoding import ChannelRequestSchema, EventRequestSchema
 
 
 def create_blueprint():
@@ -77,13 +77,13 @@ class PartnersResourceByTokenAddress(BaseResource):
         return self.rest_api.get_partners_by_token(**kwargs)
 
 
-class EventsResoure(BaseResource):
-    """no args, since we are filtering in the client for now"""
+class NetworkEventsResoure(BaseResource):
 
-    _route = '/api/events'
+    get_schema = EventRequestSchema()
 
     def __init__(self, **kwargs):
-        super(EventsResoure, self).__init__(**kwargs)
+        super(NetworkEventsResoure, self).__init__(**kwargs)
 
-    def get(self):
-        return self.rest_api.get_new_events()
+    @use_kwargs(get_schema, locations=('query', 'form', 'json'))
+    def get(self, **kwargs):
+        return self.rest_api.get_network_events(kwargs['from_block'], kwargs['to_block'])

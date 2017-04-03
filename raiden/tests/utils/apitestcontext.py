@@ -4,7 +4,6 @@ from raiden.utils import make_address
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.api.objects import ChannelList
 from raiden.api.v1.encoding import (
-    EventsListSchema,
     ChannelSchema,
     ChannelListSchema
 )
@@ -34,12 +33,27 @@ def decode_response(response):
 class ApiTestContext():
 
     def __init__(self, reveal_timeout):
+        self.events = list()
         self.channels = []
         self.tokens = set()
         self.channel_schema = ChannelSchema()
         self.channel_list_schema = ChannelListSchema()
-        self.events_list_schema = EventsListSchema()
         self.reveal_timeout = reveal_timeout
+
+    def add_events(self, events):
+        self.events += events
+
+    def get_token_added_events(self, from_block, to_block):
+        return_list = list()
+        for event in self.events:
+            if (
+                    event['_event_type'] == 'TokenAdded' and
+                    event['block_number'] >= from_block and
+                    event['block_number'] <= to_block
+            ):
+                return_list.append(event)
+
+        return return_list
 
     def make_channel(
             self,

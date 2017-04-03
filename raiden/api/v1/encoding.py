@@ -2,51 +2,20 @@
 
 from werkzeug.routing import BaseConverter
 from marshmallow import Schema, SchemaOpts, post_load, post_dump, pre_load
-from marshmallow_polyfield import PolyField
 from webargs import validate
 from marshmallow import fields
 
 from pyethapp.jsonrpc import address_encoder, address_decoder, data_encoder, data_decoder
 
-from raiden.utils import camel_to_snake_case, snake_to_camel_case
 from raiden.api.objects import (
     Channel,
     ChannelList,
-    EventsList,
     Token,
     TokensList,
-    TokenAdded,
-    ChannelClosed,
-    ChannelSettled,
-    ChannelNew,
-    ChannelNewBalance,
-    ChannelSecretRevealed,
     PartnersPerToken,
     PartnersPerTokenList
 )
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
-
-
-def serialize_schema_selector(list_element, list_obj):
-    schema = None
-    try:
-        schema = event_class_name_to_schema[list_element.__class__.__name__]()
-
-    except Exception as e:
-        raise e
-    return schema
-
-
-def deserialize_schema_selector(element_dict, base_dict):
-    event_type = element_dict['event_type']
-    event_class_name = snake_to_camel_case(event_type)
-    schema = None
-    try:
-        schema = event_class_name_to_schema[event_class_name]()
-
-    except Exception as e:
-        raise e
-    return schema
 
 
 # type converter for the flask route
@@ -119,27 +88,14 @@ class BaseListSchema(Schema):
         return decoding_class(list_)
 
 
-class EventSchema(BaseSchema):
-
-    @pre_load
-    def unwrap_envelope(self, data):
-        # exclude the event_type from the dict, since this is irrelevant internally
-        data = {key: data[key] for key in data if key != 'event_type'}
-        return data
-
-    @post_dump
-    def wrap_with_envelope(self, data):
-        event_type = camel_to_snake_case(self.opts.decoding_class.__name__)
-        data['event_type'] = event_type
-        return data
-
-
-class EventsListSchema(BaseListSchema):
-    data = PolyField(serialization_schema_selector=serialize_schema_selector, deserialization_schema_selector=deserialize_schema_selector, many=True)
+class EventRequestSchema(BaseSchema):
+    from_block = fields.Integer(missing=None)
+    to_block = fields.Integer(missing=None)
 
     class Meta:
         strict = True
-        decoding_class = EventsList
+        # decoding to a dict is required by the @use_kwargs decorator from webargs
+        decoding_class = dict
 
 
 class TokenSchema(BaseSchema):
@@ -197,7 +153,11 @@ class ChannelRequestSchema(BaseSchema):
     partner_address = AddressField(required=True)
     settle_timeout = fields.Integer(missing=DEFAULT_SETTLE_TIMEOUT)
     balance = fields.Integer(default=None, missing=None)
-    state = fields.String(default=None, missing=None, validate=validate.OneOf(['closed', 'open', 'settled']))
+    state = fields.String(
+        default=None,
+        missing=None,
+        validate=validate.OneOf(['closed', 'open', 'settled'])
+    )
 
     class Meta:
         strict = True
@@ -211,74 +171,3 @@ class ChannelListSchema(BaseListSchema):
     class Meta:
         strict = True
         decoding_class = ChannelList
-
-
-class ChannelNewSchema(EventSchema):
-    netting_channel_address = AddressField()
-    participant1 = AddressField()
-    participant2 = AddressField()
-    settle_timeout = fields.Integer()
-
-    class Meta:
-        strict = True
-        decoding_class = ChannelNew
-
-
-class TokenAddedSchema(EventSchema):
-    registry_address = AddressField()
-    token_address = AddressField()
-    channel_manager_address = AddressField()
-
-    class Meta:
-        strict = True
-        decoding_class = TokenAdded
-
-
-class ChannelNewBalanceSchema(EventSchema):
-    netting_channel_address = AddressField()
-    token_address = AddressField()
-    participant_address = AddressField()
-    new_balance = fields.Integer()
-    block_number = fields.Integer()
-
-    class Meta:
-        strict = True
-        decoding_class = ChannelNewBalance
-
-
-class ChannelClosedSchema(EventSchema):
-    netting_channel_address = AddressField()
-    closing_address = AddressField()
-    block_number = fields.Integer()
-
-    class Meta:
-        strict = True
-        decoding_class = ChannelClosed
-
-
-class ChannelSettledSchema(EventSchema):
-    netting_channel_address = AddressField()
-    block_number = fields.Integer()
-
-    class Meta:
-        strict = True
-        decoding_class = ChannelSettled
-
-
-class ChannelSecretRevealedSchema(EventSchema):
-    netting_channel_address = AddressField()
-    secret = DataField()
-
-    class Meta:
-        strict = True
-        decoding_class = ChannelSecretRevealed
-
-
-event_class_name_to_schema = dict(
-    TokenAdded=TokenAddedSchema,
-    ChannelNew=ChannelNewSchema,
-    ChannelClosed=ChannelClosedSchema,
-    ChannelSettled=ChannelSettledSchema,
-    ChannelSecretRevealed=ChannelSecretRevealedSchema,
-    ChannelNewBalance=ChannelNewBalanceSchema,
-)
