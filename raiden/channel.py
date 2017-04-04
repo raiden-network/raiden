@@ -1124,10 +1124,10 @@ class Channel(object):
             if self.state == 'closed' and self.block_number > settlement_end:
                 self.external_state.settle()
 
-        if isinstance(state_change, ContractReceiveClosed):
+        elif isinstance(state_change, ContractReceiveClosed):
             if state_change.channel_address == self.channel_address:
                 self.external_state.set_closed(state_change.block_number)
 
-        if isinstance(state_change, ContractReceiveSettled):
+        elif isinstance(state_change, ContractReceiveSettled):
             if state_change.channel_address == self.channel_address:
                 self.external_state.set_settled(state_change.block_number)

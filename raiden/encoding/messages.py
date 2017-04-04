@@ -179,12 +179,12 @@ MediatedTransfer = namedbuffer(
         recipient,                # [48:68]
         target,                   # [68:88]
         initiator,                # [88:108]
-        locksroot,
-        hashlock,
-        transferred_amount,
-        amount,
-        fee,
-        signature,
+        locksroot,                # [108:140]
+        hashlock,                 # [140:172]
+        transferred_amount,       # [172:204]
+        amount,                   # [204:236]
+        fee,                      # [236:268]
+        signature,                # [268:333]
     ]
 )
 

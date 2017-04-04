@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=no-member
+# pylint: disable=no-member,too-many-arguments,too-many-lines,invalid-name,too-many-locals
 from __future__ import division
 
 import pytest
-from ethereum import abi, tester, slogging
+from ethereum import abi, tester
 from ethereum.tester import TransactionFailed
 from ethereum.utils import encode_hex
 from secp256k1 import PrivateKey
@@ -13,7 +13,7 @@ from raiden.utils import sha3, privatekey_to_address
 from raiden.tests.utils.tester import (
     new_nettingcontract,
 )
-from raiden.messages import Lock, DirectTransfer
+from raiden.messages import Lock, DirectTransfer, MediatedTransfer
 from raiden.transfer.state_change import Block
 
 # TODO:
@@ -329,7 +329,7 @@ def test_close_only_participant_can_close(tester_nettingcontracts):
 
 def test_close_first_argument_is_for_partner_transfer(tester_channels):
     """ Close must not accept a transfer from the closing address. """
-    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
 
     transfer0 = make_direct_transfer(channel0, channel1, amount=90, pkey=pkey0)
     transfer0_data = str(transfer0.packed().data)
@@ -341,7 +341,7 @@ def test_close_first_argument_is_for_partner_transfer(tester_channels):
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_close_accepts_only_transfer_from_participants(tester_channels, private_keys):
     """ Close must not accept a transfer from a non participant. """
-    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    pkey0, _, nettingchannel, channel0, _ = tester_channels[0]
     nonparticipant_key = private_keys[2]
 
     # make a transfer where pkey0 is the target
@@ -478,7 +478,7 @@ def test_update_called_multiple_times_new_transfer(tester_channels):
     transfer0_data = str(transfer0.packed().data)
 
     transfer1 = make_direct_transfer(channel0, channel1, amount=10, pkey=pkey0)
-    transfer1_data = str(transfer0.packed().data)
+    transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close('', sender=pkey0)
     nettingchannel.updateTransfer(transfer0_data, sender=pkey1)
@@ -495,7 +495,7 @@ def test_update_called_multiple_times_older_transfer(tester_channels):
     transfer0_data = str(transfer0.packed().data)
 
     transfer1 = make_direct_transfer(channel0, channel1, amount=10, pkey=pkey0)
-    transfer1_data = str(transfer0.packed().data)
+    transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close('', sender=pkey0)
     nettingchannel.updateTransfer(transfer1_data, sender=pkey1)
@@ -813,6 +813,8 @@ def test_two_direct_transfers(
         tester_channels,
         tester_token):
 
+    """ The value of both transfers must be account for. """
+
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
     address0 = privatekey_to_address(pkey0)
@@ -822,8 +824,7 @@ def test_two_direct_transfers(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     first_amount0 = 90
-    first_direct0 = make_direct_transfer(channel0, channel1, first_amount0, pkey0)
-    first_direct0_data = str(first_direct0.packed().data)
+    make_direct_transfer(channel0, channel1, first_amount0, pkey0)
 
     second_amount0 = 90
     second_direct0 = make_direct_transfer(channel0, channel1, second_amount0, pkey0)
@@ -861,8 +862,7 @@ def test_mediated_after_direct_transfer(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     first_amount0 = 90
-    first_direct0 = make_direct_transfer(channel0, channel1, first_amount0, pkey0)
-    first_direct0_data = str(first_direct0.packed().data)
+    make_direct_transfer(channel0, channel1, first_amount0, pkey0)
 
     lock_expiration = tester_state.block.number + reveal_timeout + 5
     new_block = Block(tester_state.block.number)
@@ -949,6 +949,83 @@ def test_unlock(
     )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
+    nettingchannel.settle(sender=pkey0)
+
+    balance0 = initial_balance0 + deposit - lock0.amount
+    balance1 = initial_balance1 + deposit + lock0.amount
+    assert tester_token.balanceOf(address0, sender=pkey0) == balance0
+    assert tester_token.balanceOf(address1, sender=pkey0) == balance1
+    assert tester_token.balanceOf(nettingchannel.address, sender=pkey0) == 0
+
+
+# This test must not use tester_channels since these proxies do automatic
+# mining
+def test_unlock_at_settlement_block(
+        deposit,
+        settle_timeout,
+        reveal_timeout,
+        tester_nettingcontracts,
+        tester_state,
+        tester_token):
+
+    """ It must be possible to unlock a lock up to and including the settlment
+    block.
+    """
+
+    pkey0, pkey1, nettingchannel = tester_nettingcontracts[0]
+
+    address0 = privatekey_to_address(pkey0)
+    address1 = privatekey_to_address(pkey1)
+
+    initial_balance0 = tester_token.balanceOf(address0, sender=pkey0)
+    initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
+
+    lock_amount = 31
+    lock_expiration = tester_state.block.number + settle_timeout
+    secret = 'settlementsettlementsettlementse'
+    hashlock = sha3(secret)
+
+    lock0 = Lock(
+        amount=31,
+        expiration=lock_expiration,
+        hashlock=hashlock,
+    )
+    lock0_bytes = bytes(lock0.as_bytes)
+    lock0_hash = sha3(lock0_bytes)
+
+    opened_block = nettingchannel.opened(sender=pkey0)
+    nonce = 1 + (opened_block * (2 ** 32))
+
+    mediated0 = MediatedTransfer(
+        identifier=1,
+        nonce=nonce,
+        token=tester_token.address,
+        transferred_amount=0,
+        recipient=address1,
+        locksroot=lock0_hash,
+        lock=lock0,
+        target=address1,
+        initiator=address0,
+        fee=0,
+    )
+
+    sign_key0 = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    mediated0.sign(sign_key0, address0)
+    mediated0_data = str(mediated0.packed().data)
+    nettingchannel.close(mediated0_data, sender=pkey1)
+
+    block_until_settlement_end = lock_expiration - tester_state.block.number
+    tester_state.mine(number_of_blocks=block_until_settlement_end)
+
+    assert lock_expiration == tester_state.block.number
+    nettingchannel.unlock(
+        lock0_bytes,
+        '',  # the lock itself it the root, the proof is empty
+        secret,
+        sender=pkey1,
+    )
+
+    tester_state.mine(number_of_blocks=1)
     nettingchannel.settle(sender=pkey0)
 
     balance0 = initial_balance0 + deposit - lock0.amount

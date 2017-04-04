@@ -348,6 +348,9 @@ class Lock(MessageHashable):
         if amount >= 2 ** 256:
             raise ValueError('amount {} is too large'.format(amount))
 
+        if expiration >= 2 ** 256:
+            raise ValueError('expiration {} is too large'.format(amount))
+
         assert ishash(hashlock)
         self.amount = amount
         self.expiration = expiration
@@ -489,16 +492,41 @@ class MediatedTransfer(LockedTransfer):
 
     cmdid = messages.MEDIATEDTRANSFER
 
-    def __init__(self, identifier, nonce, token, transferred_amount, recipient,
-                 locksroot, lock, target, initiator, fee=0):
+    def __init__(
+            self,
+            identifier,
+            nonce,
+            token,
+            transferred_amount,
+            recipient,
+            locksroot,
+            lock,
+            target,
+            initiator,
+            fee=0):
 
-        if nonce >= 2 ** 64:
+        if 0 > nonce >= 2 ** 64:
             raise ValueError('nonce is too large')
 
-        if fee >= 2 ** 256:
+        if 0 > identifier >= 2 ** 64:
+            raise ValueError('identifier is too large')
+
+        if len(token) != 20:
+            raise ValueError('token is an invalid address')
+
+        if len(recipient) != 20:
+            raise ValueError('recipient is an invalid address')
+
+        if len(target) != 20:
+            raise ValueError('target is an invalid address')
+
+        if len(initiator) != 20:
+            raise ValueError('initiator is an invalid address')
+
+        if 0 > fee >= 2 ** 256:
             raise ValueError('fee is too large')
 
-        if transferred_amount >= 2 ** 256:
+        if 0 > transferred_amount >= 2 ** 256:
             raise ValueError('transferred_amount is too large')
 
         super(MediatedTransfer, self).__init__(
