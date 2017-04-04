@@ -19,6 +19,7 @@ from raiden.api.v1.resources import (
     TokensResource,
     PartnersResourceByTokenAddress,
     NetworkEventsResoure,
+    TokenEventsResource,
 )
 from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
 from raiden.utils import channel_to_api_dict
@@ -78,6 +79,10 @@ class APIServer(object):
             '/tokens/<hexaddress:token_address>/partners'
         )
         self.add_resource(NetworkEventsResoure, '/events/network')
+        self.add_resource(
+            TokenEventsResource,
+            '/events/token/<hexaddress:token_address>'
+        )
 
     def _register_type_converters(self, additional_mapping=None):
         # an additional mapping concats to class-mapping and will overwrite existing keys
@@ -179,6 +184,12 @@ class RestAPI(object):
     def get_network_events(self, from_block, to_block):
         raiden_service_result = self.raiden_api.get_token_added_events(
             from_block, to_block
+        )
+        return raiden_service_result
+
+    def get_token_events(self, token_address, from_block, to_block):
+        raiden_service_result = self.raiden_api.get_channel_new_events(
+            token_address, from_block, to_block
         )
         return raiden_service_result
 

@@ -4,7 +4,11 @@ from webargs.flaskparser import use_kwargs, parser
 from flask_restful import Resource
 from flask import Blueprint
 from pyethapp.jsonrpc import address_encoder
-from raiden.api.v1.encoding import ChannelRequestSchema, EventRequestSchema
+from raiden.api.v1.encoding import (
+    ChannelRequestSchema,
+    EventRequestSchema,
+    TokenEventRequestSchema
+)
 
 
 def create_blueprint():
@@ -84,6 +88,22 @@ class NetworkEventsResoure(BaseResource):
     def __init__(self, **kwargs):
         super(NetworkEventsResoure, self).__init__(**kwargs)
 
-    @use_kwargs(get_schema, locations=('query', 'form', 'json'))
+    @use_kwargs(get_schema, locations=('query',))
     def get(self, **kwargs):
         return self.rest_api.get_network_events(kwargs['from_block'], kwargs['to_block'])
+
+
+class TokenEventsResource(BaseResource):
+
+    get_schema = TokenEventRequestSchema()
+
+    def __init__(self, **kwargs):
+        super(TokenEventsResource, self).__init__(**kwargs)
+
+    @use_kwargs(get_schema, locations=('query',))
+    def get(self, **kwargs):
+        return self.rest_api.get_token_events(
+            kwargs['token_address'],
+            kwargs['from_block'],
+            kwargs['to_block']
+        )
