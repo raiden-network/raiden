@@ -38,7 +38,7 @@ BlockchainServices = namedtuple(
     ('deploy_service', 'blockchain_services'),
 )
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-DAGSIZE = 1073739912
+EPOCH0_DAGSIZE = 1073739912
 
 __all__ = (
     'tokens_addresses',
@@ -86,7 +86,7 @@ def dagpath():
 def pregenerate_dag(request, blockchain_type, dagpath):
     missing_dag = (
         not os.path.exists(dagpath) or
-        os.path.getsize(dagpath) != DAGSIZE
+        os.path.getsize(dagpath) != EPOCH0_DAGSIZE
     )
 
     if blockchain_type == 'geth' and missing_dag:
