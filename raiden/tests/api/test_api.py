@@ -404,11 +404,26 @@ def test_query_blockchain_events(
         'block_number': 1,
         'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
-    }, {'_event_type': 'TokenAdded',
+    }, {
+        '_event_type': 'TokenAdded',
         'block_number': 13,
         'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'}
-    ])
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    }, {
+        '_event_type': 'ChannelNew',
+        'settle_timeout': 10,
+        'netting_channel': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
+        'participant2': '0x356857Cd22CBEFccDa4e96AF13b408623473237A',
+        'block_number': 15,
+    }, {
+        '_event_type': 'ChannelNew',
+        'settle_timeout': 10,
+        'netting_channel': '0xa193fb0032c8635d590f8f31be9f70bd12451b1e',
+        'participant1': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
+        'participant2': '0x88bacc4ddc8f8a5987e1b990bb7f9e8430b24f1a',
+        'block_number': 100,
+    }])
 
     # and now let's query the network events for 'TokenAdded' for blocks 1-10
     request = grequests.get(
@@ -423,4 +438,20 @@ def test_query_blockchain_events(
         'block_number': 1,
         'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    }
+
+    # query ChannelNew event for a token
+    request = grequests.get(
+        'http://localhost:5001/api/1/events/token/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20',
+    )
+    response = request.send().response
+    assert response and response.status_code == httplib.OK
+    response = json.loads(response._content)
+    assert len(response) == 1
+    assert response[0] == {
+        '_event_type': 'ChannelNew',
+        'settle_timeout': 10,
+        'netting_channel': '0xa193fb0032c8635d590f8f31be9f70bd12451b1e',
+        'participant1': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
+        'participant2': '0x88bacc4ddc8f8a5987e1b990bb7f9e8430b24f1a',
     }
