@@ -3,6 +3,7 @@
 import logging
 import random
 import time
+from collections import namedtuple, defaultdict
 
 import gevent
 from gevent.event import AsyncResult
@@ -28,6 +29,21 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 REMOVE_CALLBACK = object()
 TIMEOUT = object()
 
+TokenSwap = namedtuple('TokenSwap', (
+    'identifier',
+    'from_token',
+    'from_amount',
+    'from_nodeaddress',  # the node' address of the owner of the `from_token`
+    'to_token',
+    'to_amount',
+    'to_nodeaddress',  # the node' address of the owner of the `to_token`
+))
+SwapKey = namedtuple('SwapKey', (
+    'identifier',
+    'from_token',
+    'from_amount',
+))
+
 
 class Task(gevent.Greenlet):
     """ Base class used to created tasks.
@@ -40,16 +56,50 @@ class Task(gevent.Greenlet):
         super(Task, self).__init__()
         self.response_queue = Queue()
 
-    def on_response(self, response):
-        """ Add a new response message to the task queue. """
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'RESPONSE MESSAGE RECEIVED %s %s',
-                repr(self),
-                response,
-            )
 
-        self.response_queue.put(response)
+class GreenletTasksDispatcher(object):
+    def __init__(self):
+        self.hashlocks_greenlets = defaultdict(list)
+
+    def register_task(self, task, hashlock):
+        """ Register the task to receive messages based on `hashlock`.
+
+        Registration is required otherwise the task won't receive any messages
+        from the protocol, un-registering is done by the `unregister_task`
+        function.
+
+        Note:
+            Messages are dispatched solely on the hashlock value (being part of
+            the message, eg. SecretRequest, or calculated from the message
+            content, eg.  RevealSecret), this means the sender needs to be
+            checked for the received messages.
+        """
+        if not isinstance(task, Task):
+            raise ValueError('task must be an instance of Task')
+
+        self.hashlocks_greenlets[hashlock].append(task)
+
+    def unregister_task(self, task, hashlock, success):  # pylint: disable=unused-argument
+        """ Clear the task when it's finished. """
+        self.hashlocks_greenlets[hashlock].remove(task)
+
+        if len(self.hashlocks_greenlets[hashlock]) == 0:
+            del self.hashlocks_greenlets[hashlock]
+
+    def dispatch_message(self, message, hashlock):
+        for task in self.hashlocks_greenlets[hashlock]:
+            task.response_queue.put(message)
+
+    def stop(self):
+        wait_for = list()
+
+        for greenlets in self.hashlocks_greenlets.itervalues():
+            for task in greenlets:
+                task.kill()
+
+            wait_for.extend(greenlets)
+
+        return wait_for
 
 
 class HealthcheckTask(Task):
@@ -61,19 +111,20 @@ class HealthcheckTask(Task):
             send_ping_time,
             max_unresponsive_time,
             sleep_time=DEFAULT_HEALTHCHECK_POLL_TIMEOUT):
-        """ Initialize a HealthcheckTask that will monitor open channels for
-             responsiveness.
 
-             :param raiden RaidenService: The Raiden service which will give us
-                                          access to the protocol object and to
-                                          the token manager
-             :param int sleep_time: Time in seconds between each healthcheck task
-             :param int send_ping_time: Time in seconds after not having received
-                                        a message from an address at which to send
-                                        a Ping.
-             :param int max_unresponsive_time: Time in seconds after not having received
-                                               a message from an address at which it
-                                               should be deleted.
+        """
+        Initialize a HealthcheckTask that will monitor open channels for
+        responsiveness.
+
+        Args:
+            raiden (RaidenService): The Raiden service which will give us
+                access to the protocol object and to the token manager.
+            sleep_time (int): Time in seconds between each healthcheck task.
+            send_ping_time (int): Time in seconds after not having received a
+                message from an address at which to send a Ping.
+            max_unresponsive_time (int): Time in seconds after not having
+                received a message from an address at which it should be
+                deleted.
          """
         super(HealthcheckTask, self).__init__()
 
@@ -88,17 +139,20 @@ class HealthcheckTask(Task):
 
     def _run(self):  # pylint: disable=method-hidden
         stop = None
+        sleep_upper_bound = int(0.2 * self.send_ping_time)
+
         while stop is None:
             keys_to_remove = []
             for key, queue in self.protocol.address_queue.iteritems():
                 receiver_address = key[0]
                 token_address = key[1]
                 if queue.empty():
-                    elapsed_time = (
-                        time.time() - self.protocol.last_received_time[receiver_address]
-                    )
+                    last_time = self.protocol.last_received_time[receiver_address]
+                    elapsed_time = time.time() - last_time
+
                     # Add a randomized delay in the loop to not clog the network
-                    gevent.sleep(random.randint(0, int(0.2 * self.send_ping_time)))
+                    gevent.sleep(random.randint(0, sleep_upper_bound))
+
                     if elapsed_time > self.max_unresponsive_time:
                         graph = self.raiden.channelgraphs[token_address]
                         graph.remove_path(self.protocol.raiden.address, receiver_address)
@@ -273,7 +327,7 @@ class BaseMediatedTransferTask(Task):
 
         Note:
             Must be called only once the secret is known.
-            Must call `on_hashlock_result` after this function returns.
+            Must call `unregister_task` after this function returns.
         """
         assert graph.token_address == mediated_transfer.token
 
@@ -387,51 +441,46 @@ class BaseMediatedTransferTask(Task):
 # nodes making the signature validation unnecessary
 
 
-# TODO:
-# - implement the token swap as a restartable task
-# - add a separate message for exchanges to simplify message handling
-class StartExchangeTask(BaseMediatedTransferTask):
+# TODO: Implement the swaps as a restartable task (issue #303)
+class MakerTokenSwapTask(BaseMediatedTransferTask):
     """ Initiator task, responsible to choose a random secret, initiate the
-    token exchange by sending a mediated transfer to the counterparty and
-    revealing the secret once the exchange can be complete.
+    token swap by sending a mediated transfer to the counterparty and
+    revealing the secret once the swap can be complete.
     """
 
-    def __init__(self, identifier, raiden, from_token, from_amount, to_token, to_amount, target):
-        # pylint: disable=too-many-arguments
+    def __init__(self, raiden, tokenswap, async_result):
+        super(MakerTokenSwapTask, self).__init__()
 
-        super(StartExchangeTask, self).__init__()
-
-        self.identifier = identifier
         self.raiden = raiden
-        self.from_token = from_token
-        self.from_amount = from_amount
-        self.to_token = to_token
-        self.to_amount = to_amount
-        self.target = target
+        self.tokenswap = tokenswap
+        self.async_result = async_result
 
     def __repr__(self):
+        tokenswap = self.tokenswap
         return '<{} {} from_token:{} to_token:{}>'.format(
             self.__class__.__name__,
             pex(self.raiden.address),
-            pex(self.from_token),
-            pex(self.to_token),
+            pex(tokenswap.from_token),
+            pex(tokenswap.to_token),
         )
 
     def _run(self):  # pylint: disable=method-hidden,too-many-locals
-        identifier = self.identifier
+        tokenswap = self.tokenswap
         raiden = self.raiden
-        from_token = self.from_token
-        from_amount = self.from_amount
-        to_token = self.to_token
-        to_amount = self.to_amount
-        target = self.target
+
+        identifier = tokenswap.identifier
+        from_token = tokenswap.from_token
+        from_amount = tokenswap.from_amount
+        to_token = tokenswap.to_token
+        to_amount = tokenswap.to_amount
+        to_nodeaddress = tokenswap.to_nodeaddress
 
         from_graph = raiden.channelgraphs[from_token]
         to_graph = raiden.channelgraphs[to_token]
 
         from_routes = from_graph.get_best_routes(
             raiden.address,
-            target,
+            to_nodeaddress,
             from_amount,
             lock_timeout=None,
         )
@@ -442,7 +491,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             secret = sha3(hex(random.getrandbits(256)))
             hashlock = sha3(secret)
 
-            raiden.register_task_for_hashlock(self, from_token, hashlock)
+            raiden.greenlet_task_dispatcher.register_task(self, hashlock)
             raiden.register_channel_for_hashlock(from_token, from_channel, hashlock)
 
             lock_expiration = (
@@ -453,7 +502,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
 
             from_mediated_transfer = from_channel.create_mediatedtransfer(
                 raiden.address,
-                target,
+                to_nodeaddress,
                 fee,
                 from_amount,
                 identifier,
@@ -475,17 +524,17 @@ class StartExchangeTask(BaseMediatedTransferTask):
             if to_mediated_transfer is None:
                 # the initiator can unregister right away since it knows the
                 # secret wont be revealed
-                raiden.on_hashlock_result(from_token, hashlock, False)
+                raiden.greenlet_task_dispatcher.unregister_task(self, hashlock, False)
 
             elif isinstance(to_mediated_transfer, MediatedTransfer):
                 to_hop = to_mediated_transfer.sender
 
-                # reveal the secret to the `to_hop` and `target`
+                # reveal the secret to the `to_hop` and `to_nodeaddress`
                 self.reveal_secret(
                     self.raiden,
                     secret,
                     last_node=to_hop,
-                    exchange_node=target,
+                    exchange_node=to_nodeaddress,
                 )
 
                 to_channel = to_graph.partneraddress_channel[to_mediated_transfer.sender]
@@ -513,8 +562,20 @@ class StartExchangeTask(BaseMediatedTransferTask):
                     to_mediated_transfer,
                 )
 
-                raiden.on_hashlock_result(from_token, hashlock, True)
-                self.done_result.set(True)
+                raiden.greenlet_task_dispatcher.unregister_task(self, hashlock, True)
+                self.async_result.set(True)
+                return
+
+        if log.isEnabledFor(logging.DEBUG):
+            node_address = raiden.address
+            log.debug(
+                'MAKER TOKEN SWAP FAILED initiator:%s to_nodeaddress:%s',
+                pex(node_address),
+                pex(to_nodeaddress),
+            )
+
+        # all routes failed
+        self.async_result.set(False)
 
     def send_and_wait_valid_state(  # noqa
             self,
@@ -523,7 +584,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             from_token_transfer,
             to_token,
             to_amount):
-        """ Start the exchange by sending the first mediated transfer to the
+        """ Start the swap by sending the first mediated transfer to the
         taker and wait for mediated transfer for the exchanged token.
 
         This method will validate the messages received, discard the invalid
@@ -559,7 +620,7 @@ class StartExchangeTask(BaseMediatedTransferTask):
             if response is None:
                 if log.isEnabledFor(logging.DEBUG):
                     log.debug(
-                        'EXCHANGE TRANSFER TIMED OUT hashlock:%s',
+                        'MAKER SWAP TIMED OUT hashlock:%s',
                         pex(from_token_transfer.lock.hashlock),
                     )
 
@@ -567,32 +628,18 @@ class StartExchangeTask(BaseMediatedTransferTask):
 
             # The MediatedTransfer might be from `next_hop` or most likely from
             # a different node.
-            #
-            # The other participant must not use a direct transfer to finish
-            # the token exchange, ignore it
             if isinstance(response, MediatedTransfer) and response.token == to_token:
-                # XXX: allow multiple transfers to add up to the correct amount
                 if response.lock.amount == to_amount:
                     mediated_transfer = response
 
             elif isinstance(response, SecretRequest) and response.sender == taker_address:
                 received_secretrequest = True
 
-            # next_hop could send the MediatedTransfer, this is handled in a
-            # previous if
-            elif response.sender == next_hop:
-                if isinstance(response, RefundTransfer):
-                    return response
-                else:
-                    if log.isEnabledFor(logging.INFO):
-                        log.info(
-                            'Partner %s sent an invalid message %s',
-                            pex(next_hop),
-                            repr(response),
-                        )
+            elif isinstance(response, RefundTransfer) and response.sender == next_hop:
+                return response
 
-                    return None
-
+            # The other participant must not use a direct transfer to finish
+            # the token swap, ignore it
             elif log.isEnabledFor(logging.ERROR):
                 log.error(
                     'Invalid message ignoring. %s',
@@ -626,28 +673,28 @@ class StartExchangeTask(BaseMediatedTransferTask):
         # ack
         raiden.send_and_wait(last_node, reveal_secret, timeout=None)  # XXX: wait for expiration
 
-        # the last_node has acknowledged the Secret, so we know the exchange
+        # the last_node has acknowledged the Secret, so we know the swap
         # has kicked-off, reveal the secret to the exchange_node to
         # avoid interceptions but dont wait
         raiden.send_async(exchange_node, reveal_secret)
 
 
-class ExchangeTask(BaseMediatedTransferTask):
-    """ Counterparty task, responsible to receive a MediatedTransfer for the
+class TakerTokenSwapTask(BaseMediatedTransferTask):
+    """ Taker task, responsible to receive a MediatedTransfer for the
     from_transfer and forward a to_transfer with the same hashlock.
     """
 
-    def __init__(self, raiden, from_mediated_transfer, to_token, to_amount, target):
-        # pylint: disable=too-many-arguments
+    def __init__(
+            self,
+            raiden,
+            tokenswap,
+            from_mediated_transfer):
 
-        super(ExchangeTask, self).__init__()
+        super(TakerTokenSwapTask, self).__init__()
 
         self.raiden = raiden
         self.from_mediated_transfer = from_mediated_transfer
-        self.target = target
-
-        self.to_amount = to_amount
-        self.to_token = to_token
+        self.tokenswap = tokenswap
 
     def __repr__(self):
         return '<{} {} from_token:{} to_token:{}>'.format(
@@ -660,27 +707,30 @@ class ExchangeTask(BaseMediatedTransferTask):
     def _run(self):  # pylint: disable=method-hidden,too-many-locals
         fee = 0
         raiden = self.raiden
-
         from_mediated_transfer = self.from_mediated_transfer
-        hashlock = from_mediated_transfer.lock.hashlock
+        tokenswap = self.tokenswap
+        previous_hop = from_mediated_transfer.sender
 
+        hashlock = from_mediated_transfer.lock.hashlock
         from_token = from_mediated_transfer.token
-        to_token = self.to_token
-        to_amount = self.to_amount
+
+        to_token = tokenswap.to_token
+        to_amount = tokenswap.to_amount
 
         to_graph = raiden.channelgraphs[to_token]
         from_graph = raiden.channelgraphs[from_token]
 
-        from_channel = from_graph.partneraddress_channel[from_mediated_transfer.sender]
+        from_channel = from_graph.partneraddress_channel[previous_hop]
+        from_channel.register_transfer(from_mediated_transfer)
 
-        raiden.register_task_for_hashlock(from_token, self, hashlock)
+        raiden.greenlet_task_dispatcher.register_task(self, hashlock)
         raiden.register_channel_for_hashlock(from_token, from_channel, hashlock)
 
         lock_expiration = from_mediated_transfer.lock.expiration - raiden.config['reveal_timeout']
         lock_timeout = lock_expiration - raiden.get_block_number()
 
         to_routes = to_graph.get_best_routes(
-            raiden.addres,
+            raiden.address,
             from_mediated_transfer.initiator,  # route back to the initiator
             from_mediated_transfer.lock.amount,
             lock_timeout,
@@ -688,7 +738,7 @@ class ExchangeTask(BaseMediatedTransferTask):
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
-                'EXCHANGE TRANSFER %s -> %s msghash:%s hashlock:%s',
+                'TAKER TOKEN SWAP %s -> %s msghash:%s hashlock:%s',
                 pex(from_mediated_transfer.target),
                 pex(from_mediated_transfer.initiator),
                 pex(from_mediated_transfer.hash),
@@ -707,12 +757,13 @@ class ExchangeTask(BaseMediatedTransferTask):
             to_next_hop = path[1]
 
             to_mediated_transfer = to_channel.create_mediatedtransfer(
-                raiden.address,  # this node is the new initiator
-                from_mediated_transfer.initiator,  # the initiator is the target for the to_token
+                raiden.address,                     # this node is the new initiator
+                from_mediated_transfer.initiator,   # the initiator is the target for the to_token
                 fee,
                 to_amount,
+                from_mediated_transfer.identifier,  # use the same identifier
                 lock_expiration,
-                hashlock,  # use the original hashlock
+                hashlock,                           # use the original hashlock
             )
             raiden.sign(to_mediated_transfer)
 
@@ -728,7 +779,7 @@ class ExchangeTask(BaseMediatedTransferTask):
             raiden.register_channel_for_hashlock(to_token, to_channel, hashlock)
             to_channel.register_transfer(to_mediated_transfer)
 
-            response = self.send_and_wait_valid(raiden, to_mediated_transfer)
+            response = self.send_and_wait_valid(raiden, to_mediated_transfer, previous_hop)
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
@@ -744,7 +795,7 @@ class ExchangeTask(BaseMediatedTransferTask):
                         'Partner %s sent an invalid refund message with an invalid amount',
                         pex(to_next_hop),
                     )
-                    raiden.on_hashlock_result(from_token, hashlock, False)
+                    raiden.greenlet_task_dispatcher.unregister_task(self, hashlock, False)
                     return
                 else:
                     to_channel.register_transfer(response)
@@ -775,7 +826,20 @@ class ExchangeTask(BaseMediatedTransferTask):
                     from_mediated_transfer,
                 )
 
-    def send_and_wait_valid(self, raiden, mediated_transfer):
+                return
+
+        if log.isEnabledFor(logging.DEBUG):
+            node_address = raiden.address
+            log.debug(
+                'TAKER TOKEN SWAP FAILED initiator:%s from_nodeaddress:%s',
+                pex(node_address),
+                pex(from_mediated_transfer.initiator),
+            )
+
+        # all routes failed
+        self.async_result.set(False)
+
+    def send_and_wait_valid(self, raiden, mediated_transfer, previous_hop):
         response_iterator = self._send_and_wait_time(
             raiden,
             mediated_transfer.recipient,
@@ -786,32 +850,26 @@ class ExchangeTask(BaseMediatedTransferTask):
         for response in response_iterator:
             if response is None:
                 log.error(
-                    'EXCHANGE TIMED OUT node:%s hashlock:%s',
+                    'TAKER SWAP TIMED OUT node:%s hashlock:%s',
                     pex(raiden.address),
                     pex(mediated_transfer.lock.hashlock),
                 )
                 return None
 
-            if isinstance(response, Secret):
+            elif isinstance(response, Secret):
                 if sha3(response.secret) != mediated_transfer.lock.hashlock:
-                    log.error('Secret doesnt match the hashlock, ignoring.')
+                    log.error("Secret doesn't match the hashlock, ignoring.")
                     continue
 
                 return response
 
-            # first check that the message is from a known/valid sender/token
-            valid_target = response.target == raiden.address
-            valid_sender = response.sender == mediated_transfer.recipient
-            valid_token = response.token == mediated_transfer.token
+            elif isinstance(response, RefundTransfer) and response.sender == previous_hop:
+                return response
 
-            if not valid_target or not valid_sender or not valid_token:
+            elif log.isEnabledFor(logging.ERROR):
                 log.error(
                     'Invalid message [%s] supplied to the task, ignoring.',
                     repr(response),
                 )
-                continue
-
-            if isinstance(response, RefundTransfer):
-                return response
 
         return None

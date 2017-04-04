@@ -3,6 +3,7 @@ import os
 from itertools import count
 
 import pytest
+import psutil
 from ethereum.utils import sha3
 
 from raiden.settings import (
@@ -181,7 +182,27 @@ def blockchain_private_keys(blockchain_number_of_nodes, blockchain_key_seed):
 @pytest.fixture(scope='session')
 def port_generator(request):
     """ count generator used to get a unique port number. """
-    return count(request.config.option.initial_port)
+
+    try:
+        # On OSX this function requires root privileges
+        psutil.net_connections()
+    except psutil.AccessDenied:
+        return count(request.config.option.initial_port)
+
+    def _unused_ports():
+        for port in count(request.config.option.initial_port):
+            # check if the port is being used
+            connect_using_port = (
+                conn
+                for conn in psutil.net_connections()
+                if hasattr(conn, 'laddr') and conn.laddr[1] == port
+            )
+
+            # only generate unused ports
+            if not any(connect_using_port):
+                yield port
+
+    return _unused_ports()
 
 
 @pytest.fixture
