@@ -3,6 +3,7 @@ from __future__ import division
 
 import json
 import os
+import subprocess
 from collections import namedtuple
 
 import pytest
@@ -37,6 +38,7 @@ BlockchainServices = namedtuple(
     ('deploy_service', 'blockchain_services'),
 )
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+DAGSIZE = 1073739912
 
 __all__ = (
     'tokens_addresses',
@@ -44,7 +46,7 @@ __all__ = (
     'blockchain_backend',
 )
 
-# pylint: disable=redefined-outer-name,too-many-arguments,unused-argument
+# pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
 
 def genesis_path_from_testfunction(request):
@@ -73,6 +75,26 @@ def _tokens_addresses(token_amount, number_of_tokens, deploy_service, blockchain
             )
 
     return result
+
+
+@pytest.fixture()
+def dagpath():
+    return os.path.expanduser('$HOME/.ethash/full-R23-0000000000000000')
+
+
+@pytest.fixture(scope='session', autouse=True)
+def pregenerate_dag(request, blockchain_type, dagpath):
+    missing_dag = (
+        not os.path.exists(dagpath) or
+        os.path.getsize(dagpath) != DAGSIZE
+    )
+
+    if blockchain_type == 'geth' and missing_dag:
+        os.makedirs(os.path.dirname(dagpath))
+
+        makedag = subprocess.Popen(['geth', 'makedag', '0', dagpath])
+        makedag.communicate()
+        assert makedag.returncode == 0, 'DAG generation failed'
 
 
 @pytest.fixture
@@ -399,7 +421,7 @@ def _mock_services(deploy_key, private_keys, request):
     # BlockChainServiceMock wasn't instantiated through the proper fixture.
 
     @request.addfinalizer
-    def _cleanup():
+    def _cleanup():  # pylint: disable=unused-variable
         BlockChainServiceMock.reset()
 
     BlockChainServiceMock.reset()
