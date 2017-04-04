@@ -485,6 +485,55 @@ Possible Responses
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
+
+Querying token specific events
+------------------------------
+
+You can query for all new channels opened for a token by making a ``GET`` request to the following endpoint. ``GET /api/<version>/events/token/<token_address>``
+
+Example Request
+^^^^^^^^^^^^^^^
+
+``GET /api/1/events/token/0x61c808d82a3ac53231750dadc13c777b59310bd9``
+
+Example Response
+^^^^^^^^^^^^^^^^
+``200 OK`` with
+::
+
+    [
+        {
+            "event_type": "ChannelNew",
+            "settle_timeout": 10,
+            "netting_channel": "0xc0ea08a2d404d3172d2add29a45be56da40e2949",
+            "participant1": "0x4894a542053248e0c504e3def2048c08f73e1ca6",
+           "participant2": "0x356857Cd22CBEFccDa4e96AF13b408623473237A",
+        }, {
+            "event_type": "ChannelNew",
+            "settle_timeout": 15,
+            "netting_channel": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+            "participant1": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+            "participant2": "0xc7262f1447fcb2f75ab14b2a28deed6006eea95b",
+        }, {
+            ...
+        }
+        ...
+    ]
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For succesful Query       |
++------------------+---------------------------+
+| 400 Bad Request  | If the provided query     |
+|                  | string is  malformed      |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
+
 Querying channel events
 ------------------------
 
