@@ -490,7 +490,7 @@ library NettingChannelLibrary {
     // TODO: use sstore instead of these temporaries
 
     function assignDirectTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 156) { // size of the raw message without the signature
+        if (message.length != 124) { // size of the raw message without the signature
             throw;
         }
 
@@ -499,7 +499,6 @@ library NettingChannelLibrary {
         address recipient;
         uint256 transferred_amount;
         bytes32 locksroot;
-        bytes32 secret;
 
         assembly {
                                                           // [0:1] cmdid
@@ -510,7 +509,6 @@ library NettingChannelLibrary {
             recipient := mload(add(message, 60))          // [40:60] recipient
             transferred_amount := mload(add(message, 92)) // [60:92] transferred_amount
             locksroot := mload(add(message, 124))         // [92:124] optional_locksroot
-            secret := mload(add(message, 156))            // [124:156] optional_secret
         }
 
         participant.nonce = nonce;
@@ -518,7 +516,6 @@ library NettingChannelLibrary {
         participant.recipient = recipient;
         participant.transferred_amount = transferred_amount;
         participant.locksroot = locksroot;
-        participant.secret = secret;
     }
 
     function assignMediatedTransfer(Participant storage participant, bytes memory message) private {
