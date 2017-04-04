@@ -311,9 +311,17 @@ class RaidenProtocol(object):
         self.last_received_time[message.sender] = time.time()
 
         if isinstance(message, Ack):
-            waitack = self.echohash_asyncresult[message.echo]
+            waitack = self.echohash_asyncresult.get(message.echo)
 
-            if waitack.ack_result.ready():
+            if waitack is None:
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'ACK FOR UNKNOWN ECHO node:%s echohash:%s',
+                        pex(self.raiden.address),
+                        pex(message.echo)
+                    )
+
+            elif waitack.ack_result.ready():
                 if log.isEnabledFor(logging.INFO):
                     log.info(
                         'DUPLICATED ACK RECEIVED node:%s receiver:%s echohash:%s',
@@ -370,7 +378,7 @@ class RaidenProtocol(object):
                 if log.isEnabledFor(logging.WARN):
                     log.warn(str(e))
 
-            except:
+            except:  # pylint: disable=bare-except
                 log.exception('unexpected exception raised.')
 
         # payload was not a valid message and decoding failed

@@ -22,7 +22,12 @@ from raiden.blockchain.events import (
 )
 from raiden.tasks import (
     AlarmTask,
+    GreenletTasksDispatcher,
     HealthcheckTask,
+    MakerTokenSwapTask,
+    SwapKey,
+    TakerTokenSwapTask,
+    TokenSwap,
 )
 from raiden.transfer.architecture import (
     StateManager,
@@ -136,8 +141,6 @@ class RaidenService(object):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
     def __init__(self, chain, private_key_bin, transport, discovery, config):
-        # pylint: disable=too-many-arguments
-
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
@@ -150,16 +153,17 @@ class RaidenService(object):
 
         self.channelgraphs = dict()
         self.manager_token = dict()
+        self.swapkeys_tokenswaps = dict()
+        self.swapkeys_greenlettasks = dict()
 
-        self.hashlock_token_task = defaultdict(dict)
         self.identifier_statemanager = defaultdict(list)
         self.identifier_result = defaultdict(list)
 
         # This is a map from a hashlock to a list of channels, the same
-        # hashlock can be used in more than one token (for exchanges), a
+        # hashlock can be used in more than one token (for tokenswaps), a
         # channel should be removed from this list only when the lock is
         # released/withdrawn but not when the secret is registered.
-        self.hashlock_channel = defaultdict(lambda: defaultdict(list))
+        self.tokens_hashlocks_channels = defaultdict(lambda: defaultdict(list))
 
         self.chain = chain
         self.config = config
@@ -173,6 +177,7 @@ class RaidenService(object):
         message_handler = RaidenMessageHandler(self)
         state_machine_event_handler = StateMachineEventHandler(self)
         pyethapp_blockchain_events = PyethappBlockchainEvents()
+        greenlet_task_dispatcher = GreenletTasksDispatcher()
 
         alarm = AlarmTask(chain)
         # ignore the blocknumber
@@ -197,6 +202,7 @@ class RaidenService(object):
         self.message_handler = message_handler
         self.state_machine_event_handler = state_machine_event_handler
         self.pyethapp_blockchain_events = pyethapp_blockchain_events
+        self.greenlet_task_dispatcher = greenlet_task_dispatcher
 
         self.on_message = message_handler.on_message
 
@@ -275,24 +281,18 @@ class RaidenService(object):
 
         self.protocol.send_and_wait(recipient, message, timeout)
 
-    # api design regarding locks:
-    # - `register_secret` method was added because secret registration can be a
-    #   cross token operation
-    # - unlocking a lock is not a cross token operation, for this reason it's
-    #   only available in the token manager
-
     def register_secret(self, secret):
         """ Register the secret with any channel that has a hashlock on it.
 
         This must search through all channels registered for a given hashlock
         and ignoring the tokens. Useful for refund transfer, split transfer,
-        and exchanges.
+        and token swaps.
         """
         hashlock = sha3(secret)
         revealsecret_message = RevealSecret(secret)
         self.sign(revealsecret_message)
 
-        for hash_channel in self.hashlock_channel.itervalues():
+        for hash_channel in self.tokens_hashlocks_channels.itervalues():
             for channel in hash_channel[hashlock]:
                 try:
                     channel.register_secret(secret)
@@ -313,23 +313,8 @@ class RaidenService(object):
                     # error in a channel to mess the state from others.
                     log.error('programming error')
 
-    def register_task_for_hashlock(self, task, token, hashlock):
-        """ Register the task to receive messages based on hashlock.
-
-        Registration is required otherwise the task won't receive any messages
-        from the protocol, un-registering is done by the `on_hashlock_result`
-        function.
-
-        Note:
-            Messages are dispatched solely on the hashlock value (being part of
-            the message, eg. SecretRequest, or calculated from the message
-            content, eg.  RevealSecret), this means the sender needs to be
-            checked for the received messages.
-        """
-        self.hashlock_token_task[hashlock][token] = task
-
     def register_channel_for_hashlock(self, token_address, channel, hashlock):
-        channels_registered = self.hashlock_channel[token_address][hashlock]
+        channels_registered = self.tokens_hashlocks_channels[token_address][hashlock]
 
         if channel not in channels_registered:
             channels_registered.append(channel)
@@ -364,7 +349,7 @@ class RaidenService(object):
         #   proof can be made, if necessary
         # - reveal the secret to the `sender` node (otherwise we
         #   cannot withdraw the token)
-        channels_list = self.hashlock_channel[token_address][hashlock]
+        channels_list = self.tokens_hashlocks_channels[token_address][hashlock]
         channels_to_remove = list()
 
         # Dont use the partner_secret_message.token since it might not match
@@ -417,7 +402,7 @@ class RaidenService(object):
             channels_list.remove(channel)
 
         if len(channels_list) == 0:
-            del self.hashlock_channel[token_address][hashlock]
+            del self.tokens_hashlocks_channels[token_address][hashlock]
 
     def get_channel_details(self, token_address, netting_channel):
         channel_details = netting_channel.detail(self.address)
@@ -458,13 +443,6 @@ class RaidenService(object):
         )
 
         return channel_detail
-
-    def on_hashlock_result(self, token, hashlock, success):  # pylint: disable=unused-argument
-        """ Clear the task when it's finished. """
-        del self.hashlock_token_task[hashlock][token]
-
-        if len(self.hashlock_token_task[hashlock]) == 0:
-            del self.hashlock_token_task[hashlock]
 
     def register_registry(self, registry_address):
         proxies = get_relevant_proxies(
@@ -547,11 +525,7 @@ class RaidenService(object):
     def stop(self):
         wait_for = [self.alarm]
 
-        for token_task in self.hashlock_token_task.itervalues():
-            for task in token_task.itervalues():
-                task.kill()
-
-            wait_for.extend(token_task.itervalues())
+        wait_for.extend(self.greenlet_task_dispatcher.stop())
 
         self.alarm.stop_async()
         if self.healthcheck is not None:
@@ -895,6 +869,119 @@ class RaidenAPI(object):
 
         return channel
 
+    def token_swap_and_wait(
+            self,
+            identifier,
+            from_token,
+            from_amount,
+            to_token,
+            to_amount,
+            target_address):
+        """ Start a atomic swap operation by sending a MediatedTransfer with
+        `from_amount` of `from_token`. Only proceed when a new valid
+        MediatedTransfer is received with `to_amount` of `to_asset`.
+        """
+
+        async_result = self.token_swap_async(
+            identifier,
+            from_token,
+            from_amount,
+            to_token,
+            to_amount,
+            target_address,
+        )
+        async_result.wait()
+
+    def token_swap_async(
+            self,
+            identifier,
+            from_token,
+            from_amount,
+            to_token,
+            to_amount,
+            target_address):
+        """ Start a token swap operation by sending a MediatedTransfer with
+        `from_amount` of `from_token`. Only proceed when a new valid
+        MediatedTransfer is received with `to_amount` of `to_asset`.
+        """
+
+        from_token_bin = safe_address_decode(from_token)
+        to_token_bin = safe_address_decode(to_token)
+        target_bin = safe_address_decode(target_address)
+
+        channelgraphs = self.raiden.channelgraphs
+
+        if to_token_bin not in channelgraphs:
+            log.error('Unknown token {}'.format(pex(to_token_bin)))
+            return
+
+        if from_token_bin not in channelgraphs:
+            log.error('Unknown token {}'.format(pex(from_token_bin)))
+            return
+
+        token_swap = TokenSwap(
+            identifier,
+            from_token,
+            from_amount,
+            self.raiden.address,
+            to_token,
+            to_amount,
+            target_bin,
+        )
+
+        async_result = AsyncResult()
+        task = MakerTokenSwapTask(
+            self.raiden,
+            token_swap,
+            async_result,
+        )
+        task.start()
+
+        # the maker is expecting the taker transfer
+        key = SwapKey(
+            identifier,
+            to_token,
+            to_amount,
+        )
+        self.raiden.swapkeys_greenlettasks[key] = task
+        self.raiden.swapkeys_tokenswaps[key] = token_swap
+
+        return async_result
+
+    def expect_token_swap(
+            self,
+            identifier,
+            from_token,
+            from_amount,
+            to_token,
+            to_amount,
+            target_address):
+        """ Register an expected transfer for this node.
+
+        If a MediatedMessage is received for the `from_asset` with
+        `from_amount` then proceed to send a MediatedTransfer to
+        `target_address` for `to_asset` with `to_amout`.
+        """
+
+        # the taker is expecting the maker transfer
+        key = SwapKey(
+            identifier,
+            from_token,
+            from_amount,
+        )
+
+        token_swap = TokenSwap(
+            identifier,
+            from_token,
+            from_amount,
+            target_address,
+            to_token,
+            to_amount,
+            self.raiden.address,
+        )
+
+        self.raiden.swapkeys_tokenswaps[key] = token_swap
+
     def get_channel_list(self, token_address=None, partner_address=None):
         """Returns a list of channels associated with the optionally given
            `token_address` and/or `partner_address`.
@@ -965,6 +1052,8 @@ class RaidenAPI(object):
         )
         return async_result.wait(timeout=timeout)
 
+    # expose a synchronous interface to the user
+    token_swap = token_swap_and_wait
     transfer = transfer_and_wait  # expose a synchronous interface to the user
 
     def transfer_async(
@@ -1140,6 +1229,11 @@ class RaidenMessageHandler(object):
         secret = message.secret
         sender = message.sender
 
+        self.raiden.greenlet_task_dispatcher.dispatch_message(
+            message,
+            message.hashlock,
+        )
+
         # A payee node knows the secret, releases the lock and updates the
         # balance locally, next transfer message will have an updated
         # transferred_amount and merkle tree root
@@ -1158,6 +1252,11 @@ class RaidenMessageHandler(object):
         self.raiden.state_machine_event_handler.dispatch_to_all_tasks(state_change)
 
     def message_secretrequest(self, message):
+        self.raiden.greenlet_task_dispatcher.dispatch_message(
+            message,
+            message.hashlock,
+        )
+
         if message.identifier in self.raiden.identifier_statemanager:
             state_change = ReceiveSecretRequest(
                 message.identifier,
@@ -1172,6 +1271,11 @@ class RaidenMessageHandler(object):
             )
 
     def message_secret(self, message):
+        self.raiden.greenlet_task_dispatcher.dispatch_message(
+            message,
+            message.hashlock,
+        )
+
         try:
             # register the secret with all channels interested in it (this
             # must not withdraw or unlock otherwise the state changes could
@@ -1206,6 +1310,11 @@ class RaidenMessageHandler(object):
             )
 
     def message_refundtransfer(self, message):
+        self.raiden.greenlet_task_dispatcher.dispatch_message(
+            message,
+            message.hashlock,
+        )
+
         if message.identifier in self.raiden.identifier_statemanager:
             identifier = message.identifier
             token_address = message.token
@@ -1274,6 +1383,18 @@ class RaidenMessageHandler(object):
         # TODO: Reject mediated transfer that the hashlock/identifier is known,
         # this is a downstream bug and the transfer is going in cycles (issue #490)
 
+        key = SwapKey(
+            message.identifier,
+            message.token,
+            message.lock.amount,
+        )
+
+        # TODO: add a separate message for exchanges to simplify message
+        # handling (issue #487)
+        if key in self.raiden.swapkeys_tokenswaps:
+            self.message_tokenswap(message)
+            return
+
         graph = self.raiden.channelgraphs[message.token]
 
         if not graph.has_channel(self.raiden.address, message.sender):
@@ -1299,6 +1420,32 @@ class RaidenMessageHandler(object):
 
         else:
             self.raiden.mediate_mediated_transfer(message)
+
+    def message_tokenswap(self, message):
+        key = SwapKey(
+            message.identifier,
+            message.token,
+            message.lock.amount,
+        )
+
+        # If we are the maker the task is already running and waiting for the
+        # taker MediatedTransfer
+        task = self.raiden.swapkeys_greenlettasks.get(key)
+        if task:
+            task.response_queue.put(message)
+
+        # If we are the taker we are reciving the maker transfer and should
+        # start our new task
+        else:
+            token_swap = self.raiden.swapkeys_tokenswaps[key]
+            task = TakerTokenSwapTask(
+                self.raiden,
+                token_swap,
+                message,
+            )
+            task.start()
+
+            self.raiden.swapkeys_greenlettasks[key] = task
 
 
 class StateMachineEventHandler(object):

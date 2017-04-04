@@ -132,6 +132,12 @@ class Ack(Message):
         packed.echo = self.echo
         packed.sender = self.sender
 
+    def __repr__(self):
+        return '<{} [echohash:{}]>'.format(
+            self.__class__.__name__,
+            pex(self.echo),
+        )
+
 
 class Ping(SignedMessage):
     """ Ping, should be responded by an Ack message. """

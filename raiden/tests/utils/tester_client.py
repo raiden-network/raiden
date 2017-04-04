@@ -119,7 +119,7 @@ class ChannelExternalStateTester(object):
         self.callbacks_on_opened = list()
         self.callbacks_on_closed = list()
         self.callbacks_on_settled = list()
-        self.hashlock_channel = defaultdict(list)
+        self.hashlocks_channels = defaultdict(list)
 
     def get_block_number(self):
         return self.tester_state.block.number
@@ -149,7 +149,7 @@ class ChannelExternalStateTester(object):
         return self.netting_channel.settle()
 
     def register_channel_for_hashlock(self, channel, hashlock):
-        channels_registered = self.hashlock_channel[hashlock]
+        channels_registered = self.hashlocks_channels[hashlock]
 
         if channel not in channels_registered:
             channels_registered.append(channel)

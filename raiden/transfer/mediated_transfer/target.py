@@ -176,6 +176,9 @@ def clear_if_finalized(iteration):
     """ Clear the state if the transfer was either completed or failed. """
     state = iteration.new_state
 
+    if state is None:
+        return iteration
+
     if state.from_transfer.secret is None and state.block_number > state.from_transfer.expiration:
         failed = EventTransferFailed(
             identifier=state.from_transfer.identifier,
