@@ -394,7 +394,7 @@ class BaseMediatedTransferTask(Task):
 
 
 # TODO:
-# - reinterate exchange tasks under the current architecture
+# - implement the token swap as a restartable task
 # - add a separate message for exchanges to simplify message handling
 class StartExchangeTask(BaseMediatedTransferTask):
     """ Initiator task, responsible to choose a random secret, initiate the

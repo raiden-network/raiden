@@ -116,11 +116,9 @@ def channel_from_nettingcontract(our_key, netting_contract, external_state, reve
         our_state,
         partner_state,
         external_state,
-
         token_address,
         reveal_timeout,
         settle_timeout,
-
         block_number,
     )
 

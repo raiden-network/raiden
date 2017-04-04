@@ -45,7 +45,7 @@ def events_for_close(from_transfer, from_route, block_number):
 
 
 def events_for_withdraw(from_transfer, from_route):
-    """ Withdraw on the from_channel if it is closed and the secret is known. """
+    """ Withdraw from the from_channel if it is closed and the secret is known. """
     channel_open = from_route.state == 'opened'
 
     if not channel_open and from_transfer.secret is not None:

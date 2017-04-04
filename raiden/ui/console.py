@@ -329,14 +329,13 @@ class ConsoleTools(object):
         Returns:
             events (list)
         """
-        # Obtain the token manager
         graph = self._raiden.channelgraphs[token_address.decode('hex')]
         assert graph
-        # Get the address for the netting contract
+
         channel = graph.partneraddress_channel[peer.decode('hex')]
         netcontract_address = channel.external_state.netting_channel.address
         assert len(netcontract_address)
-        # Get the netting_channel instance
+
         netting_channel = self._chain.netting_channel(netcontract_address)
         return events.netting_channel_events(self._chain.client, netting_channel)
 

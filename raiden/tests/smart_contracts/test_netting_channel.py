@@ -144,7 +144,7 @@ def test_deposit(private_keys, tester_channelmanager, tester_state, tester_token
     settle_timeout = 10
     events = list()
 
-    # not using the tester_nettingcontracts fixture because it has a balance set
+    # not using the tester_nettingcontracts fixture because it has a set balance
     channel = new_nettingcontract(
         pkey0,
         pkey1,
@@ -272,7 +272,9 @@ def test_settle_event(settle_timeout, tester_state, tester_events, tester_nettin
 
 
 def test_transfer_update_event(tester_state, tester_channels, tester_events):
-    """ The event TransferUpdated is emitted when after a successful call to updateTransfer. """
+    """ The event TransferUpdated is emitted after a successful call to
+    updateTransfer.
+    """
 
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     address1 = privatekey_to_address(pkey1)
@@ -419,7 +421,7 @@ def test_update_not_allowed_for_the_closing_address(tester_channels):
 
     nettingchannel.close('', sender=pkey0)
 
-    # do not accept a transfer of it's own
+    # do not accept a transfer from the party that closed
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(transfer0_data, sender=pkey0)
 
