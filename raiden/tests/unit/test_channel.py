@@ -386,7 +386,7 @@ def test_setup(raiden_network, deposit, tokens_addresses):
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_transfers', [100])
 def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeout):
-    """ Can keep doing transaction even if not all secrets have been released. """
+    """ Can keep doing transactions even if not all secrets have been released. """
     def log_state():
         unclaimed = [
             transfer.lock.amount

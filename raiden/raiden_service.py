@@ -82,7 +82,7 @@ from raiden.network.channelgraph import (
     channel_to_routestate,
     route_to_routestate,
     ChannelGraph,
-    ChannelDetail,
+    ChannelDetails,
 )
 from raiden.encoding import messages
 from raiden.messages import (
@@ -112,7 +112,7 @@ def create_default_identifier(node_address, token_address, target):
         - The token address
         - A random 8 byte number for uniqueness
     """
-    hash_ = sha3("{}{}{}{}".format(
+    hash_ = sha3('{}{}{}{}'.format(
         node_address,
         target,
         token_address,
@@ -156,7 +156,7 @@ class RaidenService(object):
         # This is a map from a hashlock to a list of channels, the same
         # hashlock can be used in more than one token (for exchanges), a
         # channel should be removed from this list only when the lock is
-        # released/withdrawed but not when the secret is registered.
+        # released/withdrawn but not when the secret is registered.
         self.hashlock_channel = defaultdict(lambda: defaultdict(list))
 
         self.chain = chain
@@ -307,7 +307,7 @@ class RaidenService(object):
                     # Only channels that care about the given secret can be
                     # registered and channels that have claimed the lock must
                     # be removed, so an exception should not happen at this
-                    # point, nevertheless handle it because we dont want a
+                    # point, nevertheless handle it because we dont want an
                     # error in a channel to mess the state from others.
                     log.error('programming error')
 
@@ -365,8 +365,8 @@ class RaidenService(object):
         channels_list = self.hashlock_channel[token_address][hashlock]
         channels_to_remove = list()
 
-        # Dont use the partner_secret_message.token since it might not match with the
-        # current token manager
+        # Dont use the partner_secret_message.token since it might not match
+        # the current token manager
         our_secret_message = Secret(
             identifier,
             secret,
@@ -415,7 +415,7 @@ class RaidenService(object):
         if len(channels_list) == 0:
             del self.hashlock_channel[token_address][hashlock]
 
-    def get_channel_detail(self, token_address, netting_channel):
+    def get_channel_details(self, token_address, netting_channel):
         channel_details = netting_channel.detail(self.address)
         our_state = ChannelEndState(
             channel_details['our_address'],
@@ -444,7 +444,7 @@ class RaidenService(object):
             netting_channel,
         )
 
-        channel_detail = ChannelDetail(
+        channel_detail = ChannelDetails(
             channel_address,
             our_state,
             partner_state,
@@ -480,7 +480,7 @@ class RaidenService(object):
             channels_detail = list()
             netting_channels = proxies.channelmanager_nettingchannels[manager_address]
             for channel in netting_channels:
-                detail = self.get_channel_detail(token_address, channel)
+                detail = self.get_channel_details(token_address, channel)
                 channels_detail.append(detail)
 
             edge_list = manager.channels_addresses()
@@ -513,7 +513,7 @@ class RaidenService(object):
         token_address = manager.token_address()
         edge_list = manager.channels_addresses()
         channels_detail = [
-            self.get_channel_detail(token_address, channel)
+            self.get_channel_details(token_address, channel)
             for channel in netting_channels
         ]
 
@@ -535,7 +535,7 @@ class RaidenService(object):
         self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
 
         block_number = self.get_block_number()
-        detail = self.get_channel_detail(token_address, netting_channel)
+        detail = self.get_channel_details(token_address, netting_channel)
         graph = self.channelgraphs[token_address]
         graph.add_channel(detail, block_number)
 
@@ -564,10 +564,11 @@ class RaidenService(object):
 
         This method will start an asyncronous transfer, the transfer might fail
         or succeed depending on a couple of factors:
+
             - Existence of a path that can be used, through the usage of direct
-            or intermediary channels.
-            - Network speed, making the transfer suficiently fast so it doesn't
-            timeout.
+              or intermediary channels.
+            - Network speed, making the transfer sufficiently fast so it doesn't
+              timeout.
         """
         graph = self.channelgraphs[token_address]
 
@@ -676,16 +677,18 @@ class RaidenService(object):
             secret=None,
         )
 
-        # Raiden might fail after a state change that uses the random generator
-        # and it's events are processed but before the snapshot is taken. If
-        # that happens on the next initialization when raiden is recovering and
-        # applying the pending state changes a new secret will be generated and
-        # the resulting events won't match, this breaks the architecture model,
+        # Issue #489
+        #
+        # Raiden may fail after a state change using the random generator is
+        # handled but right before the snapshot is taken. If that happens on
+        # the next initialization when raiden is recovering and applying the
+        # pending state changes a new secret will be generated and the
+        # resulting events won't match, this breaks the architecture model,
         # since it's assumed the re-execution of a state change will always
         # produce the same events.
         #
         # TODO: Removed the secret generator from the InitiatorState and add
-        # the secret into all state changes that required one, this way the
+        # the secret into all state changes that require one, this way the
         # secret will be serialized with the state change and the recovery will
         # use the same /random/ secret.
         random_generator = RandomSecretGenerator()
@@ -707,7 +710,7 @@ class RaidenService(object):
         async_result = AsyncResult()
 
         # TODO: implement the network timeout raiden.config['msg_timeout'] and
-        # cancel the current transfer it hapens
+        # cancel the current transfer if it hapens
         self.identifier_statemanager[identifier].append(state_manager)
         self.identifier_result[identifier].append(async_result)
 
@@ -908,7 +911,7 @@ class RaidenAPI(object):
         if token_address and partner_address:
             graph = self.raiden.channelgraphs[token_address]
 
-            # Let it raaise the KeyError
+            # Let it raise the KeyError
             channel = graph.partneraddress_channel[partner_address]
 
             return [channel]
@@ -1133,7 +1136,7 @@ class RaidenMessageHandler(object):
         secret = message.secret
         sender = message.sender
 
-        # A payee node knows the secret, release the lock and update the
+        # A payee node knows the secret, releases the lock and updates the
         # balance locally, next transfer message will have an updated
         # transferred_amount and merkle tree root
         for graph in self.raiden.channelgraphs.itervalues():
@@ -1241,7 +1244,7 @@ class RaidenMessageHandler(object):
 
     def message_directtransfer(self, message):
         if message.token not in self.raiden.channelgraphs:
-            raise UnknownTokenAddress('Unknow token address {}'.format(pex(message.token)))
+            raise UnknownTokenAddress('Unknown token address {}'.format(pex(message.token)))
 
         graph = self.raiden.channelgraphs[message.token]
 
@@ -1264,8 +1267,8 @@ class RaidenMessageHandler(object):
         channel.register_transfer(message)
 
     def message_mediatedtransfer(self, message):
-        # TODO: reject mediated transfer that the hashlock/identifier is known,
-        # this is a downstream bug and the transfer is going in cycles
+        # TODO: Reject mediated transfer that the hashlock/identifier is known,
+        # this is a downstream bug and the transfer is going in cycles (issue #490)
 
         graph = self.raiden.channelgraphs[message.token]
 

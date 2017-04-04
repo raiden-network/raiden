@@ -324,7 +324,7 @@ def test_handle_block_lower_block_number():
 
 
 def test_clear_if_finalized_payed():
-    """ Clear if the transfer is payed with a proof. """
+    """ Clear if the transfer is paid with a proof. """
     initiator = factories.HOP6
     our_address = factories.ADDR
     amount = 3

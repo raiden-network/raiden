@@ -11,8 +11,8 @@ from raiden.transfer.state import RouteState
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
-ChannelDetail = namedtuple(
-    'ChannelDetail',
+ChannelDetails = namedtuple(
+    'ChannelDetails',
     (
         'channel_address',
         'our_state',
@@ -97,7 +97,7 @@ class ChannelGraph(object):
             channelmanager_address,
             token_address,
             edge_list,
-            channels_detail,
+            channels_details,
             block_number):
 
         if not isaddress(token_address):
@@ -111,20 +111,20 @@ class ChannelGraph(object):
         self.token_address = token_address
         self.channelmanager_address = channelmanager_address
 
-        for detail in channels_detail:
-            self.add_channel(detail, block_number)
+        for details in channels_details:
+            self.add_channel(details, block_number)
 
-    def add_channel(self, detail, block_number):
-        channel_address = detail.channel_address
-        partner_state = detail.partner_state
+    def add_channel(self, details, block_number):
+        channel_address = details.channel_address
+        partner_state = details.partner_state
 
         channel = Channel(
-            detail.our_state,
+            details.our_state,
             partner_state,
-            detail.external_state,
+            details.external_state,
             self.token_address,
-            detail.reveal_timeout,
-            detail.settle_timeout,
+            details.reveal_timeout,
+            details.settle_timeout,
             block_number,
         )
 
@@ -193,7 +193,7 @@ class ChannelGraph(object):
             if not channel.isopen:
                 if log.isEnabledFor(logging.INFO):
                     log.info(
-                        'channel %s - %s is close, ignoring',
+                        'channel %s - %s is closed, ignoring',
                         pex(path[0]),
                         pex(path[1]),
                     )
@@ -214,10 +214,10 @@ class ChannelGraph(object):
             if lock_timeout:
                 # Our partner wont accept a lock timeout that:
                 # - is larger than the settle timeout, otherwise the lock's
-                # secret could be release /after/ the channel is settled.
+                #   secret could be released /after/ the channel is settled.
                 # - is smaller than the reveal timeout, because that is the
-                # minimum number of blocks required by the partner to learn the
-                # secret.
+                #   minimum number of blocks required by the partner to learn the
+                #   secret.
                 valid_timeout = channel.reveal_timeout <= lock_timeout < channel.settle_timeout
 
                 if not valid_timeout and log.isEnabledFor(logging.INFO):
@@ -237,7 +237,7 @@ class ChannelGraph(object):
             yield Route(path, channel)
 
     def has_path(self, source_address_bin, target_address_bin):
-        """ True if there is a connecting path regarless of number of hops. """
+        """ True if there is a connecting path regardless of the number of hops. """
         return networkx.has_path(self.graph, source_address_bin, target_address_bin)
 
     def has_channel(self, source_address_bin, target_address_bin):

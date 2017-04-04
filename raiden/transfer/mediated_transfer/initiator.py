@@ -238,7 +238,7 @@ def handle_secretreveal(state, state_change):
     """ Send a balance proof to the next hop with the current mediated transfer
     lock removed and the balance updated.
 
-    Wait for the node to notify it knowns the secret and then send a new merkle
+    Wait for the node to notify it knows the secret and then send a new merkle
     tree with the lock from the current mediated transfer removed.
     """
     if state_change.sender == state.route.node_address:

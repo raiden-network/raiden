@@ -329,9 +329,9 @@ def test_state_wait_unlock_valid():
     events = initiator_state_machine.dispatch(state_change)
     assert len(events) == 2
 
-    # The initiator must send a synchronizing message to it's partner
+    # The initiator must send a synchronizing message to its partner
     assert any(isinstance(e, SendBalanceProof) for e in events)
-    # Once the transfer is completed a notifing event must be emitted
+    # Once the transfer is completed a notifying event must be emitted
     assert any(isinstance(e, EventTransferCompleted) for e in events)
 
     balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))

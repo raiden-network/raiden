@@ -139,13 +139,11 @@ def test_api_open_and_deposit_channel(
     assert response == expected_response
 
     # finall let's try querying for the second channel
-    request = grequests.get(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=second_channel_address,
-        ),
-        json=channel_data_obj
-    )
+    request = grequests.get('http://localhost:{port}/api/1/channels/{channel_address}'.format(
+        port=rest_api_port_number,
+        channel_address=second_channel_address,
+    ))
+
     response = request.send().response
     assert_proper_response(response)
     response = decode_response(response)

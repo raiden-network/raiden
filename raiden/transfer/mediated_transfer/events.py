@@ -71,13 +71,12 @@ class SendBalanceProof(Event):
         This event has a dual role, it serves as a synchronization and as
         balance-proof for the netting channel smart contract.
 
-        Nodes need to keep synchronized the latest known merkle root, this is
+        Nodes need to keep the last known merkle root synchronized. This is
         required by the receiving end of a transfer in order to properly
-        validate the received transfer. The rule is "only the party that own
-        the current payment channel may change it" (remember that a netting
-        channel is composed of two uni-directional channels), as a consequence
-        the merkle root is only update by the receiver once a balance proof
-        message is received.
+        validate. The rule is "only the party that owns the current payment
+        channel may change it" (remember that a netting channel is composed of
+        two uni-directional channels), as a consequence the merkle root is only
+        updated by the receiver once a balance proof message is received.
     """
     def __init__(self, identifier, channel_address, token, receiver, secret):
         self.identifier = identifier
