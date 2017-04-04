@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 from gevent import monkey
 monkey.patch_all()
+
+import os.path
+
 import pytest
 import gevent
 import gevent.monkey

@@ -38,9 +38,6 @@ install:
   - pip install pytest-travis-fold
   - pip install -r requirements-dev.txt
 
-before_script:
-  - ./.travis/make_dag.sh
-
 script:
   - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 
