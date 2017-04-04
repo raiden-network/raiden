@@ -218,7 +218,7 @@ class ChannelGraph(object):
                 # - is smaller than the reveal timeout, because that is the
                 #   minimum number of blocks required by the partner to learn the
                 #   secret.
-                valid_timeout = channel.reveal_timeout <= lock_timeout < channel.settle_timeout
+                valid_timeout = channel.reveal_timeout <= lock_timeout <= channel.settle_timeout
 
                 if not valid_timeout and log.isEnabledFor(logging.INFO):
                     log.info(
