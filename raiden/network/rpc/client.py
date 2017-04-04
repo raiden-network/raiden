@@ -198,13 +198,21 @@ def decode_topic(topic):
     return int(topic[2:], 16)
 
 
-def estimate_and_transact(self, callobj, *args):
+def estimate_and_transact(classobject, callobj, *args):
     """Estimate gas using eth_estimateGas. Multiply by 2 to make sure sufficient gas is provided
     Limit maximum gas to GAS_LIMIT to avoid exceeding blockgas limit
     """
-    estimated_gas = callobj.estimate_gas(*args, startgas=self.startgas, gasprice=self.gasprice)
+    estimated_gas = callobj.estimate_gas(
+        *args,
+        startgas=classobject.startgas,
+        gasprice=classobject.gasprice
+    )
     estimated_gas = min(estimated_gas * 2, GAS_LIMIT)
-    transaction_hash = callobj.transact(*args, startgas=estimated_gas, gasprice=self.gasprice)
+    transaction_hash = callobj.transact(
+        *args,
+        startgas=estimated_gas,
+        gasprice=classobject.gasprice
+    )
     return transaction_hash
 
 
