@@ -177,7 +177,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 
     gevent.sleep(events_poll_timeout)
 
-    events = app0.raiden.event_handler.get_channel_event(
+    events = app0.raiden.event_handler.get_channel_events(
         channel_address=address_encoder(netcontract_address),
         event_id=CHANNELNEWBALANCE_EVENTID,
         from_block=0
@@ -192,7 +192,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     })
 
     channel0.external_state.close(app0.raiden.address, '')
-    events = app0.raiden.event_handler.get_channel_event(
+    events = app0.raiden.event_handler.get_channel_events(
         channel_address=address_encoder(netcontract_address),
         event_id=CHANNELCLOSED_EVENTID,
         from_block=0
@@ -208,7 +208,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     wait_until_block(app0.raiden.chain, settle_expiration)
 
     channel1.external_state.settle()
-    events = app0.raiden.event_handler.get_channel_event(
+    events = app0.raiden.event_handler.get_channel_events(
         channel_address=address_encoder(netcontract_address),
         event_id=CHANNELSETTLED_EVENTID,
         from_block=0

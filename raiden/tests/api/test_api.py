@@ -509,3 +509,53 @@ def test_query_blockchain_events(
         'event_type': 'ChannelSettled',
         'block_number': 35,
     }
+
+
+def test_break_blockchain_events(
+        api_test_server,
+        api_test_context,
+        api_raiden_service):
+    api_test_context.add_events([{
+        '_event_type': 'ChannelNew',
+        'settle_timeout': 10,
+        'netting_channel': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
+        'participant2': '0x356857Cd22CBEFccDa4e96AF13b408623473237A',
+        'block_number': 15,
+    }, {
+        '_event_type': 'ChannelSettled',
+        'block_number': 35,
+    }])
+
+    # Let's make sure that token_address as a query argument does not override
+    # the provided token_address
+    api_test_context.specify_token_for_channelnew('0x61c808d82a3ac53231750dadc13c777b59310bd9')
+    request = grequests.get(
+        'http://localhost:5001/api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20&token_address=0x167a9333bf582556f35bd4d16a7e80e191aa6476',
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    response = json.loads(response._content)
+    assert len(response) == 1
+    assert response[0] == {
+        'event_type': 'ChannelNew',
+        'settle_timeout': 10,
+        'netting_channel': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
+        'participant2': '0x356857Cd22CBEFccDa4e96AF13b408623473237A',
+        'block_number': 15,
+    }
+
+    # Assert the same for the event/channels endpoint
+    api_test_context.specify_channel_for_events('0xedbaf3c5100302dcdda53269322f3730b1f0416d')
+    request = grequests.get(
+        'http://localhost:5001/api/1/events/channels/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90&channel_address=0x167A9333BF582556f35Bd4d16A7E80E191aa6476',
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    response = json.loads(response._content)
+    assert len(response) == 1
+    assert response[0] == {
+        'event_type': 'ChannelSettled',
+        'block_number': 35,
+    }

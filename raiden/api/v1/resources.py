@@ -99,7 +99,7 @@ class TokenEventsResource(BaseResource):
         super(TokenEventsResource, self).__init__(**kwargs)
 
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, *args, **kwargs):
+    def get(self, **kwargs):
         return self.rest_api.get_token_events(
             kwargs['token_address'],
             kwargs['from_block'],
@@ -115,7 +115,7 @@ class ChannelEventsResource(BaseResource):
         super(ChannelEventsResource, self).__init__(**kwargs)
 
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, *args, **kwargs):
+    def get(self, **kwargs):
         return self.rest_api.get_channel_events(
             kwargs['channel_address'],
             kwargs['from_block'],
