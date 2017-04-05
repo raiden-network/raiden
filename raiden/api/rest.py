@@ -93,11 +93,11 @@ class APIServer(object):
         self.add_resource(NetworkEventsResource, '/events/network')
         self.add_resource(
             TokenEventsResource,
-            '/events/token/<hexaddress:token_address>'
+            '/events/tokens/<hexaddress:token_address>'
         )
         self.add_resource(
             ChannelEventsResource,
-            '/events/channel/<hexaddress:channel_address>'
+            '/events/channels/<hexaddress:channel_address>'
         )
 
     def _register_type_converters(self, additional_mapping=None):

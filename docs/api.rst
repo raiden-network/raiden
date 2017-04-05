@@ -489,12 +489,12 @@ Possible Responses
 Querying token specific events
 ------------------------------
 
-You can query for all new channels opened for a token by making a ``GET`` request to the following endpoint. ``GET /api/<version>/events/token/<token_address>``
+You can query for all new channels opened for a token by making a ``GET`` request to the following endpoint. ``GET /api/<version>/events/tokens/<token_address>``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``GET /api/1/events/token/0x61c808d82a3ac53231750dadc13c777b59310bd9``
+``GET /api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -542,7 +542,7 @@ You can query for events tied to a specific channel by making a ``GET`` request 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``GET /api/1/events/channel/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337``
+``GET /api/1/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337``
 
 Example Response
 ^^^^^^^^^^^^^^^^

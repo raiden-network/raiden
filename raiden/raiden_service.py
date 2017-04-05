@@ -631,7 +631,7 @@ class RaidenAPI(object):
         )
 
     def get_channel_events(self, channel_address, from_block, to_block=''):
-        return self.raiden.event_handler.get_channel_event(
+        return self.raiden.event_handler.get_channel_events(
             channel_address,
             from_block,
             to_block
