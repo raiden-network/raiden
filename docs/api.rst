@@ -507,7 +507,7 @@ Example Response
             "settle_timeout": 10,
             "netting_channel": "0xc0ea08a2d404d3172d2add29a45be56da40e2949",
             "participant1": "0x4894a542053248e0c504e3def2048c08f73e1ca6",
-           "participant2": "0x356857Cd22CBEFccDa4e96AF13b408623473237A",
+            "participant2": "0x356857Cd22CBEFccDa4e96AF13b408623473237A",
         }, {
             "event_type": "ChannelNew",
             "settle_timeout": 15,
