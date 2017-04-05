@@ -100,7 +100,7 @@ class TokenEventsResource(BaseResource):
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, **kwargs):
-        return self.rest_api.get_token_events(
+        return self.rest_api.get_token_network_events(
             kwargs['token_address'],
             kwargs['from_block'],
             kwargs['to_block']
