@@ -617,15 +617,15 @@ class RaidenAPI(object):
         netting_channel.settle()
         return channel
 
-    def get_channel_new_events(self, token_address, from_block, to_block=''):
-        return self.raiden.event_handler.get_channel_new_events(
+    def get_token_network_events(self, token_address, from_block, to_block=''):
+        return self.raiden.event_handler.get_token_network_events(
             token_address,
             from_block,
             to_block
         )
 
-    def get_token_added_events(self, from_block, to_block=''):
-        return self.raiden.event_handler.get_token_added_events(
+    def get_network_events(self, from_block, to_block=''):
+        return self.raiden.event_handler.get_network_events(
             from_block,
             to_block
         )
@@ -743,7 +743,7 @@ class RaidenEventHandler(object):
         self.event_listeners = list()
         self.logged_events = dict()
 
-    def get_channel_new_events(self, token_address, from_block, to_block=''):
+    def get_token_network_events(self, token_address, from_block, to_block=''):
         # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
         # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
         # one using `eth_getLogs`. It will require changes in all testing frameworks
@@ -760,7 +760,7 @@ class RaidenEventHandler(object):
                 filter_.uninstall()
         return [translator.decode_event(event['topics'], event['data']) for event in events]
 
-    def get_token_added_events(self, from_block, to_block=''):
+    def get_network_events(self, from_block, to_block=''):
         # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
         # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
         # one using `eth_getLogs`. It will require changes in all testing frameworks
