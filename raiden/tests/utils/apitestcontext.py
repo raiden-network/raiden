@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 import json
+
+from pyethapp.jsonrpc import address_decoder
+
 from raiden.utils import make_address
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.api.objects import ChannelList
@@ -43,6 +46,12 @@ class ApiTestContext():
     def add_events(self, events):
         self.events += events
 
+    def specificy_token_for_channelnew(self, token_address):
+        """Since it's not part of the event but part of the querying and we
+        mock the interface we should check that the token address properly makes
+        it through the REST api"""
+        self.token_for_channelnew = address_decoder(token_address)
+
     def get_token_added_events(self, from_block, to_block):
         return_list = list()
         for event in self.events:
@@ -57,6 +66,10 @@ class ApiTestContext():
 
     def get_channel_new_events(self, token_address, from_block, to_block):
         return_list = list()
+        if token_address != self.token_for_channelnew:
+            raise ValueError(
+                'Unexpected token address: "{}"  during channelnew query'.format(token_address)
+            )
         for event in self.events:
             if (
                     event['_event_type'] == 'ChannelNew' and

@@ -443,6 +443,7 @@ def test_query_blockchain_events(
     }
 
     # query ChannelNew event for a token
+    api_test_context.specificy_token_for_channelnew("0x61c808d82a3ac53231750dadc13c777b59310bd9")
     request = grequests.get(
         'http://localhost:5001/api/1/events/token/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20',
     )
