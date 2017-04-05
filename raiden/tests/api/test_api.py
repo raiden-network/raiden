@@ -9,6 +9,15 @@ from raiden.utils import channel_to_api_dict
 from raiden.tests.utils.transfer import channel
 
 
+def assert_proper_response(response):
+    """ Make sure the API response is of the proper type"""
+    assert (
+        response and
+        response.status_code == httplib.OK and
+        response.headers['Content-Type'] == 'application/json'
+    )
+
+
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
@@ -33,12 +42,12 @@ def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
 def test_api_query_channels(api_test_server, api_test_context, api_raiden_service):
     request = grequests.get('http://localhost:5001/api/1/channels')
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     assert decode_response(response) == api_test_context.expect_channels()
 
     api_test_context.make_channel_and_add()
     response = request.send().response
-    assert response.status_code == httplib.OK
+    assert_proper_response(response)
     assert decode_response(response) == api_test_context.expect_channels()
 
 
@@ -61,7 +70,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     expected_response = channel_data_obj
     expected_response['balance'] = 0
@@ -87,7 +96,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -104,7 +113,7 @@ def test_api_open_and_deposit_channel(
         json={'balance': balance}
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     expected_response = {
         "channel_address": first_channel_address,
@@ -121,7 +130,7 @@ def test_api_open_and_deposit_channel(
         'http://localhost:5001/api/1/channels/{}'.format(second_channel_address)
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     expected_response = {
         "channel_address": second_channel_address,
@@ -154,7 +163,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
 
     balance = 0
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -171,7 +180,7 @@ def test_api_open_close_and_settle_channel(
         json={'state': 'closed'}
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     expected_response = {
         "channel_address": channel_address,
@@ -189,7 +198,7 @@ def test_api_open_close_and_settle_channel(
         json={'state': 'settled'}
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     expected_response = {
         "channel_address": channel_address,
@@ -220,7 +229,7 @@ def test_api_channel_state_change_errors(
         json=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     channel_address = response['channel_address']
 
@@ -258,13 +267,13 @@ def test_api_channel_state_change_errors(
         json={'state': 'closed'}
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     request = grequests.patch(
         'http://localhost:5001/api/1/channels/{}'.format(channel_address),
         json={'state': 'settled'}
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
 
     # let's try to deposit to a settled channel
     request = grequests.patch(
@@ -301,7 +310,7 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
 
     partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
     token_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
@@ -316,14 +325,14 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
 
     # and now let's get the token list
     request = grequests.get(
         'http://localhost:5001/api/1/tokens',
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     expected_response = [
         {"address": "0x61c808d82a3ac53231750dadc13c777b59310bd9"},
@@ -351,7 +360,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     first_channel_address = response['channel_address']
 
@@ -361,7 +370,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     second_channel_address = response['channel_address']
 
@@ -373,14 +382,14 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
 
     # and now let's query our partners per token for the first token
     request = grequests.get(
         'http://localhost:5001/api/1/tokens/0xea674fdde714fd979de3edf0f56aa9716b898ec8/partners',
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = decode_response(response)
     expected_response = [
         {
@@ -450,7 +459,7 @@ def test_query_blockchain_events(
         'http://localhost:5001/api/1/events/network?from_block=0&to_block=10',
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = json.loads(response._content)
     assert len(response) == 1
     assert response[0] == {
@@ -466,7 +475,7 @@ def test_query_blockchain_events(
         'http://localhost:5001/api/1/events/token/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20',
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = json.loads(response._content)
     assert len(response) == 1
     assert response[0] == {
@@ -486,7 +495,7 @@ def test_query_blockchain_events(
         'http://localhost:5001/api/1/events/channel/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90',
     )
     response = request.send().response
-    assert response and response.status_code == httplib.OK
+    assert_proper_response(response)
     response = json.loads(response._content)
     assert len(response) == 2
     assert response[0] == {
