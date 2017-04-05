@@ -777,7 +777,7 @@ class RaidenEventHandler(object):
                 filter_.uninstall()
         return [translator.decode_event(event['topics'], event['data']) for event in events]
 
-    def get_channel_event(self, channel_address, event_id, from_block, to_block=''):
+    def get_channel_events(self, channel_address, event_id, from_block, to_block=''):
         # Note: Issue #452 (https://github.com/raiden-network/raiden/issues/452)
         # tracks a suggested TODO, which will reduce the 3 RPC calls here to only
         # one using `eth_getLogs`. It will require changes in all testing frameworks

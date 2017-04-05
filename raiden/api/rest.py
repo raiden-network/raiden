@@ -18,7 +18,7 @@ from raiden.api.v1.resources import (
     ChannelsResourceByChannelAddress,
     TokensResource,
     PartnersResourceByTokenAddress,
-    NetworkEventsResoure,
+    NetworkEventsResource,
     TokenEventsResource,
     ChannelEventsResource,
 )
@@ -90,7 +90,7 @@ class APIServer(object):
             PartnersResourceByTokenAddress,
             '/tokens/<hexaddress:token_address>/partners'
         )
-        self.add_resource(NetworkEventsResoure, '/events/network')
+        self.add_resource(NetworkEventsResource, '/events/network')
         self.add_resource(
             TokenEventsResource,
             '/events/token/<hexaddress:token_address>'
