@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from webargs.flaskparser import use_kwargs, parser
+from webargs.flaskparser import use_kwargs
 from flask_restful import Resource
 from flask import Blueprint
-from pyethapp.jsonrpc import address_encoder
 from raiden.api.v1.encoding import (
     ChannelRequestSchema,
     EventRequestSchema,
-    TokenEventRequestSchema
 )
 
 
@@ -95,13 +93,13 @@ class NetworkEventsResoure(BaseResource):
 
 class TokenEventsResource(BaseResource):
 
-    get_schema = TokenEventRequestSchema()
+    get_schema = EventRequestSchema()
 
     def __init__(self, **kwargs):
         super(TokenEventsResource, self).__init__(**kwargs)
 
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, **kwargs):
+    def get(self, *args, **kwargs):
         return self.rest_api.get_token_events(
             kwargs['token_address'],
             kwargs['from_block'],
