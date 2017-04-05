@@ -454,7 +454,7 @@ def test_query_blockchain_events(
     response = json.loads(response._content)
     assert len(response) == 1
     assert response[0] == {
-        '_event_type': 'TokenAdded',
+        'event_type': 'TokenAdded',
         'block_number': 1,
         'channel_manager_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -470,7 +470,7 @@ def test_query_blockchain_events(
     response = json.loads(response._content)
     assert len(response) == 1
     assert response[0] == {
-        '_event_type': 'ChannelNew',
+        'event_type': 'ChannelNew',
         'settle_timeout': 10,
         'netting_channel': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
         'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
@@ -490,13 +490,13 @@ def test_query_blockchain_events(
     response = json.loads(response._content)
     assert len(response) == 2
     assert response[0] == {
-        '_event_type': 'ChannelNewBalance',
+        'event_type': 'ChannelNewBalance',
         'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         'participant': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
         'balance': 200,
         'block_number': 20,
     }
     assert response[1] == {
-        '_event_type': 'ChannelSettled',
+        'event_type': 'ChannelSettled',
         'block_number': 35,
     }

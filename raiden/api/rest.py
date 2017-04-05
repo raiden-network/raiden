@@ -26,6 +26,17 @@ from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
 from raiden.utils import channel_to_api_dict
 
 
+def normalize_events_list(old_list):
+    """Internally the `event_type` key is prefixed with underscore but the API
+    returns an object without that prefix"""
+    new_list = []
+    for _event in old_list:
+        new_event = dict(_event)
+        new_event['event_type'] = new_event.pop('_event_type')
+        new_list.append(new_event)
+    return new_list
+
+
 class APIServer(object):
     """
     Runs the API-server that routes the endpoint to the resources.
@@ -190,19 +201,19 @@ class RestAPI(object):
         raiden_service_result = self.raiden_api.get_token_added_events(
             from_block, to_block
         )
-        return raiden_service_result
+        return normalize_events_list(raiden_service_result)
 
     def get_token_events(self, token_address, from_block, to_block):
         raiden_service_result = self.raiden_api.get_channel_new_events(
             token_address, from_block, to_block
         )
-        return raiden_service_result
+        return normalize_events_list(raiden_service_result)
 
     def get_channel_events(self, channel_address, from_block, to_block):
         raiden_service_result = self.raiden_api.get_channel_events(
             channel_address, from_block, to_block
         )
-        return raiden_service_result
+        return normalize_events_list(raiden_service_result)
 
     def get_channel(self, channel_address):
         channel = self.raiden_api.get_channel(channel_address)
