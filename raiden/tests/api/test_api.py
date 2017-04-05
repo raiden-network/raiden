@@ -425,6 +425,24 @@ def test_query_blockchain_events(
         'participant1': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
         'participant2': '0x88bacc4ddc8f8a5987e1b990bb7f9e8430b24f1a',
         'block_number': 100,
+    }, {
+        '_event_type': 'ChannelNewBalance',
+        'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'participant': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
+        'balance': 200,
+        'block_number': 20,
+    }, {
+        '_event_type': 'ChannelNewBalance',
+        'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'participant': '0x00472c1e4275230354dbe5007a5976053f12610a',
+        'balance': 650,
+        'block_number': 150,
+    }, {
+        '_event_type': 'ChannelSettled',
+        'block_number': 35,
+    }, {
+        '_event_type': 'ChannelSettled',
+        'block_number': 250,
     }])
 
     # and now let's query the network events for 'TokenAdded' for blocks 1-10
@@ -443,7 +461,7 @@ def test_query_blockchain_events(
     }
 
     # query ChannelNew event for a token
-    api_test_context.specificy_token_for_channelnew("0x61c808d82a3ac53231750dadc13c777b59310bd9")
+    api_test_context.specify_token_for_channelnew("0x61c808d82a3ac53231750dadc13c777b59310bd9")
     request = grequests.get(
         'http://localhost:5001/api/1/events/token/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20',
     )
@@ -458,4 +476,27 @@ def test_query_blockchain_events(
         'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
         'participant2': '0x356857Cd22CBEFccDa4e96AF13b408623473237A',
         'block_number': 15,
+    }
+
+    # finally query for some channel related events
+    # Note: No need to test em all since this does not test the implementation
+    # of `get_channel_events()` but just makes sure the proper data make it there
+    api_test_context.specify_channel_for_events("0xedbaf3c5100302dcdda53269322f3730b1f0416d")
+    request = grequests.get(
+        'http://localhost:5001/api/1/events/channel/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90',
+    )
+    response = request.send().response
+    assert response and response.status_code == httplib.OK
+    response = json.loads(response._content)
+    assert len(response) == 2
+    assert response[0] == {
+        '_event_type': 'ChannelNewBalance',
+        'token_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'participant': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
+        'balance': 200,
+        'block_number': 20,
+    }
+    assert response[1] == {
+        '_event_type': 'ChannelSettled',
+        'block_number': 35,
     }

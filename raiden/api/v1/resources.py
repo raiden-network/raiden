@@ -105,3 +105,19 @@ class TokenEventsResource(BaseResource):
             kwargs['from_block'],
             kwargs['to_block']
         )
+
+
+class ChannelEventsResource(BaseResource):
+
+    get_schema = EventRequestSchema()
+
+    def __init__(self, **kwargs):
+        super(ChannelEventsResource, self).__init__(**kwargs)
+
+    @use_kwargs(get_schema, locations=('query',))
+    def get(self, *args, **kwargs):
+        return self.rest_api.get_channel_events(
+            kwargs['channel_address'],
+            kwargs['from_block'],
+            kwargs['to_block']
+        )

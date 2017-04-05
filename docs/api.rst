@@ -542,7 +542,7 @@ You can query for events tied to a specific channel by making a ``GET`` request 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``GET /api/1/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337``
+``GET /api/1/events/channel/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337``
 
 Example Response
 ^^^^^^^^^^^^^^^^
