@@ -198,13 +198,13 @@ class RestAPI(object):
         return result
 
     def get_network_events(self, from_block, to_block):
-        raiden_service_result = self.raiden_api.get_token_added_events(
+        raiden_service_result = self.raiden_api.get_network_events(
             from_block, to_block
         )
         return normalize_events_list(raiden_service_result)
 
     def get_token_events(self, token_address, from_block, to_block):
-        raiden_service_result = self.raiden_api.get_channel_new_events(
+        raiden_service_result = self.raiden_api.get_token_network_events(
             token_address, from_block, to_block
         )
         return normalize_events_list(raiden_service_result)

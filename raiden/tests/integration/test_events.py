@@ -129,7 +129,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     token0 = app0.raiden.chain.token(token_address)
     manager0 = app0.raiden.chain.manager_by_token(token_address)
 
-    events = app0.raiden.event_handler.get_token_added_events(from_block=0)
+    events = app0.raiden.event_handler.get_network_events(from_block=0)
 
     assert len(events) == 1
     assert event_dicts_are_equal(events[0], {
@@ -144,7 +144,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
         settle_timeout,
     )
 
-    events = app0.raiden.event_handler.get_channel_new_events(
+    events = app0.raiden.event_handler.get_token_network_events(
         token_address=address_encoder(token_address),
         from_block=0
     )

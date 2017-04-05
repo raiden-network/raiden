@@ -94,13 +94,13 @@ def api_raiden_service(
     )
     monkeypatch.setattr(
         raiden_service.api,
-        'get_token_added_events',
-        api_test_context.get_token_added_events
+        'get_network_events',
+        api_test_context.get_network_events
     )
     monkeypatch.setattr(
         raiden_service.api,
-        'get_channel_new_events',
-        api_test_context.get_channel_new_events
+        'get_token_network_events',
+        api_test_context.get_token_network_events
     )
     monkeypatch.setattr(
         raiden_service.api,
