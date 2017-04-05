@@ -29,12 +29,12 @@ def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
 
     result = channel_to_api_dict(channel0)
     expected_result = {
-        "channel_address": netting_channel.address,
-        "token_address": channel0.token_address,
-        "partner_address": app1.raiden.address,
-        "settle_timeout": settle_timeout,
-        "balance": channel0.contract_balance,
-        "state": "open"
+        'channel_address': netting_channel.address,
+        'token_address': channel0.token_address,
+        'partner_address': app1.raiden.address,
+        'settle_timeout': settle_timeout,
+        'balance': channel0.contract_balance,
+        'state': 'open'
     }
     assert result == expected_result
 
@@ -56,13 +56,13 @@ def test_api_open_and_deposit_channel(
         api_test_context,
         api_raiden_service):
     # let's create a new channel
-    first_partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
-    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = 1650
     channel_data_obj = {
-        "partner_address": first_partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout
+        'partner_address': first_partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
@@ -85,10 +85,10 @@ def test_api_open_and_deposit_channel(
     second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
     balance = 100
     channel_data_obj = {
-        "partner_address": second_partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout,
-        "balance": balance
+        'partner_address': second_partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout,
+        'balance': balance
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
@@ -116,12 +116,12 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = decode_response(response)
     expected_response = {
-        "channel_address": first_channel_address,
-        "partner_address": first_partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout,
-        "state": 'open',
-        "balance": balance
+        'channel_address': first_channel_address,
+        'partner_address': first_partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout,
+        'state': 'open',
+        'balance': balance
     }
     assert response == expected_response
 
@@ -133,12 +133,12 @@ def test_api_open_and_deposit_channel(
     assert_proper_response(response)
     response = decode_response(response)
     expected_response = {
-        "channel_address": second_channel_address,
-        "partner_address": second_partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout,
-        "state": 'open',
-        "balance": balance
+        'channel_address': second_channel_address,
+        'partner_address': second_partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout,
+        'state': 'open',
+        'balance': balance
     }
     assert response == expected_response
 
@@ -148,13 +148,13 @@ def test_api_open_close_and_settle_channel(
         api_test_context,
         api_raiden_service):
     # let's create a new channel
-    partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
-    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = 1650
     channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout
+        'partner_address': partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
@@ -183,12 +183,12 @@ def test_api_open_close_and_settle_channel(
     assert_proper_response(response)
     response = decode_response(response)
     expected_response = {
-        "channel_address": channel_address,
-        "partner_address": partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout,
-        "state": 'closed',
-        "balance": balance
+        'channel_address': channel_address,
+        'partner_address': partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout,
+        'state': 'closed',
+        'balance': balance
     }
     assert response == expected_response
 
@@ -201,12 +201,12 @@ def test_api_open_close_and_settle_channel(
     assert_proper_response(response)
     response = decode_response(response)
     expected_response = {
-        "channel_address": channel_address,
-        "partner_address": partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout,
-        "state": 'settled',
-        "balance": balance
+        'channel_address': channel_address,
+        'partner_address': partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout,
+        'state': 'settled',
+        'balance': balance
     }
     assert response == expected_response
 
@@ -216,13 +216,13 @@ def test_api_channel_state_change_errors(
         api_test_context,
         api_raiden_service):
     # let's create a new channel
-    partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
-    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = 1650
     channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout
+        'partner_address': partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
@@ -297,13 +297,13 @@ def test_api_tokens(
         api_test_context,
         api_raiden_service):
     # let's create 2 new channels for 2 different tokens
-    partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
-    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = 1650
     channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout
+        'partner_address': partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
@@ -312,13 +312,13 @@ def test_api_tokens(
     response = request.send().response
     assert_proper_response(response)
 
-    partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
-    token_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    token_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     settle_timeout = 1650
     channel_data_obj = {
-        "partner_address": partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout
+        'partner_address': partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
@@ -335,8 +335,8 @@ def test_api_tokens(
     assert_proper_response(response)
     response = decode_response(response)
     expected_response = [
-        {"address": "0x61c808d82a3ac53231750dadc13c777b59310bd9"},
-        {"address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"},
+        {'address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'},
+        {'address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'},
     ]
     assert all(r in response for r in expected_response)
 
@@ -346,14 +346,14 @@ def test_query_partners_by_token(
         api_test_context,
         api_raiden_service):
     # let's create 2 new channels for the same token
-    first_partner_address = "0x61c808d82a3ac53231750dadc13c777b59310bd9"
+    first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
-    token_address = "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = 1650
     channel_data_obj = {
-        "partner_address": first_partner_address,
-        "token_address": token_address,
-        "settle_timeout": settle_timeout
+        'partner_address': first_partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout
     }
     request = grequests.put(
         'http://localhost:5001/api/1/channels',
@@ -393,11 +393,11 @@ def test_query_partners_by_token(
     response = decode_response(response)
     expected_response = [
         {
-            "partner_address": first_partner_address,
-            "channel": "/api/1/channels/{}".format(first_channel_address)
+            'partner_address': first_partner_address,
+            'channel': '/api/1/channels/{}'.format(first_channel_address)
         }, {
-            "partner_address": second_partner_address,
-            "channel": "/api/1/channels/{}".format(second_channel_address)
+            'partner_address': second_partner_address,
+            'channel': '/api/1/channels/{}'.format(second_channel_address)
         }
     ]
     assert all(r in response for r in expected_response)
@@ -470,7 +470,7 @@ def test_query_blockchain_events(
     }
 
     # query ChannelNew event for a token
-    api_test_context.specify_token_for_channelnew("0x61c808d82a3ac53231750dadc13c777b59310bd9")
+    api_test_context.specify_token_for_channelnew('0x61c808d82a3ac53231750dadc13c777b59310bd9')
     request = grequests.get(
         'http://localhost:5001/api/1/events/token/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20',
     )
@@ -490,7 +490,7 @@ def test_query_blockchain_events(
     # finally query for some channel related events
     # Note: No need to test em all since this does not test the implementation
     # of `get_channel_events()` but just makes sure the proper data make it there
-    api_test_context.specify_channel_for_events("0xedbaf3c5100302dcdda53269322f3730b1f0416d")
+    api_test_context.specify_channel_for_events('0xedbaf3c5100302dcdda53269322f3730b1f0416d')
     request = grequests.get(
         'http://localhost:5001/api/1/events/channel/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90',
     )

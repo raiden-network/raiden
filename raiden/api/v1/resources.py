@@ -79,12 +79,12 @@ class PartnersResourceByTokenAddress(BaseResource):
         return self.rest_api.get_partners_by_token(**kwargs)
 
 
-class NetworkEventsResoure(BaseResource):
+class NetworkEventsResource(BaseResource):
 
     get_schema = EventRequestSchema()
 
     def __init__(self, **kwargs):
-        super(NetworkEventsResoure, self).__init__(**kwargs)
+        super(NetworkEventsResource, self).__init__(**kwargs)
 
     @use_kwargs(get_schema, locations=('query',))
     def get(self, **kwargs):

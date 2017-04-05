@@ -61,11 +61,12 @@ class ApiTestContext():
     def get_network_events(self, from_block, to_block):
         return_list = list()
         for event in self.events:
-            if (
-                    event['_event_type'] == 'TokenAdded' and
-                    event['block_number'] >= from_block and
-                    event['block_number'] <= to_block
-            ):
+            expected_event_type = event['_event_type'] == 'TokenAdded'
+            in_block_range = (
+                event['block_number'] >= from_block and
+                event['block_number'] <= to_block
+            )
+            if expected_event_type and in_block_range:
                 return_list.append(event)
 
         return return_list
@@ -78,11 +79,12 @@ class ApiTestContext():
                 'query'.format(token_address)
             )
         for event in self.events:
-            if (
-                    event['_event_type'] == 'ChannelNew' and
-                    event['block_number'] >= from_block and
-                    event['block_number'] <= to_block
-            ):
+            expected_event_type = event['_event_type'] == 'ChannelNew'
+            in_block_range = (
+                event['block_number'] >= from_block and
+                event['block_number'] <= to_block
+            )
+            if expected_event_type and in_block_range:
                 return_list.append(event)
 
         return return_list
