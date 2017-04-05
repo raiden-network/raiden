@@ -398,7 +398,9 @@ def test_query_blockchain_events(
         api_test_server,
         api_test_context,
         api_raiden_service):
-    # mock addition of 2 new tokens
+    # Adding some mock events. Some of these events should not normally contain
+    # a block number but for the purposes of making sure block numbers propagate
+    # in the API logic I am adding them here and testing for them later.
     api_test_context.add_events([{
         '_event_type': 'TokenAdded',
         'block_number': 1,
@@ -451,7 +453,8 @@ def test_query_blockchain_events(
     assert response[0] == {
         '_event_type': 'ChannelNew',
         'settle_timeout': 10,
-        'netting_channel': '0xa193fb0032c8635d590f8f31be9f70bd12451b1e',
-        'participant1': '0xcd111aa492a9c77a367c36e6d6af8e6f212e0c8e',
-        'participant2': '0x88bacc4ddc8f8a5987e1b990bb7f9e8430b24f1a',
+        'netting_channel': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'participant1': '0x4894a542053248e0c504e3def2048c08f73e1ca6',
+        'participant2': '0x356857Cd22CBEFccDa4e96AF13b408623473237A',
+        'block_number': 15,
     }

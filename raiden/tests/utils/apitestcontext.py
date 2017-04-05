@@ -55,11 +55,11 @@ class ApiTestContext():
 
         return return_list
 
-    def get_channel_new_events(self, from_block, to_block):
+    def get_channel_new_events(self, token_address, from_block, to_block):
         return_list = list()
         for event in self.events:
             if (
-                    event['_event_type'] == 'TokenAdded' and
+                    event['_event_type'] == 'ChannelNew' and
                     event['block_number'] >= from_block and
                     event['block_number'] <= to_block
             ):

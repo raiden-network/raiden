@@ -98,17 +98,6 @@ class EventRequestSchema(BaseSchema):
         decoding_class = dict
 
 
-class TokenEventRequestSchema(BaseSchema):
-    token_address = AddressField(required=True)
-    from_block = fields.Integer(missing=None)
-    to_block = fields.Integer(missing=None)
-
-    class Meta:
-        strict = True
-        # decoding to a dict is required by the @use_kwargs decorator from webargs
-        decoding_class = dict
-
-
 class TokenSchema(BaseSchema):
     """Simple token schema only with an address field. In the future we could
 add other attributes like 'name'"""
