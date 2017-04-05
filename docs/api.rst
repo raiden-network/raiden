@@ -442,8 +442,11 @@ to signify the block from which you would like the events to be returned.
 Querying general network events
 ---------------------------------
 
+.. NOTE::
+   The network registry used is the default registry. The default registry is
+   preconfigured and can be edited from the raiden configuration file.
 
-You can query for non-channel specific events by making a ``GET`` request to the
+You can query for registry network events by making a ``GET`` request to the
 following endpoint. ``GET /api/<version>/events/network``
 
 Example Request
@@ -486,7 +489,7 @@ Possible Responses
 +------------------+---------------------------+
 
 
-Querying token specific events
+Querying token network events
 ------------------------------
 
 You can query for all new channels opened for a token by making a ``GET`` request to the following endpoint. ``GET /api/<version>/events/tokens/<token_address>``
