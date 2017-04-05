@@ -472,7 +472,7 @@ def test_query_blockchain_events(
     # query ChannelNew event for a token
     api_test_context.specify_token_for_channelnew('0x61c808d82a3ac53231750dadc13c777b59310bd9')
     request = grequests.get(
-        'http://localhost:5001/api/1/events/token/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20',
+        'http://localhost:5001/api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20',
     )
     response = request.send().response
     assert_proper_response(response)
@@ -492,7 +492,7 @@ def test_query_blockchain_events(
     # of `get_channel_events()` but just makes sure the proper data make it there
     api_test_context.specify_channel_for_events('0xedbaf3c5100302dcdda53269322f3730b1f0416d')
     request = grequests.get(
-        'http://localhost:5001/api/1/events/channel/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90',
+        'http://localhost:5001/api/1/events/channels/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90',
     )
     response = request.send().response
     assert_proper_response(response)
