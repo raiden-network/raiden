@@ -131,13 +131,13 @@ class ChannelGraph(object):
         self.partneraddress_channel[partner_state.address] = channel
         self.address_channel[channel_address] = channel
 
-    def get_channel_by_contract_address(self, netting_channel_address_bin):
-        """ Return the channel with `netting_channel_address_bin`.
+    def get_channel_by_contract_address(self, netting_channel_address):
+        """ Return the channel with `netting_channel_address`.
 
         Raises:
-            KeyError: If there is no channel with netting_channel_address_bin.
+            KeyError: If there is no channel with netting_channel_address.
         """
-        return self.address_channel[netting_channel_address_bin]
+        return self.address_channel[netting_channel_address]
 
     def get_shortest_paths(self, source, target):
         """Compute all shortest paths in the graph.
@@ -169,13 +169,13 @@ class ChannelGraph(object):
             if len(path) == num_hops + 1
         ]
 
-    def get_best_routes(self, our_address, target_address_bin, amount, lock_timeout=None):
+    def get_best_routes(self, our_address, target_address, amount, lock_timeout=None):
         """ Yield a two-tuple (path, channel) that can be used to mediate the
         transfer. The result is ordered from the best to worst path.
         """
         available_paths = self.get_shortest_paths(
             our_address,
-            target_address_bin,
+            target_address,
         )
 
         # XXX: consider using multiple channels for a single transfer. Useful
@@ -236,23 +236,23 @@ class ChannelGraph(object):
 
             yield Route(path, channel)
 
-    def has_path(self, source_address_bin, target_address_bin):
+    def has_path(self, source_address, target_address):
         """ True if there is a connecting path regardless of the number of hops. """
-        return networkx.has_path(self.graph, source_address_bin, target_address_bin)
+        return networkx.has_path(self.graph, source_address, target_address)
 
-    def has_channel(self, source_address_bin, target_address_bin):
+    def has_channel(self, source_address, target_address):
         """ True if there is a channel connecting both addresses. """
-        return self.graph.has_edge(source_address_bin, target_address_bin)
+        return self.graph.has_edge(source_address, target_address)
 
-    def add_path(self, from_address_bin, to_address_bin):
+    def add_path(self, from_address, to_address):
         """ Add a new edge into the network. """
-        self.graph.add_edge(from_address_bin, to_address_bin)
+        self.graph.add_edge(from_address, to_address)
 
-    def remove_path(self, from_address_bin, to_address_bin):
+    def remove_path(self, from_address, to_address):
         """ Remove an edge from the network. """
-        self.graph.remove_edge(from_address_bin, to_address_bin)
+        self.graph.remove_edge(from_address, to_address)
 
-    def channel_isactive(self, partner_address_bin):
+    def channel_isactive(self, partner_address):
         """ True if the channel with `partner_address` is open. """
         # TODO: check if the partner's network is alive
-        return self.partneraddress_channel[partner_address_bin].isopen
+        return self.partneraddress_channel[partner_address].isopen

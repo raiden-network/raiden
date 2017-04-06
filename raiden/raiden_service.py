@@ -102,6 +102,7 @@ from raiden.utils import (
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+INT64_MAX = 2 ** 64 - 1
 
 
 def create_default_identifier(node_address, token_address, target):
@@ -116,7 +117,7 @@ def create_default_identifier(node_address, token_address, target):
         node_address,
         target,
         token_address,
-        random.randint(0, 18446744073709551614L)
+        random.randint(0, INT64_MAX)
     ))
     return int(hash_[0:8].encode('hex'), 16)
 

@@ -12,11 +12,11 @@ class TransferWhenClosed(Exception):
 
 class UnknownTokenAddress(Exception):
     def __init__(self, address):
-        self.address = address
-        Exception.__init__(
-            self,
+        super(UnknownTokenAddress, self).__init__(
             'Message with unknown token address {} received'.format(pex(address))
         )
+
+        self.address = address
 
 
 class RaidenError(Exception):

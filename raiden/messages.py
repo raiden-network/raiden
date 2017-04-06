@@ -505,10 +505,16 @@ class MediatedTransfer(LockedTransfer):
             initiator,
             fee=0):
 
-        if 0 > nonce >= 2 ** 64:
+        if nonce <= 0:
+            raise ValueError('nonce cannot be zero or negative')
+
+        if nonce >= 2 ** 64:
             raise ValueError('nonce is too large')
 
-        if 0 > identifier >= 2 ** 64:
+        if identifier < 0:
+            raise ValueError('identifier cannot be negative')
+
+        if identifier >= 2 ** 64:
             raise ValueError('identifier is too large')
 
         if len(token) != 20:
@@ -523,10 +529,13 @@ class MediatedTransfer(LockedTransfer):
         if len(initiator) != 20:
             raise ValueError('initiator is an invalid address')
 
-        if 0 > fee >= 2 ** 256:
+        if fee >= 2 ** 256:
             raise ValueError('fee is too large')
 
-        if 0 > transferred_amount >= 2 ** 256:
+        if transferred_amount < 0:
+            raise ValueError('transferred_amount cannot be negative')
+
+        if transferred_amount >= 2 ** 256:
             raise ValueError('transferred_amount is too large')
 
         super(MediatedTransfer, self).__init__(
