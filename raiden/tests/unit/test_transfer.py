@@ -195,7 +195,8 @@ def test_mediated_transfer(raiden_network):
 
     assert channel_ab.locked == amount
 
-    # cannot do these assertions because the message has not been processed yet
+    # Cannot assert the intermediary state of the channels since the code is
+    # concurrently executed.
     # assert channel_ba.outstanding == amount
     # assert channel_bc.locked == amount
     # assert channel_cb.outstanding == amount

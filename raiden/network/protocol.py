@@ -344,36 +344,38 @@ class RaidenProtocol(object):
                     message,
                 )
 
-            # this might exit with an exception
             try:
+                # this might exit with an exception
                 self.raiden.on_message(message, echohash)
-            except (UnknownAddress, InvalidNonce, TransferWhenClosed):
-                # Do not send ACK for these cases
-                return
+
+                # only send the Ack if the message was handled without exceptions
+                ack = Ack(
+                    self.raiden.address,
+                    echohash,
+                )
+
+                try:
+                    self.send_ack(
+                        message.sender,
+                        ack,
+                    )
+                except InvalidAddress:
+                    log.debug("Couldn't send the ACK")
+
+            except (UnknownAddress, InvalidNonce, TransferWhenClosed) as e:
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug(str(e))
+
             except (UnknownTokenAddress, InvalidLocksRoot) as e:
                 if log.isEnabledFor(logging.WARN):
                     log.warn(str(e))
-                return
+
             except:
                 log.exception('unexpected exception raised.')
 
-            # only send the Ack if the message was handled without exceptions
-            ack = Ack(
-                self.raiden.address,
-                echohash,
+        # payload was not a valid message and decoding failed
+        elif log.isEnabledFor(logging.ERROR):
+            log.error(
+                'could not decode message %s',
+                pex(data),
             )
-
-            try:
-                self.send_ack(
-                    message.sender,
-                    ack,
-                )
-            except InvalidAddress:
-                return
-
-        else:  # payload was not a valid message and decoding failed
-            if log.isEnabledFor(logging.ERROR):
-                log.error(
-                    'could not decode message %s',
-                    pex(data),
-                )
