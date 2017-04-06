@@ -232,7 +232,7 @@ library NettingChannelLibrary {
     /// @param locked_encoded The lock
     /// @param merkle_proof The merkle proof
     /// @param secret The secret
-    function unlock(Data storage self, bytes locked_encoded, bytes merkle_proof, bytes32 secret)
+    function withdraw(Data storage self, bytes locked_encoded, bytes merkle_proof, bytes32 secret)
         notSettledButClosed(self)
     {
         uint amount;

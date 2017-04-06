@@ -92,9 +92,9 @@ contract NettingChannelContract {
     /// @param locked_encoded The locked transfer to be unlocked.
     /// @param merkle_proof The merke_proof for the locked transfer.
     /// @param secret The secret to unlock the locked transfer.
-    function unlock(bytes locked_encoded, bytes merkle_proof, bytes32 secret) {
+    function withdraw(bytes locked_encoded, bytes merkle_proof, bytes32 secret) {
         // throws if sender is not a participant
-        data.unlock(locked_encoded, merkle_proof, secret);
+        data.withdraw(locked_encoded, merkle_proof, secret);
         ChannelSecretRevealed(secret, msg.sender);
     }
 

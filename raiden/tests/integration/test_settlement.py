@@ -124,7 +124,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert lock.expiration > alice_app.raiden.chain.block_number()
     assert lock.hashlock == sha3(secret)
 
-    bob_alice_channel.external_state.netting_channel.unlock(
+    bob_alice_channel.external_state.netting_channel.withdraw(
         bob_app.raiden.address,
         [unlock_proof],
     )
