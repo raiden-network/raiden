@@ -142,8 +142,8 @@ class ChannelExternalStateTester(object):
     def update_transfer(self, our_address, first_transfer, second_transfer=None):
         return self.netting_channel.update_transfer(our_address, first_transfer, second_transfer)
 
-    def unlock(self, our_address, unlock_proofs):
-        return self.netting_channel.unlock(our_address, unlock_proofs)
+    def withdraw(self, our_address, unlock_proofs):
+        return self.netting_channel.withdraw(our_address, unlock_proofs)
 
     def settle(self):
         return self.netting_channel.settle()
@@ -668,7 +668,7 @@ class NettingChannelTesterMock(object):
             first_transfer=first_transfer
         )
 
-    def unlock(self, our_address, unlock_proofs):
+    def withdraw(self, our_address, unlock_proofs):
         """`our_address` is an argument used only in mock_client.py but is also
         kept here to maintain a consistent interface"""
         # force a list to get the length (could be a generator)
@@ -681,7 +681,7 @@ class NettingChannelTesterMock(object):
 
             merkleproof_encoded = ''.join(merkle_proof)
 
-            self.proxy.unlock(
+            self.proxy.withdraw(
                 locked_encoded,
                 merkleproof_encoded,
                 secret,
@@ -690,7 +690,7 @@ class NettingChannelTesterMock(object):
 
             lock = messages.Lock.from_bytes(locked_encoded)
             log.info(
-                'unlock called',
+                'withdraw called',
                 contract=pex(self.address),
                 lock=lock,
                 secret=encode_hex(secret),

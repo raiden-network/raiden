@@ -897,7 +897,7 @@ def test_mediated_after_direct_transfer(
     assert tester_token.balanceOf(address1, sender=pkey1) == balance1
 
 
-def test_unlock(
+def test_withdraw(
         deposit,
         settle_timeout,
         reveal_timeout,
@@ -943,7 +943,7 @@ def test_unlock(
 
     tester_state.mine(number_of_blocks=1)
 
-    nettingchannel.unlock(
+    nettingchannel.withdraw(
         proof.lock_encoded,
         ''.join(proof.merkle_proof),
         proof.secret,
@@ -962,7 +962,7 @@ def test_unlock(
 
 # This test must not use tester_channels since these proxies do automatic
 # mining
-def test_unlock_at_settlement_block(
+def test_withdraw_at_settlement_block(
         deposit,
         settle_timeout,
         reveal_timeout,
@@ -1020,7 +1020,7 @@ def test_unlock_at_settlement_block(
     tester_state.mine(number_of_blocks=block_until_settlement_end)
 
     assert lock_expiration == tester_state.block.number
-    nettingchannel.unlock(
+    nettingchannel.withdraw(
         lock0_bytes,
         '',  # the lock itself it the root, the proof is empty
         secret,
@@ -1037,7 +1037,7 @@ def test_unlock_at_settlement_block(
     assert tester_token.balanceOf(nettingchannel.address, sender=pkey0) == 0
 
 
-def test_unlock_expired_lock(reveal_timeout, tester_channels, tester_state):
+def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_state):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
     lock_timeout = reveal_timeout + 5
@@ -1070,7 +1070,7 @@ def test_unlock_expired_lock(reveal_timeout, tester_channels, tester_state):
     proof = unlock_proofs[0]
 
     with pytest.raises(TransactionFailed):
-        nettingchannel.unlock(
+        nettingchannel.withdraw(
             proof.lock_encoded,
             ''.join(proof.merkle_proof),
             proof.secret,
@@ -1145,7 +1145,7 @@ def test_unlock_both_participants(
         secret,
         mediated01.lock,
     )
-    nettingchannel.unlock(
+    nettingchannel.withdraw(
         proof01.lock_encoded,
         ''.join(proof01.merkle_proof),
         proof01.secret,
@@ -1156,7 +1156,7 @@ def test_unlock_both_participants(
         secret,
         mediated10.lock,
     )
-    nettingchannel.unlock(
+    nettingchannel.withdraw(
         proof10.lock_encoded,
         ''.join(proof10.merkle_proof),
         proof10.secret,
@@ -1173,7 +1173,7 @@ def test_unlock_both_participants(
     assert tester_token.balanceOf(nettingchannel.address, sender=pkey0) == 0
 
 
-def test_unlock_twice(reveal_timeout, tester_channels, tester_state):
+def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
     lock_expiration = tester_state.block.number + reveal_timeout + 5
@@ -1201,7 +1201,7 @@ def test_unlock_twice(reveal_timeout, tester_channels, tester_state):
 
     nettingchannel.close(mediated0_data, sender=pkey0)
 
-    nettingchannel.unlock(
+    nettingchannel.withdraw(
         proof.lock_encoded,
         ''.join(proof.merkle_proof),
         proof.secret,
@@ -1209,7 +1209,7 @@ def test_unlock_twice(reveal_timeout, tester_channels, tester_state):
     )
 
     with pytest.raises(TransactionFailed):
-        nettingchannel.unlock(
+        nettingchannel.withdraw(
             proof.lock_encoded,
             ''.join(proof.merkle_proof),
             proof.secret,

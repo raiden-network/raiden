@@ -465,7 +465,7 @@ class NettingChannelMock(object):
                 second_transfer.encode() if second_transfer is not None else ""
             )
 
-    def unlock(self, our_address, unlock_proofs):
+    def withdraw(self, our_address, unlock_proofs):
         ctx = {
             'block_number': BlockChainServiceMock.block_number(),
             'msg.sender': our_address,
@@ -473,11 +473,11 @@ class NettingChannelMock(object):
 
         for merkle_proof, locked_encoded, secret in unlock_proofs:
             if isinstance(locked_encoded, messages.Lock):
-                raise ValueError('unlock must be called with a lock encoded `.as_bytes`')
+                raise ValueError('withdraw must be called with a lock encoded `.as_bytes`')
 
             merkleproof_encoded = ''.join(merkle_proof)
 
-            self.contract.unlock(
+            self.contract.withdraw(
                 ctx,
                 locked_encoded,
                 merkleproof_encoded,
