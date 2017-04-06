@@ -231,7 +231,62 @@ Possible Responses
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
+Token Swaps
+------------
 
+You can perform a token swap by using the token_swap endpoint. A swap consists of two users agreeing on atomically exchanging two different tokens at a particular exchange rate.
+
+By making a ``PUT`` request to ``/api/<version>/token_swaps/<identifier>`` you can either initiate or participate in a token swap. The details, along with the role, come as part of the json payload.
+
+Example Request
+^^^^^^^^^^^^^^^
+
+The maker would do
+
+``PUT /api/1/token_swaps/1337``
+
+with payload
+::
+
+    {
+        "role": "maker",
+        "sending_amount": 42,
+        "sending_token": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "receiving_amount": 76,
+        "receiving_token": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"
+    }
+
+and the taker would use the same endpoint but with the following payload
+::
+
+    {
+        "role": "taken",
+        "sending_amount": 76,
+        "sending_token": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+        "receiving_amount": 42,
+        "receiving_token": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
+    }
+
+Example Response
+^^^^^^^^^^^^^^^^
+``200 OK``
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 201 Created      | For succesful Creation    |
++------------------+---------------------------+
+| 400 Bad Request  | If the provided json is in|
+|                  | some way malformed        |
++------------------+---------------------------+
+| 408 Request      | If the token swap         |
+|     Timeout      | operation times out       |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
 
 Channel Management
 ==================
