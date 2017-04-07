@@ -559,3 +559,35 @@ def test_break_blockchain_events(
         'event_type': 'ChannelSettled',
         'block_number': 35,
     }
+
+
+def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
+    tokenswap_obj = {
+        'role': 'maker',
+        'sending_amount': 42,
+        'sending_token': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'receiving_amount': 76,
+        'receiving_token': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
+    }
+    api_test_context.specify_tokenswap_input(tokenswap_obj, None)
+    request = grequests.put(
+        'http://localhost:5001/api/1/token_swaps/1337',
+        json=tokenswap_obj
+    )
+    response = request.send().response
+    assert_proper_response(response)
+
+    tokenswap_obj = {
+        'role': 'taker',
+        'sending_amount': 76,
+        'sending_token': '0x2a65aca4d5fc5b5c859090a6c34d164135398226',
+        'receiving_amount': 42,
+        'receiving_token': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    }
+    api_test_context.specify_tokenswap_input(tokenswap_obj, 1337)
+    request = grequests.put(
+        'http://localhost:5001/api/1/token_swaps/1337',
+        json=tokenswap_obj
+    )
+    response = request.send().response
+    assert_proper_response(response)

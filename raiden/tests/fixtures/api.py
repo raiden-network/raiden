@@ -107,6 +107,16 @@ def api_raiden_service(
         'get_channel_events',
         api_test_context.get_channel_events
     )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'exchange',
+        api_test_context.exchange
+    )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'expect_exchange',
+        api_test_context.expect_exchange
+    )
 
     # also make sure that the test server's raiden_api uses this mock
     # raiden service
