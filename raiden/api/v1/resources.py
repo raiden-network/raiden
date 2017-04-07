@@ -133,11 +133,4 @@ class TokenSwapsResource(BaseResource):
 
     @use_kwargs(put_schema)
     def put(self, **kwargs):
-        return self.rest_api.token_swap(
-            kwargs['identifier'],
-            kwargs['role'],
-            kwargs['sending_token'],
-            kwargs['sending_amount'],
-            kwargs['receiving_token'],
-            kwargs['receiving_amount'],
-        )
+        return self.rest_api.token_swap(**kwargs)

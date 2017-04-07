@@ -102,7 +102,7 @@ class APIServer(object):
         )
         self.add_resource(
             TokenSwapsResource,
-            '/token_swaps/<int:identifier>'
+            '/token_swaps/<hexaddress:target_address>/<int:identifier>'
         )
 
     def _register_type_converters(self, additional_mapping=None):
@@ -302,21 +302,21 @@ class RestAPI(object):
 
     def token_swap(
             self,
+            target_address,
             identifier,
             role,
             sending_token,
             sending_amount,
             receiving_token,
             receiving_amount):
+
         if role == 'maker':
             self.raiden_api.exchange(
                 from_token=sending_token,
                 from_amount=sending_amount,
                 to_token=receiving_token,
                 to_amount=receiving_amount,
-                # TODO: What should target_address be, how is the identifier
-                # used inside the token swap to identify the target?
-                target_address=None,
+                target_address=target_address,
             )
         elif role == 'taker':
             self.raiden_api.expect_exchange(
@@ -325,9 +325,7 @@ class RestAPI(object):
                 from_amount=sending_amount,
                 to_token=receiving_token,
                 to_amount=receiving_amount,
-                # TODO: What should target_address be, how is the identifier
-                # used inside the token swap to identify the target?
-                target_address=None,
+                target_address=target_address,
             )
         else:
             # should never happen, role is validated in the schema
