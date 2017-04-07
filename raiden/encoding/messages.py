@@ -247,7 +247,7 @@ CMDID_MESSAGE = {
     DIRECTTRANSFER: DirectTransfer,
     LOCKEDTRANSFER: LockedTransfer,
     MEDIATEDTRANSFER: MediatedTransfer,
-    TOKENSWAP: TOKENSWAP,
+    TOKENSWAP: TokenSwap,
     REFUNDTRANSFER: RefundTransfer,
 }
 
