@@ -71,7 +71,14 @@ class ChannelNew(object):
 
 class ChannelNewBalance(object):
 
-    def __init__(self, netting_channel_address, token_address, participant_address, new_balance, block_number):
+    def __init__(
+            self,
+            netting_channel_address,
+            token_address,
+            participant_address,
+            new_balance,
+            block_number):
+
         self.netting_channel_address = netting_channel_address
         self.token_address = token_address
         self.participant_address = participant_address

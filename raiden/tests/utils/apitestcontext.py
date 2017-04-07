@@ -58,6 +58,18 @@ class ApiTestContext():
         makes it through the REST api"""
         self.channel_for_events = address_decoder(channel_address)
 
+    def specify_tokenswap_input(self, tokenswap_input, identifier):
+        """We don't test the actual tokenswap but only that the input makes it
+        to the backend in the expected format"""
+        self.tokenswap_input = dict(tokenswap_input)
+        self.tokenswap_input['sending_token'] = address_decoder(
+            self.tokenswap_input['sending_token']
+        )
+        self.tokenswap_input['receiving_token'] = address_decoder(
+            self.tokenswap_input['receiving_token']
+        )
+        self.tokenswap_input['identifier'] = identifier
+
     def get_network_events(self, from_block, to_block):
         return_list = list()
         for event in self.events:
@@ -220,3 +232,25 @@ class ApiTestContext():
 
     def get_channel(self, channel_address):
         return self.find_channel_by_address(channel_address)
+
+    def _check_tokenswap_input(self, argname, input_argname, kwargs):
+        if kwargs[argname] != self.tokenswap_input[input_argname]:
+            raise ValueError(
+                'Expected "{}" for {} but got "{}"'.format(
+                    self.tokenswap_input[input_argname],
+                    input_argname,
+                    kwargs[argname])
+            )
+
+    def exchange(self, **kwargs):
+        self._check_tokenswap_input('from_token', 'sending_token', kwargs)
+        self._check_tokenswap_input('from_amount', 'sending_amount', kwargs)
+        self._check_tokenswap_input('to_token', 'receiving_token', kwargs)
+        self._check_tokenswap_input('to_amount', 'receiving_amount', kwargs)
+
+    def expect_exchange(self, **kwargs):
+        self._check_tokenswap_input('identifier', 'identifier', kwargs)
+        self._check_tokenswap_input('from_token', 'sending_token', kwargs)
+        self._check_tokenswap_input('from_amount', 'sending_amount', kwargs)
+        self._check_tokenswap_input('to_token', 'receiving_token', kwargs)
+        self._check_tokenswap_input('to_amount', 'receiving_amount', kwargs)

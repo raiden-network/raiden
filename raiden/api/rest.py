@@ -21,6 +21,7 @@ from raiden.api.v1.resources import (
     NetworkEventsResource,
     TokenEventsResource,
     ChannelEventsResource,
+    TokenSwapsResource,
 )
 from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
 from raiden.utils import channel_to_api_dict
@@ -98,6 +99,10 @@ class APIServer(object):
         self.add_resource(
             ChannelEventsResource,
             '/events/channels/<hexaddress:channel_address>'
+        )
+        self.add_resource(
+            TokenSwapsResource,
+            '/token_swaps/<int:identifier>'
         )
 
     def _register_type_converters(self, additional_mapping=None):
@@ -255,7 +260,7 @@ class RestAPI(object):
         if balance is not None:
             if current_state != 'open':
                 return make_response(
-                    'Can\'t deposit on a closed channel',
+                    "Can't deposit on a closed channel",
                     httplib.CONFLICT,
                 )
             raiden_service_result = self.raiden_api.deposit(
@@ -289,10 +294,47 @@ class RestAPI(object):
                 )
                 return self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
             else:
+                # should never happen, channel_state is validated in the schema
                 return make_response(
                     'Provided invalid channel state {}'.format(state),
                     httplib.BAD_REQUEST,
                 )
+
+    def token_swap(
+            self,
+            identifier,
+            role,
+            sending_token,
+            sending_amount,
+            receiving_token,
+            receiving_amount):
+        if role == 'maker':
+            self.raiden_api.exchange(
+                from_token=sending_token,
+                from_amount=sending_amount,
+                to_token=receiving_token,
+                to_amount=receiving_amount,
+                # TODO: What should target_address be, how is the identifier
+                # used inside the token swap to identify the target?
+                target_address=None,
+            )
+        elif role == 'taker':
+            self.raiden_api.expect_exchange(
+                identifier=identifier,
+                from_token=sending_token,
+                from_amount=sending_amount,
+                to_token=receiving_token,
+                to_amount=receiving_amount,
+                # TODO: What should target_address be, how is the identifier
+                # used inside the token swap to identify the target?
+                target_address=None,
+            )
+        else:
+            # should never happen, role is validated in the schema
+            return make_response(
+                'Provided invalid token swap role {}'.format(role),
+                httplib.BAD_REQUEST,
+            )
 
 
 @parser.error_handler

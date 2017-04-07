@@ -260,7 +260,7 @@ and the taker would use the same endpoint but with the following payload
 ::
 
     {
-        "role": "taken",
+        "role": "taker",
         "sending_amount": 76,
         "sending_token": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
         "receiving_amount": 42,

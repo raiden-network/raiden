@@ -62,7 +62,8 @@ class BaseSchema(Schema):
 
     @post_load
     def make_object(self, data):
-        # this will depend on the Schema used, which has its object class in the class Meta attributes
+        # this will depend on the Schema used, which has its object class
+        # in the class Meta attributes
         decoding_class = self.opts.decoding_class
         return decoding_class(**data)
 
@@ -72,8 +73,9 @@ class BaseListSchema(Schema):
 
     @pre_load
     def wrap_data_envelope(self, data):
-        # because the EventListSchema and ChannelListSchema ojects need to have some field ('data'),
-        # the data has to be enveloped in the internal representation to comply with the Schema
+        # because the EventListSchema and ChannelListSchema objects need to
+        # have some field ('data'), the data has to be enveloped in the internal
+        # representation to comply with the Schema
         data = dict(data=data)
         return data
 
@@ -100,7 +102,7 @@ class EventRequestSchema(BaseSchema):
 
 class TokenSchema(BaseSchema):
     """Simple token schema only with an address field. In the future we could
-add other attributes like 'name'"""
+    add other attributes like 'name'"""
     address = AddressField()
 
     class Meta:
@@ -171,3 +173,24 @@ class ChannelListSchema(BaseListSchema):
     class Meta:
         strict = True
         decoding_class = ChannelList
+
+
+class TokenSwapsSchema(BaseSchema):
+    # The identifier is actually returned properly without this, but if this
+    # is included we get a "missing" error.
+    # XXX: Lef does not like this. Find out why flask behaves like that.
+    # identifier = fields.Integer(required=True)
+
+    role = fields.String(
+        required=True,
+        validate=validate.OneOf(['maker', 'taker']),
+        location='json',
+    )
+    sending_amount = fields.Integer(required=True, location='json')
+    sending_token = AddressField(required=True, location='json')
+    receiving_amount = fields.Integer(required=True, location='json')
+    receiving_token = AddressField(required=True, location='json')
+
+    class Meta:
+        strict = True
+        decoding_class = dict

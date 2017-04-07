@@ -6,6 +6,7 @@ from flask import Blueprint
 from raiden.api.v1.encoding import (
     ChannelRequestSchema,
     EventRequestSchema,
+    TokenSwapsSchema,
 )
 
 
@@ -120,4 +121,23 @@ class ChannelEventsResource(BaseResource):
             kwargs['channel_address'],
             kwargs['from_block'],
             kwargs['to_block']
+        )
+
+
+class TokenSwapsResource(BaseResource):
+
+    put_schema = TokenSwapsSchema()
+
+    def __init__(self, **kwargs):
+        super(TokenSwapsResource, self).__init__(**kwargs)
+
+    @use_kwargs(put_schema)
+    def put(self, **kwargs):
+        return self.rest_api.token_swap(
+            kwargs['identifier'],
+            kwargs['role'],
+            kwargs['sending_token'],
+            kwargs['sending_amount'],
+            kwargs['receiving_token'],
+            kwargs['receiving_amount'],
         )

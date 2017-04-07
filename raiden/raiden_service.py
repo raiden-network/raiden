@@ -417,13 +417,8 @@ class RaidenAPI(object):
         return channel
 
     def exchange(self, from_token, from_amount, to_token, to_amount, target_address):
-        from_token_bin = safe_address_decode(from_token)
-        to_token_bin = safe_address_decode(to_token)
-        target_bin = safe_address_decode(target_address)
-
         try:
-            self.raiden.get_manager_by_token_address(from_token_bin)
-            self.raiden.get_manager_by_token_address(from_token_bin)
+            self.raiden.get_manager_by_token_address(from_token)
         except UnknownTokenAddress as e:
             log.error(
                 'no token manager for %s',
@@ -433,11 +428,11 @@ class RaidenAPI(object):
 
         task = StartExchangeTask(
             self.raiden,
-            from_token_bin,
+            from_token,
             from_amount,
-            to_token_bin,
+            to_token,
             to_amount,
-            target_bin,
+            target_address,
         )
         task.start()
         return task
