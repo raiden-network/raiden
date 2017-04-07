@@ -207,13 +207,20 @@ def estimate_and_transact(classobject, callobj, *args):
         startgas=classobject.startgas,
         gasprice=classobject.gasprice
     )
-    estimated_gas = min(estimated_gas * 2, GAS_LIMIT)
+    estimated_gas = min(estimated_gas * 2, classobject.startgas)
     transaction_hash = callobj.transact(
         *args,
         startgas=estimated_gas,
         gasprice=classobject.gasprice
     )
     return transaction_hash
+
+
+def get_block_gaslimit(client):
+    """get current block gaslimit"""
+    block_number = client.blocknumber()
+    block = client.call('eth_getBlockByNumber', block_number, False)
+    return int(block['gasLimit'], 0)
 
 
 class BlockChainService(object):
@@ -460,7 +467,7 @@ class Discovery(object):
         self.address = discovery_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.startgas = startgas
+        self.startgas = get_block_gaslimit(self.client)
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
@@ -527,7 +534,7 @@ class Token(object):
         self.address = token_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.startgas = startgas
+        self.startgas = get_block_gaslimit(self.client)
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
@@ -597,7 +604,7 @@ class Registry(object):
         self.address = registry_address
         self.proxy = proxy
         self.client = jsonrpc_client
-        self.startgas = startgas
+        self.startgas = get_block_gaslimit(self.client)
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
