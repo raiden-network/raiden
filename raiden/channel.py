@@ -550,15 +550,18 @@ class Channel(object):
 
         self.received_transfers = []
         self.sent_transfers = []  #: transfers that were sent, required for settling
+        self.STATE_OPEN = 'open'
+        self.STATE_CLOSED = 'closed'
+        self.STATE_SETTLED = 'settled'
 
     @property
     def state(self):
         if self.isopen:
-            return 'opened'
+            return self.STATE_OPEN
         elif self.external_state.settled_block != 0:
-            return 'settled'
+            return self.STATE_SETTLED
         elif self.external_state.closed_block != 0:
-            return 'closed'
+            return self.STATE_CLOSED
         else:
             raise Exception('invalid state')
 
