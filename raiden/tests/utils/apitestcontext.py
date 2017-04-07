@@ -58,7 +58,7 @@ class ApiTestContext():
         makes it through the REST api"""
         self.channel_for_events = address_decoder(channel_address)
 
-    def specify_tokenswap_input(self, tokenswap_input, identifier):
+    def specify_tokenswap_input(self, tokenswap_input, target_address, identifier):
         """We don't test the actual tokenswap but only that the input makes it
         to the backend in the expected format"""
         self.tokenswap_input = dict(tokenswap_input)
@@ -69,6 +69,7 @@ class ApiTestContext():
             self.tokenswap_input['receiving_token']
         )
         self.tokenswap_input['identifier'] = identifier
+        self.tokenswap_input['target_address'] = address_decoder(target_address)
 
     def get_network_events(self, from_block, to_block):
         return_list = list()

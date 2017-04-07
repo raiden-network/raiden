@@ -569,9 +569,13 @@ def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
         'receiving_amount': 76,
         'receiving_token': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
     }
-    api_test_context.specify_tokenswap_input(tokenswap_obj, None)
+    api_test_context.specify_tokenswap_input(
+        tokenswap_obj,
+        "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        1337
+    )
     request = grequests.put(
-        'http://localhost:5001/api/1/token_swaps/1337',
+        'http://localhost:5001/api/1/token_swaps/0x61c808d82a3ac53231750dadc13c777b59310bd9/1337',
         json=tokenswap_obj
     )
     response = request.send().response
@@ -584,9 +588,13 @@ def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
         'receiving_amount': 42,
         'receiving_token': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     }
-    api_test_context.specify_tokenswap_input(tokenswap_obj, 1337)
+    api_test_context.specify_tokenswap_input(
+        tokenswap_obj,
+        "0xbbc5ee8be95683983df67260b0ab033c237bde60",
+        1337
+    )
     request = grequests.put(
-        'http://localhost:5001/api/1/token_swaps/1337',
+        'http://localhost:5001/api/1/token_swaps/0xbbc5ee8be95683983df67260b0ab033c237bde60/1337',
         json=tokenswap_obj
     )
     response = request.send().response
