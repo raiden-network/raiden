@@ -234,7 +234,7 @@ Possible Responses
 Token Swaps
 ------------
 
-You can perform a token swap by using the token_swap endpoint. A swap consists of two users agreeing on atomically exchanging two different tokens at a particular exchange rate.
+You can perform a token swap by using the ``token_swaps`` endpoint. A swap consists of two users agreeing on atomically exchanging two different tokens at a particular exchange rate.
 
 By making a ``PUT`` request to ``/api/<version>/token_swaps/<target_address>/<identifier>`` you can either initiate or participate in a token swap with a specific user. The details, along with the role, come as part of the json payload.
 
@@ -268,6 +268,8 @@ and the taker (in our case ``0x61c808d82a3ac53231750dadc13c777b59310bd9``) would
         "receiving_amount": 42,
         "receiving_token": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
     }
+
+Please note that the sending/reveiving amount and token is always from the perspective of each node. That is why you see the reverse values in the two different examples.
 
 Example Response
 ^^^^^^^^^^^^^^^^

@@ -571,7 +571,7 @@ def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
     }
     api_test_context.specify_tokenswap_input(
         tokenswap_obj,
-        "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         1337
     )
     request = grequests.put(
@@ -590,7 +590,7 @@ def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
     }
     api_test_context.specify_tokenswap_input(
         tokenswap_obj,
-        "0xbbc5ee8be95683983df67260b0ab033c237bde60",
+        '0xbbc5ee8be95683983df67260b0ab033c237bde60',
         1337
     )
     request = grequests.put(
