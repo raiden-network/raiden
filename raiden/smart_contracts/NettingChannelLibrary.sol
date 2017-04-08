@@ -300,8 +300,8 @@ library NettingChannelLibrary {
         uint64 expiration;
         uint amount;
         bytes32 hashlock;
-        bytes32 h;
         bytes32 el;
+        bytes32 h;
 
         (expiration, amount, hashlock) = decodeLock(locked_encoded);
 
@@ -309,23 +309,47 @@ library NettingChannelLibrary {
             throw;
         }
 
-        if (expiration < block.number)
+        if (expiration < block.number) {
             throw;
+        }
 
-        if (hashlock != sha3(secret))
+        if (hashlock != sha3(secret)) {
             throw;
+        }
         
         //Check if caller_address is a participant and select her partner
         uint8 index = 1 - index_or_throw(self, caller_address);
         
         Participant storage partner = self.participants[index];
-
-        if (partner.nonce == 0) {
+        if (partner.locksroot == 0) {
             throw;
         }
 
-        h = sha3(locked_encoded);
-        for (uint i = 32; i <= merkle_proof.length; i += 32) {
+        h = computeMerkleRoot(locked_encoded, merkle_proof);
+
+        if (partner.locksroot != h) {
+            throw;
+        }
+
+        partner.unlocked.push(Lock(expiration, amount, hashlock));
+        self.locks[hashlock] = true;
+    }
+
+    function computeMerkleRoot(bytes lock, bytes merkle_proof)
+        private
+        constant
+        returns (bytes32)
+    {
+        if (merkle_proof.length % 32 != 0) {
+            throw;
+        }
+
+        uint i;
+        bytes32 h;
+        bytes32 el;
+
+        h = sha3(lock);
+        for (i = 32; i <= merkle_proof.length; i += 32) {
             assembly {
                 el := mload(add(merkle_proof, i))
             }
@@ -337,11 +361,7 @@ library NettingChannelLibrary {
             }
         }
 
-        if (partner.locksroot != h)
-            throw;
-
-        partner.unlocked.push(Lock(expiration, amount, hashlock));
-        self.locks[hashlock] = true;
+        return h;
     }
 
     /// @notice Settles the balance between the two parties
