@@ -163,5 +163,10 @@ class TransferToTargetResource(BaseResource):
         super(TransferToTargetResource, self).__init__(**kwargs)
 
     @use_kwargs(post_schema, locations=('json',))
-    def post(self, **kwargs):
-        return self.rest_api.initiate_transfer(**kwargs)
+    def post(self, token_address, target_address, amount, identifier):
+        return self.rest_api.initiate_transfer(
+            token_address=token_address,
+            target_address=target_address,
+            amount=amount,
+            identifier=identifier,
+        )
