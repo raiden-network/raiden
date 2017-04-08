@@ -194,3 +194,16 @@ class TokenSwapsSchema(BaseSchema):
     class Meta:
         strict = True
         decoding_class = dict
+
+
+class TransferSchema(BaseSchema):
+    initiator_address = AddressField(missing=None)
+    target_address = AddressField(missing=None)
+    token_address = AddressField(missing=None)
+    amount = fields.Integer(required=True)
+    identifier = fields.Integer(missing=None)
+
+
+    class Meta:
+        strict = True
+        decoding_class = dict

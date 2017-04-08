@@ -7,6 +7,7 @@ from raiden.api.v1.encoding import (
     ChannelRequestSchema,
     EventRequestSchema,
     TokenSwapsSchema,
+    TransferSchema,
 )
 
 
@@ -150,3 +151,17 @@ class TokenSwapsResource(BaseResource):
             receiving_token=receiving_token,
             receiving_amount=receiving_amount
         )
+
+
+class TransferToTargetResource(BaseResource):
+
+    post_schema = TransferSchema(
+        exclude=('initiator_address', 'target_address', 'token_address')
+    )
+
+    def __init__(self, **kwargs):
+        super(TransferToTargetResource, self).__init__(**kwargs)
+
+    @use_kwargs(post_schema, locations=('json',))
+    def post(self, **kwargs):
+        return self.rest_api.initiate_transfer(**kwargs)
