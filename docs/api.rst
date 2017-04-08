@@ -492,15 +492,17 @@ Transfers
 Initiating a Transfer
 ---------------------
 
-You can create a new transfer by making a ``PUSH`` to the following endpoint along with a json payload containing
+You can create a new transfer by making a ``POST`` to the following endpoint along with a json payload containing
 the transfer details such as amount and identifier. Identifier is optional.
 
-``PUSH /api/<version>/transfers/<token_address>/<target_address>``
+``POST /api/<version>/transfers/<token_address>/<target_address>``
+
+The request will only return once the transfer either succeeded or failed. A transfer can fail due to a lock's expiration.
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``PUSH /api/1/transfers/0x2a65aca4d5fc5b5c859090a6c34d164135398226/0x61c808d82a3ac53231750dadc13c777b59310bd9``
+``POST /api/1/transfers/0x2a65aca4d5fc5b5c859090a6c34d164135398226/0x61c808d82a3ac53231750dadc13c777b59310bd9``
 
 with payload::
   {
