@@ -11,6 +11,7 @@ from raiden.api.v1.encoding import (
     TokensListSchema,
     PartnersPerTokenListSchema,
     HexAddressConverter,
+    TransferSchema,
 )
 from raiden.api.v1.resources import (
     create_blueprint,
@@ -22,6 +23,7 @@ from raiden.api.v1.resources import (
     TokenEventsResource,
     ChannelEventsResource,
     TokenSwapsResource,
+    TransferToTargetResource,
 )
 from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
 from raiden.utils import channel_to_api_dict
@@ -104,6 +106,10 @@ class APIServer(object):
             TokenSwapsResource,
             '/token_swaps/<hexaddress:target_address>/<int:identifier>'
         )
+        self.add_resource(
+            TransferToTargetResource,
+            '/transfers/<hexaddress:token_address>/<hexaddress:target_address>'
+        )
 
     def _register_type_converters(self, additional_mapping=None):
         # an additional mapping concats to class-mapping and will overwrite existing keys
@@ -142,6 +148,7 @@ class RestAPI(object):
         self.channel_list_schema = ChannelListSchema()
         self.tokens_list_schema = TokensListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
+        self.transfer_schema = TransferSchema()
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
         raiden_service_result = self.raiden_api.open(
@@ -240,6 +247,25 @@ class RestAPI(object):
         schema_list = PartnersPerTokenList(return_list)
         result = self.partner_per_token_list_schema.dumps(schema_list)
         return result
+
+    def initiate_transfer(self, token_address, target_address, amount, identifier):
+        self.raiden_api.transfer(
+            token_address=token_address,
+            target=target_address,
+            amount=amount,
+            identifier=identifier
+        )
+
+        # TODO: Here we should query the identifier again since if None was provided
+        #       the default identifier value is given from inside the TransferManager
+        transfer = {
+            'initiator_address': self.raiden_api.raiden.address,
+            'token_address': token_address,
+            'target_address': target_address,
+            'amount': amount,
+            'identifier': identifier,
+        }
+        return self.transfer_schema.dumps(transfer)
 
     def patch_channel(self, channel_address, balance=None, state=None):
         if balance is not None and state is not None:

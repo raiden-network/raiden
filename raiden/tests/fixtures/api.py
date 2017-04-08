@@ -117,6 +117,11 @@ def api_raiden_service(
         'expect_exchange',
         api_test_context.expect_exchange
     )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'transfer',
+        api_test_context.transfer
+    )
 
     # also make sure that the test server's raiden_api uses this mock
     # raiden service

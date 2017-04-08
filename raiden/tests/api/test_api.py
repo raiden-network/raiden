@@ -4,6 +4,8 @@ import grequests
 import httplib
 import json
 
+from pyethapp.jsonrpc import address_encoder
+
 from raiden.tests.utils.apitestcontext import decode_response
 from raiden.utils import channel_to_api_dict
 from raiden.tests.utils.transfer import channel
@@ -599,3 +601,28 @@ def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
     )
     response = request.send().response
     assert_proper_response(response)
+
+
+def test_api_transfers(
+        api_test_server,
+        api_test_context,
+        api_raiden_service):
+
+    amount = 200
+    identifier = 42
+    transfer = {
+        'initiator_address': address_encoder(api_raiden_service.address),
+        'target_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'amount': amount,
+        'identifier': identifier
+    }
+
+    request = grequests.post(
+        'http://localhost:5001/api/1/transfers/0xea674fdde714fd979de3edf0f56aa9716b898ec8/0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        json={'amount': amount, 'identifier': identifier}
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    response = decode_response(response)
+    assert response == transfer

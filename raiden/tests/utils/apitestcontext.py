@@ -255,3 +255,7 @@ class ApiTestContext():
         self._check_tokenswap_input('from_amount', 'sending_amount', kwargs)
         self._check_tokenswap_input('to_token', 'receiving_token', kwargs)
         self._check_tokenswap_input('to_amount', 'receiving_amount', kwargs)
+
+    def transfer(self, token_address, amount, target, identifier):
+        # Do nothing. These tests only test the api endpoints, so nothing to do here
+        pass
