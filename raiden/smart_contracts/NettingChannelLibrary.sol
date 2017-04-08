@@ -107,7 +107,7 @@ library NettingChannelLibrary {
         uint256 amount)
         returns (bool success, uint256 balance)
     {
-     
+
         if (self.closed != 0) {
             throw;
         }
@@ -119,7 +119,7 @@ library NettingChannelLibrary {
         uint8 index = index_or_throw(self, caller_address);
 
         Participant storage participant = self.participants[index];
-        
+
         success = self.token.transferFrom(
             caller_address,
             channel_address,
@@ -199,36 +199,53 @@ library NettingChannelLibrary {
         address caller_address,
         bytes their_transfer)
     {
-        // the channel can't be closed multiple times
-        if (self.settled > 0 || self.closed > 0) {
+        uint closer_index;
+        uint counterparty_index;
+        bytes memory transfer_raw;
+        uint64 nonce;
+        address transfer_address;
+
+        // Already closed
+        if (self.closed > 0) {
             throw;
         }
 
-        Participant[2] storage participants = self.participants;
-        Participant storage node1 = participants[0];
-        Participant storage node2 = participants[1];
-        address their_sender;
+        // Only a participant can call close
+        closer_index = index_or_throw(self, caller_address);
 
-        //only a channel participant can close the channel
-        if (node1.node_address != caller_address && node2.node_address != caller_address) {
-            throw;
-        }
-
-        // keep the information of the closing party
         self.closing_address = caller_address;
         self.closed = block.number;
-        // if no transfer from the other participant was given then we are
-        // attempting to close a channel without a transfer
-        if (their_transfer.length == 0) {
-            return;
+
+        // Only the closing party can provide a transfer from the counterparty,
+        // and only when this function is called, i.e. this value can not be
+        // updated afterwards.
+
+        // An empty value means that the closer never received a transfer, or
+        // he is intentionally not providing the latest transfer, in which case
+        // the closing party is going to lose the tokens that were transferred
+        // to him.
+        if (their_transfer.length != 0) {
+
+            // only accept messages with a valid nonce
+            nonce = getNonce(their_transfer);
+            if (nonce < self.opened * (2 ** 32) || nonce >= (self.opened + 1) * (2 ** 32)) {
+                throw;
+            }
+
+            (transfer_raw, transfer_address) = getTransferRawAddress(their_transfer);
+            counterparty_index = index_or_throw(self, transfer_address);
+
+            // only a message from the counter party is valid
+            if (closer_index == counterparty_index) {
+                throw;
+            }
+
+            // update the structure of the counterparty with its data provided
+            // by the closing node
+            Participant storage counterparty = self.participants[counterparty_index];
+            decodeAndAssign(counterparty, transfer_raw);
         }
 
-        // else we are closing a channel that has received transfers
-        their_sender = processTransfer(self, node1, node2, their_transfer);
-        if (their_sender == caller_address) {
-            // the sender of "their" transaction can't be ourselves
-            throw;
-        }
     }
 
     function processTransfer(Data storage self, Participant storage node1, Participant storage node2, bytes transfer)
@@ -296,12 +313,12 @@ library NettingChannelLibrary {
         bytes32 secret)
         notSettledButClosed(self)
     {
+        uint amount;
         uint partner_id;
         uint64 expiration;
-        uint amount;
-        bytes32 hashlock;
         bytes32 el;
         bytes32 h;
+        bytes32 hashlock;
 
         (expiration, amount, hashlock) = decodeLock(locked_encoded);
 
@@ -316,10 +333,10 @@ library NettingChannelLibrary {
         if (hashlock != sha3(secret)) {
             throw;
         }
-        
+
         //Check if caller_address is a participant and select her partner
         uint8 index = 1 - index_or_throw(self, caller_address);
-        
+
         Participant storage partner = self.participants[index];
         if (partner.locksroot == 0) {
             throw;
