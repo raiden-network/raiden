@@ -486,6 +486,66 @@ Possible Responses
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
+Transfers
+=========
+
+Initiating a Transfer
+---------------------
+
+You can create a new transfer by making a ``PUSH`` to the following endpoint along with a json payload containing
+the transfer details such as amount and identifier. Identifier is optional.
+
+``PUSH /api/<version>/transfers/<token_address>/<target_address>``
+
+Example Request
+^^^^^^^^^^^^^^^
+
+``PUSH /api/1/transfers/0x2a65aca4d5fc5b5c859090a6c34d164135398226/0x61c808d82a3ac53231750dadc13c777b59310bd9``
+
+with payload::
+  {
+      "amount": 200,
+      "identifier": 42
+  }
+
+
+Example Response
+^^^^^^^^^^^^^^^^
+200 OK with payload
+::
+
+    {
+        "initiator_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+        "target_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "amount": 200,
+	"identifier": 42,
+    }
+
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For a succesful Transfer  |
+|                  |      creation             |
++------------------+---------------------------+
+| 400 Bad Request  | If the provided json is in|
+|                  | some way malformed        |
++------------------+---------------------------+
+| 408 Timeout      | If a timeout happened     |
+|                  | during the transfer       |
++------------------+---------------------------+
+| 409 Conflict     | If the transfer can't     |
+|                  | start due to insufficient |
+|                  | balance                   |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
+
+
 Querying Events
 ================
 
