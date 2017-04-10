@@ -627,7 +627,12 @@ def test_break_blockchain_events(
 
 
 @pytest.mark.skip(reeson='token swap were temporarily removed')
-def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
+def test_api_token_swaps(
+        api_test_server,
+        api_test_context,
+        api_raiden_service,
+        rest_api_port_number):
+
     tokenswap_obj = {
         'role': 'maker',
         'sending_amount': 42,
@@ -641,7 +646,9 @@ def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
         1337
     )
     request = grequests.put(
-        'http://localhost:5001/api/1/token_swaps/0x61c808d82a3ac53231750dadc13c777b59310bd9/1337',
+        'http://localhost:{port}/api/1/token_swaps/0x61c808d82a3ac53231750dadc13c777b59310bd9/1337'.format(
+            port=rest_api_port_number,
+        ),
         json=tokenswap_obj
     )
     response = request.send().response
@@ -660,7 +667,9 @@ def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
         1337
     )
     request = grequests.put(
-        'http://localhost:5001/api/1/token_swaps/0xbbc5ee8be95683983df67260b0ab033c237bde60/1337',
+        'http://localhost:{port}/api/1/token_swaps/0xbbc5ee8be95683983df67260b0ab033c237bde60/1337'.format(
+            port=rest_api_port_number,
+        ),
         json=tokenswap_obj
     )
     response = request.send().response
@@ -670,7 +679,8 @@ def test_api_token_swaps(api_test_server, api_test_context, api_raiden_service):
 def test_api_transfers(
         api_test_server,
         api_test_context,
-        api_raiden_service):
+        api_raiden_service,
+        rest_api_port_number):
 
     amount = 200
     identifier = 42
@@ -683,7 +693,9 @@ def test_api_transfers(
     }
 
     request = grequests.post(
-        'http://localhost:5001/api/1/transfers/0xea674fdde714fd979de3edf0f56aa9716b898ec8/0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        'http://localhost:{port}/api/1/transfers/0xea674fdde714fd979de3edf0f56aa9716b898ec8/0x61c808d82a3ac53231750dadc13c777b59310bd9'.format(
+            port=rest_api_port_number,
+        ),
         json={'amount': amount, 'identifier': identifier}
     )
     response = request.send().response
