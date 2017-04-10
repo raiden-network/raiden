@@ -85,7 +85,10 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
         # Explicitly call the default identifier creation since this mock
         # function here completely skips the `transfer_async()` call.
         if not identifier:
-            identifier = transfermanager.create_default_identifier(target_app.raiden.address)
+            identifier = initiator_app.raiden.api.create_default_identifier(
+                target_app.raiden.address,
+                token
+            )
 
         result = AsyncResult()
         task = StartMediatedTransferTask(
@@ -165,8 +168,7 @@ def claim_lock(app_chain, token, secret):
 
 
 def assert_identifier_correct(initiator_app, token, target, expected_id):
-    tokenmanager = initiator_app.raiden.managers_by_token_address[token]
-    got_id = tokenmanager.transfermanager.create_default_identifier(target)
+    got_id = initiator_app.raiden.api.create_default_identifier(target, token)
     assert got_id == expected_id
 
 

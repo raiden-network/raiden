@@ -521,7 +521,7 @@ Example Response
         "target_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
         "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
         "amount": 200,
-        "identifier": 42,
+        "identifier": 42
     }
 
 

@@ -492,7 +492,10 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
     # and now send one more direct transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
     direct_transfer = DirectTransfer(
-        identifier=token_manager0.transfermanager.create_default_identifier(app1.raiden.address),
+        identifier=app0.raiden.api.create_default_identifier(
+            app1.raiden.address,
+            token_manager0.token_address
+        ),
         nonce=1,
         token=token_manager0.token_address,
         transferred_amount=10,
@@ -531,7 +534,10 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
     mediated_transfer = MediatedTransfer(
-        identifier=token_manager.transfermanager.create_default_identifier(charlie_address),
+        identifier=alice_app.raiden.api.create_default_identifier(
+            charlie_address,
+            token_address
+        ),
         nonce=1,
         token=token_address,
         transferred_amount=amount,
@@ -575,7 +581,10 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
     mediated_transfer = MediatedTransfer(
-        identifier=token_manager.transfermanager.create_default_identifier(charlie_address),
+        identifier=alice_app.raiden.api.create_default_identifier(
+            charlie_address,
+            token_address
+        ),
         nonce=1,
         token=token_address,
         transferred_amount=amount,
@@ -628,7 +637,10 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
 
     # and now send one more direct transfer with a mistaken token address
     direct_transfer = DirectTransfer(
-        identifier=token_manager0.transfermanager.create_default_identifier(app1.raiden.address),
+        identifier=app0.raiden.api.create_default_identifier(
+            app1.raiden.address,
+            HASH[0:20]
+        ),
         nonce=2,
         token=HASH[0:20],
         transferred_amount=10,
@@ -672,7 +684,10 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
 
     # and now send one more direct transfer with the locksroot not set correctly
     direct_transfer = DirectTransfer(
-        identifier=token_manager0.transfermanager.create_default_identifier(app1.raiden.address),
+        identifier=app0.raiden.api.create_default_identifier(
+            app1.raiden.address,
+            token_manager0.token_address,
+        ),
         nonce=2,
         token=token_manager0.token_address,
         transferred_amount=10,
