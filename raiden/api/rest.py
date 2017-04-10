@@ -5,6 +5,7 @@ from flask import Flask, make_response, url_for
 from flask_restful import Api, abort
 from webargs.flaskparser import parser
 
+from raiden.raiden_service import NoPathError, InvalidAddress, InvalidAmount
 from raiden.api.v1.encoding import (
     ChannelSchema,
     ChannelListSchema,
@@ -256,21 +257,24 @@ class RestAPI(object):
                 token_address
             )
 
-        self.raiden_api.transfer(
-            token_address=token_address,
-            target=target_address,
-            amount=amount,
-            identifier=identifier
-        )
+        try:
+            self.raiden_api.transfer(
+                token_address=token_address,
+                target=target_address,
+                amount=amount,
+                identifier=identifier
+            )
 
-        transfer = {
-            'initiator_address': self.raiden_api.raiden.address,
-            'token_address': token_address,
-            'target_address': target_address,
-            'amount': amount,
-            'identifier': identifier,
-        }
-        return self.transfer_schema.dumps(transfer)
+            transfer = {
+                'initiator_address': self.raiden_api.raiden.address,
+                'token_address': token_address,
+                'target_address': target_address,
+                'amount': amount,
+                'identifier': identifier,
+            }
+            return self.transfer_schema.dumps(transfer)
+        except (InvalidAmount, InvalidAddress, NoPathError) as e:
+            return make_response(str(e), httplib.CONFLICT)
 
     def patch_channel(self, channel_address, balance=None, state=None):
         if balance is not None and state is not None:
