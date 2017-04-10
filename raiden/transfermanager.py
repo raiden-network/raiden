@@ -3,7 +3,6 @@ import logging
 import random
 from collections import namedtuple
 
-import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
 
@@ -13,7 +12,7 @@ from raiden.tasks import (
     EndMediatedTransferTask,
     ExchangeTask,
 )
-from raiden.utils import pex, sha3
+from raiden.utils import pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 Exchange = namedtuple('Exchange', (
@@ -82,22 +81,6 @@ class TransferManager(object):
         """ Called once a task reaches a final state. """
         del self.transfertasks[hashlock]
 
-    def create_default_identifier(self, target):
-        """
-        The default message identifier value is the first 8 bytes of the sha3 of:
-            - Our Address
-            - Our target address
-            - The token address
-            - A random 8 byte number for uniqueness
-        """
-        hash_ = sha3("{}{}{}{}".format(
-            self.tokenmanager.raiden.address,
-            target,
-            self.tokenmanager.token_address,
-            random.randint(0, 18446744073709551614L)
-        ))
-        return int(hash_[0:8].encode('hex'), 16)
-
     def transfer_async(self, amount, target, identifier=None):
         """ Transfer `amount` between this node and `target`.
 
@@ -108,11 +91,6 @@ class TransferManager(object):
             - Network speed, making the transfer suficiently fast so it doesn't
             timeout.
         """
-
-        # Create a default identifier value
-        if identifier is None:
-            identifier = self.create_default_identifier(target)
-
         direct_channel = self.tokenmanager.partneraddress_channel.get(target)
 
         if direct_channel:

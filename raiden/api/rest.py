@@ -249,6 +249,13 @@ class RestAPI(object):
         return result
 
     def initiate_transfer(self, token_address, target_address, amount, identifier):
+
+        if identifier is None:
+            identifier = self.raiden_api.create_default_identifier(
+                target_address,
+                token_address
+            )
+
         self.raiden_api.transfer(
             token_address=token_address,
             target=target_address,
@@ -256,8 +263,6 @@ class RestAPI(object):
             identifier=identifier
         )
 
-        # TODO: Here we should query the identifier again since if None was provided
-        #       the default identifier value is given from inside the TransferManager
         transfer = {
             'initiator_address': self.raiden_api.raiden.address,
             'token_address': token_address,
