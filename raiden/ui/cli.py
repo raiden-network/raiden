@@ -18,6 +18,8 @@ from raiden.network.rpc.client import BlockChainService
 from raiden.ui.console import Console
 from raiden.utils import split_endpoint
 from raiden.accounts import AccountManager
+# from raiden.api.rest import APIServer, RestAPI
+from raiden.raiden_service import RaidenAPI
 
 gevent.monkey.patch_all()
 
@@ -92,6 +94,22 @@ OPTIONS = [
         default=60,
         type=int,
     ),
+    click.option(
+        '--cli/--no-cli',
+        help=(
+            'Start with or without the command line interface. Defualt is to '
+            'start with the CLI disabled'
+        ),
+        default=False,
+    ),
+    click.option(
+        '--rpc/--no-rpc',
+        help=(
+            'Start with or without the RPC server. Default is to start '
+            'the RPC server'
+        ),
+        default=True,
+    ),
 ]
 
 
@@ -114,7 +132,9 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         logging,
         logfile,
         max_unresponsive_time,
-        send_ping_time):
+        send_ping_time,
+        rpc,
+        cli):
 
     slogging.configure(logging, log_file=logfile)
 
@@ -126,6 +146,7 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     config['port'] = listen_port
     config['max_unresponsive_time'] = max_unresponsive_time
     config['send_ping_time'] = send_ping_time
+    config['cli'] = cli
 
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:
@@ -237,6 +258,16 @@ def run(ctx, external_listen_address, **kwargs):
     )
 
     app_.raiden.register_registry(app_.raiden.chain.default_registry)
+
+    # instance of the raiden-api
+    raiden_api = RaidenAPI(app_.raiden)
+    # wrap the raiden-api with rest-logic and encoding
+    rest_api = RestAPI(raiden_api)
+    # create the server and link the api-endpoints with flask / flask-restful middleware
+    api_server = APIServer(rest_api)
+
+    # run the server
+    api_server.run(5001, debug=True)
 
     console = Console(app_)
     console.start()

@@ -24,6 +24,9 @@ class App(object):  # pylint: disable=too-few-public-methods
         # throttle policy for token bucket
         throttle_capacity=10.,
         throttle_fill_rate=10.,
+        # # start rpc or cli
+        # rpc=True,
+        # cli=False,
     )
 
     def __init__(self, config, chain, discovery, transport_class=UDPTransport):
@@ -42,7 +45,8 @@ class App(object):  # pylint: disable=too-few-public-methods
             config,
         )
         self.services = {'raiden': self.raiden}
-        self.start_console = True
+        if self.config['cli']:
+            self.start_console = True
 
     def __repr__(self):
         return '<{} {}>'.format(
