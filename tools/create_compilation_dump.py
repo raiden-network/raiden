@@ -23,7 +23,7 @@ DEFAULT_ACCOUNT = privatekey_to_address(DEFAULT_KEY)
 
 def deploy_all(token_groups=None):
     if not token_groups:
-        token_groups.dict()
+        token_groups = dict()
 
     log.DEV(  # pylint: disable=no-member
         'default key',
