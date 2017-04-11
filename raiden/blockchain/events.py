@@ -188,7 +188,7 @@ def pyethapp_event_to_state_change(pyethapp_event):  # pylint: disable=too-many-
     event = pyethapp_event.event_data
 
     # Raiden uses the binary representation of address internally, pyethapp
-    # keeps the addresses in hex representation inside the events, so al
+    # keeps the addresses in hex representation inside the events, so all
     # addresses inside the event_data must be decoded.
 
     if event['_event_type'] == 'TokenAdded':

@@ -312,10 +312,10 @@ def test_close_second_participant_can_close(tester_state, tester_nettingcontract
     _, pkey1, nettingchannel = tester_nettingcontracts[0]
     address1 = privatekey_to_address(pkey1)
 
-    close_block_number = tester_state.block.number
+    closed_block_number = tester_state.block.number
     nettingchannel.close('', sender=pkey1)
 
-    assert nettingchannel.closed(sender=pkey1) == close_block_number
+    assert nettingchannel.closed(sender=pkey1) == closed_block_number
     assert nettingchannel.closingAddress(sender=pkey1) == encode_hex(address1)
 
 
@@ -371,7 +371,7 @@ def test_close_called_multiple_times(tester_state, tester_nettingcontracts):
     pkey0, pkey1, nettingchannel = tester_nettingcontracts[0]
     address0 = privatekey_to_address(pkey0)
 
-    close_block_number = tester_state.block.number
+    closed_block_number = tester_state.block.number
     nettingchannel.close('', sender=pkey0)
 
     with pytest.raises(TransactionFailed):
@@ -380,7 +380,7 @@ def test_close_called_multiple_times(tester_state, tester_nettingcontracts):
     with pytest.raises(TransactionFailed):
         nettingchannel.close('', sender=pkey1)
 
-    assert nettingchannel.closed(sender=pkey0) == close_block_number
+    assert nettingchannel.closed(sender=pkey0) == closed_block_number
     assert nettingchannel.closingAddress(sender=pkey0) == encode_hex(address0)
 
 

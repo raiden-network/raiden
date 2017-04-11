@@ -26,56 +26,56 @@ slogging.configure(':DEBUG')
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_settlement(raiden_network, settle_timeout, reveal_timeout):
-    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+    alice_app, bob_app = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     setup_messages_cb()
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
-    assert graph0.token_address == graph1.token_address
+    alice_graph = alice_app.raiden.channelgraphs.values()[0]
+    bob_graph = bob_app.raiden.channelgraphs.values()[0]
+    assert alice_graph.token_address == bob_graph.token_address
 
-    channel0 = graph0.partneraddress_channel[app1.raiden.address]
-    channel1 = graph1.partneraddress_channel[app0.raiden.address]
+    alice_bob_channel = alice_graph.partneraddress_channel[bob_app.raiden.address]
+    bob_alice_channel = bob_graph.partneraddress_channel[alice_app.raiden.address]
 
-    deposit0 = channel0.balance
-    deposit1 = channel1.balance
+    alice_deposit = alice_bob_channel.balance
+    bob_deposit = bob_alice_channel.balance
 
-    token = app0.raiden.chain.token(channel0.token_address)
+    token = alice_app.raiden.chain.token(alice_bob_channel.token_address)
 
-    balance0 = token.balance_of(app0.raiden.address)
-    balance1 = token.balance_of(app1.raiden.address)
+    alice_balance = token.balance_of(alice_app.raiden.address)
+    bob_balance = token.balance_of(bob_app.raiden.address)
 
-    chain0 = app0.raiden.chain
+    alice_chain = alice_app.raiden.chain
 
-    amount = 10
-    expiration = app0.raiden.chain.block_number() + reveal_timeout + 1
+    alice_to_bob_amount = 10
+    expiration = alice_app.raiden.chain.block_number() + reveal_timeout + 1
     secret = 'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
-    assert app1.raiden.address in graph0.partneraddress_channel
+    assert bob_app.raiden.address in alice_graph.partneraddress_channel
 
-    nettingaddress0 = channel0.external_state.netting_channel.address
-    nettingaddress1 = channel1.external_state.netting_channel.address
+    nettingaddress0 = alice_bob_channel.external_state.netting_channel.address
+    nettingaddress1 = bob_alice_channel.external_state.netting_channel.address
     assert nettingaddress0 == nettingaddress1
 
     identifier = 1
     fee = 0
-    transfermessage = channel0.create_mediatedtransfer(
-        app0.raiden.address,
-        app1.raiden.address,
+    transfermessage = alice_bob_channel.create_mediatedtransfer(
+        alice_app.raiden.address,
+        bob_app.raiden.address,
         fee,
-        amount,
+        alice_to_bob_amount,
         identifier,
         expiration,
         hashlock,
     )
-    app0.raiden.sign(transfermessage)
-    channel0.register_transfer(transfermessage)
-    channel1.register_transfer(transfermessage)
+    alice_app.raiden.sign(transfermessage)
+    alice_bob_channel.register_transfer(transfermessage)
+    bob_alice_channel.register_transfer(transfermessage)
 
     assert_synched_channels(
-        channel0, deposit0, [],
-        channel1, deposit1, [transfermessage.lock],
+        alice_bob_channel, alice_deposit, [],
+        bob_alice_channel, bob_deposit, [transfermessage.lock],
     )
 
     # At this point we are assuming the following:
@@ -89,11 +89,11 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     # call settle.
 
     # get proof, that locked transfermessage was in merkle tree, with locked.root
-    lock = channel1.our_state.balance_proof.get_lock_by_hashlock(hashlock)
+    lock = bob_alice_channel.our_state.balance_proof.get_lock_by_hashlock(hashlock)
     assert sha3(secret) == hashlock
-    unlock_proof = channel1.our_state.balance_proof.compute_proof_for_lock(secret, lock)
+    unlock_proof = bob_alice_channel.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
-    root = channel1.our_state.balance_proof.merkleroot_for_unclaimed()
+    root = bob_alice_channel.our_state.balance_proof.merkleroot_for_unclaimed()
 
     assert check_proof(
         unlock_proof.merkle_proof,
@@ -105,45 +105,48 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # a ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
-    channel1.external_state.netting_channel.close(
-        app1.raiden.address,
+    bob_alice_channel.external_state.netting_channel.close(
+        bob_app.raiden.address,
         transfermessage,
     )
-    wait_until_block(chain0, chain0.block_number() + 1)
+    wait_until_block(alice_chain, alice_chain.block_number() + 1)
 
-    assert channel0.close_event.wait(timeout=15)
-    assert channel1.close_event.wait(timeout=15)
+    assert alice_bob_channel.close_event.wait(timeout=15)
+    assert bob_alice_channel.close_event.wait(timeout=15)
 
-    assert channel0.external_state.closed_block != 0
-    assert channel1.external_state.closed_block != 0
-    assert channel0.external_state.settled_block == 0
-    assert channel1.external_state.settled_block == 0
+    assert alice_bob_channel.external_state.closed_block != 0
+    assert bob_alice_channel.external_state.closed_block != 0
+    assert alice_bob_channel.external_state.settled_block == 0
+    assert bob_alice_channel.external_state.settled_block == 0
 
     # unlock will not be called by Channel.channel_closed because we did not
     # register the secret
-    assert lock.expiration > app0.raiden.chain.block_number()
+    assert lock.expiration > alice_app.raiden.chain.block_number()
     assert lock.hashlock == sha3(secret)
 
-    channel1.external_state.netting_channel.unlock(
-        app1.raiden.address,
+    bob_alice_channel.external_state.netting_channel.unlock(
+        bob_app.raiden.address,
         [unlock_proof],
     )
 
-    settle_expiration = chain0.block_number() + settle_timeout + 2
-    wait_until_block(chain0, settle_expiration)
+    settle_expiration = alice_chain.block_number() + settle_timeout + 2
+    wait_until_block(alice_chain, settle_expiration)
 
-    assert channel0.settle_event.wait(timeout=15)
-    assert channel1.settle_event.wait(timeout=15)
+    assert alice_bob_channel.settle_event.wait(timeout=15)
+    assert bob_alice_channel.settle_event.wait(timeout=15)
     # settle must be called by the apps triggered by the ChannelClose event,
     # and the channels must update it's state based on the ChannelSettled event
-    assert channel0.external_state.settled_block != 0
-    assert channel1.external_state.settled_block != 0
+    assert alice_bob_channel.external_state.settled_block != 0
+    assert bob_alice_channel.external_state.settled_block != 0
 
-    address0 = app0.raiden.address
-    address1 = app1.raiden.address
+    address0 = alice_app.raiden.address
+    address1 = bob_app.raiden.address
 
-    assert token.balance_of(address0) == balance0 + deposit0 - amount
-    assert token.balance_of(address1) == balance1 + deposit1 + amount
+    alice_netted_balance = alice_balance + alice_deposit - alice_to_bob_amount
+    bob_netted_balance = bob_balance + bob_deposit + alice_to_bob_amount
+
+    assert token.balance_of(address0) == alice_netted_balance
+    assert token.balance_of(address1) == bob_netted_balance
 
 
 @pytest.mark.timeout(240)
@@ -324,37 +327,38 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
 
     # Alice sends Bob 10 tokens
     amount_alice1 = 10
-    direct_transfer = channel0.create_directtransfer(
+    alice_first_transfer = channel0.create_directtransfer(
         amount_alice1,
         1  # TODO: fill in identifier
     )
-    direct_transfer.sign(privatekey0, address0)
-    channel0.register_transfer(direct_transfer)
-    channel1.register_transfer(direct_transfer)
-    alice_old_transaction = direct_transfer
+    alice_first_transfer.sign(privatekey0, address0)
+    channel0.register_transfer(alice_first_transfer)
+    channel1.register_transfer(alice_first_transfer)
 
     # Bob sends Alice 50 tokens
     amount_bob1 = 50
-    direct_transfer = channel1.create_directtransfer(
+    bob_first_transfer = channel1.create_directtransfer(
         amount_bob1,
         1  # TODO: fill in identifier
     )
-    direct_transfer.sign(privatekey1, address1)
-    channel0.register_transfer(direct_transfer)
-    channel1.register_transfer(direct_transfer)
-    bob_last_transaction = direct_transfer
+    bob_first_transfer.sign(privatekey1, address1)
+    channel0.register_transfer(bob_first_transfer)
+    channel1.register_transfer(bob_first_transfer)
 
     # Finally Alice sends Bob 60 tokens
     amount_alice2 = 60
-    direct_transfer = channel0.create_directtransfer(
+    alice_second_transfer = channel0.create_directtransfer(
         amount_alice2,
         1  # TODO: fill in identifier
     )
-    direct_transfer.sign(privatekey0, address0)
-    channel0.register_transfer(direct_transfer)
-    channel1.register_transfer(direct_transfer)
+    alice_second_transfer.sign(privatekey0, address0)
+    channel0.register_transfer(alice_second_transfer)
+    channel1.register_transfer(alice_second_transfer)
 
-    # Then Alice attempts to close the channel with an older transfer of hers
+    bob_last_transaction = bob_first_transfer
+
+    # Alice can only provide one of Bob's transfer, so she is incetivized to
+    # use the one with the largest transferred_amount.
     channel0.external_state.close(
         None,
         bob_last_transaction,
@@ -368,9 +372,12 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     assert channel0.external_state.closed_block != 0
     assert channel1.external_state.closed_block != 0
 
+    # Bob needs to provide a transfer otherwise it's netted balance will be
+    # wrong, so he is incetivized to use Alice's transfer with the largest
+    # transferred_amount.
     channel1.external_state.update_transfer(
         None,
-        direct_transfer,
+        alice_second_transfer,
     )
 
     # wait until the settle timeout has passed

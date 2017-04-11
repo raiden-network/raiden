@@ -282,6 +282,7 @@ class BaseMediatedTransferTask(Task):
             Must be called only once the secret is known.
             Must call `on_hashlock_result` after this function returns.
         """
+        assert graph.token_address == mediated_transfer.token
 
         if not isinstance(mediated_transfer, MediatedTransfer):
             raise ValueError('MediatedTransfer expected.')
@@ -373,7 +374,7 @@ class BaseMediatedTransferTask(Task):
         For a chain A-B-C, if an attacker controls A and C a mediated transfer
         can be done through B and C will wait for/send a timeout, for that
         reason B must not unregister the hashlock until the lock has expired,
-        otherwise the revealed secret wouldnt be caught.
+        otherwise the revealed secret wouldn't be caught.
         """
         # pylint: disable=no-self-use
 

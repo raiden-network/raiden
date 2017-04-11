@@ -89,7 +89,9 @@ class SendBalanceProof(Event):
 
 
 class SendSecretRequest(Event):
-    """ Event used by a target node to request the secret from the initiator. """
+    """ Event used by a target node to request the secret from the initiator
+    (`receiver`).
+    """
     def __init__(self, identifier, amount, hashlock, receiver):
         self.identifier = identifier
         self.amount = amount

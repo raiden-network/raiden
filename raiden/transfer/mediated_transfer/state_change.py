@@ -156,7 +156,7 @@ class ContractReceiveClosed(StateChange):
     def __init__(self, channel_address, closing_address, block_number):
         self.channel_address = channel_address
         self.closing_address = closing_address
-        self.block_number = block_number  # TODO: rename to close_block_number
+        self.block_number = block_number  # TODO: rename to closed_block
 
 
 class ContractReceiveSettled(StateChange):
