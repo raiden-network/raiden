@@ -362,7 +362,7 @@ def test_get_timeout_blocks():
         next_hop,
         amount,
         settle_timeout=settle_timeout,
-        close_block=2,
+        closed_block=2,
     )
 
     large_block = mediator.get_timeout_blocks(closed_route, large_transfer, block_number)
@@ -830,7 +830,7 @@ def test_events_for_balanceproof_channel_closed():
         block_number = 5
         last_pair = transfers_pair[-1]
         last_pair.payee_route.state = invalid_state
-        last_pair.payee_route.close_block = block_number
+        last_pair.payee_route.closed_block = block_number
         last_pair.payee_state = 'payee_secret_revealed'
 
         events = mediator.events_for_balanceproof(

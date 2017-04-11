@@ -391,10 +391,12 @@ class RaidenService(object):
             # withdraw a pending lock
             if channel.our_state.balance_proof.is_unclaimed(hashlock):
                 if partner_secret_message:
-                    valid_sender = partner_secret_message.sender == channel.partner_state.address
-                    valid_token = partner_secret_message.token == channel.token_address
+                    matching_sender = (
+                        partner_secret_message.sender == channel.partner_state.address
+                    )
+                    matching_token = partner_secret_message.token == channel.token_address
 
-                    if valid_sender and valid_token:
+                    if matching_sender and matching_token:
                         channel.withdraw_lock(secret)
                         channels_to_remove.append(channel)
                     else:
@@ -474,6 +476,8 @@ class RaidenService(object):
         # some events might be applied twice.
         self.pyethapp_blockchain_events.add_proxies_listeners(proxies)
 
+        block_number = self.get_block_number()
+
         for manager in proxies.channel_managers:
             token_address = manager.token_address()
             manager_address = manager.address
@@ -485,7 +489,6 @@ class RaidenService(object):
                 channels_detail.append(detail)
 
             edge_list = manager.channels_addresses()
-            block_number = self.get_block_number()
             graph = ChannelGraph(
                 self.address,
                 manager_address,
@@ -1056,7 +1059,6 @@ class RaidenAPI(object):
     def get_token_network_events(self, token_address, from_block, to_block):
         token_address = address_decoder(token_address)
         graph = self.raiden.channelgraphs[token_address]
-        graph.channelmanager_address
 
         return get_all_channel_manager_events(
             self.raiden.chain,

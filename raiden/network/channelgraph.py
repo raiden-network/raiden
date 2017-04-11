@@ -71,9 +71,9 @@ def channel_to_routestate(channel, node_address):
     reveal_timeout = channel.reveal_timeout
 
     if state == 'closed':
-        close_block = channel.external_state.closed_block
+        closed_block = channel.external_state.closed_block
     else:
-        close_block = None
+        closed_block = None
 
     state = RouteState(
         state=state,
@@ -82,7 +82,7 @@ def channel_to_routestate(channel, node_address):
         available_balance=distributable,
         settle_timeout=settle_timeout,
         reveal_timeout=reveal_timeout,
-        close_block=close_block,
+        closed_block=closed_block,
     )
 
     return state

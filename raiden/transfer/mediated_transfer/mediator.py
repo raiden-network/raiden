@@ -159,16 +159,16 @@ def get_timeout_blocks(payer_route, payer_transfer, block_number):
     - payer_route.settle_timeout: Lock expiration must be lower than
       the settlement period since the lock cannot be claimed after the channel is
       settled.
-    - payer_route.close_block: If the channel is closed then the settlement
+    - payer_route.closed_block: If the channel is closed then the settlement
       period is running and the lock expiration must be lower than number of
       blocks left.
     """
     blocks_until_settlement = payer_route.settle_timeout
 
-    if payer_route.close_block is not None:
-        assert block_number >= payer_route.close_block
+    if payer_route.closed_block is not None:
+        assert block_number >= payer_route.closed_block
 
-        elapsed_blocks = block_number - payer_route.close_block
+        elapsed_blocks = block_number - payer_route.closed_block
         blocks_until_settlement -= elapsed_blocks
 
     safe_payer_timeout = min(

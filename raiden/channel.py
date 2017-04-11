@@ -281,9 +281,10 @@ class ChannelEndState(object):
         # amount of token transferred and unlocked
         self.transferred_amount = 0
 
-        # sequential nonce, current value has not been used.
-        # 0 is used in the netting contract to represent the lack of a
-        # the nonce value must be inside the netting channel allowed range
+        # Sequential nonce, current value has not been used, 0 must not be used
+        # since in the netting contract it represents null.
+        #
+        # The nonce value must be inside the netting channel allowed range
         # that is defined in terms of the opened block
         self.nonce = 1 * (opened_block * (2 ** 32))
 
@@ -624,20 +625,8 @@ class Channel(object):
         balance_proof = self.our_state.balance_proof
         transfer = balance_proof.transfer
 
-        our_closed_transferred = self.external_state.query_transferred_amount(
-            self.our_state.address
-        )
-        partner_closed_transferred = self.external_state.query_transferred_amount(
-            self.partner_state.address
-        )
-
-        need_to_dispute = (
-            self.our_state.transferred_amount != our_closed_transferred or
-            self.partner_state.transferred_amount != partner_closed_transferred
-        )
-
-        if need_to_dispute:
-            self.external_state.update_transfer(self.our_state.address, transfer)
+        # the channel was closed, update our half of the state
+        self.external_state.update_transfer(self.our_state.address, transfer)
 
         unlock_proofs = balance_proof.get_known_unlocks()
         self.external_state.unlock(self.our_state.address, unlock_proofs)
@@ -887,28 +876,37 @@ class Channel(object):
 
                 raise InvalidLocksRoot(expected_locksroot, transfer.locksroot)
 
-            # As a receiver: If the lock expiration is larger than the settling
-            # time a secret could be revealed after the channel is settled and
-            # we won't be able to claim the token
-            if self.settle_timeout < transfer.lock.expiration - self.block_number:
+            # If the lock expires after the settle_period a secret could be
+            # revealed after the channel is settled and we won't be able to
+            # claim the token.
+            end_settle_period = self.block_number + self.settle_timeout
+            expires_after_settle = transfer.lock.expiration > end_settle_period
+
+            if expires_after_settle:
                 log.error(
-                    "Transfer expiration doesn't allow for correct settlement.",
+                    'Lock expires after the settlement period.',
                     lock_expiration=transfer.lock.expiration,
                     current_block=self.block_number,
                     settle_timeout=self.settle_timeout,
                 )
 
-                raise ValueError("Transfer expiration doesn't allow for correct settlement.")
+                raise ValueError('Lock expires after the settlement period.')
 
-            if not transfer.lock.expiration - self.block_number > self.reveal_timeout:
+            # If the lock expires within the unsafe_period we cannot accept the
+            # transfer, since there is not enough time to properly settle
+            # on-chain.
+            end_unsafe_period = self.block_number + self.reveal_timeout
+            expires_unsafe = transfer.lock.expiration < end_unsafe_period
+
+            if expires_unsafe:
                 log.error(
-                    'Expiration smaller than the minimum required.',
+                    'Lock expires within the unsafe_period.',
                     lock_expiration=transfer.lock.expiration,
                     current_block=self.block_number,
                     reveal_timeout=self.reveal_timeout,
                 )
 
-                raise ValueError('Expiration smaller than the minimum required.')
+                raise ValueError('Lock expires within the unsafe_period.')
 
         # only check the balance if the locksroot matched
         if transfer.transferred_amount < from_state.transferred_amount:
