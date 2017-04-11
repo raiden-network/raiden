@@ -15,7 +15,7 @@ First install the system-dependecies for a successful build of the Python packag
 ```
 brew install pkg-config libffi automake
 ```
-Then set the environment variable for your `pkg-config` path to `libffi` 
+Then set the environment variable for your `pkg-config` path to `libffi`
 ```
 export PKG_CONFIG_PATH=/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig/
 ```

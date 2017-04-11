@@ -89,7 +89,7 @@ The following should be avoided
 ```python
 
 def function_with_many_args(argument1, argument2, argument3, argument4, argument5, argument6, argument7):
-	pass
+    pass
 ```
 
 and instead you should
@@ -104,7 +104,7 @@ def function_with_many_args(
     argument5,
     argument6,
     argument7):
-	pass
+    pass
 ```
 
 
@@ -211,7 +211,7 @@ This helps us to easily determine which function calls are smart contract calls 
 
 ```js
 function iDoSomething(uint awesome_argument) {
-	doSomethingElse();
+    doSomethingElse();
 }
 ```
 
