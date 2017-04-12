@@ -52,9 +52,7 @@ class Console(BaseService):
     name = 'console'
 
     def __init__(self, app):
-        print('1')
         super(Console, self).__init__(app)
-        print('2')
         self.interrupt = Event()
         self.console_locals = {}
         if app.start_console:

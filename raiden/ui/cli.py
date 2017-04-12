@@ -6,6 +6,7 @@ import sys
 import signal
 import click
 import gevent
+from gevent import Greenlet
 import gevent.monkey
 from ethereum import slogging
 from ethereum.utils import decode_hex
@@ -18,7 +19,7 @@ from raiden.network.rpc.client import BlockChainService
 from raiden.ui.console import Console
 from raiden.utils import split_endpoint
 from raiden.accounts import AccountManager
-# from raiden.api.rest import APIServer, RestAPI
+from raiden.api.rest import APIServer, RestAPI
 from raiden.raiden_service import RaidenAPI
 
 gevent.monkey.patch_all()
@@ -110,6 +111,14 @@ OPTIONS = [
         ),
         default=True,
     ),
+    click.option(
+        '--port',
+        help=(
+            'Port for the RPC server to run from'
+        ),
+        default=5001,
+        type=int,
+    ),
 ]
 
 
@@ -133,6 +142,7 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         logfile,
         max_unresponsive_time,
         send_ping_time,
+        port,
         rpc,
         cli):
 
@@ -147,6 +157,8 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     config['max_unresponsive_time'] = max_unresponsive_time
     config['send_ping_time'] = send_ping_time
     config['cli'] = cli
+    config['rpc'] = rpc
+    config['port'] = port
 
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:
@@ -259,18 +271,31 @@ def run(ctx, external_listen_address, **kwargs):
 
     app_.raiden.register_registry(app_.raiden.chain.default_registry)
 
-    # instance of the raiden-api
-    raiden_api = RaidenAPI(app_.raiden)
-    # wrap the raiden-api with rest-logic and encoding
-    rest_api = RestAPI(raiden_api)
-    # create the server and link the api-endpoints with flask / flask-restful middleware
-    api_server = APIServer(rest_api)
+    if ctx.params['rpc']:
+        # instance of the raiden-api
+        raiden_api = RaidenAPI(app_.raiden)
+        # wrap the raiden-api with rest-logic and encoding
+        rest_api = RestAPI(raiden_api)
+        # create the server and link the api-endpoints with flask / flask-restful middleware
+        api_server = APIServer(rest_api)
+        # run the server
+        Greenlet.spawn(api_server.run, ctx.params['port'], debug=True, use_evalex=False)
+        print(
+            "The RPC server is now running",
+            "at http://localhost:{0}/.".format(ctx.params['port'])
+        )
+        print(
+            "Example usage to get all channels:",
+            "`curl http://localhost:{0}/api/1/channels`".format(ctx.params['port'])
+        )
+        print(
+            "See the Raiden documentation for all available endpoints at",
+            "https://github.com/raiden-network/raiden/blob/master/docs/api.rst"
+        )
 
-    # run the server
-    api_server.run(5001, debug=True)
-
-    console = Console(app_)
-    console.start()
+    if ctx.params['cli']:
+        console = Console(app_)
+        console.start()
 
     # wait for interrupt
     event = gevent.event.Event()
