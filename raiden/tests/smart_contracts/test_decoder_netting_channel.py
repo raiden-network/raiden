@@ -4,13 +4,16 @@ import os
 import pytest
 from ethereum import tester
 from ethereum.tester import TransactionFailed
-from secp256k1 import PrivateKey
+
+from coincurve import PrivateKey
 from pyethapp.jsonrpc import address_decoder
 
 from raiden.encoding import messages
 from raiden.utils import sha3, privatekey_to_address, get_project_root
+
 from raiden.encoding.format import compute_slices
 from raiden.encoding.signing import GLOBAL_CTX
+
 from raiden.tests.utils.tests import get_test_contract_path
 from raiden.tests.utils.messages import (
     make_direct_transfer,
@@ -83,7 +86,7 @@ def test_decode_direct_transfer(
         transferred_amount=transferred_amount,
         locksroot=locksroot,
     )
-    direct_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    direct_transfer.sign(PrivateKey(privatekey0), address0)
 
     assert_decoder_results(direct_transfer, decoder)
 
@@ -118,7 +121,7 @@ def test_decode_mediated_transfer(
         locksroot=locksroot,
     )
 
-    mediated_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    mediated_transfer.sign(PrivateKey(privatekey0), address0)
 
     assert_decoder_results(mediated_transfer, decoder)
 
@@ -149,7 +152,7 @@ def test_decode_refund_transfer(
         transferred_amount=transferred_amount,
         locksroot=locksroot,
     )
-    refund_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    refund_transfer.sign(PrivateKey(privatekey0), address0)
 
     assert_decoder_results(refund_transfer, decoder)
 

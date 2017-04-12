@@ -4,7 +4,7 @@ from __future__ import print_function
 import gevent
 import pytest
 from ethereum import slogging
-from secp256k1 import PrivateKey
+from coincurve import PrivateKey
 
 from raiden.encoding.signing import GLOBAL_CTX
 from raiden.messages import (
@@ -395,8 +395,8 @@ def test_receive_directtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
     graph0 = app0.raiden.channelgraphs.values()[0]
 
-    other_key = PrivateKey(HASH, ctx=GLOBAL_CTX, raw=True)
-    other_address = privatekey_to_address(other_key.private_key)
+    other_key = PrivateKey(HASH, context=GLOBAL_CTX)
+    other_address = privatekey_to_address(HASH)
     direct_transfer = DirectTransfer(
         identifier=1,
         nonce=1,
@@ -415,8 +415,8 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
     graph0 = app0.raiden.channelgraphs.values()[0]
 
-    other_key = PrivateKey(HASH, ctx=GLOBAL_CTX, raw=True)
-    other_address = privatekey_to_address(other_key.private_key)
+    other_key = PrivateKey(HASH, context=GLOBAL_CTX)
+    other_address = privatekey_to_address(HASH)
     amount = 10
     locksroot = HASH
     mediated_transfer = MediatedTransfer(
@@ -442,8 +442,8 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
 
     graph0 = app0.raiden.channelgraphs.values()[0]
 
-    other_key = PrivateKey(HASH2, ctx=GLOBAL_CTX, raw=True)
-    other_address = privatekey_to_address(other_key.private_key)
+    other_key = PrivateKey(HASH2, context=GLOBAL_CTX)
+    other_address = privatekey_to_address(HASH2)
     amount = 10
     lock = Lock(amount, 1, HASH)
     refund_transfer = RefundTransfer(
