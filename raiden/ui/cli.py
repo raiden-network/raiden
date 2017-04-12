@@ -20,7 +20,6 @@ from raiden.ui.console import Console
 from raiden.utils import split_endpoint
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
-from raiden.raiden_service import RaidenAPI
 
 gevent.monkey.patch_all()
 
@@ -96,7 +95,7 @@ OPTIONS = [
         type=int,
     ),
     click.option(
-        '--cli/--no-cli',
+        '--console/--no-console',
         help=(
             'Start with or without the command line interface. Defualt is to '
             'start with the CLI disabled'
@@ -112,7 +111,7 @@ OPTIONS = [
         default=True,
     ),
     click.option(
-        '--port',
+        '--api-port',
         help=(
             'Port for the RPC server to run from'
         ),
@@ -142,9 +141,9 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         logfile,
         max_unresponsive_time,
         send_ping_time,
-        port,
+        api_port,
         rpc,
-        cli):
+        console):
 
     slogging.configure(logging, log_file=logfile)
 
@@ -156,9 +155,9 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     config['port'] = listen_port
     config['max_unresponsive_time'] = max_unresponsive_time
     config['send_ping_time'] = send_ping_time
-    config['cli'] = cli
+    config['console'] = console
     config['rpc'] = rpc
-    config['port'] = port
+    config['api_port'] = api_port
 
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:
@@ -273,27 +272,23 @@ def run(ctx, external_listen_address, **kwargs):
 
     if ctx.params['rpc']:
         # instance of the raiden-api
-        raiden_api = RaidenAPI(app_.raiden)
+        raiden_api = app_.raiden.api
         # wrap the raiden-api with rest-logic and encoding
         rest_api = RestAPI(raiden_api)
         # create the server and link the api-endpoints with flask / flask-restful middleware
         api_server = APIServer(rest_api)
         # run the server
-        Greenlet.spawn(api_server.run, ctx.params['port'], debug=True, use_evalex=False)
+        Greenlet.spawn(api_server.run, ctx.params['api_port'], debug=False, use_evalex=False)
         print(
             "The RPC server is now running",
-            "at http://localhost:{0}/.".format(ctx.params['port'])
-        )
-        print(
-            "Example usage to get all channels:",
-            "`curl http://localhost:{0}/api/1/channels`".format(ctx.params['port'])
+            "at http://localhost:{0}/.".format(ctx.params['api_port'])
         )
         print(
             "See the Raiden documentation for all available endpoints at",
             "https://github.com/raiden-network/raiden/blob/master/docs/api.rst"
         )
 
-    if ctx.params['cli']:
+    if ctx.params['console']:
         console = Console(app_)
         console.start()
 
