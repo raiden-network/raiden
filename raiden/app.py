@@ -24,6 +24,8 @@ class App(object):  # pylint: disable=too-few-public-methods
         # throttle policy for token bucket
         throttle_capacity=10.,
         throttle_fill_rate=10.,
+        rpc=True,
+        console=False,
     )
 
     def __init__(self, config, chain, discovery, transport_class=UDPTransport):
