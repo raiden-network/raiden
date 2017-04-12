@@ -44,10 +44,8 @@ class App(object):  # pylint: disable=too-few-public-methods
             config,
         )
         self.services = {'raiden': self.raiden}
-        if self.config['console']:
-            self.start_console = True
-        else:
-            self.start_console = False
+
+        self.start_console = self.config['console']
 
     def __repr__(self):
         return '<{} {}>'.format(
