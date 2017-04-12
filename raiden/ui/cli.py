@@ -9,7 +9,6 @@ import gevent
 from gevent import Greenlet
 import gevent.monkey
 from ethereum import slogging
-from ethereum.utils import decode_hex
 from pyethapp.jsonrpc import address_decoder
 
 from raiden.app import App
@@ -187,14 +186,23 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
 
         address = addresses[idx]
 
-    try:
-        privatekey_bin = accmgr.get_privkey(address)
-    except ValueError as e:
-        # ValueError exception raised if the password is incorrect, print the
-        # exception message and exit the process, the user may try again by
-        # re-executing Raiden.
-        print(e.message)
-        sys.exit(1)
+    unlock_tries = 3
+    while True:
+        try:
+            privatekey_bin = accmgr.get_privkey(address)
+            break
+        except ValueError as e:
+            # ValueError exception raised if the password is incorrect
+            if unlock_tries == 0:
+                print('Exhausted passphrase unlock attempts for {}. Aborting ...'.format(address))
+                sys.exit(1)
+
+            print(
+                'Incorrect passphrase to unlock the private key. {} tries remaining. '
+                'Please try again or kill the process to quit. '
+                'Usually Ctrl-c.'.format(unlock_tries)
+            )
+            unlock_tries -= 1
 
     privatekey_hex = privatekey_bin.encode('hex')
     config['privatekey_hex'] = privatekey_hex
