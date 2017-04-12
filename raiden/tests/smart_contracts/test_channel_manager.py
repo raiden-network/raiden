@@ -6,7 +6,7 @@ from ethereum.utils import encode_hex, sha3
 from raiden.utils import get_contract_path, privatekey_to_address
 from raiden.encoding.signing import GLOBAL_CTX
 from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
-from secp256k1 import PrivateKey
+from coincurve import PrivateKey
 
 from raiden.tests.utils.tester import new_channelmanager
 
@@ -154,7 +154,7 @@ def test_reopen_channel(
 
     privatekey0_raw, privatekey1_raw, nettingchannel, channel0, _ = tester_channels[0]
 
-    privatekey0 = PrivateKey(privatekey0_raw, ctx=GLOBAL_CTX, raw=True)
+    privatekey0 = PrivateKey(privatekey0_raw, context=GLOBAL_CTX)
     address0 = privatekey_to_address(privatekey0_raw)
     address1 = privatekey_to_address(privatekey1_raw)
     address2 = tester.a2

@@ -6,7 +6,7 @@ import pytest
 from ethereum import abi, tester
 from ethereum.tester import TransactionFailed
 from ethereum.utils import encode_hex
-from secp256k1 import PrivateKey
+from coincurve import PrivateKey
 
 from raiden.encoding.signing import GLOBAL_CTX
 from raiden.messages import Lock, DirectTransfer, MediatedTransfer
@@ -46,7 +46,7 @@ def make_direct_transfer_from_channel(channel, partner_channel, amount, pkey):
     )
 
     address = privatekey_to_address(pkey)
-    sign_key = PrivateKey(pkey, ctx=GLOBAL_CTX, raw=True)
+    sign_key = PrivateKey(pkey, context=GLOBAL_CTX)
     direct_transfer.sign(sign_key, address)
 
     # if this fails it's not the right key for the current `channel`
@@ -84,7 +84,7 @@ def make_mediated_transfer(
     )
 
     address = privatekey_to_address(pkey)
-    sign_key = PrivateKey(pkey, ctx=GLOBAL_CTX, raw=True)
+    sign_key = PrivateKey(pkey, context=GLOBAL_CTX)
     mediated_transfer.sign(sign_key, address)
 
     channel.block_number = block_number
@@ -360,7 +360,7 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
     )
 
     nonparticipant_address = privatekey_to_address(nonparticipant_key)
-    nonparticipant_sign_key = PrivateKey(nonparticipant_key, ctx=GLOBAL_CTX, raw=True)
+    nonparticipant_sign_key = PrivateKey(nonparticipant_key, context=GLOBAL_CTX)
 
     transfer_nonparticipant.sign(nonparticipant_sign_key, nonparticipant_address)
     transfer_nonparticipant_data = str(transfer_nonparticipant.packed().data)
@@ -520,7 +520,7 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
     )
 
     nonparticipant_address = privatekey_to_address(nonparticipant_key)
-    nonparticipant_sign_key = PrivateKey(nonparticipant_key, ctx=GLOBAL_CTX, raw=True)
+    nonparticipant_sign_key = PrivateKey(nonparticipant_key, context=GLOBAL_CTX)
 
     transfer_nonparticipant.sign(nonparticipant_sign_key, nonparticipant_address)
     transfer_nonparticipant_data = str(transfer_nonparticipant.packed().data)
@@ -1083,7 +1083,7 @@ def test_withdraw_at_settlement_block(
         fee=0,
     )
 
-    sign_key0 = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    sign_key0 = PrivateKey(pkey0, context=GLOBAL_CTX)
     mediated0.sign(sign_key0, address0)
     mediated0_data = str(mediated0.packed().data)
     nettingchannel.close(mediated0_data, sender=pkey1)

@@ -316,8 +316,8 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     channel1 = app1.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]
     privatekey0 = app0.raiden.private_key
     privatekey1 = app1.raiden.private_key
-    address0 = privatekey_to_address(privatekey0.private_key)
-    address1 = privatekey_to_address(privatekey1.private_key)
+    address0 = privatekey_to_address(privatekey0.secret)
+    address1 = privatekey_to_address(privatekey1.secret)
     token = app0.raiden.chain.token(channel0.token_address)
     initial_balance0 = token.balance_of(address0)
     initial_balance1 = token.balance_of(address1)

@@ -9,7 +9,8 @@ import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
 from ethereum.utils import encode_hex
-from secp256k1 import PrivateKey
+
+from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
 from raiden.blockchain.events import (
@@ -144,12 +145,8 @@ class RaidenService(object):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
-        private_key = PrivateKey(
-            private_key_bin,
-            ctx=GLOBAL_CTX,
-            raw=True,
-        )
-        pubkey = private_key.pubkey.serialize(compressed=False)
+        private_key = PrivateKey(private_key_bin, context=GLOBAL_CTX)
+        pubkey = private_key.public_key.format(compressed=False)
 
         self.channelgraphs = dict()
         self.manager_token = dict()
