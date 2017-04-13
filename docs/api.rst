@@ -86,7 +86,7 @@ There are multiple ways to query information about your channels. The most direc
 Example Request
 ^^^^^^^^^^^^^^^
 
-``GET /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/``
+``GET /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -115,7 +115,7 @@ By making a ``GET`` request to ``/api/<version>/channels`` you can get a list of
 Example Request
 ^^^^^^^^^^^^^^^
 
-``GET /api/1/channels/``
+``GET /api/1/channels``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -132,8 +132,6 @@ Example Response
             "balance": 35000000,
             "state": "open",
             "settle_timeout": 100
-        }, {
-            ...
         }
     ]
 
@@ -160,7 +158,7 @@ tokens we have channels open for.
 Example Request
 ^^^^^^^^^^^^^^^
 
-``GET /api/1/tokens/``
+``GET /api/1/tokens``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -170,8 +168,7 @@ Example Response
 
     [
         {"address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"},
-        {"address": "0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6"},
-         ...
+        {"address": "0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6"}
     ]
 
 Possible Responses
@@ -195,7 +192,7 @@ you have non-settled channels with.
 Example Request
 ^^^^^^^^^^^^^^^
 
-``GET /api/1/tokens/0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6/partners/``
+``GET /api/1/tokens/0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6/partners``
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -206,10 +203,8 @@ Example Response
 
     [
         {
-            "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",,
+            "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
             "channel": "/api/<version>/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226"
-        }, {
-            ...
         }
     ]
 
@@ -287,7 +282,7 @@ Possible Responses
 |                  | some way malformed        |
 +------------------+---------------------------+
 | 408 Request      | If the token swap         |
-|     Timeout      | operation times out       |
+| Timeout          | operation times out       |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
@@ -359,12 +354,12 @@ Close Channel
 
 You can close an existing channel by making a ``PATCH`` request to its endpoint and altering the state to closed.
 
-``PATCH /api/<version>/channels/<channel_address>/``
+``PATCH /api/<version>/channels/<channel_address>``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/``
+``PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
 with payload
 ``{"state":"closed"}``
@@ -403,12 +398,12 @@ Settle Channel
 
 You can settle an existing channel by making a ``PATCH`` request to its endpoint and altering the state to settled.
 
-``PATCH /api/<version>/channels/<channel_address>/``
+``PATCH /api/<version>/channels/<channel_address>``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/``
+``PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
 with payload
 ``{"state":"settled"}``
@@ -447,12 +442,12 @@ Deposit to a Channel
 You can deposit more of a particular token to a channel by updating the ``balance``
 field of the channel in the corresponding endpoint with a ``PATCH`` http request.
 
-``PATCH /api/<version>/channels/<channel_address>/``
+``PATCH /api/<version>/channels/<channel_address>``
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226/``
+``PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
 with payload
 
@@ -505,6 +500,7 @@ Example Request
 ``POST /api/1/transfers/0x2a65aca4d5fc5b5c859090a6c34d164135398226/0x61c808d82a3ac53231750dadc13c777b59310bd9``
 
 with payload::
+
   {
       "amount": 200,
       "identifier": 42
@@ -532,7 +528,7 @@ Possible Responses
 | HTTP Code        | Condition                 |
 +==================+===========================+
 | 200 OK           | For a succesful Transfer  |
-|                  |      creation             |
+|                  | creation                  |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
@@ -587,12 +583,9 @@ Example Response
             "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
         }, {
             "event_type": "TokenAdded",
-            "token_address": "0x91337a300e0361bddb2e377dd4e88ccb7796663d"
+            "token_address": "0x91337a300e0361bddb2e377dd4e88ccb7796663d",
             "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
-        }, {
-            ...
         }
-        ...
     ]
 
 Possible Responses
@@ -631,17 +624,14 @@ Example Response
             "settle_timeout": 10,
             "netting_channel": "0xc0ea08a2d404d3172d2add29a45be56da40e2949",
             "participant1": "0x4894a542053248e0c504e3def2048c08f73e1ca6",
-            "participant2": "0x356857Cd22CBEFccDa4e96AF13b408623473237A",
+            "participant2": "0x356857Cd22CBEFccDa4e96AF13b408623473237A"
         }, {
             "event_type": "ChannelNew",
             "settle_timeout": 15,
             "netting_channel": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
             "participant1": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
-            "participant2": "0xc7262f1447fcb2f75ab14b2a28deed6006eea95b",
-        }, {
-            ...
+            "participant2": "0xc7262f1447fcb2f75ab14b2a28deed6006eea95b"
         }
-        ...
     ]
 
 Possible Responses
@@ -683,8 +673,7 @@ Example Response
             "event_type": "TransferUpdated",
             "token_address": "0x91337a300e0361bddb2e377dd4e88ccb7796663d",
             "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
-        },
-        ...
+        }
     ]
 
 Possible Responses
