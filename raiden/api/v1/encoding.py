@@ -22,7 +22,11 @@ from raiden.api.objects import (
     PartnersPerTokenList
 )
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
-
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+)
 
 # type converter for the flask route
 class HexAddressConverter(BaseConverter):
@@ -148,7 +152,11 @@ class ChannelSchema(BaseSchema):
     settle_timeout = fields.Integer()
     reveal_timeout = fields.Integer()
     balance = fields.Integer()
-    state = fields.String(validate=validate.OneOf(['closed', 'opened', 'settled']))
+    state = fields.String(validate=validate.OneOf([
+        CHANNEL_STATE_CLOSED,
+        CHANNEL_STATE_OPENED,
+        CHANNEL_STATE_SETTLED,
+    ]))
 
     class Meta:
         strict = True
@@ -164,7 +172,11 @@ class ChannelRequestSchema(BaseSchema):
     state = fields.String(
         default=None,
         missing=None,
-        validate=validate.OneOf(['closed', 'opened', 'settled'])
+        validate=validate.OneOf([
+            CHANNEL_STATE_CLOSED,
+            CHANNEL_STATE_OPENED,
+            CHANNEL_STATE_SETTLED,
+        ])
     )
 
     class Meta:

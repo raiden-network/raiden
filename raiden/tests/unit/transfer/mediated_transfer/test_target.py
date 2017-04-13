@@ -17,6 +17,11 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+)
 from . import factories
 
 
@@ -162,7 +167,7 @@ def test_events_for_withdraw():
     )
     assert len(events) == 0
 
-    route.state = 'closed'
+    route.state = CHANNEL_STATE_CLOSED
     events = target.events_for_withdraw(
         transfer,
         route,

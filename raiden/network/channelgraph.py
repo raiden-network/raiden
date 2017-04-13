@@ -7,7 +7,12 @@ from ethereum import slogging
 
 from raiden.utils import isaddress, pex
 from raiden.channel import Channel
-from raiden.transfer.state import RouteState
+from raiden.transfer.state import (
+    RouteState,
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+)
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -70,7 +75,7 @@ def channel_to_routestate(channel, node_address):
     settle_timeout = channel.settle_timeout
     reveal_timeout = channel.reveal_timeout
 
-    if state == 'closed':
+    if state == CHANNEL_STATE_CLOSED:
         closed_block = channel.external_state.closed_block
     else:
         closed_block = None

@@ -17,6 +17,11 @@ from raiden.mtree import merkleroot, get_proof
 from raiden.utils import sha3, pex, lpex
 from raiden.exceptions import UnknownAddress
 from raiden.transfer.state_change import Block
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+)
 from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveClosed,
     ContractReceiveSettled,
@@ -550,18 +555,15 @@ class Channel(object):
 
         self.received_transfers = []
         self.sent_transfers = []  #: transfers that were sent, required for settling
-        self.STATE_OPEN = 'open'
-        self.STATE_CLOSED = 'closed'
-        self.STATE_SETTLED = 'settled'
 
     @property
     def state(self):
         if self.isopen:
-            return self.STATE_OPEN
+            return CHANNEL_STATE_OPENED
         elif self.external_state.settled_block != 0:
-            return self.STATE_SETTLED
+            return CHANNEL_STATE_SETTLED
         elif self.external_state.closed_block != 0:
-            return self.STATE_CLOSED
+            return CHANNEL_STATE_CLOSED
         else:
             raise Exception('invalid state')
 
@@ -1119,7 +1121,7 @@ class Channel(object):
             self.block_number = state_change.block_number
             settlement_end = self.external_state.closed_block + self.settle_timeout
 
-            if self.state == 'closed' and self.block_number > settlement_end:
+            if self.state == CHANNEL_STATE_CLOSED and self.block_number > settlement_end:
                 self.external_state.settle()
 
         elif isinstance(state_change, ContractReceiveClosed):
