@@ -1271,7 +1271,7 @@ def test_lock_timeout_lower_than_previous_channel_settlement_period():
     raise NotImplementedError()
 
 
-@pytest.mark.xfail(reason='Not implemented')
+@pytest.mark.xfail(reason='Not implemented. Issue: #382')
 def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     # For a path A1-B-C-A2, an attacker controlling A1 and A2 should not be
     # able to force B-C to close the channel by burning token.
@@ -1299,7 +1299,7 @@ def test_do_not_withdraw_an_almost_expiring_lock_if_a_payment_didnt_occur():
     raise NotImplementedError()
 
 
-@pytest.mark.xfail(reason='Not implemented')
+@pytest.mark.xfail(reason='Not implemented. Issue: #382')
 def mediate_transfer_payee_timeout_must_be_lower_than_settlement_and_payer_timeout():
     # Test:
     # - the current payer route/transfer is the reference, not the from_route / from_transfer
@@ -1307,7 +1307,7 @@ def mediate_transfer_payee_timeout_must_be_lower_than_settlement_and_payer_timeo
     raise NotImplementedError()
 
 
-@pytest.mark.xfail(reason='Not implemented')
+@pytest.mark.xfail(reason='Not implemented. Issue: #382')
 def payee_timeout_must_be_lower_than_payer_timeout_minus_reveal_timeout():
     # The payee could reveal the secret on it's lock expiration block, the
     # mediator node will respond with a balance-proof to the payee since the
