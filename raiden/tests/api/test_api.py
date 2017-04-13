@@ -138,7 +138,7 @@ def test_api_open_and_deposit_channel(
     }
     assert response == expected_response
 
-    # finall let's try querying for the second channel
+    # finally let's try querying for the second channel
     request = grequests.get('http://localhost:{port}/api/1/channels/{channel_address}'.format(
         port=rest_api_port_number,
         channel_address=second_channel_address,
@@ -435,7 +435,8 @@ def test_query_partners_by_token(
 
     # and now let's query our partners per token for the first token
     request = grequests.get(
-        'http://localhost:{port}/api/1/tokens/0xea674fdde714fd979de3edf0f56aa9716b898ec8/partners'.format(
+        'http://localhost:{port}/api/1/tokens/'
+        '0xea674fdde714fd979de3edf0f56aa9716b898ec8/partners'.format(
             port=rest_api_port_number,
         )
     )
@@ -527,7 +528,8 @@ def test_query_blockchain_events(
     # query ChannelNew event for a token
     api_test_context.specify_token_for_channelnew('0x61c808d82a3ac53231750dadc13c777b59310bd9')
     request = grequests.get(
-        'http://localhost:{port}/api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20'.format(
+        'http://localhost:{port}/api/1/events/tokens/'
+        '0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20'.format(
             port=rest_api_port_number,
         )
     )
@@ -549,7 +551,8 @@ def test_query_blockchain_events(
     # of `get_channel_events()` but just makes sure the proper data make it there
     api_test_context.specify_channel_for_events('0xedbaf3c5100302dcdda53269322f3730b1f0416d')
     request = grequests.get(
-        'http://localhost:{port}/api/1/events/channels/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90'.format(
+        'http://localhost:{port}/api/1/events/channels/'
+        '0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90'.format(
             port=rest_api_port_number,
         )
     )
@@ -592,7 +595,9 @@ def test_break_blockchain_events(
     # the provided token_address
     api_test_context.specify_token_for_channelnew('0x61c808d82a3ac53231750dadc13c777b59310bd9')
     request = grequests.get(
-        'http://localhost:{port}/api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20&token_address=0x167a9333bf582556f35bd4d16a7e80e191aa6476'.format(
+        'http://localhost:{port}/api/1/events/tokens/0x61c808d82a3ac53231750dadc13c777b59310bd9'
+        '?from_block=5&to_block=20'
+        '&token_address=0x167a9333bf582556f35bd4d16a7e80e191aa6476'.format(
             port=rest_api_port_number,
         )
     )
@@ -612,7 +617,9 @@ def test_break_blockchain_events(
     # Assert the same for the event/channels endpoint
     api_test_context.specify_channel_for_events('0xedbaf3c5100302dcdda53269322f3730b1f0416d')
     request = grequests.get(
-        'http://localhost:{port}/api/1/events/channels/0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90&channel_address=0x167A9333BF582556f35Bd4d16A7E80E191aa6476'.format(
+        'http://localhost:{port}/api/1/events/channels/0xedbaf3c5100302dcdda53269322f3730b1f0416d'
+        '?from_block=10&to_block=90'
+        '&channel_address=0x167A9333BF582556f35Bd4d16A7E80E191aa6476'.format(
             port=rest_api_port_number,
         )
     )
@@ -646,7 +653,8 @@ def test_api_token_swaps(
         1337
     )
     request = grequests.put(
-        'http://localhost:{port}/api/1/token_swaps/0x61c808d82a3ac53231750dadc13c777b59310bd9/1337'.format(
+        'http://localhost:{port}/api/1/token_swaps/'
+        '0x61c808d82a3ac53231750dadc13c777b59310bd9/1337'.format(
             port=rest_api_port_number,
         ),
         json=tokenswap_obj
@@ -667,7 +675,8 @@ def test_api_token_swaps(
         1337
     )
     request = grequests.put(
-        'http://localhost:{port}/api/1/token_swaps/0xbbc5ee8be95683983df67260b0ab033c237bde60/1337'.format(
+        'http://localhost:{port}/api/1/token_swaps/'
+        '0xbbc5ee8be95683983df67260b0ab033c237bde60/1337'.format(
             port=rest_api_port_number,
         ),
         json=tokenswap_obj
@@ -693,7 +702,8 @@ def test_api_transfers(
     }
 
     request = grequests.post(
-        'http://localhost:{port}/api/1/transfers/0xea674fdde714fd979de3edf0f56aa9716b898ec8/0x61c808d82a3ac53231750dadc13c777b59310bd9'.format(
+        'http://localhost:{port}/api/1/transfers/0xea674fdde714fd979de3edf0f56aa9716b898ec8/'
+        '0x61c808d82a3ac53231750dadc13c777b59310bd9'.format(
             port=rest_api_port_number,
         ),
         json={'amount': amount, 'identifier': identifier}
