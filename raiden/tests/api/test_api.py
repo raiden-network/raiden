@@ -626,7 +626,7 @@ def test_break_blockchain_events(
     }
 
 
-@pytest.mark.skip(reeson='token swap were temporarily removed')
+@pytest.mark.skip(reason='token swap were temporarily removed')
 def test_api_token_swaps(
         api_test_server,
         api_test_context,
