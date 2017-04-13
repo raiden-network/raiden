@@ -51,7 +51,7 @@ A channel object consists of a
 
 - ``state`` should be the current state of the channel represented by a string.
   Possible value are:
-  - ``'open'``: The channel is open and tokens are tradeable
+  - ``'opened'``: The channel is open and tokens are tradeable
   - ``'closed'``: The channel has been closed by a participant
   - ``'settled'``: The channel has been closed by a participant and also settled.
 

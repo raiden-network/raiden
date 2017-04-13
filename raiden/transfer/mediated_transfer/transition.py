@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+)
 
 
 def update_route(next_state, route_state_change):
@@ -12,10 +17,10 @@ def update_route(next_state, route_state_change):
 
     # TODO: what if the route that changed is the current route?
 
-    if new_route.state != 'opened':
+    if new_route.state != CHANNEL_STATE_OPENED:
         available_routes.pop(available_idx)
 
-    elif new_route.state == 'opened':
+    elif new_route.state == CHANNEL_STATE_OPENED:
         if available_idx:
             # overwrite it, balance might have changed
             available_routes[available_idx] = new_route

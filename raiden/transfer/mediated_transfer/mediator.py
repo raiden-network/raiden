@@ -27,6 +27,11 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
 )
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+)
 from raiden.utils import sha3
 
 # Reduce the lock expiration by some additional blocks to prevent this exploit:
@@ -113,7 +118,7 @@ def is_channel_close_needed(transfer_pair, block_number):
     payee_received = transfer_pair.payee_state in STATE_TRANSFER_PAID
     payer_payed = transfer_pair.payer_state in STATE_TRANSFER_PAID
 
-    payer_channel_open = transfer_pair.payer_route.state == 'opened'
+    payer_channel_open = transfer_pair.payer_route.state == CHANNEL_STATE_OPENED
     already_closing = transfer_pair.payer_state == 'payer_waiting_close'
 
     safe_to_wait = is_safe_to_wait(
@@ -480,7 +485,7 @@ def events_for_balanceproof(transfers_pair, block_number):
     for pair in reversed(transfers_pair):
         payee_knows_secret = pair.payee_state in STATE_SECRET_KNOWN
         payee_payed = pair.payee_state in STATE_TRANSFER_PAID
-        payee_channel_open = pair.payee_route.state == 'opened'
+        payee_channel_open = pair.payee_route.state == CHANNEL_STATE_OPENED
 
         # XXX: All nodes must close the channel and withdraw on-chain if the
         # lock is nearing it's expiration block, what should be the strategy
@@ -540,7 +545,7 @@ def events_for_withdraw(transfers_pair):
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
     for pair in pending_transfers_pairs:
-        payer_channel_open = pair.payer_route.state == 'opened'
+        payer_channel_open = pair.payer_route.state == CHANNEL_STATE_OPENED
         secret_known = pair.payer_transfer.secret is not None
 
         if not payer_channel_open and secret_known:

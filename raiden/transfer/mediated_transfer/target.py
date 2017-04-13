@@ -22,6 +22,11 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.mediated_transfer.mediator import (
     is_safe_to_wait,
 )
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+)
 
 
 def events_for_close(from_transfer, from_route, block_number):
@@ -46,7 +51,7 @@ def events_for_close(from_transfer, from_route, block_number):
 
 def events_for_withdraw(from_transfer, from_route):
     """ Withdraw from the from_channel if it is closed and the secret is known. """
-    channel_open = from_route.state == 'opened'
+    channel_open = from_route.state == CHANNEL_STATE_OPENED
 
     if not channel_open and from_transfer.secret is not None:
         withdraw = ContractSendWithdraw(

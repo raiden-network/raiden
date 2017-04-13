@@ -26,6 +26,11 @@ from raiden.api.v1.resources import (
     TokenSwapsResource,
     TransferToTargetResource,
 )
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+)
 from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
 from raiden.utils import channel_to_api_dict
 
@@ -293,7 +298,7 @@ class RestAPI(object):
         current_state = channel.state
         # if we patch with `balance` it's a deposit
         if balance is not None:
-            if current_state != channel.STATE_OPEN:
+            if current_state != CHANNEL_STATE_OPENED:
                 return make_response(
                     "Can't deposit on a closed channel",
                     httplib.CONFLICT,
@@ -306,8 +311,8 @@ class RestAPI(object):
             return self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
 
         else:
-            if state == channel.STATE_CLOSED:
-                if current_state != channel.STATE_OPEN:
+            if state == CHANNEL_STATE_CLOSED:
+                if current_state != CHANNEL_STATE_OPENED:
                     return make_response(
                         httplib.CONFLICT,
                         'Attempted to close an already closed channel'
@@ -317,8 +322,8 @@ class RestAPI(object):
                     channel.partner_address
                 )
                 return self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
-            elif state == channel.STATE_SETTLED:
-                if current_state == channel.STATE_SETTLED or current_state == channel.STATE_OPEN:
+            elif state == CHANNEL_STATE_SETTLED:
+                if current_state == CHANNEL_STATE_SETTLED or current_state == CHANNEL_STATE_OPENED:
                     return make_response(
                         'Attempted to settle a channel at its {} state'.format(current_state),
                         httplib.CONFLICT,

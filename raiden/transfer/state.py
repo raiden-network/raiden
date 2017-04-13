@@ -3,6 +3,10 @@ from raiden.transfer.architecture import State
 from raiden.utils import pex
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
+CHANNEL_STATE_OPENED = 'opened'
+CHANNEL_STATE_CLOSED = 'closed'
+CHANNEL_STATE_SETTLED = 'settled'
+
 
 class RouteState(State):
     """ Route state.
@@ -30,9 +34,9 @@ class RouteState(State):
     )
 
     valid_states = (
-        'opened',
-        'closed',
-        'settled',
+        CHANNEL_STATE_OPENED,
+        CHANNEL_STATE_CLOSED,
+        CHANNEL_STATE_SETTLED,
     )
 
     def __init__(self,

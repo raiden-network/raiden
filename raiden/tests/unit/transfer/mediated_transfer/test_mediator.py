@@ -25,6 +25,11 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
 )
+from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
+)
 from . import factories
 
 
@@ -196,7 +201,7 @@ def test_is_channel_close_needed_unpaid():
         )
 
         unpaid_pair.payer_state = unpaid_state
-        assert unpaid_pair.payer_route.state == 'opened'
+        assert unpaid_pair.payer_route.state == CHANNEL_STATE_OPENED
 
         safe_block = expiration - reveal_timeout - 1
         assert mediator.is_channel_close_needed(unpaid_pair, safe_block) is False
@@ -223,7 +228,7 @@ def test_is_channel_close_needed_paid():
         )
 
         paid_pair.payee_state = paid_state
-        assert paid_pair.payer_route.state == 'opened'
+        assert paid_pair.payer_route.state == CHANNEL_STATE_OPENED
 
         safe_block = expiration - reveal_timeout - 1
         assert mediator.is_channel_close_needed(paid_pair, safe_block) is False
@@ -250,7 +255,7 @@ def test_is_channel_close_need_channel_closed():
         )
 
         pair.payee_state = state
-        pair.payer_route.state = 'closed'
+        pair.payer_route.state = CHANNEL_STATE_CLOSED
 
         safe_block = expiration - reveal_timeout - 1
         assert mediator.is_channel_close_needed(pair, safe_block) is False
@@ -275,7 +280,7 @@ def test_is_channel_close_needed_closed():
     )
     paid_pair.payee_state = 'payee_balance_proof'
 
-    assert paid_pair.payer_route.state == 'opened'
+    assert paid_pair.payer_route.state == CHANNEL_STATE_OPENED
 
     safe_block = expiration - reveal_timeout - 1
     assert mediator.is_channel_close_needed(paid_pair, safe_block) is False
@@ -818,7 +823,7 @@ def test_events_for_balanceproof_channel_closed():
     this lock in the locksroot.
     """
 
-    for invalid_state in ('closed', 'settled'):
+    for invalid_state in (CHANNEL_STATE_CLOSED, CHANNEL_STATE_SETTLED):
         transfers_pair = make_transfers_pair(
             factories.HOP1,
             [factories.HOP2, factories.HOP3],
@@ -1037,7 +1042,7 @@ def test_events_for_withdraw_channel_closed():
     )
 
     pair = transfers_pair[0]
-    pair.payer_route.state = 'closed'
+    pair.payer_route.state = CHANNEL_STATE_CLOSED
 
     # that's why this function doesn't receive the block_number
     events = mediator.events_for_withdraw(

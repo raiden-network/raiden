@@ -32,6 +32,9 @@ from raiden.transfer.state_change import (
 )
 from raiden.transfer.state import (
     RoutesState,
+    CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
 )
 from raiden.transfer.mediated_transfer import (
     initiator,
@@ -662,7 +665,7 @@ class RaidenService(object):
         available_routes = [
             route
             for route in map(route_to_routestate, routes)
-            if route.state == 'opened'
+            if route.state == CHANNEL_STATE_OPENED
         ]
 
         identifier = create_default_identifier(self.address, token_address, target)
@@ -737,7 +740,7 @@ class RaidenService(object):
         available_routes = [
             route
             for route in map(route_to_routestate, routes)
-            if route.state == 'opened'
+            if route.state == CHANNEL_STATE_OPENED
         ]
 
         from_channel = graph.partneraddress_channel[message.sender]
