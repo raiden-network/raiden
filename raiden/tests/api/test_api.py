@@ -3,8 +3,9 @@ import pytest
 import grequests
 import httplib
 import json
+from flask import url_for, current_app
 
-from pyethapp.jsonrpc import address_encoder
+from pyethapp.jsonrpc import address_encoder, address_decoder
 
 from raiden.tests.utils.apitestcontext import decode_response
 from raiden.utils import channel_to_api_dict
@@ -18,6 +19,16 @@ def assert_proper_response(response):
         response.status_code == httplib.OK and
         response.headers['Content-Type'] == 'application/json'
     )
+
+
+def api_url_for(api_backend, endpoint, **kwargs):
+    api_server, _ = api_backend
+    # url_for() expects binary address so we have to convert here
+    for key, val in kwargs.iteritems():
+        if isinstance(val, basestring) and val.startswith('0x'):
+            kwargs[key] = address_decoder(val)
+    with api_server.flask_app.app_context():
+        return url_for('v1_resources.{}'.format(endpoint), **kwargs)
 
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
@@ -42,13 +53,12 @@ def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
 
 
 def test_api_query_channels(
-        api_test_server,
+        api_backend,
         api_test_context,
-        api_raiden_service,
-        rest_api_port_number):
+        api_raiden_service):
 
     request = grequests.get(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number)
+        api_url_for(api_backend, 'channelsresource')
     )
     response = request.send().response
     assert_proper_response(response)
@@ -61,10 +71,9 @@ def test_api_query_channels(
 
 
 def test_api_open_and_deposit_channel(
-        api_test_server,
+        api_backend,
         api_test_context,
-        api_raiden_service,
-        rest_api_port_number):
+        api_raiden_service):
     # let's create a new channel
     first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
@@ -75,7 +84,7 @@ def test_api_open_and_deposit_channel(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj
     )
     response = request.send().response
@@ -101,7 +110,7 @@ def test_api_open_and_deposit_channel(
         'balance': balance
     }
     request = grequests.put(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj
     )
     response = request.send().response
@@ -119,9 +128,10 @@ def test_api_open_and_deposit_channel(
 
     # let's deposit on the first channel
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=first_channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=first_channel_address
         ),
         json={'balance': balance}
     )
@@ -139,10 +149,13 @@ def test_api_open_and_deposit_channel(
     assert response == expected_response
 
     # finally let's try querying for the second channel
-    request = grequests.get('http://localhost:{port}/api/1/channels/{channel_address}'.format(
-        port=rest_api_port_number,
-        channel_address=second_channel_address,
-    ))
+    request = grequests.get(
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=second_channel_address
+        )
+    )
 
     response = request.send().response
     assert_proper_response(response)
@@ -159,10 +172,9 @@ def test_api_open_and_deposit_channel(
 
 
 def test_api_open_close_and_settle_channel(
-        api_test_server,
+        api_backend,
         api_test_context,
-        api_raiden_service,
-        rest_api_port_number):
+        api_raiden_service):
     # let's create a new channel
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
@@ -173,7 +185,7 @@ def test_api_open_close_and_settle_channel(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj
     )
     response = request.send().response
@@ -192,9 +204,10 @@ def test_api_open_close_and_settle_channel(
 
     # let's the close the channel
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
         json={'state': 'closed'}
     )
@@ -213,9 +226,10 @@ def test_api_open_close_and_settle_channel(
 
     # let's settle the channel
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
         json={'state': 'settled'}
     )
@@ -234,10 +248,9 @@ def test_api_open_close_and_settle_channel(
 
 
 def test_api_channel_state_change_errors(
-        api_test_server,
+        api_backend,
         api_test_context,
-        api_raiden_service,
-        rest_api_port_number):
+        api_raiden_service):
     # let's create a new channel
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
@@ -248,7 +261,7 @@ def test_api_channel_state_change_errors(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj
     )
     response = request.send().response
@@ -258,9 +271,10 @@ def test_api_channel_state_change_errors(
 
     # let's try to settle the channel (we are bad!)
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
         json={'state': 'settled'}
     )
@@ -268,9 +282,10 @@ def test_api_channel_state_change_errors(
     assert response is not None and response.status_code == httplib.CONFLICT
     # let's try to set a random state
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
         json={'state': 'inlimbo'}
     )
@@ -278,9 +293,10 @@ def test_api_channel_state_change_errors(
     assert response is not None and response.status_code == httplib.BAD_REQUEST
     # let's try to set both new state and balance
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
         json={'state': 'closed', 'balance': 200}
     )
@@ -288,9 +304,10 @@ def test_api_channel_state_change_errors(
     assert response is not None and response.status_code == httplib.CONFLICT
     # let's try to path with no arguments
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
     )
     response = request.send().response
@@ -298,18 +315,20 @@ def test_api_channel_state_change_errors(
 
     # ok now let's close and settle for real
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
         json={'state': 'closed'}
     )
     response = request.send().response
     assert_proper_response(response)
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
         json={'state': 'settled'}
     )
@@ -318,9 +337,10 @@ def test_api_channel_state_change_errors(
 
     # let's try to deposit to a settled channel
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
         json={'balance': 500}
     )
@@ -329,9 +349,10 @@ def test_api_channel_state_change_errors(
 
     # and now let's try to settle again
     request = grequests.patch(
-        'http://localhost:{port}/api/1/channels/{channel_address}'.format(
-            port=rest_api_port_number,
-            channel_address=channel_address,
+        api_url_for(
+            api_backend,
+            'channelsresourcebychanneladdress',
+            channel_address=channel_address
         ),
         json={'state': 'settled'}
     )
@@ -340,10 +361,9 @@ def test_api_channel_state_change_errors(
 
 
 def test_api_tokens(
-        api_test_server,
+        api_backend,
         api_test_context,
-        api_raiden_service,
-        rest_api_port_number):
+        api_raiden_service):
     # let's create 2 new channels for 2 different tokens
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
@@ -354,7 +374,7 @@ def test_api_tokens(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj
     )
     response = request.send().response
@@ -369,7 +389,7 @@ def test_api_tokens(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj
     )
     response = request.send().response
@@ -377,7 +397,7 @@ def test_api_tokens(
 
     # and now let's get the token list
     request = grequests.get(
-        'http://localhost:{port}/api/1/tokens'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'tokensresource'),
     )
     response = request.send().response
     assert_proper_response(response)
@@ -390,10 +410,9 @@ def test_api_tokens(
 
 
 def test_query_partners_by_token(
-        api_test_server,
+        api_backend,
         api_test_context,
-        api_raiden_service,
-        rest_api_port_number):
+        api_raiden_service):
     # let's create 2 new channels for the same token
     first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     second_partner_address = '0x29fa6cf0cce24582a9b20db94be4b6e017896038'
@@ -405,7 +424,7 @@ def test_query_partners_by_token(
         'settle_timeout': settle_timeout
     }
     request = grequests.put(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj
     )
     response = request.send().response
@@ -415,7 +434,7 @@ def test_query_partners_by_token(
 
     channel_data_obj['partner_address'] = second_partner_address
     request = grequests.put(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj,
     )
     response = request.send().response
@@ -427,7 +446,7 @@ def test_query_partners_by_token(
     channel_data_obj['partner_address'] = '0xb07937AbA15304FBBB0Bf6454a9377a76E3dD39E'
     channel_data_obj['token_address'] = '0x70faa28A6B8d6829a4b1E649d26eC9a2a39ba413'
     request = grequests.put(
-        'http://localhost:{port}/api/1/channels'.format(port=rest_api_port_number),
+        api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj
     )
     response = request.send().response
@@ -435,9 +454,10 @@ def test_query_partners_by_token(
 
     # and now let's query our partners per token for the first token
     request = grequests.get(
-        'http://localhost:{port}/api/1/tokens/'
-        '0xea674fdde714fd979de3edf0f56aa9716b898ec8/partners'.format(
-            port=rest_api_port_number,
+        api_url_for(
+            api_backend,
+            'partnersresourcebytokenaddress',
+            token_address=token_address,
         )
     )
     response = request.send().response
@@ -456,10 +476,9 @@ def test_query_partners_by_token(
 
 
 def test_query_blockchain_events(
-        api_test_server,
+        api_backend,
         api_test_context,
-        api_raiden_service,
-        rest_api_port_number):
+        api_raiden_service):
 
     # Adding some mock events. Some of these events should not normally contain
     # a block number but for the purposes of making sure block numbers propagate
@@ -510,8 +529,11 @@ def test_query_blockchain_events(
 
     # and now let's query the network events for 'TokenAdded' for blocks 1-10
     request = grequests.get(
-        'http://localhost:{port}/api/1/events/network?from_block=0&to_block=10'.format(
-            port=rest_api_port_number,
+        api_url_for(
+            api_backend,
+            'networkeventsresource',
+            from_block=0,
+            to_block=10
         )
     )
     response = request.send().response
@@ -528,9 +550,12 @@ def test_query_blockchain_events(
     # query ChannelNew event for a token
     api_test_context.specify_token_for_channelnew('0x61c808d82a3ac53231750dadc13c777b59310bd9')
     request = grequests.get(
-        'http://localhost:{port}/api/1/events/tokens/'
-        '0x61c808d82a3ac53231750dadc13c777b59310bd9?from_block=5&to_block=20'.format(
-            port=rest_api_port_number,
+        api_url_for(
+            api_backend,
+            'tokeneventsresource',
+            token_address='0x61c808d82a3ac53231750dadc13c777b59310bd9',
+            from_block=5,
+            to_block=20
         )
     )
     response = request.send().response
@@ -551,9 +576,12 @@ def test_query_blockchain_events(
     # of `get_channel_events()` but just makes sure the proper data make it there
     api_test_context.specify_channel_for_events('0xedbaf3c5100302dcdda53269322f3730b1f0416d')
     request = grequests.get(
-        'http://localhost:{port}/api/1/events/channels/'
-        '0xedbaf3c5100302dcdda53269322f3730b1f0416d?from_block=10&to_block=90'.format(
-            port=rest_api_port_number,
+        api_url_for(
+            api_backend,
+            'channeleventsresource',
+            channel_address='0xedbaf3c5100302dcdda53269322f3730b1f0416d',
+            from_block=10,
+            to_block=90
         )
     )
     response = request.send().response
@@ -574,7 +602,7 @@ def test_query_blockchain_events(
 
 
 def test_break_blockchain_events(
-        api_test_server,
+        api_backend,
         api_test_context,
         api_raiden_service,
         rest_api_port_number):
@@ -635,10 +663,9 @@ def test_break_blockchain_events(
 
 @pytest.mark.skip(reason='token swap were temporarily removed')
 def test_api_token_swaps(
-        api_test_server,
+        api_backend,
         api_test_context,
-        api_raiden_service,
-        rest_api_port_number):
+        api_raiden_service):
 
     tokenswap_obj = {
         'role': 'maker',
@@ -647,15 +674,19 @@ def test_api_token_swaps(
         'receiving_amount': 76,
         'receiving_token': '0x2a65aca4d5fc5b5c859090a6c34d164135398226'
     }
+    target_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    identifier = 1337
     api_test_context.specify_tokenswap_input(
         tokenswap_obj,
-        '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        1337
+        target_address,
+        identifier
     )
     request = grequests.put(
-        'http://localhost:{port}/api/1/token_swaps/'
-        '0x61c808d82a3ac53231750dadc13c777b59310bd9/1337'.format(
-            port=rest_api_port_number,
+        api_url_for(
+            api_backend,
+            'tokenswapsresource',
+            target_address=target_address,
+            identifier=identifier
         ),
         json=tokenswap_obj
     )
@@ -669,15 +700,18 @@ def test_api_token_swaps(
         'receiving_amount': 42,
         'receiving_token': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     }
+    target_address = '0xbbc5ee8be95683983df67260b0ab033c237bde60'
     api_test_context.specify_tokenswap_input(
         tokenswap_obj,
-        '0xbbc5ee8be95683983df67260b0ab033c237bde60',
-        1337
+        target_address,
+        identifier
     )
     request = grequests.put(
-        'http://localhost:{port}/api/1/token_swaps/'
-        '0xbbc5ee8be95683983df67260b0ab033c237bde60/1337'.format(
-            port=rest_api_port_number,
+        api_url_for(
+            api_backend,
+            'tokenswapsresource',
+            target_address=target_address,
+            identifier=identifier
         ),
         json=tokenswap_obj
     )
@@ -686,25 +720,28 @@ def test_api_token_swaps(
 
 
 def test_api_transfers(
-        api_test_server,
+        api_backend,
         api_test_context,
-        api_raiden_service,
-        rest_api_port_number):
+        api_raiden_service):
 
     amount = 200
     identifier = 42
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    target_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     transfer = {
         'initiator_address': address_encoder(api_raiden_service.address),
-        'target_address': '0x61c808d82a3ac53231750dadc13c777b59310bd9',
-        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'target_address': target_address,
+        'token_address': token_address,
         'amount': amount,
         'identifier': identifier
     }
 
     request = grequests.post(
-        'http://localhost:{port}/api/1/transfers/0xea674fdde714fd979de3edf0f56aa9716b898ec8/'
-        '0x61c808d82a3ac53231750dadc13c777b59310bd9'.format(
-            port=rest_api_port_number,
+        api_url_for(
+            api_backend,
+            'transfertotargetresource',
+            token_address=token_address,
+            target_address=target_address
         ),
         json={'amount': amount, 'identifier': identifier}
     )

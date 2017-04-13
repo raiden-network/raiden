@@ -17,11 +17,12 @@ from raiden.tests.utils.apitestcontext import ApiTestContext
 #       the server is no longer running even though the teardown has not
 #       been invoked.
 @pytest.fixture
-def api_test_server(rest_api_port_number):
+def api_backend(rest_api_port_number):
     # Initializing it without raiden_service.api here since that is a
     # function scope fixture. We will inject it to rest_api object later
     rest_api = RestAPI(None)
     api_server = APIServer(rest_api)
+    api_server.flask_app.config['SERVER_NAME'] = 'localhost:{}'.format(rest_api_port_number)
 
     # TODO: Find out why tests fail with debug=True
     server = Greenlet.spawn(
@@ -31,7 +32,7 @@ def api_test_server(rest_api_port_number):
         use_evalex=False,
     )
 
-    yield rest_api
+    yield api_server, rest_api
 
     server.kill(block=True, timeout=10)
 
@@ -39,7 +40,7 @@ def api_test_server(rest_api_port_number):
 @pytest.fixture
 def api_raiden_service(
         monkeypatch,
-        api_test_server,
+        api_backend,
         api_test_context,
         blockchain_services,
         transport_class,
@@ -132,8 +133,9 @@ def api_raiden_service(
 
     # also make sure that the test server's raiden_api uses this mock
     # raiden service
+    _, raiden_api = api_backend
     monkeypatch.setattr(
-        api_test_server,
+        raiden_api,
         'raiden_api',
         raiden_service.api
     )
