@@ -120,16 +120,16 @@ def api_raiden_service(
         'transfer',
         api_test_context.transfer
     )
-    # monkeypatch.setattr(
-    #     raiden_service.api,
-    #     'exchange',
-    #     api_test_context.exchange
-    # )
-    # monkeypatch.setattr(
-    #     raiden_service.api,
-    #     'expect_exchange',
-    #     api_test_context.expect_exchange
-    # )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'token_swap',
+        api_test_context.token_swap
+    )
+    monkeypatch.setattr(
+        raiden_service.api,
+        'expect_token_swap',
+        api_test_context.expect_token_swap
+    )
 
     # also make sure that the test server's raiden_api uses this mock
     # raiden service

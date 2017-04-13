@@ -351,7 +351,7 @@ class RestAPI(object):
             receiving_amount):
 
         if role == 'maker':
-            self.raiden_api.exchange(
+            self.raiden_api.token_swap(
                 from_token=sending_token,
                 from_amount=sending_amount,
                 to_token=receiving_token,
@@ -359,7 +359,7 @@ class RestAPI(object):
                 target_address=target_address,
             )
         elif role == 'taker':
-            self.raiden_api.expect_exchange(
+            self.raiden_api.expect_token_swap(
                 identifier=identifier,
                 from_token=sending_token,
                 from_amount=sending_amount,
