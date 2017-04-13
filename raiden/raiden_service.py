@@ -1238,18 +1238,7 @@ class RaidenMessageHandler(object):
             message,
             message.hashlock,
         )
-
-        for graph in self.raiden.channelgraphs.itervalues():
-            channel = graph.partneraddress_channel.get(sender)
-
-            try:
-                # regardless of who revealed the secret, register it, but do
-                # not change the state of the lock to unlocked because that
-                # will mess up with the node's state sync
-                channel.register_secret(secret)
-            except ValueError:
-                # if the secret is not useful just ignore it
-                pass
+        self.raiden.register_secret(secret)
 
         state_change = ReceiveSecretReveal(secret, sender)
         self.raiden.state_machine_event_handler.dispatch_to_all_tasks(state_change)
@@ -1501,13 +1490,15 @@ class StateMachineEventHandler(object):
 
         elif isinstance(event, SendBalanceProof):
             # TODO: issue #189
-            secret_message = Secret(
+
+            # unlock and update remotely (send the Secret message)
+            self.raiden.handle_secret(
                 event.identifier,
-                event.secret,
                 event.token,
+                event.secret,
+                None,
+                sha3(event.secret),
             )
-            self.raiden.sign(secret_message)
-            self.raiden.send_async(event.receiver, secret_message)
 
         elif isinstance(event, SendSecretRequest):
             secret_request = SecretRequest(
