@@ -430,7 +430,7 @@ def test_state_transition():
     assert proof_iteration.new_state is None
 
 
-@pytest.mark.xfail(reason='Not implemented')
+@pytest.mark.xfail(reason='Not implemented #522')
 def test_transfer_succesful_after_secret_learned():
     # TransferCompleted event must be used only after the secret is learned and
     # there is enough time to unlock the lock on chain.

@@ -714,7 +714,7 @@ class RaidenService(object):
         async_result = AsyncResult()
 
         # TODO: implement the network timeout raiden.config['msg_timeout'] and
-        # cancel the current transfer if it hapens
+        # cancel the current transfer if it hapens (issue #374)
         self.identifier_statemanager[identifier].append(state_manager)
         self.identifier_result[identifier].append(async_result)
 
