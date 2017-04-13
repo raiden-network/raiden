@@ -476,11 +476,11 @@ class ChannelExternalState(object):
 
         return False
 
-    def close(self, our_address, first_transfer):
-        return self.netting_channel.close(our_address, first_transfer)
+    def close(self, our_address, partner_transfer):
+        return self.netting_channel.close(our_address, partner_transfer)
 
-    def update_transfer(self, our_address, their_transfer):
-        return self.netting_channel.update_transfer(our_address, their_transfer)
+    def update_transfer(self, our_address, partner_transfer):
+        return self.netting_channel.update_transfer(our_address, partner_transfer)
 
     def unlock(self, our_address, unlock_proofs):
         return self.netting_channel.unlock(our_address, unlock_proofs)

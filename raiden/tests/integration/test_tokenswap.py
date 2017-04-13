@@ -22,30 +22,32 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 def test_token_swap(raiden_network, deposit, settle_timeout):
     app0, app1 = raiden_network
 
-    target = app1.raiden.address
+    maker_address = app0.raiden.address
+    taker_address = app1.raiden.address
 
-    from_token, to_token = app0.raiden.channelgraphs.keys()[:2]
-    from_amount = 70
-    to_amount = 30
+    maker_token, taker_token = app0.raiden.channelgraphs.keys()[:2]
+    maker_amount = 70
+    taker_amount = 30
 
     identifier = 313
-
     app1.raiden.api.expect_token_swap(
         identifier,
-        from_token,
-        from_amount,
-        to_token,
-        to_amount,
-        target,
+        maker_token,
+        maker_amount,
+        maker_address,
+        taker_token,
+        taker_amount,
+        taker_address,
     )
 
     async_result = app0.raiden.api.token_swap_async(
         identifier,
-        from_token,
-        from_amount,
-        to_token,
-        to_amount,
-        target,
+        maker_token,
+        maker_amount,
+        maker_address,
+        taker_token,
+        taker_amount,
+        taker_address,
     )
 
     async_result.wait()
@@ -54,11 +56,11 @@ def test_token_swap(raiden_network, deposit, settle_timeout):
     gevent.sleep(0.5)
 
     assert_synched_channels(
-        channel(app0, app1, from_token), deposit - from_amount, [],
-        channel(app1, app0, from_token), deposit + from_amount, [],
+        channel(app0, app1, maker_token), deposit - maker_amount, [],
+        channel(app1, app0, maker_token), deposit + maker_amount, [],
     )
 
     assert_synched_channels(
-        channel(app0, app1, to_token), deposit + to_amount, [],
-        channel(app1, app0, to_token), deposit - to_amount, [],
+        channel(app0, app1, taker_token), deposit + taker_amount, [],
+        channel(app1, app0, taker_token), deposit - taker_amount, [],
     )
