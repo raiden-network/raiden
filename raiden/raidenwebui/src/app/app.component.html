@@ -1,0 +1,20 @@
+<mz-navbar navbarClass="cyan lighten-1">
+  <a href="#" class="brand-logo">Raiden</a>
+  <mz-navbar-item-container [align]="'right'">
+    <mz-navbar-item>
+      <button mz-button (click)="participateModal.open()">Participate</button>
+    </mz-navbar-item>
+    <mz-navbar-item><a href="#">{{raidenAddress}}</a></mz-navbar-item>
+  </mz-navbar-item-container>
+</mz-navbar>
+<div class="container-fluid top10">
+  <div class="row">
+    <div class="col-md-8">
+      <app-channel-table></app-channel-table>
+      <app-userinteraction></app-userinteraction>
+    </div>
+    <div class="col-md-4">
+      <app-event-list></app-event-list>
+    </div>
+  </div>
+</div>
