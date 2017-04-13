@@ -10,7 +10,7 @@ from raiden.tests.fixtures.abi import (
 from raiden.tests.fixtures.api import (
     api_raiden_service,
     api_test_context,
-    api_test_server
+    api_backend
 )
 
 from raiden.tests.fixtures.blockchain import (
@@ -72,7 +72,7 @@ from raiden.tests.fixtures.variables import (
 __all__ = (
     'api_raiden_service',
     'api_test_context',
-    'api_test_server',
+    'api_backend',
     'token_abi',
     'registry_abi',
     'channel_manager_abi',
