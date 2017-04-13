@@ -1,0 +1,51 @@
+<div class="container-fluid top10">
+    <md-tab-group>
+      <md-tab label="Open Channel">
+        <div class="top10"></div>
+        <form>
+          <table class="example-full-width" cellspacing="0">
+            <tr><td>
+              <md-input-container>
+                <input mdInput type="text" id="channel_address" name="channel_address"
+                       [(ngModel)]="newChannel.channel_address" placeholder="Channel Address">
+              </md-input-container>
+            </td></tr>
+            <tr><td>
+              <md-input-container>
+                <input mdInput type="text" id="token_address" name="token_address"
+                       [(ngModel)]="newChannel.token_address" placeholder="Token Address">
+              </md-input-container>
+            </td></tr>
+            <tr><td>
+              <md-input-container>
+                <input mdInput type="number" id="balance" name="balance"
+                       [(ngModel)]="newChannel.balance" placeholder="Balance">
+              </md-input-container>
+            </td></tr>
+            <tr><td>
+              <md-input-container>
+                <input mdInput type="number" id="settle_timeout" name="settle_timeout"
+                       [(ngModel)]="newChannel.settle_timeout" placeholder="Settle Timeout">
+              </md-input-container>
+            </td></tr>
+          </table>
+        </form>
+      </md-tab>
+      <md-tab label="Transfer Amount">
+        <h1>Some more tab content</h1>
+        <p>...</p>
+      </md-tab>
+      <md-tab label="Deposit Amount">
+        <h1>Some more tab content</h1>
+        <p>...</p>
+      </md-tab>
+      <md-tab label="Close">
+        <h1>Some more tab content</h1>
+        <p>...</p>
+      </md-tab>
+      <md-tab label="Settle">
+        <h1>Some more tab content</h1>
+        <p>...</p>
+      </md-tab>
+    </md-tab-group>
+</div>

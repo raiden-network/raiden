@@ -1,0 +1,12 @@
+<p-dataTable [value]="channels">
+    <p-header>Raiden Channels</p-header>
+    <p-column field="channel_address" header="Channel"></p-column>
+    <p-column field="partner_address" header="Partner"></p-column>
+    <p-column field="token_address" header="Token"></p-column>
+    <p-column field="balance" header="Balance"
+    [style]="{width: '70px', 'text-align': 'center'}"></p-column>
+    <p-column field="state" header="State"
+    [style]="{width: '70px', 'text-align': 'center'}"></p-column>
+    <p-column field="settle_timeout" header="SettleTimeout"
+    [style]="{width: '100px', 'text-align': 'center'}"></p-column>
+</p-dataTable>
