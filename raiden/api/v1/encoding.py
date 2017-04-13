@@ -209,7 +209,6 @@ class TransferSchema(BaseSchema):
     amount = fields.Integer(required=True)
     identifier = fields.Integer(missing=None)
 
-
     class Meta:
         strict = True
         decoding_class = dict
