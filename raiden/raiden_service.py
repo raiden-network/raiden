@@ -872,11 +872,12 @@ class RaidenAPI(object):
     def token_swap_and_wait(
             self,
             identifier,
-            from_token,
-            from_amount,
-            to_token,
-            to_amount,
-            target_address):
+            maker_token,
+            maker_amount,
+            maker_address,
+            taker_token,
+            taker_amount,
+            taker_address):
         """ Start a atomic swap operation by sending a MediatedTransfer with
         `from_amount` of `from_token`. Only proceed when a new valid
         MediatedTransfer is received with `to_amount` of `to_asset`.
@@ -884,49 +885,53 @@ class RaidenAPI(object):
 
         async_result = self.token_swap_async(
             identifier,
-            from_token,
-            from_amount,
-            to_token,
-            to_amount,
-            target_address,
+            maker_token,
+            maker_amount,
+            maker_address,
+            taker_token,
+            taker_amount,
+            taker_address,
         )
         async_result.wait()
 
     def token_swap_async(
             self,
             identifier,
-            from_token,
-            from_amount,
-            to_token,
-            to_amount,
-            target_address):
+            maker_token,
+            maker_amount,
+            maker_address,
+            taker_token,
+            taker_amount,
+            taker_address):
         """ Start a token swap operation by sending a MediatedTransfer with
         `from_amount` of `from_token`. Only proceed when a new valid
         MediatedTransfer is received with `to_amount` of `to_asset`.
         """
 
-        from_token_bin = safe_address_decode(from_token)
-        to_token_bin = safe_address_decode(to_token)
-        target_bin = safe_address_decode(target_address)
+        maker_token_bin = safe_address_decode(maker_token)
+        maker_address_bin = safe_address_decode(maker_address)
+
+        taker_token_bin = safe_address_decode(taker_token)
+        taker_address_bin = safe_address_decode(taker_address)
 
         channelgraphs = self.raiden.channelgraphs
 
-        if to_token_bin not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(to_token_bin)))
+        if taker_token_bin not in channelgraphs:
+            log.error('Unknown token {}'.format(pex(taker_token_bin)))
             return
 
-        if from_token_bin not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(from_token_bin)))
+        if maker_token_bin not in channelgraphs:
+            log.error('Unknown token {}'.format(pex(maker_token_bin)))
             return
 
         token_swap = TokenSwap(
             identifier,
-            from_token,
-            from_amount,
-            self.raiden.address,
-            to_token,
-            to_amount,
-            target_bin,
+            maker_token_bin,
+            maker_amount,
+            maker_address_bin,
+            taker_token_bin,
+            taker_amount,
+            taker_address_bin,
         )
 
         async_result = AsyncResult()
@@ -940,8 +945,8 @@ class RaidenAPI(object):
         # the maker is expecting the taker transfer
         key = SwapKey(
             identifier,
-            to_token,
-            to_amount,
+            taker_token_bin,
+            taker_amount,
         )
         self.raiden.swapkeys_greenlettasks[key] = task
         self.raiden.swapkeys_tokenswaps[key] = token_swap
@@ -951,11 +956,12 @@ class RaidenAPI(object):
     def expect_token_swap(
             self,
             identifier,
-            from_token,
-            from_amount,
-            to_token,
-            to_amount,
-            target_address):
+            maker_token,
+            maker_amount,
+            maker_address,
+            taker_token,
+            taker_amount,
+            taker_address):
         """ Register an expected transfer for this node.
 
         If a MediatedMessage is received for the `from_asset` with
@@ -966,18 +972,18 @@ class RaidenAPI(object):
         # the taker is expecting the maker transfer
         key = SwapKey(
             identifier,
-            from_token,
-            from_amount,
+            maker_token,
+            maker_amount,
         )
 
         token_swap = TokenSwap(
             identifier,
-            from_token,
-            from_amount,
-            target_address,
-            to_token,
-            to_amount,
-            self.raiden.address,
+            maker_token,
+            maker_amount,
+            maker_address,
+            taker_token,
+            taker_amount,
+            taker_address,
         )
 
         self.raiden.swapkeys_tokenswaps[key] = token_swap
@@ -1225,7 +1231,6 @@ class RaidenMessageHandler(object):
             raise Exception("Unhandled message cmdid '{}'.".format(cmdid))
 
     def message_revealsecret(self, message):
-        hashlock = message.hashlock
         secret = message.secret
         sender = message.sender
 
@@ -1234,19 +1239,17 @@ class RaidenMessageHandler(object):
             message.hashlock,
         )
 
-        # A payee node knows the secret, releases the lock and updates the
-        # balance locally, next transfer message will have an updated
-        # transferred_amount and merkle tree root
         for graph in self.raiden.channelgraphs.itervalues():
             channel = graph.partneraddress_channel.get(sender)
 
-            unclaimed = (
-                channel is not None and
-                channel.partner_state.balance_proof.is_unclaimed(hashlock)
-            )
-
-            if unclaimed:
-                channel.release_lock(secret)
+            try:
+                # regardless of who revealed the secret, register it, but do
+                # not change the state of the lock to unlocked because that
+                # will mess up with the node's state sync
+                channel.register_secret(secret)
+            except ValueError:
+                # if the secret is not useful just ignore it
+                pass
 
         state_change = ReceiveSecretReveal(secret, sender)
         self.raiden.state_machine_event_handler.dispatch_to_all_tasks(state_change)

@@ -938,7 +938,12 @@ class NettingChannel(object):
     def close(self, our_address, their_transfer):
         """`our_address` is an argument used only in mock_client.py but is also
         kept here to maintain a consistent interface"""
-        their_encoded = their_transfer.encode()
+
+        if their_transfer:
+            their_encoded = their_transfer.encode()
+        else:
+            their_encoded = ''
+
         transaction_hash = estimate_and_transact(
             self,
             self.proxy.close,

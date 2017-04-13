@@ -320,6 +320,23 @@ class BaseMediatedTransferTask(Task):
 
         yield TIMEOUT
 
+    def _messages_until_block(self, raiden, expiration_block):
+        """ Returns the received messages up to the block `expiration_block`.
+        """
+        current_block = raiden.get_block_number()
+        while current_block < expiration_block:
+            try:
+                response = self.response_queue.get(
+                    timeout=DEFAULT_EVENTS_POLL_TIMEOUT,
+                )
+            except Empty:
+                pass
+            else:
+                if response:
+                    yield response
+
+            current_block = raiden.get_block_number()
+
     def _wait_for_unlock_or_close(self, raiden, graph, channel, mediated_transfer):  # noqa
         """ Wait for a Secret message from our partner to update the local
         state, if the Secret message is not sent within time the channel will
@@ -352,9 +369,8 @@ class BaseMediatedTransferTask(Task):
                         repr(self),
                     )
 
-                channel.netting_channel.close(
+                channel.external_state.close(
                     channel.our_state.address,
-                    channel.our_state.balance_proof.transfer,
                     channel.partner_state.balance_proof.transfer,
                 )
                 return
@@ -528,17 +544,24 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
 
             elif isinstance(to_mediated_transfer, MediatedTransfer):
                 to_hop = to_mediated_transfer.sender
+                to_channel = to_graph.partneraddress_channel[to_hop]
 
-                # reveal the secret to the `to_hop` and `to_nodeaddress`
-                self.reveal_secret(
-                    self.raiden,
-                    secret,
-                    last_node=to_hop,
-                    exchange_node=to_nodeaddress,
-                )
+                to_channel.register_transfer(to_mediated_transfer)
+                raiden.register_channel_for_hashlock(to_token, to_channel, hashlock)
 
-                to_channel = to_graph.partneraddress_channel[to_mediated_transfer.sender]
+                # A swap is compose of two mediated transfers, we need to
+                # reveal the secret to both, since the maker is one of the ends
+                # we just need to send the reveal secret directly to the taker.
+                reveal_secret = RevealSecret(secret)
+                raiden.sign(reveal_secret)
+                raiden.send_async(to_nodeaddress, reveal_secret)
 
+                from_channel.register_secret(secret)
+
+                # Register the secret with the to_channel and send the
+                # RevealSecret message to the node that is paying the to_token
+                # (this node might, or might not be the same as the taker),
+                # then wait for the withdraw.
                 raiden.handle_secret(
                     identifier,
                     to_token,
@@ -547,19 +570,22 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
                     hashlock,
                 )
 
+                to_channel = to_graph.partneraddress_channel[to_mediated_transfer.sender]
+                self._wait_for_unlock_or_close(
+                    raiden,
+                    to_graph,
+                    to_channel,
+                    to_mediated_transfer,
+                )
+
+                # unlock the from_token and optimistically reveal the secret
+                # forward
                 raiden.handle_secret(
                     identifier,
                     from_token,
                     secret,
                     None,
                     hashlock,
-                )
-
-                self._wait_for_unlock_or_close(
-                    raiden,
-                    to_graph,
-                    to_channel,
-                    to_mediated_transfer,
                 )
 
                 raiden.greenlet_task_dispatcher.unregister_task(self, hashlock, True)
@@ -616,6 +642,16 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
         )
 
         for response in response_iterator:
+            valid_mediated_transfer = (
+                isinstance(response, MediatedTransfer) and
+                response.token == to_token and
+
+                # we need a lower expiration because:
+                # - otherwise the previous node is not operating correctly
+                # - we assume that received mediated transfer has a smaller
+                #   expiration to properly call close on edge cases
+                response.lock.expiration <= from_token_transfer.lock.expiration
+            )
 
             if response is None:
                 if log.isEnabledFor(logging.DEBUG):
@@ -628,7 +664,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
 
             # The MediatedTransfer might be from `next_hop` or most likely from
             # a different node.
-            if isinstance(response, MediatedTransfer) and response.token == to_token:
+            if valid_mediated_transfer:
                 if response.lock.amount == to_amount:
                     mediated_transfer = response
 
@@ -650,33 +686,6 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
                 return mediated_transfer
 
         return None
-
-    def reveal_secret(self, raiden, secret, last_node, exchange_node):
-        """ Reveal the `secret` to both participants.
-
-        The secret must be revealed backwards to get the incentives right
-        (first mediator would not forward the secret and get the transfer to
-        itself).
-
-        With exchanges there is an additional failure point, if a node is
-        mediating both token transfers it can intercept the transfer (as in not
-        revealing the secret to others), for this reason it is not sufficient
-        to just send the Secret backwards, the Secret must also be sent to the
-        exchange_node.
-        """
-        # pylint: disable=no-self-use
-
-        reveal_secret = RevealSecret(secret)
-        raiden.sign(reveal_secret)
-
-        # first reveal the secret to the last_node in the chain, proceed after
-        # ack
-        raiden.send_and_wait(last_node, reveal_secret, timeout=None)  # XXX: wait for expiration
-
-        # the last_node has acknowledged the Secret, so we know the swap
-        # has kicked-off, reveal the secret to the exchange_node to
-        # avoid interceptions but dont wait
-        raiden.send_async(exchange_node, reveal_secret)
 
 
 class TakerTokenSwapTask(BaseMediatedTransferTask):
@@ -701,170 +710,274 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
             self.__class__.__name__,
             pex(self.raiden.address),
             pex(self.from_mediated_transfer.token),
-            pex(self.to_token),
+            pex(self.tokenswap.to_token),
         )
 
     def _run(self):  # pylint: disable=method-hidden,too-many-locals
         fee = 0
         raiden = self.raiden
-        from_mediated_transfer = self.from_mediated_transfer
         tokenswap = self.tokenswap
-        previous_hop = from_mediated_transfer.sender
 
-        hashlock = from_mediated_transfer.lock.hashlock
-        from_token = from_mediated_transfer.token
+        # this is the MediatedTransfer that wil pay the maker's half of the
+        # swap, not necessarily from him
+        maker_paying_transfer = self.from_mediated_transfer
 
-        to_token = tokenswap.to_token
+        # this is the address of the node that the taker actually has a channel
+        # with (might or might not be the maker)
+        maker_payer_hop = maker_paying_transfer.sender
+
+        assert tokenswap.identifier == maker_paying_transfer.identifier
+        assert tokenswap.from_token == maker_paying_transfer.token
+        assert tokenswap.from_amount == maker_paying_transfer.lock.amount
+        assert tokenswap.from_nodeaddress == maker_paying_transfer.initiator
+
+        maker_receiving_token = tokenswap.to_token
         to_amount = tokenswap.to_amount
 
-        to_graph = raiden.channelgraphs[to_token]
-        from_graph = raiden.channelgraphs[from_token]
+        identifier = maker_paying_transfer.identifier
+        hashlock = maker_paying_transfer.lock.hashlock
+        maker_address = maker_paying_transfer.initiator
 
-        from_channel = from_graph.partneraddress_channel[previous_hop]
-        from_channel.register_transfer(from_mediated_transfer)
+        taker_receiving_token = maker_paying_transfer.token
+        taker_paying_token = maker_receiving_token
 
+        from_graph = raiden.channelgraphs[taker_receiving_token]
+        from_channel = from_graph.partneraddress_channel[maker_payer_hop]
+
+        to_graph = raiden.channelgraphs[maker_receiving_token]
+
+        # update the channel's distributable and merkle tree
+        from_channel.register_transfer(maker_paying_transfer)
+
+        # register the task to receive Refund/Secrect/RevealSecret messages
         raiden.greenlet_task_dispatcher.register_task(self, hashlock)
-        raiden.register_channel_for_hashlock(from_token, from_channel, hashlock)
+        raiden.register_channel_for_hashlock(taker_receiving_token, from_channel, hashlock)
 
-        lock_expiration = from_mediated_transfer.lock.expiration - raiden.config['reveal_timeout']
+        # send to the maker a secret request informing how much the taker will
+        # be _payed_, this is used to inform the taker that his part of the
+        # mediated transfer is okay
+        secret_request = SecretRequest(
+            identifier,
+            maker_paying_transfer.lock.hashlock,
+            maker_paying_transfer.lock.amount,
+        )
+        raiden.sign(secret_request)
+        raiden.send_async(maker_address, secret_request)
+
+        lock_expiration = maker_paying_transfer.lock.expiration - raiden.config['reveal_timeout']
         lock_timeout = lock_expiration - raiden.get_block_number()
 
-        to_routes = to_graph.get_best_routes(
+        # Note: taker may only try different routes if a RefundTransfer is
+        # received, because the maker is the node controlling the secret
+        available_routes = to_graph.get_best_routes(
             raiden.address,
-            from_mediated_transfer.initiator,  # route back to the initiator
-            from_mediated_transfer.lock.amount,
+            maker_address,
+            maker_paying_transfer.lock.amount,
             lock_timeout,
         )
 
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'TAKER TOKEN SWAP %s -> %s msghash:%s hashlock:%s',
-                pex(from_mediated_transfer.target),
-                pex(from_mediated_transfer.initiator),
-                pex(from_mediated_transfer.hash),
-                pex(hashlock),
-            )
+        if not available_routes:
+            if log.isEnabledFor(logging.DEBUG):
+                node_address = raiden.address
+                log.debug(
+                    'TAKER TOKEN SWAP FAILED, NO ROUTES initiator:%s from_nodeaddress:%s',
+                    pex(node_address),
+                    pex(maker_address),
+                )
 
-        secret_request = SecretRequest(
-            from_mediated_transfer.identifier,
-            from_mediated_transfer.lock.hashlock,
-            from_mediated_transfer.lock.amount,
-        )
-        raiden.sign(secret_request)
-        raiden.send_async(from_mediated_transfer.initiator, secret_request)
+            return
 
-        for path, to_channel in to_routes:
-            to_next_hop = path[1]
-
-            to_mediated_transfer = to_channel.create_mediatedtransfer(
-                raiden.address,                     # this node is the new initiator
-                from_mediated_transfer.initiator,   # the initiator is the target for the to_token
-                fee,
-                to_amount,
-                from_mediated_transfer.identifier,  # use the same identifier
-                lock_expiration,
-                hashlock,                           # use the original hashlock
-            )
-            raiden.sign(to_mediated_transfer)
+        first_transfer = None
+        for to_path, taker_paying_channel in available_routes:
+            taker_paying_hop = to_path[1]
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'MEDIATED TRANSFER NEW PATH path:%s hashlock:%s',
-                    lpex(path),
-                    pex(from_mediated_transfer.lock.hashlock),
+                    'TAKER TOKEN SWAP %s -> %s msghash:%s hashlock:%s',
+                    pex(maker_paying_transfer.target),
+                    pex(maker_address),
+                    pex(maker_paying_transfer.hash),
+                    pex(hashlock),
                 )
 
-            # The interest on the hashlock outlives this task, the secret
-            # handling will happen only _once_
-            raiden.register_channel_for_hashlock(to_token, to_channel, hashlock)
-            to_channel.register_transfer(to_mediated_transfer)
+            # make a paying MediatedTransfer with same hashlock/identifier and the
+            # taker's paying token/amount
+            taker_paying_transfer = taker_paying_channel.create_mediatedtransfer(
+                raiden.address,
+                maker_address,
+                fee,
+                to_amount,
+                identifier,
+                lock_expiration,
+                hashlock,
+            )
+            raiden.sign(taker_paying_transfer)
+            taker_paying_channel.register_transfer(taker_paying_transfer)
 
-            response = self.send_and_wait_valid(raiden, to_mediated_transfer, previous_hop)
+            if not first_transfer:
+                first_transfer = taker_paying_transfer
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
                     'EXCHANGE TRANSFER NEW PATH path:%s hashlock:%s',
-                    lpex(path),
+                    lpex(taker_paying_hop),
                     pex(hashlock),
                 )
 
-            # only refunds for `from_token` must be considered (check send_and_wait_valid)
+            # register the task to receive Refund/Secrect/RevealSecret messages
+            raiden.register_channel_for_hashlock(
+                maker_receiving_token,
+                taker_paying_channel,
+                hashlock,
+            )
+
+            response, secret = self.send_and_wait_valid(
+                raiden,
+                taker_paying_transfer,
+                maker_payer_hop,
+            )
+
+            # only refunds for `maker_receiving_token` must be considered
+            # (check send_and_wait_valid)
             if isinstance(response, RefundTransfer):
-                if response.lock.amount != to_mediated_transfer.amount:
+                if response.lock.amount != taker_paying_transfer.amount:
                     log.info(
                         'Partner %s sent an invalid refund message with an invalid amount',
-                        pex(to_next_hop),
+                        pex(taker_paying_hop),
                     )
                     raiden.greenlet_task_dispatcher.unregister_task(self, hashlock, False)
                     return
                 else:
-                    to_channel.register_transfer(response)
+                    taker_paying_channel.register_transfer(response)
 
-            elif isinstance(response, Secret):
-                # claim the from_token
+            elif isinstance(response, RevealSecret):
+                # the secret was registered by the message handler
+
+                # wait for the taker_paying_hop to reveal the secret prior to
+                # unlocking locally
+                if response.sender != taker_paying_hop:
+                    response = self.wait_reveal_secret(
+                        raiden,
+                        taker_paying_hop,
+                        taker_paying_transfer.lock.expiration,
+                    )
+
+                # unlock and send the Secret message
                 raiden.handle_secret(
-                    response.identifier,
-                    from_token,
+                    identifier,
+                    taker_paying_token,
                     response.secret,
-                    response,
+                    None,
                     hashlock,
                 )
 
-                # unlock the to_token
-                raiden.handle_secret(
-                    response.identifier,
-                    to_token,
-                    response.secret,
-                    response,
-                    hashlock,
-                )
+                # if the secret arrived early, withdraw it, otherwise send the
+                # RevealSecret forward in the maker-path
+                if secret:
+                    raiden.handle_secret(
+                        identifier,
+                        taker_receiving_token,
+                        response.secret,
+                        secret,
+                        hashlock,
+                    )
 
+                # wait for the withdraw in case it did not happen yet
                 self._wait_for_unlock_or_close(
                     raiden,
                     from_graph,
                     from_channel,
-                    from_mediated_transfer,
+                    maker_paying_transfer,
                 )
 
                 return
+
+            # the lock expire
+            else:
+                if log.isEnabledFor(logging.DEBUG):
+                    node_address = raiden.address
+                    log.debug(
+                        'TAKER TOKEN SWAP FAILED initiator:%s from_nodeaddress:%s',
+                        pex(node_address),
+                        pex(maker_address),
+                    )
+
+                self.async_result.set(False)
+                return
+
+        # no route is available, wait for the sent mediated transfer to expire
+        self._wait_expiration(raiden, first_transfer)
 
         if log.isEnabledFor(logging.DEBUG):
             node_address = raiden.address
             log.debug(
                 'TAKER TOKEN SWAP FAILED initiator:%s from_nodeaddress:%s',
                 pex(node_address),
-                pex(from_mediated_transfer.initiator),
+                pex(maker_address),
             )
 
-        # all routes failed
         self.async_result.set(False)
 
-    def send_and_wait_valid(self, raiden, mediated_transfer, previous_hop):
-        response_iterator = self._send_and_wait_time(
+    def send_and_wait_valid(self, raiden, mediated_transfer, maker_payer_hop):
+        """ Start the second half of the exchange and wait for the SecretReveal
+        for it.
+
+        This will send the taker mediated transfer with the maker as a target,
+        once the maker receives the transfer he is expected to send a
+        RevealSecret backwards.
+        """
+
+        # the taker cannot discard the transfer since the secret is controlled
+        # by another node (the maker), so we have no option but to wait for a
+        # valid response until the lock expires
+        response_iterator = self._send_and_wait_block(
             raiden,
             mediated_transfer.recipient,
             mediated_transfer,
-            raiden.config['msg_timeout'],
+            mediated_transfer.lock.expiration,
         )
 
+        # Usually the RevealSecret for the MediatedTransfer from this node to
+        # the maker should arrive first, but depending on the number of hops
+        # and if the maker-path is optimistically revealing the Secret, then
+        # the Secret message might arrive first.
+        secret = None
+
         for response in response_iterator:
+            valid_reveal = (
+                isinstance(response, RevealSecret) and
+                response.hashlock == mediated_transfer.lock.hashlock and
+                response.sender == maker_payer_hop
+            )
+
+            valid_refund = (
+                isinstance(response, RefundTransfer) and
+                response.sender == maker_payer_hop and
+                response.lock.amount == mediated_transfer.lock.amount and
+                response.lock.expiration <= mediated_transfer.lock.expiration and
+                response.token == mediated_transfer.token
+            )
+
             if response is None:
                 log.error(
                     'TAKER SWAP TIMED OUT node:%s hashlock:%s',
                     pex(raiden.address),
                     pex(mediated_transfer.lock.hashlock),
                 )
-                return None
+                return (response, secret)
 
             elif isinstance(response, Secret):
                 if sha3(response.secret) != mediated_transfer.lock.hashlock:
                     log.error("Secret doesn't match the hashlock, ignoring.")
                     continue
 
-                return response
+                secret = response
 
-            elif isinstance(response, RefundTransfer) and response.sender == previous_hop:
-                return response
+            elif valid_reveal:
+                return (response, secret)
+
+            elif valid_refund:
+                return (response, secret)
 
             elif log.isEnabledFor(logging.ERROR):
                 log.error(
@@ -872,4 +985,15 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
                     repr(response),
                 )
 
-        return None
+        return (None, secret)
+
+    def wait_reveal_secret(self, raiden, taker_paying_hop, expiration_block):
+        for response in self._messages_until_block(raiden, expiration_block):
+            if isinstance(response, RevealSecret) and response.sender == taker_paying_hop:
+                return response
+
+            elif log.isEnabledFor(logging.ERROR):
+                log.error(
+                    'Invalid message [%s] supplied to the task, ignoring.',
+                    repr(response),
+                )
