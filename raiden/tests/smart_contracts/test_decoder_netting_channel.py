@@ -76,8 +76,6 @@ def test_decode_direct_transfer(settle_timeout, tester_state, tester_token):
     assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
     assert dtester.decodedNonce() == 2
     assert dtester.decodedToken() == tester_token.address.encode('hex')
-    assert dtester.decodedRecipient() == address1.encode('hex')
-    assert dtester.decodedAmount() == 1337
     assert dtester.decodedLocksroot() == locksroot
 
 
@@ -121,10 +119,7 @@ def test_decode_mediated_transfer(settle_timeout, tester_state, tester_token):
 
     assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
     assert dtester.decodedNonce() == 88924902
-    assert dtester.decodedExpiration() == expiration
     assert dtester.decodedToken() == tester_token.address.encode('hex')
-    assert dtester.decodedRecipient() == address1.encode('hex')
-    assert dtester.decodedAmount() == amount
     assert dtester.decodedLocksroot() == locksroot
 
 
@@ -164,8 +159,5 @@ def test_decode_refund_transfer(settle_timeout, tester_state, tester_token):
 
     assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
     assert dtester.decodedNonce() == 4242452
-    assert dtester.decodedExpiration() == expiration
     assert dtester.decodedToken() == tester_token.address.encode('hex')
-    assert dtester.decodedRecipient() == address1.encode('hex')
-    assert dtester.decodedAmount() == amount
     assert dtester.decodedLocksroot() == locksroot

@@ -51,14 +51,6 @@ contract DecoderTester {
         return data.participants[0].nonce;
     }
 
-    function decodedToken() after_decoding constant returns (address) {
-        return data.participants[0].token;
-    }
-
-    function decodedRecipient() after_decoding constant returns (address) {
-        return data.participants[0].recipient;
-    }
-
     function decodedAmount() after_decoding constant returns (uint256) {
         return data.participants[0].transferred_amount;
     }
@@ -67,11 +59,7 @@ contract DecoderTester {
         return data.participants[0].locksroot;
     }
 
-    function decodedSecret() after_decoding constant returns (bytes32) {
-        return data.participants[0].secret;
-    }
-
-    function decodedExpiration() after_decoding constant returns (uint256) {
-        return data.participants[0].expiration;
+    function decodedToken() after_decoding constant returns (address) {
+        return data.token;
     }
 }
