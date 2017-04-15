@@ -16,14 +16,7 @@ library NettingChannelLibrary {
         uint256 balance;
         uint256 netted;
         uint256 transferred_amount;
-        uint256 amount;
-        bytes merkle_proof;
-        bytes32 hashlock;
-        bytes32 secret;
-        uint256 expiration;
         uint64 nonce;
-        address token;
-        address recipient;
         bytes32 locksroot;
         Lock[] unlocked;
     }
@@ -295,9 +288,6 @@ library NettingChannelLibrary {
 
         processTransfer(self, node1, node2, their_transfer);
         self.updated = true;
-
-        // TODO check if tampered and penalize
-        // TODO check if outdated and penalize
     }
 
     /// @notice Unlock a locked transfer
@@ -495,8 +485,6 @@ library NettingChannelLibrary {
         }
 
         uint64 nonce;
-        address token;
-        address recipient;
         uint256 transferred_amount;
         bytes32 locksroot;
 
@@ -505,15 +493,13 @@ library NettingChannelLibrary {
                                                           // [1:4] pad
             nonce := mload(add(message, 12))              // [4:12] nonce
                                                           // [12:20] identifier
-            token := mload(add(message, 40))              // [20:40] token
-            recipient := mload(add(message, 60))          // [40:60] recipient
+                                                          // [20:40] token
+                                                          // [40:60] recipient
             transferred_amount := mload(add(message, 92)) // [60:92] transferred_amount
             locksroot := mload(add(message, 124))         // [92:124] optional_locksroot
         }
 
         participant.nonce = nonce;
-        participant.token = token;
-        participant.recipient = recipient;
         participant.transferred_amount = transferred_amount;
         participant.locksroot = locksroot;
     }
@@ -524,11 +510,7 @@ library NettingChannelLibrary {
         }
 
         uint64 nonce;
-        uint64 expiration;
-        address token;
-        address recipient;
         bytes32 locksroot;
-        bytes32 hashlock;
         uint256 transferred_amount;
         uint256 lock_amount;
 
@@ -537,26 +519,21 @@ library NettingChannelLibrary {
                                                            // [1:4] pad
             nonce := mload(add(message, 12))               // [4:12] nonce
                                                            // [12:20] identifier
-            expiration := mload(add(message, 28))          // [20:28] expiration
-            token := mload(add(message, 48))               // [28:48] token
-            recipient := mload(add(message, 68))           // [48:68] recipient
+                                                           // [20:28] expiration
+                                                           // [28:48] token
+                                                           // [48:68] recipient
                                                            // [68:88] target
                                                            // [88:108] initiator
             locksroot := mload(add(message, 140))          // [108:140] locksroot
-            hashlock := mload(add(message, 172))           // [140:172] hashlock
+                                                           // [140:172] hashlock
             transferred_amount := mload(add(message, 204)) // [172:204] transferred_amoun
-            lock_amount := mload(add(message, 236))        // [204:236] amount
+                                                           // [204:236] amount
                                                            // [236:268] fee
         }
 
         participant.nonce = nonce;
-        participant.expiration = expiration;
-        participant.token = token;
-        participant.recipient = recipient;
         participant.locksroot = locksroot;
-        participant.hashlock = hashlock;
         participant.transferred_amount = transferred_amount;
-        participant.amount = lock_amount;
     }
 
     function assignRefundTransfer(Participant storage participant, bytes memory message) private {
@@ -565,36 +542,27 @@ library NettingChannelLibrary {
         }
 
         uint64 nonce;
-        uint64 expiration;
-        address token;
-        address recipient;
         bytes32 locksroot;
         uint256 transferred_amount;
         uint256 lock_amount;
-        bytes32 hashlock;
 
         assembly {
                                                             // [0:1] cmdid
                                                             // [1:4] pad
             nonce := mload(add(message, 12))                // [4:12] nonce
                                                             // [12:20] identifier
-            expiration := mload(add(message, 28))           // [20:28] expiration
-            token := mload(add(message, 48))                // [28:48] token
-            recipient := mload(add(message, 68))            // [48:68] recipient
+                                                            // [20:28] expiration
+                                                            // [28:48] token
+                                                            // [48:68] recipient
             locksroot := mload(add(message, 100))           // [68:100] locksroot
             transferred_amount := mload(add(message, 132))  // [100:132] transferred_amount
-            lock_amount := mload(add(message, 164))         // [132:164] amount
-            hashlock := mload(add(message, 196))            // [164:196] hashlock
+                                                            // [132:164] amount
+                                                            // [164:196] hashlock
         }
 
         participant.nonce = nonce;
-        participant.expiration = expiration;
-        participant.token = token;
-        participant.recipient = recipient;
         participant.locksroot = locksroot;
         participant.transferred_amount = transferred_amount;
-        participant.amount = lock_amount;
-        participant.hashlock = hashlock;
     }
 
     function decodeLock(bytes lock) private returns (uint64 expiration, uint amount, bytes32 hashlock) {
@@ -603,9 +571,9 @@ library NettingChannelLibrary {
         }
 
         assembly {
-            expiration := mload(add(lock, 8))   // expiration [0:8]
-            amount := mload(add(lock, 40))      // expiration [8:40]
-            hashlock := mload(add(lock, 72))    // expiration [40:72]
+            expiration := mload(add(lock, 8))   // [0:8] expiration
+            amount := mload(add(lock, 40))      // [8:40] amont
+            hashlock := mload(add(lock, 72))    // [40:72] hashlock
 
         }
     }
