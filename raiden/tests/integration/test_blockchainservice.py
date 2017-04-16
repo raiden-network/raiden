@@ -65,8 +65,6 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     # check contract state
     netting_channel_01 = blockchain_service0.netting_channel(netting_address_01)
     assert netting_channel_01.isopen() is False
-    assert netting_channel_01.partner(peer0_address) == peer1_address
-    assert netting_channel_01.partner(peer1_address) == peer0_address
 
     # check channels
     channel_list = manager0.channels_addresses()
@@ -86,8 +84,6 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     netting_channel_02 = blockchain_service0.netting_channel(netting_address_02)
 
     assert netting_channel_02.isopen() is False
-    assert netting_channel_02.partner(peer0_address) == peer2_address
-    assert netting_channel_02.partner(peer2_address) == peer0_address
 
     channel_list = manager0.channels_addresses()
     expected_channels = [

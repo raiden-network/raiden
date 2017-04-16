@@ -892,21 +892,6 @@ class NettingChannel(object):
 
         return self.proxy.opened.call() != 0
 
-    def partner(self, our_address):
-        data = self.proxy.addressAndBalance.call()
-
-        if address_decoder(data[0]) == our_address:
-            return address_decoder(data[2])
-
-        if address_decoder(data[2]) == our_address:
-            return address_decoder(data[0])
-
-        raise ValueError('We [{}] are not a participant of the given channel ({}, {})'.format(
-            pex(our_address),
-            data[0],
-            data[2],
-        ))
-
     def deposit(self, our_address, amount):  # pylint: disable=unused-argument
         """`our_address` is an argument used only in mock_client.py but is also
         kept here to maintain a consistent interface"""

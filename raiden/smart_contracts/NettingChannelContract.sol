@@ -53,13 +53,6 @@ contract NettingChannelContract {
         return success;
     }
 
-    /// @notice Get the address of the channel partner.
-    /// @param participant_address The address of one participant.
-    /// @return The address of the partner to that participant.
-    function partner(address participant_address) constant returns (address) {
-        return data.partner(participant_address);
-    }
-
     /// @notice Get the address and balance of both partners in a channel.
     /// @return The address and balance pairs.
     function addressAndBalance()
