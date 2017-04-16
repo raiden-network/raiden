@@ -378,9 +378,6 @@ class NettingChannelMock(object):
     def isopen(self):
         return self.contract.isopen
 
-    def partner(self, our_address):
-        return self.contract.partner(our_address)
-
     def deposit(self, our_address, amount):
         self.contract.deposit(
             our_address,
@@ -416,9 +413,9 @@ class NettingChannelMock(object):
         return self.contract.settled
 
     def detail(self, our_address):
-        partner_address = self.contract.partner(our_address)
-
         our_balance = self.contract.participants[our_address].deposit
+
+        partner_address = self.contract.partner(our_address)
         partner_balance = self.contract.participants[partner_address].deposit
 
         return {

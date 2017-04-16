@@ -574,11 +574,6 @@ class NettingChannelTesterMock(object):
 
         return opened != 0
 
-    def partner(self, our_address):
-        result = address_decoder(self.proxy.partner(our_address))
-        self.tester_state.mine(number_of_blocks=1)
-        return result
-
     def deposit(self, our_address, amount):
         if privatekey_to_address(self.private_key) != our_address:
             raise ValueError('our_address doesnt match the privatekey')

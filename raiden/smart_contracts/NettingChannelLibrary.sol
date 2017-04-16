@@ -118,25 +118,6 @@ library NettingChannelLibrary {
         return (false, 0);
     }
 
-    /// @notice Get the partner or other participant of the channel
-    /// @dev Get the other participating party of the channel
-    /// @return The partner of the calling party
-    function partner(Data storage self, address one_address) constant returns (address) {
-        Participant[2] storage participants = self.participants;
-        Participant storage node1 = participants[0];
-        Participant storage node2 = participants[1];
-
-        if (one_address == node1.node_address) {
-            return node2.node_address;
-        }
-
-        if (one_address == node2.node_address) {
-            return node1.node_address;
-        }
-
-        return 0x0;
-    }
-
     function addressAndBalance(Data storage self)
         constant
         returns(
