@@ -153,15 +153,6 @@ library NettingChannelLibrary {
         return 0x0;
     }
 
-    function transferredAmount(Data storage self, address participant_address)
-        constant
-        returns (uint)
-    {
-         uint8 index = index_or_throw(self, participant_address);
-         Participant storage participant = self.participants[index];
-         return participant.transferred_amount;
-    }
-
     function addressAndBalance(Data storage self)
         constant
         returns(
