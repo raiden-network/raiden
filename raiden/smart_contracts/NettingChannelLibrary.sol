@@ -470,12 +470,47 @@ library NettingChannelLibrary {
         }
     }
 
-    // NOTES about the length of variable types:
-    // - variable length types start with a size-prefix of 32bytes (uint256)
-    // - bytes is a variable length type
-    // - a variable with a bytes type will contain the address of the first data element
-    // - solidity starts indexing at 0 (so the 32th byte is at the offset 31)
-    //  ref: https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
+    // NOTES:
+    //
+    // - The EVM is a big-endian, byte addressing machine, with 32bytes/256bits
+    //   words.
+    // - The Ethereum Contract ABI specifies that variable length types have a
+    //   32bytes prefix to define the variable size.
+    // - Solidity has additional data types that are narrower than 32bytes
+    //   (e.g. uint128 uses a half word).
+    // - Solidity uses the *least-significant* bits of the word to store the
+    //   values of a narrower type.
+    //
+    // GENERAL APPROACH:
+    //
+    // Add to the message pointer the number of bytes required to move the
+    // address so that the target data is at the end of the 32bytes word.
+    //
+    // EXAMPLE:
+    //
+    // To decode the cmdid, consider this initial state:
+    //
+    //
+    //     v- pointer word start
+    //     [ 32 bytes length prefix ][ cmdid ] ----
+    //                              ^- pointer word end
+    //
+    //
+    // Because the cmdid has 1 byte length the type uint8 is used, the decoder
+    // needs to move the pointer so the cmdid is at the end of the pointer
+    // word.
+    //
+    //
+    //             v- pointer word start [moved 1byte ahead]
+    //     [ 32 bytes length prefix ][ cmdid ] ----
+    //                                       ^- pointer word end
+    //
+    //
+    // Now the data of the cmdid can be loaded to the uint8 variable.
+    //
+    // REFERENCES:
+    // - https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
+    // - http://solidity.readthedocs.io/en/develop/assembly.html
 
     // TODO: use sstore instead of these temporaries
 
