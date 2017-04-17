@@ -73,13 +73,6 @@ contract NettingChannelContract {
         return data.addressAndBalance();
     }
 
-    /// @notice Get the amount one partner has transferred to the other partner.
-    /// @param participant The address of one partner.
-    /// @return The amount one partner has transferred to the other.
-    function transferredAmount(address participant) constant returns (uint) {
-        return data.transferredAmount(participant);
-    }
-
     /// @notice Close the channel. Can only be called by a participant in the channel.
     /// @param theirs_encoded The last transfer recieved from our partner.
     function close(bytes theirs_encoded) {

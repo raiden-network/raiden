@@ -444,9 +444,6 @@ class ChannelExternalState(object):
         # proxy side; see also #394
         return self.netting_channel.settled() or 0
 
-    def query_transferred_amount(self, participant_address):
-        return self.netting_channel.transferred_amount(participant_address)
-
     def callback_on_opened(self, callback):
         if self._opened_block != 0:
             callback(self._opened_block)

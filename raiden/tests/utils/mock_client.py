@@ -406,11 +406,6 @@ class NettingChannelMock(object):
         for filter_ in BlockChainServiceMock.filters[self.address]:
             filter_.event(event)
 
-    def transferred_amount(self, participant_address):
-        # TODO: Make this work if we don't drop support for the mock client
-        raise RuntimeError('transferredAmount not implemented for mock client')
-        return self.contract._get_transferred_amount(None, None)
-
     def opened(self):
         return self.contract.opened
 
