@@ -547,7 +547,6 @@ library NettingChannelLibrary {
         uint64 nonce;
         bytes32 locksroot;
         uint256 transferred_amount;
-        uint256 lock_amount;
 
         assembly {
                                                            // [0:1] cmdid
@@ -579,7 +578,6 @@ library NettingChannelLibrary {
         uint64 nonce;
         bytes32 locksroot;
         uint256 transferred_amount;
-        uint256 lock_amount;
 
         assembly {
                                                             // [0:1] cmdid
