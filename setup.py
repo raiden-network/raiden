@@ -50,6 +50,7 @@ history = ''
 install_requires_replacements = {
     "-e git+https://github.com/LefterisJP/pyethapp@use_new_solc_combinedjson_key#egg=pyethapp": "pyethapp",
     "-e git+https://github.com/LefterisJP/pyelliptic@make_compatible_with_openssl1_1#egg=pyelliptic": "pyelliptic",
+    "git+https://github.com/konradkonrad/pystun@develop#egg=pystun": "pystun",
 }
 
 install_requires = list(set(
