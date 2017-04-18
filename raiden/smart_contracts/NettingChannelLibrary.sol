@@ -53,36 +53,20 @@ library NettingChannelLibrary {
         _;
     }
 
-    modifier isCounterParty(Data storage self, address caller) {
-        if (caller == self.closing_address) {
-            throw;
-        }
-        address participant0 = self.participants[0].node_address;
-        address participant1 = self.participants[1].node_address;
-        if (caller != participant0 && caller != participant1) {
-            throw;
-        }
-        _;
-    }
-
-    modifier inNonceRange(Data storage self, bytes message) {
-        uint64 nonce;
-        nonce = getNonce(message);
-        if (nonce < self.opened * (2 ** 32) || nonce >= (self.opened + 1) * (2 ** 32))
-            throw;
-        _;
-    }
-
     modifier channelSettled(Data storage self) {
         if (self.settled == 0)
             throw;
         _;
     }
 
-    modifier notYetUpdated(Data storage self) {
-        if (self.updated)
-            throw;
-        _;
+    function isValidNonce(Data storage self, uint64 nonce)
+        private
+        returns (bool)
+    {
+        return (
+            nonce >= self.opened * (2 ** 32) &&
+            nonce < (self.opened + 1) * (2 ** 32)
+        );
     }
 
     /// @notice Deposit amount to channel.
@@ -188,8 +172,10 @@ library NettingChannelLibrary {
         bytes memory transfer_raw;
         uint64 nonce;
         address transfer_address;
+        bytes32 locksroot;
+        uint256 transferred_amount;
 
-        // Already closed
+        // close can be called only once
         if (self.closed > 0) {
             throw;
         }
@@ -209,13 +195,6 @@ library NettingChannelLibrary {
         // the closing party is going to lose the tokens that were transferred
         // to him.
         if (their_transfer.length != 0) {
-
-            // only accept messages with a valid nonce
-            nonce = getNonce(their_transfer);
-            if (nonce < self.opened * (2 ** 32) || nonce >= (self.opened + 1) * (2 ** 32)) {
-                throw;
-            }
-
             (transfer_raw, transfer_address) = getTransferRawAddress(their_transfer);
             counterparty_index = index_or_throw(self, transfer_address);
 
@@ -227,42 +206,26 @@ library NettingChannelLibrary {
             // update the structure of the counterparty with its data provided
             // by the closing node
             Participant storage counterparty = self.participants[counterparty_index];
-            decodeAndAssign(counterparty, transfer_raw);
+
+            (nonce, locksroot, transferred_amount) = decodeTransfer(transfer_raw);
+
+            // only accept messages with a valid nonce
+            if (!isValidNonce(self, nonce)) {
+                throw;
+            }
+
+            counterparty.nonce = nonce;
+            counterparty.locksroot = locksroot;
+            counterparty.transferred_amount = transferred_amount;
         }
 
     }
 
-    function processTransfer(Data storage self, Participant storage node1, Participant storage node2, bytes transfer)
-        inNonceRange(self, transfer)
-        internal
-        returns (address)
-    {
-        bytes memory transfer_raw;
-        address transfer_address;
-
-        if (transfer.length <= 65) {
-            throw;
-        }
-
-        (transfer_raw, transfer_address) = getTransferRawAddress(transfer);
-        if (node1.node_address == transfer_address) {
-            Participant storage sender = node1;
-        } else if (node2.node_address == transfer_address) {
-            sender = node2;
-        } else {
-            throw;
-        }
-
-        decodeAndAssign(sender, transfer_raw);
-
-        return sender.node_address;
-    }
-
-    /// @notice Updates (disputes) the state after closing.
+    /// @notice Updates counter party transfer after closing.
     /// @param caller_address The counterparty to the channel. The participant
     ///                       that did not close the channel.
     /// @param their_transfer The transfer the counterparty believes is the
-    ///                        valid state for the first participant.
+    ///                       valid state for the first participant.
     function updateTransfer(
         Data storage self,
         address caller_address,
@@ -270,15 +233,50 @@ library NettingChannelLibrary {
     )
         notSettledButClosed(self)
         stillTimeout(self)
-        isCounterParty(self, caller_address)
-        notYetUpdated(self)
     {
-        Participant[2] storage participants = self.participants;
-        Participant storage node1 = participants[0];
-        Participant storage node2 = participants[1];
+        address transfer_address;
+        bytes32 locksroot;
+        bytes memory transfer_raw;
+        uint256 transferred_amount;
+        uint64 nonce;
+        uint8 caller_index;
+        uint8 closer_index;
 
-        processTransfer(self, node1, node2, their_transfer);
+        // updateTransfer can be called by the counter party only once
+        if (self.updated) {
+            throw;
+        }
         self.updated = true;
+
+        // Only a participant can call updateTransfer (#293 for third parties)
+        caller_index = index_or_throw(self, caller_address);
+
+        // The closer is not allowed to call updateTransfer
+        if (self.closing_address == caller_address) {
+            throw;
+        }
+
+        (transfer_raw, transfer_address) = getTransferRawAddress(their_transfer);
+
+        // Counter party can only update the closer transfer
+        if (transfer_address != self.closing_address) {
+            throw;
+        }
+
+        // Update the structure of the closer with its data provided by the
+        // counterparty
+        closer_index = 1 - caller_index;
+
+        (nonce, locksroot, transferred_amount) = decodeTransfer(transfer_raw);
+
+        // only accept messages with a valid nonce
+        if (!isValidNonce(self, nonce)) {
+            throw;
+        }
+
+        self.participants[closer_index].nonce = nonce;
+        self.participants[closer_index].locksroot = locksroot;
+        self.participants[closer_index].transferred_amount = transferred_amount;
     }
 
     /// @notice Unlock a locked transfer
@@ -444,23 +442,6 @@ library NettingChannelLibrary {
         return (transfer_raw, transfer_address);
     }
 
-    function decodeAndAssign(Participant storage sender, bytes transfer_raw) private {
-        // all checks must be done by now
-        uint cmdid;
-
-        cmdid = uint(transfer_raw[0]);
-
-        if (cmdid == 5) {
-            assignDirectTransfer(sender, transfer_raw);
-        } else if (cmdid == 7) {
-            assignMediatedTransfer(sender, transfer_raw);
-        } else if (cmdid == 8) {
-            assignRefundTransfer(sender, transfer_raw);
-        } else {
-            throw;
-        }
-    }
-
     // NOTES:
     //
     // - The EVM is a big-endian, byte addressing machine, with 32bytes/256bits
@@ -503,90 +484,105 @@ library NettingChannelLibrary {
     // - https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
     // - http://solidity.readthedocs.io/en/develop/assembly.html
 
-    // TODO: use sstore instead of these temporaries
+    function decodeTransfer(bytes transfer_raw)
+        private
+        returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount)
+    {
+        uint cmdid = uint(transfer_raw[0]);
 
-    function assignDirectTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 124) { // size of the raw message without the signature
-            throw;
+        if (cmdid == 5) {
+            return decodeDirectTransfer(transfer_raw);
+        } else if (cmdid == 7) {
+            return decodeMediatedTransfer(transfer_raw);
+        } else if (cmdid == 8) {
+            return decodeRefundTransfer(transfer_raw);
         }
 
-        uint64 nonce;
-        uint256 transferred_amount;
-        bytes32 locksroot;
-
-        assembly {
-                                                          // [0:1] cmdid
-                                                          // [1:4] pad
-            nonce := mload(add(message, 12))              // [4:12] nonce
-                                                          // [12:20] identifier
-                                                          // [20:40] token
-                                                          // [40:60] recipient
-            transferred_amount := mload(add(message, 92)) // [60:92] transferred_amount
-            locksroot := mload(add(message, 124))         // [92:124] optional_locksroot
-        }
-
-        participant.nonce = nonce;
-        participant.transferred_amount = transferred_amount;
-        participant.locksroot = locksroot;
+        throw;
     }
 
-    function assignMediatedTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 268) { // size of the raw message without the signature
+    function decodeDirectTransfer(bytes memory message)
+        private
+        returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount)
+    {
+        // size of the raw message without the signature
+        if (message.length != 124) {
             throw;
         }
 
-        uint64 nonce;
-        bytes32 locksroot;
-        uint256 transferred_amount;
-
+        // Message format:
+        // [0:1] cmdid
+        // [1:4] pad
+        // [4:12] nonce
+        // [12:20] identifier
+        // [20:40] token
+        // [40:60] recipient
+        // [60:92] transferred_amount
+        // [92:124] optional_locksroot
         assembly {
-                                                           // [0:1] cmdid
-                                                           // [1:4] pad
-            nonce := mload(add(message, 12))               // [4:12] nonce
-                                                           // [12:20] identifier
-                                                           // [20:28] expiration
-                                                           // [28:48] token
-                                                           // [48:68] recipient
-                                                           // [68:88] target
-                                                           // [88:108] initiator
-            locksroot := mload(add(message, 140))          // [108:140] locksroot
-                                                           // [140:172] hashlock
-            transferred_amount := mload(add(message, 204)) // [172:204] transferred_amoun
-                                                           // [204:236] amount
-                                                           // [236:268] fee
+            nonce := mload(add(message, 12))
+            transferred_amount := mload(add(message, 92))
+            locksroot := mload(add(message, 124))
         }
-
-        participant.nonce = nonce;
-        participant.locksroot = locksroot;
-        participant.transferred_amount = transferred_amount;
     }
 
-    function assignRefundTransfer(Participant storage participant, bytes memory message) private {
-        if (message.length != 196) { // size of the raw message without the signature
+    function decodeMediatedTransfer(bytes memory message)
+        private
+        returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount)
+    {
+        // size of the raw message without the signature
+        if (message.length != 268) {
             throw;
         }
 
-        uint64 nonce;
-        bytes32 locksroot;
-        uint256 transferred_amount;
-
+        // Message format:
+        // [0:1] cmdid
+        // [1:4] pad
+        // [4:12] nonce
+        // [12:20] identifier
+        // [20:28] expiration
+        // [28:48] token
+        // [48:68] recipient
+        // [68:88] target
+        // [88:108] initiator
+        // [108:140] locksroot
+        // [140:172] hashlock
+        // [172:204] transferred_amoun
+        // [204:236] amount
+        // [236:268] fee
         assembly {
-                                                            // [0:1] cmdid
-                                                            // [1:4] pad
-            nonce := mload(add(message, 12))                // [4:12] nonce
-                                                            // [12:20] identifier
-                                                            // [20:28] expiration
-                                                            // [28:48] token
-                                                            // [48:68] recipient
-            locksroot := mload(add(message, 100))           // [68:100] locksroot
-            transferred_amount := mload(add(message, 132))  // [100:132] transferred_amount
-                                                            // [132:164] amount
-                                                            // [164:196] hashlock
+            nonce := mload(add(message, 12))
+            locksroot := mload(add(message, 140))
+            transferred_amount := mload(add(message, 204))
+        }
+    }
+
+    function decodeRefundTransfer(bytes memory message)
+        private
+        returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount)
+    {
+        // size of the raw message without the signature
+        if (message.length != 196) {
+            throw;
         }
 
-        participant.nonce = nonce;
-        participant.locksroot = locksroot;
-        participant.transferred_amount = transferred_amount;
+        // Message format:
+        // [0:1] cmdid
+        // [1:4] pad
+        // [4:12] nonce
+        // [12:20] identifier
+        // [20:28] expiration
+        // [28:48] token
+        // [48:68] recipient
+        // [68:100] locksroot
+        // [100:132] transferred_amount
+        // [132:164] amount
+        // [164:196] hashlock
+        assembly {
+            nonce := mload(add(message, 12))
+            locksroot := mload(add(message, 100))
+            transferred_amount := mload(add(message, 132))
+        }
     }
 
     function decodeLock(bytes lock) private returns (uint64 expiration, uint amount, bytes32 hashlock) {
@@ -594,11 +590,14 @@ library NettingChannelLibrary {
             throw;
         }
 
+        // Lock format:
+        // [0:8] expiration
+        // [8:40] amount
+        // [40:72] hashlock
         assembly {
-            expiration := mload(add(lock, 8))   // [0:8] expiration
-            amount := mload(add(lock, 40))      // [8:40] amont
-            hashlock := mload(add(lock, 72))    // [40:72] hashlock
-
+            expiration := mload(add(lock, 8))
+            amount := mload(add(lock, 40))
+            hashlock := mload(add(lock, 72))
         }
     }
 
