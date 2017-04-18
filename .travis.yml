@@ -36,9 +36,11 @@ before_install:
 install:
   - pip install -U pip wheel coveralls
   - pip install pytest-travis-fold
+  - pip install flake8
   - pip install -r requirements-dev.txt
 
 script:
+  - flake8 raiden/ tools/ --exclude */ansible/
   - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 
 after_success:
