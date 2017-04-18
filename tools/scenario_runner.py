@@ -125,7 +125,7 @@ def run(privatekey,
         for token in tokens:
             # skip tokens that we're not part of
             nodes = token['channels']
-            if not our_node in nodes:
+            if our_node not in nodes:
                 continue
 
             # allow for prefunded tokens
@@ -144,7 +144,6 @@ def run(privatekey,
             # NOTE: leaving unidirectional for now because it most
             #       probably will get to higher throughput
 
-
             log.warning("Waiting for all nodes to come online")
 
             while not all(tools.ping(node) for node in nodes if node != our_node):
@@ -156,7 +155,7 @@ def run(privatekey,
                 our_index = nodes.index(our_node)
                 peer = nodes[our_index + 1]
 
-                channel_manager = tools.register_token(token_address)
+                tools.register_token(token_address)
                 amount = transfers_with_amount[nodes[-1]]
 
                 while True:
@@ -179,7 +178,7 @@ def run(privatekey,
                 while True:
                     try:
                         log.warning("Funding channel with {} for {}".format(peer, token_address))
-                        channel = app.raiden.api.deposit(token_address, peer, amount)
+                        app.raiden.api.deposit(token_address, peer, amount)
                         break
                     except Exception:
                         log.warning("Error: could not deposit {} for {}".format(amount, peer))

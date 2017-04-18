@@ -6,11 +6,12 @@ import json
 from datetime import datetime
 import click
 
+
 @click.command()
 @click.option(
-        '--results-dir',
-        required=True,
-        help='Directory with output json files from orchestration run.'
+    '--results-dir',
+    required=True,
+    help='Directory with output json files from orchestration run.'
 )
 @click.option('--plot-filename', default='', help='Plot historic data to file.')
 def process_results(results_dir, plot_filename):
@@ -82,13 +83,14 @@ def process_results(results_dir, plot_filename):
             plt.subplots_adjust(bottom=0.2)
             plt.xticks(rotation=90)
             ax = plt.gca()
-            #ax.set_xticks(dates)
+            # ax.set_xticks(dates)
             xfmt = md.DateFormatter('%H:%M:%S')
             ax.xaxis.set_major_formatter(xfmt)
             plt.plot(dates, amount_per_time)
             plt.savefig(plot_filename)
         except ImportError as exc:
             print("Error creating plot results: {}".format(exc.message))
+
 
 if __name__ == '__main__':
     process_results()
