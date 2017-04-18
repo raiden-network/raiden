@@ -27,11 +27,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
 )
-from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
-)
+from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.utils import sha3
 
 # Reduce the lock expiration by some additional blocks to prevent this exploit:

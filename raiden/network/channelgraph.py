@@ -9,9 +9,7 @@ from raiden.utils import isaddress, pex
 from raiden.channel import Channel
 from raiden.transfer.state import (
     RouteState,
-    CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name

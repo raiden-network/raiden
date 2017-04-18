@@ -22,11 +22,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.mediated_transfer.mediator import (
     is_safe_to_wait,
 )
-from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
-)
+from raiden.transfer.state import CHANNEL_STATE_OPENED
 
 
 def events_for_close(from_transfer, from_route, block_number):

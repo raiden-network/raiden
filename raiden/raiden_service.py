@@ -33,8 +33,6 @@ from raiden.transfer.state_change import (
 from raiden.transfer.state import (
     RoutesState,
     CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
 )
 from raiden.transfer.mediated_transfer import (
     initiator,

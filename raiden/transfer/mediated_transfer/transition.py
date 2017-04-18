@@ -1,9 +1,5 @@
 # -*- coding: utf-8 -*-
-from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
-)
+from raiden.transfer.state import CHANNEL_STATE_OPENED
 
 
 def update_route(next_state, route_state_change):
