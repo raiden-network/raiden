@@ -4,7 +4,120 @@ from __future__ import print_function
 
 from raiden.messages import decode
 from raiden.network.transport import DummyTransport
-from raiden.utils import pex
+from raiden.utils import pex, make_privkey_address
+from raiden.tests.utils.tests import fixture_all_combinations
+from raiden.messages import (
+    DirectTransfer,
+    Lock,
+    MediatedTransfer,
+    RefundTransfer,
+)
+
+
+PRIVKEY, ADDRESS = make_privkey_address()
+INVALID_ADDRESSES = [
+    ' ',
+    ' ' * 19,
+    ' ' * 21,
+]
+
+# zero is used to indicate novalue in solidity, that is why it's a invalid
+# nonce value
+DIRECT_TRANSFER_INVALID_VALUES = fixture_all_combinations({
+    'nonce': [-1, 0, 2 ** 64],
+    'identifier': [-1, 2 ** 64],
+    'token': INVALID_ADDRESSES,
+    'recipient': INVALID_ADDRESSES,
+    'transferred_amount': [-1, 2 ** 256],
+})
+
+REFUND_TRANSFER_INVALID_VALUES = fixture_all_combinations({
+    'nonce': [-1, 0, 2 ** 64],
+    'identifier': [-1, 2 ** 64],
+    'token': INVALID_ADDRESSES,
+    'recipient': INVALID_ADDRESSES,
+    'transferred_amount': [-1, 2 ** 256],
+})
+
+MEDIATED_TRANSFER_INVALID_VALUES = fixture_all_combinations({
+    'nonce': [-1, 0, 2 ** 64],
+    'identifier': [-1, 2 ** 64],
+    'token': INVALID_ADDRESSES,
+    'recipient': INVALID_ADDRESSES,
+    'target': INVALID_ADDRESSES,
+    'initiator': INVALID_ADDRESSES,
+    'transferred_amount': [-1, 2 ** 256],
+    'fee': [2 ** 256],
+})
+
+
+def make_lock_with_amount(amount):
+    hashlock = 'a' * 32
+    return Lock(amount, 1, hashlock)
+
+
+def make_refund_transfer(
+        identifier=0,
+        nonce=1,
+        token=ADDRESS,
+        transferred_amount=0,
+        amount=1,
+        locksroot='',
+        recipient=ADDRESS):
+
+    return RefundTransfer(
+        identifier,
+        nonce,
+        token,
+        transferred_amount,
+        recipient,
+        locksroot,
+        make_lock_with_amount(amount),
+    )
+
+
+def make_mediated_transfer(
+        identifier=0,
+        nonce=1,
+        token=ADDRESS,
+        transferred_amount=0,
+        amount=1,
+        locksroot='',
+        recipient=ADDRESS,
+        target=ADDRESS,
+        initiator=ADDRESS,
+        fee=0):
+
+    return MediatedTransfer(
+        identifier,
+        nonce,
+        token,
+        transferred_amount,
+        recipient,
+        locksroot,
+        make_lock_with_amount(amount),
+        target,
+        initiator,
+        fee
+    )
+
+
+def make_direct_transfer(
+        identifier=0,
+        nonce=1,
+        token=ADDRESS,
+        transferred_amount=0,
+        recipient=ADDRESS,
+        locksroot=''):
+
+    return DirectTransfer(
+        identifier,
+        nonce,
+        token,
+        transferred_amount,
+        recipient,
+        locksroot,
+    )
 
 
 def setup_messages_cb():

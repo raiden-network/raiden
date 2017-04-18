@@ -298,6 +298,30 @@ class DirectTransfer(SignedMessage):
     cmdid = messages.DIRECTTRANSFER
 
     def __init__(self, identifier, nonce, token, transferred_amount, recipient, locksroot):
+        if nonce <= 0:
+            raise ValueError('nonce cannot be zero or negative')
+
+        if nonce >= 2 ** 64:
+            raise ValueError('nonce is too large')
+
+        if identifier < 0:
+            raise ValueError('identifier cannot be negative')
+
+        if identifier >= 2 ** 64:
+            raise ValueError('identifier is too large')
+
+        if len(token) != 20:
+            raise ValueError('token is an invalid address')
+
+        if len(recipient) != 20:
+            raise ValueError('recipient is an invalid address')
+
+        if transferred_amount < 0:
+            raise ValueError('transferred_amount cannot be negative')
+
+        if transferred_amount >= 2 ** 256:
+            raise ValueError('transferred_amount is too large')
+
         super(DirectTransfer, self).__init__()
         self.identifier = identifier
         self.nonce = nonce
@@ -618,6 +642,49 @@ class RefundTransfer(LockedTransfer):
     transfer.
     """
     cmdid = messages.REFUNDTRANSFER
+
+    def __init__(
+            self,
+            identifier,
+            nonce,
+            token,
+            transferred_amount,
+            recipient,
+            locksroot,
+            lock):
+        if nonce <= 0:
+            raise ValueError('nonce cannot be zero or negative')
+
+        if nonce >= 2 ** 64:
+            raise ValueError('nonce is too large')
+
+        if identifier < 0:
+            raise ValueError('identifier cannot be negative')
+
+        if identifier >= 2 ** 64:
+            raise ValueError('identifier is too large')
+
+        if len(token) != 20:
+            raise ValueError('token is an invalid address')
+
+        if len(recipient) != 20:
+            raise ValueError('recipient is an invalid address')
+
+        if transferred_amount < 0:
+            raise ValueError('transferred_amount cannot be negative')
+
+        if transferred_amount >= 2 ** 256:
+            raise ValueError('transferred_amount is too large')
+
+        super(RefundTransfer, self).__init__(
+            identifier,
+            nonce,
+            token,
+            transferred_amount,
+            recipient,
+            locksroot,
+            lock,
+        )
 
     @staticmethod
     def unpack(packed):
