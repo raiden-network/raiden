@@ -1,52 +1,24 @@
 # -*- coding: utf-8 -*-
+
 import pytest
-from raiden.messages import Ping, Ack, decode, Lock, MediatedTransfer
+
+from raiden.messages import (
+    decode,
+    Ack,
+    Ping,
+)
 from raiden.utils import make_privkey_address, sha3
+from raiden.tests.utils.messages import (
+    make_direct_transfer,
+    make_lock_with_amount,
+    make_mediated_transfer,
+    make_refund_transfer,
+    MEDIATED_TRANSFER_INVALID_VALUES,
+    REFUND_TRANSFER_INVALID_VALUES,
+    DIRECT_TRANSFER_INVALID_VALUES,
+)
 
 PRIVKEY, ADDRESS = make_privkey_address()
-INVALID_ADDRESSES = [
-    ' ',
-    ' ' * 19,
-    ' ' * 21,
-]
-
-
-def make_lock_with_amount(amount):
-    hashlock = 'a' * 32
-    return Lock(amount, 1, hashlock)
-
-
-def make_mediated_transfer(
-        identifier=0,
-        nonce=1,
-        token=ADDRESS,
-        transferred_amount=0,
-        amount=1,
-        locksroot='',
-        recipient=ADDRESS,
-        target=ADDRESS,
-        initiator=ADDRESS,
-        fee=0):
-
-    return MediatedTransfer(
-        identifier,
-        nonce,
-        token,
-        transferred_amount,
-        recipient,
-        locksroot,
-        make_lock_with_amount(amount),
-        target,
-        initiator,
-        fee
-    )
-
-
-def roundtrip_serialize_mediated_transfer(mediated_transfer):
-    mediated_transfer.sign(PRIVKEY, ADDRESS)
-    decoded_mediated_transfer = decode(mediated_transfer.encode())
-    assert decoded_mediated_transfer == mediated_transfer
-    return True
 
 
 def test_signature():
@@ -88,29 +60,6 @@ def test_ack():
     assert sha3(decoded_ack.encode()) == msghash
 
 
-def test_mediated_transfer():
-    nonce = balance = 1
-    token = recipient = target = initiator = ADDRESS
-    hashlock = locksroot = sha3(ADDRESS)
-    amount = expiration = 1
-    fee = 0
-
-    lock = Lock(amount, expiration, hashlock)
-    mediated_transfer = MediatedTransfer(
-        1,  # TODO: fill in identifier
-        nonce,
-        token,
-        balance,
-        recipient,
-        locksroot,
-        lock,
-        target,
-        initiator,
-        fee,
-    )
-    assert roundtrip_serialize_mediated_transfer(mediated_transfer)
-
-
 @pytest.mark.parametrize('amount', [-1, 2 ** 256])
 @pytest.mark.parametrize(
     'make',
@@ -122,6 +71,20 @@ def test_mediated_transfer():
 def test_amount_out_of_bounds(amount, make):
     with pytest.raises(ValueError):
         make(amount=amount)
+
+
+@pytest.mark.parametrize('identifier', [0, 2 ** 64 - 1])
+@pytest.mark.parametrize('nonce', [1, 2 ** 64 - 1])
+@pytest.mark.parametrize('transferred_amount', [0, 2 ** 256 - 1])
+def test_direct_transfer_min_max(identifier, nonce, transferred_amount):
+    direct_transfer = make_direct_transfer(
+        identifier=identifier,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+    )
+
+    direct_transfer.sign(PRIVKEY, ADDRESS)
+    assert decode(direct_transfer.encode()) == direct_transfer
 
 
 @pytest.mark.parametrize('amount', [0, 2 ** 256 - 1])
@@ -137,36 +100,40 @@ def test_mediated_transfer_min_max(amount, identifier, fee, nonce, transferred_a
         fee=fee,
         transferred_amount=transferred_amount,
     )
-    assert roundtrip_serialize_mediated_transfer(mediated_transfer)
+
+    mediated_transfer.sign(PRIVKEY, ADDRESS)
+    assert decode(mediated_transfer.encode()) == mediated_transfer
 
 
-# zero is used to indicate novalue in solidity
-@pytest.mark.parametrize('nonce', [-1, 0, 2 ** 64])
-@pytest.mark.parametrize('identifier', [-1, 2 ** 64])
-@pytest.mark.parametrize('token', INVALID_ADDRESSES)
-@pytest.mark.parametrize('recipient', INVALID_ADDRESSES)
-@pytest.mark.parametrize('target', INVALID_ADDRESSES)
-@pytest.mark.parametrize('initiator', INVALID_ADDRESSES)
-@pytest.mark.parametrize('transferred_amount', [-1, 2 ** 256])
-@pytest.mark.parametrize('fee', [2 ** 256])
-def test_mediated_transfer_out_of_bounds_values(
-        nonce,
-        identifier,
-        token,
-        recipient,
-        target,
-        initiator,
-        transferred_amount,
-        fee):
+@pytest.mark.parametrize('amount', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('identifier', [0, 2 ** 64 - 1])
+@pytest.mark.parametrize('nonce', [1, 2 ** 64 - 1])
+@pytest.mark.parametrize('transferred_amount', [0, 2 ** 256 - 1])
+def test_refund_transfer_min_max(amount, identifier, nonce, transferred_amount):
+    refund_transfer = make_refund_transfer(
+        amount=amount,
+        identifier=identifier,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+    )
 
+    refund_transfer.sign(PRIVKEY, ADDRESS)
+    assert decode(refund_transfer.encode()) == refund_transfer
+
+
+@pytest.mark.parametrize('args', MEDIATED_TRANSFER_INVALID_VALUES)
+def test_mediated_transfer_out_of_bounds_values(args):
     with pytest.raises(ValueError):
-        make_mediated_transfer(
-            nonce=nonce,
-            identifier=identifier,
-            token=token,
-            recipient=recipient,
-            target=target,
-            initiator=initiator,
-            transferred_amount=transferred_amount,
-            fee=fee,
-        )
+        make_mediated_transfer(**args)
+
+
+@pytest.mark.parametrize('args', REFUND_TRANSFER_INVALID_VALUES)
+def test_refund_transfer_out_of_bounds_values(args):
+    with pytest.raises(ValueError):
+        make_refund_transfer(**args)
+
+
+@pytest.mark.parametrize('args', DIRECT_TRANSFER_INVALID_VALUES)
+def test_direct_transfer_out_of_bounds_values(args):
+    with pytest.raises(ValueError):
+        make_direct_transfer(**args)
