@@ -234,9 +234,10 @@ def geth_create_blockchain(
     # memory paging, otherwise the proof-of-work will be extremely slow
     # increasing the flakiness of the tests.
     memory = psutil.virtual_memory()
-    if memory.free < DAGSIZE:
+    if memory.available < DAGSIZE * 1.5:
         raise RuntimeError(
-            'To properly run the tests with a geth miner at least 1GB of free memory is required.'
+            'To properly run the tests with a geth miner '
+            'at least 1.5 GB of available memory is required.'
         )
 
     nodes_configuration = []
