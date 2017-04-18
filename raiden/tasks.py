@@ -21,15 +21,8 @@ from raiden.messages import (
 from raiden.settings import (
     DEFAULT_HEALTHCHECK_POLL_TIMEOUT,
     DEFAULT_EVENTS_POLL_TIMEOUT,
-    ESTIMATED_BLOCK_TIME,
 )
 from raiden.utils import lpex, pex
-
-__all__ = (
-    'StartMediatedTransferTask',
-    'MediateTransferTask',
-    'EndMediatedTransferTask',
-)
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 REMOVE_CALLBACK = object()

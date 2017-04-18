@@ -23,6 +23,7 @@ class InvalidKey(str):
         # please provide an explicit key while testing with tester
         raise Exception('sender key was not set')
 
+
 INVALID_KEY = InvalidKey('default_key_was_not_set')
 
 
@@ -74,7 +75,12 @@ def create_nettingchannel_proxy(tester_state, tester_nettingchannel_address, log
     return netting_channel_abi
 
 
-def channel_from_nettingcontract(our_key, netting_contract, external_state, reveal_timeout, block_number):
+def channel_from_nettingcontract(
+        our_key,
+        netting_contract,
+        external_state,
+        reveal_timeout,
+        block_number):
     """ Create a `channel.Channel` for the `netting_contract`.
 
     Use this to make sure that both implementations (the smart contract and the

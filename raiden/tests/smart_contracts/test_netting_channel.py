@@ -988,7 +988,7 @@ def test_unlock_at_settlement_block(
     hashlock = sha3(secret)
 
     lock0 = Lock(
-        amount=31,
+        amount=lock_amount,
         expiration=lock_expiration,
         hashlock=hashlock,
     )

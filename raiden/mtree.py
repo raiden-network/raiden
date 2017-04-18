@@ -80,7 +80,6 @@ def merkleroot(elements):
     return Merkletree(elements).merkleroot
 
 
-
 def build_lst(elements):
     result = list()
 
