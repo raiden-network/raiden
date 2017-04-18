@@ -158,7 +158,14 @@ def geth_init_datadir(datadir, genesis_path):
         datadir (str): the datadir in which the blockchain is initialized.
     """
     try:
-        subprocess.check_output(['geth', '--datadir', datadir, 'init', genesis_path], stderr=subprocess.STDOUT)
+        subprocess.check_output([
+            'geth',
+            '--datadir',
+            datadir,
+            'init',
+            genesis_path],
+            stderr=subprocess.STDOUT
+        )
     except subprocess.CalledProcessError as e:
         raise ValueError(
             """Initializing geth with custom genesis returned {} with error:

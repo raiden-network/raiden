@@ -29,7 +29,6 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
-    get_encoded_transfers
 )
 from raiden.blockchain.abi import (
     TOKENADDED_EVENTID,

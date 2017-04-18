@@ -3,7 +3,7 @@ import pytest
 import grequests
 import httplib
 import json
-from flask import url_for, current_app
+from flask import url_for
 
 from pyethapp.jsonrpc import address_encoder, address_decoder
 

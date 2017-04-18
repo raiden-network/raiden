@@ -184,12 +184,3 @@ def channel_to_api_dict(channel):
         "balance": channel.contract_balance,
         "state": channel.state
     }
-
-
-def safe_address_decode(address):
-    try:
-        address = address.decode('hex')
-    except TypeError:
-        pass
-
-    return address

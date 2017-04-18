@@ -48,7 +48,6 @@ def test_ping(iterations=ITERATIONS):
     run_timeit('Ping', msg, iterations=iterations)
 
 
-
 def test_secret_request(iterations=ITERATIONS):
     identifier = 1
     hashlock = HASH

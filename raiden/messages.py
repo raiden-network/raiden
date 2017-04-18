@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
-from collections import namedtuple
-
 from ethereum.slogging import getLogger
 from ethereum.utils import big_endian_to_int
 
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
-from raiden.encoding.messages import secret as secret_field
-from raiden.encoding.messages import signature as signature_field
 from raiden.utils import publickey_to_address, sha3, ishash, pex
 
 __all__ = (
@@ -23,6 +19,7 @@ __all__ = (
 )
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
+
 
 class MessageHashable(object):
     pass

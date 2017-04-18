@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
-import random
 from collections import namedtuple
 
 from gevent.event import AsyncResult
@@ -8,9 +6,6 @@ from ethereum import slogging
 
 from raiden.tasks import (
     StartMediatedTransferTask,
-    MediateTransferTask,
-    EndMediatedTransferTask,
-    ExchangeTask,
 )
 from raiden.utils import pex
 

@@ -2,7 +2,6 @@
 import pytest
 
 from raiden.tests.utils.transfer import channel
-from raiden.exceptions import UnknownTokenAddress
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
