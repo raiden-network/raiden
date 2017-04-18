@@ -344,5 +344,6 @@ config_builder.py private_to_account deadbeef...feedbead password
 
     print usage_text
 
+
 if __name__ == '__main__':
     cli(obj={})  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
