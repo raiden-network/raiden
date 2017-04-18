@@ -13,9 +13,7 @@
     "outDir": "../out-tsc/app",
     "module": "es2015",
     "baseUrl": "",
-    "types": [
-      "jquery",
-      "materialize-css"]
+    "types": []
   },
   "exclude": [
     "test.ts",

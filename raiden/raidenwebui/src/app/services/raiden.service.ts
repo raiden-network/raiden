@@ -25,6 +25,11 @@ export class RaidenService {
         .map((response) => response.json()).catch(this.handleError);
     }
 
+    public getTokenBalancesOf(raidenAddress: string): Observable<any> {
+        return this.http.get('/src/app/services/tokenbalance.json')
+        .map((response) => response.json()).catch(this.handleError);
+    }
+
     private handleError (error: Response | any) {
         // In a real world app, you might use a remote logging infrastructure
         let errMsg: string;

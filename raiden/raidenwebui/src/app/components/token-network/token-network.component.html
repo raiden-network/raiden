@@ -1,0 +1,10 @@
+<p-dataTable [value]="tokenBalances" [(selection)]="selectedToken" dataKey="address">
+    <p-column [style]="{'width':'38px'}" selectionMode="single"></p-column>
+    <p-column field="symbol" header="Symbol"
+    [style]="{width: '40px', 'text-align': 'center'}"></p-column>
+    <p-column field="address" header="Address"></p-column>
+    <p-column field="name" header="Name"></p-column>
+    <p-column field="balance" header="Balance"
+    [style]="{width: '60px', 'text-align': 'center'}"></p-column>
+    <p-footer><div class="ui-helper-clearfix" style="width:100%"><button type="button" pButton icon="fa-plus" style="float:left" (click)="showDialogToAdd()" label="Join"></button></div></p-footer>
+</p-dataTable>
