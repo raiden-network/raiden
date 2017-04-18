@@ -39,6 +39,7 @@ DIRECTTRANSFER_CMDID = 5
 LOCKEDTRANSFER_CMDID = 6
 MEDIATEDTRANSFER_CMDID = 7
 REFUNDTRANSFER_CMDID = 8
+TOKENSWAP_CMDID = 9
 REVEALSECRET_CMDID = 11
 
 ACK = to_bigendian(ACK_CMDID)
@@ -49,6 +50,7 @@ REVEALSECRET = to_bigendian(REVEALSECRET_CMDID)
 DIRECTTRANSFER = to_bigendian(DIRECTTRANSFER_CMDID)
 LOCKEDTRANSFER = to_bigendian(LOCKEDTRANSFER_CMDID)
 MEDIATEDTRANSFER = to_bigendian(MEDIATEDTRANSFER_CMDID)
+TOKENSWAP = to_bigendian(TOKENSWAP_CMDID)
 REFUNDTRANSFER = to_bigendian(REFUNDTRANSFER_CMDID)
 
 
@@ -187,6 +189,26 @@ MediatedTransfer = namedbuffer(
     ]
 )
 
+TokenSwap = namedbuffer(
+    'token_swap',
+    [
+        cmdid(TOKENSWAP),  # [0:1]
+        pad(3),                   # [1:4]
+        nonce,                    # [4:12]
+        identifier,               # [12:20]
+        expiration,               # [20:28]
+        token,                    # [28:48]
+        recipient,                # [48:68]
+        target,                   # [68:88]
+        initiator,                # [88:108]
+        locksroot,
+        hashlock,
+        transferred_amount,
+        amount,
+        fee,
+        signature,
+    ]
+)
 RefundTransfer = namedbuffer(
     'refund_transfer',
     [
@@ -224,6 +246,7 @@ CMDID_MESSAGE = {
     DIRECTTRANSFER: DirectTransfer,
     LOCKEDTRANSFER: LockedTransfer,
     MEDIATEDTRANSFER: MediatedTransfer,
+    TOKENSWAP: TokenSwap,
     REFUNDTRANSFER: RefundTransfer,
 }
 

@@ -452,7 +452,7 @@ library NettingChannelLibrary {
 
         if (cmdid == 5) {
             assignDirectTransfer(sender, transfer_raw);
-        } else if (cmdid == 7) {
+        } else if (cmdid == 7 || cmdid == 9) {
             assignMediatedTransfer(sender, transfer_raw);
         } else if (cmdid == 8) {
             assignRefundTransfer(sender, transfer_raw);
