@@ -8,11 +8,7 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferState,
 )
 
-from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
-)
+from raiden.transfer.state import CHANNEL_STATE_OPENED
 
 # prefixing with UNIT_ to differ from the default globals
 UNIT_SETTLE_TIMEOUT = 50

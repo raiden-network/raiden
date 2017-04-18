@@ -17,11 +17,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.transfer.state import (
-    CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_CLOSED,
-    CHANNEL_STATE_SETTLED,
-)
+from raiden.transfer.state import CHANNEL_STATE_CLOSED
 from . import factories
 
 

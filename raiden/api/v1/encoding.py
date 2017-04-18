@@ -28,6 +28,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
 )
 
+
 # type converter for the flask route
 class HexAddressConverter(BaseConverter):
 
