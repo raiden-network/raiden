@@ -1,163 +1,151 @@
 # -*- coding: utf-8 -*-
 import os
 
-from secp256k1 import PrivateKey
+import pytest
 from ethereum import tester
-from raiden.utils import sha3, privatekey_to_address, get_project_root
-from raiden.messages import DirectTransfer, Lock, MediatedTransfer, RefundTransfer
-from raiden.encoding.messages import wrap_and_validate
-from raiden.encoding.signing import GLOBAL_CTX, address_from_key
+from secp256k1 import PrivateKey
+from pyethapp.jsonrpc import address_decoder
+
+from raiden.encoding.signing import GLOBAL_CTX
 from raiden.tests.utils.tests import get_test_contract_path
+from raiden.utils import sha3, privatekey_to_address, get_project_root
+from raiden.tests.utils.messages import (
+    make_direct_transfer,
+    make_mediated_transfer,
+    make_refund_transfer,
+)
 
 
-def deploy_decoder_tester(tester_state, token_address, address1, address2, settle_timeout):
-    netting_chnanel_library_path = os.path.join(
-        get_project_root(),
-        'smart_contracts',
-        'NettingChannelLibrary.sol',
-    )
+VALID_LOCKSROOT = [
+    sha3('WaldemarstrWaldemarstrWaldemarst'),
+    sha3('SikorkaSikorkaSikorkaSikorkaSiko'),
+    sha3('MainzMainzMainzMainzMainzMainzMa'),
+]
 
-    nettingchannel_lib = tester_state.abi_contract(
-        None,
-        path=netting_chnanel_library_path,
-        language='solidity'
-    )
-    tester_state.mine(number_of_blocks=1)
-    decode_tester = tester_state.abi_contract(
+
+def assert_decoder_results(message, decoder):
+    message_encoded = message.encode()
+    transfer_raw, signing_address = decoder.getTransferRawAddress(message_encoded)
+
+    assert address_decoder(signing_address) == message.sender
+    assert transfer_raw == message_encoded[:-65]
+
+    (
+        nonce_decoded,
+        locksroot_decoded,
+        transferred_amount_decoded
+    ) = decoder.decodeTransfer(transfer_raw, sender=tester.DEFAULT_KEY)
+
+    assert message.nonce == nonce_decoded
+    assert message.transferred_amount == transferred_amount_decoded
+    assert message.locksroot == locksroot_decoded
+
+
+def deploy_decoder_tester(tester_state, tester_nettingchannel_library_address):
+    contracts_path = os.path.join(get_project_root(), 'smart_contracts')
+    raiden_remap = 'raiden={}'.format(contracts_path)
+
+    decoder = tester_state.abi_contract(
         None,
         path=get_test_contract_path('DecoderTester.sol'),
         language='solidity',
-        libraries={
-            'NettingChannelLibrary': nettingchannel_lib.address.encode('hex')
-        },
-        constructor_parameters=(
-            token_address,
-            address1,
-            address2,
-            settle_timeout
-        ),
-        extra_args='raiden={}'.format(os.path.join(get_project_root(), 'smart_contracts'))
+        libraries={'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex')},
+        extra_args=raiden_remap,
     )
     tester_state.mine(number_of_blocks=1)
 
-    return decode_tester
+    return decoder
 
 
-def test_decode_direct_transfer(settle_timeout, tester_state, tester_token):
-    privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = tester.k1
-    address0 = privatekey_to_address(privatekey0)
-    address1 = privatekey_to_address(privatekey1)
-
-    dtester = deploy_decoder_tester(
+@pytest.mark.parametrize('identifier', [0, 2 ** 64 - 1])
+@pytest.mark.parametrize('nonce', [1, 2 ** 64 - 1])
+@pytest.mark.parametrize('transferred_amount', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('locksroot', VALID_LOCKSROOT)
+def test_decode_direct_transfer(
+        identifier,
+        nonce,
+        transferred_amount,
+        locksroot,
         tester_state,
-        tester_token.address,
-        address0,
-        address1,
-        settle_timeout
-    )
+        tester_nettingchannel_library_address):
 
-    locksroot = sha3('Waldemarstr')
-
-    message = DirectTransfer(
-        identifier=1,
-        nonce=2,
-        token=tester_token.address,
-        transferred_amount=1337,
-        recipient=address1,
-        locksroot=locksroot
-    )
-
-    message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
-    _, publickey = wrap_and_validate(message.encode())
-    recovered_address = address_from_key(publickey)
-    assert recovered_address == address0
-
-    assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
-    assert dtester.decodedNonce() == 2
-    assert dtester.decodedToken() == tester_token.address.encode('hex')
-    assert dtester.decodedLocksroot() == locksroot
-
-
-def test_decode_mediated_transfer(settle_timeout, tester_state, tester_token):
     privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = tester.k1
-    privatekey2 = tester.k2
     address0 = privatekey_to_address(privatekey0)
-    address1 = privatekey_to_address(privatekey1)
-    address2 = privatekey_to_address(privatekey2)
 
-    dtester = deploy_decoder_tester(
-        tester_state,
-        tester_token.address,
-        address0,
-        address1,
-        settle_timeout
-    )
+    decoder = deploy_decoder_tester(tester_state, tester_nettingchannel_library_address)
 
-    locksroot = sha3('Sikorka')
-    amount = 1337
-    expiration = 5
-    lock = Lock(amount, expiration, locksroot)
-
-    message = MediatedTransfer(
-        identifier=313151,
-        nonce=88924902,
-        token=tester_token.address,
-        transferred_amount=amount,
-        recipient=address1,
+    direct_transfer = make_direct_transfer(
+        identifier=identifier,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
         locksroot=locksroot,
-        lock=lock,
-        target=address2,
-        initiator=address0
     )
+    direct_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
 
-    message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
-    _, publickey = wrap_and_validate(message.encode())
-    recovered_address = address_from_key(publickey)
-    assert recovered_address == address0
-
-    assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
-    assert dtester.decodedNonce() == 88924902
-    assert dtester.decodedToken() == tester_token.address.encode('hex')
-    assert dtester.decodedLocksroot() == locksroot
+    assert_decoder_results(direct_transfer, decoder)
 
 
-def test_decode_refund_transfer(settle_timeout, tester_state, tester_token):
-    privatekey0 = tester.DEFAULT_KEY
-    privatekey1 = tester.k1
-    address0 = privatekey_to_address(privatekey0)
-    address1 = privatekey_to_address(privatekey1)
-
-    dtester = deploy_decoder_tester(
+@pytest.mark.parametrize('amount', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('identifier', [0, 2 ** 64 - 1])
+@pytest.mark.parametrize('nonce', [1, 2 ** 64 - 1])
+@pytest.mark.parametrize('transferred_amount', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('fee', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('locksroot', VALID_LOCKSROOT)
+def test_decode_mediated_transfer(
+        amount,
+        identifier,
+        nonce,
+        transferred_amount,
+        locksroot,
+        fee,
         tester_state,
-        tester_token.address,
-        address0,
-        address1,
-        settle_timeout
-    )
+        tester_nettingchannel_library_address):
 
-    locksroot = sha3('Mainz')
-    amount = 1337
-    expiration = 19
-    lock = Lock(amount, expiration, locksroot)
+    privatekey0 = tester.DEFAULT_KEY
+    address0 = privatekey_to_address(privatekey0)
 
-    message = RefundTransfer(
-        identifier=321313,
-        nonce=4242452,
-        token=tester_token.address,
-        transferred_amount=amount,
-        recipient=address1,
+    decoder = deploy_decoder_tester(tester_state, tester_nettingchannel_library_address)
+
+    mediated_transfer = make_mediated_transfer(
+        amount=amount,
+        identifier=identifier,
+        nonce=nonce,
+        fee=fee,
+        transferred_amount=transferred_amount,
         locksroot=locksroot,
-        lock=lock
     )
 
-    message.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
-    _, publickey = wrap_and_validate(message.encode())
-    recovered_address = address_from_key(publickey)
-    assert recovered_address == address0
+    mediated_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
 
-    assert dtester.testDecodeTransfer(message.encode(), sender=privatekey1) is True
-    assert dtester.decodedNonce() == 4242452
-    assert dtester.decodedToken() == tester_token.address.encode('hex')
-    assert dtester.decodedLocksroot() == locksroot
+    assert_decoder_results(mediated_transfer, decoder)
+
+
+@pytest.mark.parametrize('amount', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('identifier', [0, 2 ** 64 - 1])
+@pytest.mark.parametrize('nonce', [1, 2 ** 64 - 1])
+@pytest.mark.parametrize('transferred_amount', [0, 2 ** 256 - 1])
+@pytest.mark.parametrize('locksroot', VALID_LOCKSROOT)
+def test_decode_refund_transfer(
+        amount,
+        identifier,
+        nonce,
+        transferred_amount,
+        locksroot,
+        tester_state,
+        tester_nettingchannel_library_address):
+
+    privatekey0 = tester.DEFAULT_KEY
+    address0 = privatekey_to_address(privatekey0)
+
+    decoder = deploy_decoder_tester(tester_state, tester_nettingchannel_library_address)
+
+    refund_transfer = make_refund_transfer(
+        amount=amount,
+        identifier=identifier,
+        nonce=nonce,
+        transferred_amount=transferred_amount,
+        locksroot=locksroot,
+    )
+    refund_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+
+    assert_decoder_results(refund_transfer, decoder)

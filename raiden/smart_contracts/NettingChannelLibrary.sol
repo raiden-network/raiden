@@ -403,7 +403,7 @@ library NettingChannelLibrary {
         kill(self);
     }
 
-    function getTransferRawAddress(bytes memory signed_transfer) private returns (bytes memory, address) {
+    function getTransferRawAddress(bytes memory signed_transfer) internal returns (bytes memory, address) {
         uint signature_start;
         uint length;
         bytes memory signature;
@@ -466,7 +466,7 @@ library NettingChannelLibrary {
     // - http://solidity.readthedocs.io/en/develop/assembly.html
 
     function decodeTransfer(bytes transfer_raw)
-        private
+        internal
         returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount)
     {
         uint cmdid = uint(transfer_raw[0]);
@@ -566,7 +566,7 @@ library NettingChannelLibrary {
         }
     }
 
-    function decodeLock(bytes lock) private returns (uint64 expiration, uint amount, bytes32 hashlock) {
+    function decodeLock(bytes lock) internal returns (uint64 expiration, uint amount, bytes32 hashlock) {
         if (lock.length != 72) {
             throw;
         }
@@ -583,7 +583,7 @@ library NettingChannelLibrary {
     }
 
     // Get nonce from a message
-    function getNonce(bytes message) private returns (uint64 nonce) {
+    function getNonce(bytes message) internal returns (uint64 nonce) {
         // don't care about length of message since nonce is always at a fixed position
         assembly {
             nonce := mload(add(message, 12))
