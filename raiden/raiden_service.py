@@ -98,6 +98,8 @@ from raiden.utils import (
     privatekey_to_address,
     sha3,
 )
+from raiden.settings import DEFAULT_TRANSACTION_LOG_FILENAME
+from raiden.transaction import TransactionLog
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -184,6 +186,7 @@ class RaidenService(object):
         else:
             self.healthcheck = None
 
+        self.transaction_log = TransactionLog(DEFAULT_TRANSACTION_LOG_FILENAME, None)
         self.alarm = alarm
         self.message_handler = message_handler
         self.state_machine_event_handler = state_machine_event_handler
