@@ -46,6 +46,7 @@ class TransactionLog(object):
         pickle.dump(transaction, self.transact_file)
 
     def snapshot(self, state):
+        raise NotImplementedError()
         self.snapshot_file.truncate(0)
         pickle.dump(state, self.snapshot_file)
 
