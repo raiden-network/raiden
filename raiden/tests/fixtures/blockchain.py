@@ -79,7 +79,7 @@ def _tokens_addresses(token_amount, number_of_tokens, deploy_service, blockchain
 
 @pytest.fixture()
 def dagpath():
-    return os.path.expanduser('$HOME/.ethash/full-R23-0000000000000000')
+    return os.path.expanduser('~/.ethash/full-R23-0000000000000000')
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -90,9 +90,10 @@ def pregenerate_dag(request, blockchain_type, dagpath):
     )
 
     if blockchain_type == 'geth' and missing_dag:
-        os.makedirs(os.path.dirname(dagpath))
+        dag_folder = os.path.dirname(dagpath)
+        os.makedirs(dag_folder)
 
-        makedag = subprocess.Popen(['geth', 'makedag', '0', dagpath])
+        makedag = subprocess.Popen(['geth', 'makedag', '0', dag_folder])
         makedag.communicate()
         assert makedag.returncode == 0, 'DAG generation failed'
 
