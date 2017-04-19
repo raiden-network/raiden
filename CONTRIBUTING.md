@@ -81,7 +81,7 @@ configurable here is some general guidelines.
 Flake8 will warn you for 99 characters which is the hard limit on the max length. Try not to go above it. We also have a soft
 limit on 80 characters but that is not enforced and is there just to encourage short lines.
 
-** Breaking function definitions when line is above 99 characters **
+**Breaking function definitions when line is above 99 characters**
 
 Always put each argument into its own line. Look at the following examples to understand:
 
@@ -108,7 +108,7 @@ def function_with_many_args(
 ```
 
 
-** Breaking function calls when line is above 99 characters **
+**Breaking function calls when line is above 99 characters**
 
 Much like in the above example the following should be avoided
 
@@ -203,7 +203,7 @@ Mappings/dicts:
 For solidity we generally follow the style guide as shown in the [solidity documentation](http://solidity.readthedocs.io/en/develop/style-guide.html)
 with a few notable exceptions:
 
-** Variable Names **
+**Variable Names**
 
 All variable name should be in snake case, just like in python. Function names on the other hand should be mixedCase.
 MixedCase is essentially like CamelCase but with the initial letter being a small letter.
@@ -215,7 +215,7 @@ function iDoSomething(uint awesome_argument) {
 }
 ```
 
-** Modifiers in long function declarations **
+**Modifiers in long function declarations**
 
 
 This is how the solidity documentation suggests it:
