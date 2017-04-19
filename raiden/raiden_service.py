@@ -70,6 +70,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
+from raiden.transfer.log import TransactionLog
 from raiden.channel import ChannelEndState, ChannelExternalState
 from raiden.exceptions import (
     UnknownAddress,
@@ -99,7 +100,6 @@ from raiden.utils import (
     sha3,
 )
 from raiden.settings import DEFAULT_TRANSACTION_LOG_FILENAME
-from raiden.transaction import TransactionLog
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -693,7 +693,7 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(initiator.state_transition, None)
-        all_events = state_manager.dispatch(init_initiator)
+        all_events = state_manager.log_and_dispatch(init_initiator, self.transaction_log)
 
         for event in all_events:
             self.state_machine_event_handler.on_event(event)
@@ -744,7 +744,7 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(mediator.state_transition, None)
-        all_events = state_manager.dispatch(init_mediator)
+        all_events = state_manager.log_and_dispatch(init_mediator, self.transaction_log)
 
         for event in all_events:
             self.state_machine_event_handler.on_event(event)
@@ -768,7 +768,7 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(target_task.state_transition, None)
-        all_events = state_manager.dispatch(init_target)
+        all_events = state_manager.log_and_dispatch(init_target, self.transaction_log)
 
         for event in all_events:
             self.state_machine_event_handler.on_event(event)
@@ -1049,7 +1049,7 @@ class StateMachineEventHandler(object):
             self.dispatch(manager, state_change)
 
     def dispatch(self, state_manager, state_change):
-        all_events = state_manager.dispatch(state_change)
+        all_events = state_manager.log_and_dispatch(state_change, self.raiden.transaction_log)
 
         for event in all_events:
             self.on_event(event)

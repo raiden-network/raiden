@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import errno
 import os
 import re
 import sys
@@ -175,3 +176,25 @@ def channel_to_api_dict(channel):
         "balance": channel.contract_balance,
         "state": channel.state
     }
+
+
+def create_file_iff_not_existing(path, return_it, **kwargs):
+    """ Creates a file if and only if it does not exist in a safe way.
+        Taken from:
+    http://stackoverflow.com/questions/10978869/safely-create-a-file-if-and-only-if-it-does-not-exist-with-python
+    """
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+    try:
+        file_handle = os.open(path, flags)
+    except OSError as e:
+        if e.errno == errno.EEXIST:  # Failed as the file already exists.
+            pass
+        else:  # Something unexpected went wrong so reraise the exception.
+            raise
+    else:
+        # No exception, so the file must have been created successfully.
+        if not return_it:
+            os.close(file_handle)
+            return None
+        else:
+            return os.fdopen(file_handle, **kwargs)

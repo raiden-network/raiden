@@ -3,6 +3,8 @@
 import types
 from collections import namedtuple
 from copy import deepcopy
+from log import TransactionLog
+
 
 TransitionResult = namedtuple('TransitionResult', ('new_state', 'events'))
 
@@ -137,4 +139,15 @@ class StateManager(object):
         assert isinstance(self.current_state, (State, types.NoneType))
         assert all(isinstance(e, Event) for e in events)
 
+        return events
+
+    def log_and_dispatch(self, state_change, transaction_log):
+        """Acts like `dispatch()` but also makes a log entry into the
+        transaction log.
+        """
+        assert isinstance(transaction_log, TransactionLog)
+        transaction_log.log(state_change)
+        events = self.dispatch(state_change)
+
+        # TODO: Snapshot of current state?
         return events
