@@ -48,7 +48,7 @@ def fixture_all_combinations(invalid_values):
     """ Generate all combinations for testing invalid values.
 
     `pytest.mark.parametrize` will generate the combination of the full-length
-    values, this is not sufficient for a exhaustive failing test with default
+    values, this is not sufficient for an exhaustive failing test with default
     values, example::
 
         @pytest.mark.parametrize("x", [0, 1])
@@ -57,7 +57,7 @@ def fixture_all_combinations(invalid_values):
             with pytest.raises(Exception):
                 # failing computation with x and y
 
-    The above test will generate 4 tests {x:0,y:1}, {x:0,y:3}, {x:1,y:2}, and
+    The above test will generate 4 tests {x:0,y:2}, {x:0,y:3}, {x:1,y:2}, and
     {x:1,y:3}, but it will not generate a scenario for x and y alone {x:0},
     {x:1}, {y:2}, {y:3}.
     """
@@ -83,7 +83,7 @@ def fixture_all_combinations(invalid_values):
             for key, values in invalid_values
         )
 
-        # now make the product of all possible invalid keys and values
+        # now make the cartesian product of all possible invalid keys and values
         invalid_instances = product(*keys_values)
 
         for instance in invalid_instances:
