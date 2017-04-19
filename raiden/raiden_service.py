@@ -544,6 +544,20 @@ class RaidenService(object):
         graph = self.channelgraphs[token_address]
         graph.add_channel(detail, block_number)
 
+    def log_and_apply(self, state_change):
+        self.transact_log.log(state_change)
+
+        messages = self.state_manager.dispatch(state_change)
+
+        for m in messages:
+            # TODO:
+            # encoded_message = encode(m)
+            # self.send_async(message.recipient, encoded_message)
+            pass
+
+        state = self.state_manager.current_state
+        self.transact_log.snapshot(state)
+
     def stop(self):
         wait_for = [self.alarm]
 
