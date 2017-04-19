@@ -21,7 +21,7 @@ INVALID_ADDRESSES = [
     ' ' * 21,
 ]
 
-# zero is used to indicate novalue in solidity, that is why it's a invalid
+# zero is used to indicate novalue in solidity, that is why it's an invalid
 # nonce value
 DIRECT_TRANSFER_INVALID_VALUES = fixture_all_combinations({
     'nonce': [-1, 0, 2 ** 64],
