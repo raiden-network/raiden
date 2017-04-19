@@ -33,10 +33,10 @@ TokenSwap = namedtuple('TokenSwap', (
     'identifier',
     'from_token',
     'from_amount',
-    'from_nodeaddress',  # the node' address of the owner of the `from_token`
+    'from_nodeaddress',  # the node address of the owner of the `from_token`
     'to_token',
     'to_amount',
-    'to_nodeaddress',  # the node' address of the owner of the `to_token`
+    'to_nodeaddress',  # the node address of the owner of the `to_token`
 ))
 SwapKey = namedtuple('SwapKey', (
     'identifier',
@@ -461,7 +461,7 @@ class BaseMediatedTransferTask(Task):
 class MakerTokenSwapTask(BaseMediatedTransferTask):
     """ Initiator task, responsible to choose a random secret, initiate the
     token swap by sending a mediated transfer to the counterparty and
-    revealing the secret once the swap can be complete.
+    revealing the secret once the swap is complete.
     """
 
     def __init__(self, raiden, tokenswap, async_result):
@@ -549,7 +549,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
                 to_channel.register_transfer(to_mediated_transfer)
                 raiden.register_channel_for_hashlock(to_token, to_channel, hashlock)
 
-                # A swap is compose of two mediated transfers, we need to
+                # A swap is composed of two mediated transfers, we need to
                 # reveal the secret to both, since the maker is one of the ends
                 # we just need to send the reveal secret directly to the taker.
                 reveal_secret = RevealSecret(secret)
@@ -642,7 +642,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
         )
 
         for response in response_iterator:
-            valid_mediated_transfer = (
+            transfer_is_valid_mediated_transfer = (
                 isinstance(response, MediatedTransfer) and
                 response.token == to_token and
 
@@ -664,7 +664,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
 
             # The MediatedTransfer might be from `next_hop` or most likely from
             # a different node.
-            if valid_mediated_transfer:
+            if transfer_is_valid_mediated_transfer:
                 if response.lock.amount == to_amount:
                     mediated_transfer = response
 
@@ -754,7 +754,7 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
         raiden.register_channel_for_hashlock(taker_receiving_token, from_channel, hashlock)
 
         # send to the maker a secret request informing how much the taker will
-        # be _payed_, this is used to inform the taker that his part of the
+        # be _paid_, this is used to inform the maker that his part of the
         # mediated transfer is okay
         secret_request = SecretRequest(
             identifier,
@@ -892,7 +892,7 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
 
                 return
 
-            # the lock expire
+            # the lock expired
             else:
                 if log.isEnabledFor(logging.DEBUG):
                     node_address = raiden.address

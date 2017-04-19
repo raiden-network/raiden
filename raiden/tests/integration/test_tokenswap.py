@@ -14,6 +14,7 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
     7    # taker expiration
 )
 
+
 @pytest.mark.timeout(160)
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
