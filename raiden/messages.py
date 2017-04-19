@@ -21,6 +21,32 @@ __all__ = (
 log = getLogger(__name__)  # pylint: disable=invalid-name
 
 
+def assert_transfer_values(identifier, nonce, token, transferred_amount, recipient):
+    if identifier < 0:
+        raise ValueError('identifier cannot be negative')
+
+    if identifier >= 2 ** 64:
+        raise ValueError('identifier is too large')
+
+    if nonce <= 0:
+        raise ValueError('nonce cannot be zero or negative')
+
+    if nonce >= 2 ** 64:
+        raise ValueError('nonce is too large')
+
+    if len(token) != 20:
+        raise ValueError('token is an invalid address')
+
+    if transferred_amount < 0:
+        raise ValueError('transferred_amount cannot be negative')
+
+    if transferred_amount >= 2 ** 256:
+        raise ValueError('transferred_amount is too large')
+
+    if len(recipient) != 20:
+        raise ValueError('recipient is an invalid address')
+
+
 class MessageHashable(object):
     pass
 
@@ -298,29 +324,13 @@ class DirectTransfer(SignedMessage):
     cmdid = messages.DIRECTTRANSFER
 
     def __init__(self, identifier, nonce, token, transferred_amount, recipient, locksroot):
-        if nonce <= 0:
-            raise ValueError('nonce cannot be zero or negative')
-
-        if nonce >= 2 ** 64:
-            raise ValueError('nonce is too large')
-
-        if identifier < 0:
-            raise ValueError('identifier cannot be negative')
-
-        if identifier >= 2 ** 64:
-            raise ValueError('identifier is too large')
-
-        if len(token) != 20:
-            raise ValueError('token is an invalid address')
-
-        if len(recipient) != 20:
-            raise ValueError('recipient is an invalid address')
-
-        if transferred_amount < 0:
-            raise ValueError('transferred_amount cannot be negative')
-
-        if transferred_amount >= 2 ** 256:
-            raise ValueError('transferred_amount is too large')
+        assert_transfer_values(
+            identifier,
+            nonce,
+            token,
+            transferred_amount,
+            recipient,
+        )
 
         super(DirectTransfer, self).__init__()
         self.identifier = identifier
@@ -375,6 +385,9 @@ class Lock(MessageHashable):
         if amount >= 2 ** 256:
             raise ValueError('amount {} is too large'.format(amount))
 
+        if expiration < 0:
+            raise ValueError('expiration {} needs to be positive'.format(amount))
+
         if expiration >= 2 ** 256:
             raise ValueError('expiration {} is too large'.format(amount))
 
@@ -427,29 +440,13 @@ class LockedTransfer(SignedMessage):
     def __init__(self, identifier, nonce, token, transferred_amount, recipient, locksroot, lock):
         super(LockedTransfer, self).__init__()
 
-        if identifier < 0:
-            raise ValueError('identifier cannot be negative')
-
-        if identifier >= 2 ** 64:
-            raise ValueError('identifier is too large')
-
-        if nonce <= 0:
-            raise ValueError('nonce cannot be zero or negative')
-
-        if nonce >= 2 ** 64:
-            raise ValueError('nonce is too large')
-
-        if len(token) != 20:
-            raise ValueError('token is an invalid address')
-
-        if transferred_amount < 0:
-            raise ValueError('transferred_amount cannot be negative')
-
-        if transferred_amount >= 2 ** 256:
-            raise ValueError('transferred_amount is too large')
-
-        if len(recipient) != 20:
-            raise ValueError('recipient is an invalid address')
+        assert_transfer_values(
+            identifier,
+            nonce,
+            token,
+            transferred_amount,
+            recipient,
+        )
 
         self.identifier = identifier
         self.nonce = nonce
@@ -457,7 +454,6 @@ class LockedTransfer(SignedMessage):
         self.transferred_amount = transferred_amount
         self.recipient = recipient
         self.locksroot = locksroot
-
         self.lock = lock
 
     def to_mediatedtransfer(self, target, initiator='', fee=0):
