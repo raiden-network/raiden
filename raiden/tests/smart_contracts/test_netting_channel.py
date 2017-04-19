@@ -1078,6 +1078,101 @@ def test_unlock_expired_lock(reveal_timeout, tester_channels, tester_state):
         )
 
 
+@pytest.mark.parametrize('settle_timeout', [50])
+@pytest.mark.parametrize('reveal_timeout', [5])
+def test_unlock_both_participants(
+        deposit,
+        settle_timeout,
+        reveal_timeout,
+        tester_channels,
+        tester_state,
+        tester_token):
+
+    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+
+    address0 = privatekey_to_address(pkey0)
+    address1 = privatekey_to_address(pkey1)
+
+    initial_balance0 = tester_token.balanceOf(address0, sender=pkey0)
+    initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
+
+    secret = 'secretsecretsecretsecretsecretse'
+    hashlock = sha3(secret)
+
+    lock_amount = 31
+    lock01_expiration = tester_state.block.number + settle_timeout - 1 * reveal_timeout
+    lock10_expiration = tester_state.block.number + settle_timeout - 2 * reveal_timeout
+
+    new_block = Block(tester_state.block.number)
+    channel0.state_transition(new_block)
+    channel1.state_transition(new_block)
+
+    # using the same hashlock and amount is intentional
+    lock01 = Lock(lock_amount, lock01_expiration, hashlock)
+    lock10 = Lock(lock_amount, lock10_expiration, hashlock)
+
+    mediated01 = make_mediated_transfer(
+        channel0,
+        channel1,
+        address0,
+        address1,
+        lock01,
+        pkey0,
+        tester_state.block.number,
+        secret,
+    )
+    mediated01_data = str(mediated01.packed().data)
+
+    mediated10 = make_mediated_transfer(
+        channel1,
+        channel0,
+        address1,
+        address0,
+        lock10,
+        pkey1,
+        tester_state.block.number,
+        secret,
+    )
+    mediated10_data = str(mediated10.packed().data)
+
+    nettingchannel.close(mediated01_data, sender=pkey1)
+    tester_state.mine(number_of_blocks=1)
+
+    nettingchannel.updateTransfer(mediated10_data, sender=pkey0)
+    tester_state.mine(number_of_blocks=1)
+
+    proof01 = channel1.our_state.balance_proof.compute_proof_for_lock(
+        secret,
+        mediated01.lock,
+    )
+    nettingchannel.unlock(
+        proof01.lock_encoded,
+        ''.join(proof01.merkle_proof),
+        proof01.secret,
+        sender=pkey1,
+    )
+
+    proof10 = channel0.our_state.balance_proof.compute_proof_for_lock(
+        secret,
+        mediated10.lock,
+    )
+    nettingchannel.unlock(
+        proof10.lock_encoded,
+        ''.join(proof10.merkle_proof),
+        proof10.secret,
+        sender=pkey0,
+    )
+
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    nettingchannel.settle(sender=pkey0)
+
+    balance0 = initial_balance0 + deposit - lock01.amount + lock10.amount
+    balance1 = initial_balance1 + deposit + lock01.amount - lock10.amount
+    assert tester_token.balanceOf(address0, sender=pkey0) == balance0
+    assert tester_token.balanceOf(address1, sender=pkey0) == balance1
+    assert tester_token.balanceOf(nettingchannel.address, sender=pkey0) == 0
+
+
 def test_unlock_twice(reveal_timeout, tester_channels, tester_state):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 

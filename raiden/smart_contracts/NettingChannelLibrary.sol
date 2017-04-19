@@ -3,22 +3,30 @@ pragma solidity ^0.4.0;
 import "./Token.sol";
 
 library NettingChannelLibrary {
-    struct Lock
-    {
-        uint64 expiration;
-        uint amount;
-        bytes32 hashlock;
-    }
-
     struct Participant
     {
         address node_address;
+
+        // Total amount of token transferred to this smart contract through the
+        // `deposit` function, note that direct token transfer cannot be
+        // tracked and will be burned.
         uint256 balance;
-        uint256 netted;
-        uint256 transferred_amount;
-        uint64 nonce;
+
+        // The latest known merkle root of the pending hash-time locks, used to
+        // validate the withdrawn proofs.
         bytes32 locksroot;
-        Lock[] unlocked;
+
+        // The latest known transferred_amount from this node to the other
+        // participant, used to compute the netted balance on settlement.
+        uint256 transferred_amount;
+
+        // Value used to order transfers and only accept the latest on calls to
+        // update, this will only be relevant after either #182 or #293 is
+        // implemented.
+        uint64 nonce;
+
+        // A mapping to keep track of locks that have been withdrawn.
+        mapping(bytes32 => bool) withdrawn_locks;
     }
 
     struct Data {
@@ -30,7 +38,6 @@ library NettingChannelLibrary {
         Token token;
         Participant[2] participants;
         mapping(address => uint8) participant_index;
-        mapping(bytes32 => bool) locks;
         bool updated;
     }
 
@@ -236,11 +243,23 @@ library NettingChannelLibrary {
         bytes32 h;
         bytes32 hashlock;
 
-        (expiration, amount, hashlock) = decodeLock(locked_encoded);
+        // Check if msg.sender is a participant and select the partner (for
+        // third party unlock see #541)
+        index = 1 - index_or_throw(self, msg.sender);
+        Participant storage counterparty = self.participants[index];
 
-        if (self.locks[hashlock]) {
+        // An empty locksroot means there are no pending locks
+        if (counterparty.locksroot == 0) {
             throw;
         }
+
+        (expiration, amount, hashlock) = decodeLock(locked_encoded);
+
+        // A lock can be withdrawn only once per participant
+        if (counterparty.withdrawn_locks[hashlock]) {
+            throw;
+        }
+        counterparty.withdrawn_locks[hashlock] = true;
 
         if (expiration < block.number) {
             throw;
@@ -250,21 +269,24 @@ library NettingChannelLibrary {
             throw;
         }
 
-        // Check if msg.sender is a participant and select the partner
-        index = 1 - index_or_throw(self, msg.sender);
-        Participant storage counterparty = self.participants[index];
-        if (counterparty.nonce == 0) {
-            throw;
-        }
-
         h = computeMerkleRoot(locked_encoded, merkle_proof);
 
         if (counterparty.locksroot != h) {
             throw;
         }
 
-        counterparty.unlocked.push(Lock(expiration, amount, hashlock));
-        self.locks[hashlock] = true;
+        // This implementation allows for each transfer to be set only once, so
+        // it's safe to update the transferred_amount in place.
+        //
+        // Once third parties are allowed to update the counter party transfer
+        // (#293, #182) the locksroot may change, if the locksroot change the
+        // transferred_amount must be reset and locks must be re-withdraw, so
+        // this is also safe.
+        //
+        // This may be problematic if an update changes the transferred_amount
+        // but not the locksroot, since the locks don't need to be re-withdraw,
+        // the difference in the transferred_amount must be accounted for.
+        counterparty.transferred_amount += amount;
     }
 
     function computeMerkleRoot(bytes lock, bytes merkle_proof)
@@ -303,53 +325,55 @@ library NettingChannelLibrary {
         notSettledButClosed(self)
         timeoutOver(self)
     {
-        uint total_deposit;
-        uint k;
-
-        Participant[2] storage participants = self.participants;
-        Participant storage node1 = participants[0];
-        Participant storage node2 = participants[1];
-
-        node1.netted = node1.balance + node2.transferred_amount - node1.transferred_amount;
-        node2.netted = node2.balance + node1.transferred_amount - node2.transferred_amount;
-
-        for (k = 0; k < node1.unlocked.length; k++) {
-            node1.netted -= node1.unlocked[k].amount;
-            node2.netted += node1.unlocked[k].amount;
-        }
-
-        for (k = 0; k < node2.unlocked.length; k++) {
-            node2.netted -= node2.unlocked[k].amount;
-            node1.netted += node2.unlocked[k].amount;
-        }
+        uint8 closing_index;
+        uint8 counter_index;
+        uint256 total_deposit;
+        uint256 counter_netted;
+        uint256 closer_amount;
+        uint256 counter_amount;
 
         self.settled = block.number;
-        total_deposit = node1.balance + node2.balance;
 
-        Participant memory closing_party;
-        Participant memory other_party;
+        closing_index = index_or_throw(self, self.closing_address);
+        counter_index = 1 - closing_index;
 
-        if (node1.node_address == self.closing_address) {
-            closing_party = node1;
-            other_party = node2;
-        } else {
-            closing_party = node2;
-            other_party = node1;
-        }
+        Participant storage closing_party = self.participants[closing_index];
+        Participant storage counter_party = self.participants[counter_index];
 
-        // first pay out to the party that did not close the channel
-        uint amount = total_deposit < other_party.netted
-            ? total_deposit
-            : other_party.netted;
-        if (amount > 0) {
-            if (!self.token.transfer(other_party.node_address, amount)) {
+        counter_netted = (
+            counter_party.balance
+            + closing_party.transferred_amount
+            - counter_party.transferred_amount
+        );
+
+        // Direct token transfers done through the token `transfer` function
+        // cannot be accounted for, these superfulous tokens will be burned,
+        // this is because there is no way to tell which participant (if any)
+        // had ownership over the token.
+        total_deposit = closing_party.balance + counter_party.balance;
+
+        // When the closing party does not provide the counter party transfer,
+        // the `counter_amount` may be larger than the `total_deposit`, without
+        // the min the token transfer fail and the token is locked.
+        counter_amount = min(counter_netted, total_deposit);
+
+        // When the counter party does not provide the closing party transfer,
+        // then `counter_amount` may be negative and the transfer fails, force
+        // the value to 0.
+        counter_amount = max(counter_amount, 0);
+
+        // At this point `counter_amount` is between [0,total_deposit], so this
+        // is safe.
+        closer_amount = total_deposit - counter_amount;
+
+        if (counter_amount > 0) {
+            if (!self.token.transfer(counter_party.node_address, counter_amount)) {
                 throw;
             }
         }
-        // then payout whatever can be paid out to the closing party
-        amount = total_deposit - other_party.netted;
-        if (amount > 0) {
-            if (!self.token.transfer(closing_party.node_address, amount)) {
+
+        if (closer_amount > 0) {
+            if (!self.token.transfer(closing_party.node_address, closer_amount)) {
                 throw;
             }
         }
@@ -584,6 +608,14 @@ library NettingChannelLibrary {
             throw;
         }
         return n - 1;
+    }
+
+    function min(uint a, uint b) private returns (uint) {
+        return a > b ? b : a;
+    }
+
+    function max(uint a, uint b) private returns (uint) {
+        return a > b ? a : b;
     }
 
     function kill(Data storage self) channelSettled(self) {
