@@ -878,9 +878,10 @@ class RaidenAPI(object):
             taker_token,
             taker_amount,
             taker_address):
-        """ Start a atomic swap operation by sending a MediatedTransfer with
-        `from_amount` of `from_token`. Only proceed when a new valid
-        MediatedTransfer is received with `to_amount` of `to_asset`.
+        """ Start an atomic swap operation by sending a MediatedTransfer with
+        `maker_amount` of `maker_token` to `taker_address`. Only proceed when a
+        new valid MediatedTransfer is received with `taker_amount` of
+        `taker_token`.
         """
 
         async_result = self.token_swap_async(
@@ -904,34 +905,35 @@ class RaidenAPI(object):
             taker_amount,
             taker_address):
         """ Start a token swap operation by sending a MediatedTransfer with
-        `from_amount` of `from_token`. Only proceed when a new valid
-        MediatedTransfer is received with `to_amount` of `to_asset`.
+        `maker_amount` of `maker_token` to `taker_address`. Only proceed when a
+        new valid MediatedTransfer is received with `taker_amount` of
+        `taker_token`.
         """
 
-        maker_token_bin = safe_address_decode(maker_token)
-        maker_address_bin = safe_address_decode(maker_address)
+        maker_token = safe_address_decode(maker_token)
+        maker_address = safe_address_decode(maker_address)
 
-        taker_token_bin = safe_address_decode(taker_token)
-        taker_address_bin = safe_address_decode(taker_address)
+        taker_token = safe_address_decode(taker_token)
+        taker_address = safe_address_decode(taker_address)
 
         channelgraphs = self.raiden.channelgraphs
 
-        if taker_token_bin not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(taker_token_bin)))
+        if taker_token not in channelgraphs:
+            log.error('Unknown token {}'.format(pex(taker_token)))
             return
 
-        if maker_token_bin not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(maker_token_bin)))
+        if maker_token not in channelgraphs:
+            log.error('Unknown token {}'.format(pex(maker_token)))
             return
 
         token_swap = TokenSwap(
             identifier,
-            maker_token_bin,
+            maker_token,
             maker_amount,
-            maker_address_bin,
-            taker_token_bin,
+            maker_address,
+            taker_token,
             taker_amount,
-            taker_address_bin,
+            taker_address,
         )
 
         async_result = AsyncResult()
@@ -945,7 +947,7 @@ class RaidenAPI(object):
         # the maker is expecting the taker transfer
         key = SwapKey(
             identifier,
-            taker_token_bin,
+            taker_token,
             taker_amount,
         )
         self.raiden.swapkeys_greenlettasks[key] = task
@@ -964,10 +966,26 @@ class RaidenAPI(object):
             taker_address):
         """ Register an expected transfer for this node.
 
-        If a MediatedMessage is received for the `from_asset` with
-        `from_amount` then proceed to send a MediatedTransfer to
-        `target_address` for `to_asset` with `to_amout`.
+        If a MediatedMessage is received for the `maker_asset` with
+        `maker_amount` then proceed to send a MediatedTransfer to
+        `maker_address` for `taker_asset` with `taker_amout`.
         """
+
+        maker_token = safe_address_decode(maker_token)
+        maker_address = safe_address_decode(maker_address)
+
+        taker_token = safe_address_decode(taker_token)
+        taker_address = safe_address_decode(taker_address)
+
+        channelgraphs = self.raiden.channelgraphs
+
+        if taker_token not in channelgraphs:
+            log.error('Unknown token {}'.format(pex(taker_token)))
+            return
+
+        if maker_token not in channelgraphs:
+            log.error('Unknown token {}'.format(pex(maker_token)))
+            return
 
         # the taker is expecting the maker transfer
         key = SwapKey(
@@ -1381,7 +1399,7 @@ class RaidenMessageHandler(object):
             message.lock.amount,
         )
 
-        # TODO: add a separate message for exchanges to simplify message
+        # TODO: add a separate message for token swaps to simplify message
         # handling (issue #487)
         if key in self.raiden.swapkeys_tokenswaps:
             self.message_tokenswap(message)
@@ -1421,12 +1439,12 @@ class RaidenMessageHandler(object):
         )
 
         # If we are the maker the task is already running and waiting for the
-        # taker MediatedTransfer
+        # taker's MediatedTransfer
         task = self.raiden.swapkeys_greenlettasks.get(key)
         if task:
             task.response_queue.put(message)
 
-        # If we are the taker we are reciving the maker transfer and should
+        # If we are the taker we are receiving the maker transfer and should
         # start our new task
         else:
             token_swap = self.raiden.swapkeys_tokenswaps[key]
