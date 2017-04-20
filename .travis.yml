@@ -40,10 +40,10 @@ install:
   - pip install -r requirements-dev.txt
 
 before_script:
+  - flake8 raiden/ tools/ --exclude */ansible/
   - ./.travis/make_dag.sh
 
 script:
-  - flake8 raiden/ tools/ --exclude */ansible/
   - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 
 after_success:
