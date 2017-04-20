@@ -85,7 +85,7 @@ contract ChannelManagerContract {
     /// @param partner The address of the partner
     /// @return The address of the channel
     function getChannelWith(address partner) constant returns (address) {
-        return data.getChannelWith(msg.sender, partner);
+        return data.getChannelWith(partner);
     }
 
     /// @notice Create a new channel
@@ -102,11 +102,11 @@ contract ChannelManagerContract {
                 throw; // throw if an open contract exists that is not settled
             } else {
                 // Delete channel if contract has self destructed
-                deleteChannel(msg.sender, partner, channel_address);
+                deleteChannel(partner, channel_address);
             }
         }
 
-        channel = data.newChannel(msg.sender, partner, settle_timeout);
+        channel = data.newChannel(partner, settle_timeout);
 
         // Push channel address to array keeping track of all channels
         all_channels.push(channel);
@@ -139,24 +139,18 @@ contract ChannelManagerContract {
     }
 
     /// @dev Delete a channel that's been settled
-    /// @param caller_address The address of the party calling delete
     /// @param partner The address of the partner of the channel
     /// @param channel_address The address to be deleted
-    function deleteChannel(
-        address caller_address,
-        address partner,
-        address channel_address)
-        private
-    {
+    function deleteChannel(address partner, address channel_address) private {
         // throw if the channel has already been deleted
-        if (data.getChannelWith(caller_address, partner) == 0x0) {
+        if (data.getChannelWith(partner) == 0x0) {
             throw;
         }
 
-        address[] our_channels = node_channels[caller_address];
+        address[] our_channels = node_channels[msg.sender];
         address[] partner_channels = node_channels[partner];
-        uint caller_index = node_index[caller_address][partner];
-        uint partner_index = node_index[partner][caller_address];
+        uint caller_index = node_index[msg.sender][partner];
+        uint partner_index = node_index[partner][msg.sender];
 
         // get the last element of the array
         address our_last_element = our_channels[our_channels.length - 1];
@@ -165,17 +159,17 @@ contract ChannelManagerContract {
         // decrease the size of the array by one
         our_channels.length--;
         // update the index of the moved element
-        node_index[caller_address][our_last_element] = caller_index;
+        node_index[msg.sender][our_last_element] = caller_index;
         // set the index of the deleted element to 0
         // TODO: write test to make sure that setting it to 0 doesn't cause problems
-        node_index[caller_address][partner] = 0;
+        node_index[msg.sender][partner] = 0;
 
         // same procedure as above, but just removing the element from the partner array
         address their_last_element = partner_channels[partner_channels.length - 1];
         partner_channels[partner_index] = their_last_element;
         partner_channels.length--;
         node_index[partner][their_last_element] = partner_index;
-        node_index[partner][caller_address] = 0;
+        node_index[partner][msg.sender] = 0;
 
         // remove address from all_channels
         // get the index of the channel to me removed
@@ -189,11 +183,11 @@ contract ChannelManagerContract {
         // set index of deleted element to 0
         all_channels_index[channel_address] = 0;
 
-        node_channels[caller_address] = our_channels;
+        node_channels[msg.sender] = our_channels;
         node_channels[partner] = partner_channels;
 
-        data.deleteChannel(caller_address, partner);
-        ChannelDeleted(caller_address, partner);
+        data.deleteChannel(partner);
+        ChannelDeleted(msg.sender, partner);
     }
 
     function () { throw; }
