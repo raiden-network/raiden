@@ -87,7 +87,6 @@ def geth_to_cmd(node, datadir, verbosity):
         '--ipcdisable',
         '--rpc',
         '--rpcaddr', '0.0.0.0',
-        '--jitvm=false',
         '--networkid', '627',
         '--verbosity', str(verbosity),
         '--fakepow',
