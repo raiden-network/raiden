@@ -44,7 +44,7 @@ contract NettingChannelContract {
         bool success;
         uint256 balance;
 
-        (success, balance) = data.deposit(msg.sender, this, amount);
+        (success, balance) = data.deposit(amount);
 
         if (success == true) {
             ChannelNewBalance(data.token, msg.sender, balance, data.opened);
@@ -69,7 +69,7 @@ contract NettingChannelContract {
     /// @notice Close the channel. Can only be called by a participant in the channel.
     /// @param theirs_encoded The last transfer recieved from our partner.
     function close(bytes theirs_encoded) {
-        data.close(msg.sender, theirs_encoded);
+        data.close(theirs_encoded);
         ChannelClosed(msg.sender, data.closed);
     }
 
@@ -78,7 +78,7 @@ contract NettingChannelContract {
     /// @param theirs_encoded The transfer the counterparty believes is the valid
     ///                       state of the first participant.
     function updateTransfer(bytes theirs_encoded) {
-        data.updateTransfer(msg.sender, theirs_encoded);
+        data.updateTransfer(theirs_encoded);
         TransferUpdated(msg.sender, block.number);
     }
 
@@ -88,7 +88,7 @@ contract NettingChannelContract {
     /// @param secret The secret to unlock the locked transfer.
     function unlock(bytes locked_encoded, bytes merkle_proof, bytes32 secret) {
         // throws if sender is not a participant
-        data.unlock(msg.sender, locked_encoded, merkle_proof, secret);
+        data.unlock(locked_encoded, merkle_proof, secret);
         ChannelSecretRevealed(secret, msg.sender);
     }
 
@@ -97,7 +97,7 @@ contract NettingChannelContract {
     ///         and only after the number of blocks in the settlement timeout
     ///         have passed.
     function settle() {
-        data.settle(msg.sender);
+        data.settle();
         ChannelSettled(data.settled);
     }
 
