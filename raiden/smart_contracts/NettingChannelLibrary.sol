@@ -72,37 +72,26 @@ library NettingChannelLibrary {
     /// @notice Deposit amount to channel.
     /// @dev Deposit an amount to the channel. At least one of the participants
     /// must deposit before the channel is opened.
-    /// @param caller_address The address of the invoker of the function
-    /// @param channel_address The address of the channel
     /// @param amount The amount to be deposited to the address
     /// @return Success if the transfer was successful
     /// @return The new balance of the invoker
-    function deposit(
-        Data storage self,
-        address caller_address,
-        address channel_address,
-        uint256 amount)
+    function deposit(Data storage self, uint256 amount)
         returns (bool success, uint256 balance)
     {
+        uint8 index;
 
         if (self.closed != 0) {
             throw;
         }
 
-        if (self.token.balanceOf(caller_address) < amount) {
+        if (self.token.balanceOf(msg.sender) < amount) {
             throw;
         }
 
-        uint8 index = index_or_throw(self, caller_address);
-
+        index = index_or_throw(self, msg.sender);
         Participant storage participant = self.participants[index];
 
-        success = self.token.transferFrom(
-            caller_address,
-            channel_address,
-            amount
-        );
-
+        success = self.token.transferFrom(msg.sender, this, amount);
         if (success == true) {
             balance = participant.balance;
             balance += amount;
@@ -138,15 +127,11 @@ library NettingChannelLibrary {
     }
 
     /// @notice Close a channel between two parties that was used bidirectionally
-    /// @param caller_address The address of the participant closing the channel
     /// @param their_transfer The latest known transfer of the other participant
     ///                       to the channel. Can also be empty, in which case
     ///                       we are attempting to close a channel without any
     ///                       transfers.
-    function close(
-        Data storage self,
-        address caller_address,
-        bytes their_transfer)
+    function close(Data storage self, bytes their_transfer)
     {
         uint closer_index;
         uint counterparty_index;
@@ -162,9 +147,9 @@ library NettingChannelLibrary {
         }
 
         // Only a participant can call close
-        closer_index = index_or_throw(self, caller_address);
+        closer_index = index_or_throw(self, msg.sender);
 
-        self.closing_address = caller_address;
+        self.closing_address = msg.sender;
         self.closed = block.number;
 
         // Only the closing party can provide a transfer from the counterparty,
@@ -203,15 +188,9 @@ library NettingChannelLibrary {
     }
 
     /// @notice Updates counter party transfer after closing.
-    /// @param caller_address The counterparty to the channel. The participant
-    ///                       that did not close the channel.
     /// @param their_transfer The transfer the counterparty believes is the
     ///                       valid state for the first participant.
-    function updateTransfer(
-        Data storage self,
-        address caller_address,
-        bytes their_transfer
-    )
+    function updateTransfer(Data storage self, bytes their_transfer)
         notSettledButClosed(self)
         stillTimeout(self)
     {
@@ -230,10 +209,10 @@ library NettingChannelLibrary {
         self.updated = true;
 
         // Only a participant can call updateTransfer (#293 for third parties)
-        caller_index = index_or_throw(self, caller_address);
+        caller_index = index_or_throw(self, msg.sender);
 
         // The closer is not allowed to call updateTransfer
-        if (self.closing_address == caller_address) {
+        if (self.closing_address == msg.sender) {
             throw;
         }
 
@@ -262,20 +241,15 @@ library NettingChannelLibrary {
 
     /// @notice Unlock a locked transfer
     /// @dev Unlock a locked transfer
-    /// @param caller_address The calling address
     /// @param locked_encoded The lock
     /// @param merkle_proof The merkle proof
     /// @param secret The secret
-    function unlock(
-        Data storage self,
-        address caller_address,
-        bytes locked_encoded,
-        bytes merkle_proof,
-        bytes32 secret)
+    function unlock(Data storage self, bytes locked_encoded, bytes merkle_proof, bytes32 secret)
         notSettledButClosed(self)
     {
         uint amount;
         uint partner_id;
+        uint8 index;
         uint64 expiration;
         bytes32 el;
         bytes32 h;
@@ -295,9 +269,8 @@ library NettingChannelLibrary {
             throw;
         }
 
-        //Check if caller_address is a participant and select her partner
-        uint8 index = 1 - index_or_throw(self, caller_address);
-
+        // Check if msg.sender is a participant and select the partner
+        index = 1 - index_or_throw(self, msg.sender);
         Participant storage counterparty = self.participants[index];
         if (counterparty.nonce == 0) {
             throw;
@@ -345,7 +318,7 @@ library NettingChannelLibrary {
     /// @notice Settles the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
     /// @return The participants with netted balances
-    function settle(Data storage self, address caller_address)
+    function settle(Data storage self)
         notSettledButClosed(self)
         timeoutOver(self)
     {
@@ -622,10 +595,10 @@ library NettingChannelLibrary {
         }
     }
 
-    function index_or_throw(Data storage self, address caller_address) private returns (uint8) {
+    function index_or_throw(Data storage self, address participant_address) private returns (uint8) {
         uint8 n;
         // Return index of participant, or throw
-        n = self.participant_index[caller_address];
+        n = self.participant_index[participant_address];
         if (n == 0) {
             throw;
         }

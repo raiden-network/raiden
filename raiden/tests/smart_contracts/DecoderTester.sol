@@ -5,6 +5,7 @@ import "raiden/NettingChannelLibrary.sol";
 contract DecoderTester {
     function decodeLock(bytes lock) returns (uint64 expiration, uint amount, bytes32 hashlock) {
         return NettingChannelLibrary.decodeLock(lock);
+
     }
 
     function getTransferRawAddress(bytes signed_transfer) returns (bytes transfer_raw, address signing_address) {
