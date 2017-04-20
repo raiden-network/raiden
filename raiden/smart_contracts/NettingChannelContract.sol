@@ -63,7 +63,13 @@ contract NettingChannelContract {
         address participant2,
         uint balance2)
     {
-        return data.addressAndBalance();
+        NettingChannelLibrary.Participant storage node1 = data.participants[0];
+        NettingChannelLibrary.Participant storage node2 = data.participants[1];
+
+        participant1 = node1.node_address;
+        balance1 = node1.balance;
+        participant2 = node2.node_address;
+        balance2 = node2.balance;
     }
 
     /// @notice Close the channel. Can only be called by a participant in the channel.

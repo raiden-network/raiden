@@ -107,25 +107,6 @@ library NettingChannelLibrary {
         return (false, 0);
     }
 
-    function addressAndBalance(Data storage self)
-        constant
-        returns(
-        address participant1,
-        uint balance1,
-        address participant2,
-        uint balance2)
-    {
-        Participant[2] participants = self.participants;
-        Participant node1 = participants[0];
-        Participant node2 = participants[1];
-
-        // return by name
-        participant1 = node1.node_address;
-        balance1 = node1.balance;
-        participant2 = node2.node_address;
-        balance2 = node2.balance;
-    }
-
     /// @notice Close a channel between two parties that was used bidirectionally
     /// @param their_transfer The latest known transfer of the other participant
     ///                       to the channel. Can also be empty, in which case
