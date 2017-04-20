@@ -24,8 +24,9 @@ class PortMappedSocket(object):
 @contextmanager
 def socket_factory(source_ip, source_port):
     # prefer uPnP over STUN
-    router, location = upnpsock.connect()
-    if router is not None:
+    upnp = upnpsock.connect()
+    if upnp is not None:
+        router, location = upnp
         result = upnpsock.open_port(
             router,
             source_port,
@@ -38,6 +39,11 @@ def socket_factory(source_ip, source_port):
             upnpsock.release_port(router, source_port)
 
     else:
-        with stunsock.stun_socket(source_ip, source_port) as (sock, external_ip, external_port, nat):
+        with stunsock.stun_socket(source_ip, source_port) as (
+            sock,
+            external_ip,
+            external_port,
+            nat
+        ):
             if external_port is not None:
                 yield PortMappedSocket(sock, 'STUN', external_ip, external_port, **nat)
