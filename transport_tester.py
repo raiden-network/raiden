@@ -1,3 +1,5 @@
+from gevent import monkey
+monkey.patch_all()  # noqa
 import sys
 import time
 
@@ -6,6 +8,9 @@ from raiden.network.sockfactory import socket_factory
 
 
 class DummyProtocol(object):
+
+    def __init__(self):
+        self.raiden = None
 
     def receive(self, data):
         print data
@@ -18,4 +23,4 @@ if __name__ == "__main__":
         while True:
             time.sleep(1)
             if len(sys.argv) > 1:
-                t.send(b'hello', (sys.argv[1], 8885))
+                t.send(None, (sys.argv[1], 8885), b'hello')
