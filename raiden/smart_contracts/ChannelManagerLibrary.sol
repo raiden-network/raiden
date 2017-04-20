@@ -10,14 +10,13 @@ library ChannelManagerLibrary {
     }
 
     /// @notice Get the address of the unique channel of two parties.
-    /// @param caller_address The address of the caller
     /// @param partner The address of the partner
     /// @return The address of the NettingChannelContract of the two parties.
-    function getChannelWith(Data storage self, address caller_address, address partner)
+    function getChannelWith(Data storage self, address partner)
         constant
         returns (address)
     {
-        bytes32 party_hash = partyHash(caller_address, partner);
+        bytes32 party_hash = partyHash(msg.sender, partner);
         return self.channel_addresses[party_hash];
     }
 
@@ -27,32 +26,26 @@ library ChannelManagerLibrary {
     /// @return The address of the NettingChannelContract.
     function newChannel(
         Data storage self,
-        address caller_address,
         address partner,
         uint settle_timeout)
         returns (address channel_address)
     {
         channel_address = new NettingChannelContract(
             self.token,
-            caller_address,
+            msg.sender,
             partner,
             settle_timeout
         );
 
-        self.channel_addresses[partyHash(caller_address, partner)] = channel_address;
+        self.channel_addresses[partyHash(msg.sender, partner)] = channel_address;
     }
 
     /// @notice Remove a channel after it's been settled
-    /// @param caller_address address of the caller
     /// @param partner of the partner
-    function deleteChannel(
-        Data storage self,
-        address caller_address,
-        address partner)
-        internal
+    function deleteChannel(Data storage self, address partner) internal
     {
         // remove channel from channel_addresses.
-        self.channel_addresses[partyHash(caller_address, partner)] = 0x0;
+        self.channel_addresses[partyHash(msg.sender, partner)] = 0x0;
     }
 
     /// @notice Get the hash of the two addresses
