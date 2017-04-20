@@ -12,7 +12,7 @@ from ethereum._solidity import compile_file
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import address_decoder, address_encoder, default_gasprice
 
-from raiden.utils import privatekey_to_address, get_contract_path, safe_lstrip_hex
+from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.network.transport import DummyTransport
 from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
