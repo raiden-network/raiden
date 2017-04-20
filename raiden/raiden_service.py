@@ -1322,7 +1322,7 @@ class RaidenMessageHandler(object):
     def message_refundtransfer(self, message):
         self.raiden.greenlet_task_dispatcher.dispatch_message(
             message,
-            message.hashlock,
+            message.lock.hashlock,
         )
 
         if message.identifier in self.raiden.identifier_statemanager:
