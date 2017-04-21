@@ -180,7 +180,10 @@ def cached_genesis(request, blockchain_type):
         if account_alloc['storage']:
             new_storage = dict()
             for key, val in account_alloc['storage'].iteritems():
-                new_key = '0x%064x' % int(key, 16)
+                # account_to_dict() from pyethereum can return 0x for a storage
+                # position. That is an invalid way of representing 0x0, which we
+                # have to take care of here.
+                new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
                 new_val = '0x%064x' % int(val, 16)
                 new_storage[new_key] = new_val
 
