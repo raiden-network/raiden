@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 import pytest
 import gevent
-from ethereum import slogging
 
 from raiden.utils import sha3
 from raiden.messages import Ping, Ack, decode
 from raiden.network.transport import UnreliableTransport, UDPTransport, RaidenProtocol
 from raiden.tests.utils.messages import setup_messages_cb
-
-slogging.configure(':DEBUG')
 
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
@@ -28,7 +25,7 @@ def test_ping(raiden_network):
     assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
 
 
-@pytest.mark.timeout(3)
+@pytest.mark.timeout(5)
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
@@ -48,7 +45,7 @@ def test_ping_unreachable(raiden_network):
     gevent.sleep(2)
 
     assert len(messages) == 5  # 5 dropped Pings
-    for i, message in enumerate(messages):
+    for message in messages:
         assert decode(message) == ping
 
     RaidenProtocol.repeat_messages = False
