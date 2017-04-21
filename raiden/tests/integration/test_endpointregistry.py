@@ -7,7 +7,6 @@ from raiden.network.discovery import ContractDiscovery
 
 @pytest.mark.timeout(60)
 @pytest.mark.parametrize('number_of_nodes', [1])
-@pytest.mark.parametrize('poll_timeout', [80])
 def test_endpointregistry(private_keys, blockchain_services):
     chain = blockchain_services.blockchain_services[0]
     my_address = privatekey_to_address(private_keys[0])
