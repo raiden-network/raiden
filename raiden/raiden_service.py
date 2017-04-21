@@ -1545,24 +1545,23 @@ class StateMachineEventHandler(object):
         if isinstance(state_change, ContractReceiveTokenAdded):
             self.handle_tokenadded(state_change)
 
-        if isinstance(state_change, ContractReceiveNewChannel):
+        elif isinstance(state_change, ContractReceiveNewChannel):
             self.handle_channelnew(state_change)
 
-        if isinstance(state_change, ContractReceiveBalance):
+        elif isinstance(state_change, ContractReceiveBalance):
             self.handle_balance(state_change)
 
-        if isinstance(state_change, ContractReceiveClosed):
+        elif isinstance(state_change, ContractReceiveClosed):
             self.handle_closed(state_change)
 
-        if isinstance(state_change, ContractReceiveSettled):
+        elif isinstance(state_change, ContractReceiveSettled):
             self.handle_settled(state_change)
 
-        if isinstance(state_change, ContractReceiveWithdraw):
+        elif isinstance(state_change, ContractReceiveWithdraw):
             self.handle_withdraw(state_change)
 
-        else:
-            if log.isEnabledFor(logging.ERROR):
-                log.error('Unknown state_change', state_change=state_change)
+        elif log.isEnabledFor(logging.ERROR):
+            log.error('Unknown state_change', state_change=state_change)
 
     def handle_tokenadded(self, state_change):
         manager_address = state_change.manager_address
