@@ -22,7 +22,6 @@ from raiden.utils import sha3, privatekey_to_address
 slogging.configure(':DEBUG')
 
 
-@pytest.mark.timeout(240)
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_settlement(raiden_network, settle_timeout, reveal_timeout):
@@ -149,7 +148,6 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert token.balance_of(address1) == bob_netted_balance
 
 
-@pytest.mark.timeout(240)
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -219,7 +217,6 @@ def test_settled_lock(tokens_addresses, raiden_network, settle_timeout, reveal_t
     assert participant1.netted == participant1.deposit + amount * 2
 
 
-@pytest.mark.timeout(240)
 @pytest.mark.xfail(reason="test incomplete")
 @pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
