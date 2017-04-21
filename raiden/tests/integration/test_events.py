@@ -40,7 +40,6 @@ def event_dicts_are_equal(dict1, dict2):
     return True
 
 
-@pytest.mark.timeout(90)
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -115,7 +114,6 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     )
 
 
-@pytest.mark.timeout(160)
 @pytest.mark.parametrize('privatekey_seed', ['query_events:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -264,7 +262,6 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert event_dicts_are_equal(events[0], settled_event)
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.xfail(reason='out-of-gas for unlock and settle')
 @pytest.mark.parametrize('privatekey_seed', ['event_new_channel:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])

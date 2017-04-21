@@ -19,7 +19,6 @@ from raiden.blockchain.abi import CHANNEL_MANAGER_ABI
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
 
-@pytest.mark.timeout(180)
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [0])
@@ -138,7 +137,6 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     'TRAVIS' in os.environ,
     reason='Flaky test due to mark.timeout not being scheduled. Issue #319'
 )
-@pytest.mark.timeout(160)
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(

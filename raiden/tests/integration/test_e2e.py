@@ -11,7 +11,6 @@ from raiden.tests.utils.transfer import (
 )
 
 
-@pytest.mark.timeout(160)
 @pytest.mark.parametrize('privatekey_seed', ['fullnetwork:{}'])
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('deposit', [2 ** 20])
