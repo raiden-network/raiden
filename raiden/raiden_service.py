@@ -12,6 +12,7 @@ from ethereum.utils import encode_hex
 from pyethapp.jsonrpc import address_decoder
 from secp256k1 import PrivateKey
 
+from raiden.constants import UINT64_MAX
 from raiden.blockchain.events import (
     ALL_EVENTS,
     get_relevant_proxies,
@@ -108,7 +109,6 @@ from raiden.utils import (
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
-INT64_MAX = 2 ** 64 - 1
 
 
 def create_default_identifier(node_address, token_address, target):
@@ -123,7 +123,7 @@ def create_default_identifier(node_address, token_address, target):
         node_address,
         target,
         token_address,
-        random.randint(0, INT64_MAX)
+        random.randint(0, UINT64_MAX)
     ))
     return int(hash_[0:8].encode('hex'), 16)
 

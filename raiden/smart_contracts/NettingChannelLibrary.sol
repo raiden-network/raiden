@@ -610,11 +610,11 @@ library NettingChannelLibrary {
         return n - 1;
     }
 
-    function min(uint a, uint b) private returns (uint) {
+    function min(uint a, uint b) constant internal returns (uint) {
         return a > b ? b : a;
     }
 
-    function max(uint a, uint b) private returns (uint) {
+    function max(uint a, uint b) constant internal returns (uint) {
         return a > b ? a : b;
     }
 

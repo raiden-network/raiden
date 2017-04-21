@@ -6,9 +6,9 @@ from ethereum import tester
 from secp256k1 import PrivateKey
 from pyethapp.jsonrpc import address_decoder
 
+from raiden.utils import sha3, privatekey_to_address, get_project_root
 from raiden.encoding.signing import GLOBAL_CTX
 from raiden.tests.utils.tests import get_test_contract_path
-from raiden.utils import sha3, privatekey_to_address, get_project_root
 from raiden.tests.utils.messages import (
     make_direct_transfer,
     make_mediated_transfer,
