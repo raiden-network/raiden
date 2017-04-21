@@ -17,7 +17,7 @@ library NettingChannelLibrary {
         bytes32 locksroot;
 
         // The latest known transferred_amount from this node to the other
-        // participant, used to compute the netted balance on settlement.
+        // participant, used to compute the net balance on settlement.
         uint256 transferred_amount;
 
         // Value used to order transfers and only accept the latest on calls to
@@ -280,12 +280,13 @@ library NettingChannelLibrary {
         //
         // Once third parties are allowed to update the counter party transfer
         // (#293, #182) the locksroot may change, if the locksroot change the
-        // transferred_amount must be reset and locks must be re-withdraw, so
+        // transferred_amount must be reset and locks must be re-withdrawn, so
         // this is also safe.
         //
         // This may be problematic if an update changes the transferred_amount
-        // but not the locksroot, since the locks don't need to be re-withdraw,
-        // the difference in the transferred_amount must be accounted for.
+        // but not the locksroot, since the locks don't need to be
+        // re-withdrawn, the difference in the transferred_amount must be
+        // accounted for.
         counterparty.transferred_amount += amount;
     }
 
@@ -328,7 +329,7 @@ library NettingChannelLibrary {
         uint8 closing_index;
         uint8 counter_index;
         uint256 total_deposit;
-        uint256 counter_netted;
+        uint256 counter_net;
         uint256 closer_amount;
         uint256 counter_amount;
 
@@ -340,14 +341,14 @@ library NettingChannelLibrary {
         Participant storage closing_party = self.participants[closing_index];
         Participant storage counter_party = self.participants[counter_index];
 
-        counter_netted = (
+        counter_net = (
             counter_party.balance
             + closing_party.transferred_amount
             - counter_party.transferred_amount
         );
 
         // Direct token transfers done through the token `transfer` function
-        // cannot be accounted for, these superfulous tokens will be burned,
+        // cannot be accounted for, these superfluous tokens will be burned,
         // this is because there is no way to tell which participant (if any)
         // had ownership over the token.
         total_deposit = closing_party.balance + counter_party.balance;
@@ -355,7 +356,7 @@ library NettingChannelLibrary {
         // When the closing party does not provide the counter party transfer,
         // the `counter_amount` may be larger than the `total_deposit`, without
         // the min the token transfer fail and the token is locked.
-        counter_amount = min(counter_netted, total_deposit);
+        counter_amount = min(counter_net, total_deposit);
 
         // When the counter party does not provide the closing party transfer,
         // then `counter_amount` may be negative and the transfer fails, force
