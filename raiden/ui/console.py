@@ -210,7 +210,7 @@ class ConsoleTools(object):
         channel_manager = self._chain.manager_by_token(address_decoder(token_address))
 
         # Register the channel manager with the raiden registry
-        self._raiden.register_channel_manager(channel_manager)
+        self._raiden.register_channel_manager(channel_manager.address)
         return channel_manager
 
     def ping(self, peer, timeout=4):
