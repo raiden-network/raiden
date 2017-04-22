@@ -407,7 +407,8 @@ class Lock(MessageHashable):
 
             self._asbytes = packed.data
 
-        return self._asbytes
+        # convert bytearray to bytes
+        return bytes(self._asbytes)
 
     @classmethod
     def from_bytes(cls, serialized):

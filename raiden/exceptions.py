@@ -41,3 +41,7 @@ class InvalidState(RaidenError):
 
 class InsufficientFunds(RaidenError):
     pass
+
+
+class NoHash32Error(Exception):
+    pass
