@@ -29,7 +29,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
-# A lock and it's computed hash, this namedtuple is used to keep the
+# A lock and its computed hash, this namedtuple is used to keep the
 # `sha3(lock.as_bytes)` cached since this value is used to construct the
 # merkletree
 PendingLock = namedtuple('PendingLock', ('lock', 'lockhashed'))
@@ -47,10 +47,6 @@ class InvalidNonce(Exception):
     pass
 
 
-class InvalidSecret(Exception):
-    pass
-
-
 class InvalidLocksRoot(Exception):
     def __init__(self, expected_locksroot, got_locksroot):
         Exception.__init__(
@@ -61,10 +57,6 @@ class InvalidLocksRoot(Exception):
             ))
 
 
-class InvalidLockTime(Exception):
-    pass
-
-
 class InsufficientBalance(Exception):
     pass
 
@@ -73,15 +65,15 @@ class BalanceProof(object):
     """ Saves the state required to settle a netting contract. """
 
     def __init__(self):
-        # locks that we are mediating but the secret is unknow
+        # locks that we are mediating but the secret is unknown
         self.hashlock_pendinglocks = dict()
 
-        # locks that we known the secret but our partner hasn't updated it's
-        # state yet
+        # locks for which we know the secret but our partner hasn't updated
+        # their state yet
         self.hashlock_unclaimedlocks = dict()
 
-        # locks that we known the secret and the partner has update it's state
-        # but we don't have an up-to-date transfer to use as a proof
+        # locks for which we know the secret and the partner has updated their
+        # state but we don't have an up-to-date transfer to use as a proof
         self.hashlock_unlockedlocks = dict()
 
         # the latest known transfer with a correct locksroot that can be used
@@ -109,7 +101,7 @@ class BalanceProof(object):
     def is_unclaimed(self, hashlock):
         """ True if a secret is known but we didnt claim it yet.
 
-        A lock is not claimed until the partner send the secret back.
+        A lock is not claimed until the partner sends the secret back.
         """
         return (
             hashlock in self.hashlock_pendinglocks or
@@ -117,7 +109,7 @@ class BalanceProof(object):
         )
 
     def is_known(self, hashlock):
-        """ True if the a lock with the given hashlock was registered before. """
+        """ True if a lock with the given hashlock was registered before. """
         return (
             hashlock in self.hashlock_pendinglocks or
             hashlock in self.hashlock_unclaimedlocks or
@@ -138,7 +130,7 @@ class BalanceProof(object):
 
     def register_locked_transfer(self, locked_transfer):
         if not isinstance(locked_transfer, LockedTransfer):
-            raise ValueError('transfer must be LockedTransfer')
+            raise ValueError('transfer must be a LockedTransfer')
 
         lock = locked_transfer.lock
         lockhashed = sha3(lock.as_bytes)
@@ -337,12 +329,12 @@ class ChannelEndState(object):
         otherwise the calculate locksroot of the transfer message will be
         invalid and the transfer will be rejected by the partner. Since the
         sender wants the transfer to be accepted by the receiver otherwise the
-        transfer won't proceed and the sender won't receive it's fee.
+        transfer won't proceed and the sender won't receive their fee.
 
         The receiver needs to use this method to update the container with a
         _valid_ transfer, otherwise the locksroot will not contain the pending
         transfer. The receiver needs to ensure that the merkle root has the
-        hashlock include, otherwise it won't be able to claim it.
+        hashlock included, otherwise it won't be able to claim it.
 
         Args:
             transfer (LockedTransfer): The transfer to be added.
@@ -370,10 +362,6 @@ class ChannelEndState(object):
 
         Args:
             secret: The secret being registered.
-
-        Raises:
-            InvalidSecret: If there is no lock register for the given secret
-                (or `hashlock` if given).
         """
         # Start of the critical read/write section
         lock = self.balance_proof.release_lock_by_secret(secret)
@@ -436,8 +424,10 @@ class ChannelExternalState(object):
     def set_settled(self, block_number):
         # ensure callbacks are only called once
         if self._settled_block != 0 and self._settled_block != block_number:
-            raise RuntimeError('channel is already settled on different block %s %s'
-                               % (self._settled_block, block_number))
+            raise RuntimeError(
+                'channel is already settled on different block %s %s'
+                % (self._settled_block, block_number)
+            )
         else:
             self._settled_block = block_number
 
@@ -614,8 +604,8 @@ class Channel(object):
         """ Return the current amount of our token that is locked waiting for a
         secret.
 
-        The locked value is equal to locked transfers that have being
-        initialized but the secret has not being revealed.
+        The locked value is equal to locked transfers that have been
+        initialized but their secret has not being revealed.
         """
         return self.partner_state.locked()
 
@@ -652,16 +642,16 @@ class Channel(object):
         Note:
             When a secret is revealed a message could be in-transit containing
             the older lockroot, for this reason the recipient cannot update
-            it's locksroot at the moment a secret was revealed.
+            their locksroot at the moment a secret was revealed.
 
             The protocol is to register the secret so that it can compute a
             proof of balance, if necessary, forward the secret to the sender
-            and wait for the update from it. It's the sender duty to order the
+            and wait for the update from it. It's the sender's duty to order the
             current in-transit (and possible the transfers in queue) transfers
             and the secret/locksroot update.
 
-            The channel and it's queue must be changed in sync, a transfer must
-            not be created and while we update the balance_proof.
+            The channel and its queue must be changed in sync, a transfer must
+            not be created while we update the balance_proof.
 
         Args:
             secret: The secret that releases a locked transfer.
@@ -718,12 +708,12 @@ class Channel(object):
 
         Only the sender of the mediated transfer can release a lock, the
         receiver might know the secret but it needs to wait for a message from
-        the initiator. This is because the sender needs to coordinate states
+        the initiator. This is because the sender needs to coordinate state
         updates (the hashlock for the transfers that are in transit and/or in
         queue need to be in sync with the state known by the partner).
 
         Note:
-            Releasing a lock should always be accompained by at least one
+            Releasing a lock should always be accompanied by at least one
             Secret message to the partner node.
 
             The node should also release the locks for the refund transfer.
@@ -754,13 +744,13 @@ class Channel(object):
         self.partner_state.release_lock(self.our_state, secret)
 
     def withdraw_lock(self, secret):
-        """ A lock was released by the sender, withdraw it's funds and update
+        """ A lock was released by the sender, withdraw its funds and update
         the state.
         """
         hashlock = sha3(secret)
 
         if not self.our_state.balance_proof.is_known(hashlock):
-            msg = 'The secret doesn\'t withdraw any hashlock. hashlock:{} token:{}'.format(
+            msg = "The secret doesn't withdraw any hashlock. hashlock:{} token:{}".format(
                 pex(hashlock),
                 pex(self.token_address),
             )
@@ -819,14 +809,12 @@ class Channel(object):
             acknowledgement. That is necessary for two reasons:
 
             - Guarantee that the transfer is valid.
-            - Avoiding sending a new transaction without funds.
+            - Avoid sending a new transaction without funds.
 
         Raises:
             InsufficientBalance: If the transfer is negative or above the distributable amount.
             InvalidLocksRoot: If locksroot check fails.
-            InvalidLockTime: If the transfer has expired.
             InvalidNonce: If the expected nonce does not match.
-            InvalidSecret: If there is no lock registered for the given secret.
             ValueError: If there is an address mismatch (token or node address).
         """
         if transfer.token != self.token_address:
@@ -839,7 +827,7 @@ class Channel(object):
             raise ValueError('Unsigned transfer')
 
         # nonce is changed only when a transfer is un/registered, if the test
-        # fail either we are out of sync, a message out of order, or it's an
+        # fails either we are out of sync, a message out of order, or it's a
         # forged transfer
         if transfer.nonce < 1 or transfer.nonce != from_state.nonce:
             if log.isEnabledFor(logging.WARN):
@@ -934,7 +922,7 @@ class Channel(object):
                 raise InsufficientBalance(transfer)
 
         # all checks need to be done before the internal state of the channel
-        # is changed, otherwise if a check fails and state was changed the
+        # is changed, otherwise if a check fails and the state was changed the
         # channel will be left trashed
 
         if isinstance(transfer, LockedTransfer):
@@ -956,7 +944,7 @@ class Channel(object):
             to_state.register_locked_transfer(transfer)
 
             # register this channel as waiting for the secret (the secret can
-            # be revealed through a message or an blockchain log)
+            # be revealed through a message or a blockchain log)
             self.external_state.register_channel_for_hashlock(
                 self,
                 transfer.lock.hashlock,
