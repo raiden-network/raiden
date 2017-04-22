@@ -1080,7 +1080,7 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_state):
 
 @pytest.mark.parametrize('settle_timeout', [50])
 @pytest.mark.parametrize('reveal_timeout', [5])
-def test_unlock_both_participants(
+def test_withdraw_both_participants(
         deposit,
         settle_timeout,
         reveal_timeout,

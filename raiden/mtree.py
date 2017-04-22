@@ -4,6 +4,7 @@ from __future__ import division
 from ethereum.utils import encode_hex
 
 from raiden.utils import keccak
+from raiden.exceptions import NoHash32Error
 
 
 def hash_pair(first, second):
@@ -14,10 +15,6 @@ def hash_pair(first, second):
     if first > second:
         return keccak(second + first)
     return keccak(first + second)
-
-
-class NoHash32Error(Exception):
-    pass
 
 
 def iterate_pairwise(elements):

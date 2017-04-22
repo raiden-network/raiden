@@ -1,13 +1,28 @@
 # -*- coding: utf-8 -*-
 import os
+import string
 from itertools import chain, product
 
 import pytest
 from ethereum.abi import ValueOutOfBounds
+from ethereum.tester import TransactionFailed
 
 from raiden.constants import INT64_MIN, INT64_MAX, UINT64_MIN, UINT64_MAX
-from raiden.utils import get_project_root
+from raiden.messages import Lock
+from raiden.utils import get_project_root, sha3
+from raiden.mtree import Merkletree
 from raiden.tests.utils.tests import get_test_contract_path
+
+ARBITRARY_DATA = [
+    letter * 32
+    for letter in string.ascii_uppercase[:7]
+]
+FAKE_TREE = [
+    ARBITRARY_DATA[:1],
+    ARBITRARY_DATA[:2],
+    ARBITRARY_DATA[:3],
+    ARBITRARY_DATA[:7],
+]
 
 
 def deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address):
@@ -24,6 +39,17 @@ def deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
     tester_state.mine(number_of_blocks=1)
 
     return auxiliary
+
+
+def make_locks(*secrets):
+    return [
+        Lock(
+            amount=1,
+            expiration=1,
+            hashlock=sha3(secret),
+        )
+        for secret in secrets
+    ]
 
 
 def test_min_uses_usigned(tester_state, tester_nettingchannel_library_address):
@@ -74,3 +100,62 @@ def test_max(tester_state, tester_nettingchannel_library_address):
     VALUES = [UINT64_MIN, 1, INT64_MAX, UINT64_MAX]
     for a, b in product(VALUES, VALUES):
         assert auxiliary.max(a, b) == max(a, b)
+
+
+@pytest.mark.parametrize('tree', FAKE_TREE)
+def test_merkle_proof(
+        tree,
+        tester_state,
+        tester_nettingchannel_library_address):
+    """ computeMerkleRoot and the python implementation must compute the same value. """
+
+    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+
+    hashes = [sha3(element) for element in tree]
+    merkle_tree = Merkletree(hashes)
+
+    for element in tree:
+        proof = merkle_tree.make_proof(sha3(element))
+
+        smart_contact_root = auxiliary.computeMerkleRoot(
+            element,
+            ''.join(proof),
+        )
+
+        assert smart_contact_root == merkle_tree.merkleroot
+
+
+@pytest.mark.parametrize('tree', FAKE_TREE)
+def test_merkle_proof_missing_byte(
+        tree,
+        tester_state,
+        tester_nettingchannel_library_address):
+    """ computeMerkleRoot must fail if the proof is missing a byte. """
+
+    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+
+    hashes = [sha3(element) for element in tree]
+    merkle_tree = Merkletree(hashes)
+
+    element = hashes[-1]
+    merkle_proof = merkle_tree.make_proof(element)
+
+    # for each element of the proof, remove a byte from the start and the end and test it
+    for element_to_tamper in range(len(merkle_proof)):
+        tampered_proof = list(merkle_proof)
+        tampered_proof[element_to_tamper] = tampered_proof[element_to_tamper][:-1]
+
+        with pytest.raises(TransactionFailed):
+            auxiliary.computeMerkleRoot(
+                element,
+                ''.join(tampered_proof),
+            )
+
+        tampered_proof = list(merkle_proof)
+        tampered_proof[element_to_tamper] = tampered_proof[element_to_tamper][1:]
+
+        with pytest.raises(TransactionFailed):
+            auxiliary.computeMerkleRoot(
+                element,
+                ''.join(tampered_proof),
+            )

@@ -291,7 +291,7 @@ library NettingChannelLibrary {
     }
 
     function computeMerkleRoot(bytes lock, bytes merkle_proof)
-        private
+        internal
         constant
         returns (bytes32)
     {
