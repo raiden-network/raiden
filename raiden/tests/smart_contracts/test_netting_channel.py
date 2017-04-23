@@ -9,12 +9,17 @@ from ethereum.utils import encode_hex
 from secp256k1 import PrivateKey
 
 from raiden.encoding.signing import GLOBAL_CTX
-from raiden.utils import sha3, privatekey_to_address
-from raiden.tests.utils.tester import (
-    new_nettingcontract,
-)
 from raiden.messages import Lock, DirectTransfer, MediatedTransfer
+from raiden.mtree import Merkletree
+from raiden.tests.utils.messages import (
+    HASHLOCK_FOR_MERKLETREE,
+    HASHLOCKS_SECRESTS,
+    make_direct_transfer,
+    make_lock,
+)
+from raiden.tests.utils.tester import new_nettingcontract
 from raiden.transfer.state_change import Block
+from raiden.utils import sha3, privatekey_to_address
 
 # TODO:
 # - change the hashroot and check older locks are not freed
@@ -29,7 +34,7 @@ def increase_transferred_amount(from_channel, to_channel, amount):
     to_channel.partner_state.transferred_amount += amount
 
 
-def make_direct_transfer(channel, partner_channel, amount, pkey):
+def make_direct_transfer_from_channel(channel, partner_channel, amount, pkey):
     """ Helper to create and register a direct transfer from `channel` to
     `partner_channel`.
     """
@@ -68,11 +73,9 @@ def make_mediated_transfer(
     identifier = channel.our_state.nonce
     fee = 0
 
-    receiver = channel.partner_state.address
-
     mediated_transfer = channel.create_mediatedtransfer(
         initiator,
-        receiver,
+        target,
         fee,
         lock.amount,
         identifier,
@@ -279,7 +282,7 @@ def test_transfer_update_event(tester_state, tester_channels, tester_events):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     address1 = privatekey_to_address(pkey1)
 
-    direct0 = make_direct_transfer(channel0, channel1, amount=90, pkey=pkey0)
+    direct0 = make_direct_transfer_from_channel(channel0, channel1, amount=90, pkey=pkey0)
     direct0_data = str(direct0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -333,7 +336,7 @@ def test_close_first_argument_is_for_partner_transfer(tester_channels):
     """ Close must not accept a transfer from the closing address. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer(channel0, channel1, amount=90, pkey=pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=90, pkey=pkey0)
     transfer0_data = str(transfer0.packed().data)
 
     with pytest.raises(TransactionFailed):
@@ -388,7 +391,7 @@ def test_update_fails_on_open_channel(tester_channels):
     """ Cannot call updateTransfer on a open channel. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer(channel0, channel1, amount=10, pkey=pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
     transfer0_data = str(transfer0.packed().data)
 
     with pytest.raises(TransactionFailed):
@@ -399,7 +402,7 @@ def test_update_not_allowed_after_settlement_period(settle_timeout, tester_chann
     """ updateTransfer cannot be called after the settlement period. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    direct0 = make_direct_transfer(channel0, channel1, amount=70, pkey=pkey0)
+    direct0 = make_direct_transfer_from_channel(channel0, channel1, amount=70, pkey=pkey0)
     direct0_data = str(direct0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -413,10 +416,10 @@ def test_update_not_allowed_for_the_closing_address(tester_channels):
     """ Closing address cannot call updateTransfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer(channel0, channel1, amount=10, pkey=pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
     transfer0_data = str(transfer0.packed().data)
 
-    transfer1 = make_direct_transfer(channel1, channel0, amount=10, pkey=pkey1)
+    transfer1 = make_direct_transfer_from_channel(channel1, channel0, amount=10, pkey=pkey1)
     transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -462,7 +465,7 @@ def test_update_called_multiple_times_same_transfer(tester_channels):
     """ updateTransfer can be called only once. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer(channel0, channel1, amount=10, pkey=pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
     transfer0_data = str(transfer0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -476,10 +479,10 @@ def test_update_called_multiple_times_new_transfer(tester_channels):
     """ updateTransfer second call must fail even if there is a new transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer(channel0, channel1, amount=10, pkey=pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
     transfer0_data = str(transfer0.packed().data)
 
-    transfer1 = make_direct_transfer(channel0, channel1, amount=10, pkey=pkey0)
+    transfer1 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
     transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -493,10 +496,10 @@ def test_update_called_multiple_times_older_transfer(tester_channels):
     """ updateTransfer second call must fail even if called with an older transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer(channel0, channel1, amount=10, pkey=pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
     transfer0_data = str(transfer0.packed().data)
 
-    transfer1 = make_direct_transfer(channel0, channel1, amount=10, pkey=pkey0)
+    transfer1 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
     transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -552,7 +555,7 @@ def test_settle_single_direct_transfer_for_closing_party(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount = 90
-    transfer0 = make_direct_transfer(channel0, channel1, amount, pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount, pkey0)
     transfer0_data = str(transfer0.packed().data)
 
     nettingchannel.close(transfer0_data, sender=pkey1)
@@ -585,7 +588,7 @@ def test_settle_single_direct_transfer_for_counterparty(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount = 90
-    transfer0 = make_direct_transfer(channel0, channel1, amount, pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount, pkey0)
     transfer0_data = str(transfer0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -617,11 +620,11 @@ def test_settle_two_direct_transfers(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount0 = 10
-    transfer0 = make_direct_transfer(channel0, channel1, amount0, pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount0, pkey0)
     transfer0_data = str(transfer0.packed().data)
 
     amount1 = 30
-    transfer1 = make_direct_transfer(channel1, channel0, amount1, pkey1)
+    transfer1 = make_direct_transfer_from_channel(channel1, channel0, amount1, pkey1)
     transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close(transfer1_data, sender=pkey0)
@@ -826,10 +829,10 @@ def test_two_direct_transfers(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     first_amount0 = 90
-    make_direct_transfer(channel0, channel1, first_amount0, pkey0)
+    make_direct_transfer_from_channel(channel0, channel1, first_amount0, pkey0)
 
     second_amount0 = 90
-    second_direct0 = make_direct_transfer(channel0, channel1, second_amount0, pkey0)
+    second_direct0 = make_direct_transfer_from_channel(channel0, channel1, second_amount0, pkey0)
     second_direct0_data = str(second_direct0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -864,7 +867,7 @@ def test_mediated_after_direct_transfer(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     first_amount0 = 90
-    make_direct_transfer(channel0, channel1, first_amount0, pkey0)
+    make_direct_transfer_from_channel(channel0, channel1, first_amount0, pkey0)
 
     lock_expiration = tester_state.block.number + reveal_timeout + 5
     new_block = Block(tester_state.block.number)
@@ -965,7 +968,6 @@ def test_withdraw(
 def test_withdraw_at_settlement_block(
         deposit,
         settle_timeout,
-        reveal_timeout,
         tester_nettingcontracts,
         tester_state,
         tester_token):
@@ -1174,6 +1176,7 @@ def test_withdraw_both_participants(
 
 
 def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
+    """ A lock can be withdrawn only once, the second try must fail. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
     lock_expiration = tester_state.block.number + reveal_timeout + 5
@@ -1195,11 +1198,10 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
     )
     mediated0_data = str(mediated0.packed().data)
 
-    unlock_proofs = list(channel0.our_state.balance_proof.get_known_unlocks())
-    assert len(unlock_proofs) == 1
-    proof = unlock_proofs[0]
-
     nettingchannel.close(mediated0_data, sender=pkey0)
+
+    unlock_proofs = list(channel0.our_state.balance_proof.get_known_unlocks())
+    proof = unlock_proofs[0]
 
     nettingchannel.withdraw(
         proof.lock_encoded,
@@ -1215,6 +1217,169 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
             proof.secret,
             sender=pkey0,
         )
+
+
+@pytest.mark.parametrize('tree', HASHLOCK_FOR_MERKLETREE)
+def test_withdraw_fails_with_partial_merkle_proof(
+        tree,
+        tester_channels,
+        tester_state,
+        settle_timeout):
+
+    """ withdraw must fail if informed proof is not complete. """
+    pkey0, pkey1, nettingchannel, _, _ = tester_channels[0]
+
+    current_block = tester_state.block.number
+    expiration = current_block + settle_timeout - 1
+    locks = [
+        make_lock(
+            hashlock=hashlock,
+            expiration=expiration,
+        )
+        for hashlock in tree
+    ]
+
+    merkle_tree = Merkletree(sha3(lock.as_bytes) for lock in locks)
+
+    opened_block = nettingchannel.opened(sender=pkey0)
+    nonce = 1 + (opened_block * (2 ** 32))
+    direct_transfer = make_direct_transfer(
+        nonce=nonce,
+        locksroot=merkle_tree.merkleroot,
+    )
+
+    address = privatekey_to_address(pkey0)
+    sign_key = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    direct_transfer.sign(sign_key, address)
+
+    direct_transfer_data = str(direct_transfer.packed().data)
+    nettingchannel.close(direct_transfer_data, sender=pkey1)
+
+    for lock in locks:
+        secret = HASHLOCKS_SECRESTS[lock.hashlock]
+        lock_encoded = lock.as_bytes
+        merkle_proof = merkle_tree.make_proof(sha3(lock_encoded))
+
+        # withdraw must fail regardless of which part of the proof is removed
+        for hash_ in merkle_proof:
+            tampered_proof = list(merkle_proof)
+            tampered_proof.remove(hash_)
+
+            with pytest.raises(TransactionFailed):
+                nettingchannel.withdraw(
+                    lock_encoded,
+                    ''.join(tampered_proof),
+                    secret,
+                    sender=pkey1,
+                )
+
+
+@pytest.mark.parametrize('tree', HASHLOCK_FOR_MERKLETREE)
+def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, settle_timeout):
+    """ withdraw must fail if the proof is tampered. """
+    pkey0, pkey1, nettingchannel, _, _ = tester_channels[0]
+
+    current_block = tester_state.block.number
+    expiration = current_block + settle_timeout - 1
+    locks = [
+        make_lock(
+            hashlock=hashlock,
+            expiration=expiration,
+        )
+        for hashlock in tree
+    ]
+
+    merkle_tree = Merkletree(sha3(lock.as_bytes) for lock in locks)
+
+    opened_block = nettingchannel.opened(sender=pkey0)
+    nonce = 1 + (opened_block * (2 ** 32))
+    direct_transfer = make_direct_transfer(
+        nonce=nonce,
+        locksroot=merkle_tree.merkleroot,
+    )
+
+    address = privatekey_to_address(pkey0)
+    sign_key = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    direct_transfer.sign(sign_key, address)
+
+    direct_transfer_data = str(direct_transfer.packed().data)
+    nettingchannel.close(direct_transfer_data, sender=pkey1)
+
+    for lock in locks:
+        secret = HASHLOCKS_SECRESTS[lock.hashlock]
+
+        lock_encoded = lock.as_bytes
+        merkle_proof = merkle_tree.make_proof(sha3(lock_encoded))
+
+        # withdraw must fail regardless of which part of the proof is tampered
+        for pos, hash_ in enumerate(merkle_proof):
+            # changing arbitrary bytes from the proof
+            tampered_hash = bytearray(hash_)
+            tampered_hash[5], tampered_hash[6] = tampered_hash[6], tampered_hash[5]
+
+            tampered_proof = list(merkle_proof)
+            tampered_proof[pos] = str(tampered_hash)
+
+            with pytest.raises(TransactionFailed):
+                nettingchannel.withdraw(
+                    lock_encoded,
+                    ''.join(tampered_proof),
+                    secret,
+                    sender=pkey1,
+                )
+
+
+@pytest.mark.parametrize('tree', HASHLOCK_FOR_MERKLETREE)
+def test_withdraw_tampered_lock_amount(tree, tester_channels, tester_state, settle_timeout):
+    """ withdraw must fail if the lock amonut is tampered. """
+    pkey0, pkey1, nettingchannel, _, _ = tester_channels[0]
+
+    current_block = tester_state.block.number
+    expiration = current_block + settle_timeout - 1
+    locks = [
+        make_lock(
+            hashlock=hashlock,
+            expiration=expiration,
+        )
+        for hashlock in tree
+    ]
+
+    merkle_tree = Merkletree(sha3(lock.as_bytes) for lock in locks)
+
+    opened_block = nettingchannel.opened(sender=pkey0)
+    nonce = 1 + (opened_block * (2 ** 32))
+    direct_transfer = make_direct_transfer(
+        nonce=nonce,
+        locksroot=merkle_tree.merkleroot,
+    )
+
+    address = privatekey_to_address(pkey0)
+    sign_key = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    direct_transfer.sign(sign_key, address)
+
+    direct_transfer_data = str(direct_transfer.packed().data)
+    nettingchannel.close(direct_transfer_data, sender=pkey1)
+
+    for lock in locks:
+        secret = HASHLOCKS_SECRESTS[lock.hashlock]
+
+        lock_encoded = lock.as_bytes
+        merkle_proof = merkle_tree.make_proof(sha3(lock_encoded))
+
+        tampered_lock = make_lock(
+            amount=lock.amount * 100,
+            hashlock=lock.hashlock,
+            expiration=lock.expiration,
+        )
+        tampered_lock_encoded = sha3(tampered_lock.as_bytes)
+
+        with pytest.raises(TransactionFailed):
+            nettingchannel.withdraw(
+                tampered_lock_encoded,
+                ''.join(merkle_proof),
+                secret,
+                sender=pkey1,
+            )
 
 
 def test_settlement_with_unauthorized_token_transfer(
@@ -1233,11 +1398,11 @@ def test_settlement_with_unauthorized_token_transfer(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount0 = 10
-    transfer0 = make_direct_transfer(channel0, channel1, amount0, pkey0)
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount0, pkey0)
     transfer0_data = str(transfer0.packed().data)
 
     amount1 = 30
-    transfer1 = make_direct_transfer(channel1, channel0, amount1, pkey1)
+    transfer1 = make_direct_transfer_from_channel(channel1, channel0, amount1, pkey1)
     transfer1_data = str(transfer1.packed().data)
 
     extra_amount = 10
@@ -1276,12 +1441,12 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_state, tester_
 
     amount0 = 10
     transferred_amount0 += amount0
-    direct0 = make_direct_transfer(channel0, channel1, amount0, pkey0)
+    direct0 = make_direct_transfer_from_channel(channel0, channel1, amount0, pkey0)
     direct0_data = str(direct0.packed().data)
 
     amount1 = 30
     transferred_amount1 += amount1
-    direct1 = make_direct_transfer(channel1, channel0, amount1, pkey1)
+    direct1 = make_direct_transfer_from_channel(channel1, channel0, amount1, pkey1)
     direct1_data = str(direct1.packed().data)
 
     nettingchannel.close(direct1_data, sender=pkey0)

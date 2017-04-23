@@ -10,7 +10,7 @@ from raiden.messages import (
 from raiden.utils import make_privkey_address, sha3
 from raiden.tests.utils.messages import (
     make_direct_transfer,
-    make_lock_with_amount,
+    make_lock,
     make_mediated_transfer,
     make_refund_transfer,
     MEDIATED_TRANSFER_INVALID_VALUES,
@@ -64,7 +64,7 @@ def test_ack():
 @pytest.mark.parametrize(
     'make',
     [
-        make_lock_with_amount,
+        make_lock,
         make_mediated_transfer,
     ]
 )

@@ -8,11 +8,12 @@ from ethereum.abi import ValueOutOfBounds
 from ethereum.tester import TransactionFailed
 
 from raiden.constants import INT64_MIN, INT64_MAX, UINT64_MIN, UINT64_MAX
-from raiden.messages import Lock
 from raiden.utils import get_project_root, sha3
 from raiden.mtree import Merkletree
 from raiden.tests.utils.tests import get_test_contract_path
 
+# The computeMerkleRoot function only computes the proof regardless of what the
+# hashes are encoding, so just use some arbitrary data to produce a merkle tree.
 ARBITRARY_DATA = [
     letter * 32
     for letter in string.ascii_uppercase[:7]
@@ -39,17 +40,6 @@ def deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
     tester_state.mine(number_of_blocks=1)
 
     return auxiliary
-
-
-def make_locks(*secrets):
-    return [
-        Lock(
-            amount=1,
-            expiration=1,
-            hashlock=sha3(secret),
-        )
-        for secret in secrets
-    ]
 
 
 def test_min_uses_usigned(tester_state, tester_nettingchannel_library_address):
