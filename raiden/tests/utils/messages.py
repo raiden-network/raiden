@@ -2,9 +2,11 @@
 """ Utilities to track and assert transferred messages. """
 from __future__ import print_function
 
+import string
+
 from raiden.messages import decode
 from raiden.network.transport import DummyTransport
-from raiden.utils import pex, make_privkey_address
+from raiden.utils import pex, make_privkey_address, sha3
 from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.messages import (
     DirectTransfer,
@@ -19,6 +21,22 @@ INVALID_ADDRESSES = [
     ' ',
     ' ' * 19,
     ' ' * 21,
+]
+
+VALID_SECRETS = [
+    letter * 32
+    for letter in string.ascii_uppercase[:7]
+]
+HASHLOCKS_SECRESTS = {
+    sha3(secret): secret
+    for secret in VALID_SECRETS
+}
+VALID_HASHLOCKS = list(HASHLOCKS_SECRESTS.keys())
+HASHLOCK_FOR_MERKLETREE = [
+    VALID_HASHLOCKS[:1],
+    VALID_HASHLOCKS[:2],
+    VALID_HASHLOCKS[:3],
+    VALID_HASHLOCKS[:7],
 ]
 
 # zero is used to indicate novalue in solidity, that is why it's an invalid
@@ -51,9 +69,12 @@ MEDIATED_TRANSFER_INVALID_VALUES = fixture_all_combinations({
 })
 
 
-def make_lock_with_amount(amount):
-    hashlock = 'a' * 32
-    return Lock(amount, 1, hashlock)
+def make_lock(amount=7, expiration=1, hashlock=VALID_HASHLOCKS[0]):
+    return Lock(
+        amount,
+        expiration,
+        hashlock,
+    )
 
 
 def make_refund_transfer(
@@ -72,7 +93,7 @@ def make_refund_transfer(
         transferred_amount,
         recipient,
         locksroot,
-        make_lock_with_amount(amount),
+        make_lock(amount=amount),
     )
 
 
@@ -95,7 +116,7 @@ def make_mediated_transfer(
         transferred_amount,
         recipient,
         locksroot,
-        make_lock_with_amount(amount),
+        make_lock(amount=amount),
         target,
         initiator,
         fee
