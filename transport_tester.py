@@ -1,8 +1,15 @@
+"""
+Usage:
+    transport_tester.py [--port=<port>] [<target_ip_optional_port>]
+
+Options:
+    -p --port=<port>                   Number to use [default: 8885].
+"""
 from gevent import monkey
 monkey.patch_all()  # noqa
-import sys
 import time
 
+from docopt import docopt
 from ethereum import slogging
 
 from raiden.network.transport import UDPTransport
@@ -20,10 +27,18 @@ class DummyProtocol(object):
 
 if __name__ == "__main__":
     slogging.configure(':DEBUG')
-    with socket_factory('0.0.0.0', 8885) as mapped_socket:
+    options = docopt(__doc__)
+    port = int(options['--port'])
+    target = options['<target_ip_optional_port>']
+    if target and ':' in target:
+        target, target_port = target.split(':')
+        target_port = int(target_port)
+    else:
+        target_port = port
+    with socket_factory('0.0.0.0', port) as mapped_socket:
         print mapped_socket
         t = UDPTransport(mapped_socket.socket, protocol=DummyProtocol())
         while True:
             time.sleep(1)
-            if len(sys.argv) > 1:
-                t.send(None, (sys.argv[1], 8885), b'hello')
+            if target:
+                t.send(None, (target, target_port), b'hello')
