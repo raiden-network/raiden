@@ -1,3 +1,5 @@
+<p-growl [value]="msgs"></p-growl>
+
 <p-dataTable [value]="tokenBalances" [(selection)]="selectedToken" dataKey="address">
     <p-column [style]="{'width':'38px'}" selectionMode="single"></p-column>
     <p-column field="symbol" header="Symbol"
@@ -6,5 +8,26 @@
     <p-column field="name" header="Name"></p-column>
     <p-column field="balance" header="Balance"
     [style]="{width: '60px', 'text-align': 'center'}"></p-column>
-    <p-footer><div class="ui-helper-clearfix" style="width:100%"><button type="button" pButton icon="fa-plus" style="float:left" (click)="showDialogToAdd()" label="Join"></button></div></p-footer>
+    <p-footer><div class="ui-helper-clearfix" style="width:100%"><button type="button" pButton icon="fa-plus" style="float:left" (click)="joinTokenNetwork()" label="Join"></button></div></p-footer>
 </p-dataTable>
+
+<p-dialog header="Join Token Network" [(visible)]="displayDialog" [responsive]="true" showEffect="fade" [modal]="true">
+    <div class="ui-grid ui-grid-responsive ui-fluid" *ngIf="selectedToken">
+        <div class="ui-grid-row">
+            <div class="ui-grid-col-4"><label for="partner">Partner Address</label></div>
+            <div class="ui-grid-col-8"><input pInputText id="partner" [(ngModel)]="channelOpened.channel_address"/></div>
+        </div>
+        <div class="ui-grid-row">
+            <div class="ui-grid-col-4"><label for="token">Token Address</label></div>
+            <div class="ui-grid-col-8"><input pInputText id="token" [(ngModel)]="channelOpened.token_address"/></div>
+        </div>
+        <div class="ui-grid-row">
+            <div class="ui-grid-col-4"><label for="balance">Balance</label></div>
+            <div class="ui-grid-col-8"><input pInputText id="balance" [(ngModel)]="channelOpened.balance"/></div>
+        </div>
+        <div class="ui-grid-row">
+            <div class="ui-grid-col-4"><label for="settle">Settle Timeout</label></div>
+            <div class="ui-grid-col-8"><input pInputText id="settle" [(ngModel)]="channelOpened.settle_timeout"/></div>
+        </div>
+    </div>
+</p-dialog>
