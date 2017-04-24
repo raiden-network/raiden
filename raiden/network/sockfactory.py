@@ -13,7 +13,7 @@ class PortMappedSocket(object):
         self.meta = meta
 
     def __repr__(self):
-        return '<{} mapping: {}:{} ({})>'.format(
+        return 'PortMappedSocket<{} mapping: {}:{} ({})>'.format(
             self.socket.__repr__(),
             self.external_ip,
             self.external_port,

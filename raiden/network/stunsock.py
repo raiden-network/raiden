@@ -38,9 +38,8 @@ def stun_socket(
         external_port = nat['ExternalPort']
         log.debug(
             'STUN-socket ready:',
-            # for some reason 'Test3' returns 'None' in some cases
-            external_ip=external_ip[0] or 'unknown',
-            external_port=external_port or 'unknown',
+            external_ip=external_ip,
+            external_port=external_port,
             nat_type=nat_type,
             nat=nat,
             internal_ip=sock.getsockname()[0],
