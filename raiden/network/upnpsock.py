@@ -29,10 +29,14 @@ def connect():
     if upnp.lanaddr == '0.0.0.0':
         log.error('could not query your lanaddr')
         return
-    if upnp.externalipaddress() == '0.0.0.0' or upnp.externalipaddress() is None:
-        log.error("could not query your externalipaddress")
-        return
-    return upnp, location
+    try:  # this can fail if router advertises uPnP incorrectly
+        if upnp.externalipaddress() == '0.0.0.0' or upnp.externalipaddress() is None:
+            log.error('could not query your externalipaddress')
+            return
+        return upnp, location
+    except Exception:
+        log.error('error when connecting with uPnP provider', location=location)
+        return None
 
 
 def open_port(upnp, internal_port, external_start_port=None):
