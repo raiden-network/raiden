@@ -34,6 +34,7 @@ def stun_socket(
         if isinstance(external_ip, tuple):
             external_ip = external_ip[0]
         if external_ip is None:
+            log.error('STUN failed', nat=nat)
             raise STUNUnavailableException()
         external_port = nat['ExternalPort']
         log.debug(
