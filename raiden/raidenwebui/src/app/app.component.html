@@ -27,10 +27,10 @@
     <div class="col-md-8">
       <p-accordion [multiple]="true">
         <p-accordionTab header="Token Balances">
-           <app-token-network></app-token-network>
+            <app-token-network [channelsToken]="channeltable.channels"></app-token-network>
         </p-accordionTab>
         <p-accordionTab header="Channels">
-            <app-channel-table></app-channel-table>
+            <app-channel-table #channeltable></app-channel-table>
         </p-accordionTab>
         <app-userinteraction></app-userinteraction>
       </p-accordion>

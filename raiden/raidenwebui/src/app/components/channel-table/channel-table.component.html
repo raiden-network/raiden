@@ -1,48 +1,61 @@
 <p-accordion [multiple]="true">
   <p-accordionTab header="Table View">
-    <p-dataTable [value]="channels">
-        <p-header>Raiden Channels</p-header>
-        <p-column field="channel_address" header="Channel"></p-column>
-        <p-column field="partner_address" header="Partner"></p-column>
-        <p-column field="token_address" header="Token"></p-column>
-        <p-column field="balance" header="Balance"
-        [style]="{width: '70px', 'text-align': 'center'}"></p-column>
-        <p-column field="state" header="State"
-        [style]="{width: '70px', 'text-align': 'center'}"></p-column>
-        <p-column field="settle_timeout" header="SettleTimeout"
-        [style]="{width: '100px', 'text-align': 'center'}"></p-column>
-    </p-dataTable>
+    <div *ngIf="channels?.length > 0; then channelData else msg"></div>
+    <ng-template #channelData>
+      <p-dataTable [value]="channels">
+          <p-header>Raiden Channels</p-header>
+          <p-column field="channel_address" header="Channel"></p-column>
+          <p-column field="partner_address" header="Partner"></p-column>
+          <p-column field="token_address" header="Token"></p-column>
+          <p-column field="balance" header="Balance"
+          [style]="{width: '70px', 'text-align': 'center'}"></p-column>
+          <p-column field="state" header="State"
+          [style]="{width: '70px', 'text-align': 'center'}"></p-column>
+          <p-column field="settle_timeout" header="SettleTimeout"
+          [style]="{width: '100px', 'text-align': 'center'}"></p-column>
+      </p-dataTable>
+    </ng-template>
+    <ng-template #msg>You have no Channels yet.</ng-template>
   </p-accordionTab>
   <p-accordionTab header="Carousel View">
-    <p-carousel headerText="Raiden Channels" [value]="channels" numVisible="1">
-        <ng-template let-channel pTemplate="item">
-            <div class="ui-grid ui-grid-responsive">
-                <div class="ui-grid-row">
-                    <div class="ui-grid-col-3">Channel</div>
-                    <div class="ui-grid-col-9">{{channel.channel_address}}</div>
-                </div>
-                <div class="ui-grid-row">
-                    <div class="ui-grid-col-3">Partner</div>
-                    <div class="ui-grid-col-9">{{channel.partner_address}}</div>
-                </div>
-                <div class="ui-grid-row">
-                    <div class="ui-grid-col-3">Token</div>
-                    <div class="ui-grid-col-9">{{channel.token_address}}</div>
-                </div>
-                <div class="ui-grid-row">
-                    <div class="ui-grid-col-3">Balance</div>
-                    <div class="ui-grid-col-9">{{channel.balance}}</div>
-                </div>
-                <div class="ui-grid-row">
-                    <div class="ui-grid-col-3">State</div>
-                    <div class="ui-grid-col-9">{{channel.state}}</div>
-                </div>
-                <div class="ui-grid-row">
-                    <div class="ui-grid-col-3">SettleTimeout</div>
-                    <div class="ui-grid-col-9">{{channel.settle_timeout}}</div>
-                </div>
-            </div>
-        </ng-template>
-    </p-carousel>
+    <div *ngIf="channels?.length > 0; then carousel else msg"></div>
+    <ng-template #carousel>
+      <p-carousel headerText="Raiden Channels" [value]="channels" numVisible="1">
+          <ng-template let-channel pTemplate="item">
+              <div class="ui-grid ui-grid-responsive">
+                  <div class="ui-grid-row">
+                      <div class="ui-grid-col-12" #icon id="icon">
+                          {{generateBlockies(icon, channel.channel_address)}}
+                      </div>
+                  </div>
+                  <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">Channel</div>
+                      <div class="ui-grid-col-9">{{channel.channel_address}}</div>
+                  </div>
+                  <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">Partner</div>
+                      <div class="ui-grid-col-9">{{channel.partner_address}}</div>
+                  </div>
+                  <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">Token</div>
+                      <div class="ui-grid-col-9">{{channel.token_address}}</div>
+                  </div>
+                  <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">Balance</div>
+                      <div class="ui-grid-col-9">{{channel.balance}}</div>
+                  </div>
+                  <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">State</div>
+                      <div class="ui-grid-col-9">{{channel.state}}</div>
+                  </div>
+                  <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">SettleTimeout</div>
+                      <div class="ui-grid-col-9">{{channel.settle_timeout}}</div>
+                  </div>
+              </div>
+          </ng-template>
+      </p-carousel>
+    </ng-template>
+    <ng-template #msg>You have no Channels yet.</ng-template>
   </p-accordionTab>
 </p-accordion>
