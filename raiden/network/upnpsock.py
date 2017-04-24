@@ -18,16 +18,16 @@ def connect():
     upnp.discoverdelay = 200
     providers = upnp.discover()
     if providers > 1:
-        log.warning("multiple upnp providers found", num_providers=providers)
+        log.warning('multiple upnp providers found', num_providers=providers)
     elif providers < 1:
-        log.error("no upnp providers found")
+        log.error('no upnp providers found')
         return
 
     location = upnp.selectigd()
-    log.debug("connected", upnp=upnp)
+    log.debug('connected', upnp=upnp)
 
     if upnp.lanaddr == '0.0.0.0':
-        log.error("could not query your lanaddr")
+        log.error('could not query your lanaddr')
         return
     if upnp.externalipaddress() == '0.0.0.0' or upnp.externalipaddress() is None:
         log.error("could not query your externalipaddress")
