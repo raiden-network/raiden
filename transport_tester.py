@@ -3,6 +3,8 @@ monkey.patch_all()  # noqa
 import sys
 import time
 
+from ethereum import slogging
+
 from raiden.network.transport import UDPTransport
 from raiden.network.sockfactory import socket_factory
 
@@ -17,6 +19,7 @@ class DummyProtocol(object):
 
 
 if __name__ == "__main__":
+    slogging.configure(':DEBUG')
     with socket_factory('0.0.0.0', 8885) as mapped_socket:
         print mapped_socket
         t = UDPTransport(mapped_socket.socket, protocol=DummyProtocol())
