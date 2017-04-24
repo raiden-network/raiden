@@ -4,7 +4,7 @@ from __future__ import division
 from ethereum.utils import encode_hex
 
 from raiden.utils import keccak
-from raiden.exceptions import NoHash32Error
+from raiden.exceptions import HashLengthNot32
 
 
 def hash_pair(first, second):
@@ -52,7 +52,7 @@ def merkleproof_from_layers(layers, idx):
 
 class Merkletree(object):
     def __init__(self, elements):
-        self._layers = list(merkletreelayers(build_lst(elements)))
+        self._layers = list(merkletreelayers(build_list(elements)))
 
     @property
     def merkleroot(self):
@@ -73,17 +73,19 @@ def merkleroot(elements):
 
     Returns:
         str: The root element of the merkle tree.
+    Raises:
+        HashLengthNot32: The length of one of the elements is not 32
     """
     return Merkletree(elements).merkleroot
 
 
-def build_lst(elements):
+def build_list(elements):
     result = list()
 
     for item in set(elements):
         if item:
             if len(item) != 32:
-                raise NoHash32Error()
+                raise HashLengthNot32()
 
             result.append(item)
 
