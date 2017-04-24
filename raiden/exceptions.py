@@ -43,5 +43,6 @@ class InsufficientFunds(RaidenError):
     pass
 
 
-class NoHash32Error(Exception):
+class HashLengthNot32(Exception):
+    """The length of a 32 bytes hash is not as expected"""
     pass

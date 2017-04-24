@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from raiden.mtree import merkleroot, check_proof, get_proof, NoHash32Error
+from raiden.mtree import merkleroot, check_proof, get_proof, HashLengthNot32
 from raiden.utils import keccak
 
 
@@ -15,7 +15,7 @@ def test_multiple_empty():
 
 
 def test_non_hash():
-    with pytest.raises(NoHash32Error):
+    with pytest.raises(HashLengthNot32):
         merkleroot(['not32bytes', 'neither'])
 
 
