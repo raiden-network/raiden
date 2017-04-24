@@ -9,6 +9,10 @@ from ethereum import slogging as logging
 log = logging.getLogger(__name__)
 
 
+class STUNUnavailableException(Exception):
+    pass
+
+
 @contextmanager
 def stun_socket(
     source_ip='0.0.0.0',
@@ -18,7 +22,7 @@ def stun_socket(
 ):
     with open_bare_socket(source_ip=source_ip, source_port=source_port) as sock:
         sock.settimeout(2)
-        log.debug("Initiating STUN")
+        log.debug('Initiating STUN')
         nat_type, nat = stun.get_nat_type(
             sock,
             source_ip,
@@ -29,14 +33,18 @@ def stun_socket(
         external_ip = nat['ExternalIP']
         if isinstance(external_ip, tuple):
             external_ip = external_ip[0]
+        if external_ip is None:
+            raise STUNUnavailableException()
         external_port = nat['ExternalPort']
-        log.debug("STUN-socket ready:",
-                  external_ip=external_ip[0] or 'unknown',  # for some reason 'Test3' returns 'None' in some cases
-                  external_port=external_port or 'unknown',
-                  nat_type=nat_type,
-                  nat=nat,
-                  internal_ip=sock.getsockname()[0],
-                  internal_port=sock.getsockname()[1],
+        log.debug(
+            'STUN-socket ready:',
+            # for some reason 'Test3' returns 'None' in some cases
+            external_ip=external_ip[0] or 'unknown',
+            external_port=external_port or 'unknown',
+            nat_type=nat_type,
+            nat=nat,
+            internal_ip=sock.getsockname()[0],
+            internal_port=sock.getsockname()[1],
         )
         nat['type'] = nat_type
         yield (sock, external_ip, external_port, nat)
@@ -60,7 +68,8 @@ def open_bare_socket(
     sock.bind(
         (source_ip, source_port)
     )
-    log.debug("opened socket",
+    log.debug(
+        'opened socket',
         ip=sock.getsockname()[0],
         port=sock.getsockname()[1],
     )
