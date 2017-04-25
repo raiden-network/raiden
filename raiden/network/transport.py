@@ -64,12 +64,17 @@ class UDPTransport(object):
 
     def __init__(
             self,
-            socket,
+            host,
+            port,
+            socket=None,
             protocol=None,
             throttle_policy=DummyPolicy()):
 
         self.protocol = protocol
-        self.server = DatagramServer(socket, handle=self.receive)
+        if socket is not None:
+            self.server = DatagramServer(socket, handle=self.receive)
+        else:
+            self.server = DatagramServer((host, port), handle=self.receive)
         self.server.start()
         self.host = self.server.server_host
         self.port = self.server.server_port

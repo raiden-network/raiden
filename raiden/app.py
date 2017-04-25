@@ -32,7 +32,7 @@ class App(object):  # pylint: disable=too-few-public-methods
         self.config = config
         self.discovery = discovery
         if config.get('socket'):
-            self.transport = transport_class(config['socket'])
+            self.transport = transport_class(None, None, socket=config['socket'])
         else:
             self.transport = transport_class(config['host'], config['port'])
         self.transport.throttle_policy = TokenBucket(
