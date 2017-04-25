@@ -197,9 +197,9 @@ def test_settled_lock(tokens_addresses, raiden_network, settle_timeout, reveal_t
         last_transfer,
     )
 
-    # check that the double unlock will failed
+    # check that the double unlock will fail
     with pytest.raises(Exception):
-        back_channel.external_state.netting_channel.unlock(
+        back_channel.external_state.netting_channel.withdraw(
             app1.raiden.address,
             [(unlock_proof, secret_transfer.lock.as_bytes, secret)],
         )
@@ -271,7 +271,7 @@ def test_start_end_attack(tokens_addresses, raiden_chain, deposit, reveal_timeou
     wait_until_block(app2.raiden.chain, attack_transfer.lock.expiration - 1)
 
     # since the attacker knows the secret he can net the lock
-    attack_channel.netting_channel.unlock(
+    attack_channel.netting_channel.withdraw(
         [(unlock_proof, attack_transfer.lock, secret)],
     )
     # XXX: verify that the secret was publicized
