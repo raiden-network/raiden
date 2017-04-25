@@ -26,6 +26,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
+    CHANNEL_STATE_INITIALIZING,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveClosed,
@@ -541,6 +542,13 @@ class Channel(object):
             return CHANNEL_STATE_SETTLED
         elif self.external_state.closed_block != 0:
             return CHANNEL_STATE_CLOSED
+        elif (
+            self.external_state.opened_block ==
+            self.external_state.closed_block ==
+            self.external_state.settled_block ==
+            0
+        ):
+            return CHANNEL_STATE_INITIALIZING
         else:
             raise Exception('invalid state')
 
