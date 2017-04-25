@@ -13,6 +13,7 @@ from pyethapp.jsonrpc import address_decoder
 
 from raiden.app import App
 from raiden.settings import INITIAL_PORT
+from raiden.network.sockfactory import socket_factory
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import BlockChainService
 from raiden.ui.console import Console
@@ -48,13 +49,13 @@ OPTIONS = [
     click.option(
         '--registry-contract-address',
         help='hex encoded address of the registry contract.',
-        default='32c5dab9b099a5b6c0e626c1862c07b30f58d76a',  # testnet default
+        default='bbc60aa23059b039407ac008bd0b7e902890d382',  # testnet default
         type=str,
     ),
     click.option(
         '--discovery-contract-address',
         help='hex encoded address of the discovery contract.',
-        default='79ab17cc105e820368e695dfa547604651d02cbb',  # testnet default
+        default='524b7dcacac3055bd42fc03b006e9fdcb607e2be',  # testnet default
         type=str,
     ),
     click.option(
@@ -136,6 +137,7 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         registry_contract_address,
         discovery_contract_address,
         listen_address,
+        socket,
         logging,
         logfile,
         max_unresponsive_time,
@@ -157,6 +159,7 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     config['console'] = console
     config['rpc'] = rpc
     config['api_port'] = api_port
+    config['socket'] = socket
 
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:
@@ -249,62 +252,54 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     return App(config, blockchain_service, discovery)
 
 
-@click.option(  # FIXME: implement NAT-punching
-    '--external-listen-address',
-    help='external "host:port" where the raiden service can be contacted on (through NAT).',
-    default='',
-    type=str,
-)
 @options
 @click.command()
 @click.pass_context
-def run(ctx, external_listen_address, **kwargs):
+def run(ctx, **kwargs):
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
+    (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
+    with socket_factory(listen_host, listen_port) as mapped_socket:
+        kwargs['socket'] = mapped_socket.socket
 
-    if not external_listen_address:
-        # notify('if you are behind a NAT, you should set
-        # `external_listen_address` and configure port forwarding on your router')
-        external_listen_address = kwargs['listen_address']
+        app_ = ctx.invoke(app, **kwargs)
 
-    ctx.params.pop('external_listen_address')
-    app_ = ctx.invoke(app, **kwargs)
-
-    app_.discovery.register(
-        app_.raiden.address,
-        *split_endpoint(external_listen_address)
-    )
-
-    app_.raiden.register_registry(app_.raiden.chain.default_registry.address)
-
-    if ctx.params['rpc']:
-        # instance of the raiden-api
-        raiden_api = app_.raiden.api
-        # wrap the raiden-api with rest-logic and encoding
-        rest_api = RestAPI(raiden_api)
-        # create the server and link the api-endpoints with flask / flask-restful middleware
-        api_server = APIServer(rest_api)
-        # run the server
-        Greenlet.spawn(api_server.run, ctx.params['api_port'], debug=False, use_evalex=False)
-        print(
-            "The RPC server is now running",
-            "at http://localhost:{0}/.".format(ctx.params['api_port'])
-        )
-        print(
-            "See the Raiden documentation for all available endpoints at",
-            "https://github.com/raiden-network/raiden/blob/master/docs/api.rst"
+        app_.discovery.register(
+            app_.raiden.address,
+            mapped_socket.external_ip,
+            mapped_socket.external_port,
         )
 
-    if ctx.params['console']:
-        console = Console(app_)
-        console.start()
+        app_.raiden.register_registry(app_.raiden.chain.default_registry.address)
 
-    # wait for interrupt
-    event = gevent.event.Event()
-    gevent.signal(signal.SIGQUIT, event.set)
-    gevent.signal(signal.SIGTERM, event.set)
-    gevent.signal(signal.SIGINT, event.set)
-    event.wait()
+        if ctx.params['rpc']:
+            # instance of the raiden-api
+            raiden_api = app_.raiden.api
+            # wrap the raiden-api with rest-logic and encoding
+            rest_api = RestAPI(raiden_api)
+            # create the server and link the api-endpoints with flask / flask-restful middleware
+            api_server = APIServer(rest_api)
+            # run the server
+            Greenlet.spawn(api_server.run, ctx.params['api_port'], debug=False, use_evalex=False)
+            print(
+                "The RPC server is now running",
+                "at http://localhost:{0}/.".format(ctx.params['api_port'])
+            )
+            print(
+                "See the Raiden documentation for all available endpoints at",
+                "https://github.com/raiden-network/raiden/blob/master/docs/api.rst"
+            )
 
-    app_.stop()
+        if ctx.params['console']:
+            console = Console(app_)
+            console.start()
+
+        # wait for interrupt
+        event = gevent.event.Event()
+        gevent.signal(signal.SIGQUIT, event.set)
+        gevent.signal(signal.SIGTERM, event.set)
+        gevent.signal(signal.SIGINT, event.set)
+        event.wait()
+
+        app_.stop()
