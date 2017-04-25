@@ -416,7 +416,7 @@ class NettingChannelContract(object):
         # elif state.state == STATE_THIRDPARTY and state.transfer.nonce < transfer.nonce:
         #     state.transfer = transfer
 
-    def unlock(self, ctx, locked_encoded, merkleproof_encoded, secret):
+    def withdraw(self, ctx, locked_encoded, merkleproof_encoded, secret):
         if self.settled is not 0:
             raise RuntimeError('Contract is settled.')
 

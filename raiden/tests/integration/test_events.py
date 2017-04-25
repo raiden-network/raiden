@@ -301,7 +301,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_time
     netting_channel.close(app2.raiden.address, balance_proof.transfer, None)
 
     # reveal it through the blockchain (this needs to emit the SecretRevealed event)
-    netting_channel.unlock(
+    netting_channel.withdraw(
         app2.raiden.address,
         [proof],
     )
