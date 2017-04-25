@@ -21,6 +21,7 @@ def stun_socket(
     stun_port=3478
 ):
     with open_bare_socket(source_ip=source_ip, source_port=source_port) as sock:
+        timeout = sock.gettimeout()
         sock.settimeout(2)
         log.debug('Initiating STUN')
         nat_type, nat = stun.get_nat_type(
@@ -47,6 +48,7 @@ def stun_socket(
             internal_port=sock.getsockname()[1],
         )
         nat['type'] = nat_type
+        sock.settimeout(timeout)
         yield (sock, external_ip, external_port, nat)
 
 

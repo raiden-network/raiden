@@ -31,7 +31,10 @@ class App(object):  # pylint: disable=too-few-public-methods
     def __init__(self, config, chain, discovery, transport_class=UDPTransport):
         self.config = config
         self.discovery = discovery
-        self.transport = transport_class(config['host'], config['port'])
+        if config['socket']:
+            self.transport = transport_class(config['socket'])
+        else:
+            self.transport = transport_class(config['host'], config['port'])
         self.transport.throttle_policy = TokenBucket(
             config['throttle_capacity'],
             config['throttle_fill_rate']
