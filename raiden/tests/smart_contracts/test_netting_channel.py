@@ -8,7 +8,6 @@ from ethereum.tester import TransactionFailed
 from ethereum.utils import encode_hex
 from coincurve import PrivateKey
 
-from raiden.encoding.signing import GLOBAL_CTX
 from raiden.messages import Lock, DirectTransfer, MediatedTransfer
 from raiden.mtree import Merkletree
 from raiden.tests.utils.messages import (
@@ -46,7 +45,7 @@ def make_direct_transfer_from_channel(channel, partner_channel, amount, pkey):
     )
 
     address = privatekey_to_address(pkey)
-    sign_key = PrivateKey(pkey, context=GLOBAL_CTX)
+    sign_key = PrivateKey(pkey)
     direct_transfer.sign(sign_key, address)
 
     # if this fails it's not the right key for the current `channel`
@@ -84,7 +83,7 @@ def make_mediated_transfer(
     )
 
     address = privatekey_to_address(pkey)
-    sign_key = PrivateKey(pkey, context=GLOBAL_CTX)
+    sign_key = PrivateKey(pkey)
     mediated_transfer.sign(sign_key, address)
 
     channel.block_number = block_number
@@ -360,7 +359,7 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
     )
 
     nonparticipant_address = privatekey_to_address(nonparticipant_key)
-    nonparticipant_sign_key = PrivateKey(nonparticipant_key, context=GLOBAL_CTX)
+    nonparticipant_sign_key = PrivateKey(nonparticipant_key)
 
     transfer_nonparticipant.sign(nonparticipant_sign_key, nonparticipant_address)
     transfer_nonparticipant_data = str(transfer_nonparticipant.packed().data)
@@ -520,7 +519,7 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
     )
 
     nonparticipant_address = privatekey_to_address(nonparticipant_key)
-    nonparticipant_sign_key = PrivateKey(nonparticipant_key, context=GLOBAL_CTX)
+    nonparticipant_sign_key = PrivateKey(nonparticipant_key)
 
     transfer_nonparticipant.sign(nonparticipant_sign_key, nonparticipant_address)
     transfer_nonparticipant_data = str(transfer_nonparticipant.packed().data)
@@ -1083,7 +1082,7 @@ def test_withdraw_at_settlement_block(
         fee=0,
     )
 
-    sign_key0 = PrivateKey(pkey0, context=GLOBAL_CTX)
+    sign_key0 = PrivateKey(pkey0)
     mediated0.sign(sign_key0, address0)
     mediated0_data = str(mediated0.packed().data)
     nettingchannel.close(mediated0_data, sender=pkey1)
@@ -1319,7 +1318,7 @@ def test_withdraw_fails_with_partial_merkle_proof(
     )
 
     address = privatekey_to_address(pkey0)
-    sign_key = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    sign_key = PrivateKey(pkey0)
     direct_transfer.sign(sign_key, address)
 
     direct_transfer_data = str(direct_transfer.packed().data)
@@ -1369,7 +1368,7 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, set
     )
 
     address = privatekey_to_address(pkey0)
-    sign_key = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    sign_key = PrivateKey(pkey0)
     direct_transfer.sign(sign_key, address)
 
     direct_transfer_data = str(direct_transfer.packed().data)
@@ -1431,7 +1430,7 @@ def test_withdraw_tampered_lock_amount(
     )
 
     address = privatekey_to_address(pkey0)
-    sign_key = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    sign_key = PrivateKey(pkey0)
     direct_transfer.sign(sign_key, address)
 
     direct_transfer_data = str(direct_transfer.packed().data)

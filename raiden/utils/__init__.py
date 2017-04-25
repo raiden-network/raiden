@@ -5,7 +5,6 @@ import sys
 import string
 import random
 
-import coincurve
 from coincurve import PrivateKey
 from Crypto.Hash import keccak as keccaklib
 from ethereum.utils import sha3
@@ -50,7 +49,6 @@ LETTERS = string.printable
 #     Regarding randomization, either do it once at creation time (in which case
 #     you do not need any locking for the other calls), or use a read-write lock.
 #
-GLOBAL_CTX = coincurve.Context()
 
 
 def safe_address_decode(address):
@@ -85,7 +83,7 @@ def make_address():
 
 def make_privkey_address():
     private_key_bin = sha3(''.join(random.choice(LETTERS) for _ in range(20)))
-    privkey = PrivateKey(private_key_bin, context=GLOBAL_CTX)
+    privkey = PrivateKey(private_key_bin)
     pubkey = privkey.public_key.format(compressed=False)
     address = publickey_to_address(pubkey)
     return privkey, address
@@ -119,7 +117,7 @@ def publickey_to_address(publickey):
 
 
 def privatekey_to_address(private_key_bin):
-    private_key = PrivateKey(private_key_bin, context=GLOBAL_CTX)
+    private_key = PrivateKey(private_key_bin)
     pubkey = private_key.public_key.format(compressed=False)
     return publickey_to_address(pubkey)
 
