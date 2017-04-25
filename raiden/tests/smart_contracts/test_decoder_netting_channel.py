@@ -122,7 +122,6 @@ def test_decode_mediated_transfer(
     )
 
     mediated_transfer.sign(PrivateKey(privatekey0), address0)
-
     assert_decoder_results(mediated_transfer, decoder)
 
 
@@ -153,7 +152,6 @@ def test_decode_refund_transfer(
         locksroot=locksroot,
     )
     refund_transfer.sign(PrivateKey(privatekey0), address0)
-
     assert_decoder_results(refund_transfer, decoder)
 
 

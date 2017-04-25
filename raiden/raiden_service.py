@@ -106,7 +106,6 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
     sha3,
-    GLOBAL_CTX,
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -145,7 +144,7 @@ class RaidenService(object):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
-        private_key = PrivateKey(private_key_bin, context=GLOBAL_CTX)
+        private_key = PrivateKey(private_key_bin)
         pubkey = private_key.public_key.format(compressed=False)
 
         self.channelgraphs = dict()

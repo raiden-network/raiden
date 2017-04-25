@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from coincurve import PublicKey
-from raiden.utils import sha3, GLOBAL_CTX
+from raiden.utils import sha3
 
 
 def recover_publickey(messagedata, signature):
@@ -11,7 +11,6 @@ def recover_publickey(messagedata, signature):
         signature,
         messagedata,
         hasher=sha3,
-        context=GLOBAL_CTX,
     )
     return publickey.format(compressed=False)
 

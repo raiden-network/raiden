@@ -13,9 +13,8 @@ from raiden.messages import (
     RefundTransfer, Secret, SecretRequest,
 )
 
-GLOBAL_CTX = coincurve.Context()
 PRIVKEY_BIN = 'x' * 32
-PRIVKEY = coincurve.PrivateKey(PRIVKEY_BIN, context=GLOBAL_CTX)
+PRIVKEY = coincurve.PrivateKey(PRIVKEY_BIN)
 ADDRESS = privatekey_to_address(PRIVKEY_BIN)
 HASH = sha3(PRIVKEY)
 ITERATIONS = 1000000  # timeit default
