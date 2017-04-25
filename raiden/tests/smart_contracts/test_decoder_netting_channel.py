@@ -21,7 +21,6 @@ from raiden.tests.utils.messages import (
     make_refund_transfer,
 )
 
-
 VALID_LOCKSROOT = [
     sha3('WaldemarstrWaldemarstrWaldemarst'),
     sha3('SikorkaSikorkaSikorkaSikorkaSiko'),
