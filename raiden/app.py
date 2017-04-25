@@ -31,7 +31,7 @@ class App(object):  # pylint: disable=too-few-public-methods
     def __init__(self, config, chain, discovery, transport_class=UDPTransport):
         self.config = config
         self.discovery = discovery
-        if config['socket']:
+        if config.get('socket'):
             self.transport = transport_class(config['socket'])
         else:
             self.transport = transport_class(config['host'], config['port'])
