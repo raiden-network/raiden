@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
 from collections import namedtuple, Counter
 
-try:  # py3k
-    from functools import lru_cache
-except ImportError:
-    from repoze.lru import lru_cache
-
-
 __all__ = ('Field', 'namedbuffer', 'buffer_for',)
 
 
@@ -15,12 +9,10 @@ Field = namedtuple(
     ('name', 'size_bytes', 'format_string', 'encoder'),
 )
 
-
-@lru_cache(10)  # caching so the factory returns the same object
-def pad(size_bytes):
-    name = 'pad_{}'.format(size_bytes)
-    format_string = '{}x'.format(size_bytes)
-    return Field(name, size_bytes, format_string, None)
+Pad = namedtuple(
+    'Pad',
+    ('size_bytes', 'format_string'),
+)
 
 
 def make_field(name, size_bytes, format_string, encoder=None):
@@ -32,6 +24,13 @@ def make_field(name, size_bytes, format_string, encoder=None):
         size_bytes,
         format_string,
         encoder,
+    )
+
+
+def pad(bytes):
+    return Pad(
+        bytes,
+        '{}x'.format(bytes),
     )
 
 
@@ -53,35 +52,38 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
     if not len(fields_spec):
         raise ValueError('fields_spec is empty')
 
-    if any(field.size_bytes < 0 for field in fields_spec):
+    fields = [
+        field
+        for field in fields_spec
+        if not isinstance(field, Pad)
+    ]
+
+    if any(field.size_bytes < 0 for field in fields):
         raise ValueError('negative size_bytes')
 
-    if any(len(field.name) < 0 for field in fields_spec):
+    if any(len(field.name) < 0 for field in fields):
         raise ValueError('field missing name')
 
-    if any(count > 1 for count in Counter(field.name for field in fields_spec).values()):
+    if any(count > 1 for count in Counter(field.name for field in fields).values()):
         raise ValueError('repeated field name')
-
-    size = sum(field.size_bytes for field in fields_spec)
 
     fields = list()
     name_slice = dict()
     name_field = dict()
 
     start = 0
-    for field in fields_spec:
+    for field in fields:
         end = start + field.size_bytes
 
-        # don't create a slices and attributes for paddings
-        if not field.name.startswith('pad_'):
-            name_slice[field.name] = slice(start, end)
-            name_field[field.name] = field
-            fields.append(field.name)
+        name_slice[field.name] = slice(start, end)
+        name_field[field.name] = field
+        fields.append(field.name)
 
         start = end
 
     # big endian format
     fields_format = '>' + ''.join(field.format_string for field in fields_spec)
+    size = sum(field.size_bytes for field in fields_spec)
 
     def __init__(self, data):
         if len(data) < size:
