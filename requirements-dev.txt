@@ -7,6 +7,8 @@ pytest-random>=0.02
 pytest-cov
 grequests
 psutil
+detox
+flake8
 
 # Debugging
 pdbpp>=0.8.3<1.0.0
