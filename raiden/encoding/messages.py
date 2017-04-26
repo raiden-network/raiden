@@ -5,7 +5,12 @@ from ethereum import slogging
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding.encoders import integer, optional_bytes
-from raiden.encoding.format import buffer_for, make_field, namedbuffer, pad
+from raiden.encoding.format import (
+    buffer_for,
+    make_field,
+    namedbuffer,
+    pad,
+)
 from raiden.encoding.signing import recover_publickey
 
 
