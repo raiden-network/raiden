@@ -117,7 +117,7 @@ class StateManager(object):
 
         Return:
             Event: A list of events produced by the state transition, it's
-            the upper layer's responsability to decided how to handle these
+            the upper layer's responsibility to decided how to handle these
             events.
         """
         assert isinstance(state_change, StateChange)
@@ -143,11 +143,11 @@ class StateManager(object):
 
     def log_and_dispatch(self, state_change, transaction_log):
         """Acts like `dispatch()` but also makes a log entry into the
-        transaction log.
+        transaction log and keeps a snapshot of the current state after applying.
         """
         assert isinstance(transaction_log, TransactionLog)
         transaction_log.log(state_change)
         events = self.dispatch(state_change)
 
-        # TODO: Snapshot of current state?
+        transaction_log.snapshot(self.current_state)
         return events

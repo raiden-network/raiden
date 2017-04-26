@@ -99,7 +99,6 @@ from raiden.utils import (
     privatekey_to_address,
     sha3,
 )
-from raiden.settings import DEFAULT_TRANSACTION_LOG_FILENAME
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
