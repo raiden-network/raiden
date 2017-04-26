@@ -47,6 +47,11 @@ def assert_transfer_values(identifier, nonce, token, transferred_amount, recipie
         raise ValueError('recipient is an invalid address')
 
 
+def decode(data):
+    klass = CMDID_TO_CLASS[data[0]]
+    return klass.decode(data)
+
+
 class MessageHashable(object):
     pass
 
@@ -108,14 +113,14 @@ class SignedMessage(Message):
         """ Sign message using `private_key`. """
         packed = self.packed()
 
-        field = packed.fields_spec[-1]
+        field = type(packed).fields_spec[-1]
         assert field.name == 'signature', 'signature is not the last field'
 
         # this slice must be from the end of the buffer
         message_data = packed.data[:-field.size_bytes]
         signature = signing.sign(message_data, private_key)
 
-        packed.data[-field.size_bytes:] = signature
+        packed.signature = signature
 
         self.sender = node_address
         self.signature = signature
@@ -704,8 +709,3 @@ CMDID_TO_CLASS = {
     messages.MEDIATEDTRANSFER: MediatedTransfer,
     messages.REFUNDTRANSFER: RefundTransfer,
 }
-
-
-def decode(data):
-    klass = CMDID_TO_CLASS[data[0]]
-    return klass.decode(data)
