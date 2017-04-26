@@ -3,8 +3,9 @@ import struct
 
 from ethereum import slogging
 
+from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.encoding.encoders import integer, optional_bytes
-from raiden.encoding.format import buffer_for, make_field, namedbuffer, pad, BYTE
+from raiden.encoding.format import buffer_for, make_field, namedbuffer, pad
 from raiden.encoding.signing import recover_publickey
 
 
@@ -54,9 +55,9 @@ REFUNDTRANSFER = to_bigendian(REFUNDTRANSFER_CMDID)
 log = slogging.get_logger(__name__)
 
 
-nonce = make_field('nonce', 8, '8s', integer(0, BYTE ** 8))
-identifier = make_field('identifier', 8, '8s', integer(0, BYTE ** 8))
-expiration = make_field('expiration', 8, '8s', integer(0, BYTE ** 8))
+nonce = make_field('nonce', 8, '8s', integer(0, UINT64_MAX))
+identifier = make_field('identifier', 8, '8s', integer(0, UINT64_MAX))
+expiration = make_field('expiration', 8, '8s', integer(0, UINT64_MAX))
 
 token = make_field('token', 20, '20s')
 recipient = make_field('recipient', 20, '20s')
@@ -68,9 +69,9 @@ locksroot = make_field('locksroot', 32, '32s')
 hashlock = make_field('hashlock', 32, '32s')
 secret = make_field('secret', 32, '32s')
 echo = make_field('echo', 32, '32s')
-transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, BYTE ** 32))
-amount = make_field('amount', 32, '32s', integer(0, BYTE ** 32))
-fee = make_field('fee', 32, '32s', integer(0, BYTE ** 32))
+transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, UINT256_MAX))
+amount = make_field('amount', 32, '32s', integer(0, UINT256_MAX))
+fee = make_field('fee', 32, '32s', integer(0, UINT256_MAX))
 
 optional_locksroot = make_field('locksroot', 32, '32s', optional_bytes())
 optional_secret = make_field('secret', 32, '32s', optional_bytes())
@@ -236,7 +237,7 @@ def wrap_and_validate(data):
 
     try:
         publickey = recover_publickey(message_data, message_signature)
-    except Exception:
+    except:  # pylint: disable=bare-except
         log.error('invalid signature')
         return
 
