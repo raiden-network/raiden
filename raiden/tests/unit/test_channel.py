@@ -432,7 +432,10 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
     for i, (amount, secret) in enumerate(zip(transfers_amount, transfers_secret)):
         block_number = app0.raiden.chain.block_number()
         expiration = block_number + settle_timeout - 1
-        locked_transfer = channel0.create_lockedtransfer(
+        mediated_transfer = channel0.create_mediatedtransfer(
+            transfer_initiator=app0.raiden.address,
+            transfer_target=app1.raiden.address,
+            fee=0,
             amount=amount,
             identifier=1,
             expiration=expiration,
@@ -440,15 +443,15 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
         )
 
         # synchronized registration
-        app0.raiden.sign(locked_transfer)
-        channel0.register_transfer(locked_transfer)
-        channel1.register_transfer(locked_transfer)
+        app0.raiden.sign(mediated_transfer)
+        channel0.register_transfer(mediated_transfer)
+        channel1.register_transfer(mediated_transfer)
 
         # update test state
         distributed_amount += amount
         transfers_claimed.append(False)
-        transfers_list.append(locked_transfer)
-        unclaimed_locks.append(locked_transfer.lock)
+        transfers_list.append(mediated_transfer)
+        unclaimed_locks.append(mediated_transfer.lock)
 
         log_state()
 
@@ -577,21 +580,24 @@ def test_locked_transfer(raiden_network, settle_timeout):
     secret = 'secret'
     hashlock = sha3(secret)
 
-    locked_transfer = channel0.create_lockedtransfer(
+    mediated_transfer = channel0.create_mediatedtransfer(
+        transfer_initiator=app0.raiden.address,
+        transfer_target=app1.raiden.address,
+        fee=0,
         amount=amount,
         identifier=1,
         expiration=expiration,
         hashlock=hashlock,
     )
-    app0.raiden.sign(locked_transfer)
-    channel0.register_transfer(locked_transfer)
-    channel1.register_transfer(locked_transfer)
+    app0.raiden.sign(mediated_transfer)
+    channel0.register_transfer(mediated_transfer)
+    channel1.register_transfer(mediated_transfer)
 
     # don't update balances but update the locked/distributable/outstanding
     # values
     assert_synched_channels(
         channel0, balance0, [],
-        channel1, balance1, [locked_transfer.lock],
+        channel1, balance1, [mediated_transfer.lock],
     )
 
     channel0.release_lock(secret)
@@ -632,7 +638,10 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     secret = 'secret'
     hashlock = sha3(secret)
 
-    transfer1 = channel0.create_lockedtransfer(
+    transfer1 = channel0.create_mediatedtransfer(
+        transfer_initiator=app0.raiden.address,
+        transfer_target=app1.raiden.address,
+        fee=0,
         amount=amount,
         identifier=1,
         expiration=expiration,

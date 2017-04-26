@@ -436,8 +436,6 @@ class LockedTransfer(SignedMessage):
         any signed [nonce, token, balance, recipient, locksroot, ...]
         along a merkle proof from locksroot to the not yet netted formerly locked amount
     """
-    cmdid = messages.LOCKEDTRANSFER
-
     def __init__(self, identifier, nonce, token, transferred_amount, recipient, locksroot, lock):
         super(LockedTransfer, self).__init__()
 
@@ -703,9 +701,6 @@ CMDID_TO_CLASS = {
     messages.SECRET: Secret,
     messages.REVEALSECRET: RevealSecret,
     messages.DIRECTTRANSFER: DirectTransfer,
-    # LockedTransfer is not intended to be sent across the wire, it is a
-    # "marker" for messages with locks
-    # messages.LOCKEDTRANSFER: LockedTransfer,
     messages.MEDIATEDTRANSFER: MediatedTransfer,
     messages.REFUNDTRANSFER: RefundTransfer,
 }
