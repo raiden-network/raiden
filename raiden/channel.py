@@ -15,7 +15,12 @@ from raiden.messages import (
 )
 from raiden.mtree import merkleroot, get_proof
 from raiden.utils import sha3, pex, lpex
-from raiden.exceptions import UnknownAddress
+from raiden.exceptions import (
+    InsufficientBalance,
+    InvalidLocksRoot,
+    InvalidNonce,
+    UnknownAddress,
+)
 from raiden.transfer.state_change import Block
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
@@ -41,24 +46,6 @@ UnlockPartialProof = namedtuple('UnlockProof', ('lock', 'lockhashed', 'secret'))
 
 # The proof that can be used to unlock a secret with a smart contract
 UnlockProof = namedtuple('UnlockProof', ('merkle_proof', 'lock_encoded', 'secret'))
-
-
-class InvalidNonce(Exception):
-    pass
-
-
-class InvalidLocksRoot(Exception):
-    def __init__(self, expected_locksroot, got_locksroot):
-        Exception.__init__(
-            self,
-            'Locksroot mismatch. Expected {} but got {}'.format(
-                pex(expected_locksroot),
-                pex(got_locksroot)
-            ))
-
-
-class InsufficientBalance(Exception):
-    pass
 
 
 class BalanceProof(object):
@@ -801,7 +788,7 @@ class Channel(object):
                 )
             raise UnknownAddress(transfer)
 
-    def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa pylint: disable=too-many-branches
+    def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa pylint: disable=too-many-branches,too-many-statements
         """ Validates and register a signed transfer, updating the channel's state accordingly.
 
         Note:
