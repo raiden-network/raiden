@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import pytest
 
 from raiden.encoding.format import Field, namedbuffer
 from raiden.encoding.encoders import integer
@@ -45,3 +46,23 @@ def test_decoder_long():
     huge = 2 ** (8 * 100) - 1
     packed_data.huge = huge
     assert packed_data.huge == huge
+
+
+def test_namedbuffer_does_not_expose_internals():
+    # pylint: disable=pointless-statement
+    data = bytearray(1)
+    packed_data = SingleByte(data)
+
+    with pytest.raises(AttributeError):
+        packed_data.format
+
+    with pytest.raises(AttributeError):
+        packed_data.fields_spec
+
+    # only byte is exposed
+    assert dir(packed_data) == ['byte']
+
+
+def test_namedbuffer_type_exposes_details():
+    assert SingleByte.format == '>B'
+    assert SingleByte.fields_spec == [byte]
