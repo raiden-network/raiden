@@ -7,15 +7,13 @@ except ImportError:
     from repoze.lru import lru_cache
 
 
-__all__ = ('Field', 'BYTE', 'namedbuffer', 'buffer_for',)
+__all__ = ('Field', 'namedbuffer', 'buffer_for',)
 
 
 Field = namedtuple(
     'Field',
     ('name', 'size_bytes', 'format_string', 'encoder'),
 )
-
-BYTE = 2 ** 8
 
 
 @lru_cache(10)  # caching so the factory returns the same object
