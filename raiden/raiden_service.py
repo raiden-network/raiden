@@ -23,8 +23,10 @@ from raiden.blockchain.events import (
 )
 from raiden.tasks import (
     AlarmTask,
-    GreenletTasksDispatcher,
     HealthcheckTask,
+)
+from raiden.token_swap import (
+    GreenletTasksDispatcher,
     MakerTokenSwapTask,
     SwapKey,
     TakerTokenSwapTask,
