@@ -427,6 +427,21 @@ def test_close_valid_tranfer_different_token(
         nettingchannel.close(direct_transfer_data, sender=pkey1)
 
 
+def test_close_tampered_nonce(tester_state, tester_channels):
+    """ Messages the nonce tampered must be rejected. """
+    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=90, pkey=pkey0)
+    transfer0_data = transfer0.encode()
+
+    tampered_transfer = DirectTransfer.decode(transfer0_data)
+    tampered_transfer.identifier += 1
+    tampered_transfer_data = tampered_transfer.encode()
+
+    with pytest.raises(TransactionFailed):
+        nettingchannel.close(tampered_transfer_data, sender=pkey1)
+
+
 def test_update_fails_on_open_channel(tester_channels):
     """ Cannot call updateTransfer on a open channel. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
@@ -1370,7 +1385,13 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, set
 
 
 @pytest.mark.parametrize('tree', HASHLOCK_FOR_MERKLETREE)
-def test_withdraw_tampered_lock_amount(tree, tester_channels, tester_state, settle_timeout):
+def test_withdraw_tampered_lock_amount(
+        tree,
+        tester_channels,
+        tester_state,
+        tester_token,
+        settle_timeout):
+
     """ withdraw must fail if the lock amonut is tampered. """
     pkey0, pkey1, nettingchannel, _, _ = tester_channels[0]
 
@@ -1391,6 +1412,7 @@ def test_withdraw_tampered_lock_amount(tree, tester_channels, tester_state, sett
     direct_transfer = make_direct_transfer(
         nonce=nonce,
         locksroot=merkle_tree.merkleroot,
+        token=tester_token.address,
     )
 
     address = privatekey_to_address(pkey0)
