@@ -36,7 +36,6 @@ PING_CMDID = 1
 SECRETREQUEST_CMDID = 3
 SECRET_CMDID = 4
 DIRECTTRANSFER_CMDID = 5
-LOCKEDTRANSFER_CMDID = 6
 MEDIATEDTRANSFER_CMDID = 7
 REFUNDTRANSFER_CMDID = 8
 REVEALSECRET_CMDID = 11
@@ -47,7 +46,6 @@ SECRETREQUEST = to_bigendian(SECRETREQUEST_CMDID)
 SECRET = to_bigendian(SECRET_CMDID)
 REVEALSECRET = to_bigendian(REVEALSECRET_CMDID)
 DIRECTTRANSFER = to_bigendian(DIRECTTRANSFER_CMDID)
-LOCKEDTRANSFER = to_bigendian(LOCKEDTRANSFER_CMDID)
 MEDIATEDTRANSFER = to_bigendian(MEDIATEDTRANSFER_CMDID)
 REFUNDTRANSFER = to_bigendian(REFUNDTRANSFER_CMDID)
 
@@ -148,24 +146,6 @@ DirectTransfer = namedbuffer(
     ]
 )
 
-LockedTransfer = namedbuffer(
-    'locked_transfer',
-    [
-        cmdid(LOCKEDTRANSFER),  # [0:1]
-        pad(3),                 # [1:4]
-        nonce,                  # [4:12]
-        identifier,             # [12:20]
-        expiration,             # [20:28]
-        token,                  # [28:48]
-        recipient,              # [48:68]
-        locksroot,
-        transferred_amount,
-        amount,
-        hashlock,
-        signature,
-    ]
-)
-
 MediatedTransfer = namedbuffer(
     'mediated_transfer',
     [
@@ -222,7 +202,6 @@ CMDID_MESSAGE = {
     SECRET: Secret,
     REVEALSECRET: RevealSecret,
     DIRECTTRANSFER: DirectTransfer,
-    LOCKEDTRANSFER: LockedTransfer,
     MEDIATEDTRANSFER: MediatedTransfer,
     REFUNDTRANSFER: RefundTransfer,
 }
