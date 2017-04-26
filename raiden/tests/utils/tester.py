@@ -27,6 +27,19 @@ class InvalidKey(str):
 INVALID_KEY = InvalidKey('default_key_was_not_set')
 
 
+def approve_and_deposit(tester_token, nettingcontract, deposit, key):
+    assert tester_token.approve(
+        nettingcontract.address,
+        deposit,
+        sender=key,
+    )
+
+    assert nettingcontract.deposit(
+        deposit,
+        sender=key,
+    )
+
+
 def create_tokenproxy(tester_state, tester_token_address, log_listener):
     translator = tester.ContractTranslator(HUMAN_TOKEN_ABI)
     token_abi = tester.ABIContract(

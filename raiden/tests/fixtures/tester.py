@@ -11,9 +11,10 @@ from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.tests.utils.tester import (
+    approve_and_deposit,
+    channel_from_nettingcontract,
     create_registryproxy,
     create_tokenproxy,
-    channel_from_nettingcontract,
     new_channelmanager,
     new_nettingcontract,
 )
@@ -256,17 +257,20 @@ def tester_nettingcontracts(
             (first_key, second_key, nettingcontract),
         )
 
-        assert tester_token.approve(nettingcontract.address, deposit, sender=first_key) is True
-        if both_participants_deposit:
-            assert tester_token.approve(
-                nettingcontract.address,
-                deposit,
-                sender=second_key
-            ) is True
+        approve_and_deposit(
+            tester_token,
+            nettingcontract,
+            deposit,
+            first_key,
+        )
 
-        assert nettingcontract.deposit(deposit, sender=first_key) is True
         if both_participants_deposit:
-            assert nettingcontract.deposit(deposit, sender=second_key) is True
+            approve_and_deposit(
+                tester_token,
+                nettingcontract,
+                deposit,
+                second_key,
+            )
 
     return result
 
