@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import pickle
+import sqlite3
 from collections import namedtuple
 from abc import ABCMeta, abstractmethod
 
-from raiden.settings import DEFAULT_TRANSACTION_LOG_FILENAME
 from raiden.utils import create_file_iff_not_existing
 
-Transaction = namedtuple('Transaction', ('_id', 'state_change'))
+DEFAULT_TRANSACTION_LOG_NAME = "transaction_log.db"
+Transaction = namedtuple('Transaction', ('id', 'state_change'))
 
 
 # TODO:
@@ -52,7 +53,11 @@ class TransactionLogStorageBackend(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def write(self, data):
+    def write_transaction(self, identifier, data):
+        pass
+
+    @abstractmethod
+    def write_state_snapshot(self, identifier, data):
         pass
 
     @abstractmethod
@@ -62,16 +67,67 @@ class TransactionLogStorageBackend(object):
 
 class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
 
-    def write(self, data):
-        pass
+    def __init__(self):
+        self.conn = sqlite3.connect("transaction_log.db")
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'CREATE TABLE IF NOT EXISTS transactions (id integer, data text)'
+        )
+        cursor.execute(
+            'CREATE TABLE IF NOT EXISTS state_snapshot (id integer, data text)'
+        )
+        self.conn.commit()
+
+    def write_transaction(self, identifier, data):
+        import pdb
+        pdb.set_trace()
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'INSERT INTO transactions(id, data) VALUES(?,?)',
+            (identifier, data)
+        )
+        self.conn.commit()
+
+    def write_state_snapshot(self, identifier, data):
+        cursor = self.conn.cursor()
+        result = cursor.execute(
+            'SELECT * from state_snapshot',
+            (identifier, data)
+        )
+        result = result.fetchone()
+        if result is None:
+            cursor.execute(
+                'INSERT INTO state_snapshot(id, data) VALUES(?,?)',
+                (identifier, data)
+            )
+        else:
+            cursor.execute(
+                'UPDATE state_snapshot SET id=?, data=? WHERE id=?',
+                (identifier, data, result[0])
+            )
+        self.conn.commit()
+
+    def get_transaction_by_id(self, identifier):
+        cursor = self.conn.cursor()
+        result = cursor.execute(
+            'SELECT * from transactions where id=?', identifier
+        )
+        result = result.fetchall()
+        assert len(result) == 1
+        result = result[0]
+        return result
 
     def read(self):
         pass
 
+    def __del__(self):
+        self.conn.close()
+
 
 class TransactionLogFileBackend(TransactionLogStorageBackend):
+    """This is just an example for having a file backend. Not actually implemented"""
 
-    def __init__(self, filepath=DEFAULT_TRANSACTION_LOG_FILENAME):
+    def __init__(self, filepath=DEFAULT_TRANSACTION_LOG_NAME):
         self.filepath = filepath
         self.file = create_file_iff_not_existing(
             self.filepath,
@@ -81,8 +137,11 @@ class TransactionLogFileBackend(TransactionLogStorageBackend):
         )
         self._synced = False  #: True when the existing log is read to the end
 
-    def write(self, data):
-        self.file.write(data)
+    def write_transaction(self, identifier, data):
+        pass
+
+    def write_state_snapshot(self, identifier, data):
+        pass
 
     def read(self):
         pass
@@ -110,33 +169,36 @@ class TransactionLog(object):
         else:
             raise ValueError('invalid value for storage_type')
 
-        self._id = 0  #: the currently used id (state_change ids start at 1)
+        # the currently used id (state_change ids start at 1)
+        self.identifier = 0
 
     def log(self, state_change):
-        self._id += 1
+        self.identifier += 1
 
-        transaction = Transaction(self._id, state_change)
-        serialized_data = self.serializer.serialize(transaction)
-        self.storage.write(serialized_data)
+        serialized_data = self.serializer.serialize(state_change)
+        self.storage.write(self.identifier, serialized_data)
+
+    def get_transaction_by_id(self, identifier):
+        serialized_data = self.storage.get_transaction_by_id(identifier)
+        return self.serializer.deserialize(serialized_data)
 
     def snapshot(self, state):
-        raise NotImplementedError()
-        self.snapshot_file.truncate(0)
-        pickle.dump(state, self.snapshot_file)
+        serialized_data = self.serializer.serialize(state)
+        self.storage.write_state_snapshot(self.identifier, serialized_data)
 
 
 def unapplied_state_changes(transaction_log, snapshot):
     """ Return a list of the operations that are in the log file but are not
     applied in the snapshot.
     """
-    latest_id = snapshot._id
-    previous_id = latest_id - 1
+    latest_identifier = snapshot.identifier
+    previous_identifier = latest_identifier - 1
 
     # skip the operations from the log that are applied in the snapshot
     # this assumes the ides are serial
-    if previous_id > 1:
+    if previous_identifier > 1:
         for transaction in transaction_log:
-            if transaction._id >= previous_id:
+            if transaction.identifier >= previous_identifier:
                 break
 
     return list(transaction_log)
