@@ -41,23 +41,23 @@ HASHLOCK_FOR_MERKLETREE = [
 
 # zero is used to indicate novalue in solidity, that is why it's an invalid
 # nonce value
-DIRECT_TRANSFER_INVALID_VALUES = fixture_all_combinations({
+DIRECT_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
     'nonce': [-1, 0, 2 ** 64],
     'identifier': [-1, 2 ** 64],
     'token': INVALID_ADDRESSES,
     'recipient': INVALID_ADDRESSES,
     'transferred_amount': [-1, 2 ** 256],
-})
+}))
 
-REFUND_TRANSFER_INVALID_VALUES = fixture_all_combinations({
+REFUND_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
     'nonce': [-1, 0, 2 ** 64],
     'identifier': [-1, 2 ** 64],
     'token': INVALID_ADDRESSES,
     'recipient': INVALID_ADDRESSES,
     'transferred_amount': [-1, 2 ** 256],
-})
+}))
 
-MEDIATED_TRANSFER_INVALID_VALUES = fixture_all_combinations({
+MEDIATED_TRANSFER_INVALID_VALUES = list(fixture_all_combinations({
     'nonce': [-1, 0, 2 ** 64],
     'identifier': [-1, 2 ** 64],
     'token': INVALID_ADDRESSES,
@@ -66,7 +66,7 @@ MEDIATED_TRANSFER_INVALID_VALUES = fixture_all_combinations({
     'initiator': INVALID_ADDRESSES,
     'transferred_amount': [-1, 2 ** 256],
     'fee': [2 ** 256],
-})
+}))
 
 
 def make_lock(amount=7, expiration=1, hashlock=VALID_HASHLOCKS[0]):
