@@ -11,9 +11,7 @@ from pyethapp.jsonrpc import address_decoder
 from raiden.encoding import messages
 from raiden.encoding.format import compute_slices
 from raiden.utils import sha3, privatekey_to_address, get_project_root
-
-
-from raiden.tests.utils.tests import get_test_contract_path
+from raiden.tests.utils.tests import get_relative_contract
 from raiden.tests.utils.messages import (
     make_direct_transfer,
     make_mediated_transfer,
@@ -51,7 +49,7 @@ def deploy_decoder_tester(tester_state, tester_nettingchannel_library_address):
 
     decoder = tester_state.abi_contract(
         None,
-        path=get_test_contract_path('DecoderTester.sol'),
+        path=get_relative_contract(__file__, 'DecoderTester.sol'),
         language='solidity',
         libraries={'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex')},
         extra_args=raiden_remap,

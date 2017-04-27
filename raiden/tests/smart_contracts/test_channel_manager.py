@@ -8,6 +8,7 @@ from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
 from coincurve import PrivateKey
 
 from raiden.tests.utils.tester import new_channelmanager
+from raiden.tests.utils.tester import new_nettingcontract
 
 
 def test_channelnew_event(
@@ -229,3 +230,35 @@ def test_reopen_channel(
         settle_timeout,
         sender=privatekey0_raw,
     )
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_new_channel(private_keys, tester_state, tester_channelmanager):
+    """ Tests the state of a newly created netting channel. """
+    pkey0, pkey1 = private_keys
+
+    events = list()
+    settle_timeout = 10
+    channel = new_nettingcontract(
+        pkey0,
+        pkey1,
+        tester_state,
+        events.append,
+        tester_channelmanager,
+        settle_timeout,
+    )
+
+    assert channel.settleTimeout(sender=pkey0) == settle_timeout
+    assert channel.tokenAddress(sender=pkey0) == tester_channelmanager.tokenAddress(sender=pkey0)
+    assert channel.opened(sender=pkey0) == 0
+    assert channel.closed(sender=pkey0) == 0
+    assert channel.settled(sender=pkey0) == 0
+
+    address_and_balances = channel.addressAndBalance(sender=pkey0)
+    address0 = privatekey_to_address(pkey0)
+    address1 = privatekey_to_address(pkey1)
+
+    assert address_and_balances[0] == encode_hex(address0)
+    assert address_and_balances[1] == 0
+    assert address_and_balances[2] == encode_hex(address1)
+    assert address_and_balances[3] == 0

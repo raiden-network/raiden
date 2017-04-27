@@ -2,10 +2,11 @@
 from __future__ import print_function
 
 import gevent
+from coincurve import PrivateKey
 
-from raiden.raiden_service import create_default_identifier
-from raiden.utils import sha3
 from raiden.mtree import merkleroot
+from raiden.raiden_service import create_default_identifier
+from raiden.utils import sha3, privatekey_to_address
 
 
 def channel(app0, app1, token):
@@ -254,3 +255,80 @@ def assert_balance(channel0, balance, outstanding, distributable):
     assert channel0.distributable >= 0
     assert channel0.locked >= 0
     assert channel0.balance == channel0.locked + channel0.distributable
+
+
+def increase_transferred_amount(from_channel, to_channel, amount):
+    """ Helper to increase the transferred_amount of the channels without the
+    need of creating/signing/register transfers.
+    """
+    from_channel.our_state.transferred_amount += amount
+    to_channel.partner_state.transferred_amount += amount
+
+
+def make_direct_transfer_from_channel(channel, partner_channel, amount, pkey):
+    """ Helper to create and register a direct transfer from `channel` to
+    `partner_channel`.
+    """
+    identifier = channel.our_state.nonce
+
+    direct_transfer = channel.create_directtransfer(
+        amount,
+        identifier=identifier,
+    )
+
+    address = privatekey_to_address(pkey)
+    sign_key = PrivateKey(pkey)
+    direct_transfer.sign(sign_key, address)
+
+    # if this fails it's not the right key for the current `channel`
+    assert direct_transfer.sender == channel.our_state.address
+
+    channel.register_transfer(direct_transfer)
+    partner_channel.register_transfer(direct_transfer)
+
+    return direct_transfer
+
+
+def make_mediated_transfer(
+        channel,
+        partner_channel,
+        initiator,
+        target,
+        lock,
+        pkey,
+        block_number,
+        secret=None):
+    """ Helper to create and register a mediated transfer from `channel` to
+    `partner_channel`.
+    """
+    identifier = channel.our_state.nonce
+    fee = 0
+
+    mediated_transfer = channel.create_mediatedtransfer(
+        initiator,
+        target,
+        fee,
+        lock.amount,
+        identifier,
+        lock.expiration,
+        lock.hashlock,
+    )
+
+    address = privatekey_to_address(pkey)
+    sign_key = PrivateKey(pkey)
+    mediated_transfer.sign(sign_key, address)
+
+    channel.block_number = block_number
+    partner_channel.block_number = block_number
+
+    # if this fails it's not the right key for the current `channel`
+    assert mediated_transfer.sender == channel.our_state.address
+
+    channel.register_transfer(mediated_transfer)
+    partner_channel.register_transfer(mediated_transfer)
+
+    if secret is not None:
+        channel.register_secret(secret)
+        partner_channel.register_secret(secret)
+
+    return mediated_transfer
