@@ -242,8 +242,17 @@ def wrap_and_validate(data):
 
     try:
         publickey = recover_publickey(message_data, message_signature)
-    except:  # pylint: disable=bare-except
+    except ValueError:
+        # raised if the signature has the wrong length
         log.error('invalid signature')
+        return
+    except TypeError as e:
+        # raised if the PublicKey instantiation failed
+        log.error('invalid key data: {}'.format(e.message))
+        return
+    except Exception as e:
+        # secp256k1 is using bare Exception classes: raised if the recovery failed
+        log.error('error while recovering pubkey: {}'.format(e.message))
         return
 
     return message, publickey

@@ -35,7 +35,7 @@ def pad(bytes):
 
 
 def buffer_for(klass):
-    ''' Returns a new buffer of the appropriate size for klass. '''
+    """ Returns a new buffer of the appropriate size for klass. """
     return bytearray(klass.size)
 
 
@@ -55,12 +55,12 @@ def compute_slices(fields_spec):
 
 
 def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity)
-    ''' Class factory, returns a class to wrap a buffer instance and expose the
+    """ Class factory, returns a class to wrap a buffer instance and expose the
     data as fields.
 
     The field spec specifies how many bytes should be used for a field and what
     is the encoding / decoding function.
-    '''
+    """
     # pylint: disable=protected-access,unused-argument
 
     if not len(buffer_name):
