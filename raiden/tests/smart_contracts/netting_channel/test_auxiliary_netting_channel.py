@@ -10,7 +10,7 @@ from ethereum.tester import TransactionFailed
 from raiden.constants import INT64_MIN, INT64_MAX, UINT64_MIN, UINT64_MAX
 from raiden.utils import get_project_root, sha3
 from raiden.mtree import Merkletree
-from raiden.tests.utils.tests import get_test_contract_path
+from raiden.tests.utils.tests import get_relative_contract
 
 # The computeMerkleRoot function only computes the proof regardless of what the
 # hashes are encoding, so just use some arbitrary data to produce a merkle tree.
@@ -32,7 +32,7 @@ def deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
 
     auxiliary = tester_state.abi_contract(
         None,
-        path=get_test_contract_path('AuxiliaryTester.sol'),
+        path=get_relative_contract(__file__, 'AuxiliaryTester.sol'),
         language='solidity',
         libraries={'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex')},
         extra_args=raiden_remap,
