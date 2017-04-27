@@ -427,8 +427,8 @@ def test_close_valid_tranfer_different_token(
         nettingchannel.close(direct_transfer_data, sender=pkey1)
 
 
-def test_close_tampered_nonce(tester_state, tester_channels):
-    """ Messages the nonce tampered must be rejected. """
+def test_close_tampered_identifier(tester_state, tester_channels):
+    """ Messages with a tampered identifier must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
     transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=90, pkey=pkey0)
@@ -436,6 +436,21 @@ def test_close_tampered_nonce(tester_state, tester_channels):
 
     tampered_transfer = DirectTransfer.decode(transfer0_data)
     tampered_transfer.identifier += 1
+    tampered_transfer_data = tampered_transfer.encode()
+
+    with pytest.raises(TransactionFailed):
+        nettingchannel.close(tampered_transfer_data, sender=pkey1)
+
+
+def test_close_tampered_nonce(tester_state, tester_channels):
+    """ Messages with a tampered nonce must be rejected. """
+    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+
+    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=90, pkey=pkey0)
+    transfer0_data = transfer0.encode()
+
+    tampered_transfer = DirectTransfer.decode(transfer0_data)
+    tampered_transfer.nonce += 1
     tampered_transfer_data = tampered_transfer.encode()
 
     with pytest.raises(TransactionFailed):
