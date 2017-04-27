@@ -387,6 +387,46 @@ def test_close_called_multiple_times(tester_state, tester_nettingcontracts):
     assert nettingchannel.closingAddress(sender=pkey0) == encode_hex(address0)
 
 
+@pytest.mark.xfail(reason='Issue: #292')
+def test_close_valid_tranfer_different_token(
+        tester_state,
+        tester_nettingcontracts,
+        token_amount,
+        tester_events):
+    """ Valid messages from a different channel must be rejected. """
+    pkey0, pkey1, nettingchannel = tester_nettingcontracts[0]
+
+    from raiden.tests.fixtures.tester import (
+        tester_token,
+        tester_token_address,
+    )
+
+    private_keys = [pkey0, pkey1]
+    other_token = tester_token(
+        token_amount,
+        private_keys,
+        tester_state,
+        tester_token_address(private_keys, token_amount, tester_state),
+        tester_events,
+    )
+
+    opened_block = nettingchannel.opened(sender=pkey0)
+    nonce = 1 + (opened_block * (2 ** 32))
+    direct_transfer_other_token = make_direct_transfer(
+        nonce=nonce,
+        token=other_token.address,
+    )
+
+    address = privatekey_to_address(pkey0)
+    sign_key = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    direct_transfer_other_token.sign(sign_key, address)
+
+    direct_transfer_data = direct_transfer_other_token.encode()
+
+    with pytest.raises(TransactionFailed):
+        nettingchannel.close(direct_transfer_data, sender=pkey1)
+
+
 def test_update_fails_on_open_channel(tester_channels):
     """ Cannot call updateTransfer on a open channel. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
