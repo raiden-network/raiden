@@ -55,6 +55,7 @@ GLOBAL_CTX = secp256k1.lib.secp256k1_context_create(secp256k1.ALL_FLAGS)
 
 def safe_address_decode(address):
     try:
+        address = safe_lstrip_hex(address)
         address = address.decode('hex')
     except TypeError:
         pass

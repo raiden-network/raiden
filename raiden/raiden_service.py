@@ -105,7 +105,6 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
-    safe_address_decode,
     sha3,
     GLOBAL_CTX,
 )

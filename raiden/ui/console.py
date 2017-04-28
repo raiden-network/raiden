@@ -19,7 +19,7 @@ from pyethapp.utils import bcolors as bc
 from pyethapp.jsonrpc import address_decoder, default_gasprice
 from pyethapp.console_service import GeventInputHook, SigINTHandler
 
-from raiden.utils import events, get_contract_path
+from raiden.utils import events, get_contract_path, safe_address_decode
 
 # ipython needs to accept "--gui gevent" option
 IPython.core.shellapp.InteractiveShellApp.gui.values += ('gevent',)
@@ -175,7 +175,7 @@ class ConsoleTools(object):
             auto_register (boolean): if True(default), automatically register
                 the token with raiden.
         Returns:
-            token_address: the hex encoded address of the new token/token.
+            token_address_hex: the hex encoded address of the new token/token.
         """
         contract_path = get_contract_path('HumanStandardToken.sol')
         # Deploy a new ERC20 token
@@ -187,23 +187,24 @@ class ConsoleTools(object):
             contract_path=contract_path,
             gasprice=gasprice,
             timeout=timeout)
-        token_address = token_proxy.address.encode('hex')
+        token_address_hex = token_proxy.address.encode('hex')
         if auto_register:
-            self.register_token(token_address)
+            self.register_token(token_address_hex)
         print("Successfully created {}the token '{}'.".format(
             'and registered ' if auto_register else ' ',
             name
         ))
-        return token_address
+        return token_address_hex
 
-    def register_token(self, token_address):
+    def register_token(self, token_address_hex):
         """Register a token with the raiden token manager.
         Args:
-            token_address (string): a hex encoded token address.
+            token_address_hex (string): a hex encoded token address.
         Returns:
             channel_manager: the channel_manager contract_proxy.
         """
         # Add the ERC20 token to the raiden registry
+        token_address = safe_address_decode(token_address_hex)
         self._chain.default_registry.add_token(token_address)
 
         # Obtain the channel manager for the token
@@ -213,38 +214,38 @@ class ConsoleTools(object):
         self._raiden.register_channel_manager(channel_manager.address)
         return channel_manager
 
-    def ping(self, peer, timeout=4):
+    def ping(self, peer_address_hex, timeout=4):
         """
         See, if a peer is discoverable and up.
            Args:
-                peer (string): the hex-encoded (ethereum) address of the peer.
+                peer_address_hex (string): the hex-encoded (ethereum) address of the peer.
                 timeout (int): The number of seconds to wait for the peer to
                                acknowledge our ping
         Returns:
             success (boolean): True if ping succeeded, False otherwise.
         """
         # Check, if peer is discoverable
-        peer_bin = address_decoder(peer)
+        peer_address = address_decoder(peer_address_hex)
         try:
-            self._discovery.get(peer_bin)
+            self._discovery.get(peer_address)
         except KeyError:
-            print("Error: peer {} not found in discovery".format(peer))
+            print("Error: peer {} not found in discovery".format(peer_address_hex))
             return False
 
-        async_result = self._raiden.protocol.send_ping(peer_bin)
+        async_result = self._raiden.protocol.send_ping(peer_address)
         return async_result.wait(timeout) is not None
 
     def open_channel_with_funding(
             self,
-            token_address,
-            peer,
+            token_address_hex,
+            peer_address_hex,
             amount,
             settle_timeout=None,
             reveal_timeout=None):
         """Convenience method to open a channel.
         Args:
-            token_address (str): hex encoded address of the token for the channel.
-            peer (str): hex encoded address of the channel peer.
+            token_address_hex (str): hex encoded address of the token for the channel.
+            peer_address_hex (str): hex encoded address of the channel peer.
             amount (int): amount of initial funding of the channel.
             settle_timeout (int): amount of blocks for the settle time (if None use app defaults).
             reveal_timeout (int): amount of blocks for the reveal time (if None use app defaults).
@@ -252,43 +253,46 @@ class ConsoleTools(object):
             netting_channel: the (newly opened) netting channel object.
         """
         # Check, if peer is discoverable
+        peer_address = safe_address_decode(peer_address_hex)
+        token_address = safe_address_decode(token_address_hex)
         try:
-            self._discovery.get(address_decoder(peer))
+            self._discovery.get(address_decoder(peer_address))
         except KeyError:
-            print("Error: peer {} not found in discovery".format(peer))
+            print("Error: peer {} not found in discovery".format(peer_address_hex))
             return
 
         self._raiden.api.open(
             token_address,
-            peer,
+            peer_address,
             settle_timeout=settle_timeout,
             reveal_timeout=reveal_timeout,
         )
 
-        return self._raiden.api.deposit(token_address, peer, amount)
+        return self._raiden.api.deposit(token_address, peer_address, amount)
 
-    def channel_stats_for(self, token_address, peer, pretty=False):
+    def channel_stats_for(self, token_address_hex, peer_address_hex, pretty=False):
         """Collect information about sent and received transfers
         between yourself and your peer for the given token.
         Args:
-            token_address (string): hex encoded address of the token
-            peer (string): hex encoded address of the peer
+            token_address_hex (string): hex encoded address of the token
+            peer_address_hex (string): hex encoded address of the peer
             pretty (boolean): if True, print a json representation instead of returning a dict
         Returns:
             stats (dict): collected stats for the channel or None if pretty
 
         """
-        peer_bin = address_decoder(peer)
-        token_address_bin = address_decoder(token_address)
+        peer_address = safe_address_decode(peer_address_hex)
+        token_address = safe_address_decode(token_address_hex)
+
         # Get the token
-        token = self._chain.token(token_address_bin)
+        token = self._chain.token(token_address)
 
         # Obtain the token manager
-        graph = self._raiden.channelgraphs[token_address.decode('hex')]
+        graph = self._raiden.channelgraphs[token_address]
         assert graph
 
         # Get the channel
-        channel = graph.partneraddress_channel[peer.decode('hex')]
+        channel = graph.partneraddress_channel[peer_address]
         assert channel
 
         # Collect data
@@ -309,7 +313,7 @@ class ConsoleTools(object):
             funding=channel.external_state.netting_channel.detail(self._raiden.address),
             token=dict(
                 our_balance=token.balance_of(self._raiden.address),
-                partner_balance=token.balance_of(peer_bin),
+                partner_balance=token.balance_of(peer_address),
                 name=token.proxy.name(),
                 symbol=token.proxy.symbol(),
             ),
@@ -321,30 +325,40 @@ class ConsoleTools(object):
         else:
             print(json.dumps(stats, indent=2, sort_keys=True))
 
-    def show_events_for(self, token_address, peer):
+    def show_events_for(self, token_address_hex, peer_address_hex):
         """Find all EVM-EventLogs for a channel.
         Args:
-            token_address (string): hex encoded address of the token
-            peer (string): hex encoded address of the peer
+            token_address_hex (string): hex encoded address of the token
+            peer_address_hex (string): hex encoded address of the peer
         Returns:
             events (list)
         """
-        graph = self._raiden.channelgraphs[token_address.decode('hex')]
+        token_address = safe_address_decode(token_address_hex)
+        peer_address = safe_address_decode(peer_address_hex)
+
+        graph = self._raiden.channelgraphs[token_address]
         assert graph
 
-        channel = graph.partneraddress_channel[peer.decode('hex')]
+        channel = graph.partneraddress_channel[peer_address]
         netcontract_address = channel.external_state.netting_channel.address
         assert len(netcontract_address)
 
         netting_channel = self._chain.netting_channel(netcontract_address)
         return events.netting_channel_events(self._chain.client, netting_channel)
 
-    def wait_for_contract(self, contract_address, timeout=None):
-        contract_address_bin = address_decoder(contract_address),
+    def wait_for_contract(self, contract_address_hex, timeout=None):
+        """Wait until a contract is mined
+        Args:
+            contract_address_hex (string): hex encoded address of the contract
+            timeout (int): time to wait for the contract to get mined
+        Returns:
+            True if the contract got mined, false otherwise
+        """
+        contract_address = safe_address_decode(contract_address_hex)
         start_time = time.time()
         result = self._raiden.chain.client.call(
             'eth_getCode',
-            contract_address_bin,
+            contract_address,
             'latest',
         )
 
@@ -355,7 +369,7 @@ class ConsoleTools(object):
 
             result = self._raiden.chain.client.call(
                 'eth_getCode',
-                contract_address_bin,
+                contract_address,
                 'latest',
             )
             gevent.sleep(0.5)
