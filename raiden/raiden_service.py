@@ -9,7 +9,6 @@ import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
 from ethereum.utils import encode_hex
-from pyethapp.jsonrpc import address_decoder
 from secp256k1 import PrivateKey
 
 from raiden.constants import UINT64_MAX
