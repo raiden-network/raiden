@@ -196,7 +196,7 @@ Lists of objects:
 
 Mappings/dicts:
 
-`<name>s_<name>s`, e.g. `tokenaddresses_taskmanagers`
+`<name>s_to_<name>s`, e.g. `tokenaddresses_to_taskmanagers`
 
 #### Solidity
 
