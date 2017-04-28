@@ -149,7 +149,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     )
 
     events = app0.raiden.api.get_token_network_events(
-        token_address=address_encoder(token_address),
+        token_address=token_address,
         from_block=0,
         to_block='latest',
     )
@@ -182,7 +182,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     netting_channel0.deposit(app0.raiden.address, deposit)
 
     all_netting_channel_events = app0.raiden.api.get_channel_events(
-        channel_address=address_encoder(netcontract_address),
+        channel_address=netcontract_address,
         from_block=0,
         to_block='latest',
     )
@@ -210,7 +210,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     channel0.external_state.close(app0.raiden.address, '')
 
     all_netting_channel_events = app0.raiden.api.get_channel_events(
-        channel_address=address_encoder(netcontract_address),
+        channel_address=netcontract_address,
         from_block=0,
         to_block='latest',
     )
@@ -239,7 +239,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     channel1.external_state.settle()
 
     all_netting_channel_events = app0.raiden.api.get_channel_events(
-        channel_address=address_encoder(netcontract_address),
+        channel_address=netcontract_address,
         from_block=0,
         to_block='latest',
     )

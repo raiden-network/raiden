@@ -15,6 +15,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
+from raiden.utils import pex
 
 
 class NettingChannelMock(object):
@@ -94,7 +95,7 @@ class ApiTestContext():
         if token_address != self.token_for_channelnew:
             raise ValueError(
                 'Unexpected token address: "{}"  during channelnew '
-                'query'.format(token_address)
+                'query'.format(pex(token_address))
             )
         for event in self.events:
             expected_event_type = event['_event_type'] == 'ChannelNew'
@@ -112,7 +113,7 @@ class ApiTestContext():
         if channel_address != self.channel_for_events:
             raise ValueError(
                 'Unexpected channel address: "{}"  during channel events '
-                'query'.format(channel_address)
+                'query'.format(pex(channel_address))
             )
 
         for event in self.events:
