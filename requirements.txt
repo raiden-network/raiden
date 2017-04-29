@@ -5,7 +5,7 @@ pysha3
 -e git+https://github.com/LefterisJP/pyethapp@use_new_solc_combinedjson_key#egg=pyethapp
 ipython<5.0.0
 rlp>=0.4.3
-coincurve==4.3.0
+coincurve==4.5.1
 pycryptodome>=3.4.3
 miniupnpc
 networkx
