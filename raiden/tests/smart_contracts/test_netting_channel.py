@@ -417,7 +417,7 @@ def test_close_valid_tranfer_different_token(
     )
 
     address = privatekey_to_address(pkey0)
-    sign_key = PrivateKey(pkey0, ctx=GLOBAL_CTX, raw=True)
+    sign_key = PrivateKey(pkey0)
     direct_transfer_other_token.sign(sign_key, address)
 
     direct_transfer_data = direct_transfer_other_token.encode()
