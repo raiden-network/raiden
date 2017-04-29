@@ -9,10 +9,9 @@ from coincurve import PrivateKey
 from pyethapp.jsonrpc import address_decoder
 
 from raiden.encoding import messages
+from raiden.encoding.format import compute_slices
 from raiden.utils import sha3, privatekey_to_address, get_project_root
 
-from raiden.encoding.format import compute_slices
-from raiden.encoding.signing import GLOBAL_CTX
 
 from raiden.tests.utils.tests import get_test_contract_path
 from raiden.tests.utils.messages import (
@@ -161,7 +160,7 @@ def test_decode_tampered_direct_transfer(tester_state, tester_nettingchannel_lib
     decoder = deploy_decoder_tester(tester_state, tester_nettingchannel_library_address)
 
     direct_transfer = make_direct_transfer()
-    direct_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    direct_transfer.sign(PrivateKey(privatekey0), address0)
 
     message_encoded = direct_transfer.encode()
     transfer_raw, _ = decoder.getTransferRawAddress(message_encoded)
@@ -192,7 +191,7 @@ def test_decode_tampered_mediated_transfer(tester_state, tester_nettingchannel_l
 
     mediated_transfer = make_mediated_transfer()
 
-    mediated_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    mediated_transfer.sign(PrivateKey(privatekey0), address0)
 
     message_encoded = mediated_transfer.encode()
     transfer_raw, _ = decoder.getTransferRawAddress(message_encoded)
@@ -222,7 +221,7 @@ def test_decode_tampered_refund_transfer(tester_state, tester_nettingchannel_lib
     decoder = deploy_decoder_tester(tester_state, tester_nettingchannel_library_address)
 
     refund_transfer = make_refund_transfer()
-    refund_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    refund_transfer.sign(PrivateKey(privatekey0), address0)
 
     message_encoded = refund_transfer.encode()
     transfer_raw, _ = decoder.getTransferRawAddress(message_encoded)
