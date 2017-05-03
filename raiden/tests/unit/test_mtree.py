@@ -1,38 +1,36 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from raiden.mtree import merkleroot, check_proof, get_proof, HashLengthNot32
+from raiden.mtree import Merkletree, check_proof, get_proof, HashLengthNot32
 from raiden.utils import keccak
 
 
 def test_empty():
-    assert merkleroot([]) == ''
-    assert merkleroot(['']) == ''
-
-
-def test_multiple_empty():
-    assert merkleroot(['', '']) == ''
+    assert Merkletree([]).merkleroot == ''
 
 
 def test_non_hash():
     with pytest.raises(HashLengthNot32):
-        merkleroot(['not32bytes', 'neither'])
+        Merkletree(['not32bytes', 'neither'])
+
+    with pytest.raises(HashLengthNot32):
+        assert Merkletree(['']).merkleroot == ''
 
 
 def test_single():
     hash_0 = keccak('x')
-    assert merkleroot([hash_0]) == hash_0
+    assert Merkletree([hash_0]).merkleroot == hash_0
 
 
 def test_duplicates():
     hash_0 = keccak('x')
     hash_1 = keccak('y')
 
-    assert merkleroot([hash_0, hash_0]) == hash_0, 'duplicates should be removed'
+    with pytest.raises(ValueError):
+        Merkletree([hash_0, hash_0])
 
-    result0 = merkleroot([hash_0, hash_1, hash_0])
-    result1 = merkleroot([hash_0, hash_1])
-    assert result0 == result1, 'duplicates should be removed'
+    with pytest.raises(ValueError):
+        Merkletree([hash_0, hash_1, hash_0])
 
 
 def test_one():
@@ -40,7 +38,7 @@ def test_one():
 
     merkle_tree = [hash_0]
     merkle_proof = get_proof(merkle_tree, hash_0)
-    merkle_root = merkleroot(merkle_tree)
+    merkle_root = Merkletree(merkle_tree).merkleroot
 
     assert merkle_proof == []
     assert merkle_root == hash_0
@@ -54,14 +52,14 @@ def test_two():
     merkle_tree = [hash_0, hash_1]
 
     merkle_proof = get_proof(merkle_tree, hash_0)
-    merkle_root = merkleroot(merkle_tree)
+    merkle_root = Merkletree(merkle_tree).merkleroot
 
     assert merkle_proof == [hash_1]
     assert merkle_root == keccak(hash_0 + hash_1)
     assert check_proof(merkle_proof, merkle_root, hash_0)
 
     merkle_proof = get_proof(merkle_tree, hash_1)
-    merkle_root = merkleroot(merkle_tree)
+    merkle_root = Merkletree(merkle_tree).merkleroot
 
     assert merkle_proof == [hash_0]
     assert merkle_root == keccak(hash_0 + hash_1)
@@ -86,21 +84,21 @@ def test_three():
     calculated_root = keccak(hash_2 + hash_01)
 
     merkle_proof = get_proof(merkle_tree, hash_0)
-    merkle_root = merkleroot(merkle_tree)
+    merkle_root = Merkletree(merkle_tree).merkleroot
 
     assert merkle_proof == [hash_1, hash_2]
     assert merkle_root == calculated_root
     assert check_proof(merkle_proof, merkle_root, hash_0)
 
     merkle_proof = get_proof(merkle_tree, hash_1)
-    merkle_root = merkleroot(merkle_tree)
+    merkle_root = Merkletree(merkle_tree).merkleroot
 
     assert merkle_proof == [hash_0, hash_2]
     assert merkle_root == calculated_root
     assert check_proof(merkle_proof, merkle_root, hash_1)
 
     merkle_proof = get_proof(merkle_tree, hash_2)
-    merkle_root = merkleroot(merkle_tree)
+    merkle_root = Merkletree(merkle_tree).merkleroot
 
     # with an odd number of values, the last value wont appear by itself in the
     # proof since it isn't hashed with another value
@@ -116,7 +114,7 @@ def test_get_proof():
     merkle_tree = [hash_0, hash_1]
 
     merkle_proof = get_proof(merkle_tree, hash_0)
-    merkle_root = merkleroot(merkle_tree)
+    merkle_root = Merkletree(merkle_tree).merkleroot
     assert check_proof(merkle_proof, merkle_root, hash_0)
 
     second_merkle_proof = get_proof(merkle_tree, hash_0, merkle_root)
@@ -133,10 +131,10 @@ def test_many(tree_up_to=10):
 
         for value in merkle_tree:
             merkle_proof = get_proof(merkle_tree, value)
-            merkle_root = merkleroot(merkle_tree)
+            merkle_root = Merkletree(merkle_tree).merkleroot
             second_proof = get_proof(merkle_tree, value, merkle_root)
 
             assert check_proof(merkle_proof, merkle_root, value) is True
             assert check_proof(second_proof, merkle_root, value) is True
 
-        assert merkleroot(merkle_tree) == merkleroot(reversed(merkle_tree))
+        assert Merkletree(merkle_tree).merkleroot == Merkletree(reversed(merkle_tree)).merkleroot

@@ -50,19 +50,6 @@ def merkleproof_from_layers(layers, idx):
     return proof
 
 
-def merkleroot(elements):
-    """
-    Args:
-        elements (List[str]): List of hashes that make the merkletree.
-
-    Returns:
-        str: The root element of the merkle tree.
-    Raises:
-        HashLengthNot32: The length of one of the elements is not 32
-    """
-    return Merkletree(elements).merkleroot
-
-
 def check_proof(proof, root, hash_):
     for x in proof:
         hash_ = hash_pair(hash_, x)
@@ -85,6 +72,8 @@ def get_proof(lst, proof_for, root=None):
 
 class Merkletree(object):
     def __init__(self, elements):
+        elements = list(elements)  # consume generators
+
         if not all(isinstance(item, (str, bytes)) for item in elements):
             raise ValueError('all elements must be str')
 
@@ -99,6 +88,7 @@ class Merkletree(object):
 
     @property
     def merkleroot(self):
+        """ Return the root element of the merkle tree. """
         return self._layers[-1][0]
 
     def make_proof(self, element):
