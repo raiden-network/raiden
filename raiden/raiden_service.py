@@ -836,11 +836,10 @@ class RaidenAPI(object):
             partner_address,
             settle_timeout,
         )
-        netting_channel = self.raiden.chain.netting_channel(netcontract_address)
-        self.raiden.register_channel(netting_channel, reveal_timeout)
+        self.raiden.register_netting_channel(token_address, netcontract_address)
 
         graph = self.raiden.channelgraphs[token_address]
-        channel = graph.partneraddress_channel[partner_address.decode('hex')]
+        channel = graph.partneraddress_channel[partner_address]
         return channel
 
     def deposit(self, token_address, partner_address, amount):
