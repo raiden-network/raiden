@@ -307,4 +307,4 @@ def run(ctx, external_listen_address, **kwargs):
     gevent.signal(signal.SIGINT, event.set)
     event.wait()
 
-    app.stop()
+    app_.stop()
