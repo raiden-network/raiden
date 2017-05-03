@@ -23,6 +23,16 @@ class PortMappedSocket(object):
 
 @contextmanager
 def socket_factory(source_ip, source_port, *args, **kwargs):
+    """
+    Create a port mapped socket via uPnP or STUN.
+    Args:
+        source_ip (ip string): the network interface/ip to bind
+        source_port (int): the local port to bind
+        *args: generic args that are passed to the below implementations
+        **kargs: generic kwargs that are passed to the below implementations
+    Return:
+        PortMappedSocket
+    """
     # prefer uPnP over STUN
     upnp = upnpsock.connect()
     if upnp is not None:
