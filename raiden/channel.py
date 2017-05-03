@@ -401,10 +401,14 @@ class ChannelExternalState(object):
 
     def set_closed(self, block_number):
         # TODO: ensure the same callback logic as in set_settled
-        if self._closed_block != 0:
-            raise RuntimeError('channel is already closed')
+        if self._closed_block != 0 and self._closed_block != block_number:
+            raise RuntimeError(
+                'channel is already closed on different block %s %s'
+                % (self._closed_block, block_number)
+            )
 
-        self._closed_block = block_number
+        else:
+            self._closed_block = block_number
 
         for callback in self.callbacks_closed:
             callback(block_number)
