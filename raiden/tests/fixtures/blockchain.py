@@ -42,6 +42,7 @@ EPOCH0_DAGSIZE = 1073739912
 
 __all__ = (
     'tokens_addresses',
+    'register_tokens',
     'blockchain_services',
     'blockchain_backend',
 )
@@ -56,15 +57,29 @@ def genesis_path_from_testfunction(request):
     return str(genesis_path)  # makedir returns a py.path.LocalPath object
 
 
-def _tokens_addresses(token_amount, number_of_tokens, deploy_service, blockchain_services):
+def _tokens_addresses(
+    token_amount,
+    number_of_tokens,
+    deploy_service,
+    blockchain_services,
+    register
+):
     result = list()
     for _ in range(number_of_tokens):
-        token_address = deploy_service.deploy_and_register_token(
-            contract_name='HumanStandardToken',
-            contract_file='HumanStandardToken.sol',
-            constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
-        )
-        result.append(token_address)
+        if register:
+            token_address = deploy_service.deploy_and_register_token(
+                contract_name='HumanStandardToken',
+                contract_file='HumanStandardToken.sol',
+                constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
+            )
+            result.append(token_address)
+        else:
+            token_address = deploy_service.deploy_contract(
+                contract_name='HumanStandardToken',
+                contract_file='HumanStandardToken.sol',
+                constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
+            )
+            result.append(token_address)
 
         # only the creator of the token starts with a balance (deploy_service),
         # transfer from the creator to the other nodes
@@ -131,6 +146,7 @@ def cached_genesis(request, blockchain_type):
         request.getfixturevalue('number_of_tokens'),
         deploy_service,
         blockchain_services,
+        True
     )
 
     raiden_apps = create_apps(
@@ -223,12 +239,20 @@ def cached_genesis(request, blockchain_type):
 
 
 @pytest.fixture
+def register_tokens():
+    """Should fixture generated tokens be registered with raiden (default: True)
+    """
+    return True
+
+
+@pytest.fixture
 def tokens_addresses(
         request,
         token_amount,
         number_of_tokens,
         blockchain_services,
-        cached_genesis):
+        cached_genesis,
+        register_tokens):
 
     if cached_genesis:
         tokens_addresses = [
@@ -241,6 +265,7 @@ def tokens_addresses(
             number_of_tokens,
             blockchain_services.deploy_service,
             blockchain_services.blockchain_services,
+            register_tokens
         )
 
     return tokens_addresses
