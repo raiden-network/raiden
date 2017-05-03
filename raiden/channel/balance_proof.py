@@ -9,7 +9,7 @@ from raiden.messages import (
     DirectTransfer,
     LockedTransfer,
 )
-from raiden.mtree import Merkletree, get_proof
+from raiden.mtree import Merkletree
 from raiden.utils import sha3, pex
 from raiden.exceptions import (
     InvalidLocksRoot,
@@ -223,12 +223,13 @@ class BalanceProof(object):
             self.hashlock_unclaimedlocks.values(),
             self.hashlock_unlockedlocks.values()
         )
-        merkletree = [l.lockhashed for l in alllocks]
 
         # forcing bytes because ethereum.abi doesnt work with bytearray
         lock_encoded = bytes(lock.as_bytes)
         lock_hash = sha3(lock_encoded)
-        merkle_proof = get_proof(merkletree, lock_hash)
+
+        tree = Merkletree(lock.lockhashed for lock in alllocks)
+        merkle_proof = tree.make_proof(lock_hash)
 
         return UnlockProof(
             merkle_proof,

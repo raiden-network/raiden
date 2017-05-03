@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
-
-from ethereum.utils import encode_hex
-
+# -*- coding: utf-8 -*-
 from raiden.utils import keccak
 from raiden.exceptions import HashLengthNot32
 
@@ -55,19 +53,6 @@ def check_proof(proof, root, hash_):
         hash_ = hash_pair(hash_, x)
 
     return hash_ == root
-
-
-def get_proof(lst, proof_for, root=None):
-    tree = Merkletree(lst)
-
-    root_hash = tree.merkleroot
-    if root and root != root_hash:
-        raise ValueError('root hashes did not match {} {}'.format(
-            encode_hex(root_hash),
-            encode_hex(root)
-        ))
-
-    return tree.make_proof(proof_for)
 
 
 class Merkletree(object):
