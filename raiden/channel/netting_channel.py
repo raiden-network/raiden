@@ -124,13 +124,13 @@ class ChannelExternalState(object):
         self.callbacks_settled.append(callback)
 
     def isopen(self):
-        if self._closed_block != 0:
-            return False
-
-        if self._opened_block != 0:
-            return True
-
-        return False
+        """ True if the channel is opened. A channel is opened after its first
+        deposit until close is called.
+        """
+        return (
+            self._opened_block != 0 and
+            self._closed_block == 0
+        )
 
     def close(self, our_address, partner_transfer):
         return self.netting_channel.close(our_address, partner_transfer)
@@ -159,7 +159,6 @@ class Channel(object):
             block_number):
 
         if settle_timeout <= reveal_timeout:
-            # reveal_timeout must be a fraction of the settle_timeout
             raise ValueError('reveal_timeout can not be larger-or-equal to settle_timeout')
 
         if reveal_timeout < 3:
@@ -214,21 +213,17 @@ class Channel(object):
 
     @property
     def state(self):
-        if self.isopen:
-            return CHANNEL_STATE_OPENED
-        elif self.external_state.settled_block != 0:
+        if self.external_state.settled_block != 0:
             return CHANNEL_STATE_SETTLED
-        elif self.external_state.closed_block != 0:
+
+        if self.external_state.closed_block != 0:
             return CHANNEL_STATE_CLOSED
-        elif (
-            self.external_state.opened_block ==
-            self.external_state.closed_block ==
-            self.external_state.settled_block ==
-            0
-        ):
-            return CHANNEL_STATE_INITIALIZING
-        else:
-            raise Exception('invalid state')
+
+        if self.external_state.opened_block != 0:
+            return CHANNEL_STATE_OPENED
+
+        # waiting for the first deposit
+        return CHANNEL_STATE_INITIALIZING
 
     @property
     def our_address(self):
