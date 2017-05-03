@@ -4,7 +4,7 @@ from __future__ import print_function
 import gevent
 from coincurve import PrivateKey
 
-from raiden.mtree import merkleroot
+from raiden.mtree import Merkletree
 from raiden.raiden_service import create_default_identifier
 from raiden.utils import sha3, privatekey_to_address
 
@@ -227,7 +227,7 @@ def assert_mirror(channel0, channel1):
 def assert_locked(channel0, outstanding_locks):
     """ Assert the locks create from `channel`. """
     # a locked transfer is registered in the _partner_ state
-    hashroot = merkleroot(sha3(lock.as_bytes) for lock in outstanding_locks)
+    hashroot = Merkletree(sha3(lock.as_bytes) for lock in outstanding_locks).merkleroot
 
     assert len(channel0.our_state.balance_proof.hashlock_pendinglocks) == len(outstanding_locks)
     assert channel0.our_state.balance_proof.merkleroot_for_unclaimed() == hashroot

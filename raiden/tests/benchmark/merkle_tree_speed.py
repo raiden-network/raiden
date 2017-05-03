@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import time
 
-from raiden.mtree import merkleroot
+from raiden.mtree import Merkletree
 from raiden.utils import keccak
 
 
@@ -13,7 +13,7 @@ def do_test_speed(rounds=100, num_hashes=1000):
 
     start_time = time.time()
     for __ in range(rounds):
-        merkleroot(values)
+        Merkletree(values).merkleroot
 
     elapsed = time.time() - start_time
 

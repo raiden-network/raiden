@@ -9,7 +9,7 @@ from raiden.messages import (
     DirectTransfer,
     LockedTransfer,
 )
-from raiden.mtree import merkleroot, get_proof
+from raiden.mtree import Merkletree, get_proof
 from raiden.utils import sha3, pex
 from raiden.exceptions import (
     InvalidLocksRoot,
@@ -63,7 +63,9 @@ class BalanceProof(object):
             self.hashlock_pendinglocks.values(),
             self.hashlock_unclaimedlocks.values()
         )
-        return merkleroot(lock.lockhashed for lock in alllocks)
+
+        tree = Merkletree(lock.lockhashed for lock in alllocks)
+        return tree.merkleroot
 
     def is_pending(self, hashlock):
         """ True if a secret is not known for the given `hashlock`. """
@@ -109,9 +111,9 @@ class BalanceProof(object):
         if self.is_known(lock.hashlock):
             raise ValueError('hashlock is already registered')
 
-        merkletree = self.unclaimed_merkletree()
-        merkletree.append(lockhashed)
-        new_locksroot = merkleroot(merkletree)
+        leafs = self.unclaimed_merkletree()
+        leafs.append(lockhashed)
+        new_locksroot = Merkletree(leafs).merkleroot
 
         if locked_transfer.locksroot != new_locksroot:
             raise ValueError(

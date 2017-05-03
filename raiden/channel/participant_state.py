@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from ethereum import slogging
 
-from raiden.mtree import merkleroot
+from raiden.mtree import Merkletree
 from raiden.utils import sha3
 from raiden.channel.balance_proof import BalanceProof
 
@@ -60,9 +60,11 @@ class ChannelEndState(object):
         """ Compute the resulting merkle root if the lock `include` is added in
         the tree.
         """
-        merkletree = self.balance_proof.unclaimed_merkletree()
-        merkletree.append(sha3(include.as_bytes))
-        return merkleroot(merkletree)
+        leafs = self.balance_proof.unclaimed_merkletree()
+        leafs.append(sha3(include.as_bytes))
+        locksroot = Merkletree(leafs).merkleroot
+
+        return locksroot
 
     # api design: using specialized methods to force the user to register the
     # transfer and the lock in a single step
