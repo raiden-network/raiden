@@ -101,6 +101,7 @@ from raiden.messages import (
     SignedMessage,
 )
 from raiden.network.protocol import RaidenProtocol
+from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
     pex,
@@ -201,6 +202,8 @@ class RaidenService(object):
         self.greenlet_task_dispatcher = greenlet_task_dispatcher
 
         self.on_message = message_handler.on_message
+
+        self.tokens_connectionmanagers = dict()  # token_address: ConnectionManager
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -517,6 +520,16 @@ class RaidenService(object):
         detail = self.get_channel_details(token_address, netting_channel)
         graph = self.channelgraphs[token_address]
         graph.add_channel(detail, block_number)
+
+    def connection_manager_for_token(self, token_address):
+        if not isaddress(token_address):
+            raise InvalidAddress('token address is not valid.')
+        if token_address not in self.tokens_connectionmanagers.keys():
+            manager = ConnectionManager(self, token_address)
+            self.tokens_connectionmanagers[token_address] = manager
+        else:
+            manager = self.tokens_connectionmanagers[token_address]
+        return manager
 
     def stop(self):
         wait_for = [self.alarm]
@@ -1626,11 +1639,17 @@ class StateMachineEventHandler(object):
         graph = self.raiden.channelgraphs[token_address]
         graph.add_path(participant1, participant2)
 
+        connection_manager = self.raiden.connection_manager_for_token(token_address)
+
         if participant1 == self.raiden.address or participant2 == self.raiden.address:
             self.raiden.register_netting_channel(
                 token_address,
                 channel_address,
             )
+        elif connection_manager.wants_more_channels:
+            gevent.spawn(connection_manager.retry_connect)
+        else:
+            log.info('ignoring new channel, this node is not a participant.')
 
     def handle_balance(self, state_change):
         channel_address = state_change.channel_address
@@ -1645,6 +1664,16 @@ class StateMachineEventHandler(object):
 
         if channel_state.contract_balance != balance:
             channel_state.update_contract_balance(balance)
+
+        connection_manager = self.raiden.connection_manager_for_token(
+            token_address
+        )
+        if channel.deposit == 0:
+            gevent.spawn(
+                connection_manager.join_channel,
+                participant_address,
+                balance
+            )
 
         if channel.external_state.opened_block == 0:
             channel.external_state.set_opened(block_number)
