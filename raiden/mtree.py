@@ -50,22 +50,6 @@ def merkleproof_from_layers(layers, idx):
     return proof
 
 
-class Merkletree(object):
-    def __init__(self, elements):
-        self._layers = list(merkletreelayers(build_list(elements)))
-
-    @property
-    def merkleroot(self):
-        return self._layers[-1][0]
-
-    def make_proof(self, element):
-        """ The proof contains all elements between `element` and `root`.
-            If on all of [element] + proof is recursively hash_pair applied one
-            gets the root.
-        """
-        return merkleproof_from_layers(self._layers, self._layers[0].index(element))
-
-
 def merkleroot(elements):
     """
     Args:
@@ -77,20 +61,6 @@ def merkleroot(elements):
         HashLengthNot32: The length of one of the elements is not 32
     """
     return Merkletree(elements).merkleroot
-
-
-def build_list(elements):
-    result = list()
-
-    for item in set(elements):
-        if item:
-            if len(item) != 32:
-                raise HashLengthNot32()
-
-            result.append(item)
-
-    result.sort()
-    return result
 
 
 def check_proof(proof, root, hash_):
@@ -111,3 +81,29 @@ def get_proof(lst, proof_for, root=None):
         ))
 
     return tree.make_proof(proof_for)
+
+
+class Merkletree(object):
+    def __init__(self, elements):
+        if not all(isinstance(item, (str, bytes)) for item in elements):
+            raise ValueError('all elements must be str')
+
+        if any(len(item) != 32 for item in elements):
+            raise HashLengthNot32()
+
+        if len(elements) != len(set(elements)):
+            raise ValueError('Duplicated element')
+
+        leafs = sorted(item for item in elements)
+        self._layers = list(merkletreelayers(leafs))
+
+    @property
+    def merkleroot(self):
+        return self._layers[-1][0]
+
+    def make_proof(self, element):
+        """ The proof contains all elements between `element` and `root`.
+            If on all of [element] + proof is recursively hash_pair applied one
+            gets the root.
+        """
+        return merkleproof_from_layers(self._layers, self._layers[0].index(element))
