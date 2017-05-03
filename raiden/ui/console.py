@@ -208,7 +208,7 @@ class ConsoleTools(object):
         self._chain.default_registry.add_token(token_address)
 
         # Obtain the channel manager for the token
-        channel_manager = self._chain.manager_by_token(address_decoder(token_address))
+        channel_manager = self._chain.manager_by_token(token_address)
 
         # Register the channel manager with the raiden registry
         self._raiden.register_channel_manager(channel_manager.address)
@@ -256,7 +256,7 @@ class ConsoleTools(object):
         peer_address = safe_address_decode(peer_address_hex)
         token_address = safe_address_decode(token_address_hex)
         try:
-            self._discovery.get(address_decoder(peer_address))
+            self._discovery.get(peer_address)
         except KeyError:
             print("Error: peer {} not found in discovery".format(peer_address_hex))
             return
