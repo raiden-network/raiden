@@ -333,7 +333,8 @@ def blockchain_backend(
         blockchain_rpc_ports,
         tmpdir,
         blockchain_type,
-        cached_genesis):
+        cached_genesis,
+        database_paths):
 
     genesis_path = None
     if cached_genesis:
@@ -353,6 +354,7 @@ def blockchain_backend(
             blockchain_rpc_ports,
             tmpdir,
             genesis_path,
+            database_paths
         )
 
     if blockchain_type == 'tester':
@@ -373,7 +375,8 @@ def _geth_blockchain(
         blockchain_p2p_ports,
         blockchain_rpc_ports,
         tmpdir,
-        genesis_path):
+        genesis_path,
+        database_paths):
 
     """ Helper to do proper cleanup. """
     verbosity = request.config.option.verbose
@@ -386,6 +389,7 @@ def _geth_blockchain(
         blockchain_p2p_ports,
         str(tmpdir),
         verbosity,
+        database_paths,
         genesis_path,
     )
 

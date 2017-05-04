@@ -4,6 +4,7 @@ from itertools import count
 
 import pytest
 import psutil
+import os
 from ethereum.utils import sha3
 
 from raiden.settings import (
@@ -238,3 +239,13 @@ def raiden_udp_ports(number_of_nodes, port_generator):
 def rest_api_port_number(port_generator):
     """ Unique port for the REST API server. """
     return next(port_generator)
+
+
+@pytest.fixture
+def database_paths(tmpdir, blockchain_number_of_nodes):
+    """ Sqlite database paths for each node.
+    """
+    return [
+        os.path.join(tmpdir, 'transaction_log_{}.db'.format(position))
+        for position in range(blockchain_number_of_nodes)
+    ]

@@ -6,7 +6,7 @@ from abc import ABCMeta, abstractmethod
 
 from raiden.utils import create_file_iff_not_existing
 
-DEFAULT_TRANSACTION_LOG_NAME = "transaction_log.db"
+DEFAULT_TRANSACTION_LOG_PATH = "transaction_log.db"
 Transaction = namedtuple('Transaction', ('id', 'state_change'))
 
 
@@ -67,20 +67,18 @@ class TransactionLogStorageBackend(object):
 
 class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
 
-    def __init__(self):
-        self.conn = sqlite3.connect("transaction_log.db")
+    def __init__(self, database_path):
+        self.conn = sqlite3.connect(database_path)
         cursor = self.conn.cursor()
         cursor.execute(
-            'CREATE TABLE IF NOT EXISTS transactions (id integer, data text)'
+            'CREATE TABLE IF NOT EXISTS transactions (id integer, data binary)'
         )
         cursor.execute(
-            'CREATE TABLE IF NOT EXISTS state_snapshot (id integer, data text)'
+            'CREATE TABLE IF NOT EXISTS state_snapshot (id integer, data binary)'
         )
         self.conn.commit()
 
     def write_transaction(self, identifier, data):
-        import pdb
-        pdb.set_trace()
         cursor = self.conn.cursor()
         cursor.execute(
             'INSERT INTO transactions(id, data) VALUES(?,?)',
@@ -110,11 +108,11 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
     def get_transaction_by_id(self, identifier):
         cursor = self.conn.cursor()
         result = cursor.execute(
-            'SELECT * from transactions where id=?', identifier
+            'SELECT data from transactions where id=?', (identifier,)
         )
         result = result.fetchall()
         assert len(result) == 1
-        result = result[0]
+        result = result[0][0]
         return result
 
     def read(self):
@@ -127,7 +125,7 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
 class TransactionLogFileBackend(TransactionLogStorageBackend):
     """This is just an example for having a file backend. Not actually implemented"""
 
-    def __init__(self, filepath=DEFAULT_TRANSACTION_LOG_NAME):
+    def __init__(self, filepath=DEFAULT_TRANSACTION_LOG_PATH):
         self.filepath = filepath
         self.file = create_file_iff_not_existing(
             self.filepath,
@@ -155,6 +153,7 @@ class TransactionLog(object):
 
     def __init__(
             self,
+            database_path=DEFAULT_TRANSACTION_LOG_PATH,
             serializer_type='pickle',
             storage_type='sqlite'):
 
@@ -163,7 +162,7 @@ class TransactionLog(object):
         self.serializer = PickleTransactionSerializer()
 
         if storage_type == 'sqlite':
-            self.storage = TransactionLogSQLiteBackend()
+            self.storage = TransactionLogSQLiteBackend(database_path)
         elif storage_type == 'file':
             self.storage = TransactionLogFileBackend()
         else:
@@ -176,7 +175,7 @@ class TransactionLog(object):
         self.identifier += 1
 
         serialized_data = self.serializer.serialize(state_change)
-        self.storage.write(self.identifier, serialized_data)
+        self.storage.write_transaction(self.identifier, serialized_data)
 
     def get_transaction_by_id(self, identifier):
         serialized_data = self.storage.get_transaction_by_id(identifier)
