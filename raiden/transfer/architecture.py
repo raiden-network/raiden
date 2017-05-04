@@ -140,14 +140,3 @@ class StateManager(object):
         assert all(isinstance(e, Event) for e in events)
 
         return events
-
-    def log_and_dispatch(self, state_change, transaction_log):
-        """Acts like `dispatch()` but also makes a log entry into the
-        transaction log and keeps a snapshot of the current state after applying.
-        """
-        assert isinstance(transaction_log, TransactionLog)
-        transaction_log.log(state_change)
-        events = self.dispatch(state_change)
-
-        transaction_log.snapshot(self.current_state)
-        return events

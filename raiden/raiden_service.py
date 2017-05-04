@@ -70,7 +70,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.transfer.log import TransactionLog
+from raiden.transfer.log import TransactionLog, DEFAULT_TRANSACTION_LOG_PATH
 from raiden.channel import ChannelEndState, ChannelExternalState
 from raiden.exceptions import (
     UnknownAddress,
@@ -185,7 +185,9 @@ class RaidenService(object):
         else:
             self.healthcheck = None
 
-        self.transaction_log = TransactionLog(DEFAULT_TRANSACTION_LOG_FILENAME, None)
+        self.transaction_log = TransactionLog(
+            database_path=config.get('database_path', DEFAULT_TRANSACTION_LOG_PATH)
+        )
         self.alarm = alarm
         self.message_handler = message_handler
         self.state_machine_event_handler = state_machine_event_handler
@@ -692,11 +694,7 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(initiator.state_transition, None)
-        all_events = state_manager.log_and_dispatch(init_initiator, self.transaction_log)
-
-        for event in all_events:
-            self.state_machine_event_handler.on_event(event)
-
+        self.state_machine_event_handler.log_and_dispatch(state_manager, init_initiator)
         async_result = AsyncResult()
 
         # TODO: implement the network timeout raiden.config['msg_timeout'] and
@@ -743,10 +741,7 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(mediator.state_transition, None)
-        all_events = state_manager.log_and_dispatch(init_mediator, self.transaction_log)
-
-        for event in all_events:
-            self.state_machine_event_handler.on_event(event)
+        self.state_machine_event_handler.log_and_dispatch(state_manager, init_mediator)
 
         self.identifier_statemanager[identifier].append(state_manager)
 
@@ -767,10 +762,7 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(target_task.state_transition, None)
-        all_events = state_manager.log_and_dispatch(init_target, self.transaction_log)
-
-        for event in all_events:
-            self.state_machine_event_handler.on_event(event)
+        self.state_machine_event_handler.log_and_dispatch(state_manager, init_target)
 
         identifier = message.identifier
         self.identifier_statemanager[identifier].append(state_manager)
@@ -1039,16 +1031,17 @@ class StateMachineEventHandler(object):
         manager_lists = self.raiden.identifier_statemanager.itervalues()
 
         for manager in itertools.chain(*manager_lists):
-            self.dispatch(manager, state_change)
+            self.log_and_dispatch(manager, state_change)
 
     def dispatch_by_identifier(self, identifier, state_change):
         manager_list = self.raiden.identifier_statemanager[identifier]
 
         for manager in manager_list:
-            self.dispatch(manager, state_change)
+            self.log_and_dispatch(manager, state_change)
 
-    def dispatch(self, state_manager, state_change):
-        all_events = state_manager.log_and_dispatch(state_change, self.raiden.transaction_log)
+    def log_and_dispatch(self, state_manager, state_change):
+        self.raiden.transaction_log.log(state_change)
+        all_events = state_manager.dispatch(state_change)
 
         for event in all_events:
             self.on_event(event)
@@ -1114,6 +1107,7 @@ class StateMachineEventHandler(object):
     def on_blockchain_statechange(self, state_change):
         if log.isEnabledFor(logging.INFO):
             log.info('state_change received', state_change=state_change)
+        self.raiden.transaction_log.log(state_change)
 
         if isinstance(state_change, ContractReceiveTokenAdded):
             self.handle_tokenadded(state_change)
