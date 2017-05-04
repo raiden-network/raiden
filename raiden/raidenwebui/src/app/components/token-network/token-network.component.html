@@ -11,14 +11,14 @@
     <p-footer><div class="ui-helper-clearfix" style="width:100%"><button type="button" pButton icon="fa-plus" style="float:left" (click)="joinTokenNetwork()" label="Join"></button></div></p-footer>
 </p-dataTable>
 
-<p-dialog header="Join Token Network" [(visible)]="displayDialog" [responsive]="true" showEffect="fade" [modal]="true">
+<p-dialog header="Join Token Network" [(visible)]="displayDialog" [responsive]="true"  showEffect="fade" [modal]="true" [resizable]="true">
     <div class="ui-grid ui-grid-responsive ui-fluid" *ngIf="selectedToken">
         <div class="ui-grid-row">
-            <div class="ui-grid-col-4"><label for="partner">Partner Address</label></div>
+            <div class="ui-grid-col-4"><label for="partner">Partner</label></div>
             <div class="ui-grid-col-8"><input pInputText id="partner" [(ngModel)]="channelOpened.channel_address"/></div>
         </div>
         <div class="ui-grid-row">
-            <div class="ui-grid-col-4"><label for="token">Token Address</label></div>
+            <div class="ui-grid-col-4"><label for="token">Token</label></div>
             <div class="ui-grid-col-8"><input pInputText id="token" [(ngModel)]="channelOpened.token_address"/></div>
         </div>
         <div class="ui-grid-row">
@@ -30,4 +30,10 @@
             <div class="ui-grid-col-8"><input pInputText id="settle" [(ngModel)]="channelOpened.settle_timeout"/></div>
         </div>
     </div>
+    <p-footer>
+        <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
+            <button type="button" pButton icon="fa-close" (click)="save()" label="Close"></button>
+            <button type="button" pButton icon="fa-check" (click)="delete()" label="Join"></button>
+        </div>
+    </p-footer>
 </p-dialog>
