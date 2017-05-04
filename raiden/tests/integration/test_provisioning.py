@@ -27,35 +27,38 @@ def test_participant_selection(
         app.raiden.config['reveal_timeout'] = reveal_timeout
         app.raiden.config['settle_timeout'] = settle_timeout
 
+    # connect the first node (will register the token if necessary)
+    raiden_network[0].raiden.api.connect_token_network(token_address, 100)
+
+    # connect the other nodes
     pool = Pool()
     calls = []
-    for num, app in enumerate(raiden_network):
-        manager = app.raiden.connection_manager_for_token(token_address)
-        chain = app.raiden.chain
+    for app in raiden_network[1:]:
+        api = app.raiden.api
+        calls.append((api.connect_token_network, token_address, 100))
 
-        calls.append((manager.connect, 100))
-
-    pool.imap(lambda x: x[0](x[1]), calls).join()
+    pool.imap(lambda x: x[0](*x[1:]), calls).join()
 
     # wait some blocks to let the network connect
-    n = 15
+    wait_blocks = 15
     if blockchain_type == 'geth':
         wait_until_block(
             raiden_network[-1].raiden.chain,
-            raiden_network[-1].raiden.chain.block_number() + n
+            raiden_network[-1].raiden.chain.block_number() + wait_blocks
         )
     else:
-        for i in range(n):
+        for i in range(wait_blocks):
             for app in raiden_network:
                 wait_until_block(
                     app.raiden.chain,
                     app.raiden.chain.block_number() + 1
                 )
-        # tester needs a context switch
-        gevent.sleep(1)
+            # tester needs an explicit context switch :(
+            gevent.sleep(1)
 
     connection_managers = [
-        app.raiden.tokens_connectionmanagers[token_address] for app in raiden_network]
+        app.raiden.connection_manager_for_token(token_address) for app in raiden_network
+    ]
 
     def open_channels_count(connection_managers_):
         return [
@@ -114,7 +117,7 @@ def test_participant_selection(
     before = len(connection_manager.open_channels)
     before_block = connection_manager.raiden.chain.block_number()
 
-    connection_manager.leave(wait_for_settle=False)
+    raiden_network[0].raiden.api.leave_token_network(token_address, wait_for_settle=False)
 
     wait_until_block(
         connection_manager.raiden.chain,

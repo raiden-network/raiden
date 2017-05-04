@@ -826,6 +826,52 @@ class RaidenAPI(object):
         """
         return self.raiden.create_default_identifier(target, token_address)
 
+    def connect_token_network(
+        self,
+        token_address,
+        funds,
+        initial_channel_target=3,
+        joinable_funds_target=.4
+    ):
+        """Instruct the ConnectionManager to establish and maintain a connection to the token
+        network.
+
+        If the `token_address` is not already part of the raiden network, this will also register
+        the token.
+
+        Args:
+            token_address (bin): the ERC20 token network to connect to.
+            funds (int): the amount of funds that can be used by the ConnectionMananger.
+            initial_channel_target (int): number of channels to open proactively.
+            joinable_funds_target (float): fraction of the funds that will be used to join
+                channels opened by other participants.
+        """
+        if not isaddress(token_address):
+            raise InvalidAddress('not an address %s' % pex(token_address))
+        try:
+            connection_manager = self.raiden.connection_manager_for_token(token_address)
+        except InvalidAddress:
+            # token is not yet registered
+            self.raiden.chain.default_registry.add_token(token_address)
+
+            # wait for registration
+            while token_address not in self.raiden.tokens_connectionmanagers:
+                gevent.sleep(self.raiden.alarm.wait_time)
+            connection_manager = self.raiden.connection_manager_for_token(token_address)
+
+        connection_manager.connect(
+            funds,
+            initial_channel_target=initial_channel_target,
+            joinable_funds_target=joinable_funds_target
+        )
+
+    def leave_token_network(self, token_address, wait_for_settle=False, timeout=30):
+        """Instruct the ConnectionManager to close all channels and (optionally) wait for
+        settlement.
+        """
+        connection_manager = self.raiden.connection_manager_for_token(token_address)
+        connection_manager.leave(wait_for_settle=wait_for_settle, timeout=timeout)
+
     def open(
             self,
             token_address,
