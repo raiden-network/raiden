@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-import time
-
+import gevent
 from gevent.lock import Semaphore
 
 from ethereum import slogging
@@ -85,14 +84,14 @@ class ConnectionManager(object):
                     funding
                 )
 
-    def leave(self, wait_for_settle=True, max_wait=30):
+    def leave(self, wait_for_settle=True, timeout=30):
         """
         Leave the token network.
         This implies closing all open channels and optionally wait for
         settlement.
         Args:
             wait_for_settle (bool): block until successful settlement?
-            max_wait (float): maximum time to wait
+            timeout (float): maximum time to wait
         """
         with self.lock:
             self.initial_channel_target = 0
@@ -112,23 +111,24 @@ class ConnectionManager(object):
             self.raiden.poll_blockchain_events(self.raiden.get_block_number())
 
             if wait_for_settle:
-                timeout = time.time() + max_wait
-                while any(c.state != CHANNEL_STATE_SETTLED for c in open_channels):
-                    # force state update
-                    self.raiden.poll_blockchain_events(self.raiden.get_block_number())
-                    if time.time() > timeout:
-                        log.debug(
-                            'timeout while waiting for settlement',
-                            unsettled=sum(
-                                1 for channel in open_channels if
-                                channel.state != CHANNEL_STATE_SETTLED
-                            ),
-                            settled=sum(
-                                1 for channel in open_channels if
-                                channel.state == CHANNEL_STATE_SETTLED
-                            )
+                try:
+                    with gevent.timeout.Timeout(timeout):
+                        while any(c.state != CHANNEL_STATE_SETTLED for c in open_channels):
+                            # force state update
+                            self.raiden.poll_blockchain_events(self.raiden.get_block_number())
+
+                except gevent.timeout.Timeout:
+                    log.debug(
+                        'timeout while waiting for settlement',
+                        unsettled=sum(
+                            1 for channel in open_channels if
+                            channel.state != CHANNEL_STATE_SETTLED
+                        ),
+                        settled=sum(
+                            1 for channel in open_channels if
+                            channel.state == CHANNEL_STATE_SETTLED
                         )
-                        break
+                    )
 
     def join_channel(self, partner_address, partner_deposit):
         """Will be called, when we were selected as channel partner by another
