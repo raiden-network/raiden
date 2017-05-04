@@ -58,4 +58,51 @@
     </ng-template>
     <ng-template #msg>You have no Channels yet.</ng-template>
   </p-accordionTab>
+  <p-accordionTab header="Datalist View">
+    <div *ngIf="channels?.length > 0; then datalist else message"></div>
+    <ng-template #datalist>
+      <p-dataList [value]="channels" [paginator]="true" [rows]="3">
+        <p-header>Channels</p-header>
+          <ng-template let-channel pTemplate="item">
+            <div class="ui-grid ui-grid-responsive ui-fluid" style="font-size:14px;padding:20px;border-bottom:1px solid #D5D5D5;">
+              <div class="ui-grid-row">
+                <div class="ui-grid-col-3" #icon id="icon" style="text-align:center">
+                  {{generateBlockies(icon, channel.channel_address)}}
+                </div>
+                <div class="ui-grid-col-9">
+                  <div class="ui-grid ui-grid-responsive ui-fluid">
+                    <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">Channel: </div>
+                      <div class="ui-grid-col-11">{{channel.channel_address}}</div>
+                    </div>
+                    <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">Partner: </div>
+                      <div class="ui-grid-col-11">{{channel.partner_address}}</div>
+                    </div>
+                    <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">Token: </div>
+                      <div class="ui-grid-col-11">{{channel.token_address}}</div>
+                    </div>
+                    <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">Balance: </div>
+                      <div class="ui-grid-col-11">{{channel.balance}}</div>
+                    </div>
+                    <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">State: </div>
+                      <div class="ui-grid-col-11">{{channel.state}}</div>
+                    </div>
+                    <div class="ui-grid-row">
+                      <div class="ui-grid-col-3">SettleTimeout: </div>
+                      <div class="ui-grid-col-11">{{channel.settle_timeout}}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-template>
+      </p-dataList>
+    </ng-template>
+    <ng-template #message>
+    </ng-template>
+  </p-accordionTab>
 </p-accordion>
