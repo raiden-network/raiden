@@ -81,7 +81,7 @@ class ConnectionManager(object):
     def leave(self, wait_for_settle=True, timeout=30):
         """
         Leave the token network.
-        This implies closing all open channels and optionally wait for
+        This implies closing all open channels and optionally waiting for
         settlement.
         Args:
             wait_for_settle (bool): block until successful settlement?
@@ -211,6 +211,7 @@ class ConnectionManager(object):
 
     def _select_best_partners(self, partners):
         # FIXME: use a proper selection strategy
+        # https://github.com/raiden-network/raiden/issues/576
         return list(partners)
 
     @property

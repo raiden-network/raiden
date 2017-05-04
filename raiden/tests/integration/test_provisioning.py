@@ -103,8 +103,9 @@ def test_participant_selection(
     )
 
     try:
-        # depending on the number of channels, this will fail, due to weak
+        # FIXME: depending on the number of channels, this will fail, due to weak
         # selection algorithm
+        # https://github.com/raiden-network/raiden/issues/576
         assert not any(
             len(connection_manager.open_channels) > 2 * acc
             for connection_manager in connection_managers

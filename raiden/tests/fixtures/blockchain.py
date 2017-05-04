@@ -141,12 +141,13 @@ def cached_genesis(request, blockchain_type):
 
     # create_network only registers the tokens,
     # the contracts must be deployed previously
+    register = True
     token_contract_addresses = _tokens_addresses(
         request.getfixturevalue('token_amount'),
         request.getfixturevalue('number_of_tokens'),
         deploy_service,
         blockchain_services,
-        True
+        register
     )
 
     raiden_apps = create_apps(
