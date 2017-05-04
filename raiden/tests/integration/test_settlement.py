@@ -153,11 +153,11 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 # TODO: Need to expose the netted value to use a different blockchain_type
 @pytest.mark.parametrize('blockchain_type', ['mock'])
-def test_settled_lock(tokens_addresses, raiden_network, settle_timeout, reveal_timeout):
+def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_timeout):
     """ Any transfer following a secret revealed must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
-    token = tokens_addresses[0]
+    token = token_addresses[0]
     amount = 30
 
     app0, app1, app2, _ = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -220,7 +220,7 @@ def test_settled_lock(tokens_addresses, raiden_network, settle_timeout, reveal_t
 @pytest.mark.xfail(reason="test incomplete")
 @pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_start_end_attack(tokens_addresses, raiden_chain, deposit, reveal_timeout):
+def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout):
     """ An attacker can try to steal tokens from a hub or the last node in a
     path.
 
@@ -235,7 +235,7 @@ def test_start_end_attack(tokens_addresses, raiden_chain, deposit, reveal_timeou
     """
     amount = 30
 
-    token = tokens_addresses[0]
+    token = token_addresses[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     # the attacker owns app0 and app2 and creates a transfer through app1

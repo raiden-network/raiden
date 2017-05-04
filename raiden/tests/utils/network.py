@@ -177,7 +177,7 @@ def network_with_minimum_channels(apps, channels_per_node):
 
 def create_network_channels(
         raiden_apps,
-        tokens_addresses,
+        token_addresses,
         channels_per_node,
         deposit,
         settle_timeout):
@@ -187,7 +187,7 @@ def create_network_channels(
     if channels_per_node is not CHAIN and channels_per_node > num_nodes:
         raise ValueError("Can't create more channels than nodes")
 
-    for token in tokens_addresses:
+    for token in token_addresses:
         if channels_per_node == CHAIN:
             app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
         else:
@@ -203,7 +203,7 @@ def create_network_channels(
 
 def create_sequential_channels(
         raiden_apps,
-        tokens_addresses,
+        token_addresses,
         channels_per_node,
         deposit,
         settle_timeout):
@@ -238,7 +238,7 @@ def create_sequential_channels(
         app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
 
     setup_channels(
-        tokens_addresses,
+        token_addresses,
         app_channels,
         deposit,
         settle_timeout,

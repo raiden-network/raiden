@@ -21,7 +21,7 @@ from raiden.tests.fixtures import (
     channel_manager_abi,
     netting_channel_abi,
 
-    tokens_addresses,
+    token_addresses,
     register_tokens,
     cached_genesis,
     blockchain_services,
@@ -80,7 +80,7 @@ __all__ = (
     'channel_manager_abi',
     'netting_channel_abi',
 
-    'tokens_addresses',
+    'token_addresses',
     'register_tokens',
     'cached_genesis',
     'blockchain_services',

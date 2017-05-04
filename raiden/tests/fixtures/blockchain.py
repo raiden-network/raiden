@@ -41,7 +41,7 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 EPOCH0_DAGSIZE = 1073739912
 
 __all__ = (
-    'tokens_addresses',
+    'token_addresses',
     'register_tokens',
     'blockchain_services',
     'blockchain_backend',
@@ -57,7 +57,7 @@ def genesis_path_from_testfunction(request):
     return str(genesis_path)  # makedir returns a py.path.LocalPath object
 
 
-def _tokens_addresses(
+def _token_addresses(
     token_amount,
     number_of_tokens,
     deploy_service,
@@ -142,7 +142,7 @@ def cached_genesis(request, blockchain_type):
     # create_network only registers the tokens,
     # the contracts must be deployed previously
     register = True
-    token_contract_addresses = _tokens_addresses(
+    token_contract_addresses = _token_addresses(
         request.getfixturevalue('token_amount'),
         request.getfixturevalue('number_of_tokens'),
         deploy_service,
@@ -247,7 +247,7 @@ def register_tokens():
 
 
 @pytest.fixture
-def tokens_addresses(
+def token_addresses(
         request,
         token_amount,
         number_of_tokens,
@@ -256,12 +256,12 @@ def tokens_addresses(
         register_tokens):
 
     if cached_genesis:
-        tokens_addresses = [
+        token_addresses = [
             address_decoder(token_address)
             for token_address in cached_genesis['config']['tokenAddresses']
         ]
     else:
-        tokens_addresses = _tokens_addresses(
+        token_addresses = _token_addresses(
             token_amount,
             number_of_tokens,
             blockchain_services.deploy_service,
@@ -269,7 +269,7 @@ def tokens_addresses(
             register_tokens
         )
 
-    return tokens_addresses
+    return token_addresses
 
 
 @pytest.fixture

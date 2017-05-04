@@ -15,12 +15,12 @@ log = slogging.getLogger(__name__)
 @pytest.mark.parametrize('register_tokens', [True, False])
 def test_participant_selection(
     raiden_network,
-    tokens_addresses,
+    token_addresses,
     settle_timeout,
     reveal_timeout,
     blockchain_type
 ):
-    token_address = tokens_addresses[0]
+    token_address = token_addresses[0]
 
     # adjust timeouts
     for app in raiden_network:
