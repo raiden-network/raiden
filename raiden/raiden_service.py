@@ -479,6 +479,12 @@ class RaidenService(object):
             self.manager_token[manager_address] = token_address
             self.channelgraphs[token_address] = graph
 
+            self.tokens_connectionmanagers[token_address] = ConnectionManager(
+                self,
+                token_address,
+                graph
+            )
+
     def register_channel_manager(self, manager_address):
         manager = self.chain.manager(manager_address)
         netting_channels = [
@@ -512,6 +518,12 @@ class RaidenService(object):
         self.manager_token[manager_address] = token_address
         self.channelgraphs[token_address] = graph
 
+        self.tokens_connectionmanagers[token_address] = ConnectionManager(
+            self,
+            token_address,
+            graph
+        )
+
     def register_netting_channel(self, token_address, channel_address):
         netting_channel = self.chain.netting_channel(channel_address)
         self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
@@ -524,11 +536,10 @@ class RaidenService(object):
     def connection_manager_for_token(self, token_address):
         if not isaddress(token_address):
             raise InvalidAddress('token address is not valid.')
-        if token_address not in self.tokens_connectionmanagers.keys():
-            manager = ConnectionManager(self, token_address)
-            self.tokens_connectionmanagers[token_address] = manager
-        else:
+        if token_address in self.tokens_connectionmanagers.keys():
             manager = self.tokens_connectionmanagers[token_address]
+        else:
+            raise InvalidAddress('token is not registered.')
         return manager
 
     def stop(self):

@@ -10,8 +10,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 class ConnectionManager(object):
-    """
-    The ConnectionManager provides a high level abstraction for connecting to a
+    """The ConnectionManager provides a high level abstraction for connecting to a
     Token network.
     Note:
         It is initialized with 0 funds; a connection to the token network
@@ -26,50 +25,45 @@ class ConnectionManager(object):
         self,
         raiden,
         token_address,
-        initial_channel_target=3,  # number of channels to open immediately
-        joinable_funds_target=.4,  # amount of funds not initially assigned
+        channelgraph,
     ):
         self.lock = Semaphore()
-        self.funds = 0
         self.raiden = raiden
+        self.channelgraph = channelgraph
         self.token_address = token_address
+        self.funds = 0
+        self.initial_channel_target = 0
+        self.joinable_funds_target = 0
+
+    def connect(
+        self,
+        funds,
+        initial_channel_target=3,
+        joinable_funds_target=.4
+    ):
+        """Connect to the network.
+        Use this to establish a connection with the token network.
+        Args:
+            funds (int): the amount of tokens spendable for this
+            ConnectionManager.
+            initial_channel_target (int): number of channels to open immediately
+            joinable_funds_target (float): amount of funds not initially assigned
+        """
+        if funds <= 0:
+            raise ValueError('connecting needs a positive value for `funds`')
+
         self.initial_channel_target = initial_channel_target
         self.joinable_funds_target = joinable_funds_target
-        # force state update
-        self.raiden.poll_blockchain_events(self.raiden.get_block_number())
-        if self.token_address in self.raiden.channelgraphs.keys():
-            self.channelgraph = self.raiden.channelgraphs[self.token_address]
-            if len(self.channelgraph.graph.nodes()) == 0:
-                log.debug('BOOTSTRAP for existing token')
+
+        if len(self.channelgraph.graph.nodes()) == 0:
+            with self.lock:
+                log.debug('bootstrapping token network.')
                 # make ourselves visible
                 self.raiden.api.open(
                     self.token_address,
                     ConnectionManager.BOOTSTRAP_ADDR
                 )
-        else:
-            log.debug(
-                'token not yet registered',
-                token=pex(self.token_address)
-            )
-            self.raiden.chain.default_registry.add_token(self.token_address)
-            # force state update
-            self.raiden.poll_blockchain_events(self.raiden.get_block_number())
-            self.channelgraph = self.raiden.channelgraphs[self.token_address]
-            # make ourselves visible
-            self.raiden.api.open(
-                self.token_address,
-                ConnectionManager.BOOTSTRAP_ADDR
-            )
 
-    def connect(self, funds):
-        """Connect to the network.
-        Use this to establish a connection with the token network.
-        Args:
-            funds (int): the amount of tokens spendable for this
-                         ConnectionManager.
-        """
-        if funds <= 0:
-            raise ValueError('connecting needs a positive value for `funds`')
         with self.lock:
             self.funds = funds
             funding = self.initial_funding_per_partner
