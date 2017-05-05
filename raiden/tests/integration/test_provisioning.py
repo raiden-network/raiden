@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
 import gevent
-from gevent.pool import Pool
 from ethereum import slogging
 
 from raiden.tests.utils.blockchain import wait_until_block
@@ -24,13 +23,11 @@ def test_participant_selection(
     raiden_network[0].raiden.api.connect_token_network(token_address, 100)
 
     # connect the other nodes
-    pool = Pool()
-    calls = []
-    for app in raiden_network[1:]:
-        api = app.raiden.api
-        calls.append((api.connect_token_network, token_address, 100))
-
-    pool.imap(lambda x: x[0](*x[1:]), calls).join()
+    connect_greenlets = [
+        gevent.spawn(app.raiden.api.connect_token_network, token_address, 100)
+        for app in raiden_network[1:]
+    ]
+    gevent.wait(connect_greenlets)
 
     # wait some blocks to let the network connect
     wait_blocks = 15
@@ -58,7 +55,6 @@ def test_participant_selection(
             connection_manager.open_channels for connection_manager in connection_managers_
         ]
 
-    assert any(open_channels_count(connection_managers))
     assert all(open_channels_count(connection_managers))
 
     def not_saturated(connection_managers):
@@ -70,11 +66,9 @@ def test_participant_selection(
     chain = raiden_network[-1].raiden.chain
     max_wait = 12
 
-    while len(not_saturated(connection_managers)) > 0:
+    while len(not_saturated(connection_managers)) > 0 and max_wait > 0:
         wait_until_block(chain, chain.block_number() + 1)
         max_wait -= 1
-        if max_wait <= 0:
-            break
 
     assert len(not_saturated(connection_managers)) == 0
 
