@@ -31,19 +31,14 @@ def test_participant_selection(
 
     # wait some blocks to let the network connect
     wait_blocks = 15
-    if blockchain_type == 'geth':
-        wait_until_block(
-            raiden_network[-1].raiden.chain,
-            raiden_network[-1].raiden.chain.block_number() + wait_blocks
-        )
-    else:
-        for i in range(wait_blocks):
-            for app in raiden_network:
-                wait_until_block(
-                    app.raiden.chain,
-                    app.raiden.chain.block_number() + 1
-                )
-            # tester needs an explicit context switch :(
+    for i in range(wait_blocks):
+        for app in raiden_network:
+            wait_until_block(
+                app.raiden.chain,
+                app.raiden.chain.block_number() + 1
+            )
+        # tester needs an explicit context switch :(
+        if blockchain_type == 'tester':
             gevent.sleep(1)
 
     connection_managers = [
