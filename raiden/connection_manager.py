@@ -101,15 +101,15 @@ class ConnectionManager(object):
                     if channel[1] in [c.partner_address for c in self.open_channels]:
                         raise
 
-            # force state update
-            self.raiden.poll_blockchain_events(self.raiden.get_block_number())
+            # wait for events to propagate
+            gevent.sleep(self.raiden.alarm.wait_time)
 
             if wait_for_settle:
                 try:
                     with gevent.timeout.Timeout(timeout):
                         while any(c.state != CHANNEL_STATE_SETTLED for c in open_channels):
-                            # force state update
-                            self.raiden.poll_blockchain_events(self.raiden.get_block_number())
+                            # wait for events to propagate
+                            gevent.sleep(self.raiden.alarm.wait_time)
 
                 except gevent.timeout.Timeout:
                     log.debug(
