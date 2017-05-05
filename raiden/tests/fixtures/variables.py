@@ -246,6 +246,6 @@ def database_paths(tmpdir, blockchain_number_of_nodes):
     """ Sqlite database paths for each node.
     """
     return [
-        os.path.join(tmpdir, 'transaction_log_{}.db'.format(position))
+        os.path.join(tmpdir.strpath, 'transaction_log_{}.db'.format(position))
         for position in range(blockchain_number_of_nodes)
     ]
