@@ -44,6 +44,7 @@ def create_app(
         max_unresponsive_time,
         port,
         reveal_timeout,
+        settle_timeout,
         host='127.0.0.1',
 ):
     ''' Instantiates an Raiden app with the given configuration. '''
@@ -55,6 +56,7 @@ def create_app(
     config['send_ping_time'] = send_ping_time
     config['max_unresponsive_time'] = max_unresponsive_time
     config['reveal_timeout'] = reveal_timeout
+    config['settle_timeout'] = settle_timeout
 
     app = App(
         config,
@@ -252,7 +254,8 @@ def create_apps(
         verbosity,
         send_ping_time,
         max_unresponsive_time,
-        reveal_timeout):
+        reveal_timeout,
+        settle_timeout):
     """ Create the apps.
 
     Note:
@@ -300,7 +303,8 @@ def create_apps(
             max_unresponsive_time,
             port=port,
             host=host,
-            reveal_timeout=reveal_timeout
+            reveal_timeout=reveal_timeout,
+            settle_timeout=settle_timeout,
         )
         apps.append(app)
 

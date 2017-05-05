@@ -58,7 +58,8 @@ def raiden_chain(
         verbosity,
         send_ping_time,
         max_unresponsive_time,
-        reveal_timeout
+        reveal_timeout,
+        settle_timeout
     )
 
     if not cached_genesis:
@@ -102,7 +103,8 @@ def raiden_network(
         verbosity,
         send_ping_time,
         max_unresponsive_time,
-        reveal_timeout
+        reveal_timeout,
+        settle_timeout
     )
 
     if not cached_genesis:
