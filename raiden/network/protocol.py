@@ -12,12 +12,13 @@ from ethereum import slogging
 
 from raiden.exceptions import (
     InvalidAddress,
+    InvalidLocksRoot,
+    InvalidNonce,
     TransferWhenClosed,
     UnknownAddress,
     UnknownTokenAddress,
 )
 from raiden.messages import decode, Ack, Ping, SignedMessage
-from raiden.channel import InvalidLocksRoot, InvalidNonce
 from raiden.utils import isaddress, sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name

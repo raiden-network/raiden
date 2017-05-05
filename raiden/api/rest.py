@@ -5,7 +5,11 @@ from flask import Flask, make_response, url_for
 from flask_restful import Api, abort
 from webargs.flaskparser import parser
 
-from raiden.raiden_service import NoPathError, InvalidAddress, InvalidAmount
+from raiden.exceptions import (
+    InvalidAddress,
+    InvalidAmount,
+    NoPathError,
+)
 from raiden.api.v1.encoding import (
     ChannelSchema,
     ChannelListSchema,
