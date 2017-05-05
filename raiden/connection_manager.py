@@ -43,6 +43,15 @@ class ConnectionManager(object):
     ):
         """Connect to the network.
         Use this to establish a connection with the token network.
+
+        Subsequent calls to `connect` are allowed, but will only affect the spendable
+        funds and the connection strategy parameters for the future. `connect` will not
+        close any channels.
+
+        Note: the ConnectionManager does not discriminate manually opened channels from
+        automatically opened ones. If the user manually opened channels, those deposit
+        amounts will affect the funding per channel and the number of new channels opened.
+
         Args:
             funds (int): the amount of tokens spendable for this
             ConnectionManager.
@@ -54,6 +63,19 @@ class ConnectionManager(object):
 
         self.initial_channel_target = initial_channel_target
         self.joinable_funds_target = joinable_funds_target
+
+        open_channels = self.open_channels
+        # there are already channels open
+        if len(open_channels):
+            log.debug(
+                'connect() called on an already joined token network',
+                token_address=pex(self.token_address),
+                open_channels=len(open_channels),
+                sum_deposits=sum(
+                    channel.deposit for channel in open_channels
+                ),
+                funds=funds,
+            )
 
         if len(self.channelgraph.graph.nodes()) == 0:
             with self.lock:
@@ -67,7 +89,11 @@ class ConnectionManager(object):
         with self.lock:
             self.funds = funds
             funding = self.initial_funding_per_partner
-            for partner in self.find_new_partners(self.initial_channel_target):
+            # this could be a subsequent call, or some channels already open
+            new_partner_count = max(0,
+                                    self.initial_channel_target - len(self.open_channels)
+                                    )
+            for partner in self.find_new_partners(new_partner_count):
                 self.raiden.api.open(
                     self.token_address,
                     partner,
