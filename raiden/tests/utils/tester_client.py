@@ -643,7 +643,9 @@ class NettingChannelTesterMock(object):
     def close(self, our_address, their_transfer):
         """`our_address` is an argument used only in mock_client.py but is also
         kept here to maintain a consistent interface"""
-        their_encoded = their_transfer.encode()
+        their_encoded = ''
+        if their_transfer is not None:
+            their_encoded = their_transfer.encode()
         self.proxy.close(
             their_encoded,
         )

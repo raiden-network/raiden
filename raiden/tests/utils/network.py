@@ -44,6 +44,7 @@ def create_app(
         max_unresponsive_time,
         port,
         reveal_timeout,
+        settle_timeout,
         host='127.0.0.1',
 ):
     ''' Instantiates an Raiden app with the given configuration. '''
@@ -55,6 +56,7 @@ def create_app(
     config['send_ping_time'] = send_ping_time
     config['max_unresponsive_time'] = max_unresponsive_time
     config['reveal_timeout'] = reveal_timeout
+    config['settle_timeout'] = settle_timeout
 
     app = App(
         config,
@@ -177,7 +179,7 @@ def network_with_minimum_channels(apps, channels_per_node):
 
 def create_network_channels(
         raiden_apps,
-        tokens_addresses,
+        token_addresses,
         channels_per_node,
         deposit,
         settle_timeout):
@@ -187,7 +189,7 @@ def create_network_channels(
     if channels_per_node is not CHAIN and channels_per_node > num_nodes:
         raise ValueError("Can't create more channels than nodes")
 
-    for token in tokens_addresses:
+    for token in token_addresses:
         if channels_per_node == CHAIN:
             app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
         else:
@@ -203,7 +205,7 @@ def create_network_channels(
 
 def create_sequential_channels(
         raiden_apps,
-        tokens_addresses,
+        token_addresses,
         channels_per_node,
         deposit,
         settle_timeout):
@@ -238,7 +240,7 @@ def create_sequential_channels(
         app_channels = list(zip(raiden_apps[:-1], raiden_apps[1:]))
 
     setup_channels(
-        tokens_addresses,
+        token_addresses,
         app_channels,
         deposit,
         settle_timeout,
@@ -252,7 +254,8 @@ def create_apps(
         verbosity,
         send_ping_time,
         max_unresponsive_time,
-        reveal_timeout):
+        reveal_timeout,
+        settle_timeout):
     """ Create the apps.
 
     Note:
@@ -300,7 +303,8 @@ def create_apps(
             max_unresponsive_time,
             port=port,
             host=host,
-            reveal_timeout=reveal_timeout
+            reveal_timeout=reveal_timeout,
+            settle_timeout=settle_timeout,
         )
         apps.append(app)
 

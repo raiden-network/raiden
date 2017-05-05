@@ -41,7 +41,8 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 EPOCH0_DAGSIZE = 1073739912
 
 __all__ = (
-    'tokens_addresses',
+    'token_addresses',
+    'register_tokens',
     'blockchain_services',
     'blockchain_backend',
 )
@@ -56,15 +57,29 @@ def genesis_path_from_testfunction(request):
     return str(genesis_path)  # makedir returns a py.path.LocalPath object
 
 
-def _tokens_addresses(token_amount, number_of_tokens, deploy_service, blockchain_services):
+def _token_addresses(
+    token_amount,
+    number_of_tokens,
+    deploy_service,
+    blockchain_services,
+    register
+):
     result = list()
     for _ in range(number_of_tokens):
-        token_address = deploy_service.deploy_and_register_token(
-            contract_name='HumanStandardToken',
-            contract_file='HumanStandardToken.sol',
-            constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
-        )
-        result.append(token_address)
+        if register:
+            token_address = deploy_service.deploy_and_register_token(
+                contract_name='HumanStandardToken',
+                contract_file='HumanStandardToken.sol',
+                constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
+            )
+            result.append(token_address)
+        else:
+            token_address = deploy_service.deploy_contract(
+                contract_name='HumanStandardToken',
+                contract_file='HumanStandardToken.sol',
+                constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
+            )
+            result.append(token_address)
 
         # only the creator of the token starts with a balance (deploy_service),
         # transfer from the creator to the other nodes
@@ -126,11 +141,13 @@ def cached_genesis(request, blockchain_type):
 
     # create_network only registers the tokens,
     # the contracts must be deployed previously
-    token_contract_addresses = _tokens_addresses(
+    register = True
+    token_contract_addresses = _token_addresses(
         request.getfixturevalue('token_amount'),
         request.getfixturevalue('number_of_tokens'),
         deploy_service,
         blockchain_services,
+        register
     )
 
     raiden_apps = create_apps(
@@ -141,6 +158,7 @@ def cached_genesis(request, blockchain_type):
         request.getfixturevalue('send_ping_time'),
         request.getfixturevalue('max_unresponsive_time'),
         request.getfixturevalue('reveal_timeout'),
+        request.getfixturevalue('settle_timeout'),
     )
 
     if 'raiden_network' in request.fixturenames:
@@ -223,27 +241,36 @@ def cached_genesis(request, blockchain_type):
 
 
 @pytest.fixture
-def tokens_addresses(
+def register_tokens():
+    """Should fixture generated tokens be registered with raiden (default: True)
+    """
+    return True
+
+
+@pytest.fixture
+def token_addresses(
         request,
         token_amount,
         number_of_tokens,
         blockchain_services,
-        cached_genesis):
+        cached_genesis,
+        register_tokens):
 
     if cached_genesis:
-        tokens_addresses = [
+        token_addresses = [
             address_decoder(token_address)
             for token_address in cached_genesis['config']['tokenAddresses']
         ]
     else:
-        tokens_addresses = _tokens_addresses(
+        token_addresses = _token_addresses(
             token_amount,
             number_of_tokens,
             blockchain_services.deploy_service,
             blockchain_services.blockchain_services,
+            register_tokens
         )
 
-    return tokens_addresses
+    return token_addresses
 
 
 @pytest.fixture

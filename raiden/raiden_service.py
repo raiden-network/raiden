@@ -101,6 +101,7 @@ from raiden.messages import (
     SignedMessage,
 )
 from raiden.network.protocol import RaidenProtocol
+from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
     pex,
@@ -201,6 +202,8 @@ class RaidenService(object):
         self.greenlet_task_dispatcher = greenlet_task_dispatcher
 
         self.on_message = message_handler.on_message
+
+        self.tokens_connectionmanagers = dict()  # token_address: ConnectionManager
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -476,6 +479,12 @@ class RaidenService(object):
             self.manager_token[manager_address] = token_address
             self.channelgraphs[token_address] = graph
 
+            self.tokens_connectionmanagers[token_address] = ConnectionManager(
+                self,
+                token_address,
+                graph
+            )
+
     def register_channel_manager(self, manager_address):
         manager = self.chain.manager(manager_address)
         netting_channels = [
@@ -509,6 +518,12 @@ class RaidenService(object):
         self.manager_token[manager_address] = token_address
         self.channelgraphs[token_address] = graph
 
+        self.tokens_connectionmanagers[token_address] = ConnectionManager(
+            self,
+            token_address,
+            graph
+        )
+
     def register_netting_channel(self, token_address, channel_address):
         netting_channel = self.chain.netting_channel(channel_address)
         self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
@@ -517,6 +532,15 @@ class RaidenService(object):
         detail = self.get_channel_details(token_address, netting_channel)
         graph = self.channelgraphs[token_address]
         graph.add_channel(detail, block_number)
+
+    def connection_manager_for_token(self, token_address):
+        if not isaddress(token_address):
+            raise InvalidAddress('token address is not valid.')
+        if token_address in self.tokens_connectionmanagers.keys():
+            manager = self.tokens_connectionmanagers[token_address]
+        else:
+            raise InvalidAddress('token is not registered.')
+        return manager
 
     def stop(self):
         wait_for = [self.alarm]
@@ -801,6 +825,52 @@ class RaidenAPI(object):
             - A random 8 byte number for uniqueness
         """
         return self.raiden.create_default_identifier(target, token_address)
+
+    def connect_token_network(
+        self,
+        token_address,
+        funds,
+        initial_channel_target=3,
+        joinable_funds_target=.4
+    ):
+        """Instruct the ConnectionManager to establish and maintain a connection to the token
+        network.
+
+        If the `token_address` is not already part of the raiden network, this will also register
+        the token.
+
+        Args:
+            token_address (bin): the ERC20 token network to connect to.
+            funds (int): the amount of funds that can be used by the ConnectionMananger.
+            initial_channel_target (int): number of channels to open proactively.
+            joinable_funds_target (float): fraction of the funds that will be used to join
+                channels opened by other participants.
+        """
+        if not isaddress(token_address):
+            raise InvalidAddress('not an address %s' % pex(token_address))
+        try:
+            connection_manager = self.raiden.connection_manager_for_token(token_address)
+        except InvalidAddress:
+            # token is not yet registered
+            self.raiden.chain.default_registry.add_token(token_address)
+
+            # wait for registration
+            while token_address not in self.raiden.tokens_connectionmanagers:
+                gevent.sleep(self.raiden.alarm.wait_time)
+            connection_manager = self.raiden.connection_manager_for_token(token_address)
+
+        connection_manager.connect(
+            funds,
+            initial_channel_target=initial_channel_target,
+            joinable_funds_target=joinable_funds_target
+        )
+
+    def leave_token_network(self, token_address, wait_for_settle=False, timeout=30):
+        """Instruct the ConnectionManager to close all channels and (optionally) wait for
+        settlement.
+        """
+        connection_manager = self.raiden.connection_manager_for_token(token_address)
+        connection_manager.leave(wait_for_settle=wait_for_settle, timeout=timeout)
 
     def open(
             self,
@@ -1626,11 +1696,17 @@ class StateMachineEventHandler(object):
         graph = self.raiden.channelgraphs[token_address]
         graph.add_path(participant1, participant2)
 
+        connection_manager = self.raiden.connection_manager_for_token(token_address)
+
         if participant1 == self.raiden.address or participant2 == self.raiden.address:
             self.raiden.register_netting_channel(
                 token_address,
                 channel_address,
             )
+        elif connection_manager.wants_more_channels:
+            gevent.spawn(connection_manager.retry_connect)
+        else:
+            log.info('ignoring new channel, this node is not a participant.')
 
     def handle_balance(self, state_change):
         channel_address = state_change.channel_address
@@ -1645,6 +1721,16 @@ class StateMachineEventHandler(object):
 
         if channel_state.contract_balance != balance:
             channel_state.update_contract_balance(balance)
+
+        connection_manager = self.raiden.connection_manager_for_token(
+            token_address
+        )
+        if channel.deposit == 0:
+            gevent.spawn(
+                connection_manager.join_channel,
+                participant_address,
+                balance
+            )
 
         if channel.external_state.opened_block == 0:
             channel.external_state.set_opened(block_number)

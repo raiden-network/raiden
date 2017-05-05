@@ -30,7 +30,7 @@ def _raiden_cleanup(request, raiden_apps):
 @pytest.fixture
 def raiden_chain(
         request,
-        tokens_addresses,
+        token_addresses,
         channels_per_node,
         deposit,
         settle_timeout,
@@ -42,7 +42,7 @@ def raiden_chain(
         max_unresponsive_time,
         reveal_timeout):
 
-    if len(tokens_addresses) > 1:
+    if len(token_addresses) > 1:
         raise ValueError('raiden_chain only works with a single token')
 
     assert channels_per_node in (0, 1, 2, CHAIN), (
@@ -58,13 +58,14 @@ def raiden_chain(
         verbosity,
         send_ping_time,
         max_unresponsive_time,
-        reveal_timeout
+        reveal_timeout,
+        settle_timeout
     )
 
     if not cached_genesis:
         create_sequential_channels(
             raiden_apps,
-            tokens_addresses[0],
+            token_addresses[0],
             channels_per_node,
             deposit,
             settle_timeout,
@@ -81,7 +82,7 @@ def raiden_chain(
 @pytest.fixture
 def raiden_network(
         request,
-        tokens_addresses,
+        token_addresses,
         channels_per_node,
         deposit,
         settle_timeout,
@@ -102,13 +103,14 @@ def raiden_network(
         verbosity,
         send_ping_time,
         max_unresponsive_time,
-        reveal_timeout
+        reveal_timeout,
+        settle_timeout
     )
 
     if not cached_genesis:
         create_network_channels(
             raiden_apps,
-            tokens_addresses,
+            token_addresses,
             channels_per_node,
             deposit,
             settle_timeout
