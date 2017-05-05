@@ -832,18 +832,17 @@ class RaidenMessageHandler(object):
             message.hashlock,
         )
 
-        if message.identifier in self.raiden.identifier_to_statemanagers:
-            state_change = ReceiveSecretRequest(
-                message.identifier,
-                message.amount,
-                message.hashlock,
-                message.sender,
-            )
+        state_change = ReceiveSecretRequest(
+            message.identifier,
+            message.amount,
+            message.hashlock,
+            message.sender,
+        )
 
-            self.raiden.state_machine_event_handler.dispatch_by_identifier(
-                message.identifier,
-                state_change,
-            )
+        self.raiden.state_machine_event_handler.dispatch_by_identifier(
+            message.identifier,
+            state_change,
+        )
 
     def message_secret(self, message):
         self.raiden.greenlet_task_dispatcher.dispatch_message(
@@ -873,16 +872,15 @@ class RaidenMessageHandler(object):
         except:  # pylint: disable=bare-except
             log.exception('Unhandled exception')
 
-        if message.identifier in self.raiden.identifier_to_statemanagers:
-            state_change = ReceiveSecretReveal(
-                message.secret,
-                message.sender,
-            )
+        state_change = ReceiveSecretReveal(
+            message.secret,
+            message.sender,
+        )
 
-            self.raiden.state_machine_event_handler.dispatch_by_identifier(
-                message.identifier,
-                state_change,
-            )
+        self.raiden.state_machine_event_handler.dispatch_by_identifier(
+            message.identifier,
+            state_change,
+        )
 
     def message_refundtransfer(self, message):
         self.raiden.greenlet_task_dispatcher.dispatch_message(
@@ -890,45 +888,44 @@ class RaidenMessageHandler(object):
             message.lock.hashlock,
         )
 
-        if message.identifier in self.raiden.identifier_to_statemanagers:
-            identifier = message.identifier
-            token_address = message.token
-            target = message.target
-            amount = message.lock.amount
-            expiration = message.lock.expiration
-            hashlock = message.lock.hashlock
+        identifier = message.identifier
+        token_address = message.token
+        target = message.target
+        amount = message.lock.amount
+        expiration = message.lock.expiration
+        hashlock = message.lock.hashlock
 
-            manager = self.raiden.identifier_to_statemanagers[identifier]
+        manager = self.raiden.identifier_to_statemanagers[identifier]
 
-            if isinstance(manager.current_state, InitiatorState):
-                initiator_address = self.raiden.address
+        if isinstance(manager.current_state, InitiatorState):
+            initiator_address = self.raiden.address
 
-            elif isinstance(manager.current_state, MediatorState):
-                last_pair = manager.current_state.transfers_pair[-1]
-                initiator_address = last_pair.payee_transfer.initiator
+        elif isinstance(manager.current_state, MediatorState):
+            last_pair = manager.current_state.transfers_pair[-1]
+            initiator_address = last_pair.payee_transfer.initiator
 
-            else:
-                # TODO: emit a proper event for the reject message
-                return
+        else:
+            # TODO: emit a proper event for the reject message
+            return
 
-            transfer_state = LockedTransferState(
-                identifier=identifier,
-                amount=amount,
-                token=token_address,
-                initiator=initiator_address,
-                target=target,
-                expiration=expiration,
-                hashlock=hashlock,
-                secret=None,
-            )
-            state_change = ReceiveTransferRefund(
-                message.sender,
-                transfer_state,
-            )
-            self.raiden.state_machine_event_handler.dispatch_by_identifier(
-                message.identifier,
-                state_change,
-            )
+        transfer_state = LockedTransferState(
+            identifier=identifier,
+            amount=amount,
+            token=token_address,
+            initiator=initiator_address,
+            target=target,
+            expiration=expiration,
+            hashlock=hashlock,
+            secret=None,
+        )
+        state_change = ReceiveTransferRefund(
+            message.sender,
+            transfer_state,
+        )
+        self.raiden.state_machine_event_handler.dispatch_by_identifier(
+            message.identifier,
+            state_change,
+        )
 
     def message_directtransfer(self, message):
         if message.token not in self.raiden.channelgraphs:
@@ -1034,13 +1031,17 @@ class StateMachineEventHandler(object):
             self.log_and_dispatch(manager, state_change)
 
     def dispatch_by_identifier(self, identifier, state_change):
+        self.raiden.transaction_log.log(state_change)
         manager_list = self.raiden.identifier_to_statemanagers[identifier]
 
         for manager in manager_list:
-            self.log_and_dispatch(manager, state_change)
+            self.dispatch(manager, state_change)
 
     def log_and_dispatch(self, state_manager, state_change):
         self.raiden.transaction_log.log(state_change)
+        self.dispatch(state_manager, state_change)
+
+    def dispatch(self, state_manager, state_change):
         all_events = state_manager.dispatch(state_change)
 
         for event in all_events:
