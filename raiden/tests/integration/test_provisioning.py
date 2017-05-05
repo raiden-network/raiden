@@ -102,13 +102,15 @@ def test_participant_selection(
     # test `leave()` method
     connection_manager = connection_managers[0]
     before = len(connection_manager.open_channels)
-    before_block = connection_manager.raiden.chain.block_number()
 
     raiden_network[0].raiden.api.leave_token_network(token_address, wait_for_settle=False)
 
     wait_until_block(
         connection_manager.raiden.chain,
-        before_block + connection_manager.raiden.config['settle_timeout'] + 1
+        (
+            connection_manager.raiden.chain.block_number() +
+            connection_manager.raiden.config['settle_timeout'] + 1
+        )
     )
     after = len(connection_manager.open_channels)
 
