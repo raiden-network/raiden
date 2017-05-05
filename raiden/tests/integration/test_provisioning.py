@@ -16,16 +16,9 @@ log = slogging.getLogger(__name__)
 def test_participant_selection(
     raiden_network,
     token_addresses,
-    settle_timeout,
-    reveal_timeout,
     blockchain_type
 ):
     token_address = token_addresses[0]
-
-    # adjust timeouts
-    for app in raiden_network:
-        app.raiden.config['reveal_timeout'] = reveal_timeout
-        app.raiden.config['settle_timeout'] = settle_timeout
 
     # connect the first node (will register the token if necessary)
     raiden_network[0].raiden.api.connect_token_network(token_address, 100)
