@@ -3,9 +3,9 @@ from __future__ import print_function
 
 import gevent
 import pytest
-from ethereum import slogging
 from coincurve import PrivateKey
 
+from raiden.exceptions import NoPathError
 from raiden.messages import (
     Ack,
     decode,
@@ -23,14 +23,12 @@ from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
 from raiden.tests.utils.network import CHAIN
 from raiden.utils import pex, sha3, privatekey_to_address
-from raiden.raiden_service import NoPathError, create_default_identifier
+from raiden.raiden_service import create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
-slogging.configure(':DEBUG')
-
-HASH = sha3("muchcodingsuchwow")
-HASH2 = sha3("terribleweathermuchstayinside")
+HASH = sha3('muchcodingsuchwow_______________')
+HASH2 = sha3('terribleweathermuchstayinside___')
 
 
 def sign_and_send(message, key, address, app):

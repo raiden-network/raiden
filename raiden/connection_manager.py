@@ -4,7 +4,9 @@ from gevent.lock import Semaphore
 
 from ethereum import slogging
 from raiden.utils import pex
-from raiden.channel import CHANNEL_STATE_SETTLED
+from raiden.transfer.state import (
+    CHANNEL_STATE_SETTLED,
+)
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
