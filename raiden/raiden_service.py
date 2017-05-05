@@ -144,8 +144,8 @@ class RaidenService(object):
         self.swapkeys_tokenswaps = dict()
         self.swapkeys_greenlettasks = dict()
 
-        self.identifier_statemanager = defaultdict(list)
-        self.identifier_result = defaultdict(list)
+        self.identifier_to_statemanagers = defaultdict(list)
+        self.identifier_to_results = defaultdict(list)
 
         # This is a map from a hashlock to a list of channels, the same
         # hashlock can be used in more than one token (for tokenswaps), a
@@ -699,8 +699,8 @@ class RaidenService(object):
 
         # TODO: implement the network timeout raiden.config['msg_timeout'] and
         # cancel the current transfer if it hapens (issue #374)
-        self.identifier_statemanager[identifier].append(state_manager)
-        self.identifier_result[identifier].append(async_result)
+        self.identifier_to_statemanagers[identifier].append(state_manager)
+        self.identifier_to_results[identifier].append(async_result)
 
         return async_result
 
@@ -743,7 +743,7 @@ class RaidenService(object):
         state_manager = StateManager(mediator.state_transition, None)
         self.state_machine_event_handler.log_and_dispatch(state_manager, init_mediator)
 
-        self.identifier_statemanager[identifier].append(state_manager)
+        self.identifier_to_statemanagers[identifier].append(state_manager)
 
     def target_mediated_transfer(self, message):
         graph = self.channelgraphs[message.token]
@@ -765,7 +765,7 @@ class RaidenService(object):
         self.state_machine_event_handler.log_and_dispatch(state_manager, init_target)
 
         identifier = message.identifier
-        self.identifier_statemanager[identifier].append(state_manager)
+        self.identifier_to_statemanagers[identifier].append(state_manager)
 
 
 class RaidenMessageHandler(object):
@@ -832,7 +832,7 @@ class RaidenMessageHandler(object):
             message.hashlock,
         )
 
-        if message.identifier in self.raiden.identifier_statemanager:
+        if message.identifier in self.raiden.identifier_to_statemanagers:
             state_change = ReceiveSecretRequest(
                 message.identifier,
                 message.amount,
@@ -873,7 +873,7 @@ class RaidenMessageHandler(object):
         except:  # pylint: disable=bare-except
             log.exception('Unhandled exception')
 
-        if message.identifier in self.raiden.identifier_statemanager:
+        if message.identifier in self.raiden.identifier_to_statemanagers:
             state_change = ReceiveSecretReveal(
                 message.secret,
                 message.sender,
@@ -890,7 +890,7 @@ class RaidenMessageHandler(object):
             message.lock.hashlock,
         )
 
-        if message.identifier in self.raiden.identifier_statemanager:
+        if message.identifier in self.raiden.identifier_to_statemanagers:
             identifier = message.identifier
             token_address = message.token
             target = message.target
@@ -898,7 +898,7 @@ class RaidenMessageHandler(object):
             expiration = message.lock.expiration
             hashlock = message.lock.hashlock
 
-            manager = self.raiden.identifier_statemanager[identifier]
+            manager = self.raiden.identifier_to_statemanagers[identifier]
 
             if isinstance(manager.current_state, InitiatorState):
                 initiator_address = self.raiden.address
@@ -1028,13 +1028,13 @@ class StateMachineEventHandler(object):
         self.raiden = raiden
 
     def dispatch_to_all_tasks(self, state_change):
-        manager_lists = self.raiden.identifier_statemanager.itervalues()
+        manager_lists = self.raiden.identifier_to_statemanagers.itervalues()
 
         for manager in itertools.chain(*manager_lists):
             self.log_and_dispatch(manager, state_change)
 
     def dispatch_by_identifier(self, identifier, state_change):
-        manager_list = self.raiden.identifier_statemanager[identifier]
+        manager_list = self.raiden.identifier_to_statemanagers[identifier]
 
         for manager in manager_list:
             self.log_and_dispatch(manager, state_change)
@@ -1097,11 +1097,11 @@ class StateMachineEventHandler(object):
             pass
 
         elif isinstance(event, EventTransferCompleted):
-            for result in self.raiden.identifier_result[event.identifier]:
+            for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(True)
 
         elif isinstance(event, EventTransferFailed):
-            for result in self.raiden.identifier_result[event.identifier]:
+            for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(True)
 
     def on_blockchain_statechange(self, state_change):
