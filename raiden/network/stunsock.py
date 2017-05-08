@@ -65,13 +65,16 @@ def open_bare_socket(
         socket.SO_REUSEADDR,
         1
     )
-    sock.bind(
-        (source_ip, source_port)
-    )
-    log.debug(
-        'opened socket',
-        ip=sock.getsockname()[0],
-        port=sock.getsockname()[1],
-    )
-    yield sock
-    sock.close()
+
+    try:
+        sock.bind(
+            (source_ip, source_port)
+        )
+        log.debug(
+            'opened socket',
+            ip=sock.getsockname()[0],
+            port=sock.getsockname()[1],
+        )
+        yield sock
+    finally:
+        sock.close()
