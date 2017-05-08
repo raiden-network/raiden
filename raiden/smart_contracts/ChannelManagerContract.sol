@@ -49,8 +49,6 @@ contract ChannelManagerContract {
         uint i;
         uint pos;
         address channel;
-        address participant1;
-        address participant2;
         address[] memory result;
 
         result = new address[](all_channels.length * 2);
