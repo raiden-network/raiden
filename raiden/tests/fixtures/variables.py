@@ -242,10 +242,10 @@ def rest_api_port_number(port_generator):
 
 
 @pytest.fixture
-def database_paths(tmpdir, blockchain_number_of_nodes):
-    """ Sqlite database paths for each node.
+def database_paths(tmpdir, private_keys):
+    """ Sqlite database paths for each app.
     """
     return [
         os.path.join(tmpdir.strpath, 'transaction_log_{}.db'.format(position))
-        for position in range(blockchain_number_of_nodes)
+        for position in range(len(private_keys))
     ]

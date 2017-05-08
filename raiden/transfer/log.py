@@ -179,7 +179,6 @@ class TransactionLog(object):
 
     def log(self, state_change):
         self.identifier += 1
-
         serialized_data = self.serializer.serialize(state_change)
         self.storage.write_transaction(self.identifier, serialized_data)
 
