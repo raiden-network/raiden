@@ -3,6 +3,7 @@ import pytest
 import gevent
 from ethereum import slogging
 
+from raiden.api.python import RaidenAPI
 from raiden.tests.utils.blockchain import wait_until_block
 
 log = slogging.getLogger(__name__)
@@ -24,11 +25,11 @@ def test_participant_selection(
     token_address = token_addresses[0]
 
     # connect the first node (will register the token if necessary)
-    raiden_network[0].raiden.api.connect_token_network(token_address, 100)
+    RaidenAPI(raiden_network[0].raiden).connect_token_network(token_address, 100)
 
     # connect the other nodes
     connect_greenlets = [
-        gevent.spawn(app.raiden.api.connect_token_network, token_address, 100)
+        gevent.spawn(RaidenAPI(app.raiden).connect_token_network, token_address, 100)
         for app in raiden_network[1:]
     ]
     gevent.wait(connect_greenlets)
@@ -103,7 +104,7 @@ def test_participant_selection(
     connection_manager = connection_managers[0]
     before = len(connection_manager.open_channels)
 
-    raiden_network[0].raiden.api.leave_token_network(token_address, wait_for_settle=False)
+    RaidenAPI(raiden_network[0].raiden).leave_token_network(token_address, wait_for_settle=False)
 
     wait_until_block(
         connection_manager.raiden.chain,

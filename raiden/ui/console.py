@@ -19,6 +19,7 @@ from pyethapp.utils import bcolors as bc
 from pyethapp.jsonrpc import address_decoder, default_gasprice
 from pyethapp.console_service import GeventInputHook, SigINTHandler
 
+from raiden.api.python import RaidenAPI
 from raiden.utils import events, get_contract_path, safe_address_decode
 
 # ipython needs to accept "--gui gevent" option
@@ -147,10 +148,11 @@ class ConsoleTools(object):
     def __init__(self, raiden_service, discovery, settle_timeout, reveal_timeout):
         self._chain = raiden_service.chain
         self._raiden = raiden_service
+        self._api = RaidenAPI(raiden_service)
         self._discovery = discovery
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
-        self.deposit = self._raiden.api.deposit
+        self.deposit = self._api.deposit
 
     def create_token(
             self,
@@ -261,14 +263,14 @@ class ConsoleTools(object):
             print("Error: peer {} not found in discovery".format(peer_address_hex))
             return
 
-        self._raiden.api.open(
+        self._api.open(
             token_address,
             peer_address,
             settle_timeout=settle_timeout,
             reveal_timeout=reveal_timeout,
         )
 
-        return self._raiden.api.deposit(token_address, peer_address, amount)
+        return self._api.deposit(token_address, peer_address, amount)
 
     def channel_stats_for(self, token_address_hex, peer_address_hex, pretty=False):
         """Collect information about sent and received transfers

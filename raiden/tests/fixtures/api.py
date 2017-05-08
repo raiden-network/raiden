@@ -7,6 +7,7 @@ from gevent import Greenlet
 
 from raiden.app import App
 from raiden.api.rest import RestAPI, APIServer
+from raiden.api.python import RaidenAPI
 from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
 from raiden.tests.utils.apitestcontext import ApiTestContext
@@ -65,80 +66,25 @@ def api_raiden_service(
         Discovery(),
         config
     )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'get_channel_list',
-        api_test_context.query_channels
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'get_tokens_list',
-        api_test_context.query_tokens
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'open',
-        api_test_context.open_channel
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'deposit',
-        api_test_context.deposit
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'close',
-        api_test_context.close
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'settle',
-        api_test_context.settle
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'get_channel',
-        api_test_context.get_channel
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'get_network_events',
-        api_test_context.get_network_events
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'get_token_network_events',
-        api_test_context.get_token_network_events
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'get_channel_events',
-        api_test_context.get_channel_events
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'transfer',
-        api_test_context.transfer
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'token_swap',
-        api_test_context.token_swap
-    )
-    monkeypatch.setattr(
-        raiden_service.api,
-        'expect_token_swap',
-        api_test_context.expect_token_swap
-    )
+    api = RaidenAPI(raiden_service)
+    monkeypatch.setattr(api, 'get_channel_list', api_test_context.query_channels)
+    monkeypatch.setattr(api, 'get_tokens_list', api_test_context.query_tokens)
+    monkeypatch.setattr(api, 'open', api_test_context.open_channel)
+    monkeypatch.setattr(api, 'deposit', api_test_context.deposit)
+    monkeypatch.setattr(api, 'close', api_test_context.close)
+    monkeypatch.setattr(api, 'settle', api_test_context.settle)
+    monkeypatch.setattr(api, 'get_channel', api_test_context.get_channel)
+    monkeypatch.setattr(api, 'get_network_events', api_test_context.get_network_events)
+    monkeypatch.setattr(api, 'get_token_network_events', api_test_context.get_token_network_events)
+    monkeypatch.setattr(api, 'get_channel_events', api_test_context.get_channel_events)
+    monkeypatch.setattr(api, 'transfer', api_test_context.transfer)
+    monkeypatch.setattr(api, 'token_swap', api_test_context.token_swap)
+    monkeypatch.setattr(api, 'expect_token_swap', api_test_context.expect_token_swap)
 
     # also make sure that the test server's raiden_api uses this mock
     # raiden service
     _, raiden_api = api_backend
-    monkeypatch.setattr(
-        raiden_api,
-        'raiden_api',
-        raiden_service.api
-    )
+    monkeypatch.setattr(raiden_api, 'raiden_api', api)
     return raiden_service
 
 

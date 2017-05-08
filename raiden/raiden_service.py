@@ -12,7 +12,6 @@ from ethereum.utils import encode_hex
 
 from coincurve import PrivateKey
 
-from raiden.api.python import RaidenAPI
 from raiden.constants import UINT64_MAX
 from raiden.blockchain.events import (
     get_relevant_proxies,
@@ -185,7 +184,6 @@ class RaidenService(object):
         else:
             self.healthcheck = None
 
-        self.api = RaidenAPI(self)
         self.alarm = alarm
         self.message_handler = message_handler
         self.state_machine_event_handler = state_machine_event_handler
