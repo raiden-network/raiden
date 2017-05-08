@@ -70,7 +70,11 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.transfer.log import TransactionLog, DEFAULT_TRANSACTION_LOG_PATH
+from raiden.transfer.log import (
+    TransactionLog,
+    TransactionLogSQLiteBackend,
+    DEFAULT_TRANSACTION_LOG_PATH,
+)
 from raiden.channel import ChannelEndState, ChannelExternalState
 from raiden.exceptions import (
     UnknownAddress,
@@ -186,7 +190,9 @@ class RaidenService(object):
             self.healthcheck = None
 
         self.transaction_log = TransactionLog(
-            database_path=config.get('database_path', DEFAULT_TRANSACTION_LOG_PATH)
+            storage_class=TransactionLogSQLiteBackend(
+                database_path=config.get('database_path', DEFAULT_TRANSACTION_LOG_PATH)
+            )
         )
         self.alarm = alarm
         self.message_handler = message_handler
