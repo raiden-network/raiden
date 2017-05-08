@@ -3,6 +3,8 @@ import gevent
 from gevent.lock import Semaphore
 
 from ethereum import slogging
+
+from raiden.api.python import RaidenAPI
 from raiden.utils import pex
 from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
@@ -31,6 +33,7 @@ class ConnectionManager(object):
     ):
         self.lock = Semaphore()
         self.raiden = raiden
+        self.api = RaidenAPI(raiden)
         self.channelgraph = channelgraph
         self.token_address = token_address
         self.funds = 0
@@ -83,7 +86,7 @@ class ConnectionManager(object):
             with self.lock:
                 log.debug('bootstrapping token network.')
                 # make ourselves visible
-                self.raiden.api.open(
+                self.api.open(
                     self.token_address,
                     ConnectionManager.BOOTSTRAP_ADDR
                 )
@@ -96,11 +99,11 @@ class ConnectionManager(object):
                                     self.initial_channel_target - len(self.open_channels)
                                     )
             for partner in self.find_new_partners(new_partner_count):
-                self.raiden.api.open(
+                self.api.open(
                     self.token_address,
                     partner,
                 )
-                self.raiden.api.deposit(
+                self.api.deposit(
                     self.token_address,
                     partner,
                     funding
@@ -123,7 +126,7 @@ class ConnectionManager(object):
                 c.partner_address) for c in open_channels]
             for channel in channel_specs:
                 try:
-                    self.raiden.api.close(*channel),
+                    self.api.close(*channel),
                 except RuntimeError:
                     # if the error wasn't that the channel was already closed: raise
                     if channel[1] in [c.partner_address for c in self.open_channels]:
@@ -176,7 +179,7 @@ class ConnectionManager(object):
             if joining_funds <= 0:
                 return
 
-            self.raiden.api.deposit(
+            self.api.deposit(
                 self.token_address,
                 partner_address,
                 joining_funds
@@ -210,11 +213,11 @@ class ConnectionManager(object):
                 self.initial_channel_target - len(self.open_channels)
             ):
                 try:
-                    self.raiden.api.open(
+                    self.api.open(
                         self.token_address,
                         partner
                     )
-                    self.raiden.api.deposit(
+                    self.api.deposit(
                         self.token_address,
                         partner,
                         self.initial_funding_per_partner
@@ -283,6 +286,6 @@ class ConnectionManager(object):
         """
         return [
             channel for channel in
-            self.raiden.api.get_channel_list(token_address=self.token_address)
+            self.api.get_channel_list(token_address=self.token_address)
             if channel.isopen
         ]

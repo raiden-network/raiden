@@ -11,16 +11,17 @@ import gevent.monkey
 from ethereum import slogging
 from pyethapp.jsonrpc import address_decoder
 
-from raiden.constants import ROPSTEN_REGISTRY_ADDRESS, ROPSTEN_DISCOVERY_ADDRESS
+from raiden.accounts import AccountManager
+from raiden.api.python import RaidenAPI
+from raiden.api.rest import APIServer, RestAPI
 from raiden.app import App
-from raiden.settings import INITIAL_PORT
-from raiden.network.sockfactory import socket_factory
+from raiden.constants import ROPSTEN_REGISTRY_ADDRESS, ROPSTEN_DISCOVERY_ADDRESS
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import BlockChainService
+from raiden.network.sockfactory import socket_factory
+from raiden.settings import INITIAL_PORT
 from raiden.ui.console import Console
 from raiden.utils import split_endpoint
-from raiden.accounts import AccountManager
-from raiden.api.rest import APIServer, RestAPI
 
 gevent.monkey.patch_all()
 
@@ -275,21 +276,23 @@ def run(ctx, **kwargs):
         app_.raiden.register_registry(app_.raiden.chain.default_registry.address)
 
         if ctx.params['rpc']:
-            # instance of the raiden-api
-            raiden_api = app_.raiden.api
-            # wrap the raiden-api with rest-logic and encoding
+            raiden_api = RaidenAPI(app_.raiden)
             rest_api = RestAPI(raiden_api)
-            # create the server and link the api-endpoints with flask / flask-restful middleware
             api_server = APIServer(rest_api)
-            # run the server
-            Greenlet.spawn(api_server.run, ctx.params['api_port'], debug=False, use_evalex=False)
-            print(
-                "The RPC server is now running",
-                "at http://localhost:{0}/.".format(ctx.params['api_port'])
+
+            Greenlet.spawn(
+                api_server.run,
+                ctx.params['api_port'],
+                debug=False,
+                use_evalex=False
             )
+
             print(
-                "See the Raiden documentation for all available endpoints at",
-                "https://github.com/raiden-network/raiden/blob/master/docs/api.rst"
+                "The RPC server is now running at http://localhost:{}/.\n\n"
+                "See the Raiden documentation for all available endpoints at\n"
+                "https://github.com/raiden-network/raiden/blob/master/docs/api.rst".format(
+                    ctx.params['api_port'],
+                )
             )
 
         if ctx.params['console']:

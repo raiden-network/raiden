@@ -48,12 +48,13 @@ def transfer(initiator_app, target_app, token, amount, identifier):
     will be revealed.
     """
 
-    initiator_app.raiden.api.transfer(
+    async_result = initiator_app.raiden.transfer_async(
         token,
         amount,
         target_app.raiden.address,
         identifier
     )
+    assert async_result.wait()
 
 
 def direct_transfer(initiator_app, target_app, token, amount, identifier=None):
@@ -62,12 +63,13 @@ def direct_transfer(initiator_app, target_app, token, amount, identifier=None):
     has_channel = target_app.raiden.address in graph.partneraddress_channel
     assert has_channel, 'there is not a direct channel'
 
-    initiator_app.raiden.api.transfer(
+    async_result = initiator_app.raiden.transfer_async(
         token,
         amount,
         target_app.raiden.address,
         identifier,
     )
+    assert async_result.wait()
 
 
 def mediated_transfer(initiator_app, target_app, token, amount, identifier=None):
@@ -86,12 +88,13 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
         )
 
     else:
-        initiator_app.raiden.api.transfer(
+        async_result = initiator_app.raiden.transfer_async(
             token,
             amount,
             target_app.raiden.address,
             identifier
         )
+        assert async_result.wait()
 
 
 def pending_mediated_transfer(app_chain, token, amount, identifier, expiration):
