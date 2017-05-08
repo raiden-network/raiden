@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 import pickle
 import sqlite3
-from collections import namedtuple
 from abc import ABCMeta, abstractmethod
 
 from raiden.utils import create_file_iff_not_existing
 
 DEFAULT_TRANSACTION_LOG_PATH = "transaction_log.db"
-Transaction = namedtuple('Transaction', ('id', 'state_change'))
 
 
 # TODO:
-# - use advisory locks
 # - snapshots should be used to reduce the log file size
-# - add log rotation
 
 class TransactionLogSerializer(object):
     """ TransactionLogSerializer
@@ -81,7 +77,9 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
         self.conn.text_factory = str
         cursor = self.conn.cursor()
         cursor.execute(
-            'CREATE TABLE IF NOT EXISTS transactions (id integer primary key autoincrement, data binary)'
+            'CREATE TABLE IF NOT EXISTS transactions ('
+            '    id integer primary key autoincrement, data binary'
+            ')'
         )
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS state_snapshot (id integer primary key, data binary)'
@@ -124,6 +122,13 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
         assert len(result) == 1
         result = result[0][0]
         return result
+
+    def get_all_transactions(self):
+        cursor = self.conn.cursor()
+        result = cursor.execute(
+            'SELECT * from transactions'
+        )
+        return result.fetchall()
 
     def read(self):
         pass
@@ -199,6 +204,13 @@ class TransactionLog(object):
 
     def last_identifier(self):
         return self.storage.last_identifier()
+
+    def get_all_state_changes(self):
+        """ Returns a list of tuples of identifiers and state changes"""
+        return [
+            (res[0], self.serializer.deserialize(res[1]))
+            for res in self.storage.get_all_transactions()
+        ]
 
     def snapshot(self, state):
         serialized_data = self.serializer.serialize(state)

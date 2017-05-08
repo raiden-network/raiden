@@ -1031,10 +1031,11 @@ class StateMachineEventHandler(object):
         self.raiden = raiden
 
     def dispatch_to_all_tasks(self, state_change):
+        self.raiden.transaction_log.log(state_change)
         manager_lists = self.raiden.identifier_to_statemanagers.itervalues()
 
         for manager in itertools.chain(*manager_lists):
-            self.log_and_dispatch(manager, state_change)
+            self.dispatch(manager, state_change)
 
     def dispatch_by_identifier(self, identifier, state_change):
         self.raiden.transaction_log.log(state_change)
