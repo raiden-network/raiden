@@ -19,12 +19,28 @@ from raiden.tests.utils.transfer import (
 from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveClosed,
     ContractReceiveWithdraw,
-    ContractReceiveSettled
+    ContractReceiveSettled,
+    ReceiveSecretReveal,
 )
+from raiden.transfer.state_change import Block
 from raiden.utils import sha3, privatekey_to_address
 
 # pylint: disable=too-many-locals,too-many-statements
 slogging.configure(':DEBUG')
+
+
+def assert_secretreveal_or_withdraw(state_change, secret, channel_address, raiden_address):
+    if isinstance(state_change, ReceiveSecretReveal):
+        assert state_change.secret == secret
+        assert state_change.sender == raiden_address
+    elif isinstance(state_change, ContractReceiveWithdraw):
+        assert state_change.channel_address == channel_address
+        assert state_change.secret == secret
+        assert state_change.receiver == raiden_address
+    else:
+        raise ValueError(
+            '{} is neither ReceiveSecretReveal or ContractReceiveWithdraw'.format(state_change)
+        )
 
 
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
@@ -153,24 +169,28 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert token.balance_of(address1) == bob_netted_balance
 
     # Now let's query the WAL to see if the state changes were logged as expected
-    assert alice_app.raiden.transaction_log.last_identifier() == 3
-    state_change1 = alice_app.raiden.transaction_log.get_transaction_by_id(1)
-    state_change2 = alice_app.raiden.transaction_log.get_transaction_by_id(2)
-    state_change3 = alice_app.raiden.transaction_log.get_transaction_by_id(3)
+    state_changes = [
+        change[1] for change in alice_app.raiden.transaction_log.get_all_state_changes()
+        if not isinstance(change[1], Block)
+    ]
+
+    state_change1 = state_changes[0]
+    state_change2 = state_changes[1]
+    state_change3 = state_changes[2]
+    state_change4 = state_changes[3]
 
     assert(isinstance(state_change1, ContractReceiveClosed))
     assert state_change1.channel_address == nettingaddress0
     assert state_change1.closing_address == bob_app.raiden.address
     assert state_change1.block_number == alice_bob_channel.external_state.closed_block
 
-    assert(isinstance(state_change2, ContractReceiveWithdraw))
-    assert state_change2.channel_address == nettingaddress0
-    assert state_change2.secret == secret
-    assert state_change2.receiver == bob_app.raiden.address
+    # Can't be sure of the order in which we encounter the SecretReveal and the withdraw
+    assert_secretreveal_or_withdraw(state_change2, secret, nettingaddress0, bob_app.raiden.address)
+    assert_secretreveal_or_withdraw(state_change3, secret, nettingaddress0, bob_app.raiden.address)
 
-    assert(isinstance(state_change3, ContractReceiveSettled))
-    assert state_change3.channel_address == nettingaddress0
-    assert state_change3.block_number == bob_alice_channel.external_state.settled_block
+    assert(isinstance(state_change4, ContractReceiveSettled))
+    assert state_change4.channel_address == nettingaddress0
+    assert state_change4.block_number == bob_alice_channel.external_state.settled_block
 
 
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
