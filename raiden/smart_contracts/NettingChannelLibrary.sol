@@ -236,10 +236,8 @@ library NettingChannelLibrary {
         notSettledButClosed(self)
     {
         uint amount;
-        uint partner_id;
         uint8 index;
         uint64 expiration;
-        bytes32 el;
         bytes32 h;
         bytes32 hashlock;
 
