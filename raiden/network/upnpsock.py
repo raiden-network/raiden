@@ -18,24 +18,28 @@ def connect():
     upnp.discoverdelay = 200
     providers = upnp.discover()
     if providers > 1:
-        log.warning("multiple upnp providers found", num_providers=providers)
+        log.warning('multiple upnp providers found', num_providers=providers)
     elif providers < 1:
-        log.error("no upnp providers found")
+        log.error('no upnp providers found')
         return
 
-    router = upnp.selectigd()
-    log.debug("connected", router=router)
+    location = upnp.selectigd()
+    log.debug('connected', upnp=upnp)
 
     if upnp.lanaddr == '0.0.0.0':
-        log.error("could not query your lanaddr")
+        log.error('could not query your lanaddr')
         return
-    if upnp.externalipaddress() == '0.0.0.0' or upnp.externalipaddress() is None:
-        log.error("could not query your externalipaddress")
-        return
-    return upnp, router
+    try:  # this can fail if router advertises uPnP incorrectly
+        if upnp.externalipaddress() == '0.0.0.0' or upnp.externalipaddress() is None:
+            log.error('could not query your externalipaddress')
+            return
+        return upnp, location
+    except Exception:
+        log.error('error when connecting with uPnP provider', location=location)
+        return None
 
 
-def open_port(internal_port, external_start_port=None):
+def open_port(upnp, internal_port, external_start_port=None):
     """Open a port for the raiden service (listening at `internal_port`) through
     UPnP.
     Args:
@@ -47,8 +51,6 @@ def open_port(internal_port, external_start_port=None):
     """
     if external_start_port is None:
         external_start_port = internal_port
-
-    upnp, _ = connect()
 
     if upnp is None:
         return
@@ -83,12 +85,12 @@ def open_port(internal_port, external_start_port=None):
 
     log.error(
         'could not register a port-mapping',
-        router='FIXME',
+        location='FIXME',
     )
     return
 
 
-def release_port(internal_port):
+def release_port(upnp, internal_port):
     """Try to release the port mapping for `internal_port`.
 
     Args:
@@ -97,19 +99,17 @@ def release_port(internal_port):
     Returns:
         success (boolean): if the release was successful.
     """
-    upnp, router = connect()
     mapping = upnp.getspecificportmapping(internal_port, 'UDP')
 
     if mapping is None:
-        log.error('could not find a port mapping', router=router)
+        log.error('could not find a port mapping')
         return False
 
     if upnp.deleteportmapping(internal_port, 'UDP'):
-        log.info('successfully released port mapping', router=router)
+        log.info('successfully released port mapping')
         return True
 
     log.warning(
-        'could not release port mapping, check your router for stale mappings',
-        router=router,
+        'could not release port mapping, check your router for stale mappings'
     )
     return False
