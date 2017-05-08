@@ -43,17 +43,12 @@ def socket_factory(source_ip, source_port, *args, **kwargs):
         )
         if result is not None:
             with stunsock.open_bare_socket(source_ip, source_port, *args, **kwargs) as sock:
-                exception = None
                 try:
                     yield PortMappedSocket(sock, 'uPnP', result[0], result[1], **dict(
                         router_location=location
                     ))
-                except Exception as e:
-                    exception = e
                 finally:
                     upnpsock.release_port(router, source_port)
-                if exception is not None:
-                    raise exception
 
     else:
         with stunsock.stun_socket(source_ip, source_port, *args, **kwargs) as (
