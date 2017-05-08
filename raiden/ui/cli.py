@@ -11,6 +11,7 @@ import gevent.monkey
 from ethereum import slogging
 from pyethapp.jsonrpc import address_decoder
 
+from raiden.constants import ROPSTEN_REGISTRY_ADDRESS, ROPSTEN_DISCOVERY_ADDRESS
 from raiden.app import App
 from raiden.settings import INITIAL_PORT
 from raiden.network.sockfactory import socket_factory
@@ -49,13 +50,13 @@ OPTIONS = [
     click.option(
         '--registry-contract-address',
         help='hex encoded address of the registry contract.',
-        default='bbc60aa23059b039407ac008bd0b7e902890d382',  # testnet default
+        default=ROPSTEN_REGISTRY_ADDRESS,  # testnet default
         type=str,
     ),
     click.option(
         '--discovery-contract-address',
         help='hex encoded address of the discovery contract.',
-        default='524b7dcacac3055bd42fc03b006e9fdcb607e2be',  # testnet default
+        default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
         type=str,
     ),
     click.option(
