@@ -5,12 +5,10 @@ from contextlib import contextmanager
 import stun
 from ethereum import slogging as logging
 
+from raiden.exceptions import STUNUnavailableException
+
 
 log = logging.getLogger(__name__)
-
-
-class STUNUnavailableException(Exception):
-    pass
 
 
 @contextmanager
