@@ -2,14 +2,18 @@ import os
 
 import transfer.mediated_transfer.factories as factories
 
-from raiden.transfer.log import TransactionLog
+from raiden.transfer.log import TransactionLog, TransactionLogSQLiteBackend
 from raiden.transfer.mediated_transfer.state_change import ContractReceiveWithdraw
 from raiden.transfer.state_change import Block, ActionRouteChange
 from raiden.transfer.state import RouteState
 
 
 def test_write_read_log(tmpdir):
-    log = TransactionLog(database_path=os.path.join(tmpdir.strpath, 'database.db'))
+    log = TransactionLog(
+        storage_class=TransactionLogSQLiteBackend(
+            database_path=os.path.join(tmpdir.strpath, 'database.db')
+        )
+    )
 
     block_number = 1337
     block = Block(block_number)

@@ -72,7 +72,7 @@ class TransactionLogStorageBackend(object):
 
 class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
 
-    def __init__(self, database_path):
+    def __init__(self, database_path=DEFAULT_TRANSACTION_LOG_PATH):
         self.conn = sqlite3.connect(database_path)
         self.conn.text_factory = str
         cursor = self.conn.cursor()
@@ -159,20 +159,18 @@ class TransactionLog(object):
 
     def __init__(
             self,
-            database_path=DEFAULT_TRANSACTION_LOG_PATH,
-            serializer_type='pickle',
-            storage_type='sqlite'):
+            storage_class=TransactionLogSQLiteBackend(),
+            serializer_class=PickleTransactionSerializer()):
 
-        if serializer_type != 'pickle':
-            raise ValueError('invalid value for serializer_type')
-        self.serializer = PickleTransactionSerializer()
+        if not issubclass(type(serializer_class), TransactionLogSerializer):
+            raise ValueError('serializer_class must follow the TransactionLogSerializer interface')
+        self.serializer = serializer_class
 
-        if storage_type == 'sqlite':
-            self.storage = TransactionLogSQLiteBackend(database_path)
-        elif storage_type == 'file':
-            self.storage = TransactionLogFileBackend()
-        else:
-            raise ValueError('invalid value for storage_type')
+        if not issubclass(type(storage_class), TransactionLogStorageBackend):
+            raise ValueError(
+                'storage_class must follow the TransactionLogStorageBackend interface'
+            )
+        self.storage = storage_class
 
         # the currently used id (state_change ids start at 1)
         self.identifier = 0
