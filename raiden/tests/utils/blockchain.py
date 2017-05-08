@@ -223,7 +223,6 @@ def geth_create_blockchain(
         p2p_ports,
         base_datadir,
         verbosity,
-        database_paths,
         genesis_path=None,
         logdirectory=None):
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments
@@ -241,9 +240,9 @@ def geth_create_blockchain(
         )
 
     nodes_configuration = []
-    key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports, database_paths)
+    key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports)
 
-    for pos, (key, p2p_port, rpc_port, database_path) in enumerate(key_p2p_rpc):
+    for pos, (key, p2p_port, rpc_port) in enumerate(key_p2p_rpc):
         config = dict()
 
         # make the first node miner
@@ -261,7 +260,6 @@ def geth_create_blockchain(
             pub=config['pub'],
             port=config['port'],
         )
-        config['database_path'] = database_path
         nodes_configuration.append(config)
 
     for config in nodes_configuration:

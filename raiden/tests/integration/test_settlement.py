@@ -16,6 +16,11 @@ from raiden.tests.utils.transfer import (
     pending_mediated_transfer,
     claim_lock,
 )
+from raiden.transfer.mediated_transfer.state_change import (
+    ContractReceiveClosed,
+    ContractReceiveWithdraw,
+    ContractReceiveSettled
+)
 from raiden.utils import sha3, privatekey_to_address
 
 # pylint: disable=too-many-locals,too-many-statements
@@ -146,6 +151,25 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     assert token.balance_of(address0) == alice_netted_balance
     assert token.balance_of(address1) == bob_netted_balance
+
+    # Now let's query the WAL to see if the state changes were logged as expected
+    state_change1 = alice_app.raiden.transaction_log.get_transaction_by_id(1)
+    state_change2 = alice_app.raiden.transaction_log.get_transaction_by_id(2)
+    state_change3 = alice_app.raiden.transaction_log.get_transaction_by_id(3)
+
+    assert(isinstance(state_change1, ContractReceiveClosed))
+    assert state_change1.channel_address == nettingaddress0
+    assert state_change1.closing_address == bob_app.raiden.address
+    assert state_change1.block_number == alice_bob_channel.external_state.closed_block
+
+    assert(isinstance(state_change2, ContractReceiveWithdraw))
+    assert state_change2.channel_address == nettingaddress0
+    assert state_change2.secret == secret
+    assert state_change2.receiver == bob_app.raiden.address
+
+    assert(isinstance(state_change3, ContractReceiveSettled))
+    assert state_change3.channel_address == nettingaddress0
+    assert state_change3.block_number == bob_alice_channel.external_state.settled_block
 
 
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])

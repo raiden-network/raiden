@@ -45,6 +45,7 @@ def create_app(
         port,
         reveal_timeout,
         settle_timeout,
+        database_path,
         host='127.0.0.1',
 ):
     ''' Instantiates an Raiden app with the given configuration. '''
@@ -57,6 +58,7 @@ def create_app(
     config['max_unresponsive_time'] = max_unresponsive_time
     config['reveal_timeout'] = reveal_timeout
     config['settle_timeout'] = settle_timeout
+    config['database_path'] = database_path
 
     app = App(
         config,
@@ -256,7 +258,8 @@ def create_apps(
         send_ping_time,
         max_unresponsive_time,
         reveal_timeout,
-        settle_timeout):
+        settle_timeout,
+        database_paths):
     """ Create the apps.
 
     Note:
@@ -303,6 +306,7 @@ def create_apps(
             send_ping_time,
             max_unresponsive_time,
             port=port,
+            database_path=database_paths[idx],
             host=host,
             reveal_timeout=reveal_timeout,
             settle_timeout=settle_timeout,

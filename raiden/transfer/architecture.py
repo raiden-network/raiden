@@ -3,8 +3,6 @@
 import types
 from collections import namedtuple
 from copy import deepcopy
-from log import TransactionLog
-
 
 TransitionResult = namedtuple('TransitionResult', ('new_state', 'events'))
 

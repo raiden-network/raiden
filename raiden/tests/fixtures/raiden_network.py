@@ -40,7 +40,8 @@ def raiden_chain(
         cached_genesis,
         send_ping_time,
         max_unresponsive_time,
-        reveal_timeout):
+        reveal_timeout,
+        database_paths):
 
     if len(token_addresses) > 1:
         raise ValueError('raiden_chain only works with a single token')
@@ -59,7 +60,8 @@ def raiden_chain(
         send_ping_time,
         max_unresponsive_time,
         reveal_timeout,
-        settle_timeout
+        settle_timeout,
+        database_paths,
     )
 
     if not cached_genesis:
@@ -92,7 +94,8 @@ def raiden_network(
         send_ping_time,
         max_unresponsive_time,
         cached_genesis,
-        reveal_timeout):
+        reveal_timeout,
+        database_paths):
 
     verbosity = request.config.option.verbose
 
@@ -104,7 +107,8 @@ def raiden_network(
         send_ping_time,
         max_unresponsive_time,
         reveal_timeout,
-        settle_timeout
+        settle_timeout,
+        database_paths,
     )
 
     if not cached_genesis:

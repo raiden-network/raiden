@@ -159,6 +159,7 @@ def cached_genesis(request, blockchain_type):
         request.getfixturevalue('max_unresponsive_time'),
         request.getfixturevalue('reveal_timeout'),
         request.getfixturevalue('settle_timeout'),
+        request.getfixturevalue('database_paths'),
     )
 
     if 'raiden_network' in request.fixturenames:
@@ -333,8 +334,7 @@ def blockchain_backend(
         blockchain_rpc_ports,
         tmpdir,
         blockchain_type,
-        cached_genesis,
-        database_paths):
+        cached_genesis):
 
     genesis_path = None
     if cached_genesis:
@@ -354,7 +354,6 @@ def blockchain_backend(
             blockchain_rpc_ports,
             tmpdir,
             genesis_path,
-            database_paths
         )
 
     if blockchain_type == 'tester':
@@ -375,8 +374,7 @@ def _geth_blockchain(
         blockchain_p2p_ports,
         blockchain_rpc_ports,
         tmpdir,
-        genesis_path,
-        database_paths):
+        genesis_path):
 
     """ Helper to do proper cleanup. """
     verbosity = request.config.option.verbose
@@ -389,7 +387,6 @@ def _geth_blockchain(
         blockchain_p2p_ports,
         str(tmpdir),
         verbosity,
-        database_paths,
         genesis_path,
     )
 
