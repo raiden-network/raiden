@@ -153,6 +153,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert token.balance_of(address1) == bob_netted_balance
 
     # Now let's query the WAL to see if the state changes were logged as expected
+    assert alice_app.raiden.transaction_log.last_identifier() == 3
     state_change1 = alice_app.raiden.transaction_log.get_transaction_by_id(1)
     state_change2 = alice_app.raiden.transaction_log.get_transaction_by_id(2)
     state_change3 = alice_app.raiden.transaction_log.get_transaction_by_id(3)

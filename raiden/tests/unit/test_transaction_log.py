@@ -28,8 +28,11 @@ def test_write_read_log(tmpdir):
     )
 
     log.log(block)
+    assert log.last_identifier() == 1
     log.log(action_route_change)
+    assert log.last_identifier() == 2
     log.log(contract_receive_withdraw)
+    assert log.last_identifier() == 3
 
     result1 = log.get_transaction_by_id(1)
     result2 = log.get_transaction_by_id(2)
