@@ -69,6 +69,10 @@ class TransactionLogStorageBackend(object):
     def read(self):
         pass
 
+    @abstractmethod
+    def last_identifier(self):
+        pass
+
 
 class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
 
@@ -77,18 +81,18 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
         self.conn.text_factory = str
         cursor = self.conn.cursor()
         cursor.execute(
-            'CREATE TABLE IF NOT EXISTS transactions (id integer, data binary)'
+            'CREATE TABLE IF NOT EXISTS transactions (id integer primary key autoincrement, data binary)'
         )
         cursor.execute(
-            'CREATE TABLE IF NOT EXISTS state_snapshot (id integer, data binary)'
+            'CREATE TABLE IF NOT EXISTS state_snapshot (id integer primary key, data binary)'
         )
         self.conn.commit()
 
-    def write_transaction(self, identifier, data):
+    def write_transaction(self, data):
         cursor = self.conn.cursor()
         cursor.execute(
-            'INSERT INTO transactions(id, data) VALUES(?,?)',
-            (identifier, data)
+            'INSERT INTO transactions(id, data) VALUES(null,?)',
+            (data,)
         )
         self.conn.commit()
 
@@ -124,6 +128,16 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
     def read(self):
         pass
 
+    def last_identifier(self):
+        cursor = self.conn.cursor()
+        result = cursor.execute(
+            'SELECT seq FROM sqlite_sequence WHERE name="transactions"'
+        )
+        result = result.fetchall()
+        assert len(result) == 1
+        result = result[0][0]
+        return result
+
     def __del__(self):
         self.conn.close()
 
@@ -141,13 +155,16 @@ class TransactionLogFileBackend(TransactionLogStorageBackend):
         )
         self._synced = False  #: True when the existing log is read to the end
 
-    def write_transaction(self, identifier, data):
+    def write_transaction(self, data):
         pass
 
     def write_state_snapshot(self, identifier, data):
         pass
 
     def read(self):
+        pass
+
+    def last_identifier(self):
         pass
 
     def __del__(self):
@@ -172,21 +189,20 @@ class TransactionLog(object):
             )
         self.storage = storage_class
 
-        # the currently used id (state_change ids start at 1)
-        self.identifier = 0
-
     def log(self, state_change):
-        self.identifier += 1
         serialized_data = self.serializer.serialize(state_change)
-        self.storage.write_transaction(self.identifier, serialized_data)
+        self.storage.write_transaction(serialized_data)
 
     def get_transaction_by_id(self, identifier):
         serialized_data = self.storage.get_transaction_by_id(identifier)
         return self.serializer.deserialize(serialized_data)
 
+    def last_identifier(self):
+        return self.storage.last_identifier()
+
     def snapshot(self, state):
         serialized_data = self.serializer.serialize(state)
-        self.storage.write_state_snapshot(self.identifier, serialized_data)
+        self.storage.write_state_snapshot(self.last_identifier(), serialized_data)
 
 
 def unapplied_state_changes(transaction_log, snapshot):
