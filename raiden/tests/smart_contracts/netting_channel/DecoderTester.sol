@@ -11,10 +11,6 @@ contract DecoderTester {
         return NettingChannelLibrary.getTransferRawAddress(signed_transfer);
     }
 
-    function getNonce(bytes message) returns (uint64 nonce) {
-        return NettingChannelLibrary.getNonce(message);
-    }
-
     function decodeTransfer(bytes transfer_raw) returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount) {
         return NettingChannelLibrary.decodeTransfer(transfer_raw);
     }
