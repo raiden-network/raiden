@@ -119,8 +119,9 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
             'SELECT data from transactions where id=?', (identifier,)
         )
         result = result.fetchall()
-        assert len(result) == 1
-        result = result[0][0]
+        if result != list():
+            assert len(result) == 1
+            result = result[0][0]
         return result
 
     def get_all_transactions(self):
@@ -139,8 +140,11 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
             'SELECT seq FROM sqlite_sequence WHERE name="transactions"'
         )
         result = result.fetchall()
-        assert len(result) == 1
-        result = result[0][0]
+        if result != list():
+            assert len(result) == 1
+            result = result[0][0]
+        else:
+            result = 0
         return result
 
     def __del__(self):
@@ -195,6 +199,8 @@ class TransactionLog(object):
         self.storage = storage_class
 
     def log(self, state_change):
+        # TODO: Issue 587
+        # Implement a queue of state changes for batch writting
         serialized_data = self.serializer.serialize(state_change)
         self.storage.write_transaction(serialized_data)
 
