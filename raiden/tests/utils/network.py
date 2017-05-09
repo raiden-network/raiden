@@ -230,6 +230,7 @@ def create_sequential_channels(
         app_channels = list()
 
     if channels_per_node == 1:
+        assert len(raiden_apps) % 2 == 0, 'needs an even number of nodes'
         every_two = iter(raiden_apps)
         app_channels = list(zip(every_two, every_two))
 

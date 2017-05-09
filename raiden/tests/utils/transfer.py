@@ -7,6 +7,7 @@ from coincurve import PrivateKey
 from raiden.mtree import Merkletree
 from raiden.raiden_service import create_default_identifier
 from raiden.utils import sha3, privatekey_to_address
+from raiden.channel.netting_channel import Channel
 
 
 def channel(app0, app1, token):
@@ -32,6 +33,7 @@ def sleep(initiator_app, target_app, token, multiplier=1):
 
 
 def get_sent_transfer(app_channel, transfer_number):
+    assert isinstance(app_channel, Channel)
     return app_channel.sent_transfers[transfer_number]
 
 
@@ -77,7 +79,7 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
     # pylint: disable=too-many-arguments
 
     graph = initiator_app.raiden.channelgraphs[token]
-    has_channel = initiator_app.raiden.address in graph.partneraddress_channel
+    has_channel = target_app.raiden.address in graph.partneraddress_channel
 
     if has_channel:
         raise NotImplementedError(
@@ -149,11 +151,6 @@ def claim_lock(app_chain, token, secret):
 
         channel_ = channel(to_, from_, token)
         withdraw_or_unlock(channel_, secret)
-
-
-def assert_identifier_correct(initiator_app, token, target, expected_id):
-    got_id = create_default_identifier(initiator_app.raiden.address, token, target)
-    assert got_id == expected_id
 
 
 def withdraw_or_unlock(channel_, secret):

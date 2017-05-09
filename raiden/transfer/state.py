@@ -63,7 +63,7 @@ class RouteState(State):
 
     def __repr__(self):
         return (
-            '<Route {state} hop:{address} available_balance:{available_balance} '
+            '<RouteState {state} hop:{address} available_balance:{available_balance} '
             'settle:{settle_timeout} reveal:{reveal_timeout}>'
         ).format(
             state=self.state,
