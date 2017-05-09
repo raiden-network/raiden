@@ -409,6 +409,11 @@ class NettingChannelMock(object):
     def closed(self):
         return self.contract.closed
 
+    def closing_address(self):
+        closing_address = self.contract.closingAddress
+        assert len(closing_address) == 20, "Expected binary address"
+        return closing_address
+
     def settled(self):
         return self.contract.settled
 
