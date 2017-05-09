@@ -932,6 +932,9 @@ class NettingChannel(object):
     def closed(self):
         return self.proxy.closed.call()
 
+    def closing_address(self):
+        return address_decoder(self.proxy.closingAddress())
+
     def settled(self):
         return self.proxy.settled.call()
 

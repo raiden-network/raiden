@@ -285,8 +285,10 @@ class Channel(object):
         balance_proof = self.our_state.balance_proof
         transfer = balance_proof.transfer
 
-        # the channel was closed, update our half of the state
-        self.external_state.update_transfer(self.our_state.address, transfer)
+        # the channel was closed, update our half of the state if we need to
+        closing_address = self.external_state.netting_channel.closing_address()
+        if closing_address != self.our_state.address:
+            self.external_state.update_transfer(self.our_state.address, transfer)
 
         unlock_proofs = balance_proof.get_known_unlocks()
         self.external_state.withdraw(self.our_state.address, unlock_proofs)
