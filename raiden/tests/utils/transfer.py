@@ -5,7 +5,6 @@ import gevent
 from coincurve import PrivateKey
 
 from raiden.mtree import Merkletree
-from raiden.raiden_service import create_default_identifier
 from raiden.utils import sha3, privatekey_to_address
 from raiden.channel.netting_channel import Channel
 
