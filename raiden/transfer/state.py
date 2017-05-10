@@ -44,7 +44,7 @@ class RouteState(State):
     def __init__(self,
                  state,
                  node_address,
-                 chanel_address,
+                 channel_address,
                  available_balance,
                  settle_timeout,
                  reveal_timeout,
@@ -55,7 +55,7 @@ class RouteState(State):
 
         self.state = state
         self.node_address = node_address
-        self.channel_address = chanel_address
+        self.channel_address = channel_address
         self.available_balance = available_balance
         self.settle_timeout = settle_timeout
         self.reveal_timeout = reveal_timeout
