@@ -68,7 +68,7 @@ def route_to_routestate(route):
 
 def channel_to_routestate(channel, node_address):
     state = channel.state
-    chanel_address = channel.external_state.netting_channel.address
+    channel_address = channel.external_state.netting_channel.address
     distributable = channel.distributable
     settle_timeout = channel.settle_timeout
     reveal_timeout = channel.reveal_timeout
@@ -81,7 +81,7 @@ def channel_to_routestate(channel, node_address):
     state = RouteState(
         state=state,
         node_address=node_address,
-        chanel_address=chanel_address,
+        channel_address=channel_address,
         available_balance=distributable,
         settle_timeout=settle_timeout,
         reveal_timeout=reveal_timeout,
