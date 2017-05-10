@@ -149,7 +149,7 @@ def get_timeout_blocks(payer_route, payer_transfer, block_number):
     lock timeout must be computed.
 
     The payee lock timeout is crucial for safety of the mediated transfer, the
-    value must be choosen so that the payee hop is forced to reveal the secret
+    value must be chosen so that the payee hop is forced to reveal the secret
     with sufficient time for this node to claim the received lock from the
     payer hop.
 
