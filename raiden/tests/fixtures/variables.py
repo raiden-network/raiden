@@ -24,7 +24,7 @@ def settle_timeout(blockchain_type):
     too many blocks to be mined is very costly time-wise.
     """
     if blockchain_type == 'geth':
-        return 10
+        return 16
     else:
         return 400
 
@@ -37,7 +37,7 @@ def reveal_timeout(blockchain_type):
     too many blocks to be mined is very costly time-wise.
     """
     if blockchain_type == 'geth':
-        return 5
+        return 4
     else:
         return 20
 

@@ -157,7 +157,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert len(events) == 1
     assert event_dicts_are_equal(events[0], {
         '_event_type': 'ChannelNew',
-        'settle_timeout': 10,
+        'settle_timeout': settle_timeout,
         'netting_channel': address_encoder(netcontract_address),
         'participant1': address_encoder(app0.raiden.address),
         'participant2': address_encoder(app1.raiden.address),
