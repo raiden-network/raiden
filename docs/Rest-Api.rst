@@ -481,6 +481,90 @@ Possible Responses
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
+Connection Management
+======================
+
+Connecting to a token network
+------------------------------
+
+You can automatically join a token network by making a ``PUT`` to the following endpoint along with a json payload
+containing the connection details such as the funding you want to put into the network, the initial target for 
+amount of channels to create and the target for joinable funds.
+
+``PUT /api/<version>/connection/<token_address>``
+
+The request will only return once the transfer either succeeded or failed. A transfer can fail due to a lock's expiration.
+
+Example Request
+^^^^^^^^^^^^^^^
+
+``PUT /api/v1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
+
+with payload::
+
+    {
+        "funds": 1337,
+        "initial_channel_target": 4,
+        "joinable_funds_target": 0.4
+    }
+
+
+Example Response
+^^^^^^^^^^^^^^^^
+``200 OK``
+::
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For a successful          |
+|                  | connection creation       |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
+
+Leaving a token network
+-----------------------
+
+You can leave a token network by making a ``DELETE`` to the following endpoint along with a json payload containing
+details about the way you want to leave the network. For instance if you want to wait for settlement and the timeout period.
+
+``DELETE /api/<version>/connection/<token_address>``
+
+The request will only return once the transfer either succeeded or failed. A transfer can fail due to a lock's expiration.
+
+Example Request
+^^^^^^^^^^^^^^^
+
+``DELETE /api/v1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
+
+with payload::
+
+    {
+        "wait_for_settlement": true,
+        "timeout": 40
+    }
+
+Example Response
+^^^^^^^^^^^^^^^^
+``200 OK``
+::
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For successfully leaving  |
+|                  | a token network           |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
+
 Transfers
 =========
 
