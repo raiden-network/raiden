@@ -8,6 +8,8 @@ from raiden.api.v1.encoding import (
     EventRequestSchema,
     TokenSwapsSchema,
     TransferSchema,
+    ConnectionConnectSchema,
+    ConnectionsLeaveSchema,
 )
 
 
@@ -170,4 +172,30 @@ class TransferToTargetResource(BaseResource):
             target_address=target_address,
             amount=amount,
             identifier=identifier,
+        )
+
+
+class ConnectionsResource(BaseResource):
+
+    put_schema = ConnectionConnectSchema()
+    delete_schema = ConnectionsLeaveSchema()
+
+    def __init__(self, **kwargs):
+        super(ConnectionsResource, self).__init__(**kwargs)
+
+    @use_kwargs(put_schema, location=('json',))
+    def put(self, token_address, funds, initial_channel_target, joinable_funds_target):
+        return self.rest_api.connect(
+            token_address=token_address,
+            funds=funds,
+            initial_channel_target=initial_channel_target,
+            joinable_funds_target=joinable_funds_target,
+        )
+
+    @use_kwargs(delete_schema, location=('json',))
+    def delete(self, token_address, wait_for_settle, timeout):
+        return self.rest_api.leave(
+            token_address=token_address,
+            wait_for_settle=wait_for_settle,
+            timeout=timeout,
         )

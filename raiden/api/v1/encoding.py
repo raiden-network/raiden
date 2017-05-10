@@ -225,3 +225,24 @@ class TransferSchema(BaseSchema):
     class Meta:
         strict = True
         decoding_class = dict
+
+
+class ConnectionConnectSchema(BaseSchema):
+    token_address = AddressField()
+    funds = fields.Integer()
+    initial_channel_target = fields.Integer()
+    joinable_funds_target = fields.Decimal()
+
+    class Meta:
+        strict = True
+        decoding_class = dict
+
+
+class ConnectionsLeaveSchema(BaseSchema):
+    token_address = AddressField()
+    wait_for_settle = fields.Bool()
+    timeout = fields.Integer()
+
+    class Meta:
+        strict = True
+        decoding_class = dict
