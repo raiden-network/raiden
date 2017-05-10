@@ -17,6 +17,8 @@ from raiden.api.v1.encoding import (
     PartnersPerTokenListSchema,
     HexAddressConverter,
     TransferSchema,
+    ConnectionConnectSchema,
+    ConnectionsLeaveSchema,
 )
 from raiden.api.v1.resources import (
     create_blueprint,
@@ -29,6 +31,7 @@ from raiden.api.v1.resources import (
     ChannelEventsResource,
     TokenSwapsResource,
     TransferToTargetResource,
+    ConnectionsResource,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
@@ -120,6 +123,10 @@ class APIServer(object):
             TransferToTargetResource,
             '/transfers/<hexaddress:token_address>/<hexaddress:target_address>'
         )
+        self.add_resource(
+            ConnectionsResource,
+            '/connection/<hexaddress:token_address>'
+        )
 
     def _register_type_converters(self, additional_mapping=None):
         # an additional mapping concats to class-mapping and will overwrite existing keys
@@ -146,7 +153,7 @@ class APIServer(object):
 
 class RestAPI(object):
     """
-    This wraps around the actual RaidenAPI in raiden_service.
+    This wraps around the actual RaidenAPI in api/python.
     It will provide the additional, neccessary RESTful logic and
     the proper JSON-encoding of the Objects provided by the RaidenAPI
     """
@@ -159,6 +166,8 @@ class RestAPI(object):
         self.tokens_list_schema = TokensListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.transfer_schema = TransferSchema()
+        self.connection_connect_schema = ConnectionConnectSchema()
+        self.connection_leave_schema = ConnectionsLeaveSchema()
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
         raiden_service_result = self.raiden_api.open(
@@ -207,7 +216,7 @@ class RestAPI(object):
             timeout
         )
 
-        result = self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
+        result = self.connection_leave_schema.dumps(channel_to_api_dict(raiden_service_result))
         return result
 
     def connect(self, token_address, funds, initial_channel_target=3, joinable_funds_target=.4):
@@ -219,7 +228,7 @@ class RestAPI(object):
             joinable_funds_target
         )
 
-        result = self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
+        result = self.connection_connect_schema.dumps(channel_to_api_dict(raiden_service_result))
         return result
 
     def get_channel_list(self, token_address=None, partner_address=None):
