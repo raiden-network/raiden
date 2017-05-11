@@ -73,7 +73,6 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.transfer.log import (
     TransactionLog,
     TransactionLogSQLiteBackend,
-    DEFAULT_TRANSACTION_LOG_PATH,
 )
 from raiden.channel import ChannelEndState, ChannelExternalState
 from raiden.exceptions import (
@@ -191,7 +190,7 @@ class RaidenService(object):
 
         self.transaction_log = TransactionLog(
             storage_class=TransactionLogSQLiteBackend(
-                database_path=config.get('database_path', DEFAULT_TRANSACTION_LOG_PATH)
+                database_path=config['database_path']
             )
         )
         self.alarm = alarm
