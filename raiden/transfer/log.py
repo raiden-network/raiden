@@ -5,8 +5,6 @@ from abc import ABCMeta, abstractmethod
 
 from raiden.utils import create_file_iff_not_existing
 
-DEFAULT_TRANSACTION_LOG_PATH = "transaction_log.db"
-
 
 # TODO:
 # - snapshots should be used to reduce the log file size
@@ -72,7 +70,7 @@ class TransactionLogStorageBackend(object):
 
 class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
 
-    def __init__(self, database_path=DEFAULT_TRANSACTION_LOG_PATH):
+    def __init__(self, database_path):
         self.conn = sqlite3.connect(database_path)
         self.conn.text_factory = str
         cursor = self.conn.cursor()
@@ -154,7 +152,7 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
 class TransactionLogFileBackend(TransactionLogStorageBackend):
     """This is just an example for having a file backend. Not actually implemented"""
 
-    def __init__(self, filepath=DEFAULT_TRANSACTION_LOG_PATH):
+    def __init__(self, filepath):
         self.filepath = filepath
         self.file = create_file_iff_not_existing(
             self.filepath,
@@ -185,7 +183,7 @@ class TransactionLog(object):
 
     def __init__(
             self,
-            storage_class=TransactionLogSQLiteBackend(),
+            storage_class,
             serializer_class=PickleTransactionSerializer()):
 
         if not issubclass(type(serializer_class), TransactionLogSerializer):

@@ -2,6 +2,7 @@
 # pylint: disable=too-many-arguments,redefined-outer-name
 import copy
 
+import os
 import pytest
 from gevent import Greenlet
 
@@ -48,7 +49,8 @@ def api_raiden_service(
         max_unresponsive_time,
         send_ping_time,
         reveal_timeout,
-        raiden_udp_ports):
+        raiden_udp_ports,
+        tmpdir):
 
     blockchain = blockchain_services[0]
     config = copy.deepcopy(App.default_config)
@@ -59,6 +61,7 @@ def api_raiden_service(
     config['send_ping_time'] = send_ping_time
     config['max_unresponsive_time'] = max_unresponsive_time
     config['reveal_timeout'] = reveal_timeout
+    config['database_path'] = os.path.join(tmpdir.strpath, 'database.db')
     raiden_service = RaidenService(
         blockchain,
         blockchain.private_key,
