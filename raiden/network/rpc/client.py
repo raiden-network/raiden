@@ -179,8 +179,8 @@ def patch_send_message(client, pool_maxsize=50):
 def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_block=None):
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     json_data = {
-        'fromBlock': from_block if from_block is not None else '',
-        'toBlock': to_block if to_block is not None else '',
+        'fromBlock': from_block if from_block is not None else 'latest',
+        'toBlock': to_block if to_block is not None else 'latest',
         'address': address_encoder(normalize_address(contract_address)),
     }
 
