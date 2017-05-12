@@ -9,8 +9,8 @@ from raiden.utils import create_file_iff_not_existing
 # TODO:
 # - snapshots should be used to reduce the log file size
 
-class TransactionLogSerializer(object):
-    """ TransactionLogSerializer
+class StateChangeLogSerializer(object):
+    """ StateChangeLogSerializer
 
         An abstract class defining the serialization interface for the
         Transaction log. Allows for pluggable serializer backends.
@@ -26,7 +26,7 @@ class TransactionLogSerializer(object):
         pass
 
 
-class PickleTransactionSerializer(TransactionLogSerializer):
+class PickleTransactionSerializer(StateChangeLogSerializer):
     """ PickleTransactionSerializer
 
         A simple transaction serializer using pickle
@@ -43,8 +43,8 @@ class PickleTransactionSerializer(TransactionLogSerializer):
         return pickle.loads(data)
 
 
-class TransactionLogStorageBackend(object):
-    """ TransactionLogStorageBackend
+class StateChangeLogStorageBackend(object):
+    """ StateChangeLogStorageBackend
 
         An abstract class defining the storage backend for the transaction log.
         Allows for pluggable storage backends.
@@ -68,7 +68,7 @@ class TransactionLogStorageBackend(object):
         pass
 
 
-class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
+class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
 
     def __init__(self, database_path):
         self.conn = sqlite3.connect(database_path)
@@ -149,7 +149,7 @@ class TransactionLogSQLiteBackend(TransactionLogStorageBackend):
         self.conn.close()
 
 
-class TransactionLogFileBackend(TransactionLogStorageBackend):
+class StateChangeLogFileBackend(StateChangeLogStorageBackend):
     """This is just an example for having a file backend. Not actually implemented"""
 
     def __init__(self, filepath):
@@ -179,22 +179,24 @@ class TransactionLogFileBackend(TransactionLogStorageBackend):
         self.file.close()
 
 
-class TransactionLog(object):
+class StateChangeLog(object):
 
     def __init__(
             self,
-            storage_class,
-            serializer_class=PickleTransactionSerializer()):
+            storage_instance,
+            serializer_instance=PickleTransactionSerializer()):
 
-        if not issubclass(type(serializer_class), TransactionLogSerializer):
-            raise ValueError('serializer_class must follow the TransactionLogSerializer interface')
-        self.serializer = serializer_class
-
-        if not issubclass(type(storage_class), TransactionLogStorageBackend):
+        if not issubclass(type(serializer_instance), StateChangeLogSerializer):
             raise ValueError(
-                'storage_class must follow the TransactionLogStorageBackend interface'
+                'serializer_instance must follow the StateChangeLogSerializer interface'
             )
-        self.storage = storage_class
+        self.serializer = serializer_instance
+
+        if not issubclass(type(storage_instance), StateChangeLogStorageBackend):
+            raise ValueError(
+                'storage_instance must follow the StateChangeLogStorageBackend interface'
+            )
+        self.storage = storage_instance
 
     def log(self, state_change):
         # TODO: Issue 587
