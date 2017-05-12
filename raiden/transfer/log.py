@@ -75,46 +75,41 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         self.conn.text_factory = str
         cursor = self.conn.cursor()
         cursor.execute(
-            'CREATE TABLE IF NOT EXISTS transactions ('
+            'CREATE TABLE IF NOT EXISTS state_changes ('
             '    id integer primary key autoincrement, data binary'
             ')'
         )
         cursor.execute(
-            'CREATE TABLE IF NOT EXISTS state_snapshot (id integer primary key, data binary)'
+            'CREATE TABLE IF NOT EXISTS state_snapshot ('
+            'statechange_id integer, data binary, '
+            'FOREIGN KEY(statechange_id) REFERENCES state_changes(id)'
+            ')'
         )
         self.conn.commit()
 
     def write_transaction(self, data):
         cursor = self.conn.cursor()
         cursor.execute(
-            'INSERT INTO transactions(id, data) VALUES(null,?)',
+            'INSERT INTO state_changes(id, data) VALUES(null,?)',
             (data,)
         )
         self.conn.commit()
 
     def write_state_snapshot(self, identifier, data):
+        # TODO: Snapshotting is not yet implemented. This is just skeleton code
+        # Issue: https://github.com/raiden-network/raiden/issues/593
+        # This skeleton code assumes we only keep a single snapshot and overwrite it each time.
         cursor = self.conn.cursor()
-        result = cursor.execute(
-            'SELECT * from state_snapshot',
+        cursor.execute(
+            'INSERT OR REPLACE INTO state_snapshot(statechange_id, data) VALUES(?,?)',
             (identifier, data)
         )
-        result = result.fetchone()
-        if result is None:
-            cursor.execute(
-                'INSERT INTO state_snapshot(id, data) VALUES(?,?)',
-                (identifier, data)
-            )
-        else:
-            cursor.execute(
-                'UPDATE state_snapshot SET id=?, data=? WHERE id=?',
-                (identifier, data, result[0])
-            )
         self.conn.commit()
 
     def get_transaction_by_id(self, identifier):
         cursor = self.conn.cursor()
         result = cursor.execute(
-            'SELECT data from transactions where id=?', (identifier,)
+            'SELECT data from state_changes where id=?', (identifier,)
         )
         result = result.fetchall()
         if result != list():
@@ -122,10 +117,10 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
             result = result[0][0]
         return result
 
-    def get_all_transactions(self):
+    def get_all_state_changes(self):
         cursor = self.conn.cursor()
         result = cursor.execute(
-            'SELECT * from transactions'
+            'SELECT * from state_changes'
         )
         return result.fetchall()
 
@@ -135,7 +130,7 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
     def last_identifier(self):
         cursor = self.conn.cursor()
         result = cursor.execute(
-            'SELECT seq FROM sqlite_sequence WHERE name="transactions"'
+            'SELECT seq FROM sqlite_sequence WHERE name="state_changes"'
         )
         result = result.fetchall()
         if result != list():
@@ -215,7 +210,7 @@ class StateChangeLog(object):
         """ Returns a list of tuples of identifiers and state changes"""
         return [
             (res[0], self.serializer.deserialize(res[1]))
-            for res in self.storage.get_all_transactions()
+            for res in self.storage.get_all_state_changes()
         ]
 
     def snapshot(self, state):
