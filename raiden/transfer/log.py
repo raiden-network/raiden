@@ -3,8 +3,6 @@ import pickle
 import sqlite3
 from abc import ABCMeta, abstractmethod
 
-from raiden.utils import create_file_iff_not_existing
-
 
 # TODO:
 # - snapshots should be used to reduce the log file size
@@ -144,36 +142,6 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         self.conn.close()
 
 
-class StateChangeLogFileBackend(StateChangeLogStorageBackend):
-    """This is just an example for having a file backend. Not actually implemented"""
-
-    def __init__(self, filepath):
-        self.filepath = filepath
-        self.file = create_file_iff_not_existing(
-            self.filepath,
-            return_it=True,
-            mode='r+',
-            buffering=False
-        )
-        self._synced = False  #: True when the existing log is read to the end
-
-    def write_transaction(self, data):
-        pass
-
-    def write_state_snapshot(self, identifier, data):
-        pass
-
-    def read(self):
-        pass
-
-    def last_identifier(self):
-        pass
-
-    def __del__(self):
-        self.file.flush()
-        self.file.close()
-
-
 class StateChangeLog(object):
 
     def __init__(
@@ -181,13 +149,13 @@ class StateChangeLog(object):
             storage_instance,
             serializer_instance=PickleTransactionSerializer()):
 
-        if not issubclass(type(serializer_instance), StateChangeLogSerializer):
+        if not isinstance(serializer_instance, StateChangeLogSerializer):
             raise ValueError(
                 'serializer_instance must follow the StateChangeLogSerializer interface'
             )
         self.serializer = serializer_instance
 
-        if not issubclass(type(storage_instance), StateChangeLogStorageBackend):
+        if not isinstance(storage_instance, StateChangeLogStorageBackend):
             raise ValueError(
                 'storage_instance must follow the StateChangeLogStorageBackend interface'
             )
@@ -216,20 +184,3 @@ class StateChangeLog(object):
     def snapshot(self, state):
         serialized_data = self.serializer.serialize(state)
         self.storage.write_state_snapshot(self.last_identifier(), serialized_data)
-
-
-def unapplied_state_changes(transaction_log, snapshot):
-    """ Return a list of the operations that are in the log file but are not
-    applied in the snapshot.
-    """
-    latest_identifier = snapshot.identifier
-    previous_identifier = latest_identifier - 1
-
-    # skip the operations from the log that are applied in the snapshot
-    # this assumes the ides are serial
-    if previous_identifier > 1:
-        for transaction in transaction_log:
-            if transaction.identifier >= previous_identifier:
-                break
-
-    return list(transaction_log)
