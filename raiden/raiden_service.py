@@ -71,8 +71,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
 )
 from raiden.transfer.log import (
-    TransactionLog,
-    TransactionLogSQLiteBackend,
+    StateChangeLog,
+    StateChangeLogSQLiteBackend,
 )
 from raiden.channel import ChannelEndState, ChannelExternalState
 from raiden.exceptions import (
@@ -188,8 +188,8 @@ class RaidenService(object):
         else:
             self.healthcheck = None
 
-        self.transaction_log = TransactionLog(
-            storage_class=TransactionLogSQLiteBackend(
+        self.transaction_log = StateChangeLog(
+            storage_instance=StateChangeLogSQLiteBackend(
                 database_path=config['database_path']
             )
         )
