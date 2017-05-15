@@ -79,7 +79,7 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         )
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS state_snapshot ('
-            'statechange_id integer, data binary, '
+            'identifier integer primary key, statechange_id integer, data binary, '
             'FOREIGN KEY(statechange_id) REFERENCES state_changes(id)'
             ')'
         )
@@ -93,16 +93,26 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         )
         self.conn.commit()
 
-    def write_state_snapshot(self, identifier, data):
+    def write_state_snapshot(self, statechange_id, data):
         # TODO: Snapshotting is not yet implemented. This is just skeleton code
         # Issue: https://github.com/raiden-network/raiden/issues/593
         # This skeleton code assumes we only keep a single snapshot and overwrite it each time.
         cursor = self.conn.cursor()
         cursor.execute(
-            'INSERT OR REPLACE INTO state_snapshot(statechange_id, data) VALUES(?,?)',
-            (identifier, data)
+            'INSERT OR REPLACE INTO state_snapshot(identifier, statechange_id, data) VALUES(?,?,?)',
+            (1, statechange_id, data)
         )
         self.conn.commit()
+
+    def get_state_snapshot(self):
+        """ Return the last state snapshot as a tuple of (state_change_id, data)"""
+        cursor = self.conn.cursor()
+        result = cursor.execute('SELECT * from state_snapshot')
+        result = result.fetchall()
+        if result == list():
+            return None
+        assert len(result) == 1
+        return (result[0][1], result[0][2])
 
     def get_transaction_by_id(self, identifier):
         cursor = self.conn.cursor()
