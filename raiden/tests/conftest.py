@@ -70,6 +70,7 @@ from raiden.tests.fixtures import (
     raiden_udp_ports,
     rest_api_port_number,
     database_paths,
+    in_memory_database,
 )
 
 __all__ = (
@@ -130,6 +131,7 @@ __all__ = (
     'raiden_udp_ports',
     'rest_api_port_number',
     'database_paths',
+    'in_memory_database',
 
     'pytest_addoption',
     'logging_level',

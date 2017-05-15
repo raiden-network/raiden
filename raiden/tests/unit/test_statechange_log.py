@@ -8,10 +8,13 @@ from raiden.transfer.state_change import Block, ActionRouteChange
 from raiden.transfer.state import RouteState
 
 
-def test_write_read_log(tmpdir):
+def test_write_read_log(tmpdir, in_memory_database):
+    database_path = ":memory:"
+    if not in_memory_database:
+        database_path = os.path.join(tmpdir.strpath, 'database.db')
     log = StateChangeLog(
         storage_instance=StateChangeLogSQLiteBackend(
-            database_path=os.path.join(tmpdir.strpath, 'database.db')
+            database_path=database_path
         )
     )
 

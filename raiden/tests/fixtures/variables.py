@@ -242,10 +242,26 @@ def rest_api_port_number(port_generator):
 
 
 @pytest.fixture
-def database_paths(tmpdir, private_keys):
+def in_memory_database():
+    """A boolean value indicating whether the sqlite3 databases will be in memory
+    or in normal files. Defaults to True (in memory)."""
+    return True
+
+
+@pytest.fixture
+def database_paths(tmpdir, private_keys, in_memory_database):
     """ Sqlite database paths for each app.
     """
-    return [
-        os.path.join(tmpdir.strpath, 'transaction_log_{}.db'.format(position))
-        for position in range(len(private_keys))
-    ]
+    # According to http://www.sqlite.org/inmemorydb.html each memory connection will
+    # create a unique in-memory DB, which is exactly what we need in this case for
+    # each different Raiden app
+    if in_memory_database:
+        return [
+            ':memory:'
+            for position in range(len(private_keys))
+        ]
+    else:
+        return [
+            os.path.join(tmpdir.strpath, 'transaction_log_{}.db'.format(position))
+            for position in range(len(private_keys))
+        ]
