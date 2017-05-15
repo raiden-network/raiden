@@ -68,7 +68,8 @@ from raiden.tests.fixtures.variables import (
     blockchain_p2p_ports,
     raiden_udp_ports,
     rest_api_port_number,
-    database_paths
+    database_paths,
+    in_memory_database,
 )
 
 __all__ = (
@@ -129,4 +130,5 @@ __all__ = (
     'raiden_udp_ports',
     'rest_api_port_number',
     'database_paths',
+    'in_memory_database',
 )

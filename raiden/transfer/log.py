@@ -99,7 +99,8 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         # This skeleton code assumes we only keep a single snapshot and overwrite it each time.
         cursor = self.conn.cursor()
         cursor.execute(
-            'INSERT OR REPLACE INTO state_snapshot(identifier, statechange_id, data) VALUES(?,?,?)',
+            'INSERT OR REPLACE INTO state_snapshot('
+            'identifier, statechange_id, data) VALUES(?,?,?)',
             (1, statechange_id, data)
         )
         self.conn.commit()
