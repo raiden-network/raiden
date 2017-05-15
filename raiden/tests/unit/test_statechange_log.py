@@ -48,3 +48,10 @@ def test_write_read_log(tmpdir):
     assert result3.channel_address == factories.ADDR
     assert result3.secret == factories.UNIT_SECRET
     assert result3.receiver == factories.HOP1
+
+    # Make sure we can only have a single state snapshot
+    assert log.storage.get_state_snapshot() is None
+    log.storage.write_state_snapshot(34, 'AAAA')
+    assert (34, 'AAAA') == log.storage.get_state_snapshot()
+    log.storage.write_state_snapshot(56, 'BBBB')
+    assert (56, 'BBBB') == log.storage.get_state_snapshot()
