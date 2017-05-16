@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import gevent
 from gevent.lock import Semaphore
+from gevent.event import AsyncResult
 
 from ethereum import slogging
 
@@ -9,6 +10,7 @@ from raiden.utils import pex
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
+    CHANNEL_STATE_CLOSED,
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -110,14 +112,29 @@ class ConnectionManager(object):
                     funding
                 )
 
-    def leave(self, wait_for_settle=True, timeout=30):
+    def leave_async(self, wait_for_settle=True, timeout=240):
+        """ Async version of `leave()`
+        Args:
+            wait_for_settle (bool): block until successful settlement?
+            timeout (float): maximum time to wait in seconds
         """
-        Leave the token network.
+        leave_result = AsyncResult()
+        gevent.spawn(
+            self.leave,
+            wait_for_settle=wait_for_settle,
+            timeout=timeout,
+            async_result=leave_result
+        )
+        return leave_result
+
+    def leave(self, wait_for_settle=True, timeout=30, async_result=AsyncResult()):
+        """ Leave the token network.
         This implies closing all open channels and optionally waiting for
         settlement.
         Args:
             wait_for_settle (bool): block until successful settlement?
-            timeout (float): maximum time to wait
+            timeout (float): maximum time to wait in seconds
+            async_result (gevent.event.AsyncResult): for async usage.
         """
         with self.lock:
             self.initial_channel_target = 0
@@ -127,8 +144,8 @@ class ConnectionManager(object):
                 c.partner_address) for c in open_channels]
             for channel in channel_specs:
                 try:
-                    self.api.close(*channel),
-                except RuntimeError:
+                    self.api.close(*channel)
+                except:
                     # if the error wasn't that the channel was already closed: raise
                     if channel[1] in [c.partner_address for c in self.open_channels]:
                         raise
@@ -136,25 +153,34 @@ class ConnectionManager(object):
             # wait for events to propagate
             gevent.sleep(self.raiden.alarm.wait_time)
 
-            if wait_for_settle:
-                try:
-                    with gevent.timeout.Timeout(timeout):
-                        while any(c.state != CHANNEL_STATE_SETTLED for c in open_channels):
-                            # wait for events to propagate
-                            gevent.sleep(self.raiden.alarm.wait_time)
+        if wait_for_settle:
+            try:
+                with gevent.timeout.Timeout(timeout):
+                    while any(c.state != CHANNEL_STATE_SETTLED for c in open_channels):
+                        # wait for events to propagate
+                        gevent.sleep(self.raiden.alarm.wait_time)
 
-                except gevent.timeout.Timeout:
-                    log.debug(
-                        'timeout while waiting for settlement',
-                        unsettled=sum(
-                            1 for channel in open_channels if
-                            channel.state != CHANNEL_STATE_SETTLED
-                        ),
-                        settled=sum(
-                            1 for channel in open_channels if
-                            channel.state == CHANNEL_STATE_SETTLED
-                        )
+            except gevent.timeout.Timeout:
+                async_result.set(False)
+                log.debug(
+                    'timeout while waiting for settlement',
+                    unsettled=sum(
+                        1 for channel in open_channels if
+                        channel.state != CHANNEL_STATE_SETTLED
+                    ),
+                    settled=sum(
+                        1 for channel in open_channels if
+                        channel.state == CHANNEL_STATE_SETTLED
                     )
+                )
+            else:
+                async_result.set(True)
+        # if we don't care for settlement
+        else:
+            if len(self.open_channels) == 0:
+                async_result.set(True)
+            else:
+                async_result.set(False)
 
     def join_channel(self, partner_address, partner_deposit):
         """Will be called, when we were selected as channel partner by another
