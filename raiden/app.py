@@ -56,7 +56,14 @@ class App(object):  # pylint: disable=too-few-public-methods
             pex(self.raiden.address),
         )
 
-    def stop(self):
+    def stop(self, graceful=False):
+        """Stop the raiden app.
+        Args:
+            graceful (bool): if True, also close and settle all channels before stopping
+        """
+        if graceful:
+            self.raiden.close_and_settle()
+
         self.raiden.stop()
 
         # The transport must be stopped after the protocol. The protocol can be
