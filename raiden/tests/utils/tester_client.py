@@ -602,7 +602,9 @@ class NettingChannelTesterMock(object):
         return closed
 
     def closing_address(self):
-        return address_decoder(self.proxy.closingAddress())
+        closing_address = self.proxy.closingAddress()
+        if closing_address is not None:
+            return address_decoder(closing_address)
 
     def settled(self):
         settled = self.proxy.settled()
