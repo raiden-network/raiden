@@ -316,3 +316,21 @@ class ConnectionManager(object):
             self.api.get_channel_list(token_address=self.token_address)
             if channel.state == CHANNEL_STATE_OPENED
         ]
+
+    @property
+    def min_settle_blocks(self):
+        """Returns the minimum necessary waiting time to settle all channels.
+        """
+        channels = self.api.get_channel_list(
+            token_address=self.token_address
+        )
+        timeouts = [0]
+        current_block = self.raiden.get_block_number()
+        for channel in channels:
+            if channel.state == CHANNEL_STATE_CLOSED:
+                since_closed = current_block - channel.external_state._closed_block
+            else:
+                since_closed = 0
+            timeouts.append(channel.settle_timeout - since_closed)
+
+        return max(timeouts)
