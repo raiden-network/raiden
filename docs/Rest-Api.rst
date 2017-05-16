@@ -504,15 +504,12 @@ with payload::
 
     {
         "funds": 1337,
-        "initial_channel_target": 4,
-        "joinable_funds_target": 0.4
     }
 
 
 Example Response
 ^^^^^^^^^^^^^^^^
 ``200 OK``
-::
 
 Possible Responses
 ^^^^^^^^^^^^^^^^^^
@@ -541,17 +538,10 @@ Example Request
 
 ``DELETE /api/v1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
-with payload::
-
-    {
-        "wait_for_settlement": true,
-        "timeout": 40
-    }
 
 Example Response
 ^^^^^^^^^^^^^^^^
 ``200 OK``
-::
 
 Possible Responses
 ^^^^^^^^^^^^^^^^^^

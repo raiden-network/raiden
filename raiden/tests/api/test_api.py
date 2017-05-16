@@ -755,7 +755,7 @@ def test_api_transfers(
     assert response == transfer
 
 
-def test_connect_token_network(
+def test_connect_and_leave_token_network(
         api_backend,
         api_test_context,
         api_raiden_service):
@@ -799,3 +799,25 @@ def test_connect_token_network(
     assert channels[0]['balance'] == expected_balance
     assert channels[1]['balance'] == expected_balance
     assert channels[2]['balance'] == expected_balance
+    assert channels[0]['state'] == 'opened'
+    assert channels[1]['state'] == 'opened'
+    assert channels[2]['state'] == 'opened'
+
+    # Let's leave the token network
+    request = grequests.delete(
+        api_url_for(api_backend, 'connectionsresource', token_address=token_address),
+    )
+    response = request.send().response
+    assert_proper_response(response)
+
+    # check that all channels were settled after calling `leave`
+    request = grequests.get(
+        api_url_for(api_backend, 'channelsresource')
+    )
+    response = request.send().response
+    assert_proper_response(response)
+
+    channels = decode_response(response)
+    assert channels[0]['state'] == 'settled'
+    assert channels[1]['state'] == 'settled'
+    assert channels[2]['state'] == 'settled'
