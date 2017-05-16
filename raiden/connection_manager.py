@@ -154,9 +154,14 @@ class ConnectionManager(object):
             gevent.sleep(self.raiden.alarm.wait_time)
 
         if wait_for_settle:
+            not_settled_channels = [
+                channel for channel in
+                self.api.get_channel_list(token_address=self.token_address)
+                if channel.state != CHANNEL_STATE_SETTLED
+            ]
             try:
                 with gevent.timeout.Timeout(timeout):
-                    while any(c.state != CHANNEL_STATE_SETTLED for c in open_channels):
+                    while any(c.state != CHANNEL_STATE_SETTLED for c in not_settled_channels):
                         # wait for events to propagate
                         gevent.sleep(self.raiden.alarm.wait_time)
 
@@ -165,11 +170,11 @@ class ConnectionManager(object):
                 log.debug(
                     'timeout while waiting for settlement',
                     unsettled=sum(
-                        1 for channel in open_channels if
+                        1 for channel in not_settled_channels if
                         channel.state != CHANNEL_STATE_SETTLED
                     ),
                     settled=sum(
-                        1 for channel in open_channels if
+                        1 for channel in not_settled_channels if
                         channel.state == CHANNEL_STATE_SETTLED
                     )
                 )
@@ -329,6 +334,8 @@ class ConnectionManager(object):
         for channel in channels:
             if channel.state == CHANNEL_STATE_CLOSED:
                 since_closed = current_block - channel.external_state._closed_block
+            elif channel.state != CHANNEL_STATE_SETTLED:
+                since_closed = 0
             else:
                 since_closed = 0
             timeouts.append(channel.settle_timeout - since_closed)
