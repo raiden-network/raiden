@@ -207,7 +207,7 @@ def test_api_open_close_and_settle_channel(
     expected_response['channel_address'] = response['channel_address']
     assert response == expected_response
 
-    # let's the close the channel
+    # let's close the channel
     request = grequests.patch(
         api_url_for(
             api_backend,
@@ -753,3 +753,49 @@ def test_api_transfers(
     assert_proper_response(response)
     response = decode_response(response)
     assert response == transfer
+
+
+def test_connect_token_network(
+        api_backend,
+        api_test_context,
+        api_raiden_service):
+
+    # first check we don't have any open channels
+    request = grequests.get(
+        api_url_for(api_backend, 'channelsresource')
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    channels = decode_response(response)
+    assert len(channels) == 0
+    assert decode_response(response) == api_test_context.expect_channels()
+
+    funds = 100
+    initial_channel_target = 3
+    joinable_funds_target = 0.4
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    connect_data_obj = {
+        'funds': funds,
+    }
+    request = grequests.put(
+        api_url_for(api_backend, 'connectionsresource', token_address=token_address),
+        json=connect_data_obj,
+    )
+    response = request.send().response
+    assert_proper_response(response)
+
+    # check that channels got created
+    request = grequests.get(
+        api_url_for(api_backend, 'channelsresource')
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    channels = decode_response(response)
+    # There should be three channels according to the default initial_channel_target
+    assert len(channels) == 3
+    assert decode_response(response) == api_test_context.expect_channels()
+
+    expected_balance = int((funds * joinable_funds_target) / initial_channel_target)
+    assert channels[0]['balance'] == expected_balance
+    assert channels[1]['balance'] == expected_balance
+    assert channels[2]['balance'] == expected_balance
