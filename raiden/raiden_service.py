@@ -35,6 +35,7 @@ from raiden.transfer.state_change import (
 from raiden.transfer.state import (
     RoutesState,
     CHANNEL_STATE_OPENED,
+    CHANNEL_STATE_SETTLED,
 )
 from raiden.transfer.mediated_transfer import (
     initiator,
@@ -541,9 +542,67 @@ class RaidenService(object):
             raise InvalidAddress('token is not registered.')
         return manager
 
+    def leave_all_token_networks_async(self):
+        token_addresses = self.channelgraphs.keys()
+        leave_results = []
+        for token_address in token_addresses:
+            try:
+                connection_manager = self.connection_manager_for_token(token_address)
+            except InvalidAddress:
+                pass
+            leave_results.append(connection_manager.leave_async())
+        return leave_results
+
+    def close_and_settle(self):
+        log.info('raiden will close and settle all channels now')
+
+        connection_managers = [
+            self.connection_manager_for_token(token_address) for
+            token_address in self.channelgraphs.keys()
+        ]
+
+        def blocks_to_wait():
+            return max(
+                connection_manager.min_settle_blocks
+                for connection_manager in connection_managers
+            )
+
+        all_channels = sum(
+            [connection_manager.open_channels for connection_manager in connection_managers], []
+        )
+
+        leave_greenlets = self.leave_all_token_networks_async()
+        # using the un-cached block number here
+        last_block = self.chain.block_number()
+
+        earliest_settlement = last_block + blocks_to_wait()
+
+        current_block = last_block
+        while current_block < earliest_settlement:
+            gevent.sleep(self.alarm.wait_time)
+            current_block = self.chain.block_number()
+            log.info(
+                'waiting at least %s more blocks for settlement (%s channels not yet settled)' % (
+                    blocks_to_wait(),
+                    sum(
+                        1 for channel in all_channels
+                        if not channel.state == CHANNEL_STATE_SETTLED
+                    )
+                )
+            )
+
+        gevent.wait(leave_greenlets)
+        if any(channel.state != CHANNEL_STATE_SETTLED for channel in all_channels):
+            log.error(
+                'Some channels were not settled!',
+                channels=[
+                    pex(channel.channel_address) for channel in all_channels
+                    if channel.state != CHANNEL_STATE_SETTLED
+                ]
+            )
+
     def stop(self):
         wait_for = [self.alarm]
-
         wait_for.extend(self.greenlet_task_dispatcher.stop())
 
         self.alarm.stop_async()
