@@ -17,6 +17,8 @@ log = slogging.getLogger(__name__)
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('cached_genesis', [False])
 @pytest.mark.parametrize('register_tokens', [True, False])
+@pytest.mark.parametrize('settle_timeout', [6])
+@pytest.mark.parametrize('reveal_timeout', [3])
 def test_participant_selection(
     raiden_network,
     token_addresses,
