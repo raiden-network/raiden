@@ -5,8 +5,73 @@ from ethereum import slogging
 
 from raiden.api.python import RaidenAPI
 from raiden.tests.utils.blockchain import wait_until_block
+from raiden.transfer.state import (
+    CHANNEL_STATE_SETTLED,
+)
 
 log = slogging.getLogger(__name__)
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.parametrize('settle_timeout', [6])
+@pytest.mark.parametrize('reveal_timeout', [3])
+def test_close_raiden_app_gracefully(
+    raiden_network,
+    token_addresses,
+    settle_timeout,
+    blockchain_type
+):
+    if blockchain_type == 'tester':
+        return
+    for app in raiden_network:
+        app.stop(graceful=True)
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.parametrize('settle_timeout', [6])
+@pytest.mark.parametrize('reveal_timeout', [3])
+def test_leaving(
+    raiden_network,
+    token_addresses,
+    blockchain_type
+):
+
+    token_address = token_addresses[0]
+    connection_managers = [
+        app.raiden.connection_manager_for_token(token_address) for app in raiden_network
+    ]
+
+    all_channels = sum(
+        (connection_manager.open_channels
+         for connection_manager in connection_managers),
+        []
+    )
+
+    leaving_async = sum([
+        app.raiden.leave_all_token_networks_async() for app in raiden_network[1:]
+    ], [])
+
+    with gevent.timeout.Timeout(30):
+        # tester needs manual block progress
+        if blockchain_type == 'tester':
+            for app in raiden_network:
+                connection_manager = app.raiden.connection_manager_for_token(token_address)
+                wait_blocks = connection_manager.min_settle_blocks
+                if wait_blocks > 0:
+                    wait_until_block(
+                        app.raiden.chain,
+                        app.raiden.chain.block_number() + wait_blocks
+                    )
+                    gevent.sleep(app.raiden.alarm.wait_time)
+
+    gevent.wait(leaving_async, timeout=50)
+    assert len(connection_managers[0].open_channels) == 0
+    assert all(channel.state == CHANNEL_STATE_SETTLED for channel in all_channels), [
+        channel.state for channel in all_channels]
 
 
 # TODO: add test scenarios for
