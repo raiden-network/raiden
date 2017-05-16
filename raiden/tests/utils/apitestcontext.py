@@ -285,7 +285,8 @@ class ApiTestContext():
 
         channels = self.get_all_channels_for_token(token_address)
         for channel in channels:
-            self.settle(token_address, channel.partner_state.address)
+            channel.external_state.netting_channel.state = CHANNEL_STATE_SETTLED
+            channel.external_state._settled_block = 1
 
     def get_all_channels_for_token(self, token_address):
         channels = []
