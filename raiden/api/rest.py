@@ -208,28 +208,22 @@ class RestAPI(object):
         result = self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
         return result
 
-    def leave(self, token_address, wait_for_settle=False, timeout=30):
-
-        raiden_service_result = self.raiden_api.leave_token_network(
-            token_address,
-            wait_for_settle,
-            timeout
-        )
-
-        result = self.connection_leave_schema.dumps(channel_to_api_dict(raiden_service_result))
-        return result
-
     def connect(self, token_address, funds, initial_channel_target=3, joinable_funds_target=.4):
 
-        raiden_service_result = self.raiden_api.connect_token_network(
+        self.raiden_api.connect_token_network(
             token_address,
             funds,
             initial_channel_target,
             joinable_funds_target
         )
 
-        result = self.connection_connect_schema.dumps(channel_to_api_dict(raiden_service_result))
-        return result
+    def leave(self, token_address, wait_for_settle=False, timeout=30):
+
+        self.raiden_api.leave_token_network(
+            token_address,
+            wait_for_settle,
+            timeout
+        )
 
     def get_channel_list(self, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)

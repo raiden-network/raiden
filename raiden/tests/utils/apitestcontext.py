@@ -264,3 +264,36 @@ class ApiTestContext():
     def transfer(self, token_address, amount, target, identifier):
         # Do nothing. These tests only test the api endpoints, so nothing to do here
         pass
+
+    def connect(
+            self,
+            token_address,
+            funds,
+            initial_channel_target=3,
+            joinable_funds_target=0.4):
+
+        funding = int((funds * joinable_funds_target) / initial_channel_target)
+        for i in range(0, initial_channel_target):
+            channel = self.make_channel(token_address=token_address, balance=funding)
+            self.channels.append(channel)
+
+    def leave(
+            self,
+            token_address,
+            wait_for_settle=True,
+            timeout=30):
+
+        channels = self.get_all_channels_for_token(token_address)
+        for channel in channels:
+            self.settle(token_address, channel.partner_state.address)
+
+    def get_all_channels_for_token(self, token_address):
+        channels = []
+        for channel in self.channels:
+            if (channel.token_address == token_address):
+                channels.append(channel)
+
+        if len(channels) > 0:
+            return channels
+        else:
+            raise ValueError("Could not find channel")

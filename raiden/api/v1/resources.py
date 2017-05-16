@@ -177,19 +177,21 @@ class TransferToTargetResource(BaseResource):
 
 class ConnectionsResource(BaseResource):
 
-    put_schema = ConnectionConnectSchema()
-    delete_schema = ConnectionsLeaveSchema()
+    put_schema = ConnectionConnectSchema(
+        exclude=('initial_channel_target', 'joinable_funds_target')
+    )
+    delete_schema = ConnectionsLeaveSchema(
+        exclude=('wait_for_settle', 'timeout')
+    )
 
     def __init__(self, **kwargs):
         super(ConnectionsResource, self).__init__(**kwargs)
 
     @use_kwargs(put_schema, locations=('json',))
-    def put(self, token_address, funds, initial_channel_target, joinable_funds_target):
+    def put(self, token_address, funds):
         return self.rest_api.connect(
             token_address=token_address,
             funds=funds,
-            initial_channel_target=initial_channel_target,
-            joinable_funds_target=joinable_funds_target,
         )
 
     @use_kwargs(delete_schema, locations=('json',))
