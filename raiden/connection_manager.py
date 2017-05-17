@@ -127,7 +127,7 @@ class ConnectionManager(object):
         )
         return leave_result
 
-    def leave(self, wait_for_settle=True, timeout=30, async_result=AsyncResult()):
+    def leave(self, wait_for_settle=True, timeout=30, async_result=None):
         """ Leave the token network.
         This implies closing all open channels and optionally waiting for
         settlement.
@@ -136,6 +136,8 @@ class ConnectionManager(object):
             timeout (float): maximum time to wait for settlement in seconds
             async_result (gevent.event.AsyncResult): for async usage.
         """
+        if async_result is None:
+            async_result = AsyncResult()
         with self.lock:
             self.initial_channel_target = 0
             open_channels = self.open_channels
@@ -145,8 +147,8 @@ class ConnectionManager(object):
             for channel in channel_specs:
                 try:
                     self.api.close(*channel)
+                # catch-all BUT: if the error wasn't that the channel was already closed: re-raise
                 except:
-                    # if the error wasn't that the channel was already closed: raise
                     if channel[1] in [c.partner_address for c in self.open_channels]:
                         raise
 
