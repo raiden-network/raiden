@@ -570,8 +570,10 @@ class RaidenService(object):
                 for connection_manager in connection_managers
             )
 
-        all_channels = sum(
-            [connection_manager.open_channels for connection_manager in connection_managers], []
+        all_channels = list(
+            itertools.chain.from_iterable(
+                [connection_manager.open_channels for connection_manager in connection_managers]
+            )
         )
 
         leave_greenlets = self.leave_all_token_networks_async()

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import pytest
 import gevent
+import itertools
+
 from ethereum import slogging
 
 from raiden.api.python import RaidenAPI
@@ -46,15 +48,17 @@ def test_leaving(
         app.raiden.connection_manager_for_token(token_address) for app in raiden_network
     ]
 
-    all_channels = sum(
-        (connection_manager.open_channels
-         for connection_manager in connection_managers),
-        []
+    all_channels = list(
+        itertools.chain.from_iterable(
+            connection_manager.open_channels for connection_manager in connection_managers
+        )
     )
 
-    leaving_async = sum([
-        app.raiden.leave_all_token_networks_async() for app in raiden_network[1:]
-    ], [])
+    leaving_async = list(
+        itertools.chain.from_iterable(
+            app.raiden.leave_all_token_networks_async() for app in raiden_network[1:]
+        )
+    )
 
     with gevent.timeout.Timeout(30):
         # tester needs manual block progress
