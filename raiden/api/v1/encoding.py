@@ -21,7 +21,13 @@ from raiden.api.objects import (
     PartnersPerToken,
     PartnersPerTokenList
 )
-from raiden.settings import DEFAULT_SETTLE_TIMEOUT
+from raiden.settings import (
+    DEFAULT_SETTLE_TIMEOUT,
+    DEFAULT_REVEAL_TIMEOUT,
+    DEFAULT_JOINABLE_FUNDS_TARGET,
+    DEFAULT_INITIAL_CHANNEL_TARGET,
+    DEFAULT_WAIT_FOR_SETTLE,
+)
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
@@ -227,11 +233,11 @@ class TransferSchema(BaseSchema):
         decoding_class = dict
 
 
-class ConnectionConnectSchema(BaseSchema):
+class ConnectionsConnectSchema(BaseSchema):
     token_address = AddressField()
     funds = fields.Integer()
-    initial_channel_target = fields.Integer()
-    joinable_funds_target = fields.Decimal()
+    initial_channel_target = fields.Integer(missing=DEFAULT_INITIAL_CHANNEL_TARGET)
+    joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET)
 
     class Meta:
         strict = True
@@ -240,8 +246,8 @@ class ConnectionConnectSchema(BaseSchema):
 
 class ConnectionsLeaveSchema(BaseSchema):
     token_address = AddressField()
-    wait_for_settle = fields.Bool()
-    timeout = fields.Integer()
+    wait_for_settle = fields.Bool(missing=DEFAULT_WAIT_FOR_SETTLE)
+    timeout = fields.Integer(missing=DEFAULT_REVEAL_TIMEOUT)
 
     class Meta:
         strict = True

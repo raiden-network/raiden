@@ -15,6 +15,10 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
+from raiden.settings import (
+    DEFAULT_JOINABLE_FUNDS_TARGET,
+    DEFAULT_INITIAL_CHANNEL_TARGET,
+)
 
 
 def assert_proper_response(response):
@@ -771,8 +775,8 @@ def test_connect_and_leave_token_network(
     assert decode_response(response) == api_test_context.expect_channels()
 
     funds = 100
-    initial_channel_target = 3
-    joinable_funds_target = 0.4
+    initial_channel_target = DEFAULT_INITIAL_CHANNEL_TARGET
+    joinable_funds_target = DEFAULT_JOINABLE_FUNDS_TARGET
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     connect_data_obj = {
         'funds': funds,
@@ -792,7 +796,7 @@ def test_connect_and_leave_token_network(
     assert_proper_response(response)
     channels = decode_response(response)
     # There should be three channels according to the default initial_channel_target
-    assert len(channels) == 3
+    assert len(channels) == DEFAULT_INITIAL_CHANNEL_TARGET
     assert decode_response(response) == api_test_context.expect_channels()
 
     expected_balance = int((funds * joinable_funds_target) / initial_channel_target)

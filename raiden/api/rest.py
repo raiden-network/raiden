@@ -17,8 +17,6 @@ from raiden.api.v1.encoding import (
     PartnersPerTokenListSchema,
     HexAddressConverter,
     TransferSchema,
-    ConnectionConnectSchema,
-    ConnectionsLeaveSchema,
 )
 from raiden.api.v1.resources import (
     create_blueprint,
@@ -166,8 +164,6 @@ class RestAPI(object):
         self.tokens_list_schema = TokensListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.transfer_schema = TransferSchema()
-        self.connection_connect_schema = ConnectionConnectSchema()
-        self.connection_leave_schema = ConnectionsLeaveSchema()
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
         raiden_service_result = self.raiden_api.open(
@@ -208,7 +204,12 @@ class RestAPI(object):
         result = self.channel_schema.dumps(channel_to_api_dict(raiden_service_result))
         return result
 
-    def connect(self, token_address, funds, initial_channel_target=3, joinable_funds_target=.4):
+    def connect(
+            self,
+            token_address,
+            funds,
+            initial_channel_target=None,
+            joinable_funds_target=None):
 
         self.raiden_api.connect_token_network(
             token_address,
@@ -217,7 +218,7 @@ class RestAPI(object):
             joinable_funds_target
         )
 
-    def leave(self, token_address, wait_for_settle=False, timeout=30):
+    def leave(self, token_address, wait_for_settle=None, timeout=None):
 
         self.raiden_api.leave_token_network(
             token_address,

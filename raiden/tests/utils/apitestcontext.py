@@ -269,8 +269,8 @@ class ApiTestContext():
             self,
             token_address,
             funds,
-            initial_channel_target=3,
-            joinable_funds_target=0.4):
+            initial_channel_target,
+            joinable_funds_target):
 
         funding = int((funds * joinable_funds_target) / initial_channel_target)
         for i in range(0, initial_channel_target):
@@ -289,10 +289,7 @@ class ApiTestContext():
             channel.external_state._settled_block = 1
 
     def get_all_channels_for_token(self, token_address):
-        channels = []
-        for channel in self.channels:
-            if (channel.token_address == token_address):
-                channels.append(channel)
+        channels = [channel for channel in self.channels if channel.token_address == token_address]
 
         if len(channels) > 0:
             return channels
