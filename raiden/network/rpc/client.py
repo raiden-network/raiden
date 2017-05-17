@@ -260,6 +260,32 @@ class BlockChainService(object):
     def block_number(self):
         return self.client.blocknumber()
 
+    def estimate_blocktime(self, oldest=256):
+        """Calculate a blocktime estimate based on some past blocks.
+        Args:
+            oldest (int): delta in block numbers to go back.
+        Return:
+            average block time (int) in seconds
+        """
+        last_block_number = self.block_number()
+        # around genesis block there is nothing to estimate
+        if last_block_number < 1:
+            return 15
+        # if there are less than `oldest` blocks available, start at block 1
+        if last_block_number < oldest:
+            interval = (last_block_number - 1) or 1
+        else:
+            interval = last_block_number - oldest
+        assert interval > 0
+        delta = (
+            int(self.get_block_header(last_block_number)['timestamp'], 16) -
+            int(self.get_block_header(last_block_number - interval)['timestamp'], 16)
+        )
+        return delta / interval
+
+    def get_block_header(self, block_number):
+        return self.client.call('eth_getBlockByNumber', block_number, False)
+
     def next_block(self):
         target_block_number = self.block_number() + 1
         current_block = target_block_number
