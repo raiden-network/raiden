@@ -550,6 +550,9 @@ class RaidenService(object):
                 connection_manager = self.connection_manager_for_token(token_address)
             except InvalidAddress:
                 pass
+            # TODO: estimate and set the `timeout` parameter in seconds
+            # based on connection_manager.min_settle_blocks and an average
+            # blocktime from the past
             leave_results.append(connection_manager.leave_async())
         return leave_results
 

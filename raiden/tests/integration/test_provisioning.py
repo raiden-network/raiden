@@ -23,6 +23,7 @@ def test_close_raiden_app_gracefully(
     settle_timeout,
     blockchain_type
 ):
+    # it's pretty tedious to get tester to mine during `app.stop`, so we just skip it
     if blockchain_type == 'tester':
         return
     for app in raiden_network:

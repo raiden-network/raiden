@@ -116,7 +116,7 @@ class ConnectionManager(object):
         """ Async version of `leave()`
         Args:
             wait_for_settle (bool): block until successful settlement?
-            timeout (float): maximum time to wait in seconds
+            timeout (float): maximum time to wait for settlement in seconds
         """
         leave_result = AsyncResult()
         gevent.spawn(
@@ -133,7 +133,7 @@ class ConnectionManager(object):
         settlement.
         Args:
             wait_for_settle (bool): block until successful settlement?
-            timeout (float): maximum time to wait in seconds
+            timeout (float): maximum time to wait for settlement in seconds
             async_result (gevent.event.AsyncResult): for async usage.
         """
         with self.lock:
@@ -169,7 +169,7 @@ class ConnectionManager(object):
                 async_result.set(False)
                 log.debug(
                     'timeout while waiting for settlement',
-                    unsettled=sum(
+                    not_settled=sum(
                         1 for channel in not_settled_channels if
                         channel.state != CHANNEL_STATE_SETTLED
                     ),
