@@ -503,7 +503,7 @@ Example Request
 with payload::
 
     {
-        "funds": 1337,
+        "funds": 1337
     }
 
 
