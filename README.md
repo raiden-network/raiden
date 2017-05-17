@@ -24,10 +24,10 @@ export PKG_CONFIG_PATH=/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig/
 
 These are the currently deployed contract addresses for the Ropsten testnet:
 
-* Netting Channel Library: [0x5208baa313256c0e703c96b06c896875b823cc11](https://testnet.etherscan.io/address/0x5208baa313256c0e703c96b06c896875b823cc11)
-* Channel Manager Library: [0x196da534e3860398f2d9c27cb93fb4bac69715eb](https://testnet.etherscan.io/address/0x196da534e3860398f2d9c27cb93fb4bac69715eb)
-* Registry Contract: [0x32c5dab9b099a5b6c0e626c1862c07b30f58d76a](https://testnet.etherscan.io/address/0x32c5dab9b099a5b6c0e626c1862c07b30f58d76a)
-* Discovery Contract: [0x79ab17cc105e820368e695dfa547604651d02cbb](https://testnet.etherscan.io/address/0x79ab17cc105e820368e695dfa547604651d02cbb)
+* Netting Channel Library: [0x5208baa313256c0e703c96b06c896875b823cc11](https://ropsten.etherscan.io/address/0x5208baa313256c0e703c96b06c896875b823cc11)
+* Channel Manager Library: [0x196da534e3860398f2d9c27cb93fb4bac69715eb](https://ropsten.etherscan.io/address/0x196da534e3860398f2d9c27cb93fb4bac69715eb)
+* Registry Contract: [0x32c5dab9b099a5b6c0e626c1862c07b30f58d76a](https://ropsten.etherscan.io/address/0x32c5dab9b099a5b6c0e626c1862c07b30f58d76a)
+* Discovery Contract: [0x79ab17cc105e820368e695dfa547604651d02cbb](https://ropsten.etherscan.io/address/0x79ab17cc105e820368e695dfa547604651d02cbb)
 
 ### Versions and releases
 
