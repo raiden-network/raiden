@@ -602,6 +602,9 @@ class NettingChannelTesterMock(object):
         return closed
 
     def closing_address(self):
+        """Returns the address of the participant that called close, or None if the channel is
+        not closed.
+        """
         closing_address = self.proxy.closingAddress()
         if closing_address is not None:
             return address_decoder(closing_address)
