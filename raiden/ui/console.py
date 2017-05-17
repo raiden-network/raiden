@@ -62,12 +62,6 @@ class Console(BaseService):
         else:
             SigINTHandler(self.interrupt)
 
-    def _stop_app(self):
-        try:
-            self.app.stop()
-        except gevent.GreenletExit:
-            pass
-
     def start(self):
         # start console service
         super(Console, self).start()

@@ -181,7 +181,7 @@ def cached_genesis(request, blockchain_type):
     # else: a test that is not creating channels
 
     for app in raiden_apps:
-        app.stop()
+        app.stop(graceful=False)
 
     # save the state from the last block into a genesis dict
     tester = blockchain_services[0].tester_state
