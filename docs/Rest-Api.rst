@@ -487,13 +487,13 @@ Connection Management
 Connecting to a token network
 ------------------------------
 
-You can automatically join a token network by making a ``PUT`` to the following endpoint along with a json payload
+You can automatically join a token network by making a ``PUT`` request to the following endpoint along with a json payload
 containing the connection details such as the funding you want to put into the network, the initial target for 
 amount of channels to create and the target for joinable funds.
 
 ``PUT /api/<version>/connection/<token_address>``
 
-The request will only return once the transfer either succeeded or failed. A transfer can fail due to a lock's expiration.
+The request will only return once the transfer either succeeded or failed. A transfer can fail due to the expiration of a lock.
 
 Example Request
 ^^^^^^^^^^^^^^^
@@ -526,12 +526,12 @@ Possible Responses
 Leaving a token network
 -----------------------
 
-You can leave a token network by making a ``DELETE`` to the following endpoint along with a json payload containing
+You can leave a token network by making a ``DELETE`` request to the following endpoint along with a json payload containing
 details about the way you want to leave the network. For instance if you want to wait for settlement and the timeout period.
 
 ``DELETE /api/<version>/connection/<token_address>``
 
-The request will only return once the transfer either succeeded or failed. A transfer can fail due to a lock's expiration.
+The request will only return once the transfer either succeeded or failed. A transfer can fail due to the expiration of a lock.
 
 Example Request
 ^^^^^^^^^^^^^^^
@@ -561,12 +561,12 @@ Transfers
 Initiating a Transfer
 ---------------------
 
-You can create a new transfer by making a ``POST`` to the following endpoint along with a json payload containing
+You can create a new transfer by making a ``POST`` request to the following endpoint along with a json payload containing
 the transfer details such as amount and identifier. Identifier is optional.
 
 ``POST /api/<version>/transfers/<token_address>/<target_address>``
 
-The request will only return once the transfer either succeeded or failed. A transfer can fail due to a lock's expiration.
+The request will only return once the transfer either succeeded or failed. A transfer can fail due to the expiration of a lock.
 
 Example Request
 ^^^^^^^^^^^^^^^
