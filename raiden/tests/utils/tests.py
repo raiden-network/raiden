@@ -22,6 +22,14 @@ def get_test_contract_path(contract_name):
     return os.path.realpath(contract_path)
 
 
+def get_relative_contract(relative_to, contract_name):
+    contract_path = os.path.join(
+        os.path.dirname(os.path.realpath(relative_to)),
+        contract_name
+    )
+    return contract_path
+
+
 def cleanup_tasks():
     tasks = [
         running_task

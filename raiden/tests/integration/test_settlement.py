@@ -16,10 +16,31 @@ from raiden.tests.utils.transfer import (
     pending_mediated_transfer,
     claim_lock,
 )
+from raiden.transfer.mediated_transfer.state_change import (
+    ContractReceiveClosed,
+    ContractReceiveWithdraw,
+    ContractReceiveSettled,
+    ReceiveSecretReveal,
+)
+from raiden.transfer.state_change import Block
 from raiden.utils import sha3, privatekey_to_address
 
 # pylint: disable=too-many-locals,too-many-statements
 slogging.configure(':DEBUG')
+
+
+def assert_secretreveal_or_withdraw(state_change, secret, channel_address, raiden_address):
+    if isinstance(state_change, ReceiveSecretReveal):
+        assert state_change.secret == secret
+        assert state_change.sender == raiden_address
+    elif isinstance(state_change, ContractReceiveWithdraw):
+        assert state_change.channel_address == channel_address
+        assert state_change.secret == secret
+        assert state_change.receiver == raiden_address
+    else:
+        raise ValueError(
+            '{} is neither ReceiveSecretReveal or ContractReceiveWithdraw'.format(state_change)
+        )
 
 
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
@@ -147,17 +168,41 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert token.balance_of(address0) == alice_netted_balance
     assert token.balance_of(address1) == bob_netted_balance
 
+    # Now let's query the WAL to see if the state changes were logged as expected
+    state_changes = [
+        change[1] for change in alice_app.raiden.transaction_log.get_all_state_changes()
+        if not isinstance(change[1], Block)
+    ]
+
+    state_change1 = state_changes[0]
+    state_change2 = state_changes[1]
+    state_change3 = state_changes[2]
+    state_change4 = state_changes[3]
+
+    assert(isinstance(state_change1, ContractReceiveClosed))
+    assert state_change1.channel_address == nettingaddress0
+    assert state_change1.closing_address == bob_app.raiden.address
+    assert state_change1.block_number == alice_bob_channel.external_state.closed_block
+
+    # Can't be sure of the order in which we encounter the SecretReveal and the withdraw
+    assert_secretreveal_or_withdraw(state_change2, secret, nettingaddress0, bob_app.raiden.address)
+    assert_secretreveal_or_withdraw(state_change3, secret, nettingaddress0, bob_app.raiden.address)
+
+    assert(isinstance(state_change4, ContractReceiveSettled))
+    assert state_change4.channel_address == nettingaddress0
+    assert state_change4.block_number == bob_alice_channel.external_state.settled_block
+
 
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 # TODO: Need to expose the netted value to use a different blockchain_type
 @pytest.mark.parametrize('blockchain_type', ['mock'])
-def test_settled_lock(tokens_addresses, raiden_network, settle_timeout, reveal_timeout):
+def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_timeout):
     """ Any transfer following a secret revealed must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
     """
-    token = tokens_addresses[0]
+    token = token_addresses[0]
     amount = 30
 
     app0, app1, app2, _ = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -220,7 +265,7 @@ def test_settled_lock(tokens_addresses, raiden_network, settle_timeout, reveal_t
 @pytest.mark.xfail(reason="test incomplete")
 @pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_start_end_attack(tokens_addresses, raiden_chain, deposit, reveal_timeout):
+def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout):
     """ An attacker can try to steal tokens from a hub or the last node in a
     path.
 
@@ -235,7 +280,7 @@ def test_start_end_attack(tokens_addresses, raiden_chain, deposit, reveal_timeou
     """
     amount = 30
 
-    token = tokens_addresses[0]
+    token = token_addresses[0]
     app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     # the attacker owns app0 and app2 and creates a transfer through app1
@@ -316,8 +361,8 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     channel1 = app1.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]
     privatekey0 = app0.raiden.private_key
     privatekey1 = app1.raiden.private_key
-    address0 = privatekey_to_address(privatekey0.private_key)
-    address1 = privatekey_to_address(privatekey1.private_key)
+    address0 = privatekey_to_address(privatekey0.secret)
+    address1 = privatekey_to_address(privatekey1.secret)
     token = app0.raiden.chain.token(channel0.token_address)
     initial_balance0 = token.balance_of(address0)
     initial_balance1 = token.balance_of(address1)

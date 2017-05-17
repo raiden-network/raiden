@@ -4,20 +4,19 @@ import os
 import pytest
 from ethereum import tester
 from ethereum.tester import TransactionFailed
-from secp256k1 import PrivateKey
+
+from coincurve import PrivateKey
 from pyethapp.jsonrpc import address_decoder
 
 from raiden.encoding import messages
-from raiden.utils import sha3, privatekey_to_address, get_project_root
 from raiden.encoding.format import compute_slices
-from raiden.encoding.signing import GLOBAL_CTX
-from raiden.tests.utils.tests import get_test_contract_path
+from raiden.utils import sha3, privatekey_to_address, get_project_root
+from raiden.tests.utils.tests import get_relative_contract
 from raiden.tests.utils.messages import (
     make_direct_transfer,
     make_mediated_transfer,
     make_refund_transfer,
 )
-
 
 VALID_LOCKSROOT = [
     sha3('WaldemarstrWaldemarstrWaldemarst'),
@@ -50,7 +49,7 @@ def deploy_decoder_tester(tester_state, tester_nettingchannel_library_address):
 
     decoder = tester_state.abi_contract(
         None,
-        path=get_test_contract_path('DecoderTester.sol'),
+        path=get_relative_contract(__file__, 'DecoderTester.sol'),
         language='solidity',
         libraries={'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex')},
         extra_args=raiden_remap,
@@ -83,7 +82,7 @@ def test_decode_direct_transfer(
         transferred_amount=transferred_amount,
         locksroot=locksroot,
     )
-    direct_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    direct_transfer.sign(PrivateKey(privatekey0), address0)
 
     assert_decoder_results(direct_transfer, decoder)
 
@@ -118,8 +117,7 @@ def test_decode_mediated_transfer(
         locksroot=locksroot,
     )
 
-    mediated_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
-
+    mediated_transfer.sign(PrivateKey(privatekey0), address0)
     assert_decoder_results(mediated_transfer, decoder)
 
 
@@ -149,8 +147,7 @@ def test_decode_refund_transfer(
         transferred_amount=transferred_amount,
         locksroot=locksroot,
     )
-    refund_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
-
+    refund_transfer.sign(PrivateKey(privatekey0), address0)
     assert_decoder_results(refund_transfer, decoder)
 
 
@@ -161,7 +158,7 @@ def test_decode_tampered_direct_transfer(tester_state, tester_nettingchannel_lib
     decoder = deploy_decoder_tester(tester_state, tester_nettingchannel_library_address)
 
     direct_transfer = make_direct_transfer()
-    direct_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    direct_transfer.sign(PrivateKey(privatekey0), address0)
 
     message_encoded = direct_transfer.encode()
     transfer_raw, _ = decoder.getTransferRawAddress(message_encoded)
@@ -192,7 +189,7 @@ def test_decode_tampered_mediated_transfer(tester_state, tester_nettingchannel_l
 
     mediated_transfer = make_mediated_transfer()
 
-    mediated_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    mediated_transfer.sign(PrivateKey(privatekey0), address0)
 
     message_encoded = mediated_transfer.encode()
     transfer_raw, _ = decoder.getTransferRawAddress(message_encoded)
@@ -222,7 +219,7 @@ def test_decode_tampered_refund_transfer(tester_state, tester_nettingchannel_lib
     decoder = deploy_decoder_tester(tester_state, tester_nettingchannel_library_address)
 
     refund_transfer = make_refund_transfer()
-    refund_transfer.sign(PrivateKey(privatekey0, ctx=GLOBAL_CTX, raw=True), address0)
+    refund_transfer.sign(PrivateKey(privatekey0), address0)
 
     message_encoded = refund_transfer.encode()
     transfer_raw, _ = decoder.getTransferRawAddress(message_encoded)

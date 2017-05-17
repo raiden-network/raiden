@@ -4,6 +4,7 @@ from itertools import count
 
 import pytest
 import psutil
+import os
 from ethereum.utils import sha3
 
 from raiden.settings import (
@@ -24,7 +25,7 @@ def settle_timeout(blockchain_type):
     too many blocks to be mined is very costly time-wise.
     """
     if blockchain_type == 'geth':
-        return 10
+        return 16
     else:
         return 400
 
@@ -37,7 +38,7 @@ def reveal_timeout(blockchain_type):
     too many blocks to be mined is very costly time-wise.
     """
     if blockchain_type == 'geth':
-        return 5
+        return 4
     else:
         return 20
 
@@ -238,3 +239,29 @@ def raiden_udp_ports(number_of_nodes, port_generator):
 def rest_api_port_number(port_generator):
     """ Unique port for the REST API server. """
     return next(port_generator)
+
+
+@pytest.fixture
+def in_memory_database():
+    """A boolean value indicating whether the sqlite3 databases will be in memory
+    or in normal files. Defaults to True (in memory)."""
+    return True
+
+
+@pytest.fixture
+def database_paths(tmpdir, private_keys, in_memory_database):
+    """ Sqlite database paths for each app.
+    """
+    # According to http://www.sqlite.org/inmemorydb.html each memory connection will
+    # create a unique in-memory DB, which is exactly what we need in this case for
+    # each different Raiden app
+    if in_memory_database:
+        return [
+            ':memory:'
+            for position in range(len(private_keys))
+        ]
+    else:
+        return [
+            os.path.join(tmpdir.strpath, 'transaction_log_{}.db'.format(position))
+            for position in range(len(private_keys))
+        ]

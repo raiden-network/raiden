@@ -9,15 +9,12 @@ import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
 from ethereum.utils import encode_hex
-from secp256k1 import PrivateKey
+
+from coincurve import PrivateKey
 
 from raiden.constants import UINT64_MAX
 from raiden.blockchain.events import (
-    ALL_EVENTS,
     get_relevant_proxies,
-    get_all_channel_manager_events,
-    get_all_registry_events,
-    get_all_netting_channel_events,
     PyethappBlockchainEvents,
 )
 from raiden.tasks import (
@@ -26,10 +23,8 @@ from raiden.tasks import (
 )
 from raiden.token_swap import (
     GreenletTasksDispatcher,
-    MakerTokenSwapTask,
     SwapKey,
     TakerTokenSwapTask,
-    TokenSwap,
 )
 from raiden.transfer.architecture import (
     StateManager,
@@ -75,16 +70,16 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
+from raiden.transfer.log import (
+    StateChangeLog,
+    StateChangeLogSQLiteBackend,
+)
 from raiden.channel import ChannelEndState, ChannelExternalState
 from raiden.exceptions import (
     UnknownAddress,
     TransferWhenClosed,
     UnknownTokenAddress,
-    NoPathError,
     InvalidAddress,
-    InvalidAmount,
-    InvalidState,
-    InsufficientFunds,
 )
 from raiden.network.channelgraph import (
     channel_to_routestate,
@@ -100,12 +95,12 @@ from raiden.messages import (
     SignedMessage,
 )
 from raiden.network.protocol import RaidenProtocol
+from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
     sha3,
-    GLOBAL_CTX,
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -144,20 +139,16 @@ class RaidenService(object):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
-        private_key = PrivateKey(
-            private_key_bin,
-            ctx=GLOBAL_CTX,
-            raw=True,
-        )
-        pubkey = private_key.pubkey.serialize(compressed=False)
+        private_key = PrivateKey(private_key_bin)
+        pubkey = private_key.public_key.format(compressed=False)
 
         self.channelgraphs = dict()
         self.manager_token = dict()
         self.swapkeys_tokenswaps = dict()
         self.swapkeys_greenlettasks = dict()
 
-        self.identifier_statemanager = defaultdict(list)
-        self.identifier_result = defaultdict(list)
+        self.identifier_to_statemanagers = defaultdict(list)
+        self.identifier_to_results = defaultdict(list)
 
         # This is a map from a hashlock to a list of channels, the same
         # hashlock can be used in more than one token (for tokenswaps), a
@@ -197,7 +188,11 @@ class RaidenService(object):
         else:
             self.healthcheck = None
 
-        self.api = RaidenAPI(self)
+        self.transaction_log = StateChangeLog(
+            storage_instance=StateChangeLogSQLiteBackend(
+                database_path=config['database_path']
+            )
+        )
         self.alarm = alarm
         self.message_handler = message_handler
         self.state_machine_event_handler = state_machine_event_handler
@@ -205,6 +200,8 @@ class RaidenService(object):
         self.greenlet_task_dispatcher = greenlet_task_dispatcher
 
         self.on_message = message_handler.on_message
+
+        self.tokens_connectionmanagers = dict()  # token_address: ConnectionManager
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -480,6 +477,12 @@ class RaidenService(object):
             self.manager_token[manager_address] = token_address
             self.channelgraphs[token_address] = graph
 
+            self.tokens_connectionmanagers[token_address] = ConnectionManager(
+                self,
+                token_address,
+                graph
+            )
+
     def register_channel_manager(self, manager_address):
         manager = self.chain.manager(manager_address)
         netting_channels = [
@@ -513,6 +516,12 @@ class RaidenService(object):
         self.manager_token[manager_address] = token_address
         self.channelgraphs[token_address] = graph
 
+        self.tokens_connectionmanagers[token_address] = ConnectionManager(
+            self,
+            token_address,
+            graph
+        )
+
     def register_netting_channel(self, token_address, channel_address):
         netting_channel = self.chain.netting_channel(channel_address)
         self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
@@ -521,6 +530,15 @@ class RaidenService(object):
         detail = self.get_channel_details(token_address, netting_channel)
         graph = self.channelgraphs[token_address]
         graph.add_channel(detail, block_number)
+
+    def connection_manager_for_token(self, token_address):
+        if not isaddress(token_address):
+            raise InvalidAddress('token address is not valid.')
+        if token_address in self.tokens_connectionmanagers.keys():
+            manager = self.tokens_connectionmanagers[token_address]
+        else:
+            raise InvalidAddress('token is not registered.')
+        return manager
 
     def stop(self):
         wait_for = [self.alarm]
@@ -681,17 +699,13 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(initiator.state_transition, None)
-        all_events = state_manager.dispatch(init_initiator)
-
-        for event in all_events:
-            self.state_machine_event_handler.on_event(event)
-
+        self.state_machine_event_handler.log_and_dispatch(state_manager, init_initiator)
         async_result = AsyncResult()
 
         # TODO: implement the network timeout raiden.config['msg_timeout'] and
         # cancel the current transfer if it hapens (issue #374)
-        self.identifier_statemanager[identifier].append(state_manager)
-        self.identifier_result[identifier].append(async_result)
+        self.identifier_to_statemanagers[identifier].append(state_manager)
+        self.identifier_to_results[identifier].append(async_result)
 
         return async_result
 
@@ -732,12 +746,9 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(mediator.state_transition, None)
-        all_events = state_manager.dispatch(init_mediator)
+        self.state_machine_event_handler.log_and_dispatch(state_manager, init_mediator)
 
-        for event in all_events:
-            self.state_machine_event_handler.on_event(event)
-
-        self.identifier_statemanager[identifier].append(state_manager)
+        self.identifier_to_statemanagers[identifier].append(state_manager)
 
     def target_mediated_transfer(self, message):
         graph = self.channelgraphs[message.token]
@@ -756,505 +767,10 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(target_task.state_transition, None)
-        all_events = state_manager.dispatch(init_target)
-
-        for event in all_events:
-            self.state_machine_event_handler.on_event(event)
+        self.state_machine_event_handler.log_and_dispatch(state_manager, init_target)
 
         identifier = message.identifier
-        self.identifier_statemanager[identifier].append(state_manager)
-
-
-class RaidenAPI(object):
-    """ CLI interface. """
-
-    def __init__(self, raiden):
-        self.raiden = raiden
-
-    @property
-    def address(self):
-        return self.raiden.address
-
-    @property
-    def tokens(self):
-        """ Return a list of the tokens registered with the default registry. """
-        return self.raiden.chain.default_registry.token_addresses()
-
-    def get_balance(self, token_address, partner_address):
-        raise NotImplementedError()
-
-    def get_completed_transfers(self, token_address=None, partner_address=None):
-        raise NotImplementedError()
-
-    def get_channel(self, channel_address):
-        if not isaddress(channel_address):
-            raise InvalidAddress('Expected binary address format for channel in get_channel')
-        channel_list = self.get_channel_list()
-        for channel in channel_list:
-            if channel.channel_address == channel_address:
-                return channel
-
-        raise ValueError("Channel not found")
-
-    def create_default_identifier(self, target, token_address):
-        """
-        The default message identifier value is the first 8 bytes of the sha3 of:
-            - Our Address
-            - Our target address
-            - The token address
-            - A random 8 byte number for uniqueness
-        """
-        return self.raiden.create_default_identifier(target, token_address)
-
-    def open(
-            self,
-            token_address,
-            partner_address,
-            settle_timeout=None,
-            reveal_timeout=None):
-        """ Open a channel with the peer at `partner_address`
-        with the given `token_address`.
-        """
-        if reveal_timeout is None:
-            reveal_timeout = self.raiden.config['reveal_timeout']
-
-        if settle_timeout is None:
-            settle_timeout = self.raiden.config['settle_timeout']
-
-        if settle_timeout < self.raiden.config['settle_timeout']:
-            raise ValueError('Configured minimum `settle_timeout` is {} blocks.'.format(
-                self.raiden.config['settle_timeout']
-            ))
-
-        if not isaddress(token_address):
-            raise InvalidAddress('Expected binary address format for token in channel open')
-
-        if not isaddress(partner_address):
-            raise InvalidAddress('Expected binary address format for partner in channel open')
-
-        channel_manager = self.raiden.chain.manager_by_token(token_address)
-        assert token_address in self.raiden.channelgraphs
-
-        netcontract_address = channel_manager.new_netting_channel(
-            self.raiden.address,
-            partner_address,
-            settle_timeout,
-        )
-        netting_channel = self.raiden.chain.netting_channel(netcontract_address)
-        self.raiden.register_channel(netting_channel, reveal_timeout)
-
-        graph = self.raiden.channelgraphs[token_address]
-        channel = graph.partneraddress_channel[partner_address.decode('hex')]
-        return channel
-
-    def deposit(self, token_address, partner_address, amount):
-        """ Deposit `amount` in the channel with the peer at `partner_address` and the
-        given `token_address` in order to be able to do transfers.
-        """
-        if not isaddress(token_address):
-            raise InvalidAddress('Expected binary address format for token in channel deposit')
-
-        if not isaddress(partner_address):
-            raise InvalidAddress('Expected binary address format for partner in channel deposit')
-
-        graph = self.raiden.channelgraphs[token_address]
-        channel = graph.partneraddress_channel[partner_address]
-        netcontract_address = channel.external_state.netting_channel.address
-        assert len(netcontract_address)
-
-        # Obtain a reference to the token and approve the amount for funding
-        token = self.raiden.chain.token(token_address)
-        balance = token.balance_of(self.raiden.address.encode('hex'))
-
-        if not balance >= amount:
-            msg = "Not enough balance for token'{}' [{}]: have={}, need={}".format(
-                token.proxy.name(), pex(token_address), balance, amount
-            )
-            raise InsufficientFunds(msg)
-
-        token.approve(netcontract_address, amount)
-
-        # Obtain the netting channel and fund it by depositing the amount
-        netting_channel = self.raiden.chain.netting_channel(netcontract_address)
-        netting_channel.deposit(self.raiden.address, amount)
-
-        return channel
-
-    def token_swap_and_wait(
-            self,
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address):
-        """ Start an atomic swap operation by sending a MediatedTransfer with
-        `maker_amount` of `maker_token` to `taker_address`. Only proceed when a
-        new valid MediatedTransfer is received with `taker_amount` of
-        `taker_token`.
-        """
-
-        async_result = self.token_swap_async(
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address,
-        )
-        async_result.wait()
-
-    def token_swap_async(
-            self,
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address):
-        """ Start a token swap operation by sending a MediatedTransfer with
-        `maker_amount` of `maker_token` to `taker_address`. Only proceed when a
-        new valid MediatedTransfer is received with `taker_amount` of
-        `taker_token`.
-        """
-        if not isaddress(maker_token):
-            raise InvalidAddress(
-                'Address for maker token is not in expected binary format in token swap'
-            )
-        if not isaddress(maker_address):
-            raise InvalidAddress(
-                'Address for maker is not in expected binary format in token swap'
-            )
-
-        if not isaddress(taker_token):
-            raise InvalidAddress(
-                'Address for taker token is not in expected binary format in token swap'
-            )
-        if not isaddress(taker_address):
-            raise InvalidAddress(
-                'Address for taker is not in expected binary format in token swap'
-            )
-
-        channelgraphs = self.raiden.channelgraphs
-
-        if taker_token not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(taker_token)))
-            return
-
-        if maker_token not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(maker_token)))
-            return
-
-        token_swap = TokenSwap(
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address,
-        )
-
-        async_result = AsyncResult()
-        task = MakerTokenSwapTask(
-            self.raiden,
-            token_swap,
-            async_result,
-        )
-        task.start()
-
-        # the maker is expecting the taker transfer
-        key = SwapKey(
-            identifier,
-            taker_token,
-            taker_amount,
-        )
-        self.raiden.swapkeys_greenlettasks[key] = task
-        self.raiden.swapkeys_tokenswaps[key] = token_swap
-
-        return async_result
-
-    def expect_token_swap(
-            self,
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address):
-        """ Register an expected transfer for this node.
-
-        If a MediatedMessage is received for the `maker_asset` with
-        `maker_amount` then proceed to send a MediatedTransfer to
-        `maker_address` for `taker_asset` with `taker_amout`.
-        """
-
-        if not isaddress(maker_token):
-            raise InvalidAddress(
-                'Address for maker token is not in expected binary format in expect_token_swap'
-            )
-        if not isaddress(maker_address):
-            raise InvalidAddress(
-                'Address for maker is not in expected binary format in expect_token_swap'
-            )
-
-        if not isaddress(taker_token):
-            raise InvalidAddress(
-                'Address for taker token is not in expected binary format in expect_token_swap'
-            )
-        if not isaddress(taker_address):
-            raise InvalidAddress(
-                'Address for taker is not in expected binary format in expect_token_swap'
-            )
-
-        channelgraphs = self.raiden.channelgraphs
-
-        if taker_token not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(taker_token)))
-            return
-
-        if maker_token not in channelgraphs:
-            log.error('Unknown token {}'.format(pex(maker_token)))
-            return
-
-        # the taker is expecting the maker transfer
-        key = SwapKey(
-            identifier,
-            maker_token,
-            maker_amount,
-        )
-
-        token_swap = TokenSwap(
-            identifier,
-            maker_token,
-            maker_amount,
-            maker_address,
-            taker_token,
-            taker_amount,
-            taker_address,
-        )
-
-        self.raiden.swapkeys_tokenswaps[key] = token_swap
-
-    def get_channel_list(self, token_address=None, partner_address=None):
-        """Returns a list of channels associated with the optionally given
-           `token_address` and/or `partner_address`.
-
-        Args:
-            token_address (bin): an optionally provided token address
-            partner_address (bin): an optionally provided partner address
-
-        Return:
-            A list containing all channels the node participates. Optionally
-            filtered by a token address and/or partner address.
-
-        Raises:
-            KeyError:
-                - An error occurred when the given partner address isn't associated
-                  with the given token address.
-                - An error occurred when the token address is unknown to the node.
-        """
-
-        if token_address and not isaddress(token_address):
-            raise InvalidAddress('Expected binary address format for token in get_channel_list')
-
-        if partner_address and not isaddress(partner_address):
-            raise InvalidAddress('Expected binary address format for partner in get_channel_list')
-
-        if token_address and partner_address:
-            graph = self.raiden.channelgraphs[token_address]
-
-            # Let it raise the KeyError
-            channel = graph.partneraddress_channel[partner_address]
-
-            return [channel]
-
-        elif token_address:
-            graph = self.raiden.channelgraphs[token_address]
-            token_channels = graph.address_channel.values()
-            return token_channels
-
-        elif partner_address:
-            partner_channels = [
-                graph.partneraddress_channel[partner_address]
-                for graph in self.raiden.channelgraphs.itervalues()
-                if partner_address in graph.partneraddress_channel
-            ]
-
-            return partner_channels
-
-        else:
-            all_channels = list()
-            for graph in self.raiden.channelgraphs.itervalues():
-                all_channels.extend(graph.address_channel.itervalues())
-
-            return all_channels
-
-    def get_tokens_list(self):
-        """Returns a list of tokens the node knows about"""
-        tokens_list = list(self.raiden.channelgraphs.iterkeys())
-        return tokens_list
-
-    def transfer_and_wait(
-            self,
-            token_address,
-            amount,
-            target,
-            identifier=None,
-            timeout=None):
-        """ Do a transfer with `target` with the given `amount` of `token_address`. """
-        # pylint: disable=too-many-arguments
-
-        async_result = self.transfer_async(
-            token_address,
-            amount,
-            target,
-            identifier,
-        )
-        return async_result.wait(timeout=timeout)
-
-    # expose a synchronous interface to the user
-    token_swap = token_swap_and_wait
-    transfer = transfer_and_wait  # expose a synchronous interface to the user
-
-    def transfer_async(
-            self,
-            token_address,
-            amount,
-            target,
-            identifier=None):
-        # pylint: disable=too-many-arguments
-
-        if not isinstance(amount, (int, long)):
-            raise InvalidAmount('Amount not a number')
-
-        if amount <= 0:
-            raise InvalidAmount('Amount negative')
-
-        if not isaddress(token_address) or token_address not in self.tokens:
-            raise InvalidAddress('token address is not valid.')
-
-        if not isaddress(target):
-            raise InvalidAddress('target address is not valid.')
-
-        graph = self.raiden.channelgraphs[token_address]
-        if not graph.has_path(self.raiden.address, target):
-            raise NoPathError('No path to address found')
-
-        async_result = self.raiden.transfer_async(
-            token_address,
-            amount,
-            target,
-            identifier=identifier,
-        )
-        return async_result
-
-    def close(self, token_address, partner_address):
-        """ Close a channel opened with `partner_address` for the given `token_address`. """
-
-        if not isaddress(token_address):
-            raise InvalidAddress('Expected binary address format for token in channel close')
-
-        if not isaddress(partner_address):
-            raise InvalidAddress('Expected binary address format for partner in channel close')
-
-        if not isaddress(token_address) or token_address not in self.tokens:
-            raise InvalidAddress('token address is not valid.')
-
-        if not isaddress(partner_address):
-            raise InvalidAddress('partner_address is not valid.')
-
-        graph = self.raiden.channelgraphs[token_address]
-        channel = graph.partneraddress_channel[partner_address]
-
-        first_transfer = None
-        if channel.received_transfers:
-            first_transfer = channel.received_transfers[-1]
-
-        netting_channel = channel.external_state.netting_channel
-        netting_channel.close(
-            self.raiden.address,
-            first_transfer,
-        )
-
-        return channel
-
-    def settle(self, token_address, partner_address):
-        """ Settle a closed channel with `partner_address` for the given `token_address`. """
-
-        if not isaddress(token_address):
-            raise InvalidAddress('Expected binary address format for token in channel settle')
-
-        if not isaddress(partner_address):
-            raise InvalidAddress('Expected binary address format for partner in channel settle')
-
-        if not isaddress(token_address) or token_address not in self.tokens:
-            raise InvalidAddress('token address is not valid.')
-
-        if not isaddress(partner_address):
-            raise InvalidAddress('partner_address is not valid.')
-
-        graph = self.raiden.channelgraphs[token_address]
-        channel = graph.partneraddress_channel[partner_address]
-
-        if channel.isopen:
-            raise InvalidState('channel is still open.')
-
-        netting_channel = channel.external_state.netting_channel
-
-        current_block = self.raiden.chain.block_number()
-        settle_timeout = netting_channel.detail(self.raiden.address)['settle_timeout']
-        settle_expiration = channel.external_state.closed_block + settle_timeout
-
-        if current_block <= settle_expiration:
-            raise InvalidState('settlement period is not yet over.')
-
-        netting_channel.settle()
-        return channel
-
-    def get_token_network_events(self, token_address, from_block, to_block):
-        if not isaddress(token_address):
-            raise InvalidAddress(
-                'Expected binary address format for token in get_token_network_events'
-            )
-
-        graph = self.raiden.channelgraphs[token_address]
-
-        return get_all_channel_manager_events(
-            self.raiden.chain,
-            graph.channelmanager_address,
-            events=ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-    def get_network_events(self, from_block, to_block):
-        registry_address = self.raiden.chain.default_registry.address
-
-        return get_all_registry_events(
-            self.raiden.chain,
-            registry_address,
-            events=ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
-
-    def get_channel_events(self, channel_address, from_block, to_block):
-        if not isaddress(channel_address):
-            raise InvalidAddress(
-                'Expected binary address format for channel in get_channel_events'
-            )
-        return get_all_netting_channel_events(
-            self.raiden.chain,
-            channel_address,
-            events=ALL_EVENTS,
-            from_block=from_block,
-            to_block=to_block,
-        )
+        self.identifier_to_statemanagers[identifier].append(state_manager)
 
 
 class RaidenMessageHandler(object):
@@ -1321,18 +837,17 @@ class RaidenMessageHandler(object):
             message.hashlock,
         )
 
-        if message.identifier in self.raiden.identifier_statemanager:
-            state_change = ReceiveSecretRequest(
-                message.identifier,
-                message.amount,
-                message.hashlock,
-                message.sender,
-            )
+        state_change = ReceiveSecretRequest(
+            message.identifier,
+            message.amount,
+            message.hashlock,
+            message.sender,
+        )
 
-            self.raiden.state_machine_event_handler.dispatch_by_identifier(
-                message.identifier,
-                state_change,
-            )
+        self.raiden.state_machine_event_handler.dispatch_by_identifier(
+            message.identifier,
+            state_change,
+        )
 
     def message_secret(self, message):
         self.raiden.greenlet_task_dispatcher.dispatch_message(
@@ -1362,16 +877,15 @@ class RaidenMessageHandler(object):
         except:  # pylint: disable=bare-except
             log.exception('Unhandled exception')
 
-        if message.identifier in self.raiden.identifier_statemanager:
-            state_change = ReceiveSecretReveal(
-                message.secret,
-                message.sender,
-            )
+        state_change = ReceiveSecretReveal(
+            message.secret,
+            message.sender,
+        )
 
-            self.raiden.state_machine_event_handler.dispatch_by_identifier(
-                message.identifier,
-                state_change,
-            )
+        self.raiden.state_machine_event_handler.dispatch_by_identifier(
+            message.identifier,
+            state_change,
+        )
 
     def message_refundtransfer(self, message):
         self.raiden.greenlet_task_dispatcher.dispatch_message(
@@ -1379,45 +893,44 @@ class RaidenMessageHandler(object):
             message.lock.hashlock,
         )
 
-        if message.identifier in self.raiden.identifier_statemanager:
-            identifier = message.identifier
-            token_address = message.token
-            target = message.target
-            amount = message.lock.amount
-            expiration = message.lock.expiration
-            hashlock = message.lock.hashlock
+        identifier = message.identifier
+        token_address = message.token
+        target = message.target
+        amount = message.lock.amount
+        expiration = message.lock.expiration
+        hashlock = message.lock.hashlock
 
-            manager = self.raiden.identifier_statemanager[identifier]
+        manager = self.raiden.identifier_to_statemanagers[identifier]
 
-            if isinstance(manager.current_state, InitiatorState):
-                initiator_address = self.raiden.address
+        if isinstance(manager.current_state, InitiatorState):
+            initiator_address = self.raiden.address
 
-            elif isinstance(manager.current_state, MediatorState):
-                last_pair = manager.current_state.transfers_pair[-1]
-                initiator_address = last_pair.payee_transfer.initiator
+        elif isinstance(manager.current_state, MediatorState):
+            last_pair = manager.current_state.transfers_pair[-1]
+            initiator_address = last_pair.payee_transfer.initiator
 
-            else:
-                # TODO: emit a proper event for the reject message
-                return
+        else:
+            # TODO: emit a proper event for the reject message
+            return
 
-            transfer_state = LockedTransferState(
-                identifier=identifier,
-                amount=amount,
-                token=token_address,
-                initiator=initiator_address,
-                target=target,
-                expiration=expiration,
-                hashlock=hashlock,
-                secret=None,
-            )
-            state_change = ReceiveTransferRefund(
-                message.sender,
-                transfer_state,
-            )
-            self.raiden.state_machine_event_handler.dispatch_by_identifier(
-                message.identifier,
-                state_change,
-            )
+        transfer_state = LockedTransferState(
+            identifier=identifier,
+            amount=amount,
+            token=token_address,
+            initiator=initiator_address,
+            target=target,
+            expiration=expiration,
+            hashlock=hashlock,
+            secret=None,
+        )
+        state_change = ReceiveTransferRefund(
+            message.sender,
+            transfer_state,
+        )
+        self.raiden.state_machine_event_handler.dispatch_by_identifier(
+            message.identifier,
+            state_change,
+        )
 
     def message_directtransfer(self, message):
         if message.token not in self.raiden.channelgraphs:
@@ -1517,16 +1030,22 @@ class StateMachineEventHandler(object):
         self.raiden = raiden
 
     def dispatch_to_all_tasks(self, state_change):
-        manager_lists = self.raiden.identifier_statemanager.itervalues()
+        self.raiden.transaction_log.log(state_change)
+        manager_lists = self.raiden.identifier_to_statemanagers.itervalues()
 
         for manager in itertools.chain(*manager_lists):
             self.dispatch(manager, state_change)
 
     def dispatch_by_identifier(self, identifier, state_change):
-        manager_list = self.raiden.identifier_statemanager[identifier]
+        self.raiden.transaction_log.log(state_change)
+        manager_list = self.raiden.identifier_to_statemanagers[identifier]
 
         for manager in manager_list:
             self.dispatch(manager, state_change)
+
+    def log_and_dispatch(self, state_manager, state_change):
+        self.raiden.transaction_log.log(state_change)
+        self.dispatch(state_manager, state_change)
 
     def dispatch(self, state_manager, state_change):
         all_events = state_manager.dispatch(state_change)
@@ -1585,16 +1104,17 @@ class StateMachineEventHandler(object):
             pass
 
         elif isinstance(event, EventTransferCompleted):
-            for result in self.raiden.identifier_result[event.identifier]:
+            for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(True)
 
         elif isinstance(event, EventTransferFailed):
-            for result in self.raiden.identifier_result[event.identifier]:
+            for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(True)
 
     def on_blockchain_statechange(self, state_change):
         if log.isEnabledFor(logging.INFO):
             log.info('state_change received', state_change=state_change)
+        self.raiden.transaction_log.log(state_change)
 
         if isinstance(state_change, ContractReceiveTokenAdded):
             self.handle_tokenadded(state_change)
@@ -1631,11 +1151,17 @@ class StateMachineEventHandler(object):
         graph = self.raiden.channelgraphs[token_address]
         graph.add_path(participant1, participant2)
 
+        connection_manager = self.raiden.connection_manager_for_token(token_address)
+
         if participant1 == self.raiden.address or participant2 == self.raiden.address:
             self.raiden.register_netting_channel(
                 token_address,
                 channel_address,
             )
+        elif connection_manager.wants_more_channels:
+            gevent.spawn(connection_manager.retry_connect)
+        else:
+            log.info('ignoring new channel, this node is not a participant.')
 
     def handle_balance(self, state_change):
         channel_address = state_change.channel_address
@@ -1650,6 +1176,16 @@ class StateMachineEventHandler(object):
 
         if channel_state.contract_balance != balance:
             channel_state.update_contract_balance(balance)
+
+        connection_manager = self.raiden.connection_manager_for_token(
+            token_address
+        )
+        if channel.deposit == 0:
+            gevent.spawn(
+                connection_manager.join_channel,
+                participant_address,
+                balance
+            )
 
         if channel.external_state.opened_block == 0:
             channel.external_state.set_opened(block_number)

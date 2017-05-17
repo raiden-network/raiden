@@ -115,7 +115,7 @@ class StateManager(object):
 
         Return:
             Event: A list of events produced by the state transition, it's
-            the upper layer's responsability to decided how to handle these
+            the upper layer's responsibility to decided how to handle these
             events.
         """
         assert isinstance(state_change, StateChange)

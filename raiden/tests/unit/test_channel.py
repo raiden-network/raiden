@@ -358,7 +358,7 @@ def test_python_channel():
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_setup(raiden_network, deposit, tokens_addresses):
+def test_setup(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     tokens0 = app0.raiden.channelgraphs.keys()
@@ -367,7 +367,7 @@ def test_setup(raiden_network, deposit, tokens_addresses):
     assert len(tokens0) == 1
     assert len(tokens1) == 1
     assert tokens0 == tokens1
-    assert tokens0[0] == tokens_addresses[0]
+    assert tokens0[0] == token_addresses[0]
 
     token_address = tokens0[0]
     channel0 = channel(app0, app1, token_address)
@@ -493,11 +493,11 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
 
 @pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_transfer(raiden_network, tokens_addresses):
+def test_transfer(raiden_network, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    channel0 = channel(app0, app1, tokens_addresses[0])
-    channel1 = channel(app1, app0, tokens_addresses[0])
+    channel0 = channel(app0, app1, token_addresses[0])
+    channel1 = channel(app1, app0, token_addresses[0])
 
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance

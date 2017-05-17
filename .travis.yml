@@ -7,10 +7,10 @@ python:
 
 env:
   global:
-    - GETH_URL='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.6.0-facc47cb.tar.gz'
-    - GETH_VERSION='1.6.0'
-    - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.10/solc'
-    - SOLC_VERSION='0.4.10'
+    - GETH_URL='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.6.1-021c3c28.tar.gz'
+    - GETH_VERSION='1.6.1'
+    - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.11/solc-static-linux'
+    - SOLC_VERSION='v0.4.11'
   matrix:
     - TEST_TYPE='unit'
     - TEST_TYPE='smart_contracts'
@@ -34,7 +34,7 @@ before_install:
   - ./.travis/download_solc.sh
 
 install:
-  - pip install -U pip wheel coveralls
+  - pip install -U pip wheel coveralls "coverage<4.4"
   - pip install pytest-travis-fold
   - pip install flake8
   - pip install -r requirements-dev.txt

@@ -28,7 +28,6 @@ contract Registry {
         returns (address)
     {
         address manager_address;
-        ChannelManagerContract manager;
 
         manager_address = new ChannelManagerContract(token_address);
 

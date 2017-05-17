@@ -21,7 +21,8 @@ from raiden.tests.fixtures import (
     channel_manager_abi,
     netting_channel_abi,
 
-    tokens_addresses,
+    token_addresses,
+    register_tokens,
     cached_genesis,
     blockchain_services,
     blockchain_backend,
@@ -68,6 +69,8 @@ from raiden.tests.fixtures import (
     blockchain_p2p_ports,
     raiden_udp_ports,
     rest_api_port_number,
+    database_paths,
+    in_memory_database,
 )
 
 __all__ = (
@@ -79,7 +82,8 @@ __all__ = (
     'channel_manager_abi',
     'netting_channel_abi',
 
-    'tokens_addresses',
+    'token_addresses',
+    'register_tokens',
     'cached_genesis',
     'blockchain_services',
     'blockchain_backend',
@@ -126,6 +130,8 @@ __all__ = (
     'blockchain_p2p_ports',
     'raiden_udp_ports',
     'rest_api_port_number',
+    'database_paths',
+    'in_memory_database',
 
     'pytest_addoption',
     'logging_level',

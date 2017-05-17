@@ -596,17 +596,17 @@ class NettingChannelTesterMock(object):
 
     def opened(self):
         opened = self.proxy.opened()
-        self.tester_state.mine(number_of_blocks=1)
         return opened
 
     def closed(self):
         closed = self.proxy.closed()
-        self.tester_state.mine(number_of_blocks=1)
         return closed
+
+    def closing_address(self):
+        return address_decoder(self.proxy.closingAddress())
 
     def settled(self):
         settled = self.proxy.settled()
-        self.tester_state.mine(number_of_blocks=1)
         return settled
 
     def detail(self, our_address):
@@ -643,7 +643,9 @@ class NettingChannelTesterMock(object):
     def close(self, our_address, their_transfer):
         """`our_address` is an argument used only in mock_client.py but is also
         kept here to maintain a consistent interface"""
-        their_encoded = their_transfer.encode()
+        their_encoded = ''
+        if their_transfer is not None:
+            their_encoded = their_transfer.encode()
         self.proxy.close(
             their_encoded,
         )

@@ -236,10 +236,8 @@ library NettingChannelLibrary {
         notSettledButClosed(self)
     {
         uint amount;
-        uint partner_id;
         uint8 index;
         uint64 expiration;
-        bytes32 el;
         bytes32 h;
         bytes32 hashlock;
 
@@ -354,7 +352,7 @@ library NettingChannelLibrary {
         total_deposit = closing_party.balance + counter_party.balance;
 
         // When the closing party does not provide the counter party transfer,
-        // the `counter_amount` may be larger than the `total_deposit`, without
+        // the `counter_net` may be larger than the `total_deposit`, without
         // the min the token transfer fail and the token is locked.
         counter_amount = min(counter_net, total_deposit);
 
@@ -558,14 +556,6 @@ library NettingChannelLibrary {
             expiration := mload(add(lock, 8))
             amount := mload(add(lock, 40))
             hashlock := mload(add(lock, 72))
-        }
-    }
-
-    // Get nonce from a message
-    function getNonce(bytes message) internal returns (uint64 nonce) {
-        // don't care about length of message since nonce is always at a fixed position
-        assembly {
-            nonce := mload(add(message, 12))
         }
     }
 

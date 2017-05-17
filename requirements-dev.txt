@@ -14,7 +14,7 @@ flake8
 pdbpp>=0.8.3<1.0.0
 
 # Continuous Integration
-coverage>=4.0<5.0
+coverage>=4.0<4.4
 
 # Documentation
 sphinx>=1.5.1<2.0.0

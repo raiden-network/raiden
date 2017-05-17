@@ -409,6 +409,11 @@ class NettingChannelMock(object):
     def closed(self):
         return self.contract.closed
 
+    def closing_address(self):
+        closing_address = self.contract.closingAddress
+        assert len(closing_address) == 20, "Expected binary address"
+        return closing_address
+
     def settled(self):
         return self.contract.settled
 
@@ -426,20 +431,20 @@ class NettingChannelMock(object):
             'settle_timeout': self.contract.settle_timeout,
         }
 
-    def close(self, our_address, first_transfer):
+    def close(self, our_address, their_transfer):
         ctx = {
             'block_number': BlockChainServiceMock.block_number(),
             'msg.sender': our_address,
         }
 
-        first_encoded = None
+        their_encoded = None
 
-        if first_transfer is not None:
-            first_encoded = first_transfer.encode()
+        if their_transfer is not None:
+            their_encoded = their_transfer.encode()
 
         self.contract.close(
             ctx,
-            first_encoded,
+            their_encoded,
         )
 
         data = {

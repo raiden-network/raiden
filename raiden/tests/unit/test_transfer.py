@@ -3,10 +3,8 @@ from __future__ import print_function
 
 import gevent
 import pytest
-from ethereum import slogging
-from secp256k1 import PrivateKey
+from coincurve import PrivateKey
 
-from raiden.encoding.signing import GLOBAL_CTX
 from raiden.messages import (
     Ack,
     decode,
@@ -24,14 +22,12 @@ from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
 from raiden.tests.utils.network import CHAIN
 from raiden.utils import pex, sha3, privatekey_to_address
-from raiden.raiden_service import NoPathError, create_default_identifier
+from raiden.raiden_service import create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
-slogging.configure(':DEBUG')
-
-HASH = sha3("muchcodingsuchwow")
-HASH2 = sha3("terribleweathermuchstayinside")
+HASH = sha3('muchcodingsuchwow_______________')
+HASH2 = sha3('terribleweathermuchstayinside___')
 
 
 def sign_and_send(message, key, address, app):
@@ -109,11 +105,14 @@ def test_transfer(raiden_network):
     assert app1.raiden.address in graph0.partneraddress_channel
 
     amount = 10
-    app0.raiden.api.transfer(
+    target = app1.raiden.address
+    result = app0.raiden.transfer_async(
         graph0.token_address,
         amount,
-        target=app1.raiden.address,
+        target,
     )
+
+    result.wait(timeout=10)
     gevent.sleep(1)
 
     assert_synched_channels(
@@ -187,7 +186,7 @@ def test_mediated_transfer(raiden_network):
 
     amount = 10
 
-    result = alice_app.raiden.api.transfer_async(
+    result = alice_app.raiden.transfer_async(
         token_address,
         amount,
         charlie_address,
@@ -201,7 +200,7 @@ def test_mediated_transfer(raiden_network):
     # assert channel_bc.locked == amount
     # assert channel_cb.outstanding == amount
 
-    result.wait()
+    assert result.wait(timeout=10)
     gevent.sleep(.1)  # wait for the other nodes to sync
 
     assert initial_balance_ab - amount == channel_ab.balance
@@ -307,11 +306,13 @@ def test_healthcheck_with_normal_peer(raiden_network):
     assert app1.raiden.address in graph0.partneraddress_channel
 
     amount = 10
-    app0.raiden.api.transfer(
+    target = app1.raiden.address
+    result = app0.raiden.transfer_async(
         graph0.token_address,
         amount,
-        target=app1.raiden.address,
+        target,
     )
+    assert result.wait(timeout=10)
 
     gevent.sleep(max_unresponsive_time)
     assert graph0.has_path(
@@ -349,13 +350,16 @@ def test_healthcheck_with_bad_peer(raiden_network):
     assert app1.raiden.address in graph0.partneraddress_channel
 
     amount = 10
-    app0.raiden.api.transfer(
+    target = app1.raiden.address
+    result = app0.raiden.transfer_async(
         graph0.token_address,
         amount,
-        target=app1.raiden.address,
+        target,
     )
 
+    assert result.wait(timeout=10)
     gevent.sleep(2)
+
     assert graph0.has_path(
         app0.raiden.address,
         app1.raiden.address
@@ -395,8 +399,8 @@ def test_receive_directtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
     graph0 = app0.raiden.channelgraphs.values()[0]
 
-    other_key = PrivateKey(HASH, ctx=GLOBAL_CTX, raw=True)
-    other_address = privatekey_to_address(other_key.private_key)
+    other_key = PrivateKey(HASH)
+    other_address = privatekey_to_address(HASH)
     direct_transfer = DirectTransfer(
         identifier=1,
         nonce=1,
@@ -415,8 +419,8 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
     graph0 = app0.raiden.channelgraphs.values()[0]
 
-    other_key = PrivateKey(HASH, ctx=GLOBAL_CTX, raw=True)
-    other_address = privatekey_to_address(other_key.private_key)
+    other_key = PrivateKey(HASH)
+    other_address = privatekey_to_address(HASH)
     amount = 10
     locksroot = HASH
     mediated_transfer = MediatedTransfer(
@@ -442,8 +446,8 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
 
     graph0 = app0.raiden.channelgraphs.values()[0]
 
-    other_key = PrivateKey(HASH2, ctx=GLOBAL_CTX, raw=True)
-    other_address = privatekey_to_address(other_key.private_key)
+    other_key = PrivateKey(HASH2)
+    other_address = privatekey_to_address(HASH2)
     amount = 10
     lock = Lock(amount, 1, HASH)
     refund_transfer = RefundTransfer(
@@ -486,11 +490,14 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
     assert app1.raiden.address in graph0.partneraddress_channel
 
     amount = 10
-    app0.raiden.api.transfer(
+    target = app1.raiden.address
+    result = app0.raiden.transfer_async(
         graph0.token_address,
         amount,
-        target=app1.raiden.address,
+        target,
     )
+
+    assert result.wait(timeout=10)
     gevent.sleep(1)
 
     assert_synched_channels(
@@ -533,11 +540,13 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
 
     alice_address, bob_address, charlie_address = path
     amount = 10
-    alice_app.raiden.api.transfer(
+    result = alice_app.raiden.transfer_async(
         token_address,
         amount,
         charlie_address,
     )
+
+    assert result.wait(timeout=10)
     gevent.sleep(1.)
 
     # and now send one more mediated transfer with the same nonce, simulating
@@ -582,11 +591,13 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
 
     alice_address, bob_address, charlie_address = path
     amount = 10
-    alice_app.raiden.api.transfer(
+    result = alice_app.raiden.transfer_async(
         token_address,
         amount,
         charlie_address,
     )
+
+    assert result.wait(timeout=10)
     gevent.sleep(1.)
 
     # and now send one more mediated transfer with the same nonce, simulating
@@ -638,11 +649,13 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     assert app1.raiden.address in graph0.partneraddress_channel
 
     amount = 10
-    app0.raiden.api.transfer(
+    result = app0.raiden.transfer_async(
         graph0.token_address,
         amount,
         target=app1.raiden.address,
     )
+
+    assert result.wait(timeout=10)
     gevent.sleep(1)
 
     assert_synched_channels(
@@ -687,11 +700,13 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     assert app1.raiden.address in graph0.partneraddress_channel
 
     amount = 10
-    app0.raiden.api.transfer(
+    result = app0.raiden.transfer_async(
         graph0.token_address,
         amount,
         target=app1.raiden.address,
     )
+
+    assert result.wait(timeout=10)
     gevent.sleep(1)
 
     assert_synched_channels(
@@ -717,27 +732,6 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     sign_and_send(direct_transfer, app0_key, app0.raiden.address, app1)
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('channels_per_node', [1])
-def test_transfer_to_unknownchannel(raiden_network):
-    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
-
-    assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
-
-    with pytest.raises(NoPathError):
-        app0.raiden.api.transfer(
-            graph0.token_address,
-            10,
-            # sending to an unknown/non-existant address
-            target='\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1',
-        )
-
-
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
@@ -758,18 +752,23 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
     assert app1.raiden.address in graph0.partneraddress_channel
 
     amount = 10
-    app0.raiden.api.transfer(
+    result = app0.raiden.transfer_async(
         graph0.token_address,
         amount,
         target=app1.raiden.address,
     )
+
+    assert result.wait(timeout=10)
 
     assert_synched_channels(
         channel0, balance0 - amount, [],
         channel1, balance1 + amount, []
     )
 
-    app1.raiden.api.close(graph0.token_address, app0.raiden.address)
+    channel1.external_state.netting_channel.close(
+        app1.raiden.address,
+        channel1.received_transfers[-1],
+    )
 
     wait_until_block(
         app1.raiden.chain,

@@ -64,3 +64,7 @@ class UnknownTokenAddress(Exception):
         )
 
         self.address = address
+
+
+class STUNUnavailableException(Exception):
+    pass

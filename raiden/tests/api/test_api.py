@@ -38,9 +38,9 @@ def api_url_for(api_backend, endpoint, **kwargs):
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_channel_to_api_dict(raiden_network, tokens_addresses, settle_timeout):
+def test_channel_to_api_dict(raiden_network, token_addresses, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-    channel0 = channel(app0, app1, tokens_addresses[0])
+    channel0 = channel(app0, app1, token_addresses[0])
 
     netting_address = channel0.external_state.netting_channel.address
     netting_channel = app0.raiden.chain.netting_channel(netting_address)

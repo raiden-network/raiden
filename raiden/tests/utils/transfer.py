@@ -2,10 +2,11 @@
 from __future__ import print_function
 
 import gevent
+from coincurve import PrivateKey
 
-from raiden.raiden_service import create_default_identifier
-from raiden.utils import sha3
-from raiden.mtree import merkleroot
+from raiden.mtree import Merkletree
+from raiden.utils import sha3, privatekey_to_address
+from raiden.channel.netting_channel import Channel
 
 
 def channel(app0, app1, token):
@@ -31,6 +32,7 @@ def sleep(initiator_app, target_app, token, multiplier=1):
 
 
 def get_sent_transfer(app_channel, transfer_number):
+    assert isinstance(app_channel, Channel)
     return app_channel.sent_transfers[transfer_number]
 
 
@@ -46,12 +48,13 @@ def transfer(initiator_app, target_app, token, amount, identifier):
     will be revealed.
     """
 
-    initiator_app.raiden.api.transfer(
+    async_result = initiator_app.raiden.transfer_async(
         token,
         amount,
         target_app.raiden.address,
         identifier
     )
+    assert async_result.wait()
 
 
 def direct_transfer(initiator_app, target_app, token, amount, identifier=None):
@@ -60,12 +63,13 @@ def direct_transfer(initiator_app, target_app, token, amount, identifier=None):
     has_channel = target_app.raiden.address in graph.partneraddress_channel
     assert has_channel, 'there is not a direct channel'
 
-    initiator_app.raiden.api.transfer(
+    async_result = initiator_app.raiden.transfer_async(
         token,
         amount,
         target_app.raiden.address,
         identifier,
     )
+    assert async_result.wait()
 
 
 def mediated_transfer(initiator_app, target_app, token, amount, identifier=None):
@@ -76,7 +80,7 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
     # pylint: disable=too-many-arguments
 
     graph = initiator_app.raiden.channelgraphs[token]
-    has_channel = initiator_app.raiden.address in graph.partneraddress_channel
+    has_channel = target_app.raiden.address in graph.partneraddress_channel
 
     if has_channel:
         raise NotImplementedError(
@@ -84,12 +88,13 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
         )
 
     else:
-        initiator_app.raiden.api.transfer(
+        async_result = initiator_app.raiden.transfer_async(
             token,
             amount,
             target_app.raiden.address,
             identifier
         )
+        assert async_result.wait()
 
 
 def pending_mediated_transfer(app_chain, token, amount, identifier, expiration):
@@ -148,11 +153,6 @@ def claim_lock(app_chain, token, secret):
 
         channel_ = channel(to_, from_, token)
         withdraw_or_unlock(channel_, secret)
-
-
-def assert_identifier_correct(initiator_app, token, target, expected_id):
-    got_id = create_default_identifier(initiator_app.raiden.address, token, target)
-    assert got_id == expected_id
 
 
 def withdraw_or_unlock(channel_, secret):
@@ -226,7 +226,7 @@ def assert_mirror(channel0, channel1):
 def assert_locked(channel0, outstanding_locks):
     """ Assert the locks create from `channel`. """
     # a locked transfer is registered in the _partner_ state
-    hashroot = merkleroot(sha3(lock.as_bytes) for lock in outstanding_locks)
+    hashroot = Merkletree(sha3(lock.as_bytes) for lock in outstanding_locks).merkleroot
 
     assert len(channel0.our_state.balance_proof.hashlock_pendinglocks) == len(outstanding_locks)
     assert channel0.our_state.balance_proof.merkleroot_for_unclaimed() == hashroot
@@ -254,3 +254,80 @@ def assert_balance(channel0, balance, outstanding, distributable):
     assert channel0.distributable >= 0
     assert channel0.locked >= 0
     assert channel0.balance == channel0.locked + channel0.distributable
+
+
+def increase_transferred_amount(from_channel, to_channel, amount):
+    """ Helper to increase the transferred_amount of the channels without the
+    need of creating/signing/register transfers.
+    """
+    from_channel.our_state.transferred_amount += amount
+    to_channel.partner_state.transferred_amount += amount
+
+
+def make_direct_transfer_from_channel(channel, partner_channel, amount, pkey):
+    """ Helper to create and register a direct transfer from `channel` to
+    `partner_channel`.
+    """
+    identifier = channel.our_state.nonce
+
+    direct_transfer = channel.create_directtransfer(
+        amount,
+        identifier=identifier,
+    )
+
+    address = privatekey_to_address(pkey)
+    sign_key = PrivateKey(pkey)
+    direct_transfer.sign(sign_key, address)
+
+    # if this fails it's not the right key for the current `channel`
+    assert direct_transfer.sender == channel.our_state.address
+
+    channel.register_transfer(direct_transfer)
+    partner_channel.register_transfer(direct_transfer)
+
+    return direct_transfer
+
+
+def make_mediated_transfer(
+        channel,
+        partner_channel,
+        initiator,
+        target,
+        lock,
+        pkey,
+        block_number,
+        secret=None):
+    """ Helper to create and register a mediated transfer from `channel` to
+    `partner_channel`.
+    """
+    identifier = channel.our_state.nonce
+    fee = 0
+
+    mediated_transfer = channel.create_mediatedtransfer(
+        initiator,
+        target,
+        fee,
+        lock.amount,
+        identifier,
+        lock.expiration,
+        lock.hashlock,
+    )
+
+    address = privatekey_to_address(pkey)
+    sign_key = PrivateKey(pkey)
+    mediated_transfer.sign(sign_key, address)
+
+    channel.block_number = block_number
+    partner_channel.block_number = block_number
+
+    # if this fails it's not the right key for the current `channel`
+    assert mediated_transfer.sender == channel.our_state.address
+
+    channel.register_transfer(mediated_transfer)
+    partner_channel.register_transfer(mediated_transfer)
+
+    if secret is not None:
+        channel.register_secret(secret)
+        partner_channel.register_secret(secret)
+
+    return mediated_transfer

@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
-
-from ethereum.utils import encode_hex
-
+# -*- coding: utf-8 -*-
 from raiden.utils import keccak
 from raiden.exceptions import HashLengthNot32
 
@@ -50,12 +48,32 @@ def merkleproof_from_layers(layers, idx):
     return proof
 
 
+def check_proof(proof, root, hash_):
+    for x in proof:
+        hash_ = hash_pair(hash_, x)
+
+    return hash_ == root
+
+
 class Merkletree(object):
     def __init__(self, elements):
-        self._layers = list(merkletreelayers(build_list(elements)))
+        elements = list(elements)  # consume generators
+
+        if not all(isinstance(item, (str, bytes)) for item in elements):
+            raise ValueError('all elements must be str')
+
+        if any(len(item) != 32 for item in elements):
+            raise HashLengthNot32()
+
+        if len(elements) != len(set(elements)):
+            raise ValueError('Duplicated element')
+
+        leafs = sorted(item for item in elements)
+        self._layers = list(merkletreelayers(leafs))
 
     @property
     def merkleroot(self):
+        """ Return the root element of the merkle tree. """
         return self._layers[-1][0]
 
     def make_proof(self, element):
@@ -64,50 +82,3 @@ class Merkletree(object):
             gets the root.
         """
         return merkleproof_from_layers(self._layers, self._layers[0].index(element))
-
-
-def merkleroot(elements):
-    """
-    Args:
-        elements (List[str]): List of hashes that make the merkletree.
-
-    Returns:
-        str: The root element of the merkle tree.
-    Raises:
-        HashLengthNot32: The length of one of the elements is not 32
-    """
-    return Merkletree(elements).merkleroot
-
-
-def build_list(elements):
-    result = list()
-
-    for item in set(elements):
-        if item:
-            if len(item) != 32:
-                raise HashLengthNot32()
-
-            result.append(item)
-
-    result.sort()
-    return result
-
-
-def check_proof(proof, root, hash_):
-    for x in proof:
-        hash_ = hash_pair(hash_, x)
-
-    return hash_ == root
-
-
-def get_proof(lst, proof_for, root=None):
-    tree = Merkletree(lst)
-
-    root_hash = tree.merkleroot
-    if root and root != root_hash:
-        raise ValueError('root hashes did not match {} {}'.format(
-            encode_hex(root_hash),
-            encode_hex(root)
-        ))
-
-    return tree.make_proof(proof_for)

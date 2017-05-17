@@ -4,7 +4,7 @@ from __future__ import print_function
 import contextlib
 import timeit
 
-import secp256k1
+import coincurve
 
 from raiden.utils import sha3, privatekey_to_address
 from raiden.messages import decode
@@ -13,10 +13,8 @@ from raiden.messages import (
     RefundTransfer, Secret, SecretRequest,
 )
 
-GLOBAL_CTX = secp256k1.lib.secp256k1_context_create(secp256k1.ALL_FLAGS)
-
 PRIVKEY_BIN = 'x' * 32
-PRIVKEY = secp256k1.PrivateKey(PRIVKEY_BIN, ctx=GLOBAL_CTX, raw=True)
+PRIVKEY = coincurve.PrivateKey(PRIVKEY_BIN)
 ADDRESS = privatekey_to_address(PRIVKEY_BIN)
 HASH = sha3(PRIVKEY)
 ITERATIONS = 1000000  # timeit default
