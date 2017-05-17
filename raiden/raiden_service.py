@@ -581,18 +581,30 @@ class RaidenService(object):
         earliest_settlement = last_block + blocks_to_wait()
 
         current_block = last_block
+        avg_block_time = self.chain.estimate_blocktime()
+        wait_blocks_left = blocks_to_wait()
         while current_block < earliest_settlement:
             gevent.sleep(self.alarm.wait_time)
-            current_block = self.chain.block_number()
-            log.info(
-                'waiting at least %s more blocks for settlement (%s channels not yet settled)' % (
-                    blocks_to_wait(),
-                    sum(
-                        1 for channel in all_channels
-                        if not channel.state == CHANNEL_STATE_SETTLED
+            last_block = self.chain.block_number()
+            if last_block != current_block:
+                current_block = last_block
+                avg_block_time = self.chain.estimate_blocktime()
+                wait_blocks_left = blocks_to_wait()
+                not_settled = sum(
+                    1 for channel in all_channels
+                    if not channel.state == CHANNEL_STATE_SETTLED
+                )
+                if not_settled == 0:
+                    log.debug('nothing left to settle')
+                    break
+                log.info(
+                    'waiting at least %s more blocks (~%s sec) for settlement'
+                    '(%s channels not yet settled)' % (
+                        wait_blocks_left,
+                        wait_blocks_left * avg_block_time,
+                        not_settled
                     )
                 )
-            )
 
         gevent.wait(leave_greenlets)
         if any(channel.state != CHANNEL_STATE_SETTLED for channel in all_channels):
