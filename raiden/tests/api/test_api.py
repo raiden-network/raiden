@@ -799,9 +799,9 @@ def test_connect_and_leave_token_network(
     assert channels[0]['balance'] == expected_balance
     assert channels[1]['balance'] == expected_balance
     assert channels[2]['balance'] == expected_balance
-    assert channels[0]['state'] == 'opened'
-    assert channels[1]['state'] == 'opened'
-    assert channels[2]['state'] == 'opened'
+    assert channels[0]['state'] == CHANNEL_STATE_OPENED
+    assert channels[1]['state'] == CHANNEL_STATE_OPENED
+    assert channels[2]['state'] == CHANNEL_STATE_OPENED
 
     # Let's leave the token network
     request = grequests.delete(
@@ -818,6 +818,6 @@ def test_connect_and_leave_token_network(
     assert_proper_response(response)
 
     channels = decode_response(response)
-    assert channels[0]['state'] == 'settled'
-    assert channels[1]['state'] == 'settled'
-    assert channels[2]['state'] == 'settled'
+    assert channels[0]['state'] == CHANNEL_STATE_SETTLED
+    assert channels[1]['state'] == CHANNEL_STATE_SETTLED
+    assert channels[2]['state'] == CHANNEL_STATE_SETTLED
