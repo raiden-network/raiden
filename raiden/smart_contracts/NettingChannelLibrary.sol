@@ -126,6 +126,7 @@ library NettingChannelLibrary {
         bytes memory transfer_raw;
         uint64 nonce;
         address transfer_address;
+        address recipient;
         bytes32 locksroot;
         uint256 transferred_amount;
 
@@ -161,10 +162,15 @@ library NettingChannelLibrary {
             // by the closing node
             Participant storage counterparty = self.participants[counterparty_index];
 
-            (nonce, locksroot, transferred_amount) = decodeTransfer(transfer_raw);
+            (nonce, recipient, locksroot, transferred_amount) = decodeTransfer(transfer_raw);
 
             // only accept messages with a valid nonce
             if (!isValidNonce(self, nonce)) {
+                throw;
+            }
+
+            // the registered message recipient should be the closing party
+            if (recipient != self.closing_address) {
                 throw;
             }
 
@@ -183,6 +189,7 @@ library NettingChannelLibrary {
         stillTimeout(self)
     {
         address transfer_address;
+        address recipient;
         bytes32 locksroot;
         bytes memory transfer_raw;
         uint256 transferred_amount;
@@ -215,10 +222,18 @@ library NettingChannelLibrary {
         // counterparty
         closer_index = 1 - caller_index;
 
-        (nonce, locksroot, transferred_amount) = decodeTransfer(transfer_raw);
+        (nonce, recipient, locksroot, transferred_amount) = decodeTransfer(transfer_raw);
 
         // only accept messages with a valid nonce
         if (!isValidNonce(self, nonce)) {
+            throw;
+        }
+
+        // the registered recipient in the message should be us
+        // Note: could have taken msg.sender here but trying to be future-proof
+        // for when we allow third party updates
+        Participant storage updating_party = self.participants[caller_index];
+        if (updating_party.node_address != recipient) {
             throw;
         }
 
@@ -444,7 +459,7 @@ library NettingChannelLibrary {
 
     function decodeTransfer(bytes transfer_raw)
         internal
-        returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount)
+        returns (uint64 nonce, address recipient, bytes32 locksroot, uint256 transferred_amount)
     {
         uint cmdid = uint(transfer_raw[0]);
 
@@ -461,7 +476,7 @@ library NettingChannelLibrary {
 
     function decodeDirectTransfer(bytes memory message)
         private
-        returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount)
+        returns (uint64 nonce, address recipient, bytes32 locksroot, uint256 transferred_amount)
     {
         // size of the raw message without the signature
         if (message.length != 124) {
@@ -479,6 +494,7 @@ library NettingChannelLibrary {
         // [92:124] optional_locksroot
         assembly {
             nonce := mload(add(message, 12))
+            recipient := mload(add(message, 60))
             transferred_amount := mload(add(message, 92))
             locksroot := mload(add(message, 124))
         }
@@ -486,7 +502,7 @@ library NettingChannelLibrary {
 
     function decodeMediatedTransfer(bytes memory message)
         private
-        returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount)
+        returns (uint64 nonce, address recipient, bytes32 locksroot, uint256 transferred_amount)
     {
         // size of the raw message without the signature
         if (message.length != 268) {
@@ -510,6 +526,7 @@ library NettingChannelLibrary {
         // [236:268] fee
         assembly {
             nonce := mload(add(message, 12))
+            recipient := mload(add(message, 68))
             locksroot := mload(add(message, 140))
             transferred_amount := mload(add(message, 204))
         }
@@ -517,7 +534,7 @@ library NettingChannelLibrary {
 
     function decodeRefundTransfer(bytes memory message)
         private
-        returns (uint64 nonce, bytes32 locksroot, uint256 transferred_amount)
+        returns (uint64 nonce, address recipient, bytes32 locksroot, uint256 transferred_amount)
     {
         // size of the raw message without the signature
         if (message.length != 196) {
@@ -538,6 +555,7 @@ library NettingChannelLibrary {
         // [164:196] hashlock
         assembly {
             nonce := mload(add(message, 12))
+            recipient := mload(add(message, 68))
             locksroot := mload(add(message, 100))
             transferred_amount := mload(add(message, 132))
         }
