@@ -81,11 +81,12 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
     """ Close must not accept a transfer from a non participant. """
     pkey0, _, nettingchannel, channel0, _ = tester_channels[0]
     nonparticipant_key = private_keys[2]
+    opened_block = nettingchannel.opened(sender=pkey0)
 
     # make a transfer where pkey0 is the target
     transfer_nonparticipant = DirectTransfer(
         identifier=1,
-        nonce=1,
+        nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
         transferred_amount=10,
         recipient=channel0.our_address,
@@ -100,6 +101,30 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
 
     with pytest.raises(TransactionFailed):
         nettingchannel.close(transfer_nonparticipant_data, sender=pkey0)
+
+
+@pytest.mark.parametrize('number_of_nodes', [3])
+def test_close_wrong_recipient(tester_channels, private_keys):
+    """ Close must not accept a transfer aimed at a non recipient. """
+    pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
+    opened_block = nettingchannel.opened(sender=pkey0)
+    nonparticipant_address = privatekey_to_address(private_keys[2])
+
+    # make a transfer where the recipient is totally wrong
+    transfer_wrong_recipient = DirectTransfer(
+        identifier=1,
+        nonce=1 + (opened_block * (2 ** 32)),
+        token=channel0.token_address,
+        transferred_amount=10,
+        recipient=nonparticipant_address,
+        locksroot='',
+    )
+
+    transfer_wrong_recipient.sign(PrivateKey(pkey1), privatekey_to_address(pkey1))
+    transfer_wrong_recipient_data = str(transfer_wrong_recipient.packed().data)
+
+    with pytest.raises(TransactionFailed):
+        nettingchannel.close(transfer_wrong_recipient_data, sender=pkey0)
 
 
 def test_close_called_multiple_times(tester_state, tester_nettingcontracts):
