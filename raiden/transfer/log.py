@@ -62,7 +62,7 @@ class StateChangeLogStorageBackend(object):
         pass
 
     @abstractmethod
-    def last_identifier(self):
+    def last_state_change_id(self):
         pass
 
 
@@ -81,6 +81,12 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
             'CREATE TABLE IF NOT EXISTS state_snapshot ('
             'identifier integer primary key, statechange_id integer, data binary, '
             'FOREIGN KEY(statechange_id) REFERENCES state_changes(id)'
+            ')'
+        )
+        cursor.execute(
+            'CREATE TABLE IF NOT EXISTS state_events ('
+            'identifier integer primary key, source_statechange_id integer, data binary, '
+            'FOREIGN KEY(source_statechange_id) REFERENCES state_changes(id)'
             ')'
         )
         self.conn.commit()
@@ -129,6 +135,15 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         )
         self.conn.commit()
 
+    def write_state_event(self, statechange_id, data):
+        cursor = self.conn.cursor()
+        cursor.execute(
+            'INSERT INTO state_events('
+            ' source_statechange_id, data) VALUES(null,?,?)',
+            (statechange_id, data)
+        )
+        self.conn.commit()
+
     def get_state_snapshot(self):
         """ Return the last state snapshot as a tuple of (state_change_id, data)"""
         cursor = self.conn.cursor()
@@ -160,7 +175,7 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
     def read(self):
         pass
 
-    def last_identifier(self):
+    def last_state_change_id(self):
         cursor = self.conn.cursor()
         result = cursor.execute(
             'SELECT seq FROM sqlite_sequence WHERE name="state_changes"'
@@ -202,12 +217,21 @@ class StateChangeLog(object):
         serialized_data = self.serializer.serialize(state_change)
         self.storage.write_transaction(serialized_data)
 
+    def log_events(self, events):
+        """ Log the events into the write ahead Log. They are always assumed to be
+        events coming out of the last logged state change"""
+        assert isinstance(events, list)
+
+        id = self.last_state_change_id()
+        for event in events:
+            self.storage.write_state_event(id, event)
+
     def get_transaction_by_id(self, identifier):
         serialized_data = self.storage.get_transaction_by_id(identifier)
         return self.serializer.deserialize(serialized_data)
 
-    def last_identifier(self):
-        return self.storage.last_identifier()
+    def last_state_change_id(self):
+        return self.storage.last_state_change_id()
 
     def get_all_state_changes(self):
         """ Returns a list of tuples of identifiers and state changes"""
@@ -218,4 +242,4 @@ class StateChangeLog(object):
 
     def snapshot(self, state):
         serialized_data = self.serializer.serialize(state)
-        self.storage.write_state_snapshot(self.last_identifier(), serialized_data)
+        self.storage.write_state_snapshot(self.last_state_change_id(), serialized_data)

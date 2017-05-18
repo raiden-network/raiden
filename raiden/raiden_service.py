@@ -1034,24 +1034,29 @@ class StateMachineEventHandler(object):
         manager_lists = self.raiden.identifier_to_statemanagers.itervalues()
 
         for manager in itertools.chain(*manager_lists):
-            self.dispatch(manager, state_change)
+            events = self.dispatch(manager, state_change)
+            self.raiden.transaction_log.log_events(events)
 
     def dispatch_by_identifier(self, identifier, state_change):
         self.raiden.transaction_log.log(state_change)
         manager_list = self.raiden.identifier_to_statemanagers[identifier]
 
         for manager in manager_list:
-            self.dispatch(manager, state_change)
+            events = self.dispatch(manager, state_change)
+            self.raiden.transaction_log.log_events(events)
 
     def log_and_dispatch(self, state_manager, state_change):
         self.raiden.transaction_log.log(state_change)
-        self.dispatch(state_manager, state_change)
+        events = self.dispatch(state_manager, state_change)
+        self.raiden.tranaction_log.log_events(events)
 
     def dispatch(self, state_manager, state_change):
         all_events = state_manager.dispatch(state_change)
 
         for event in all_events:
             self.on_event(event)
+
+        return all_events
 
     def on_event(self, event):
         if isinstance(event, SendMediatedTransfer):
