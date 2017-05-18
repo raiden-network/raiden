@@ -362,6 +362,7 @@ def test_withdraw_fails_with_partial_merkle_proof(
     direct_transfer = make_direct_transfer(
         nonce=nonce,
         locksroot=merkle_tree.merkleroot,
+        recipient=privatekey_to_address(pkey1)
     )
 
     address = privatekey_to_address(pkey0)
@@ -412,6 +413,7 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, set
     direct_transfer = make_direct_transfer(
         nonce=nonce,
         locksroot=merkle_tree.merkleroot,
+        recipient=privatekey_to_address(pkey1)
     )
 
     address = privatekey_to_address(pkey0)
@@ -474,6 +476,7 @@ def test_withdraw_tampered_lock_amount(
         nonce=nonce,
         locksroot=merkle_tree.merkleroot,
         token=tester_token.address,
+        recipient=privatekey_to_address(pkey1)
     )
 
     address = privatekey_to_address(pkey0)
