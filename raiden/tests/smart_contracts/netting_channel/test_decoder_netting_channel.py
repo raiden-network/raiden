@@ -34,11 +34,13 @@ def assert_decoder_results(message, decoder):
 
     (
         nonce_decoded,
+        recipient_address_decoded,
         locksroot_decoded,
         transferred_amount_decoded
     ) = decoder.decodeTransfer(transfer_raw)
 
     assert message.nonce == nonce_decoded
+    assert message.recipient == address_decoder(recipient_address_decoded)
     assert message.transferred_amount == transferred_amount_decoded
     assert message.locksroot == locksroot_decoded
 
