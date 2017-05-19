@@ -209,26 +209,25 @@ class BalanceProof(object):
             self.hashlock_unlockedlocks.itervalues(),
         )
 
+        tree = self.generate_merkle_tree();
+
         return [
             self.compute_proof_for_lock(
                 partialproof.secret,
                 partialproof.lock,
+                tree,
             )
             for partialproof in allpartialproof
         ]
 
-    def compute_proof_for_lock(self, secret, lock):
-        alllocks = chain(
-            self.hashlock_pendinglocks.values(),
-            self.hashlock_unclaimedlocks.values(),
-            self.hashlock_unlockedlocks.values()
-        )
+    def compute_proof_for_lock(self, secret, lock, tree=None):
+        if tree is None:
+            tree = self.generate_merkle_tree()
 
         # forcing bytes because ethereum.abi doesnt work with bytearray
         lock_encoded = bytes(lock.as_bytes)
         lock_hash = sha3(lock_encoded)
 
-        tree = Merkletree(lock.lockhashed for lock in alllocks)
         merkle_proof = tree.make_proof(lock_hash)
 
         return UnlockProof(
@@ -236,3 +235,12 @@ class BalanceProof(object):
             lock_encoded,
             secret,
         )
+
+    # generate a Merkle tree for the known locks
+    def generate_merkle_tree(self):
+        alllocks = chain(
+            self.hashlock_pendinglocks.values(),
+            self.hashlock_unclaimedlocks.values(),
+            self.hashlock_unlockedlocks.values()
+        )
+        return Merkletree(lock.lockhashed for lock in alllocks)
