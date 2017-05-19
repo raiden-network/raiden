@@ -1,6 +1,12 @@
-{
-    "*/*":{
-        "target": "http://localhost:8545",
-        "secure":false
-      }
-}
+[
+  {
+    "context": ["*/*"],
+    "target": "http://localhost:8545",
+    "secure": false
+  },
+  {
+    "context": ["*/api/*"],
+    "target": "http://localhost:5001",
+    "secure": false
+  }
+]
