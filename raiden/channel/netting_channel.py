@@ -789,3 +789,56 @@ class Channel(object):
         elif isinstance(state_change, ContractReceiveSettled):
             if state_change.channel_address == self.channel_address:
                 self.external_state.set_settled(state_change.block_number)
+
+    def serialize(self):
+        return ChannelSerialization(self)
+
+
+class ChannelSerialization(object):
+
+    def __init__(self, channel_instance):
+        self.our_state = None
+        self.partner_state = None
+        self.external_state = None
+
+        self.channel_address = channel_instance.channel_address
+        self.token_address = channel_instance.token_address
+        self.reveal_timeout = channel_instance.reveal_timeout
+        self.settle_timeout = channel_instance.settle_timeout
+        self.block_number = channel_instance.block_number
+        self.received_transfers = channel_instance.received_transfers
+        self.sent_transfers = channel_instance.sent_transfers
+        self.open_event = channel_instance.open_event.is_set()
+        self.close_event = channel_instance.close_event.is_set()
+        self.settle_event = channel_instance.settle_event.is_set()
+
+        # TODO: these require extra work
+
+        # HUB
+        # self.open_event = channel_instance.open_event
+        # self.close_event = channel_instance.close_event
+        # self.settle_event = channel_instance.settle_event
+
+        # instancemethod
+        # self.external_state = channel_instance.external_state
+
+        # TODO serialize event state
+        # # external_state.callback_on_opened(lambda _: self.open_event.set())
+        # # external_state.callback_on_closed(lambda _: self.close_event.set())
+        # # external_state.callback_on_settled(lambda _: self.settle_event.set())
+        # # external_state.callback_on_closed(self.channel_closed)
+
+    def to_channel_instance(self, raiden_service):
+        external_state = ChannelExternalState(
+
+        )
+        instance = Channel(
+            self.our_state,
+            self.partner_state,
+            self.external_state,
+            self.token_address,
+            self.reveal_timeout,
+            self.settle_timeout,
+            self.block_number
+        )
+        return instance
