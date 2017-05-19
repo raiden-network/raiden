@@ -43,24 +43,22 @@ library NettingChannelLibrary {
 
 
     modifier notSettledButClosed(Data storage self) {
-        if (self.settled > 0 || self.closed == 0)
-            throw;
+        require(self.settled <= 0 && self.closed > 0);
         _;
     }
 
     modifier stillTimeout(Data storage self) {
-        assert(self.closed + self.settle_timeout >= block.number);
+        require(self.closed + self.settle_timeout >= block.number);
         _;
     }
 
     modifier timeoutOver(Data storage self) {
-        assert(self.closed + self.settle_timeout <= block.number);
+        require(self.closed + self.settle_timeout <= block.number);
         _;
     }
 
     modifier channelSettled(Data storage self) {
-        if (self.settled == 0)
-            throw;
+        require(self.settled != 0);
         _;
     }
 
@@ -491,9 +489,7 @@ library NettingChannelLibrary {
         returns (uint64 nonce, address recipient, bytes32 locksroot, uint256 transferred_amount)
     {
         // size of the raw message without the signature
-        if (message.length != 268) {
-            throw;
-        }
+        require(message.length == 268);
 
         // Message format:
         // [0:1] cmdid
@@ -523,9 +519,7 @@ library NettingChannelLibrary {
         returns (uint64 nonce, address recipient, bytes32 locksroot, uint256 transferred_amount)
     {
         // size of the raw message without the signature
-        if (message.length != 196) {
-            throw;
-        }
+        require(message.length == 196);
 
         // Message format:
         // [0:1] cmdid
