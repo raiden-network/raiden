@@ -141,9 +141,7 @@ contract ChannelManagerContract {
     /// @param channel_address The address to be deleted
     function deleteChannel(address partner, address channel_address) private {
         // throw if the channel has already been deleted
-        if (data.getChannelWith(partner) == 0x0) {
-            throw;
-        }
+        assert(data.getChannelWith(partner) != 0x0);
 
         address[] our_channels = node_channels[msg.sender];
         address[] partner_channels = node_channels[partner];

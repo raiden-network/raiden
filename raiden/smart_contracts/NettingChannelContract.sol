@@ -13,7 +13,7 @@ contract NettingChannelContract {
     event ChannelSecretRevealed(bytes32 secret, address receiver_address);
 
     modifier settleTimeoutNotTooLow(uint t) {
-        if (t < 6) throw;
+        assert(t >= 6);
         _;
     }
 
