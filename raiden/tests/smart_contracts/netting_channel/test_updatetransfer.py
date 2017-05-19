@@ -83,11 +83,12 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
     """ updateTransfer must not accept a transfer from a non participant. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     nonparticipant_key = private_keys[2]
+    opened_block = nettingchannel.opened(sender=pkey0)
 
     # make a transfer where pkey1 is the target
     transfer_nonparticipant = DirectTransfer(
         identifier=1,
-        nonce=1,
+        nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
         transferred_amount=10,
         recipient=channel1.our_address,
@@ -104,6 +105,35 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
 
     with pytest.raises(TransactionFailed):
         nettingchannel.updateTransfer(transfer_nonparticipant_data, sender=pkey1)
+
+
+@pytest.mark.parametrize('number_of_nodes', [3])
+def test_update_must_fail_with_a_wrong_recipient(tester_channels, private_keys):
+    """ updateTransfer must not accept a transfer from a non participant. """
+    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    opened_block = nettingchannel.opened(sender=pkey0)
+    nonparticipant_address = privatekey_to_address(private_keys[2])
+
+    # make a transfer where pkey1 is the target
+    transfer_wrong_recipient = DirectTransfer(
+        identifier=1,
+        nonce=1 + (opened_block * (2 ** 32)),
+        token=channel0.token_address,
+        transferred_amount=10,
+        recipient=nonparticipant_address,
+        locksroot='',
+    )
+
+    our_address = privatekey_to_address(pkey0)
+    our_sign_key = PrivateKey(pkey0)
+
+    transfer_wrong_recipient.sign(our_sign_key, our_address)
+    transfer_wrong_recipient_data = str(transfer_wrong_recipient.packed().data)
+
+    nettingchannel.close('', sender=pkey0)
+
+    with pytest.raises(TransactionFailed):
+        nettingchannel.updateTransfer(transfer_wrong_recipient_data, sender=pkey1)
 
 
 def test_update_called_multiple_times_same_transfer(tester_channels):
