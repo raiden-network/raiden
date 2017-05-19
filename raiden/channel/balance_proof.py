@@ -209,7 +209,7 @@ class BalanceProof(object):
             self.hashlock_unlockedlocks.itervalues(),
         )
 
-        tree = self.generate_merkle_tree();
+        tree = self.generate_merkle_tree()
 
         return [
             self.compute_proof_for_lock(
