@@ -11,7 +11,7 @@ Machine-based, rapid creation of many tokens would not necessarily need these ex
 
 .*/
 
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.10;
 import "./StandardToken.sol";
 
 contract HumanStandardToken is StandardToken {
@@ -52,9 +52,7 @@ contract HumanStandardToken is StandardToken {
         allowed[msg.sender][_spender] = _value;
         //call the receiveApproval function on the contract you want to be notified. This crafts the function signature manually so one doesn't have to include a contract in here just for this.
         //receiveApproval(address _from, uint256 _value, address _tokenContract, bytes _extraData)
-        if (!_spender.call(bytes4(bytes32(sha3("receiveApproval(address,uint256,address,bytes)"))), msg.sender, _value, this, _extraData)) {
-            throw;
-        }
+        assert(_spender.call(bytes4(bytes32(sha3("receiveApproval(address,uint256,address,bytes)"))), msg.sender, _value, this, _extraData));
         Approval(msg.sender, _spender, _value);
         return true;
     }

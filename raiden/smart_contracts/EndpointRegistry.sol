@@ -4,7 +4,7 @@
  * The Ethereum address registers his address in this registry.
 */
 
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.10;
 
 contract EndpointRegistry{
     event AddressRegistered(address indexed eth_address, string socket);
@@ -18,9 +18,7 @@ contract EndpointRegistry{
 
     modifier noEmptyString(string str)
     {
-        if (equals(str, "") == true) {
-            throw;
-        }
+        assert(!equals(str, ""));
         _;
     }
 
