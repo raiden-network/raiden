@@ -15,23 +15,22 @@ export class RaidenConfig {
             .subscribe(config => {
                 this.config = config;
                 const raidenConf = this.config['raiden'];
-                this.apiCall = 'http://' + raidenConf['host'] + ':' +
-                                          raidenConf['port'] + '/api/' +
-                                          raidenConf['version'];
+                this.apiCall = ['http://', raidenConf['host'], ':', raidenConf['port'],
+                                '/api/', raidenConf['version']].join('');
+                const web3Conf = this.config['web3'];
+                if (typeof this.web3 !== 'undefined') {
+                    this.web3 = new Web3(this.web3.currentProvider);
+                } else {
+                // set the provider you want from Web3.providers
+                    const web3Url = 'http://' + web3Conf['host'] + ':' + web3Conf['port'];
+                    this.web3 = new Web3(new Web3.providers.HttpProvider(web3Url));
+                }
                 resolve();
             });
         });
     }
 
     public getWeb3() {
-        const web3Conf = this.config['web3'];
-        if (typeof this.web3 !== 'undefined') {
-            this.web3 = new Web3(this.web3.currentProvider);
-        } else {
-            // set the provider you want from Web3.providers
-            const web3Url = 'http://' + web3Conf['host'] + ':' + web3Conf['port'];
-            this.web3 = new Web3(new Web3.providers.HttpProvider(web3Url));
-        }
         return this.web3;
     }
 }

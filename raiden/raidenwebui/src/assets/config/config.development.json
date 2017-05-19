@@ -2,7 +2,7 @@
   "raiden":
   {
     "host": "localhost",
-    "port": 5000,
+    "port": 5001,
     "version": 1
   },
   "web3":
