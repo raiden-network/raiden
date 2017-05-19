@@ -156,9 +156,7 @@ library NettingChannelLibrary {
             require(isValidNonce(self, nonce));
 
             // the registered message recipient should be the closing party
-            if (recipient != self.closing_address) {
-                throw;
-            }
+            require(recipient == self.closing_address);
 
             counterparty.nonce = nonce;
             counterparty.locksroot = locksroot;
@@ -211,9 +209,7 @@ library NettingChannelLibrary {
         // Note: could have taken msg.sender here but trying to be future-proof
         // for when we allow third party updates
         Participant storage updating_party = self.participants[caller_index];
-        if (updating_party.node_address != recipient) {
-            throw;
-        }
+        require(updating_party.node_address == recipient);
 
         self.participants[closer_index].nonce = nonce;
         self.participants[closer_index].locksroot = locksroot;
@@ -248,9 +244,7 @@ library NettingChannelLibrary {
         require(!counterparty.withdrawn_locks[hashlock]);
         counterparty.withdrawn_locks[hashlock] = true;
 
-        if (expiration < block.number) {
-            throw;
-        }
+        require(expiration >= block.number);
 
         require(hashlock == sha3(secret));
 
