@@ -14,6 +14,8 @@ env:
   matrix:
     - TEST_TYPE='unit'
     - TEST_TYPE='smart_contracts'
+    - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=tester'
+    - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=geth'
 
     - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=tester'
     - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
