@@ -1048,7 +1048,7 @@ class StateMachineEventHandler(object):
     def log_and_dispatch(self, state_manager, state_change):
         self.raiden.transaction_log.log(state_change)
         events = self.dispatch(state_manager, state_change)
-        self.raiden.tranaction_log.log_events(events)
+        self.raiden.transaction_log.log_events(events)
 
     def dispatch(self, state_manager, state_change):
         all_events = state_manager.dispatch(state_change)
