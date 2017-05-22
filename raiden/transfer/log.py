@@ -71,6 +71,7 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
     def __init__(self, database_path):
         self.conn = sqlite3.connect(database_path)
         self.conn.text_factory = str
+        self.conn.execute("PRAGMA foreign_keys=ON")
         cursor = self.conn.cursor()
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS state_changes ('
@@ -85,7 +86,7 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         )
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS state_events ('
-            'identifier integer primary key, source_statechange_id integer, data binary, '
+            'identifier integer primary key, source_statechange_id integer NOT NULL, data binary, '
             'FOREIGN KEY(source_statechange_id) REFERENCES state_changes(id)'
             ')'
         )
@@ -139,8 +140,8 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         cursor = self.conn.cursor()
         cursor.execute(
             'INSERT INTO state_events('
-            ' source_statechange_id, data) VALUES(null,?,?)',
-            (statechange_id, data)
+            'identifier, source_statechange_id, data) VALUES(?,?,?)',
+            (None, statechange_id, data)
         )
         self.conn.commit()
 
@@ -169,6 +170,13 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         cursor = self.conn.cursor()
         result = cursor.execute(
             'SELECT * from state_changes'
+        )
+        return result.fetchall()
+
+    def get_all_state_events(self):
+        cursor = self.conn.cursor()
+        result = cursor.execute(
+            'SELECT * from state_events'
         )
         return result.fetchall()
 
@@ -224,7 +232,7 @@ class StateChangeLog(object):
 
         id = self.last_state_change_id()
         for event in events:
-            self.storage.write_state_event(id, event)
+            self.storage.write_state_event(id, self.serializer.serialize(event))
 
     def get_transaction_by_id(self, identifier):
         serialized_data = self.storage.get_transaction_by_id(identifier)
@@ -238,6 +246,13 @@ class StateChangeLog(object):
         return [
             (res[0], self.serializer.deserialize(res[1]))
             for res in self.storage.get_all_state_changes()
+        ]
+
+    def get_all_state_events(self):
+        """ Returns a list of tuples of event id, state_change_id and events"""
+        return [
+            (res[0], res[1], self.serializer.deserialize(res[2]))
+            for res in self.storage.get_all_state_events()
         ]
 
     def snapshot(self, state):
