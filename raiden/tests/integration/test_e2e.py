@@ -16,6 +16,13 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretRequest,
     ReceiveSecretReveal
 )
+from raiden.transfer.mediated_transfer.events import (
+    SendMediatedTransfer,
+    SendRevealSecret,
+    SendBalanceProof,
+    EventTransferCompleted,
+    SendSecretRequest,
+)
 from raiden.messages import DirectTransfer
 
 
@@ -62,21 +69,34 @@ def test_fullnetwork(raiden_chain, settle_timeout, reveal_timeout):
         change[1] for change in app0.raiden.transaction_log.get_all_state_changes()
         if not isinstance(change[1], Block)
     ]
+    app0_events = [
+        event[2] for event in app0.raiden.transaction_log.get_all_state_events()
+    ]
     app1_state_changes = [
         change[1] for change in app1.raiden.transaction_log.get_all_state_changes()
         if not isinstance(change[1], Block)
+    ]
+    app1_events = [
+        event[2] for event in app1.raiden.transaction_log.get_all_state_events()
     ]
     app2_state_changes = [
         change[1] for change in app2.raiden.transaction_log.get_all_state_changes()
         if not isinstance(change[1], Block)
     ]
+    app2_events = [
+        event[2] for event in app2.raiden.transaction_log.get_all_state_events()
+    ]
     app3_state_changes = [
         change[1] for change in app3.raiden.transaction_log.get_all_state_changes()
         if not isinstance(change[1], Block)
     ]
+    app3_events = [
+        event[2] for event in app3.raiden.transaction_log.get_all_state_events()
+    ]
 
     # app1 does not take part in the mediated transfer.
-    assert app1_state_changes == list()
+    assert len(app1_state_changes) == 0
+    assert len(app1_events) == 0
 
     # app0 initiates the mediated_transfer
     assert len(app0_state_changes) == 3
@@ -132,6 +152,29 @@ def test_fullnetwork(raiden_chain, settle_timeout, reveal_timeout):
     secret = app0_state_changes[2].secret
     assert sha3(secret) == hashlock
 
+    # check app0 state events
+    assert len(app0_events) == 4
+    assert isinstance(app0_events[0], SendMediatedTransfer)
+    assert app0_events[0].token == token_address
+    assert app0_events[0].amount == amount
+    assert app0_events[0].hashlock == hashlock
+    assert app0_events[0].initiator == app0.raiden.address
+    assert app0_events[0].target == app2.raiden.address
+    assert app0_events[0].receiver == app3.raiden.address
+    assert isinstance(app0_events[1], SendRevealSecret)
+    assert app0_events[1].secret == secret
+    assert app0_events[1].token == token_address
+    assert app0_events[1].receiver == app2.raiden.address
+    assert app0_events[1].sender == app0.raiden.address
+    assert isinstance(app0_events[2], SendBalanceProof)
+    assert app0_events[2].token == token_address
+    assert app0_events[2].channel_address == channel_0_3.channel_address
+    assert app0_events[2].receiver == app3.raiden.address
+    assert app0_events[2].secret == secret
+    assert isinstance(app0_events[3], EventTransferCompleted)
+    assert app0_events[3].secret == secret
+    assert app0_events[3].hashlock == hashlock
+
     # app3 is the mediator
     assert isinstance(app3_state_changes[0], ActionInitMediator)
     assert app3_state_changes[0].our_address == app3.raiden.address
@@ -179,6 +222,26 @@ def test_fullnetwork(raiden_chain, settle_timeout, reveal_timeout):
         assert state_change.sender == app0.raiden.address
         assert state_change.secret == secret
 
+    # check app3 state events
+    assert len(app3_events) == 3
+    assert isinstance(app3_events[0], SendMediatedTransfer)
+    assert app3_events[0].token == token_address
+    assert app3_events[0].amount == amount
+    assert app3_events[0].hashlock == hashlock
+    assert app3_events[0].initiator == app0.raiden.address
+    assert app3_events[0].target == app2.raiden.address
+    assert app3_events[0].receiver == app2.raiden.address
+    assert isinstance(app3_events[1], SendRevealSecret)
+    assert app3_events[1].secret == secret
+    assert app3_events[1].token == token_address
+    assert app3_events[1].receiver == app0.raiden.address
+    assert app3_events[1].sender == app3.raiden.address
+    assert isinstance(app3_events[2], SendBalanceProof)
+    assert app3_events[2].token == token_address
+    assert app3_events[2].channel_address == channel_3_2.channel_address
+    assert app3_events[2].receiver == app2.raiden.address
+    assert app3_events[2].secret == secret
+
     # app2 is the target of the mediated transfer
     assert len(app2_state_changes) == 4  # We get 2 secret reveals from the mediator. WHY?
     assert isinstance(app2_state_changes[0], ActionInitTarget)
@@ -213,3 +276,15 @@ def test_fullnetwork(raiden_chain, settle_timeout, reveal_timeout):
     assert isinstance(app2_state_changes[3], ReceiveSecretReveal)
     assert app2_state_changes[3].sender == app3.raiden.address
     assert app2_state_changes[3].secret == secret
+
+    # check app2 state events
+    assert len(app2_events) == 2
+    assert isinstance(app2_events[0], SendSecretRequest)
+    assert app2_events[0].amount == amount
+    assert app2_events[0].hashlock == hashlock
+    assert app2_events[0].receiver == app0.raiden.address
+    assert isinstance(app2_events[1], SendRevealSecret)
+    assert app2_events[1].token == token_address
+    assert app2_events[1].secret == secret
+    assert app2_events[1].receiver == app3.raiden.address
+    assert app2_events[1].sender == app2.raiden.address
