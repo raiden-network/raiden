@@ -39,17 +39,12 @@ class ChannelExternalState(object):
         self.register_channel_for_hashlock = register_channel_for_hashlock
         self.netting_channel = netting_channel
 
-        # force use of the setters to run the callbacks (using explicit methods
-        # to imply that more code is executed)
         self._opened_block = netting_channel.opened()
         self._closed_block = netting_channel.closed()
         self._settled_block = netting_channel.settled()
 
         self.close_event = Event()
         self.settle_event = Event()
-
-        self.callbacks_closed = list()
-        self.callbacks_settled = list()
 
     @property
     def opened_block(self):
@@ -65,40 +60,32 @@ class ChannelExternalState(object):
 
     def set_opened(self, block_number):
         if self._opened_block != 0:
-            raise RuntimeError('channel is already open')
+            raise RuntimeError(
+                'channel is already open on different block %s %s'
+                % (self._opened_block, block_number)
+            )
 
         self._opened_block = block_number
 
     def set_closed(self, block_number):
-        self.close_event.set()
-
-        # TODO: ensure the same callback logic as in set_settled
         if self._closed_block != 0 and self._closed_block != block_number:
             raise RuntimeError(
-                'attempted set_closed(%s) for a channel already closed on block %s'
+                'channel is already closed on different block %s %s'
                 % (self._closed_block, block_number)
             )
 
-        else:
-            self._closed_block = block_number
-
-        for callback in self.callbacks_closed:
-            callback(block_number)
+        self._closed_block = block_number
+        self.close_event.set()
 
     def set_settled(self, block_number):
-        self.settle_event.set()
-
-        # ensure callbacks are only called once
         if self._settled_block != 0 and self._settled_block != block_number:
             raise RuntimeError(
                 'channel is already settled on different block %s %s'
                 % (self._settled_block, block_number)
             )
-        else:
-            self._settled_block = block_number
 
-            for callback in self.callbacks_settled:
-                callback(block_number)
+        self._settled_block = block_number
+        self.settle_event.set()
 
     def query_settled(self):
         # FIXME: the if None: return 0 constraint should be ensured on the

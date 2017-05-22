@@ -4,7 +4,9 @@ import os
 import logging
 import random
 import itertools
+import pickle
 from collections import defaultdict
+from os import path
 
 import gevent
 from gevent.event import AsyncResult
@@ -86,7 +88,13 @@ from raiden.transfer.log import (
     StateChangeLog,
     StateChangeLogSQLiteBackend,
 )
-from raiden.channel import ChannelEndState, ChannelExternalState
+from raiden.channel import (
+    ChannelEndState,
+    ChannelExternalState,
+)
+from raiden.channel.netting_channel import (
+    ChannelSerialization,
+)
 from raiden.exceptions import (
     UnknownAddress,
     TransferWhenClosed,
@@ -211,6 +219,26 @@ class RaidenService(object):
                 database_path=config['database_path']
             )
         )
+
+        self.channels_serialization_path = None
+        if config['database_path'] != ':memory:':
+            self.channels_serialization_path = path.join(
+                path.dirname(self.config['database_path']),
+                'channels.pickle',
+            )
+
+            if path.exists(self.channels_serialization_path):
+                restored_channels = list()
+
+                with open(self.channels_serialization_path, 'r') as handler:
+                    try:
+                        while True:
+                            restored_channels.append(pickle.load(handler))
+                    except EOFError:
+                        pass
+
+                map(self.restore_channel, restored_channels)
+
         self.alarm = alarm
         self.message_handler = message_handler
         self.state_machine_event_handler = state_machine_event_handler
@@ -718,11 +746,21 @@ class RaidenService(object):
         if self.healthcheck is not None:
             self.healthcheck.stop_async()
             wait_for.append(self.healthcheck)
-        self.protocol.stop_async()
 
         wait_for.extend(self.protocol.address_greenlet.itervalues())
-
         self.pyethapp_blockchain_events.uninstall_all_event_listeners()
+
+        self.protocol.stop_and_wait()
+
+        if self.channels_serialization_path:
+            with open(self.channels_serialization_path, 'w') as handler:
+                for network in self.channelgraphs.values():
+                    for channel in network.address_channel.values():
+                        pickle.dump(
+                            ChannelSerialization(channel),
+                            handler,
+                        )
+
         gevent.wait(wait_for)
 
     def transfer_async(self, token_address, amount, target, identifier=None):

@@ -111,7 +111,7 @@ class RaidenProtocol(object):
 
     def stop_and_wait(self):
         self.stop_async()
-        gevent.wait(self.address_greenlet.itervalues())
+        gevent.wait(list(self.address_greenlet.itervalues()))
 
     @cachetools.cached(cache=TTL_CACHE)
     def get_host_port(self, receiver_address):
