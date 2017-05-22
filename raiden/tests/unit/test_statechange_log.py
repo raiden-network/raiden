@@ -1,22 +1,29 @@
 import os
+import sqlite3
+import pytest
 
 import transfer.mediated_transfer.factories as factories
 
 from raiden.transfer.log import StateChangeLog, StateChangeLogSQLiteBackend
 from raiden.transfer.mediated_transfer.state_change import ContractReceiveWithdraw
+from raiden.transfer.mediated_transfer.events import EventTransferFailed
 from raiden.transfer.state_change import Block, ActionRouteChange
 from raiden.transfer.state import RouteState
 
 
-def test_write_read_log(tmpdir, in_memory_database):
+def init_database(tmpdir, in_memory_database):
     database_path = ":memory:"
     if not in_memory_database:
         database_path = os.path.join(tmpdir.strpath, 'database.db')
-    log = StateChangeLog(
+    return StateChangeLog(
         storage_instance=StateChangeLogSQLiteBackend(
             database_path=database_path
         )
     )
+
+
+def test_write_read_log(tmpdir, in_memory_database):
+    log = init_database(tmpdir, in_memory_database)
 
     block_number = 1337
     block = Block(block_number)
@@ -58,3 +65,19 @@ def test_write_read_log(tmpdir, in_memory_database):
     assert (34, 'AAAA') == log.storage.get_state_snapshot()
     log.storage.write_state_snapshot(56, 'BBBB')
     assert (56, 'BBBB') == log.storage.get_state_snapshot()
+
+
+def test_write_read_events(tmpdir, in_memory_database):
+    log = init_database(tmpdir, in_memory_database)
+    event = EventTransferFailed(1, 'whatever')
+    with pytest.raises(sqlite3.IntegrityError):
+        log.storage.write_state_event(1, log.serializer.serialize(event))
+    assert(len(log.get_all_state_events()) == 0)
+
+    log.storage.write_transaction('statechangedata')
+    log.storage.write_state_event(1, log.serializer.serialize(event))
+    logged_events = log.get_all_state_events()
+    assert(len(logged_events) == 1)
+    assert(logged_events[0][0] == 1)
+    assert(logged_events[0][1] == 1)
+    assert(isinstance(logged_events[0][2], EventTransferFailed))
