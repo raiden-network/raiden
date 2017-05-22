@@ -4,6 +4,7 @@ import httplib
 from flask import Flask, make_response, url_for
 from flask.json import jsonify
 from flask_restful import Api, abort
+from flask_cors import CORS
 from webargs.flaskparser import parser
 
 from raiden.exceptions import (
@@ -90,6 +91,7 @@ class APIServer(object):
             raise ValueError('Invalid api version: {}'.format(self.rest_api.version))
 
         self.flask_app = Flask(__name__)
+        CORS(self.flask_app, origins="http://localhost:*/*")
         self._add_default_resources()
         self._register_type_converters()
         self.flask_app.register_blueprint(self.blueprint)
