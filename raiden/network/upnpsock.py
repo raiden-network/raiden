@@ -23,8 +23,12 @@ def connect():
         log.error('no upnp providers found')
         return
 
-    location = upnp.selectigd()
-    log.debug('connected', upnp=upnp)
+    try:
+        location = upnp.selectigd()
+        log.debug('connected', upnp=upnp)
+    except Exception as e:
+        log.error('Error when connecting to uPnP provider', exception_info=e)
+        return None
 
     if upnp.lanaddr == '0.0.0.0':
         log.error('could not query your lanaddr')
