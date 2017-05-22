@@ -2,6 +2,7 @@
 from __future__ import print_function
 
 import sys
+import os
 
 import signal
 import click
@@ -250,6 +251,13 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         blockchain_service.node_address,
         blockchain_service.discovery(discovery_contract_address)
     )
+
+    # default database directory
+    raiden_directory = os.path.join(os.path.expanduser('~'), '.raiden')
+    if not os.path.exists(raiden_directory):
+        os.makedirs(raiden_directory)
+    database_path = os.path.join(raiden_directory, 'log.db')
+    config['database_path'] = database_path
 
     return App(config, blockchain_service, discovery)
 
