@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.10;
 
 import "./Token.sol";
 import "./ChannelManagerLibrary.sol";
@@ -96,12 +96,10 @@ contract ChannelManagerContract {
         channel_address = getChannelWith(partner);
         // Check if channel is present in the node_channels mapping within the Data struct
         if (channel_address != 0x0) {
-            if (contractExists(channel_address)) {
-                throw; // throw if an open contract exists that is not settled
-            } else {
-                // Delete channel if contract has self destructed
-                deleteChannel(partner, channel_address);
-            }
+            // throw if an open contract exists that is not settled
+            assert(!contractExists(channel_address));
+            // Delete channel if contract has self destructed
+            deleteChannel(partner, channel_address);
         }
 
         channel = data.newChannel(partner, settle_timeout);
@@ -141,9 +139,7 @@ contract ChannelManagerContract {
     /// @param channel_address The address to be deleted
     function deleteChannel(address partner, address channel_address) private {
         // throw if the channel has already been deleted
-        if (data.getChannelWith(partner) == 0x0) {
-            throw;
-        }
+        assert(!(data.getChannelWith(partner) == 0x0));
 
         address[] our_channels = node_channels[msg.sender];
         address[] partner_channels = node_channels[partner];

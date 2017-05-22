@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.10;
 
 import "./Token.sol";
 import "./NettingChannelContract.sol";
@@ -53,12 +53,12 @@ library ChannelManagerLibrary {
     /// @param address_two of the other party
     /// @return The sha3 hash of both parties sorted by size of address
     function partyHash(address address_one, address address_two) private constant returns (bytes32) {
+        // throw if the two addresses provided are identical
+        assert(address_one != address_two);
         if (address_one < address_two) {
             return sha3(address_one, address_two);
         } else if (address_one > address_two){
             return sha3(address_two, address_one);
-        } else {
-            throw; // if the two addresses provided are identical
         }
     }
 

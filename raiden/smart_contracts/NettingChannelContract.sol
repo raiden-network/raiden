@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.10;
 
 import "./NettingChannelLibrary.sol";
 
@@ -13,7 +13,7 @@ contract NettingChannelContract {
     event ChannelSecretRevealed(bytes32 secret, address receiver_address);
 
     modifier settleTimeoutNotTooLow(uint t) {
-        if (t < 6) throw;
+        assert(t > 6);
         _;
     }
 
@@ -24,9 +24,7 @@ contract NettingChannelContract {
         uint timeout)
         settleTimeoutNotTooLow(timeout)
     {
-        if (participant1 == participant2) {
-            throw;
-        }
+        require(participant1 != participant2);
 
         data.participants[0].node_address = participant1;
         data.participants[1].node_address = participant2;
