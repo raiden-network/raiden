@@ -1,5 +1,10 @@
 from contextlib import contextmanager
+
+from ethereum import slogging
+
 from raiden.network import upnpsock, stunsock
+
+log = slogging.getLogger(__name__)
 
 
 class PortMappedSocket(object):
@@ -34,6 +39,7 @@ def socket_factory(source_ip, source_port, *args, **kwargs):
         PortMappedSocket
     """
     # prefer uPnP over STUN
+    log.info('trying to find uPnP port mapper...')
     upnp = upnpsock.connect()
     if upnp is not None:
         router, location = upnp
@@ -51,6 +57,7 @@ def socket_factory(source_ip, source_port, *args, **kwargs):
                     upnpsock.release_port(router, source_port)
 
     else:
+        log.info('uPnP not available, trying STUN for port mapping...')
         with stunsock.stun_socket(source_ip, source_port, *args, **kwargs) as (
             sock,
             external_ip,
