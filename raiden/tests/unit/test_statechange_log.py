@@ -38,11 +38,11 @@ def test_write_read_log(tmpdir, in_memory_database):
     )
 
     log.log(block)
-    assert log.last_identifier() == 1
+    assert log.last_state_change_id() == 1
     log.log(action_route_change)
-    assert log.last_identifier() == 2
+    assert log.last_state_change_id() == 2
     log.log(contract_receive_withdraw)
-    assert log.last_identifier() == 3
+    assert log.last_state_change_id() == 3
 
     result1 = log.get_transaction_by_id(1)
     result2 = log.get_transaction_by_id(2)
@@ -59,12 +59,15 @@ def test_write_read_log(tmpdir, in_memory_database):
     assert result3.secret == factories.UNIT_SECRET
     assert result3.receiver == factories.HOP1
 
+    # Make sure state snapshot can only go for corresponding state change ids
+    with pytest.raises(sqlite3.IntegrityError):
+        log.storage.write_state_snapshot(34, 'AAAA')
     # Make sure we can only have a single state snapshot
     assert log.storage.get_state_snapshot() is None
-    log.storage.write_state_snapshot(34, 'AAAA')
-    assert (34, 'AAAA') == log.storage.get_state_snapshot()
-    log.storage.write_state_snapshot(56, 'BBBB')
-    assert (56, 'BBBB') == log.storage.get_state_snapshot()
+    log.storage.write_state_snapshot(1, 'AAAA')
+    assert (1, 'AAAA') == log.storage.get_state_snapshot()
+    log.storage.write_state_snapshot(2, 'BBBB')
+    assert (2, 'BBBB') == log.storage.get_state_snapshot()
 
 
 def test_write_read_events(tmpdir, in_memory_database):
