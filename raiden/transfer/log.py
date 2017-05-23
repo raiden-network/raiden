@@ -85,6 +85,30 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         )
         self.conn.commit()
 
+        self.sanity_check()
+
+    def sanity_check(self):
+        """ Ensures that NUL character can be safely inserted and recovered
+        from the database.
+
+        http://bugs.python.org/issue13676
+        """
+
+        data = '\x00a'
+        self.conn.execute(
+            'INSERT INTO state_changes (id, data) VALUES (null,?)',
+            (data, ),
+        )
+
+        result = next(self.conn.execute('SELECT data FROM state_changes ORDER BY id DESC'))
+
+        if result[0] != data:
+            raise RuntimeError(
+                'Database cannot save NUL character, ensure python is at least 2.7.3'
+            )
+
+        self.conn.rollback()
+
     def write_transaction(self, data):
         cursor = self.conn.cursor()
         cursor.execute(
