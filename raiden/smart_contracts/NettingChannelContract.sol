@@ -48,7 +48,7 @@ contract NettingChannelContract {
         (success, balance) = data.deposit(amount);
 
         if (success == true) {
-            ChannelNewBalance(data.token, msg.sender, balance, data.opened);
+            ChannelNewBalance(data.token, msg.sender, balance, block.number);
         }
 
         return success;
