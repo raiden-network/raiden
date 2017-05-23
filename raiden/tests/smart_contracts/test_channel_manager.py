@@ -250,7 +250,7 @@ def test_new_channel(private_keys, tester_state, tester_channelmanager):
 
     assert channel.settleTimeout(sender=pkey0) == settle_timeout
     assert channel.tokenAddress(sender=pkey0) == tester_channelmanager.tokenAddress(sender=pkey0)
-    assert channel.opened(sender=pkey0) == 0
+    assert channel.opened(sender=pkey0) == tester_state.block.number - 1
     assert channel.closed(sender=pkey0) == 0
     assert channel.settled(sender=pkey0) == 0
 
