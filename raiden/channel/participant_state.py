@@ -16,6 +16,9 @@ class ChannelEndState(object):
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
 
+        if not opened_block > 0:
+            raise ValueError('opened_block must be non-zero and positive (not %s)' % opened_block)
+
         self.contract_balance = participant_balance
         self.address = participant_address
 
