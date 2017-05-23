@@ -94,7 +94,7 @@ from raiden.messages import (
     SecretRequest,
     SignedMessage,
 )
-from raiden.network.protocol import RaidenProtocol
+from raiden.network.protocol import RaidenProtocol, send_ping
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
@@ -1063,6 +1063,7 @@ class StateMachineEventHandler(object):
             fee = 0
             graph = self.raiden.channelgraphs[event.token]
             channel = graph.partneraddress_channel[receiver]
+            send_ping(receiver)
 
             mediated_transfer = channel.create_mediatedtransfer(
                 event.initiator,
