@@ -83,6 +83,7 @@ library NettingChannelLibrary {
     {
         uint8 index;
 
+        require(self.opened > 0);
         require(self.closed == 0);
 
         if (self.token.balanceOf(msg.sender) < amount) {
@@ -97,10 +98,6 @@ library NettingChannelLibrary {
             balance = participant.balance;
             balance += amount;
             participant.balance = balance;
-
-            if (self.opened == 0) {
-                self.opened = block.number;
-            }
 
             return (true, balance);
         }

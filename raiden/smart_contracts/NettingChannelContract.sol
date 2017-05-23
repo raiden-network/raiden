@@ -35,6 +35,7 @@ contract NettingChannelContract {
 
         data.token = Token(token_address);
         data.settle_timeout = timeout;
+        data.opened = block.number;
     }
 
     /// @notice Caller makes a deposit into their channel balance.
