@@ -91,7 +91,7 @@ class APIServer(object):
             raise ValueError('Invalid api version: {}'.format(self.rest_api.version))
 
         self.flask_app = Flask(__name__)
-        CORS(self.flask_app, origins="http://localhost:*/*")
+        CORS(self.flask_app, origins=["http://localhost:*/*", "http://127.0.0.1:*/*"])
         self._add_default_resources()
         self._register_type_converters()
         self.flask_app.register_blueprint(self.blueprint)
