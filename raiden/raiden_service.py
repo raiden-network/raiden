@@ -289,9 +289,6 @@ class RaidenService(object):
 
         message.sign(self.private_key, self.address)
 
-    def send(self, *args):
-        raise NotImplementedError('use send_and_wait or send_async')
-
     def send_async(self, recipient, message):
         """ Send `message` to `recipient` using the raiden protocol.
 
