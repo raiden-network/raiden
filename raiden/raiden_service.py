@@ -1030,25 +1030,25 @@ class StateMachineEventHandler(object):
         self.raiden = raiden
 
     def dispatch_to_all_tasks(self, state_change):
-        self.raiden.transaction_log.log(state_change)
+        state_change_id = self.raiden.transaction_log.log(state_change)
         manager_lists = self.raiden.identifier_to_statemanagers.itervalues()
 
         for manager in itertools.chain(*manager_lists):
             events = self.dispatch(manager, state_change)
-            self.raiden.transaction_log.log_events(events)
+            self.raiden.transaction_log.log_events(state_change_id, events)
 
     def dispatch_by_identifier(self, identifier, state_change):
-        self.raiden.transaction_log.log(state_change)
+        state_change_id = self.raiden.transaction_log.log(state_change)
         manager_list = self.raiden.identifier_to_statemanagers[identifier]
 
         for manager in manager_list:
             events = self.dispatch(manager, state_change)
-            self.raiden.transaction_log.log_events(events)
+            self.raiden.transaction_log.log_events(state_change_id, events)
 
     def log_and_dispatch(self, state_manager, state_change):
-        self.raiden.transaction_log.log(state_change)
+        state_change_id = self.raiden.transaction_log.log(state_change)
         events = self.dispatch(state_manager, state_change)
-        self.raiden.transaction_log.log_events(events)
+        self.raiden.transaction_log.log_events(state_change_id, events)
 
     def dispatch(self, state_manager, state_change):
         all_events = state_manager.dispatch(state_change)
