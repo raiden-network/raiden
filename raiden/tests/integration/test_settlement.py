@@ -16,6 +16,7 @@ from raiden.tests.utils.transfer import (
     pending_mediated_transfer,
     claim_lock,
 )
+from raiden.tests.utils.log import get_all_state_changes
 from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveClosed,
     ContractReceiveWithdraw,
@@ -170,7 +171,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # Now let's query the WAL to see if the state changes were logged as expected
     state_changes = [
-        change[1] for change in alice_app.raiden.transaction_log.get_all_state_changes()
+        change[1] for change in get_all_state_changes(alice_app.raiden.transaction_log)
         if not isinstance(change[1], Block)
     ]
 
