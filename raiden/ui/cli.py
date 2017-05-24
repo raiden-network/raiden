@@ -68,6 +68,12 @@ OPTIONS = [
         type=str,
     ),
     click.option(
+        '--rpccorsdomain',
+        help='Comma separated list of domains to accept cross origin requests (localhost enabled by default)',
+        default=None,
+        type=str,
+    ),
+    click.option(
         '--logging',
         help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
         default=':INFO',
@@ -140,6 +146,7 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         registry_contract_address,
         discovery_contract_address,
         listen_address,
+        rpccorsdomain,
         socket,
         logging,
         logfile,
@@ -283,10 +290,20 @@ def run(ctx, **kwargs):
 
         app_.raiden.register_registry(app_.raiden.chain.default_registry.address)
 
+        domain_list = []
+        if kwargs['rpccorsdomain']:
+            if ',' in kwargs['rpccorsdomain']:
+                for domain in kwargs['rpccorsdomain'].split(','):
+                    domain = str("".join(["http://", domain, ":*/*" ]))
+                    domain_list.append(domain)
+            else:
+                domain = str("".join(["http://", kwargs['rpccorsdomain'], ":*/*"]))
+                domain_list.append(domain)
+
         if ctx.params['rpc']:
             raiden_api = RaidenAPI(app_.raiden)
             rest_api = RestAPI(raiden_api)
-            api_server = APIServer(rest_api)
+            api_server = APIServer(rest_api, cors_domain_list=domain_list)
 
             Greenlet.spawn(
                 api_server.run,
