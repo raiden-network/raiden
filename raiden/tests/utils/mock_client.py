@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from collections import defaultdict
 from itertools import count
+from functools import partial, update_wrapper
+import inspect
 
 from ethereum.utils import encode_hex
 from ethereum.abi import encode_abi, encode_single
@@ -320,8 +322,12 @@ class ChannelManagerMock(object):
             settle_timeout,
         )
         self.pair_channel[pair] = channel
-        self.participant_channels[peer1].append(channel)
-        self.participant_channels[peer2].append(channel)
+        self.participant_channels[peer1].append(
+            OwnedNettingChannelMock(peer1, channel)
+        )
+        self.participant_channels[peer2].append(
+            OwnedNettingChannelMock(peer2, channel)
+        )
 
         BlockChainServiceMock.address_contract[channel.address] = channel
 
@@ -353,6 +359,30 @@ class ChannelManagerMock(object):
         filter_ = FilterMock(topics, next(FILTER_ID_GENERATOR))
         BlockChainServiceMock.filters[self.address].append(filter_)
         return filter_
+
+
+class OwnedNettingChannelMock(object):
+    """Shim for NettingChannelMock that allows to have 'our_address' as a default argument
+    partially applied where necessary.
+    This allows to use the same method signatures on the outside as in the other implementations,
+    while keeping the simple state sharing implementation of NettingChannelMock.
+    """
+    def __init__(self, our_address, netting_channel_mock):
+        self.netting_channel = netting_channel_mock
+        self.our_address = our_address
+        for name, value in inspect.getmembers(self.netting_channel):
+            # ignore private parts
+            if not name.startswith('__'):
+                if inspect.ismethod(value):
+                    orig_func = getattr(self.netting_channel, name)
+                    if 'our_address' in inspect.getargspec(orig_func).args:
+                        new_func = partial(orig_func, self.our_address)
+                        update_wrapper(new_func, orig_func)
+                        setattr(self, name, new_func)
+                    else:
+                        setattr(self, name, orig_func)
+                else:
+                    setattr(self, name, value)
 
 
 class NettingChannelMock(object):
