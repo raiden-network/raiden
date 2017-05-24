@@ -94,7 +94,7 @@ from raiden.messages import (
     SecretRequest,
     SignedMessage,
 )
-from raiden.network.protocol import RaidenProtocol, send_ping
+from raiden.network.protocol import RaidenProtocol
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
@@ -657,6 +657,13 @@ class RaidenService(object):
             if route.state == CHANNEL_STATE_OPENED
         ]
 
+        # send ping to target to make sure we can receive something back from target
+        async_result = self.protocol.send_ping(target)
+        if async_result.get(block=True):
+            log.debug("transfer target received invitation ping")
+        else:
+            log.debug("transfer target did not receive invitation ping, probably behing NAT")
+
         identifier = create_default_identifier(self.address, token_address, target)
         route_state = RoutesState(available_routes)
         our_address = self.address
@@ -1063,7 +1070,6 @@ class StateMachineEventHandler(object):
             fee = 0
             graph = self.raiden.channelgraphs[event.token]
             channel = graph.partneraddress_channel[receiver]
-            send_ping(receiver)
 
             mediated_transfer = channel.create_mediatedtransfer(
                 event.initiator,
