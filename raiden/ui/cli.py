@@ -69,7 +69,8 @@ OPTIONS = [
     ),
     click.option(
         '--rpccorsdomain',
-        help='Comma separated list of domains to accept cross origin requests (localhost enabled by default)',
+        help='Comma separated list of domains to accept cross origin requests. \n'
+        '(localhost enabled by default)',
         default=None,
         type=str,
     ),
@@ -294,7 +295,7 @@ def run(ctx, **kwargs):
         if kwargs['rpccorsdomain']:
             if ',' in kwargs['rpccorsdomain']:
                 for domain in kwargs['rpccorsdomain'].split(','):
-                    domain = str("".join(["http://", domain, ":*/*" ]))
+                    domain = str("".join(["http://", domain, ":*/*"]))
                     domain_list.append(domain)
             else:
                 domain = str("".join(["http://", kwargs['rpccorsdomain'], ":*/*"]))
