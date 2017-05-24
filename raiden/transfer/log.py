@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import pickle
 import sqlite3
+import threading
 from abc import ABCMeta, abstractmethod
 
 
@@ -87,8 +88,20 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
             ')'
         )
         self.conn.commit()
-
         self.sanity_check()
+        # When writting to a table where the primary key is the identifier and we want
+        # to return said identifier we use cursor.lastrowid, which uses sqlite's last_insert_rowid
+        # https://github.com/python/cpython/blob/2.7/Modules/_sqlite/cursor.c#L727-L732
+        #
+        # According to the documentation (http://www.sqlite.org/c3ref/last_insert_rowid.html)
+        # if a different thread tries to use the same connection to write into the table
+        # while we query the last_insert_rowid, the result is unpredictable. For that reason
+        # we have this write lock here.
+        #
+        # TODO (If possible):
+        # Improve on this and find a better way to protect against this potential race
+        # condition.
+        self.write_lock = threading.Lock()
 
     def sanity_check(self):
         """ Ensures that NUL character can be safely inserted and recovered
@@ -113,30 +126,32 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         self.conn.rollback()
 
     def write_state_change(self, data):
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'INSERT INTO state_changes(id, data) VALUES(null,?)',
-            (data,)
-        )
-        last_id = cursor.lastrowid
-        self.conn.commit()
+        with self.write_lock:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                'INSERT INTO state_changes(id, data) VALUES(null,?)',
+                (data,)
+            )
+            last_id = cursor.lastrowid
+            self.conn.commit()
+
         return last_id
 
     def write_state_snapshot(self, statechange_id, data):
         # TODO: Snapshotting is not yet implemented. This is just skeleton code
         # Issue: https://github.com/raiden-network/raiden/issues/593
         # This skeleton code assumes we only keep a single snapshot and overwrite it each time.
-        cursor = self.conn.cursor()
-        cursor.execute(
-            'INSERT OR REPLACE INTO state_snapshot('
-            'identifier, statechange_id, data) VALUES(?,?,?)',
-            (1, statechange_id, data)
-        )
-        # Note: Both here and in write_state_change() there is a potential race condition
-        # because cursor.lastrowid is using `last_insert_rowid()` underneath which is only
-        # guaranteed to be safe if each thread uses its own database connection object.
-        last_id = cursor.lastrowid
-        self.conn.commit()
+
+        with self.write_lock:
+            cursor = self.conn.cursor()
+            cursor.execute(
+                'INSERT OR REPLACE INTO state_snapshot('
+                'identifier, statechange_id, data) VALUES(?,?,?)',
+                (1, statechange_id, data)
+            )
+            last_id = cursor.lastrowid
+            self.conn.commit()
+
         return last_id
 
     def write_state_events(self, statechange_id, events_data):
