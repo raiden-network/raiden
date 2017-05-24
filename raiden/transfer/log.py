@@ -132,6 +132,9 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
             'identifier, statechange_id, data) VALUES(?,?,?)',
             (1, statechange_id, data)
         )
+        # Note: Both here and in write_state_change() there is a potential race condition
+        # because cursor.lastrowid is using `last_insert_rowid()` underneath which is only
+        # guaranteed to be safe if each thread uses its own database connection object.
         last_id = cursor.lastrowid
         self.conn.commit()
         return last_id
@@ -166,35 +169,8 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
             result = result[0][0]
         return result
 
-    def get_all_state_changes(self):
-        cursor = self.conn.cursor()
-        result = cursor.execute(
-            'SELECT * from state_changes'
-        )
-        return result.fetchall()
-
-    def get_all_state_events(self):
-        cursor = self.conn.cursor()
-        result = cursor.execute(
-            'SELECT * from state_events'
-        )
-        return result.fetchall()
-
     def read(self):
         pass
-
-    def last_state_change_id(self):
-        cursor = self.conn.cursor()
-        result = cursor.execute(
-            'SELECT seq FROM sqlite_sequence WHERE name="state_changes"'
-        )
-        result = result.fetchall()
-        if result != list():
-            assert len(result) == 1
-            result = result[0][0]
-        else:
-            result = 0
-        return result
 
     def __del__(self):
         self.conn.close()
@@ -236,23 +212,6 @@ class StateChangeLog(object):
     def get_state_change_by_id(self, identifier):
         serialized_data = self.storage.get_state_change_by_id(identifier)
         return self.serializer.deserialize(serialized_data)
-
-    def last_state_change_id(self):
-        return self.storage.last_state_change_id()
-
-    def get_all_state_changes(self):
-        """ Returns a list of tuples of identifiers and state changes"""
-        return [
-            (res[0], self.serializer.deserialize(res[1]))
-            for res in self.storage.get_all_state_changes()
-        ]
-
-    def get_all_state_events(self):
-        """ Returns a list of tuples of event id, state_change_id and events"""
-        return [
-            (res[0], res[1], self.serializer.deserialize(res[2]))
-            for res in self.storage.get_all_state_events()
-        ]
 
     def snapshot(self, state_change_id, state):
         serialized_data = self.serializer.serialize(state)

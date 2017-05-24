@@ -8,6 +8,7 @@ from raiden.tests.utils.transfer import (
     channel,
     get_sent_transfer,
 )
+from raiden.tests.utils.log import get_all_state_changes, get_all_state_events
 from raiden.transfer.state_change import Block, RouteState
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
@@ -66,32 +67,32 @@ def test_fullnetwork(raiden_chain, settle_timeout, reveal_timeout):
 
     # Now let's query the WAL to see if the state changes were logged as expected
     app0_state_changes = [
-        change[1] for change in app0.raiden.transaction_log.get_all_state_changes()
+        change[1] for change in get_all_state_changes(app0.raiden.transaction_log)
         if not isinstance(change[1], Block)
     ]
     app0_events = [
-        event[2] for event in app0.raiden.transaction_log.get_all_state_events()
+        event[2] for event in get_all_state_events(app0.raiden.transaction_log)
     ]
     app1_state_changes = [
-        change[1] for change in app1.raiden.transaction_log.get_all_state_changes()
+        change[1] for change in get_all_state_changes(app1.raiden.transaction_log)
         if not isinstance(change[1], Block)
     ]
     app1_events = [
-        event[2] for event in app1.raiden.transaction_log.get_all_state_events()
+        event[2] for event in get_all_state_events(app1.raiden.transaction_log)
     ]
     app2_state_changes = [
-        change[1] for change in app2.raiden.transaction_log.get_all_state_changes()
+        change[1] for change in get_all_state_changes(app2.raiden.transaction_log)
         if not isinstance(change[1], Block)
     ]
     app2_events = [
-        event[2] for event in app2.raiden.transaction_log.get_all_state_events()
+        event[2] for event in get_all_state_events(app2.raiden.transaction_log)
     ]
     app3_state_changes = [
-        change[1] for change in app3.raiden.transaction_log.get_all_state_changes()
+        change[1] for change in get_all_state_changes(app3.raiden.transaction_log)
         if not isinstance(change[1], Block)
     ]
     app3_events = [
-        event[2] for event in app3.raiden.transaction_log.get_all_state_events()
+        event[2] for event in get_all_state_events(app3.raiden.transaction_log)
     ]
 
     # app1 does not take part in the mediated transfer.
