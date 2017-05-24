@@ -37,16 +37,13 @@ def test_write_read_log(tmpdir, in_memory_database):
         factories.HOP1
     )
 
-    log.log(block)
-    assert log.last_state_change_id() == 1
-    log.log(action_route_change)
-    assert log.last_state_change_id() == 2
-    log.log(contract_receive_withdraw)
-    assert log.last_state_change_id() == 3
+    assert log.log(block) == 1
+    assert log.log(action_route_change) == 2
+    assert log.log(contract_receive_withdraw) == 3
 
-    result1 = log.get_transaction_by_id(1)
-    result2 = log.get_transaction_by_id(2)
-    result3 = log.get_transaction_by_id(3)
+    result1 = log.get_state_change_by_id(1)
+    result2 = log.get_state_change_by_id(2)
+    result3 = log.get_state_change_by_id(3)
 
     assert isinstance(result1, Block)
     assert result1.block_number == block_number
@@ -77,7 +74,7 @@ def test_write_read_events(tmpdir, in_memory_database):
         log.storage.write_state_event(1, log.serializer.serialize(event))
     assert(len(log.get_all_state_events()) == 0)
 
-    log.storage.write_transaction('statechangedata')
+    log.storage.write_state_change('statechangedata')
     log.storage.write_state_event(1, log.serializer.serialize(event))
     logged_events = log.get_all_state_events()
     assert(len(logged_events) == 1)
