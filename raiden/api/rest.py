@@ -79,7 +79,7 @@ class APIServer(object):
         'hexaddress': HexAddressConverter
     }
 
-    def __init__(self, rest_api):
+    def __init__(self, rest_api, cors_domain_list=None):
         self.rest_api = rest_api
         self.blueprint = create_blueprint()
         if self.rest_api.version == 1:
@@ -91,7 +91,10 @@ class APIServer(object):
             raise ValueError('Invalid api version: {}'.format(self.rest_api.version))
 
         self.flask_app = Flask(__name__)
-        CORS(self.flask_app, origins=["http://localhost:*/*", "http://127.0.0.1:*/*"])
+        origins_list = ["http://localhost:*/*", "http://127.0.0.1:*/*"]
+        if cors_domain_list:
+            origins_list.extend(cors_domain_list)
+        CORS(self.flask_app, origins=origins_list)
         self._add_default_resources()
         self._register_type_converters()
         self.flask_app.register_blueprint(self.blueprint)
