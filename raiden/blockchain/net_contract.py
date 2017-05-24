@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-A pure python implementation of a contract responsable to open a channel.
+A pure python implementation of a contract responsible to open a channel.
 """
 from ethereum import slogging
 
@@ -277,8 +277,8 @@ class NettingChannelContract(object):
         participant.has_deposited = True
         participant.deposit += amount
 
-        if self.isopen and self.opened is 0:
-            # track the block were the contract was openned
+        if self.opened is 0:
+            # track the block were the contract was opened
             self.opened = block_number
 
     def partner(self, address):

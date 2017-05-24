@@ -136,8 +136,8 @@ class ChannelExternalStateTester(object):
     def settled_block(self):
         return self.netting_channel.settled()
 
-    def isopen(self):
-        return self.netting_channel.isopen()
+    def can_transfer(self):
+        return self.netting_channel.can_transfer()
 
     def update_transfer(self, our_address, first_transfer, second_transfer=None):
         return self.netting_channel.update_transfer(our_address, first_transfer, second_transfer)
@@ -551,7 +551,7 @@ class NettingChannelTesterMock(object):
         self.channelsettle_filters = list()
 
         # check we are a participant of the channel
-        self.detail(privatekey_to_address(private_key))
+        self.detail(None)
 
     def token_address(self):
         result = address_decoder(self.proxy.tokenAddress())
@@ -563,7 +563,7 @@ class NettingChannelTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
         return result
 
-    def isopen(self):
+    def can_transfer(self):
         # do not mine in this method
         closed = self.proxy.closed()
 
@@ -571,8 +571,10 @@ class NettingChannelTesterMock(object):
             return False
 
         opened = self.proxy.opened()
-
-        return opened != 0
+        return (
+            opened != 0 and
+            self.detail(None)['our_balance'] > 0
+        )
 
     def deposit(self, our_address, amount):
         if privatekey_to_address(self.private_key) != our_address:
@@ -610,6 +612,8 @@ class NettingChannelTesterMock(object):
         return settled
 
     def detail(self, our_address):
+        """ FIXME: 'our_address' is only needed for the pure python mock implementation """
+        our_address = privatekey_to_address(self.private_key)
         data = self.proxy.addressAndBalance()
         self.tester_state.mine(number_of_blocks=1)
 

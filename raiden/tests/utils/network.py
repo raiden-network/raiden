@@ -19,11 +19,11 @@ def check_channel(app1, app2, netting_channel_address):
     netcontract1 = app1.raiden.chain.netting_channel(netting_channel_address)
     netcontract2 = app2.raiden.chain.netting_channel(netting_channel_address)
 
-    assert netcontract1.isopen()
-    assert netcontract2.isopen()
+    assert netcontract1.can_transfer()
+    assert netcontract2.can_transfer()
 
-    assert netcontract1.detail(app1.raiden.address) == netcontract2.detail(app1.raiden.address)
-    assert netcontract2.detail(app2.raiden.address) == netcontract1.detail(app2.raiden.address)
+    assert netcontract1.can_transfer()
+    assert netcontract2.can_transfer()
 
     app1_details = netcontract1.detail(app1.raiden.address)
     app2_details = netcontract2.detail(app2.raiden.address)

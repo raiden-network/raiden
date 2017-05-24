@@ -596,7 +596,7 @@ class RaidenService(object):
         mediated transfer.
         """
 
-        if not direct_channel.isopen:
+        if not direct_channel.can_transfer:
             log.info(
                 'DIRECT CHANNEL %s > %s is closed',
                 pex(direct_channel.our_state.address),
@@ -946,7 +946,7 @@ class RaidenMessageHandler(object):
 
         channel = graph.partneraddress_channel[message.sender]
 
-        if not channel.isopen:
+        if not channel.can_transfer:
             raise TransferWhenClosed(
                 'Direct transfer received for a closed channel: {}'.format(
                     pex(channel.channel_address),
@@ -982,7 +982,7 @@ class RaidenMessageHandler(object):
 
         channel = graph.partneraddress_channel[message.sender]
 
-        if not channel.isopen:
+        if not channel.can_transfer:
             raise TransferWhenClosed(
                 'Direct transfer received for a closed channel: {}'.format(
                     pex(channel.channel_address),

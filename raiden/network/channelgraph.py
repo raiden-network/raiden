@@ -193,7 +193,7 @@ class ChannelGraph(object):
             partner = path[1]
             channel = self.partneraddress_channel[partner]
 
-            if not channel.isopen:
+            if not channel.can_transfer:
                 if log.isEnabledFor(logging.INFO):
                     log.info(
                         'channel %s - %s is closed, ignoring',
@@ -258,4 +258,4 @@ class ChannelGraph(object):
     def channel_isactive(self, partner_address):
         """ True if the channel with `partner_address` is open. """
         # TODO: check if the partner's network is alive
-        return self.partneraddress_channel[partner_address].isopen
+        return self.partneraddress_channel[partner_address].can_transfer

@@ -513,7 +513,7 @@ class RaidenAPI(object):
         graph = self.raiden.channelgraphs[token_address]
         channel = graph.partneraddress_channel[partner_address]
 
-        if channel.isopen:
+        if channel.can_transfer:
             raise InvalidState('channel is still open.')
 
         netting_channel = channel.external_state.netting_channel

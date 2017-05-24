@@ -375,8 +375,12 @@ class NettingChannelMock(object):
     def settle_timeout(self):
         return self.contract.settle_timeout
 
-    def isopen(self):
-        return self.contract.isopen
+    def can_transfer(self, our_address):
+        return (
+            self.contract.opened > 0 and
+            self.contract.closed == 0 and
+            self.detail(our_address)['our_balance'] > 0
+        )
 
     def deposit(self, our_address, amount):
         self.contract.deposit(

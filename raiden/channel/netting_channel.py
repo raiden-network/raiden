@@ -238,8 +238,11 @@ class Channel(object):
         return self.our_state.contract_balance
 
     @property
-    def isopen(self):
-        return self.external_state.isopen()
+    def can_transfer(self):
+        return (
+            self.state == CHANNEL_STATE_OPENED and
+            self.distributable > 0
+        )
 
     @property
     def contract_balance(self):
@@ -646,7 +649,7 @@ class Channel(object):
         This message needs to be signed and registered with the channel before
         sent.
         """
-        if not self.isopen:
+        if not self.can_transfer:
             raise ValueError('The channel is closed')
 
         from_ = self.our_state
@@ -682,7 +685,7 @@ class Channel(object):
         """
         timeout = expiration - self.block_number
 
-        if not self.isopen:
+        if not self.can_transfer:
             raise ValueError('The channel is closed.')
 
         # the lock timeout cannot be larger than the settle timeout (otherwise
