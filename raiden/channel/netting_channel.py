@@ -123,15 +123,6 @@ class ChannelExternalState(object):
 
         self.callbacks_settled.append(callback)
 
-    def isopen(self):
-        """ True if the channel is opened. A channel is opened after its first
-        deposit until close is called.
-        """
-        return (
-            self._opened_block != 0 and
-            self._closed_block == 0
-        )
-
     def close(self, our_address, partner_transfer):
         return self.netting_channel.close(our_address, partner_transfer)
 

@@ -240,24 +240,6 @@ class NettingChannelContract(object):
         #   contract.
         # This implementation's settle_timeout is a "fixed waiting time"
 
-    @property
-    def isopen(self):
-        """ The contract is open after both participants have deposited, and if
-        it has not being closed.
-
-        Returns:
-            bool: True if the contract is open, False otherwise
-        """
-        # 0 is used for uninitialized values
-        if self.closed is not 0:
-            return False
-
-        # allow single funded channels
-        return any(
-            state.has_deposited
-            for state in self.participants.values()
-        )
-
     def deposit(self, address, amount, block_number):
         """ Method for `address` to make a deposit of `amount` token. """
 
