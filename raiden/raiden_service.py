@@ -110,12 +110,16 @@ from raiden.network.channelgraph import (
 )
 from raiden.encoding import messages
 from raiden.messages import (
+    decode,
     RevealSecret,
     Secret,
     SecretRequest,
     SignedMessage,
 )
-from raiden.network.protocol import RaidenProtocol
+from raiden.network.protocol import (
+    RaidenProtocol,
+    QueueItem,
+)
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
@@ -221,10 +225,16 @@ class RaidenService(object):
         )
 
         self.channels_serialization_path = None
+        self.channels_queue_path = None
         if config['database_path'] != ':memory:':
             self.channels_serialization_path = path.join(
                 path.dirname(self.config['database_path']),
                 'channels.pickle',
+            )
+
+            self.channels_queue_path = path.join(
+                path.dirname(self.config['database_path']),
+                'queues.pickle',
             )
 
             if path.exists(self.channels_serialization_path):
@@ -238,6 +248,18 @@ class RaidenService(object):
                         pass
 
                 map(self.restore_channel, restored_channels)
+
+            if path.exists(self.channels_queue_path):
+                restored_queues = list()
+
+                with open(self.channels_queue_path, 'r') as handler:
+                    try:
+                        while True:
+                            restored_queues.append(pickle.load(handler))
+                    except EOFError:
+                        pass
+
+                map(self.restore_queue, restored_queues)
 
         self.alarm = alarm
         self.message_handler = message_handler
@@ -556,6 +578,24 @@ class RaidenService(object):
         # for hashlock in all_hashlocks:
         #     register_channel_for_hashlock(channel, hashlock)
 
+    def restore_queue(self, serialized_queue):
+        receiver_address = serialized_queue['receiver_address']
+        token_address = serialized_queue['token_address']
+        queue = self.protocol.get_task_queue(receiver_address, token_address)
+
+        for messagedata in serialized_queue['messages']:
+            ack_result = AsyncResult()
+            message = decode(messagedata)
+            echohash = sha3(messagedata + receiver_address)
+
+            queue_item = QueueItem(
+                message,
+                ack_result,
+                messagedata,
+                echohash,
+            )
+            queue.put(queue_item)
+
     def register_registry(self, registry_address):
         proxies = get_relevant_proxies(
             self.chain,
@@ -750,13 +790,29 @@ class RaidenService(object):
         self.protocol.stop_and_wait()
 
         if self.channels_serialization_path:
-            with open(self.channels_serialization_path, 'w') as handler:
+            with open(self.channels_serialization_path, 'wb') as handler:
                 for network in self.channelgraphs.values():
                     for channel in network.address_channel.values():
                         pickle.dump(
                             ChannelSerialization(channel),
                             handler,
                         )
+
+        if self.channels_queue_path:
+            with open(self.channels_queue_path, 'wb') as handler:
+                for key, queue in self.protocol.channel_queue.iteritems():
+                    queue_data = {
+                        'receiver_address': key[0],
+                        'token_address': key[1],
+                        'messages': [
+                            queue_item.messagedata
+                            for queue_item in queue
+                        ]
+                    }
+                    pickle.dump(
+                        queue_data,
+                        handler,
+                    )
 
         gevent.wait(wait_for)
 

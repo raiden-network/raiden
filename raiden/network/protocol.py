@@ -100,11 +100,6 @@ class RaidenProtocol(object):
         for waitack in self.echohash_asyncresult.itervalues():
             waitack.ack_result.set(False)
 
-        self.channel_queue = dict()
-        self.address_greenlet = dict()
-        self.echohash_acks = dict()
-        self.echohash_asyncresult = dict()
-
     def stop_and_wait(self):
         self.stop_async()
         gevent.wait(list(self.address_greenlet.itervalues()))
@@ -177,7 +172,7 @@ class RaidenProtocol(object):
             messagedata,
             echohash):
 
-        queue = self._get_task_queue(
+        queue = self.get_task_queue(
             receiver_address,
             token_address,
         )
@@ -202,7 +197,7 @@ class RaidenProtocol(object):
             messagedata,
         )
 
-    def _get_task_queue(self, receiver_address, token_address):
+    def get_task_queue(self, receiver_address, token_address):
         # TODO: Change this to the channel address
         key = (
             receiver_address,
