@@ -127,8 +127,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     bob_alice_channel.external_state.netting_channel.close(transfermessage)
     wait_until_block(alice_chain, alice_chain.block_number() + 1)
 
-    assert alice_bob_channel.close_event.wait(timeout=15)
-    assert bob_alice_channel.close_event.wait(timeout=15)
+    assert alice_bob_channel.external_state.close_event.wait(timeout=15)
+    assert bob_alice_channel.external_state.close_event.wait(timeout=15)
 
     assert alice_bob_channel.external_state.closed_block != 0
     assert bob_alice_channel.external_state.closed_block != 0
@@ -145,8 +145,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     settle_expiration = alice_chain.block_number() + settle_timeout + 2
     wait_until_block(alice_chain, settle_expiration)
 
-    assert alice_bob_channel.settle_event.wait(timeout=15)
-    assert bob_alice_channel.settle_event.wait(timeout=15)
+    assert alice_bob_channel.external_state.settle_event.wait(timeout=15)
+    assert bob_alice_channel.external_state.settle_event.wait(timeout=15)
     # settle must be called by the apps triggered by the ChannelClose event,
     # and the channels must update it's state based on the ChannelSettled event
     assert alice_bob_channel.external_state.settled_block != 0
@@ -395,8 +395,8 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     chain0 = app0.raiden.chain
     wait_until_block(chain0, chain0.block_number() + 1)
 
-    assert channel0.close_event.wait(timeout=25)
-    assert channel1.close_event.wait(timeout=25)
+    assert channel0.external_state.close_event.wait(timeout=25)
+    assert channel1.external_state.close_event.wait(timeout=25)
 
     assert channel0.external_state.closed_block != 0
     assert channel1.external_state.closed_block != 0
@@ -413,8 +413,8 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     wait_until_block(chain0, settle_expiration)
 
     # the settle event must be set
-    assert channel0.settle_event.wait(timeout=60)
-    assert channel1.settle_event.wait(timeout=60)
+    assert channel0.external_state.settle_event.wait(timeout=60)
+    assert channel1.external_state.settle_event.wait(timeout=60)
 
     # check that the channel is properly settled and that Bob's client
     # automatically called updateTransfer() to reflect the actual transactions

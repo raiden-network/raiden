@@ -36,18 +36,18 @@ class ChannelExternalState(object):
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, register_channel_for_hashlock, netting_channel):
-
         self.register_channel_for_hashlock = register_channel_for_hashlock
         self.netting_channel = netting_channel
 
-        # api design: allow the user to access these attributes as read-only
-        # but force him to use the `set_` methods, the use of methods is to
-        # signal that additinal code might get executed
+        # force use of the setters to run the callbacks (using explicit methods
+        # to imply that more code is executed)
         self._opened_block = netting_channel.opened()
         self._closed_block = netting_channel.closed()
         self._settled_block = netting_channel.settled()
 
-        self.callbacks_opened = list()
+        self.close_event = Event()
+        self.settle_event = Event()
+
         self.callbacks_closed = list()
         self.callbacks_settled = list()
 
@@ -64,16 +64,14 @@ class ChannelExternalState(object):
         return self._settled_block
 
     def set_opened(self, block_number):
-        # TODO: ensure the same callback logic as in set_settled
         if self._opened_block != 0:
             raise RuntimeError('channel is already open')
 
         self._opened_block = block_number
 
-        for callback in self.callbacks_opened:
-            callback(block_number)
-
     def set_closed(self, block_number):
+        self.close_event.set()
+
         # TODO: ensure the same callback logic as in set_settled
         if self._closed_block != 0 and self._closed_block != block_number:
             raise RuntimeError(
@@ -88,6 +86,8 @@ class ChannelExternalState(object):
             callback(block_number)
 
     def set_settled(self, block_number):
+        self.settle_event.set()
+
         # ensure callbacks are only called once
         if self._settled_block != 0 and self._settled_block != block_number:
             raise RuntimeError(
@@ -189,18 +189,8 @@ class Channel(object):
         self.external_state = external_state
         self.block_number = block_number
 
-        self.open_event = Event()
-        self.close_event = Event()
-        self.settle_event = Event()
-
-        external_state.callback_on_opened(lambda _: self.open_event.set())
-        external_state.callback_on_closed(lambda _: self.close_event.set())
-        external_state.callback_on_settled(lambda _: self.settle_event.set())
-
-        external_state.callback_on_closed(self.channel_closed)
-
-        self.received_transfers = []
-        self.sent_transfers = []  #: transfers that were sent, required for settling
+        self.received_transfers = list()
+        self.sent_transfers = list()
 
     @property
     def state(self):
@@ -781,7 +771,23 @@ class Channel(object):
         elif isinstance(state_change, ContractReceiveClosed):
             if state_change.channel_address == self.channel_address:
                 self.external_state.set_closed(state_change.block_number)
+                self.channel_closed(state_change.block_number)
 
         elif isinstance(state_change, ContractReceiveSettled):
             if state_change.channel_address == self.channel_address:
                 self.external_state.set_settled(state_change.block_number)
+
+    def serialize(self):
+        return ChannelSerialization(self)
+
+
+class ChannelSerialization(object):
+
+    def __init__(self, channel_instance):
+        self.channel_address = channel_instance.channel_address
+        self.token_address = channel_instance.token_address
+        self.reveal_timeout = channel_instance.reveal_timeout
+        self.block_number = channel_instance.block_number
+
+        self.our_balance_proof = channel_instance.our_state.balance_proof
+        self.partner_balance_proof = channel_instance.partner_state.balance_proof
