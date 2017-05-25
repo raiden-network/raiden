@@ -26,7 +26,7 @@ def mk_genesis(accounts, initial_alloc=denoms.ether * 100000000):
     :return: genesis dict
     """
     genesis = GENESIS_STUB.copy()
-    genesis['extraData'] = CLUSTER_NAME
+    genesis['extraData'] = '0x' + CLUSTER_NAME.encode('hex')
     genesis['alloc'] = {
         account: {
             'balance': str(initial_alloc)
