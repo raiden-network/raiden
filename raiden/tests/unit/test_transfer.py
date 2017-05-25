@@ -162,7 +162,7 @@ def test_transfer(raiden_network):
 @pytest.mark.parametrize('number_of_nodes', [10])
 def test_mediated_transfer(raiden_network):
     alice_app = raiden_network[0]
-    setup_messages_cb()
+    messages = setup_messages_cb()
 
     graph = alice_app.raiden.channelgraphs.values()[0]
     token_address = graph.token_address
@@ -191,6 +191,14 @@ def test_mediated_transfer(raiden_network):
         amount,
         charlie_address,
     )
+
+    # check for invitation ping
+    assert len(messages) == 2  # Ping, Ack
+    ping_message = decode(messages[0])
+    assert isinstance(ping_message, Ping)
+    decoded = decode(messages[1])
+    assert isinstance(decoded, Ack)
+    assert decoded.echo == sha3(ping_message.encode() + charlie_address)
 
     assert channel_ab.locked == amount
 
@@ -529,7 +537,7 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
 @pytest.mark.parametrize('channels_per_node', [2])
 def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     alice_app = raiden_network[0]
-    setup_messages_cb()
+    messages = setup_messages_cb()
 
     graph = alice_app.raiden.channelgraphs.values()[0]
     token_address = graph.token_address
@@ -538,6 +546,9 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     initiator_address = alice_app.raiden.address
     path = mt_helper.get_paths_of_length(initiator_address, 2)
 
+    # make sure we have no messages before the transfer
+    assert len(messages) == 0
+
     alice_address, bob_address, charlie_address = path
     amount = 10
     result = alice_app.raiden.transfer_async(
@@ -545,6 +556,14 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
         amount,
         charlie_address,
     )
+
+    # check for invitation ping
+    assert len(messages) == 2  # Ping, Ack
+    ping_message = decode(messages[0])
+    assert isinstance(ping_message, Ping)
+    decoded = decode(messages[1])
+    assert isinstance(decoded, Ack)
+    assert decoded.echo == sha3(ping_message.encode() + charlie_address)
 
     assert result.wait(timeout=10)
     gevent.sleep(1.)
@@ -580,7 +599,7 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
 @pytest.mark.parametrize('channels_per_node', [2])
 def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     alice_app = raiden_network[0]
-    setup_messages_cb()
+    messages = setup_messages_cb()
 
     graph = alice_app.raiden.channelgraphs.values()[0]
     token_address = graph.token_address
@@ -596,6 +615,14 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
         amount,
         charlie_address,
     )
+
+    # check for invitation ping
+    assert len(messages) == 2  # Ping, Ack
+    ping_message = decode(messages[0])
+    assert isinstance(ping_message, Ping)
+    decoded = decode(messages[1])
+    assert isinstance(decoded, Ack)
+    assert decoded.echo == sha3(ping_message.encode() + charlie_address)
 
     assert result.wait(timeout=10)
     gevent.sleep(1.)
