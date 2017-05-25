@@ -461,6 +461,76 @@ class RaidenService(object):
 
         return channel_detail
 
+    def restore_channel(self, serialized_channel):
+        token_address = serialized_channel.token_address
+
+        netting_channel = self.chain.netting_channel(
+            serialized_channel.channel_address,
+        )
+
+        # restoring balances from the BC since the serialized value could be
+        # falling behind.
+        channel_details = netting_channel.detail(self.address)
+
+        # our_address is checked by detail
+        assert channel_details['partner_address'] == serialized_channel.partner_address
+
+        opened_block = netting_channel.opened()
+        our_state = ChannelEndState(
+            channel_details['our_address'],
+            channel_details['our_balance'],
+            opened_block,
+        )
+        partner_state = ChannelEndState(
+            channel_details['partner_address'],
+            channel_details['partner_balance'],
+            opened_block,
+        )
+
+        def register_channel_for_hashlock(channel, hashlock):
+            self.register_channel_for_hashlock(
+                token_address,
+                channel,
+                hashlock,
+            )
+
+        external_state = ChannelExternalState(
+            register_channel_for_hashlock,
+            netting_channel,
+        )
+        details = ChannelDetails(
+            serialized_channel.channel_address,
+            our_state,
+            partner_state,
+            external_state,
+            serialized_channel.reveal_timeout,
+            channel_details['settle_timeout'],
+        )
+
+        graph = self.channelgraphs[token_address]
+        graph.add_channel(details)
+        channel = graph.address_channel.get(
+            serialized_channel.channel_address,
+        )
+
+        channel.our_state.balance_proof = serialized_channel.our_balance_proof
+        channel.partner_state.balance_proof = serialized_channel.partner_balance_proof
+
+        # `register_channel_for_hashlock` is deprecated, currently only the
+        # swap tasks are using it and these tasks are /not/ restartable, there
+        # is no point in re-registering the hashlocks.
+        #
+        # all_hashlocks = itertools.chain(
+        #     serialized_channel.our_balance_proof.hashlock_pendinglocks.keys(),
+        #     serialized_channel.our_balance_proof.hashlock_unclaimedlocks.keys(),
+        #     serialized_channel.our_balance_proof.hashlock_unlockedlocks.keys(),
+        #     serialized_channel.partner_balance_proof.hashlock_pendinglocks.keys(),
+        #     serialized_channel.partner_balance_proof.hashlock_unclaimedlocks.keys(),
+        #     serialized_channel.partner_balance_proof.hashlock_unlockedlocks.keys(),
+        # )
+        # for hashlock in all_hashlocks:
+        #     register_channel_for_hashlock(channel, hashlock)
+
     def register_registry(self, registry_address):
         proxies = get_relevant_proxies(
             self.chain,

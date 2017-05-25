@@ -155,15 +155,6 @@ class ChannelExternalStateTester(object):
         if channel not in channels_registered:
             channels_registered.append(channel)
 
-    def callback_on_opened(self, callback):
-        self.callbacks_on_opened.append(callback)
-
-    def callback_on_closed(self, callback):
-        self.callbacks_on_closed.append(callback)
-
-    def callback_on_settled(self, callback):
-        self.callbacks_on_settled.append(callback)
-
 
 class FilterTesterMock(object):
     def __init__(self, contract_address, topics, filter_id_raw):
