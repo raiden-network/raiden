@@ -6,7 +6,9 @@ from ethereum import slogging
 
 import gevent
 from gevent.event import AsyncResult
-from gevent.queue import Queue
+from gevent.queue import (
+    Queue,
+)
 from gevent.timeout import Timeout
 
 from raiden.settings import (

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import random
 import time
 from collections import namedtuple
 from collections import defaultdict
@@ -46,6 +47,236 @@ QueueItem = namedtuple('QueueItem', (
     'echohash',
 ))
 
+NODE_NETWORK_UNKNOWN = 'unknown',
+NODE_NETWORK_UNREACHABLE = 'unreachable'
+NODE_NETWORK_REACHABLE = 'reachable'
+
+# GOALS:
+# - Each netting channel must have the messages processed in-order, the
+# protocol must detect unacknowledged messages and retry them.
+# - A queue must not stall because of synchronization problems in other queues.
+# - Assuming a queue can stall, the non-healthiness of a node must not be
+# inferred from the lack of acknowledged from a single queue, but healthiness
+# may be safely inferred from it.
+# - The state of the node must be synchronized among all tasks that are
+# handling messages.
+
+
+def wait_for_recovery(event_recovery, timeout):
+    """ If necessary wait for the node to be reachable again.
+
+    If the node transitions from reachable to unreachable, wait for it to come
+    back.
+    """
+    if not event_recovery.ready():
+        event_recovery.wait()
+
+        # There may be multiple threads waiting, do not restart them all at
+        # once since this may flood with messages.
+        sleep = random.randint(0, timeout)
+        gevent.sleep(sleep)
+
+
+def retry_infinite(protocol, data, receiver_address, retry_timeout, event_recovery):
+    """ Send data indefinetely until it's acknowledged, at this point the node
+    communication state is unknown or unreachable.
+
+    This is used for stalled queues or when the network is having hiccups.
+    Since there is no trustless method for knowing if the other node is stalled
+    hiccups are assumed.
+    """
+    async_result = protocol.send_raw_with_result(
+        data,
+        receiver_address,
+    )
+
+    # retry_timeout must be large enough so that randomization wouldn't make a
+    # difference
+    while async_result.wait(timeout=retry_timeout) is not True:
+        async_result = protocol.send_raw_with_result(
+            data,
+            receiver_address,
+        )
+
+        wait_for_recovery(event_recovery, retry_timeout)
+
+    return async_result
+
+
+def retry_with_exponential_backoff(
+        protocol,
+        data,
+        receiver_address,
+        retries,
+        retry_timeout,
+        backoff_max_timeout):
+
+    # Send the message `retries` times, waiting `retry_timeout` in between
+    for _ in range(retries):
+        async_result = protocol.send_raw_with_result(data, receiver_address)
+
+        if async_result.wait(timeout=retry_timeout) is True:
+            return async_result
+
+    # The message was not acknowledged after `retries` times, start the
+    # exponential backoff.
+    while retry_timeout <= backoff_max_timeout:
+        async_result = protocol.send_raw_with_result(
+            data,
+            receiver_address,
+        )
+
+        if async_result.wait(timeout=retry_timeout) is True:
+            return async_result
+
+        retry_timeout = min(retry_timeout * 2, backoff_max_timeout)
+
+    # The message was not acknowledged, give up
+    return async_result
+
+
+def single_queue_send(
+        protocol,
+        receiver_address,
+        queue,
+        event_recovery,
+        event_isreachable,
+        message_retries,
+        message_retry_timeout,
+        nat_invitation_timeout,
+        health_check_inactive_timeout):
+
+    """ Handles a single message queue for `receiver_address`.
+
+    This task can be killed at any time.
+
+    Starts sending messages when event_recovery is set, set it prior to
+    starting the task to reduce latency. If there many tasks to start, it is
+    the caller's responsability to not start them together to avoid congestion.
+
+    Args:
+        nat_invitation_timeout: If `receiver_address` is unreachable, defines how
+            long should the node wait before sending the next invitation ping.
+        message_retry_timeout: How long should the nod wait before resending an
+            unacknowled message
+    """
+
+    while True:
+        data = queue.peek(
+            timeout=None,
+            block=True,
+        )
+
+        # Check if the node is recovering only if there is data to be sent,
+        # because while the queue is waiting for data the node could become
+        # unreachable.
+        wait_for_recovery(
+            event_recovery,
+            health_check_inactive_timeout,
+        )
+
+        async_result = retry_with_exponential_backoff(
+            protocol,
+            data,
+            receiver_address,
+            message_retries,
+            message_retry_timeout,
+            nat_invitation_timeout,
+        )
+
+        # The message has not been acknowledged yet, either:
+        # - The node is unreachable.
+        # - The corresponding netting channel stalled.
+        # - There is a transient state in the network.
+        if not async_result.sucessful():
+            # Ask for a healthcheck, do not assume the node is unreachable
+            # because it could be a problem with this queue.
+            #
+            # This won't reset the event_recovery right away, it will wait for
+            # a few missed Ping acknowledgments.
+            event_isreachable.reset()
+
+            # Re-send the message indefinetely. The message is not sent while the
+            # healtcheck is failing.
+            retry_infinite(
+                protocol,
+                data,
+                receiver_address,
+                nat_invitation_timeout,
+                event_recovery,
+            )
+
+        # Discard the acknowledged message
+        queue.get()
+
+
+def healthcheck(
+        protocol,
+        graph,
+        receiver_address,
+        event_isreachable,
+        event_recovery,
+        nat_keepalive_retries,
+        nat_keepalive_timeout,
+        nat_invitation_timeout,
+        ping_nonce=0):
+
+    graph.set_state(receiver_address, NODE_NETWORK_UNKNOWN)
+
+    while True:
+        data = protocol.get_ping(
+            receiver_address,
+            ping_nonce,
+        )
+
+        # Assumes that NAT punching has sucessfully happened and send messages
+        # within nat_keepalive_timeout to keep the routers happy, useful with
+        # single queue since the queue task is stopped waiting for the
+        # healthcheck.
+        #
+        # The exponential backoff intentionally adds some delay to the network
+        # state change, prior to considering the node unreachable, i.e. a queue
+        # asking for a healthcheck does not imediately hold other queues.
+        async_result = retry_with_exponential_backoff(
+            protocol,
+            data,
+            receiver_address,
+            nat_keepalive_retries,
+            nat_keepalive_timeout,
+            nat_invitation_timeout,
+        )
+
+        # The Ping message is independent of netting channel ordering, so if
+        # this message was not answered the node is considered down.
+        if not async_result.sucessful():
+            # Tell all execution threads to wait for the node/network to
+            # recover.
+            event_recovery.reset()
+            graph.set_state(receiver_address, NODE_NETWORK_UNREACHABLE)
+
+            # Retry until recovery, this is used for both:
+            # - Waiting for a node to recover.
+            # - Sending a packet to `receiver_address` allowing for nat
+            #   punching (if it did not happen yet with the exponential backoff
+            #   above).
+            retry_infinite(
+                protocol,
+                data,
+                receiver_address,
+                nat_invitation_timeout,
+                event_recovery,
+            )
+
+        graph.set_state(receiver_address, NODE_NETWORK_REACHABLE)
+        ping_nonce += 1
+
+        # Set recovery so that all task queues can proceed.
+        event_recovery.set()
+
+        # Wait for the next time a healtcheck must be done.
+        event_isreachable.reset()
+        event_isreachable.wait()
+
 
 class RaidenProtocol(object):
     """ Encode the message into a packet and send it.
@@ -67,6 +298,7 @@ class RaidenProtocol(object):
         self.max_message_size = PROTOCOL_MAX_MESSAGE_SIZE
 
         self.channel_queue_lock = Semaphore()
+        self.echohash_lock = Semaphore()
 
         # Messages are sent in-order for each partner
         self.channel_queue = dict()
@@ -332,6 +564,33 @@ class RaidenProtocol(object):
             self.discovery.get(receiver_address),
             message_data
         )
+        return async_result
+
+    def get_ping(self, receiver_address, nonce):
+        message = Ping(nonce)
+        self.raiden.sign(message)
+        message_data = message.encode()
+
+        return message_data
+
+    def send_raw_with_result(self, data, receiver_address):
+        host_port = self.get_host_port(receiver_address)
+        echohash = sha3(data + receiver_address)
+
+        with self.echohash_lock:
+            if echohash not in self.echohash_asyncresult:
+                async_result = AsyncResult()
+                self.echohash_asyncresult[echohash] = WaitAck(async_result, receiver_address)
+            else:
+                async_result = self.echohash_asyncresult[echohash].async_result
+
+        if not async_result.ready():
+            self.transport.send(
+                self.raiden,
+                host_port,
+                data,
+            )
+
         return async_result
 
     def receive(self, data):
