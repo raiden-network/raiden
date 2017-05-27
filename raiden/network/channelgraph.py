@@ -6,10 +6,14 @@ import networkx
 from ethereum import slogging
 
 from raiden.utils import isaddress, pex
-from raiden.channel import Channel
 from raiden.transfer.state import (
     RouteState,
     CHANNEL_STATE_CLOSED,
+)
+from raiden.channel.netting_channel import (
+    Channel,
+    NODE_NETWORK_UNKNOWN,
+    NODE_NETWORK_REACHABLE,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -189,6 +193,8 @@ class ChannelGraph(object):
         # distributable amount, but to sort them based on available balance and
         # let the task use as many as required to finish the transfer.
 
+        online_nodes = list()
+        unknown_nodes = list()
         for path in available_paths:
             partner = path[1]
             channel = self.partneraddress_channel[partner]
@@ -237,7 +243,13 @@ class ChannelGraph(object):
                 if not valid_timeout:
                     continue
 
-            yield Route(path, channel)
+            if channel.network_state == NODE_NETWORK_UNKNOWN:
+                online_nodes.append(Route(path, channel))
+
+            if channel.network_state == NODE_NETWORK_REACHABLE:
+                unknown_nodes.append(Route(path, channel))
+
+        return online_nodes + unknown_nodes
 
     def has_path(self, source_address, target_address):
         """ True if there is a connecting path regardless of the number of hops. """
