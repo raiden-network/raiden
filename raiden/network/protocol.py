@@ -4,6 +4,7 @@ import random
 import time
 from collections import namedtuple
 from collections import defaultdict
+from itertools import repeat
 
 import cachetools
 import gevent
@@ -30,6 +31,11 @@ from raiden.settings import (
     PROTOCOL_RETRIES_BEFORE_BACKOFF,
     PROTOCOL_MAX_MESSAGE_SIZE,
 )
+from raiden.channel.netting_channel import (
+    NODE_NETWORK_UNKNOWN,
+    NODE_NETWORK_UNREACHABLE,
+    NODE_NETWORK_REACHABLE,
+)
 from raiden.messages import decode, Ack, Ping, SignedMessage
 from raiden.utils import isaddress, sha3, pex
 
@@ -47,10 +53,6 @@ QueueItem = namedtuple('QueueItem', (
     'echohash',
 ))
 
-NODE_NETWORK_UNKNOWN = 'unknown',
-NODE_NETWORK_UNREACHABLE = 'unreachable'
-NODE_NETWORK_REACHABLE = 'reachable'
-
 # GOALS:
 # - Each netting channel must have the messages processed in-order, the
 # protocol must detect unacknowledged messages and retry them.
@@ -63,7 +65,11 @@ NODE_NETWORK_REACHABLE = 'reachable'
 
 
 def event_first_of(*events):
-    """ Waits until one of `events` is set. """
+    """ Waits until one of `events` is set.
+
+    The event returned is /not/ cleared with any of the `events`, this values
+    must not be reused if the clearing behavior is used.
+    """
     first_finished = Event()
 
     for event in events:
@@ -73,7 +79,7 @@ def event_first_of(*events):
     return first_finished
 
 
-def timeout_exponential_backoff(timeout, retries, maximum):
+def timeout_exponential_backoff(retries, timeout, maximum):
     """ Timeouts generator with an exponential backoff strategy.
 
     Timeouts start spaced by `timeout`, after `retries` exponentially increase
@@ -94,14 +100,18 @@ def timeout_exponential_backoff(timeout, retries, maximum):
         yield maximum
 
 
-def retry_with_health_check(
-        protocol,
-        data,
-        receiver_address,
-        event_healthy,
-        event_stop,
-        timeout_backoff):
-    """ Send data indefinetely until it's acknowledged. """
+def retry(protocol, data, receiver_address, event_stop, timeout_backoff):
+    """ Send data until it's acknowledged.
+
+    Exits when the first of following happen:
+
+    - The packet is acknowledged.
+    - Event_stop is set.
+    - The iterator timeout_backoff runs out of values.
+
+    Returns:
+        bool: True if the message was acknowledged, False otherwise.
+    """
 
     async_result = protocol.send_raw_with_result(
         data,
@@ -113,31 +123,90 @@ def retry_with_health_check(
         event_stop,
     )
 
-    timeout = next(timeout_backoff)
-    while event_quit.wait(timeout=timeout) is True:
-        timeout = next(timeout_backoff)
+    for timeout in timeout_backoff:
 
-        if not event_healthy.is_set():
-            event_recovering = event_first_of(
-                event_healthy,
-                event_stop,
-            )
-
-            event_recovering.wait()
-
-            if event_stop.is_set():
-                return
-
-            # There may be multiple threads waiting, do not restart them all at
-            # once to avoid message flood.
-            gevent.sleep(random.random())
+        if event_quit.wait(timeout=timeout) is True:
+            break
 
         protocol.send_raw_with_result(
             data,
             receiver_address,
         )
 
-    return async_result
+    return async_result.ready()
+
+
+def wait_recovery(event_healthy, event_stop):
+    event_first_of(
+        event_healthy,
+        event_stop,
+    ).wait()
+
+    if event_stop.is_set():
+        return
+
+    # There may be multiple threads waiting, do not restart them all at
+    # once to avoid message flood.
+    gevent.sleep(random.random())
+
+
+def retry_with_recovery(
+        protocol,
+        data,
+        receiver_address,
+        event_healthy,
+        event_stop,
+        event_unhealthy,
+        backoff):
+    """ Send data while the node is healthy until it's acknowledged.
+
+    Note:
+        backoff must be an infinite iterator, otherwise this task will
+        become a hot loop.
+    """
+
+    # The underlying unhealthy will be cleared, care must be taken to properly
+    # clear stop_or_unhealthy too.
+    stop_or_unhealthy = event_first_of(
+        event_stop,
+        event_unhealthy,
+    )
+
+    acknowledged = False
+    while not event_stop.is_set() and not acknowledged:
+
+        # Packets must not be sent to an unhealthy node, nor should the task
+        # wait for it to become available if the message has been acknowledged.
+        if event_unhealthy.is_set():
+            wait_recovery(
+                event_healthy,
+                event_stop,
+            )
+
+            # Assume wait_recovery returned because unhealthy was cleared and
+            # continue execution, this is safe to do because event_stop is
+            # checked below.
+            stop_or_unhealthy.clear()
+
+            if event_stop.is_set():
+                return
+
+        acknowledged = retry(
+            protocol,
+            data,
+            receiver_address,
+
+            # retry will stop when this event is set, allowing this task to
+            # wait for recovery when the node becomes unhealthy or to quit if
+            # the stop event is set.
+            stop_or_unhealthy,
+
+            # Intentionally reusing backoff to restart from the last
+            # timeout/number of iterations.
+            backoff,
+        )
+
+    return acknowledged
 
 
 def single_queue_send(
@@ -146,6 +215,7 @@ def single_queue_send(
         queue,
         event_healthy,
         event_stop,
+        event_unhealthy,
         message_retries,
         message_retry_timeout,
         message_retry_max_timeout):
@@ -154,7 +224,8 @@ def single_queue_send(
 
     Notes:
     - This task must be the only consumer of queue.
-    - This task can be killed at any time.
+    - This task can be killed at any time, but the intended usage is to stop it
+      with the event_stop.
     - If there are many queues for the same receiver_address, it is the
       caller's responsability to not start them together to avoid congestion.
     """
@@ -165,47 +236,58 @@ def single_queue_send(
     if not isinstance(queue, NotifyingQueue):
         raise ValueError('queue must be a NotifyingQueue.')
 
+    # Reusing the event, clear must be carefully done
+    data_or_stop = event_first_of(
+        queue,
+        event_stop,
+    )
+
     while True:
-        event_first_of(
-            queue,
-            event_stop,
-        )
+        data_or_stop.wait()
 
         if event_stop.is_set():
             return
 
-        data = queue.peek(
-            timeout=None,
-            block=True,
-        )
+        # The queue is not empty at this point, so this won't raise Empty.
+        # This task being the only consumer is a requirement.
+        data = queue.peek(block=False)
 
         backoff = timeout_exponential_backoff(
-            message_retry_timeout,
             message_retries,
+            message_retry_timeout,
             message_retry_max_timeout,
         )
 
-        retry_with_health_check(
+        acknowledged = retry_with_recovery(
             protocol,
             data,
             receiver_address,
             event_healthy,
             event_stop,
+            event_unhealthy,
             backoff,
         )
 
-        if event_stop.is_set():
-            return
+        if acknowledged:
+            queue.get()
 
-        queue.get()
+            # Checking the length of the queue does not trigger a
+            # context-switch, so it's safe to assume the length of the queue
+            # won't change under our feet and when a new item will be added the
+            # event will be set again.
+            if queue:
+                data_or_stop.clear()
+
+                if event_stop.is_set():
+                    return
 
 
 def healthcheck(
         protocol,
-        graph,
         receiver_address,
-        event_stop,
         event_healthy,
+        event_stop,
+        event_unhealthy,
         nat_keepalive_retries,
         nat_keepalive_timeout,
         nat_invitation_timeout,
@@ -213,61 +295,66 @@ def healthcheck(
 
     """ Sends a periodical Ping to `receiver_address` to check it's health. """
 
-    graph.set_state(
+    # The state of the node is unknown, the events are set to allow the tasks
+    # to do work.
+    protocol.set_node_network_state(
         receiver_address,
         NODE_NETWORK_UNKNOWN,
     )
 
-    # Don't wait on the first iteration
+    # Always call `clear` before `set`, since only `set` does context-switches
+    # it's easier to reason about tasks that are waiting on both events.
+    event_unhealthy.clear()
+    event_healthy.set()
+
+    # Don't wait to send the first Ping
     sleep = 0
 
-    while not event_stop.wait(sleep):
+    while not event_stop.wait(sleep) is True:
         sleep = nat_keepalive_timeout
 
         data = protocol.get_ping(
-            receiver_address,
             ping_nonce,
         )
         ping_nonce += 1
 
-        async_result = protocol.send_raw_with_result(
+        # Send Ping a few times before setting the node as unreachable
+        acknowledged = retry(
+            protocol,
             data,
             receiver_address,
-        )
-        event_quit = event_first_of(
-            async_result,
             event_stop,
+            [nat_keepalive_timeout] * nat_keepalive_retries,
         )
 
-        backoff = timeout_exponential_backoff(
-            nat_keepalive_timeout,
-            nat_keepalive_retries,
-            nat_invitation_timeout,
-        )
+        if event_stop.is_set():
+            return
 
-        # Retry until recovery, used for:
-        # - Checking node status.
-        # - Nat punching.
-        timeout = next(backoff)
-        while not event_quit.wait(timeout) is not True:
-            timeout = next(backoff)
-
+        if not acknowledged:
             # The node is not healthy, clear the event to stop all queue
             # tasks
-            event_healthy.clear()
-            graph.set_state(
+            protocol.set_node_network_state(
                 receiver_address,
                 NODE_NETWORK_UNREACHABLE,
             )
+            event_healthy.clear()
+            event_unhealthy.set()
 
-            async_result = protocol.send_raw_with_result(
+            # Retry until recovery, used for:
+            # - Checking node status.
+            # - Nat punching.
+            acknowledged = retry(
+                protocol,
                 data,
                 receiver_address,
+                event_stop,
+                repeat(nat_invitation_timeout),
             )
 
-        if async_result.ready():
+        if acknowledged:
+            event_unhealthy.clear()
             event_healthy.set()
-            graph.set_state(
+            protocol.set_node_network_state(
                 receiver_address,
                 NODE_NETWORK_REACHABLE,
             )
@@ -292,6 +379,9 @@ class NotifyingQueue(Event):
 
     def peek(self, block=True, timeout=None):
         return self._queue.peek(block, timeout)
+
+    def __len__(self):
+        return len(self._queue)
 
 
 class RaidenProtocol(object):
@@ -582,7 +672,7 @@ class RaidenProtocol(object):
         )
         return async_result
 
-    def get_ping(self, receiver_address, nonce):
+    def get_ping(self, nonce):
         message = Ping(nonce)
         self.raiden.sign(message)
         message_data = message.encode()
@@ -613,6 +703,12 @@ class RaidenProtocol(object):
             )
 
         return async_result
+
+    def set_node_network_state(self, node_address, node_state):
+        self.raiden.set_node_network_state(
+            node_address,
+            node_state,
+        )
 
     def receive(self, data):
         # ignore large packets

@@ -286,6 +286,13 @@ class RaidenService(object):
         # tasks have been updated.
         self._blocknumber = blocknumber
 
+    def set_node_network_state(self, node_address, network_state):
+        for graph in self.channelgraphs.itervalues():
+            channel = graph.partneraddress_channel.get(node_address)
+
+            if channel:
+                channel.network_state = network_state
+
     def get_block_number(self):
         return self._blocknumber
 

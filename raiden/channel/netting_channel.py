@@ -31,6 +31,10 @@ from raiden.transfer.mediated_transfer.state_change import (
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
+NODE_NETWORK_UNKNOWN = 'unknown'
+NODE_NETWORK_UNREACHABLE = 'unreachable'
+NODE_NETWORK_REACHABLE = 'reachable'
+
 
 class ChannelExternalState(object):
     # pylint: disable=too-many-instance-attributes
@@ -175,6 +179,7 @@ class Channel(object):
         self.settle_timeout = settle_timeout
         self.external_state = external_state
         self.block_number = block_number
+        self.network_state = NODE_NETWORK_UNKNOWN
 
         self.received_transfers = list()
         self.sent_transfers = list()
