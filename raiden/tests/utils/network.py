@@ -9,7 +9,7 @@ from raiden.app import App
 from raiden.network.discovery import Discovery
 from raiden.network.transport import DummyPolicy
 from raiden.utils import privatekey_to_address
-from raiden.tests.utils.mock_client import OwnedNettingChannelMock
+from raiden.tests.utils import OwnedNettingChannel
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -17,11 +17,13 @@ CHAIN = object()  # Flag used by create a network does make a loop with the chan
 
 
 def check_channel(app1, app2, netting_channel_address):
-    netcontract1 = OwnedNettingChannelMock(
+    # proxying the NettingChannel with OwnedNettingChannel allows us to use both, tester and mock.
+    netcontract1 = OwnedNettingChannel(
         app1.raiden.address,
         app1.raiden.chain.netting_channel(netting_channel_address)
     )
-    netcontract2 = OwnedNettingChannelMock(
+
+    netcontract2 = OwnedNettingChannel(
         app2.raiden.address,
         app2.raiden.chain.netting_channel(netting_channel_address)
     )
