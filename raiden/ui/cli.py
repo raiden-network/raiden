@@ -295,11 +295,9 @@ def run(ctx, **kwargs):
         if kwargs['rpccorsdomain']:
             if ',' in kwargs['rpccorsdomain']:
                 for domain in kwargs['rpccorsdomain'].split(','):
-                    domain = str("".join(["http://", domain, ":*/*"]))
-                    domain_list.append(domain)
+                    domain_list.append(str(domain))
             else:
-                domain = str("".join(["http://", kwargs['rpccorsdomain'], ":*/*"]))
-                domain_list.append(domain)
+                domain_list.append(str(kwargs['rpccorsdomain']))
 
         if ctx.params['rpc']:
             raiden_api = RaidenAPI(app_.raiden)
