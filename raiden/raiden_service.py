@@ -659,7 +659,8 @@ class RaidenService(object):
 
         # send ping to target to make sure we can receive something back from target
         async_result = self.protocol.send_ping(target)
-        if async_result.wait():
+        async_result.wait(timeout=0.5)  # allow the ping to succeed
+        if async_result.ready():
             log.debug("transfer target received invitation ping")
         else:
             log.debug("transfer target did not receive invitation ping, probably behing NAT")
