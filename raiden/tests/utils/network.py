@@ -16,7 +16,7 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 
 
-def check_channel(app1, app2, netting_channel_address):
+def check_channel(app1, app2, netting_channel_address, deposit_amount):
     # proxying the NettingChannel with OwnedNettingChannel allows us to use both, tester and mock.
     netcontract1 = OwnedNettingChannel(
         app1.raiden.address,
@@ -28,8 +28,9 @@ def check_channel(app1, app2, netting_channel_address):
         app2.raiden.chain.netting_channel(netting_channel_address)
     )
 
-    assert netcontract1.can_transfer()
-    assert netcontract2.can_transfer()
+    if deposit_amount > 0:
+        assert netcontract1.can_transfer()
+        assert netcontract2.can_transfer()
 
     app1_details = netcontract1.detail()
     app2_details = netcontract2.detail()
@@ -111,6 +112,7 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
             first,
             second,
             netcontract_address,
+            deposit,
         )
 
         first_netting_channel = first.raiden.chain.netting_channel(netcontract_address)
