@@ -15,3 +15,6 @@ MINUTE_SEC = 60
 MINUTE_MS = 60 * 1000
 
 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN = 6
+
+# TODO: add this as an attribute of the transport class
+UDP_MAX_MESSAGE_SIZE = 1200

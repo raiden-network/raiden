@@ -151,8 +151,6 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         socket,
         logging,
         logfile,
-        max_unresponsive_time,
-        send_ping_time,
         api_port,
         rpc,
         console):
@@ -162,11 +160,9 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     # config_file = args.config_file
     (listen_host, listen_port) = split_endpoint(listen_address)
 
-    config = App.default_config.copy()
+    config = App.DEFAULT_CONFIG.copy()
     config['host'] = listen_host
     config['port'] = listen_port
-    config['max_unresponsive_time'] = max_unresponsive_time
-    config['send_ping_time'] = send_ping_time
     config['console'] = console
     config['rpc'] = rpc
     config['api_port'] = api_port

@@ -2,7 +2,6 @@
 """ Utilities to set-up a Raiden network. """
 from __future__ import print_function, division
 
-import copy
 from ethereum import slogging
 
 from raiden.app import App
@@ -42,44 +41,10 @@ def check_channel(app1, app2, netting_channel_address, deposit_amount):
     assert app1_details['partner_balance'] == app2_details['our_balance']
 
 
-def create_app(
-        privatekey_bin,
-        chain,
-        discovery,
-        transport_class,
-        send_ping_time,
-        max_unresponsive_time,
-        port,
-        reveal_timeout,
-        settle_timeout,
-        database_path,
-        host='127.0.0.1',
-):
-    ''' Instantiates an Raiden app with the given configuration. '''
-    config = copy.deepcopy(App.default_config)
-
-    config['port'] = port
-    config['host'] = host
-    config['privatekey_hex'] = privatekey_bin.encode('hex')
-    config['send_ping_time'] = send_ping_time
-    config['max_unresponsive_time'] = max_unresponsive_time
-    config['reveal_timeout'] = reveal_timeout
-    config['settle_timeout'] = settle_timeout
-    config['database_path'] = database_path
-
-    app = App(
-        config,
-        chain,
-        discovery,
-        transport_class,
-    )
-    app.raiden.protocol.transport.throttle_policy = DummyPolicy()
-    return app
-
-
 def setup_channels(token_address, app_pairs, deposit, settle_timeout):
     for first, second in app_pairs:
-        assert len(token_address)
+        assert token_address
+
         manager = first.raiden.chain.manager_by_token(token_address)
 
         netcontract_address = manager.new_netting_channel(
@@ -87,7 +52,8 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
             second.raiden.address,
             settle_timeout,
         )
-        assert len(netcontract_address)
+
+        assert netcontract_address
 
         # use each app's own chain because of the private key / local signing
         for app in [first, second]:
@@ -263,11 +229,17 @@ def create_apps(
         raiden_udp_ports,
         transport_class,
         verbosity,
-        send_ping_time,
-        max_unresponsive_time,
         reveal_timeout,
         settle_timeout,
-        database_paths):
+        database_paths,
+        retry_interval,
+        retries_before_backoff,
+        throttle_capacity,
+        throttle_fill_rate,
+        nat_invitation_timeout,
+        nat_keepalive_retries,
+        nat_keepalive_timeout):
+
     """ Create the apps.
 
     Note:
@@ -306,19 +278,35 @@ def create_apps(
 
         discovery.register(nodeid, host, port)
 
-        app = create_app(
-            private_key,
+        config = {
+            'host': host,
+            'port': port,
+            'privatekey_hex': private_key.encode('hex'),
+            'reveal_timeout': reveal_timeout,
+            'settle_timeout': settle_timeout,
+            'database_path': database_paths[idx],
+            'protocol': {
+                'retry_interval': retry_interval,
+                'retries_before_backoff': retries_before_backoff,
+                'throttle_capacity': throttle_capacity,
+                'throttle_fill_rate': throttle_fill_rate,
+                'nat_invitation_timeout': nat_invitation_timeout,
+                'nat_keepalive_retries': nat_keepalive_retries,
+                'nat_keepalive_timeout': nat_keepalive_timeout,
+            },
+            'rpc': True,
+            'console': False,
+        }
+        copy = App.DEFAULT_CONFIG.copy()
+        copy.update(config)
+
+        app = App(
+            copy,
             blockchain,
             discovery,
             transport_class,
-            send_ping_time,
-            max_unresponsive_time,
-            port=port,
-            database_path=database_paths[idx],
-            host=host,
-            reveal_timeout=reveal_timeout,
-            settle_timeout=settle_timeout,
         )
+        app.raiden.protocol.transport.throttle_policy = DummyPolicy()
         apps.append(app)
 
     return apps

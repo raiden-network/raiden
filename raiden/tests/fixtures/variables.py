@@ -10,6 +10,8 @@ from ethereum.utils import sha3
 from raiden.settings import (
     DEFAULT_EVENTS_POLL_TIMEOUT,
     DEFAULT_POLL_TIMEOUT,
+    DEFAULT_PROTOCOL_THROTTLE_CAPACITY,
+    DEFAULT_PROTOCOL_THROTTLE_FILL_RATE,
 )
 from raiden.network.transport import UDPTransport
 
@@ -26,8 +28,8 @@ def settle_timeout(blockchain_type):
     """
     if blockchain_type == 'geth':
         return 16
-    else:
-        return 400
+
+    return 400
 
 
 @pytest.fixture
@@ -39,8 +41,8 @@ def reveal_timeout(blockchain_type):
     """
     if blockchain_type == 'geth':
         return 4
-    else:
-        return 20
+
+    return 20
 
 
 @pytest.fixture
@@ -92,21 +94,38 @@ def transport_class():
 
 
 @pytest.fixture
-def send_ping_time():
-    """
-    Time in seconds after which if we have received no message from a node we
-    have a connection with, we are going to send a PING message
-    """
-    return 0
+def retry_interval():
+    return 0.5
 
 
 @pytest.fixture
-def max_unresponsive_time():
-    """
-    Max time in seconds for which an address can send no packets and still
-    be considered healthy. Give 0 in order to disable healthcheck.
-    """
-    return 0  # Default is no healthcheck for tests
+def retries_before_backoff():
+    return 2
+
+
+@pytest.fixture
+def throttle_capacity():
+    return DEFAULT_PROTOCOL_THROTTLE_CAPACITY
+
+
+@pytest.fixture
+def throttle_fill_rate():
+    return DEFAULT_PROTOCOL_THROTTLE_FILL_RATE
+
+
+@pytest.fixture
+def nat_invitation_timeout():
+    return 5
+
+
+@pytest.fixture
+def nat_keepalive_retries():
+    return 2
+
+
+@pytest.fixture
+def nat_keepalive_timeout():
+    return 1
 
 
 @pytest.fixture
@@ -259,8 +278,8 @@ def database_paths(tmpdir, private_keys, in_memory_database):
             ':memory:'
             for position in range(len(private_keys))
         ]
-    else:
-        return [
-            os.path.join(tmpdir.strpath, 'transaction_log_{}.db'.format(position))
-            for position in range(len(private_keys))
-        ]
+
+    return [
+        os.path.join(tmpdir.strpath, 'transaction_log_{}.db'.format(position))
+        for position in range(len(private_keys))
+    ]

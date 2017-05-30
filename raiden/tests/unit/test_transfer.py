@@ -23,15 +23,51 @@ from raiden.tests.utils.messages import (
     make_refund_transfer,
     MessageLogger,
 )
-from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
+from raiden.tests.utils.transfer import (
+    assert_synched_channels,
+    channel,
+    direct_transfer,
+    transfer,
+)
 from raiden.tests.utils.network import CHAIN
 from raiden.utils import pex, sha3, privatekey_to_address
 from raiden.raiden_service import create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block
+from raiden.channel.netting_channel import (
+    NODE_NETWORK_UNREACHABLE,
+    NODE_NETWORK_UNKNOWN,
+)
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 HASH = sha3('muchcodingsuchwow_______________')
 HASH2 = sha3('terribleweathermuchstayinside___')
+
+
+def unique(messages):
+    seen = set()
+
+    for m in messages:
+        if m not in seen:
+            seen.add(m)
+            yield m
+
+
+def get_messages_by_type(messages, type_):
+    return [
+        m
+        for m in messages
+        if isinstance(m, type_)
+    ]
+
+
+def assert_ack_for(receiver, message, message_list):
+    direct_hash = sha3(message.encode() + receiver.raiden.address)
+
+    assert any(
+        ack.echo == direct_hash
+        for ack in message_list
+        if isinstance(ack, Ack)
+    )
 
 
 def sign_and_send(message, key, address, app):
@@ -63,10 +99,13 @@ class MediatedTransferTestHelper(object):
             initiator_address,
             num_hops,
         )
-        assert len(paths_length)
+
+        assert paths_length, 'path must not be empty'
+
         for path in paths_length:
             assert len(path) == num_hops + 1
             assert path[0] == initiator_address
+
         return paths_length[0]
 
     def assert_path_in_shortest_paths(self, path, initiator_address, num_hops):
@@ -91,10 +130,6 @@ def test_transfer(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     messages = setup_messages_cb()
-    mlogger = MessageLogger()
-
-    a0_address = pex(app0.raiden.address)
-    a1_address = pex(app1.raiden.address)
 
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
@@ -124,40 +159,17 @@ def test_transfer(raiden_network):
         channel1, balance1 + amount, []
     )
 
-    assert len(messages) == 2  # DirectTransfer, Ack
-    directtransfer_message = decode(messages[0])
-    assert isinstance(directtransfer_message, DirectTransfer)
-    assert directtransfer_message.transferred_amount == amount
+    decoded_messages = [decode(m) for m in messages]
+    direct_messages = get_messages_by_type(decoded_messages, DirectTransfer)
 
-    ack_message = decode(messages[1])
-    assert isinstance(ack_message, Ack)
-    assert ack_message.echo == sha3(directtransfer_message.encode() + app1.raiden.address)
+    assert len(direct_messages) == 1
+    assert direct_messages[0].transferred_amount == amount
 
-    a0_messages = mlogger.get_node_messages(a0_address)
-    assert len(a0_messages) == 2
-    assert isinstance(a0_messages[0], DirectTransfer)
-    assert isinstance(a0_messages[1], Ack)
-
-    a0_sent_messages = mlogger.get_node_messages(a0_address, only='sent')
-    assert len(a0_sent_messages) == 1
-    assert isinstance(a0_sent_messages[0], DirectTransfer)
-
-    a0_recv_messages = mlogger.get_node_messages(a0_address, only='recv')
-    assert len(a0_recv_messages) == 1
-    assert isinstance(a0_recv_messages[0], Ack)
-
-    a1_messages = mlogger.get_node_messages(a1_address)
-    assert len(a1_messages) == 2
-    assert isinstance(a1_messages[0], Ack)
-    assert isinstance(a1_messages[1], DirectTransfer)
-
-    a1_sent_messages = mlogger.get_node_messages(a1_address, only='sent')
-    assert len(a1_sent_messages) == 1
-    assert isinstance(a1_sent_messages[0], Ack)
-
-    a1_recv_messages = mlogger.get_node_messages(a1_address, only='recv')
-    assert len(a1_recv_messages) == 1
-    assert isinstance(a1_recv_messages[0], DirectTransfer)
+    assert_ack_for(
+        app1,
+        direct_messages[0],
+        decoded_messages,
+    )
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -296,7 +308,7 @@ def test_cancel_transfer(raiden_chain, token, deposit):
         channel(app3, app2, token), deposit + amount23, []
     )
 
-    assert len(messages) == 12  # DT + DT + SMT + MT + RT + RT + ACKs
+    assert len(unique(messages)) == 12  # DT + DT + SMT + MT + RT + RT + ACKs
 
     app1_messages = mlogger.get_node_messages(pex(app1.raiden.address), only='sent')
     assert isinstance(app1_messages[-1], RefundTransfer)
@@ -307,8 +319,6 @@ def test_cancel_transfer(raiden_chain, token, deposit):
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('send_ping_time', [3])
-@pytest.mark.parametrize('max_unresponsive_time', [6])
 def test_healthcheck_with_normal_peer(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
     messages = setup_messages_cb()
@@ -316,8 +326,6 @@ def test_healthcheck_with_normal_peer(raiden_network):
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    max_unresponsive_time = app0.raiden.config['max_unresponsive_time']
-
     assert graph0.token_address == graph1.token_address
     assert app1.raiden.address in graph0.partneraddress_channel
 
@@ -330,7 +338,6 @@ def test_healthcheck_with_normal_peer(raiden_network):
     )
     assert result.wait(timeout=10)
 
-    gevent.sleep(max_unresponsive_time)
     assert graph0.has_path(
         app0.raiden.address,
         app1.raiden.address
@@ -338,74 +345,44 @@ def test_healthcheck_with_normal_peer(raiden_network):
 
     # At this point we should have sent a direct transfer and got back the ack
     # and gotten at least 1 ping - ack for a normal healthcheck
-    assert len(messages) >= 4  # DirectTransfer, Ack, Ping, Ack
-    assert isinstance(decode(messages[0]), DirectTransfer)
-    assert isinstance(decode(messages[1]), Ack)
-    assert isinstance(decode(messages[2]), Ping)
-    assert isinstance(decode(messages[3]), Ack)
+    decoded_messages = [decode(m) for m in unique(messages)]
+    direct_messages = get_messages_by_type(decoded_messages, DirectTransfer)
+
+    assert len(direct_messages) == 1
+    assert_ack_for(app1, direct_messages[0], decoded_messages)
+
+    ping_messages = get_messages_by_type(decoded_messages, Ping)
+    assert len(ping_messages) > 0
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('send_ping_time', [3])
-@pytest.mark.parametrize('max_unresponsive_time', [6])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
-def test_healthcheck_with_bad_peer(raiden_network):
+def test_healthcheck_with_bad_peer(raiden_network, nat_keepalive_retries, nat_keepalive_timeout):
+    """ If the Ping messages are not answered, the node must be set to
+    unreachable.
+    """
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-    UnreliableTransport.droprate = 10  # Let's allow some messages to go through
-    UnreliableTransport.network.counter = 1
-    messages = setup_messages_cb()
 
-    send_ping_time = app0.raiden.config['send_ping_time']
-    max_unresponsive_time = app0.raiden.config['max_unresponsive_time']
-
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
-
-    assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
-
-    amount = 10
-    target = app1.raiden.address
-    result = app0.raiden.transfer_async(
-        graph0.token_address,
-        amount,
-        target,
-    )
-
-    assert result.wait(timeout=10)
-    gevent.sleep(2)
-
-    assert graph0.has_path(
-        app0.raiden.address,
-        app1.raiden.address
-    )
-
-    # At this point we should have sent a direct transfer and got back the ack
-    assert len(messages) == 2  # DirectTransfer, Ack
-    assert isinstance(decode(messages[0]), DirectTransfer)
-    assert isinstance(decode(messages[1]), Ack)
-
-    # now let's make things interesting and drop every message
+    # Drop all Ping and Ack messages
     UnreliableTransport.droprate = 1
     UnreliableTransport.network.counter = 0
-    gevent.sleep(send_ping_time)
 
-    # At least 1 ping should have been sent by now but gotten no response
-    assert len(messages) >= 3
-    for msg in messages[2:]:
-        assert isinstance(decode(msg), Ping)
-
-    gevent.sleep(max_unresponsive_time - send_ping_time)
-    # By now our peer has not replied and must have been removed from the graph
-    assert not graph0.has_path(
-        app0.raiden.address,
-        app1.raiden.address
+    app0.raiden.protocol.start_health_check(
+        app1.raiden.address,
+        ping_nonce=0,
     )
-    final_messages_num = len(messages)
-    # Let's make sure no new pings are sent afterwards
-    gevent.sleep(2)
-    assert len(messages) == final_messages_num
+
+    graph0 = app0.raiden.channelgraphs.values()[0]
+    partner_channel = graph0.partneraddress_channel[app1.raiden.address]
+
+    assert partner_channel.network_state == NODE_NETWORK_UNKNOWN
+
+    gevent.sleep(
+        nat_keepalive_retries * nat_keepalive_timeout + 0.5
+    )
+
+    assert partner_channel.network_state == NODE_NETWORK_UNREACHABLE
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -417,7 +394,7 @@ def test_receive_directtransfer_unknown(raiden_network):
 
     other_key = PrivateKey(HASH)
     other_address = privatekey_to_address(HASH)
-    direct_transfer = DirectTransfer(
+    direct_transfer_message = DirectTransfer(
         identifier=1,
         nonce=1,
         token=graph0.token_address,
@@ -425,7 +402,7 @@ def test_receive_directtransfer_unknown(raiden_network):
         recipient=app0.raiden.address,
         locksroot=HASH
     )
-    sign_and_send(direct_transfer, other_key, other_address, app0)
+    sign_and_send(direct_transfer_message, other_key, other_address, app0)
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -528,7 +505,7 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
         graph0.token_address,
         app1.raiden.address,
     )
-    direct_transfer = DirectTransfer(
+    direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=1,
         token=graph0.token_address,
@@ -537,7 +514,7 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
         locksroot=HASH,
     )
     app0_key = PrivateKey(private_keys[0])
-    sign_and_send(direct_transfer, app0_key, app0.raiden.address, app1)
+    sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -714,7 +691,7 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
         graph0.token_address,
         app1.raiden.address,
     )
-    direct_transfer = DirectTransfer(
+    direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=2,
         token=HASH[0:20],
@@ -723,7 +700,7 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
         locksroot=HASH,
     )
     app0_key = PrivateKey(private_keys[0])
-    sign_and_send(direct_transfer, app0_key, app0.raiden.address, app1)
+    sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -765,7 +742,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
         graph0.token_address,
         app1.raiden.address,
     )
-    direct_transfer = DirectTransfer(
+    direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=2,
         token=graph0.token_address,
@@ -774,7 +751,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
         locksroot=HASH,
     )
     app0_key = PrivateKey(private_keys[0])
-    sign_and_send(direct_transfer, app0_key, app0.raiden.address, app1)
+    sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -837,7 +814,7 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
     assert channel1.external_state.settled_block != 0
 
     # and now receive one more transfer from the closed channel
-    direct_transfer = DirectTransfer(
+    direct_transfer_message = DirectTransfer(
         identifier=1,
         nonce=1,
         token=graph0.token_address,
@@ -846,7 +823,7 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         locksroot=HASH
     )
     sign_and_send(
-        direct_transfer,
+        direct_transfer_message,
         app1.raiden.private_key,
         app1.raiden.address, app1
     )

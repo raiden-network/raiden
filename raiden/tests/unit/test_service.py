@@ -4,8 +4,12 @@ import gevent
 
 from raiden.utils import sha3
 from raiden.api.python import RaidenAPI
-from raiden.messages import Ping, Ack, decode
-from raiden.network.transport import UnreliableTransport, UDPTransport, RaidenProtocol
+from raiden.messages import (
+    decode,
+    Ack,
+    Ping,
+)
+from raiden.network.transport import UnreliableTransport
 from raiden.tests.utils.messages import setup_messages_cb
 from raiden.tests.utils.transfer import channel
 
@@ -16,70 +20,60 @@ def test_ping(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     messages = setup_messages_cb()
-    ping = Ping(nonce=0)
-    app0.raiden.sign(ping)
-    app0.raiden.protocol.send_and_wait(app1.raiden.address, ping)
+
+    ping_message = Ping(nonce=0)
+    app0.raiden.sign(ping_message)
+    ping_encoded = ping_message.encode()
+
+    app0.raiden.protocol.send_and_wait(
+        app1.raiden.address,
+        ping_message,
+    )
     gevent.sleep(0.1)
-    assert len(messages) == 2  # Ping, Ack
-    assert decode(messages[0]) == ping
-    decoded = decode(messages[1])
-    assert isinstance(decoded, Ack)
-    assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
+
+    # mesages may have more than two entries depending on the retry logic, so
+    # fiter duplicates
+    assert len(set(messages)) == 2
+
+    assert ping_encoded in messages
+    messages_decoded = [
+        decode(m)
+        for m in messages
+    ]
+    ack_message = next(
+        decoded
+        for decoded in messages_decoded
+        if isinstance(decoded, Ack)
+    )
+    assert ack_message.echo == sha3(ping_encoded + app1.raiden.address)
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
-def test_ping_dropped_message(raiden_network):
+def test_ping_unreachable(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    # mock transport with packet loss, every 3rd is lost, starting with first message
-    UnreliableTransport.droprate = 3
-    RaidenProtocol.try_interval = 0.1  # for fast tests
-    RaidenProtocol.repeat_messages = True
+    UnreliableTransport.droprate = 1  # drop everything to force disabling of re-sends
+    app0.raiden.protocol.retry_interval = 0.1  # for fast tests
 
     messages = setup_messages_cb()
     UnreliableTransport.network.counter = 0
 
     ping = Ping(nonce=0)
-    app0.raiden.sign(ping)
-    app0.raiden.protocol.send_and_wait(app1.raiden.address, ping)
-    gevent.sleep(1)
+    async_result = app0.raiden.protocol.send_async(
+        app1.raiden.address,
+        ping,
+    )
 
-    assert len(messages) == 3  # Ping(dropped), Ping, Ack
+    assert async_result.wait(2) is None, "the message was dropped, it can't be acknowledged"
 
-    for i in [0, 1]:
-        assert decode(messages[i]) == ping
-
-    for i in [2]:
-        decoded = decode(messages[i])
-        assert isinstance(decoded, Ack)
-
-    assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
-
-    messages = setup_messages_cb()
-    assert not messages
-
-    UnreliableTransport.network.counter = 2  # first message sent, 2nd dropped
-    ping = Ping(nonce=1)
-    app0.raiden.sign(ping)
-    app0.raiden.protocol.send_and_wait(app1.raiden.address, ping)
-    gevent.sleep(1)
-
-    assert len(messages) == 4  # Ping, Ack(dropped), Ping, Ack
-    for i in [0, 2]:
-        assert decode(messages[i]) == ping
-    for i in [1, 3]:
-        decoded = decode(messages[i])
-        assert isinstance(decoded, Ack)
-    assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
-
-    RaidenProtocol.repeat_messages = False
+    for message in messages:
+        assert decode(message) == ping
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('transport_class', [UDPTransport])
 def test_ping_udp(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
     messages = setup_messages_cb()
@@ -103,8 +97,7 @@ def test_ping_ordering(raiden_network):
 
     # mock transport with packet loss, every 3rd is lost, starting with first message
     droprate = UnreliableTransport.droprate = 3
-    RaidenProtocol.try_interval = 0.1  # for fast tests
-    RaidenProtocol.repeat_messages = True
+    app0.raiden.protocol.retry_interval = 0.1  # for fast tests
 
     messages = setup_messages_cb()
     UnreliableTransport.network.counter = 0
@@ -135,15 +128,13 @@ def test_ping_ordering(raiden_network):
         assert isinstance(decoded, Ack)
         assert decoded.echo == hashes[j]
 
-    RaidenProtocol.repeat_messages = False
-
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('deposit', [0])
 def test_receive_direct_before_deposit(raiden_network):
     """Regression test that ensures we accept incoming direct transfers, even if we don't have
     any back channel balance.  """
-    app0, app1, app2 = raiden_network
+    app0, app1, _ = raiden_network
 
     token_address = app0.raiden.chain.default_registry.token_addresses()[0]
     channel_0_1 = channel(app0, app1, token_address)

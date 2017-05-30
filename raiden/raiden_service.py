@@ -25,7 +25,6 @@ from raiden.blockchain.events import (
 )
 from raiden.tasks import (
     AlarmTask,
-    HealthcheckTask,
 )
 from raiden.token_swap import (
     GreenletTasksDispatcher,
@@ -110,7 +109,6 @@ from raiden.network.channelgraph import (
 )
 from raiden.encoding import messages
 from raiden.messages import (
-    decode,
     RevealSecret,
     Secret,
     SecretRequest,
@@ -118,7 +116,6 @@ from raiden.messages import (
 )
 from raiden.network.protocol import (
     RaidenProtocol,
-    QueueItem,
 )
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
@@ -170,6 +167,17 @@ class RaidenService(object):
 
         private_key = PrivateKey(private_key_bin)
         pubkey = private_key.public_key.format(compressed=False)
+        protocol = RaidenProtocol(
+            transport,
+            discovery,
+            self,
+            config['protocol']['retry_interval'],
+            config['protocol']['retries_before_backoff'],
+            config['protocol']['nat_keepalive_retries'],
+            config['protocol']['nat_keepalive_timeout'],
+            config['protocol']['nat_invitation_timeout'],
+        )
+        transport.protocol = protocol
 
         self.channelgraphs = dict()
         self.manager_token = dict()
@@ -191,8 +199,7 @@ class RaidenService(object):
         self.pubkey = pubkey
         self.private_key = private_key
         self.address = privatekey_to_address(private_key_bin)
-        self.protocol = RaidenProtocol(transport, discovery, self)
-        transport.protocol = self.protocol
+        self.protocol = protocol
 
         message_handler = RaidenMessageHandler(self)
         state_machine_event_handler = StateMachineEventHandler(self)
@@ -207,16 +214,6 @@ class RaidenService(object):
         alarm.register_callback(self.set_block_number)
 
         alarm.start()
-
-        if config['max_unresponsive_time'] > 0:
-            self.healthcheck = HealthcheckTask(
-                self,
-                config['send_ping_time'],
-                config['max_unresponsive_time']
-            )
-            self.healthcheck.start()
-        else:
-            self.healthcheck = None
 
         self.transaction_log = StateChangeLog(
             storage_instance=StateChangeLogSQLiteBackend(
@@ -588,20 +585,14 @@ class RaidenService(object):
     def restore_queue(self, serialized_queue):
         receiver_address = serialized_queue['receiver_address']
         token_address = serialized_queue['token_address']
-        queue = self.protocol.get_task_queue(receiver_address, token_address)
+
+        queue = self.protocol.get_channel_queue(
+            receiver_address,
+            token_address,
+        )
 
         for messagedata in serialized_queue['messages']:
-            ack_result = AsyncResult()
-            message = decode(messagedata)
-            echohash = sha3(messagedata + receiver_address)
-
-            queue_item = QueueItem(
-                message,
-                ack_result,
-                messagedata,
-                echohash,
-            )
-            queue.put(queue_item)
+            queue.put(messagedata)
 
     def register_registry(self, registry_address):
         proxies = get_relevant_proxies(
@@ -787,11 +778,8 @@ class RaidenService(object):
         wait_for.extend(self.greenlet_task_dispatcher.stop())
 
         self.alarm.stop_async()
-        if self.healthcheck is not None:
-            self.healthcheck.stop_async()
-            wait_for.append(self.healthcheck)
 
-        wait_for.extend(self.protocol.address_greenlet.itervalues())
+        wait_for.extend(self.protocol.greenlets)
         self.pyethapp_blockchain_events.uninstall_all_event_listeners()
 
         self.protocol.stop_and_wait()

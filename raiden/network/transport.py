@@ -3,8 +3,6 @@
 This module contains the classes responsible to implement the network
 communication.
 """
-import time
-
 import gevent
 from gevent.server import DatagramServer
 from ethereum import slogging
@@ -30,11 +28,18 @@ class TokenBucket(object):
     """Implementation of the token bucket throttling algorithm.
     """
 
-    def __init__(self, capacity=10., fill_rate=10.):
+    def __init__(self, capacity=10., fill_rate=10., time=None):
         self.capacity = float(capacity)
         self.fill_rate = fill_rate
         self.tokens = float(capacity)
-        self.timestamp = time.time()
+
+        if time is None:
+            from time import time
+            self._time = time
+        else:
+            self._time = time
+
+        self.timestamp = self._time()
 
     def consume(self, tokens):
         """Consume tokens.
@@ -52,7 +57,7 @@ class TokenBucket(object):
         return wait_time
 
     def _get_tokens(self):
-        now = time.time()
+        now = self._time()
         self.tokens += self.fill_rate * (now - self.timestamp)
         if self.tokens > self.capacity:
             self.tokens = self.capacity

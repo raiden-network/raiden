@@ -78,7 +78,7 @@ def run(privatekey,
 
     (listen_host, listen_port) = split_endpoint(listen_address)
 
-    config = App.default_config.copy()
+    config = App.DEFAULT_CONFIG.copy()
     config['host'] = listen_host
     config['port'] = listen_port
     config['privatekey_hex'] = privatekey
