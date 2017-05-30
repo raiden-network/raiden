@@ -35,10 +35,6 @@ class NettingChannelMock(object):
         return self.state == CHANNEL_STATE_SETTLED
 
 
-def decode_response(response):
-    return json.loads(response._content)
-
-
 class ApiTestContext():
 
     def __init__(self, reveal_timeout):
