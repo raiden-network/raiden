@@ -50,7 +50,12 @@ contract StandardToken is Token {
       return allowed[_owner][_spender];
     }
 
+    function totalSupply() constant returns (uint256 supply) {
+        return _total_supply;
+    }
+
+    uint256 internal _total_supply;
     mapping (address => uint256) balances;
     mapping (address => mapping (address => uint256)) allowed;
-    uint256 public totalSupply;
+
 }
