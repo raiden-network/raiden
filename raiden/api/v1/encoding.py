@@ -35,16 +35,15 @@ from raiden.transfer.state import (
 )
 
 
-# type converter for the flask route
 class HexAddressConverter(BaseConverter):
-
     def to_python(self, value):
-        value = address_decoder(value)
-        return value
+        if value[:2] == '0x':
+            return value[2:].decode('hex')
+
+        raise Exception('invalid address')
 
     def to_url(self, value):
-        value = address_encoder(value)
-        return value
+        return address_encoder(value)
 
 
 class AddressField(fields.Field):
