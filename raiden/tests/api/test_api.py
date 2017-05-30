@@ -8,7 +8,6 @@ from flask import url_for
 from pyethapp.jsonrpc import address_encoder, address_decoder
 
 from raiden.api.v1.encoding import HexAddressConverter
-from raiden.tests.utils.apitestcontext import decode_response
 from raiden.utils import channel_to_api_dict
 from raiden.tests.utils.transfer import channel
 from raiden.transfer.state import (
@@ -91,12 +90,12 @@ def test_api_query_channels(
     )
     response = request.send().response
     assert_proper_response(response)
-    assert decode_response(response) == api_test_context.expect_channels()
+    assert response.json() == api_test_context.expect_channels()
 
     api_test_context.make_channel_and_add()
     response = request.send().response
     assert_proper_response(response)
-    assert decode_response(response) == api_test_context.expect_channels()
+    assert response.json() == api_test_context.expect_channels()
 
 
 def test_api_open_and_deposit_channel(
@@ -119,7 +118,7 @@ def test_api_open_and_deposit_channel(
     response = request.send().response
 
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = 0
     expected_response['state'] = CHANNEL_STATE_OPENED
@@ -145,7 +144,7 @@ def test_api_open_and_deposit_channel(
     response = request.send().response
 
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
@@ -166,7 +165,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     expected_response = {
         'channel_address': first_channel_address,
         'partner_address': first_partner_address,
@@ -188,7 +187,7 @@ def test_api_open_and_deposit_channel(
 
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     expected_response = {
         'channel_address': second_channel_address,
         'partner_address': second_partner_address,
@@ -221,7 +220,7 @@ def test_api_open_close_and_settle_channel(
 
     balance = 0
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
@@ -242,7 +241,6 @@ def test_api_open_close_and_settle_channel(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
     expected_response = {
         'channel_address': channel_address,
         'partner_address': partner_address,
@@ -251,7 +249,7 @@ def test_api_open_close_and_settle_channel(
         'state': CHANNEL_STATE_CLOSED,
         'balance': balance
     }
-    assert response == expected_response
+    assert response.json() == expected_response
 
     # let's settle the channel
     request = grequests.patch(
@@ -264,7 +262,6 @@ def test_api_open_close_and_settle_channel(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
     expected_response = {
         'channel_address': channel_address,
         'partner_address': partner_address,
@@ -273,7 +270,7 @@ def test_api_open_close_and_settle_channel(
         'state': CHANNEL_STATE_SETTLED,
         'balance': balance
     }
-    assert response == expected_response
+    assert response.json() == expected_response
 
 
 def test_api_channel_state_change_errors(
@@ -295,7 +292,7 @@ def test_api_channel_state_change_errors(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     channel_address = response['channel_address']
 
     # let's try to settle the channel (we are bad!)
@@ -430,7 +427,7 @@ def test_api_tokens(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     expected_response = [
         {'address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'},
         {'address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'},
@@ -458,7 +455,7 @@ def test_query_partners_by_token(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     first_channel_address = response['channel_address']
 
     channel_data_obj['partner_address'] = second_partner_address
@@ -468,7 +465,7 @@ def test_query_partners_by_token(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     second_channel_address = response['channel_address']
 
     # and a channel for another token
@@ -491,7 +488,7 @@ def test_query_partners_by_token(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     expected_response = [
         {
             'partner_address': first_partner_address,
@@ -775,7 +772,7 @@ def test_api_transfers(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = decode_response(response)
+    response = response.json()
     assert response == transfer
 
 
@@ -790,9 +787,9 @@ def test_connect_and_leave_token_network(
     )
     response = request.send().response
     assert_proper_response(response)
-    channels = decode_response(response)
-    assert len(channels) == 0
-    assert decode_response(response) == api_test_context.expect_channels()
+    channels = response.json()
+    assert not channels
+    assert response.json() == api_test_context.expect_channels()
 
     funds = 100
     initial_channel_target = DEFAULT_INITIAL_CHANNEL_TARGET
@@ -814,10 +811,10 @@ def test_connect_and_leave_token_network(
     )
     response = request.send().response
     assert_proper_response(response)
-    channels = decode_response(response)
+    channels = response.json()
     # There should be three channels according to the default initial_channel_target
     assert len(channels) == DEFAULT_INITIAL_CHANNEL_TARGET
-    assert decode_response(response) == api_test_context.expect_channels()
+    assert response.json() == api_test_context.expect_channels()
 
     expected_balance = int((funds * joinable_funds_target) / initial_channel_target)
     assert channels[0]['balance'] == expected_balance
@@ -841,7 +838,7 @@ def test_connect_and_leave_token_network(
     response = request.send().response
     assert_proper_response(response)
 
-    channels = decode_response(response)
+    channels = response.json()
     assert channels[0]['state'] == CHANNEL_STATE_SETTLED
     assert channels[1]['state'] == CHANNEL_STATE_SETTLED
     assert channels[2]['state'] == CHANNEL_STATE_SETTLED
