@@ -62,16 +62,4 @@ library ChannelManagerLibrary {
         }
     }
 
-    /// @notice Check if a contract is deployed at given address
-    /// @param _addr address to check for a deployed contract
-    /// @return if contract exists, false if not
-    function contractExists(Data storage self, address _addr) internal constant returns (bool) {
-        uint size;
-        assembly {
-            size := extcodesize(_addr)
-        }
-        if (size > 0) {
-            return true;
-        }
-    }
 }
