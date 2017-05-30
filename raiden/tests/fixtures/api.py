@@ -64,20 +64,16 @@ def api_raiden_service(
         api_test_context,
         blockchain_services,
         transport_class,
-        max_unresponsive_time,
-        send_ping_time,
         reveal_timeout,
         raiden_udp_ports,
         tmpdir):
 
     blockchain = blockchain_services[0]
-    config = copy.deepcopy(App.default_config)
+    config = copy.deepcopy(App.DEFAULT_CONFIG)
 
     config['port'] = raiden_udp_ports[0]
     config['host'] = '127.0.0.1'
     config['privatekey_hex'] = blockchain.private_key.encode('hex')
-    config['send_ping_time'] = send_ping_time
-    config['max_unresponsive_time'] = max_unresponsive_time
     config['reveal_timeout'] = reveal_timeout
     config['database_path'] = os.path.join(tmpdir.strpath, 'database.db')
     raiden_service = RaidenService(

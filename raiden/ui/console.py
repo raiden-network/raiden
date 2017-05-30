@@ -8,15 +8,15 @@ import time
 from logging import StreamHandler, Formatter
 
 import gevent
+from gevent.event import Event
 import IPython
+from IPython.lib.inputhook import inputhook_manager
 from devp2p.service import BaseService
 from ethereum.slogging import getLogger
 from ethereum._solidity import compile_file
 from ethereum.utils import denoms
-from gevent.event import Event
-from IPython.lib.inputhook import inputhook_manager
 from pyethapp.utils import bcolors as bc
-from pyethapp.jsonrpc import address_decoder, default_gasprice
+from pyethapp.jsonrpc import default_gasprice
 from pyethapp.console_service import GeventInputHook, SigINTHandler
 
 from raiden.api.python import RaidenAPI
@@ -113,9 +113,17 @@ class Console(BaseService):
             """
             lines = (stream.getvalue().strip().split('\n') or [])
             if prefix:
-                lines = filter(lambda line: line.split(':')[1].startswith(prefix), lines)
+                lines = [
+                    line
+                    for line in lines
+                    if line.split(':')[1].startswith(prefix)
+                ]
             if level:
-                lines = filter(lambda line: line.split(':')[0] == level, lines)
+                lines = [
+                    line
+                    for line in lines
+                    if line.split(':')[0] == level
+                ]
             for line in lines[-n:]:
                 print(line)
 
@@ -209,27 +217,6 @@ class ConsoleTools(object):
         # Register the channel manager with the raiden registry
         self._raiden.register_channel_manager(channel_manager.address)
         return channel_manager
-
-    def ping(self, peer_address_hex, timeout=4):
-        """
-        See, if a peer is discoverable and up.
-           Args:
-                peer_address_hex (string): the hex-encoded (ethereum) address of the peer.
-                timeout (int): The number of seconds to wait for the peer to
-                               acknowledge our ping
-        Returns:
-            success (boolean): True if ping succeeded, False otherwise.
-        """
-        # Check, if peer is discoverable
-        peer_address = address_decoder(peer_address_hex)
-        try:
-            self._discovery.get(peer_address)
-        except KeyError:
-            print("Error: peer {} not found in discovery".format(peer_address_hex))
-            return False
-
-        async_result = self._raiden.protocol.send_ping(peer_address)
-        return async_result.wait(timeout) is not None
 
     def open_channel_with_funding(
             self,
@@ -337,7 +324,7 @@ class ConsoleTools(object):
 
         channel = graph.partneraddress_channel[peer_address]
         netcontract_address = channel.external_state.netting_channel.address
-        assert len(netcontract_address)
+        assert netcontract_address
 
         netting_channel = self._chain.netting_channel(netcontract_address)
         return events.netting_channel_events(self._chain.client, netting_channel)

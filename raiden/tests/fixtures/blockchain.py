@@ -153,11 +153,16 @@ def cached_genesis(request, blockchain_type):
         request.getfixturevalue('raiden_udp_ports'),
         DummyTransport,  # Do not use a UDP server to avoid port reuse in MacOSX
         request.config.option.verbose,
-        request.getfixturevalue('send_ping_time'),
-        request.getfixturevalue('max_unresponsive_time'),
         request.getfixturevalue('reveal_timeout'),
         request.getfixturevalue('settle_timeout'),
         request.getfixturevalue('database_paths'),
+        request.getfixturevalue('retry_interval'),
+        request.getfixturevalue('retries_before_backoff'),
+        request.getfixturevalue('throttle_capacity'),
+        request.getfixturevalue('throttle_fill_rate'),
+        request.getfixturevalue('nat_invitation_timeout'),
+        request.getfixturevalue('nat_keepalive_retries'),
+        request.getfixturevalue('nat_keepalive_timeout'),
     )
 
     if 'raiden_network' in request.fixturenames:

@@ -38,10 +38,15 @@ def raiden_chain(
         raiden_udp_ports,
         transport_class,
         cached_genesis,
-        send_ping_time,
-        max_unresponsive_time,
         reveal_timeout,
-        database_paths):
+        database_paths,
+        retry_interval,
+        retries_before_backoff,
+        throttle_capacity,
+        throttle_fill_rate,
+        nat_invitation_timeout,
+        nat_keepalive_retries,
+        nat_keepalive_timeout):
 
     if len(token_addresses) > 1:
         raise ValueError('raiden_chain only works with a single token')
@@ -57,11 +62,16 @@ def raiden_chain(
         raiden_udp_ports,
         transport_class,
         verbosity,
-        send_ping_time,
-        max_unresponsive_time,
         reveal_timeout,
         settle_timeout,
         database_paths,
+        retry_interval,
+        retries_before_backoff,
+        throttle_capacity,
+        throttle_fill_rate,
+        nat_invitation_timeout,
+        nat_keepalive_retries,
+        nat_keepalive_timeout,
     )
 
     if not cached_genesis:
@@ -91,11 +101,16 @@ def raiden_network(
         blockchain_services,
         raiden_udp_ports,
         transport_class,
-        send_ping_time,
-        max_unresponsive_time,
         cached_genesis,
         reveal_timeout,
-        database_paths):
+        database_paths,
+        retry_interval,
+        retries_before_backoff,
+        throttle_capacity,
+        throttle_fill_rate,
+        nat_invitation_timeout,
+        nat_keepalive_retries,
+        nat_keepalive_timeout):
 
     verbosity = request.config.option.verbose
 
@@ -104,11 +119,16 @@ def raiden_network(
         raiden_udp_ports,
         transport_class,
         verbosity,
-        send_ping_time,
-        max_unresponsive_time,
         reveal_timeout,
         settle_timeout,
         database_paths,
+        retry_interval,
+        retries_before_backoff,
+        throttle_capacity,
+        throttle_fill_rate,
+        nat_invitation_timeout,
+        nat_keepalive_retries,
+        nat_keepalive_timeout,
     )
 
     if not cached_genesis:
