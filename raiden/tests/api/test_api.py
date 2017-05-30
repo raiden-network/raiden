@@ -7,6 +7,7 @@ from flask import url_for
 
 from pyethapp.jsonrpc import address_encoder, address_decoder
 
+from raiden.api.v1.encoding import HexAddressConverter
 from raiden.tests.utils.apitestcontext import decode_response
 from raiden.utils import channel_to_api_dict
 from raiden.tests.utils.transfer import channel
@@ -38,6 +39,25 @@ def api_url_for(api_backend, endpoint, **kwargs):
             kwargs[key] = address_decoder(val)
     with api_server.flask_app.app_context():
         return url_for('v1_resources.{}'.format(endpoint), **kwargs)
+
+
+def test_hex_converter():
+    converter = HexAddressConverter(map=None)
+
+    # invalid hex data
+    with pytest.raises(Exception):
+        converter.to_python('-')
+
+    # invalid address, too short
+    with pytest.raises(Exception):
+        converter.to_python('1234')
+
+    # missing prefix 0x
+    with pytest.raises(Exception):
+        converter.to_python('414d72a6f6e28f4950117696081450d63d56c354')
+
+    address = b'AMr\xa6\xf6\xe2\x8fIP\x11v\x96\x08\x14P\xd6=V\xc3T'
+    assert converter.to_python('0x414d72a6f6e28f4950117696081450d63d56c354') == address
 
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
