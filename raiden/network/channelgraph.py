@@ -255,7 +255,7 @@ class ChannelGraph(object):
         """ Remove an edge from the network. """
         self.graph.remove_edge(from_address, to_address)
 
-    def channel_isactive(self, partner_address):
-        """ True if the channel with `partner_address` is open. """
+    def channel_cantransfer(self, partner_address):
+        """ True if the channel with `partner_address` is open and has spendable funds. """
         # TODO: check if the partner's network is alive
         return self.partneraddress_channel[partner_address].can_transfer

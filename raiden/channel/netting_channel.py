@@ -641,7 +641,7 @@ class Channel(object):
         sent.
         """
         if not self.can_transfer:
-            raise ValueError('The channel is closed')
+            raise ValueError('Transfer not possible, no funding or channel closed.')
 
         from_ = self.our_state
         to_ = self.partner_state
