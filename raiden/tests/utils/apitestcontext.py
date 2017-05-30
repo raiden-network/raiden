@@ -36,7 +36,7 @@ class NettingChannelMock(object):
 
 
 def decode_response(response):
-    return json.loads(json.loads(response._content))
+    return json.loads(response._content)
 
 
 class ApiTestContext():
