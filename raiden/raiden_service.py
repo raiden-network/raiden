@@ -171,8 +171,7 @@ class RaidenService(object):
         greenlet_task_dispatcher = GreenletTasksDispatcher()
 
         alarm = AlarmTask(chain)
-        # ignore the blocknumber
-        alarm.register_callback(self.poll_blockchain_events)
+        alarm.register_callback(lambda _: self.poll_blockchain_events())
         alarm.start()
 
         self._blocknumber = alarm.last_block_number
@@ -219,7 +218,7 @@ class RaidenService(object):
     def get_block_number(self):
         return self._blocknumber
 
-    def poll_blockchain_events(self, block_number):  # pylint: disable=unused-argument
+    def poll_blockchain_events(self):
         on_statechange = self.state_machine_event_handler.on_blockchain_statechange
 
         for state_change in self.pyethapp_blockchain_events.poll_state_change():
