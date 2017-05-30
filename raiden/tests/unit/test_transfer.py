@@ -211,6 +211,11 @@ def test_mediated_transfer(raiden_network):
     assert result.wait(timeout=10)
     gevent.sleep(.1)  # wait for the other nodes to sync
 
+    # check that transfer messages were added
+    assert len(messages) == 22  # Ping, Ack + tranfer messages
+    # make sure that the mediated transfer is sent after the invitation ping
+    assert isinstance(decode(messages[2]), MediatedTransfer)
+
     assert initial_balance_ab - amount == channel_ab.balance
     assert initial_balance_ba + amount == channel_ba.balance
     assert initial_balance_bc - amount == channel_bc.balance
@@ -568,6 +573,11 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     assert result.wait(timeout=10)
     gevent.sleep(1.)
 
+    # check that transfer messages were added
+    assert len(messages) == 22  # Ping, Ack + tranfer messages
+    # make sure that the mediated transfer is sent after the invitation ping
+    assert isinstance(decode(messages[2]), MediatedTransfer)
+
     # and now send one more mediated transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
     locksroot = HASH
@@ -626,6 +636,11 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
 
     assert result.wait(timeout=10)
     gevent.sleep(1.)
+
+    # check that transfer messages were added
+    assert len(messages) == 22  # Ping, Ack + tranfer messages
+    # make sure that the mediated transfer is sent after the invitation ping
+    assert isinstance(decode(messages[2]), MediatedTransfer)
 
     # and now send one more mediated transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
