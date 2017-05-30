@@ -946,7 +946,7 @@ class RaidenMessageHandler(object):
 
         channel = graph.partneraddress_channel[message.sender]
 
-        if not channel.can_transfer:
+        if channel.state != CHANNEL_STATE_OPENED:
             raise TransferWhenClosed(
                 'Direct transfer received for a closed channel: {}'.format(
                     pex(channel.channel_address),
@@ -975,16 +975,16 @@ class RaidenMessageHandler(object):
 
         if not graph.has_channel(self.raiden.address, message.sender):
             raise UnknownAddress(
-                'Direct transfer from node without an existing channel: {}'.format(
+                'Mediated transfer from node without an existing channel: {}'.format(
                     pex(message.sender),
                 )
             )
 
         channel = graph.partneraddress_channel[message.sender]
 
-        if not channel.can_transfer:
+        if channel.state != CHANNEL_STATE_OPENED:
             raise TransferWhenClosed(
-                'Direct transfer received for a closed channel: {}'.format(
+                'Mediated transfer received but the channel is closed: {}'.format(
                     pex(channel.channel_address),
                 )
             )
