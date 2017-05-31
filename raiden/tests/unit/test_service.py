@@ -200,29 +200,29 @@ def test_receive_direct_before_deposit(raiden_network):
 def test_receive_mediated_before_deposit(raiden_network):
     """Regression test that ensures we accept incoming mediated transfers, even if we don't have
     any back channel balance. """
-    app_bob, app_alice, app_charly = raiden_network
+    app_bob, app_alice, app_charlie = raiden_network
 
     chain = app_bob.raiden.chain
 
     token_address = app_bob.raiden.chain.default_registry.token_addresses()[0]
-    # path alice -> bob -> charly
+    # path alice -> bob -> charlie
     alice_bob = channel(app_alice, app_bob, token_address)
     bob_alice = channel(app_bob, app_alice, token_address)
-    bob_charly = channel(app_bob, app_charly, token_address)
-    charly_bob = channel(app_charly, app_bob, token_address)
+    bob_charlie = channel(app_bob, app_charlie, token_address)
+    charlie_bob = channel(app_charlie, app_bob, token_address)
 
     all_channels = dict(
         alice_bob=alice_bob,
         bob_alice=bob_alice,
-        bob_charly=bob_charly,
-        charly_bob=charly_bob
+        bob_charlie=bob_charlie,
+        charlie_bob=charlie_bob
     )
-    # ensure alice charly is mediated
+    # ensure alice charlie is mediated
     with pytest.raises(KeyError):
-        channel(app_alice, app_charly, token_address)
+        channel(app_alice, app_charlie, token_address)
 
     assert not alice_bob.can_transfer
-    assert not bob_charly.can_transfer
+    assert not bob_charlie.can_transfer
     assert not bob_alice.can_transfer
 
     deposit_amount = 3
@@ -234,25 +234,25 @@ def test_receive_mediated_before_deposit(raiden_network):
     gevent.sleep(app_alice.raiden.alarm.wait_time)
 
     api_bob = RaidenAPI(app_bob.raiden)
-    api_bob.deposit(token_address, app_charly.raiden.address, deposit_amount)
+    api_bob.deposit(token_address, app_charlie.raiden.address, deposit_amount)
     chain.next_block()
     gevent.sleep(app_bob.raiden.alarm.wait_time)
 
     assert alice_bob.can_transfer
     assert alice_bob.distributable == deposit_amount
-    assert bob_charly.can_transfer
-    assert bob_charly.distributable == deposit_amount
+    assert bob_charlie.can_transfer
+    assert bob_charlie.distributable == deposit_amount
     assert not bob_alice.can_transfer
 
-    api_alice.transfer_and_wait(token_address, transfer_amount, app_charly.raiden.address)
+    api_alice.transfer_and_wait(token_address, transfer_amount, app_charlie.raiden.address)
     gevent.sleep(app_alice.raiden.alarm.wait_time)
 
     assert alice_bob.distributable == deposit_amount - transfer_amount
-    assert bob_charly.distributable == deposit_amount - transfer_amount
+    assert bob_charlie.distributable == deposit_amount - transfer_amount
     assert bob_alice.distributable == transfer_amount, channel_balances(all_channels)
     assert bob_alice.can_transfer
-    assert charly_bob.distributable == transfer_amount, channel_balances(all_channels)
-    assert charly_bob.can_transfer
+    assert charlie_bob.distributable == transfer_amount, channel_balances(all_channels)
+    assert charlie_bob.can_transfer
 
 
 def channel_balances(name_to_channel):

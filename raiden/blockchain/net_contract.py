@@ -260,7 +260,7 @@ class NettingChannelContract(object):
         participant.deposit += amount
 
         if self.opened is 0:
-            # track the block were the contract was opened
+            # track the block where the contract was opened
             self.opened = block_number
 
     def partner(self, address):
