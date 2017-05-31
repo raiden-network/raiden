@@ -182,6 +182,7 @@ def test_receive_direct_before_deposit(raiden_network):
     transfer_amount = 1
     api0 = RaidenAPI(app0.raiden)
     api0.deposit(token_address, app1.raiden.address, deposit_amount)
+    app0.raiden.chain.next_block()
     gevent.sleep(app0.raiden.alarm.wait_time)
 
     assert channel_0_1.can_transfer
