@@ -164,6 +164,7 @@ def test_ping_ordering(raiden_network):
     RaidenProtocol.repeat_messages = False
 
 
+@pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('deposit', [0])
 def test_receive_direct_before_deposit(raiden_network):
     """Regression test that ensures we accept incoming direct transfers, even if we don't have
@@ -194,11 +195,14 @@ def test_receive_direct_before_deposit(raiden_network):
     assert back_channel.distributable == transfer_amount
 
 
+@pytest.mark.parametrize('blockchain_type', ['mock'])
 @pytest.mark.parametrize('deposit', [0])
 def test_receive_mediated_before_deposit(raiden_network):
     """Regression test that ensures we accept incoming mediated transfers, even if we don't have
     any back channel balance. """
     app_bob, app_alice, app_charly = raiden_network
+
+    chain = app_bob.raiden.chain
 
     token_address = app_bob.raiden.chain.default_registry.token_addresses()[0]
     # path alice -> bob -> charly
@@ -213,6 +217,7 @@ def test_receive_mediated_before_deposit(raiden_network):
         bob_charly=bob_charly,
         charly_bob=charly_bob
     )
+    # ensure alice charly is mediated
     with pytest.raises(KeyError):
         channel(app_alice, app_charly, token_address)
 
@@ -225,10 +230,12 @@ def test_receive_mediated_before_deposit(raiden_network):
 
     api_alice = RaidenAPI(app_alice.raiden)
     api_alice.deposit(token_address, app_bob.raiden.address, deposit_amount)
+    chain.next_block()
     gevent.sleep(app_alice.raiden.alarm.wait_time)
 
     api_bob = RaidenAPI(app_bob.raiden)
     api_bob.deposit(token_address, app_charly.raiden.address, deposit_amount)
+    chain.next_block()
     gevent.sleep(app_bob.raiden.alarm.wait_time)
 
     assert alice_bob.can_transfer
