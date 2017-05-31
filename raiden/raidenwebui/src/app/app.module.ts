@@ -5,7 +5,7 @@ import { HttpModule } from '@angular/http';
 import { DataTableModule, SharedModule, DataListModule, CarouselModule,
 ButtonModule, AccordionModule, GrowlModule, DialogModule } from 'primeng/primeng';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule } from '@angular/material';
+import { MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule } from '@angular/material';
 
 import { AppComponent } from './app.component';
 import { ChannelTableComponent } from './components/channel-table/channel-table.component';
@@ -45,7 +45,7 @@ import { environment } from '../environments/environment';
     MdSelectModule,
     MdToolbarModule,
   ],
-  exports: [ MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule ],
+  exports: [ MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule ],
   providers: [ RaidenConfig,
               {
                   provide: APP_INITIALIZER,
