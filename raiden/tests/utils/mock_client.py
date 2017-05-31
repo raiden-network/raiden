@@ -182,7 +182,7 @@ class FilterMock(object):
         return events
 
     def event(self, event):
-        if event['topics'] is None or event['topics'] == self.topics:
+        if self.topics is None or event['topics'] == self.topics:
             self.events.append(event)
 
     def uninstall(self):
