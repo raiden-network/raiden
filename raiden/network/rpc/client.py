@@ -853,6 +853,9 @@ class NettingChannel(object):
         return address_decoder(self.proxy.tokenAddress.call())
 
     def detail(self, our_address):
+        """`our_address` is an argument used only in mock_client.py but is also
+        kept here to maintain a consistent interface"""
+        our_address = self.client.sender
         data = self.proxy.addressAndBalance.call(startgas=self.startgas)
         settle_timeout = self.proxy.settleTimeout.call(startgas=self.startgas)
 
@@ -890,11 +893,14 @@ class NettingChannel(object):
         settle_timeout = self.proxy.settleTimeout.call()
         return settle_timeout
 
-    def isopen(self):
+    def can_transfer(self):
         if self.proxy.closed.call() != 0:
             return False
 
-        return self.proxy.opened.call() != 0
+        return (
+            self.proxy.opened.call() != 0 and
+            self.detail(None)['our_balance'] > 0
+        )
 
     def deposit(self, our_address, amount):  # pylint: disable=unused-argument
         """`our_address` is an argument used only in mock_client.py but is also

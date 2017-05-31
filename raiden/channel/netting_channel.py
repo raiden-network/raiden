@@ -123,15 +123,6 @@ class ChannelExternalState(object):
 
         self.callbacks_settled.append(callback)
 
-    def isopen(self):
-        """ True if the channel is opened. A channel is opened after its first
-        deposit until close is called.
-        """
-        return (
-            self._opened_block != 0 and
-            self._closed_block == 0
-        )
-
     def close(self, our_address, partner_transfer):
         return self.netting_channel.close(our_address, partner_transfer)
 
@@ -238,8 +229,11 @@ class Channel(object):
         return self.our_state.contract_balance
 
     @property
-    def isopen(self):
-        return self.external_state.isopen()
+    def can_transfer(self):
+        return (
+            self.state == CHANNEL_STATE_OPENED and
+            self.distributable > 0
+        )
 
     @property
     def contract_balance(self):
@@ -646,8 +640,8 @@ class Channel(object):
         This message needs to be signed and registered with the channel before
         sent.
         """
-        if not self.isopen:
-            raise ValueError('The channel is closed')
+        if not self.can_transfer:
+            raise ValueError('Transfer not possible, no funding or channel closed.')
 
         from_ = self.our_state
         to_ = self.partner_state
@@ -682,8 +676,8 @@ class Channel(object):
         """
         timeout = expiration - self.block_number
 
-        if not self.isopen:
-            raise ValueError('The channel is closed.')
+        if not self.can_transfer:
+            raise ValueError('Transfer not possible, no funding or channel closed.')
 
         # the lock timeout cannot be larger than the settle timeout (otherwise
         # the smart contract cannot check the locks)

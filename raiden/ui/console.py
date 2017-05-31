@@ -308,7 +308,7 @@ class ConsoleTools(object):
                      else channel.external_state.netting_channel.address.encode('hex')),
             lifecycle=dict(
                 opened_at=channel.external_state.opened_block or 'not yet',
-                open=channel.isopen,
+                can_transfer=channel.can_transfer,
                 closed_at=channel.external_state.closed_block or 'not yet',
                 settled_at=channel.external_state.settled_block or 'not yet',
             ),

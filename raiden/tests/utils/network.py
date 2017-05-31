@@ -9,24 +9,31 @@ from raiden.app import App
 from raiden.network.discovery import Discovery
 from raiden.network.transport import DummyPolicy
 from raiden.utils import privatekey_to_address
+from raiden.tests.utils import OwnedNettingChannel
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 CHAIN = object()  # Flag used by create a network does make a loop with the channels
 
 
-def check_channel(app1, app2, netting_channel_address):
-    netcontract1 = app1.raiden.chain.netting_channel(netting_channel_address)
-    netcontract2 = app2.raiden.chain.netting_channel(netting_channel_address)
+def check_channel(app1, app2, netting_channel_address, deposit_amount):
+    # proxying the NettingChannel with OwnedNettingChannel allows us to use both, tester and mock.
+    netcontract1 = OwnedNettingChannel(
+        app1.raiden.address,
+        app1.raiden.chain.netting_channel(netting_channel_address)
+    )
 
-    assert netcontract1.isopen()
-    assert netcontract2.isopen()
+    netcontract2 = OwnedNettingChannel(
+        app2.raiden.address,
+        app2.raiden.chain.netting_channel(netting_channel_address)
+    )
 
-    assert netcontract1.detail(app1.raiden.address) == netcontract2.detail(app1.raiden.address)
-    assert netcontract2.detail(app2.raiden.address) == netcontract1.detail(app2.raiden.address)
+    if deposit_amount > 0:
+        assert netcontract1.can_transfer()
+        assert netcontract2.can_transfer()
 
-    app1_details = netcontract1.detail(app1.raiden.address)
-    app2_details = netcontract2.detail(app2.raiden.address)
+    app1_details = netcontract1.detail()
+    app2_details = netcontract2.detail()
 
     assert app1_details['our_address'] == app2_details['partner_address']
     assert app1_details['partner_address'] == app2_details['our_address']
@@ -105,6 +112,7 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
             first,
             second,
             netcontract_address,
+            deposit,
         )
 
         first_netting_channel = first.raiden.chain.netting_channel(netcontract_address)

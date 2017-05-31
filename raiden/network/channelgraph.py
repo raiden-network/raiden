@@ -193,10 +193,10 @@ class ChannelGraph(object):
             partner = path[1]
             channel = self.partneraddress_channel[partner]
 
-            if not channel.isopen:
+            if not channel.can_transfer:
                 if log.isEnabledFor(logging.INFO):
                     log.info(
-                        'channel %s - %s is closed, ignoring',
+                        'channel %s - %s is closed or has zero funding, ignoring',
                         pex(path[0]),
                         pex(path[1]),
                     )
@@ -255,7 +255,7 @@ class ChannelGraph(object):
         """ Remove an edge from the network. """
         self.graph.remove_edge(from_address, to_address)
 
-    def channel_isactive(self, partner_address):
-        """ True if the channel with `partner_address` is open. """
+    def channel_can_transfer(self, partner_address):
+        """ True if the channel with `partner_address` is open and has spendable funds. """
         # TODO: check if the partner's network is alive
-        return self.partneraddress_channel[partner_address].isopen
+        return self.partneraddress_channel[partner_address].can_transfer

@@ -7,6 +7,7 @@ from ethereum import slogging
 from raiden.api.python import RaidenAPI
 from raiden.utils import pex
 from raiden.transfer.state import (
+    CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
 )
 
@@ -287,5 +288,5 @@ class ConnectionManager(object):
         return [
             channel for channel in
             self.api.get_channel_list(token_address=self.token_address)
-            if channel.isopen
+            if channel.state == CHANNEL_STATE_OPENED
         ]

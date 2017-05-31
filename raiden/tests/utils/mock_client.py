@@ -7,6 +7,7 @@ from ethereum.abi import encode_abi, encode_single
 
 from raiden import messages
 from raiden.utils import isaddress, make_address, pex
+from raiden.tests.utils import OwnedNettingChannel
 from raiden.blockchain.net_contract import NettingChannelContract
 from raiden.blockchain.abi import (
     TOKENADDED_EVENT,
@@ -181,7 +182,7 @@ class FilterMock(object):
         return events
 
     def event(self, event):
-        if event['topics'] is None or event['topics'] == self.topics:
+        if self.topics is None or event['topics'] == self.topics:
             self.events.append(event)
 
     def uninstall(self):
@@ -320,8 +321,12 @@ class ChannelManagerMock(object):
             settle_timeout,
         )
         self.pair_channel[pair] = channel
-        self.participant_channels[peer1].append(channel)
-        self.participant_channels[peer2].append(channel)
+        self.participant_channels[peer1].append(
+            OwnedNettingChannel(peer1, channel)
+        )
+        self.participant_channels[peer2].append(
+            OwnedNettingChannel(peer2, channel)
+        )
 
         BlockChainServiceMock.address_contract[channel.address] = channel
 
@@ -356,6 +361,10 @@ class ChannelManagerMock(object):
 
 
 class NettingChannelMock(object):
+    """Shared state implementation of a pure python netting channel. You should not call this
+    instance directly, but instead instantiate a raiden.tests.utils.OwnedNettingChannel with a
+    fixed address.
+    """
     def __init__(self, token_address, peer1, peer2, settle_timeout, address=None):
         # pylint: disable=too-many-arguments
 
@@ -375,8 +384,12 @@ class NettingChannelMock(object):
     def settle_timeout(self):
         return self.contract.settle_timeout
 
-    def isopen(self):
-        return self.contract.isopen
+    def can_transfer(self, our_address):
+        return (
+            self.contract.opened > 0 and
+            self.contract.closed == 0 and
+            self.detail(our_address)['our_balance'] > 0
+        )
 
     def deposit(self, our_address, amount):
         self.contract.deposit(

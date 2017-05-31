@@ -150,9 +150,12 @@ class RaidenAPI(object):
             partner_address,
             settle_timeout,
         )
-        self.raiden.register_netting_channel(token_address, netcontract_address)
+        while netcontract_address not in self.raiden.chain.address_contract:
+            gevent.sleep(self.raiden.alarm.wait_time)
 
         graph = self.raiden.channelgraphs[token_address]
+        while partner_address not in graph.partneraddress_channel:
+            gevent.sleep(self.raiden.alarm.wait_time)
         channel = graph.partneraddress_channel[partner_address]
         return channel
 
@@ -510,7 +513,7 @@ class RaidenAPI(object):
         graph = self.raiden.channelgraphs[token_address]
         channel = graph.partneraddress_channel[partner_address]
 
-        if channel.isopen:
+        if channel.can_transfer:
             raise InvalidState('channel is still open.')
 
         netting_channel = channel.external_state.netting_channel
