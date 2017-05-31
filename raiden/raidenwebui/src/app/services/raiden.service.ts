@@ -7,6 +7,7 @@ import 'rxjs/add/operator/catch';
 import { RaidenConfig } from './raiden.config';
 import { tokenabi } from './tokenabi';
 import { Usertoken } from '../models/usertoken';
+import { Channel } from '../models/channel';
 
 @Injectable()
 export class RaidenService {
@@ -23,7 +24,11 @@ export class RaidenService {
     public getChannels(): Observable<any> {
         console.log(this.raidenAddress);
         return this.http.get(this.config.apiCall + '/channels')
-        .map((response) => response.json()).catch(this.handleError);
+        .map((response) => {
+            const data = response.json();
+            const channelArray = <Array<any>>JSON.parse(data.replace(/\\'/g, '"'));
+            return channelArray;
+        }).catch(this.handleError);
     }
 
     public getEvents(): Observable<any> {
@@ -31,23 +36,18 @@ export class RaidenService {
         .map((response) => response.json()).catch(this.handleError);
     }
 
-    public getTradedTokens(): Observable<any> {
-        return this.http.get(this.config.apiCall + '/tokens')
-        .map((response) => response.json()).catch(this.handleError);
-    }
-
     public getTokenBalancesOf(raidenAddress: string): Observable<any> {
         return this.http.get(this.config.apiCall + '/tokens')
         .map((response) => {
             const data = response.json();
-            console.log(data);
-            return data.map((tokeninfo) => {
+            const tokenArray = <Array<any>>JSON.parse(data.replace(/\\'/g, '"'));
+            return tokenArray.map((tokeninfo) => {
                 const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
                 return new Usertoken(
                 tokeninfo.address,
                 tokenContractInstance.symbol(),
                 tokenContractInstance.name(),
-                tokenContractInstance.balanceOf(this.raidenAddress));
+                tokenContractInstance.balanceOf(this.raidenAddress).toNumber());
             });
         }).catch(this.handleError);
     }

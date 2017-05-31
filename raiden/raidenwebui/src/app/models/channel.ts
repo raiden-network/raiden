@@ -4,5 +4,6 @@ export class Channel {
                 public token_address?: string,
                 public balance?: number,
                 public state?: string,
-                public settle_timeout?: number) {}
+                public settle_timeout?: number,
+                public reveal_timeout?: number) {}
 }
