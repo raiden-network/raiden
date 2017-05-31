@@ -677,7 +677,7 @@ class Channel(object):
         timeout = expiration - self.block_number
 
         if not self.can_transfer:
-            raise ValueError('The channel is closed.')
+            raise ValueError('Transfer not possible, no funding or channel closed.')
 
         # the lock timeout cannot be larger than the settle timeout (otherwise
         # the smart contract cannot check the locks)

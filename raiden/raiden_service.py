@@ -598,7 +598,7 @@ class RaidenService(object):
 
         if not direct_channel.can_transfer:
             log.info(
-                'DIRECT CHANNEL %s > %s is closed',
+                'DIRECT CHANNEL %s > %s is closed or has no funding',
                 pex(direct_channel.our_state.address),
                 pex(direct_channel.partner_state.address),
             )

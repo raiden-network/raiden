@@ -196,7 +196,7 @@ class ChannelGraph(object):
             if not channel.can_transfer:
                 if log.isEnabledFor(logging.INFO):
                     log.info(
-                        'channel %s - %s is closed, ignoring',
+                        'channel %s - %s is closed or has zero funding, ignoring',
                         pex(path[0]),
                         pex(path[1]),
                     )
