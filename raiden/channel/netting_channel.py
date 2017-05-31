@@ -123,14 +123,14 @@ class ChannelExternalState(object):
 
         self.callbacks_settled.append(callback)
 
-    def close(self, our_address, partner_transfer):
-        return self.netting_channel.close(our_address, partner_transfer)
+    def close(self, partner_transfer):
+        return self.netting_channel.close(partner_transfer)
 
-    def update_transfer(self, our_address, partner_transfer):
-        return self.netting_channel.update_transfer(our_address, partner_transfer)
+    def update_transfer(self, partner_transfer):
+        return self.netting_channel.update_transfer(partner_transfer)
 
-    def withdraw(self, our_address, unlock_proofs):
-        return self.netting_channel.withdraw(our_address, unlock_proofs)
+    def withdraw(self, unlock_proofs):
+        return self.netting_channel.withdraw(unlock_proofs)
 
     def settle(self):
         return self.netting_channel.settle()
@@ -282,10 +282,10 @@ class Channel(object):
         # the channel was closed, update our half of the state if we need to
         closing_address = self.external_state.netting_channel.closing_address()
         if closing_address != self.our_state.address:
-            self.external_state.update_transfer(self.our_state.address, transfer)
+            self.external_state.update_transfer(transfer)
 
         unlock_proofs = balance_proof.get_known_unlocks()
-        self.external_state.withdraw(self.our_state.address, unlock_proofs)
+        self.external_state.withdraw(unlock_proofs)
 
     def get_state_for(self, node_address_bin):
         if self.our_state.address == node_address_bin:

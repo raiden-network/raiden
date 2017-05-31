@@ -188,7 +188,7 @@ class RaidenAPI(object):
 
         # Obtain the netting channel and fund it by depositing the amount
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
-        netting_channel.deposit(self.raiden.address, amount)
+        netting_channel.deposit(amount)
 
         return channel
 
@@ -489,7 +489,6 @@ class RaidenAPI(object):
 
         netting_channel = channel.external_state.netting_channel
         netting_channel.close(
-            self.raiden.address,
             first_transfer,
         )
 

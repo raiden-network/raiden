@@ -239,8 +239,6 @@ class BlockChainService(object):
         self.address_registry = dict()
         self.token_manager = dict()
 
-        # if this object becomes a problem for testing consider using one of
-        # the mock blockchains
         jsonrpc_client = JSONRPCClient(
             privkey=privatekey_bin,
             host=host,
@@ -902,9 +900,7 @@ class NettingChannel(object):
             self.detail(None)['our_balance'] > 0
         )
 
-    def deposit(self, our_address, amount):  # pylint: disable=unused-argument
-        """`our_address` is an argument used only in mock_client.py but is also
-        kept here to maintain a consistent interface"""
+    def deposit(self, amount):  # pylint: disable=unused-argument
         if not isinstance(amount, (int, long)):
             raise ValueError('amount needs to be an integral number.')
 
@@ -948,10 +944,7 @@ class NettingChannel(object):
     def settled(self):
         return self.proxy.settled.call()
 
-    def close(self, our_address, their_transfer):
-        """`our_address` is an argument used only in mock_client.py but is also
-        kept here to maintain a consistent interface"""
-
+    def close(self, their_transfer):
         if their_transfer:
             their_encoded = their_transfer.encode()
         else:
@@ -974,9 +967,7 @@ class NettingChannel(object):
             their_transfer=their_transfer,
         )
 
-    def update_transfer(self, our_address, their_transfer):
-        """`our_address` is an argument used only in mock_client.py but is also
-        kept here to maintain a consistent interface"""
+    def update_transfer(self, their_transfer):
         if their_transfer is not None:
             their_transfer_encoded = their_transfer.encode()
 
@@ -1001,9 +992,7 @@ class NettingChannel(object):
             # TODO: check if the ChannelSecretRevealed event was emitted and if
             # it wasn't raise an error
 
-    def withdraw(self, our_address, unlock_proofs):
-        """`our_address` is an argument used only in mock_client.py but is also
-        kept here to maintain a consistent interface"""
+    def withdraw(self, unlock_proofs):
         # force a list to get the length (could be a generator)
         unlock_proofs = list(unlock_proofs)
         log.info(

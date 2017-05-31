@@ -125,4 +125,12 @@ def raiden_network(
 
     _raiden_cleanup(request, raiden_apps)
 
+    # The block_number is primed on the app creation, but after the app is
+    # created all the channels are deployed, for the tester implementation this
+    # will advance the block_number with synchronous execution, making the
+    # apps' block_number to greatly fall behind.
+    if not cached_genesis:
+        for app in raiden_apps:
+            app.raiden.alarm.poll_for_new_block()
+
     return raiden_apps

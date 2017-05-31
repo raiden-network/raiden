@@ -98,7 +98,7 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
             assert previous_balance >= deposit
 
             token.approve(netcontract_address, deposit)
-            netting_channel.deposit(app.raiden.address, deposit)
+            netting_channel.deposit(deposit)
 
             new_balance = token.balance_of(app.raiden.address)
 

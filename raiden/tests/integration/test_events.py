@@ -83,7 +83,7 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     )
 
     token0.approve(netcontract_address, deposit)
-    netting_channel0.deposit(app0.raiden.address, deposit)
+    netting_channel0.deposit(deposit)
 
     gevent.sleep(events_poll_timeout)
 
@@ -100,7 +100,7 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     )
 
     token1.approve(netcontract_address, deposit)
-    netting_channel1.deposit(app1.raiden.address, deposit)
+    netting_channel1.deposit(deposit)
 
     gevent.sleep(events_poll_timeout)
 
@@ -187,7 +187,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     )
 
     token0.approve(netcontract_address, deposit)
-    netting_channel0.deposit(app0.raiden.address, deposit)
+    netting_channel0.deposit(deposit)
 
     all_netting_channel_events = get_all_netting_channel_events(
         app0.raiden.chain,
@@ -216,7 +216,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert event_dicts_are_equal(all_netting_channel_events[-1], new_balance_event)
     assert event_dicts_are_equal(events[0], new_balance_event)
 
-    channel0.external_state.close(app0.raiden.address, '')
+    channel0.external_state.close('')
 
     all_netting_channel_events = get_all_netting_channel_events(
         app0.raiden.chain,
@@ -309,7 +309,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_time
     proofs = list(balance_proof.get_known_unlocks())
     assert len(proofs) == 0
 
-    netting_channel.close(app2.raiden.address, balance_proof.transfer, None)
+    netting_channel.close(balance_proof.transfer)
 
     # reveal it through the blockchain (this needs to emit the SecretRevealed event)
     netting_channel.withdraw(

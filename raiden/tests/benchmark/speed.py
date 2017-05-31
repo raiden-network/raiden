@@ -8,9 +8,15 @@ from ethereum import slogging
 from ethereum.utils import sha3
 
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
-from raiden.tests.utils.mock_client import (
-    BlockChainServiceMock,
-    MOCK_REGISTRY_ADDRESS,
+from raiden.tests.utils.tester_client import (
+    BlockChainServiceTesterMock,
+)
+from raiden.tests.fixtures.tester import (
+    tester_blockgas_limit,
+    tester_channelmanager_library_address,
+    tester_nettingchannel_library_address,
+    tester_registry_address,
+    tester_state,
 )
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import create_network
@@ -33,16 +39,32 @@ def setup_apps(amount, tokens, num_transfers, num_nodes, channels_per_node):
         for position in range(num_nodes)
     ]
 
-    BlockChainServiceMock.reset()
     blockchain_services = list()
+    tester = tester_state(
+        private_keys[0],
+        private_keys,
+        tester_blockgas_limit(),
+    )
+    nettingchannel_library_address = tester_nettingchannel_library_address(
+        tester_state,
+    )
+    channelmanager_library_address = tester_channelmanager_library_address(
+        tester_state,
+        nettingchannel_library_address,
+    )
+    registry_address = tester_registry_address(
+        tester_state,
+        channelmanager_library_address,
+    )
     for privkey in private_keys:
-        blockchain = BlockChainServiceMock(
+        blockchain = BlockChainServiceTesterMock(
             privkey,
-            MOCK_REGISTRY_ADDRESS,
+            tester,
+            registry_address,
         )
         blockchain_services.append(blockchain)
 
-    registry = blockchain_services[0].registry(MOCK_REGISTRY_ADDRESS)
+    registry = blockchain_services[0].registry(registry_address)
     for token in tokens:
         registry.add_token(token)
 

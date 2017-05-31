@@ -10,7 +10,7 @@ from raiden.tests.utils.messages import setup_messages_cb
 from raiden.tests.utils.transfer import channel
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_ping(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -27,33 +27,7 @@ def test_ping(raiden_network):
     assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
 
 
-@pytest.mark.timeout(5)
-@pytest.mark.parametrize('blockchain_type', ['mock'])
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('transport_class', [UnreliableTransport])
-def test_ping_unreachable(raiden_network):
-    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-
-    UnreliableTransport.droprate = 1  # drop everything to force disabling of re-sends
-    RaidenProtocol.try_interval = 0.1  # for fast tests
-    RaidenProtocol.repeat_messages = True
-
-    messages = setup_messages_cb()
-    UnreliableTransport.network.counter = 0
-
-    ping = Ping(nonce=0)
-    app0.raiden.sign(ping)
-    app0.raiden.protocol.send_and_wait(app1.raiden.address, ping)
-    gevent.sleep(2)
-
-    assert len(messages) == 5  # 5 dropped Pings
-    for message in messages:
-        assert decode(message) == ping
-
-    RaidenProtocol.repeat_messages = False
-
-
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
 def test_ping_dropped_message(raiden_network):
@@ -103,7 +77,7 @@ def test_ping_dropped_message(raiden_network):
     RaidenProtocol.repeat_messages = False
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UDPTransport])
 def test_ping_udp(raiden_network):
@@ -121,7 +95,7 @@ def test_ping_udp(raiden_network):
 
 
 @pytest.mark.parametrize('privatekey_seed', ['ping_dropped_message:{}'])
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
 def test_ping_ordering(raiden_network):
@@ -164,7 +138,7 @@ def test_ping_ordering(raiden_network):
     RaidenProtocol.repeat_messages = False
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('deposit', [0])
 def test_receive_direct_before_deposit(raiden_network):
     """Regression test that ensures we accept incoming direct transfers, even if we don't have
@@ -196,7 +170,7 @@ def test_receive_direct_before_deposit(raiden_network):
     assert back_channel.distributable == transfer_amount
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('deposit', [0])
 def test_receive_mediated_before_deposit(raiden_network):
     """Regression test that ensures we accept incoming mediated transfers, even if we don't have
