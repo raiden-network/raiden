@@ -1332,7 +1332,11 @@ class StateMachineEventHandler(object):
 
         for manager in itertools.chain(*manager_lists):
             events = self.dispatch(manager, state_change)
-            self.raiden.transaction_log.log_events(state_change_id, events)
+            self.raiden.transaction_log.log_events(
+                state_change_id,
+                events,
+                self.raiden.get_block_number()
+            )
 
     def log_and_dispatch_by_identifier(self, identifier, state_change):
         """Log a state change, dispatch it to the state manager corresponding to `idenfitier`
@@ -1342,13 +1346,21 @@ class StateMachineEventHandler(object):
 
         for manager in manager_list:
             events = self.dispatch(manager, state_change)
-            self.raiden.transaction_log.log_events(state_change_id, events)
+            self.raiden.transaction_log.log_events(
+                state_change_id,
+                events,
+                self.raiden.get_block_number()
+            )
 
     def log_and_dispatch(self, state_manager, state_change):
         """Log a state change, dispatch it to the given state manager and log generated events"""
         state_change_id = self.raiden.transaction_log.log(state_change)
         events = self.dispatch(state_manager, state_change)
-        self.raiden.transaction_log.log_events(state_change_id, events)
+        self.raiden.transaction_log.log_events(
+            state_change_id,
+            events,
+            self.raiden.get_block_number()
+        )
 
     def dispatch(self, state_manager, state_change):
         all_events = state_manager.dispatch(state_change)

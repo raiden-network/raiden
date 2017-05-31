@@ -19,8 +19,8 @@ def get_all_state_changes(log):
 
 
 def get_all_state_events(log):
-    """ Returns a list of tuples of event id, state_change_id and events"""
+    """ Returns a list of tuples of event id, state_change_id, block_number and events"""
     return [
-        (res[0], res[1], log.serializer.deserialize(res[2]))
+        (res[0], res[1], res[2], log.serializer.deserialize(res[3]))
         for res in get_db_state_changes(log.storage, 'state_events')
     ]
