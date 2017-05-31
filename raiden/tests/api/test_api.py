@@ -106,7 +106,7 @@ def test_channel_to_api_dict(raiden_network, token_addresses, settle_timeout):
 
 
 def test_url_with_invalid_address(rest_api_port_number, api_backend):
-    """ Addresses required the leading 0x in the urls. """
+    """ Addresses require the leading 0x in the urls. """
 
     url_without_prefix = (
         'http://localhost:{port}/api/1/'
@@ -123,7 +123,7 @@ def test_url_with_invalid_address(rest_api_port_number, api_backend):
 
 
 def test_payload_with_address_without_prefix(api_backend):
-    """ Addresses required leading 0x in the payload. """
+    """ Addresses require leading 0x in the payload. """
     invalid_address = '61c808d82a3ac53231750dadc13c777b59310bd9'
     channel_data_obj = {
         'partner_address': invalid_address,
