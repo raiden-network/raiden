@@ -16,7 +16,6 @@ from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.network.transport import DummyTransport
 from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
-from raiden.tests.utils.mock_client import BlockChainServiceMock, MOCK_REGISTRY_ADDRESS
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
 from raiden.network.rpc.client import (
@@ -124,10 +123,6 @@ def cached_genesis(request, blockchain_type):
     """
 
     if not request.config.option.blockchain_cache:
-        return
-
-    # cannot cache for mock blockchain
-    if blockchain_type == 'mock':
         return
 
     # this will create the tester _and_ deploy the Registry
@@ -314,13 +309,6 @@ def blockchain_services(
             tester_blockgas_limit,
         )
 
-    if blockchain_type == 'mock':
-        return _mock_services(
-            deploy_key,
-            private_keys,
-            request,
-        )
-
     raise ValueError('unknown cluster type {}'.format(blockchain_type))
 
 
@@ -357,9 +345,6 @@ def blockchain_backend(
         )
 
     if blockchain_type == 'tester':
-        return ()
-
-    if blockchain_type == 'mock':
         return ()
 
     # check pytest_addoption
@@ -454,29 +439,6 @@ def _jsonrpc_services(
             registry_address,
             host,
             deploy_client.port,
-        )
-        blockchain_services.append(blockchain)
-
-    return BlockchainServices(deploy_blockchain, blockchain_services)
-
-
-def _mock_services(deploy_key, private_keys, request):
-    # make sure we are getting and leaving a clean state, just in case the
-    # BlockChainServiceMock wasn't instantiated through the proper fixture.
-
-    @request.addfinalizer
-    def _cleanup():  # pylint: disable=unused-variable
-        BlockChainServiceMock.reset()
-
-    BlockChainServiceMock.reset()
-
-    deploy_blockchain = BlockChainServiceMock(deploy_key, MOCK_REGISTRY_ADDRESS)
-
-    blockchain_services = list()
-    for privkey in private_keys:
-        blockchain = BlockChainServiceMock(
-            privkey,
-            MOCK_REGISTRY_ADDRESS,
         )
         blockchain_services.append(blockchain)
 

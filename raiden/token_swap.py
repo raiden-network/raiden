@@ -196,7 +196,6 @@ class BaseMediatedTransferTask(Task):
                     )
 
                 channel.external_state.close(
-                    channel.our_state.address,
                     channel.partner_state.balance_proof.transfer,
                 )
                 return

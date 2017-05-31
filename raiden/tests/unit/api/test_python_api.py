@@ -17,7 +17,7 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 )
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_get_channel_list(raiden_network, token_addresses):
     app0, app1, app2 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -48,7 +48,7 @@ def test_get_channel_list(raiden_network, token_addresses):
         )
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_transfer_to_unknownchannel(raiden_network):

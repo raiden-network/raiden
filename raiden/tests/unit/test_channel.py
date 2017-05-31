@@ -351,12 +351,7 @@ def test_python_channel():
     assert test_channel.partner_state.locked() == 0
 
 
-# The following tests need more than one raiden app with different keys to test
-# the channels, but don't interact with a smart contact, so the mock
-# implementation is sufficient
-
-
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_setup(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -381,7 +376,7 @@ def test_setup(raiden_network, deposit, token_addresses):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('deposit', [2 ** 30])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_transfers', [100])
@@ -491,7 +486,7 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
             assert channel0.distributable == contract_balance0 - distributed_amount
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_transfer(raiden_network, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -557,7 +552,7 @@ def test_transfer(raiden_network, token_addresses):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_locked_transfer(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -610,7 +605,7 @@ def test_locked_transfer(raiden_network, settle_timeout):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_register_invalid_transfer(raiden_network, settle_timeout):
     """ Regression test for registration of invalid transfer.

@@ -100,7 +100,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert manager0.channels_by_participant(peer2_address) == [netting_address_02]
 
     # deposit without approve should fail
-    netting_channel_01.deposit(peer0_address, 100)
+    netting_channel_01.deposit(100)
     assert netting_channel_01.can_transfer() is False
     assert netting_channel_02.can_transfer() is False
     assert netting_channel_01.detail(None)['our_balance'] == 0
@@ -108,7 +108,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 
     # single-funded channel
     app0.raiden.chain.token(token_address).approve(netting_address_01, 100)
-    netting_channel_01.deposit(peer0_address, 100)
+    netting_channel_01.deposit(100)
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is False
 
@@ -117,7 +117,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 
     # double-funded channel
     app0.raiden.chain.token(token_address).approve(netting_address_02, 70)
-    netting_channel_02.deposit(peer0_address, 70)
+    netting_channel_02.deposit(70)
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is True
 
@@ -125,7 +125,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail(None)['partner_balance'] == 0
 
     app2.raiden.chain.token(token_address).approve(netting_address_02, 130)
-    app2.raiden.chain.netting_channel(netting_address_02).deposit(peer2_address, 130)
+    app2.raiden.chain.netting_channel(netting_address_02).deposit(130)
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is True
 
@@ -148,7 +148,7 @@ def test_blockchain(
     # pylint: disable=too-many-locals
 
     # this test is for interaction with a blockchain using json-rpc, so it
-    # doesnt make sense to execute it against mock or tester
+    # doesnt make sense to execute it against tester
     if blockchain_type not in ('geth',):
         return
 

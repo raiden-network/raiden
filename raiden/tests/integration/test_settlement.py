@@ -126,10 +126,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # a ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
-    bob_alice_channel.external_state.netting_channel.close(
-        bob_app.raiden.address,
-        transfermessage,
-    )
+    bob_alice_channel.external_state.netting_channel.close(transfermessage)
     wait_until_block(alice_chain, alice_chain.block_number() + 1)
 
     assert alice_bob_channel.close_event.wait(timeout=15)
@@ -145,10 +142,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert lock.expiration > alice_app.raiden.chain.block_number()
     assert lock.hashlock == sha3(secret)
 
-    bob_alice_channel.external_state.netting_channel.withdraw(
-        bob_app.raiden.address,
-        [unlock_proof],
-    )
+    bob_alice_channel.external_state.netting_channel.withdraw([unlock_proof])
 
     settle_expiration = alice_chain.block_number() + settle_timeout + 2
     wait_until_block(alice_chain, settle_expiration)
@@ -197,8 +191,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-# TODO: Need to expose the netted value to use a different blockchain_type
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_timeout):
     """ Any transfer following a secret revealed must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
@@ -207,8 +200,19 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     amount = 30
 
     app0, app1, app2, _ = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
     address0 = app0.raiden.address
     address1 = app1.raiden.address
+
+    forward_channel = channel(app0, app1, token)
+    back_channel = channel(app1, app0, token)
+
+    deposit0 = forward_channel.deposit
+    deposit1 = back_channel.deposit
+
+    token_contract = app0.raiden.chain.token(token)
+    balance0 = token_contract.balance_of(address0)
+    balance1 = token_contract.balance_of(address1)
 
     # mediated transfer
     identifier = 1
@@ -223,7 +227,6 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     hashlock = sha3(secret)
 
     # get a proof for the pending transfer
-    back_channel = channel(app1, app0, token)
     secret_transfer = get_received_transfer(back_channel, 0)
     lock = back_channel.our_state.balance_proof.get_lock_by_hashlock(hashlock)
     unlock_proof = back_channel.our_state.balance_proof.compute_proof_for_lock(secret, lock)
@@ -234,19 +237,14 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     # a new transfer to update the hashlock
     direct_transfer(app0, app1, token, amount)
 
-    forward_channel = channel(app0, app1, token)
     last_transfer = get_sent_transfer(forward_channel, 1)
 
     # call close giving the secret for a transfer that has being revealed
-    back_channel.external_state.netting_channel.close(
-        app1.raiden.address,
-        last_transfer,
-    )
+    back_channel.external_state.netting_channel.close(last_transfer)
 
     # check that the double unlock will fail
     with pytest.raises(Exception):
         back_channel.external_state.netting_channel.withdraw(
-            app1.raiden.address,
             [(unlock_proof, secret_transfer.lock.as_bytes, secret)],
         )
 
@@ -256,11 +254,8 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
 
     back_channel.external_state.netting_channel.settle()
 
-    participant0 = back_channel.external_state.netting_channel.contract.participants[address0]
-    participant1 = back_channel.external_state.netting_channel.contract.participants[address1]
-
-    assert participant0.netted == participant0.deposit - amount * 2
-    assert participant1.netted == participant1.deposit + amount * 2
+    assert token_contract.balance_of(address0) == balance0 + deposit0 - amount * 2
+    assert token_contract.balance_of(address1) == balance1 + deposit1 + amount * 2
 
 
 @pytest.mark.xfail(reason="test incomplete")
@@ -306,11 +301,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout
     unlock_proof = attack_channel.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
     # start the settle counter
-    attack_channel.netting_channel.close(
-        app2.raiden.address,
-        attack_transfer,
-        None
-    )
+    attack_channel.netting_channel.close(attack_transfer)
 
     # wait until the last block to reveal the secret, hopefully we are not
     # missing a block during the test
@@ -402,10 +393,7 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
 
     # Alice can only provide one of Bob's transfer, so she is incetivized to
     # use the one with the largest transferred_amount.
-    channel0.external_state.close(
-        None,
-        bob_last_transaction,
-    )
+    channel0.external_state.close(bob_last_transaction)
     chain0 = app0.raiden.chain
     wait_until_block(chain0, chain0.block_number() + 1)
 
@@ -419,7 +407,6 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeo
     # wrong, so he is incetivized to use Alice's transfer with the largest
     # transferred_amount.
     channel1.external_state.update_transfer(
-        None,
         alice_second_transfer,
     )
 

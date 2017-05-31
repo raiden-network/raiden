@@ -139,11 +139,11 @@ class ChannelExternalStateTester(object):
     def can_transfer(self):
         return self.netting_channel.can_transfer()
 
-    def update_transfer(self, our_address, first_transfer, second_transfer=None):
-        return self.netting_channel.update_transfer(our_address, first_transfer, second_transfer)
+    def update_transfer(self, first_transfer):
+        return self.netting_channel.update_transfer(first_transfer)
 
-    def withdraw(self, our_address, unlock_proofs):
-        return self.netting_channel.withdraw(our_address, unlock_proofs)
+    def withdraw(self, unlock_proofs):
+        return self.netting_channel.withdraw(unlock_proofs)
 
     def settle(self):
         return self.netting_channel.settle()
@@ -576,10 +576,7 @@ class NettingChannelTesterMock(object):
             self.detail(None)['our_balance'] > 0
         )
 
-    def deposit(self, our_address, amount):
-        if privatekey_to_address(self.private_key) != our_address:
-            raise ValueError('our_address doesnt match the privatekey')
-
+    def deposit(self, amount):
         token = TokenTesterMock(
             self.tester_state,
             self.private_key,
@@ -644,9 +641,7 @@ class NettingChannelTesterMock(object):
             data[2],
         ))
 
-    def close(self, our_address, their_transfer):
-        """`our_address` is an argument used only in mock_client.py but is also
-        kept here to maintain a consistent interface"""
+    def close(self, their_transfer):
         their_encoded = ''
         if their_transfer is not None:
             their_encoded = their_transfer.encode()
@@ -660,9 +655,7 @@ class NettingChannelTesterMock(object):
             their_transfer=their_transfer,
         )
 
-    def update_transfer(self, our_address, first_transfer):
-        """`our_address` is an argument used only in mock_client.py but is also
-        kept here to maintain a consistent interface"""
+    def update_transfer(self, first_transfer):
         if first_transfer is not None:
             first_encoded = first_transfer.encode()
             self.proxy.updateTransfer(first_encoded)
@@ -674,9 +667,7 @@ class NettingChannelTesterMock(object):
             first_transfer=first_transfer
         )
 
-    def withdraw(self, our_address, unlock_proofs):
-        """`our_address` is an argument used only in mock_client.py but is also
-        kept here to maintain a consistent interface"""
+    def withdraw(self, unlock_proofs):
         # force a list to get the length (could be a generator)
         unlock_proofs = list(unlock_proofs)
         log.info('{} locks to unlock'.format(len(unlock_proofs)), contract=pex(self.address))

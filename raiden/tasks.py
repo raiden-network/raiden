@@ -116,6 +116,7 @@ class AlarmTask(Task):
         # TODO: Start with a larger wait_time and decrease it as the
         # probability of a new block increases.
         self.wait_time = 0.5
+        self.last_loop = time.time()
 
     def register_callback(self, callback):
         """ Register a new callback.
@@ -131,41 +132,16 @@ class AlarmTask(Task):
         self.callbacks.append(callback)
 
     def _run(self):  # pylint: disable=method-hidden
-        stop = None
-        result = None
-        last_loop = time.time()
         log.debug('starting block number', block_number=self.last_block_number)
 
-        while stop is None:
-            current_block = self.chain.block_number()
-
-            if current_block > self.last_block_number + 1:
-                difference = current_block - self.last_block_number - 1
-                log.error(
-                    'alarm missed %s blocks',
-                    difference,
-                )
-
-            if current_block != self.last_block_number:
-                self.last_block_number = current_block
-                log.debug('new block', number=current_block, timestamp=last_loop)
-
-                remove = list()
-                for callback in self.callbacks:
-                    try:
-                        result = callback(current_block)
-                    except:  # pylint: disable=bare-except
-                        log.exception('unexpected exception on alarm')
-                    else:
-                        if result is REMOVE_CALLBACK:
-                            remove.append(callback)
-
-                for callback in remove:
-                    self.callbacks.remove(callback)
+        sleep_time = 0
+        while self.stop_event.wait(sleep_time) is not True:
+            self.poll_for_new_block()
 
             # we want this task to iterate in the tick of `wait_time`, so take
             # into account how long we spent executing one tick.
-            work_time = time.time() - last_loop
+            self.last_loop = time.time()
+            work_time = self.last_loop - self.last_loop
             if work_time > self.wait_time:
                 log.warning(
                     'alarm loop is taking longer than the wait time',
@@ -176,8 +152,36 @@ class AlarmTask(Task):
             else:
                 sleep_time = self.wait_time - work_time
 
-            stop = self.stop_event.wait(sleep_time)
-            last_loop = time.time()
+    def poll_for_new_block(self):
+        current_block = self.chain.block_number()
+
+        if current_block > self.last_block_number + 1:
+            difference = current_block - self.last_block_number - 1
+            log.error(
+                'alarm missed %s blocks',
+                difference,
+            )
+
+        if current_block != self.last_block_number:
+            log.debug(
+                'new block',
+                number=current_block,
+                timestamp=self.last_loop,
+            )
+
+            self.last_block_number = current_block
+            remove = list()
+            for callback in self.callbacks:
+                try:
+                    result = callback(current_block)
+                except:  # pylint: disable=bare-except
+                    log.exception('unexpected exception on alarm')
+                else:
+                    if result is REMOVE_CALLBACK:
+                        remove.append(callback)
+
+            for callback in remove:
+                self.callbacks.remove(callback)
 
     def stop_and_wait(self):
         self.stop_event.set(True)

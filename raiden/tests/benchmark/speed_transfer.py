@@ -8,9 +8,15 @@ from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
     DEFAULT_REVEAL_TIMEOUT,
 )
-from raiden.network.rpc.client import (
-    BlockChainServiceMock,
-    MOCK_REGISTRY_ADDRESS,
+from raiden.tests.utils.tester_client import (
+    BlockChainServiceTesterMock,
+)
+from raiden.tests.fixtures.tester import (
+    tester_blockgas_limit,
+    tester_channelmanager_library_address,
+    tester_nettingchannel_library_address,
+    tester_registry_address,
+    tester_state,
 )
 from raiden.network.transport import UDPTransport
 from raiden.tests.utils.network import create_network
@@ -49,24 +55,46 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
         for i in range(num_transfers)
     ]
 
-    BlockChainServiceMock._instance = True
-    blockchain_service = BlockChainServiceMock(None, MOCK_REGISTRY_ADDRESS)
-    BlockChainServiceMock._instance = blockchain_service  # pylint: disable=redefined-variable-type
+    blockchain_services = list()
+    tester = tester_state(
+        private_keys[0],
+        private_keys,
+        tester_blockgas_limit(),
+    )
+    nettingchannel_library_address = tester_nettingchannel_library_address(
+        tester_state,
+    )
+    channelmanager_library_address = tester_channelmanager_library_address(
+        tester_state,
+        nettingchannel_library_address,
+    )
+    registry_address = tester_registry_address(
+        tester_state,
+        channelmanager_library_address,
+    )
+    for privkey in private_keys:
+        blockchain = BlockChainServiceTesterMock(
+            privkey,
+            tester,
+            registry_address,
+        )
+        blockchain_services.append(blockchain)
 
-    registry = blockchain_service.registry(MOCK_REGISTRY_ADDRESS)
+    registry = blockchain_services[0].registry(registry_address)
+
     for token in tokens:
         registry.add_token(token)
 
     apps = create_network(
         private_keys,
         tokens,
-        MOCK_REGISTRY_ADDRESS,
+        registry_address,
         channels_per_node,
         deposit,
         DEFAULT_SETTLE_TIMEOUT,
         DEFAULT_POLL_TIMEOUT,
         UDPTransport,
-        BlockChainServiceMock
+        BlockChainServiceTesterMock,
     )
 
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking

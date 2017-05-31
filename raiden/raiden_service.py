@@ -174,8 +174,11 @@ class RaidenService(object):
         alarm.register_callback(lambda _: self.poll_blockchain_events())
         alarm.start()
 
+        # prime the block number cache and set the callbacks
         self._blocknumber = alarm.last_block_number
         alarm.register_callback(self.set_block_number)
+
+        alarm.start()
 
         if config['max_unresponsive_time'] > 0:
             self.healthcheck = HealthcheckTask(

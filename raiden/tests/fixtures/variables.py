@@ -151,8 +151,7 @@ def blockchain_type(request):
 @pytest.fixture
 def blockchain_number_of_nodes():
     """ Number of nodes in the cluster, not the same as the number of raiden
-    nodes. Used for all geth clusters and ignored for tester and
-    mock.
+    nodes. Used for all geth clusters and ignored for tester.
     """
     return 1
 

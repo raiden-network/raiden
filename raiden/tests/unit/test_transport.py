@@ -33,7 +33,7 @@ class fake_time(object):
         return self.count
 
 
-@pytest.mark.parametrize('blockchain_type', ['mock'])
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UDPTransport])
 def test_throttle_policy_ping(monkeypatch, raiden_network):
