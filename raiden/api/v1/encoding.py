@@ -9,9 +9,15 @@ from marshmallow import (
     SchemaOpts,
 )
 from webargs import validate
-from werkzeug.routing import BaseConverter
-
-from pyethapp.jsonrpc import address_encoder, address_decoder, data_encoder, data_decoder
+from werkzeug.routing import (
+    BaseConverter,
+    ValidationError,
+)
+from pyethapp.jsonrpc import (
+    address_encoder,
+    data_encoder,
+    data_decoder,
+)
 
 from raiden.api.objects import (
     Channel,
@@ -37,22 +43,46 @@ from raiden.transfer.state import (
 
 class HexAddressConverter(BaseConverter):
     def to_python(self, value):
-        if value[:2] == '0x':
-            return value[2:].decode('hex')
+        if value[:2] != '0x':
+            raise ValidationError()
 
-        raise Exception('invalid address')
+        try:
+            value = value[2:].decode('hex')
+        except TypeError:
+            raise ValidationError()
+
+        if len(value) != 20:
+            raise ValidationError()
+
+        return value
 
     def to_url(self, value):
         return address_encoder(value)
 
 
 class AddressField(fields.Field):
+    default_error_messages = {
+        'missing_prefix': 'Not a valid hex encoded address, must be 0x prefixed.',
+        'invalid_data': 'Not a valid hex encoded address, contains invalid characters.',
+        'invalid_size': 'Not a valid hex encoded address, decoded address is not 20 bytes long.',
+    }
 
     def _serialize(self, value, attr, obj):
         return address_encoder(value)
 
-    def _deserialize(self, value, attr, obj):
-        return address_decoder(value)
+    def _deserialize(self, value, attr, data):
+        if value[:2] != '0x':
+            self.fail('missing_prefix')
+
+        try:
+            value = value[2:].decode('hex')
+        except TypeError:
+            self.fail('invalid_data')
+
+        if len(value) != 20:
+            self.fail('invalid_size')
+
+        return value
 
 
 class DataField(fields.Field):

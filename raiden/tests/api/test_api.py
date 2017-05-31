@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
-import pytest
-import grequests
 import httplib
 import json
-from flask import url_for
 
+import pytest
+import grequests
+from flask import url_for
 from pyethapp.jsonrpc import address_encoder, address_decoder
 
-from raiden.api.v1.encoding import HexAddressConverter
+from raiden.api.v1.encoding import (
+    AddressField,
+    HexAddressConverter,
+)
 from raiden.utils import channel_to_api_dict
 from raiden.tests.utils.transfer import channel
 from raiden.transfer.state import (
@@ -59,6 +62,28 @@ def test_hex_converter():
     assert converter.to_python('0x414d72a6f6e28f4950117696081450d63d56c354') == address
 
 
+def test_address_field():
+    # pylint: disable=protected-access
+    field = AddressField()
+    attr = 'test'
+    data = object()
+
+    # invalid hex data
+    with pytest.raises(Exception):
+        field._deserialize('-', attr, data)
+
+    # invalid address, too short
+    with pytest.raises(Exception):
+        field._deserialize('1234', attr, data)
+
+    # missing prefix 0x
+    with pytest.raises(Exception):
+        field._deserialize('414d72a6f6e28f4950117696081450d63d56c354', attr, data)
+
+    address = b'AMr\xa6\xf6\xe2\x8fIP\x11v\x96\x08\x14P\xd6=V\xc3T'
+    assert field._deserialize('0x414d72a6f6e28f4950117696081450d63d56c354', attr, data) == address
+
+
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_channel_to_api_dict(raiden_network, token_addresses, settle_timeout):
@@ -78,6 +103,71 @@ def test_channel_to_api_dict(raiden_network, token_addresses, settle_timeout):
         'state': CHANNEL_STATE_OPENED
     }
     assert result == expected_result
+
+
+def test_url_with_invalid_address(rest_api_port_number, api_backend):
+    """ Addresses required the leading 0x in the urls. """
+
+    url_without_prefix = (
+        'http://localhost:{port}/api/1/'
+        'channels/ea674fdde714fd979de3edf0f56aa9716b898ec8'
+    ).format(port=rest_api_port_number)
+
+    request = grequests.patch(
+        url_without_prefix,
+        json={'state': CHANNEL_STATE_SETTLED}
+    )
+    response = request.send().response
+
+    assert response.status_code == httplib.NOT_FOUND
+
+
+def test_payload_with_address_without_prefix(api_backend):
+    """ Addresses required leading 0x in the payload. """
+    invalid_address = '61c808d82a3ac53231750dadc13c777b59310bd9'
+    channel_data_obj = {
+        'partner_address': invalid_address,
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'settle_timeout': 10,
+    }
+    request = grequests.put(
+        api_url_for(api_backend, 'channelsresource'),
+        json=channel_data_obj
+    )
+    response = request.send().response
+    assert response.status_code == httplib.BAD_REQUEST
+
+
+def test_payload_with_address_invalid_chars(api_backend):
+    """ Addresses cannot have invalid characters in it. """
+    invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310bdg'  # g at the end is invalid
+    channel_data_obj = {
+        'partner_address': invalid_address,
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'settle_timeout': 10,
+    }
+    request = grequests.put(
+        api_url_for(api_backend, 'channelsresource'),
+        json=channel_data_obj
+    )
+    response = request.send().response
+    assert response.status_code == httplib.BAD_REQUEST
+
+
+def test_payload_with_address_invalid_length(api_backend):
+    """ Encoded addresses must have the right length. """
+    invalid_address = '0x61c808d82a3ac53231750dadc13c777b59310b'  # g at the end is invalid
+    channel_data_obj = {
+        'partner_address': invalid_address,
+        'token_address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
+        'settle_timeout': 10,
+    }
+    request = grequests.put(
+        api_url_for(api_backend, 'channelsresource'),
+        json=channel_data_obj
+    )
+    response = request.send().response
+    assert response.status_code == httplib.BAD_REQUEST
 
 
 def test_api_query_channels(
