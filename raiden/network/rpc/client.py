@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+from time import time as now
+
+import rlp
 import gevent
 from gevent.lock import Semaphore
-from time import time as now
-import rlp
 from ethereum import slogging
 from ethereum import _solidity
 from ethereum.exceptions import InvalidTransaction
@@ -41,8 +42,6 @@ from raiden.blockchain.abi import (
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-
-
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 # Coding standard for this module:
@@ -221,7 +220,7 @@ def estimate_and_transact(classobject, callobj, *args):
 
 class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
-    # pylint: disable=too-many-instance-attributes,unused-argument
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(
             self,
@@ -485,7 +484,7 @@ class Discovery(object):
         node_address_hex = node_address_bin.encode('hex')
         endpoint = self.proxy.findEndpointByAddress.call(node_address_hex)
 
-        if endpoint is '':
+        if endpoint == '':
             raise KeyError('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
@@ -507,7 +506,6 @@ class Token(object):
             startgas=GAS_LIMIT,
             gasprice=GAS_PRICE,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
-        # pylint: disable=too-many-arguments
 
         result = jsonrpc_client.call(
             'eth_getCode',
@@ -783,7 +781,7 @@ class ChannelManager(object):
             for address in address_list
         ]
 
-    def channelnew_filter(self, from_block=None, to_block=None):  # pylint: disable=unused-argument
+    def channelnew_filter(self, from_block=None, to_block=None):
         """ Install a new filter for ChannelNew events.
 
         Return:
@@ -900,7 +898,7 @@ class NettingChannel(object):
             self.detail(None)['our_balance'] > 0
         )
 
-    def deposit(self, amount):  # pylint: disable=unused-argument
+    def deposit(self, amount):
         if not isinstance(amount, (int, long)):
             raise ValueError('amount needs to be an integral number.')
 
