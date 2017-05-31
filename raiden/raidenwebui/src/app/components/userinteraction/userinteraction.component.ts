@@ -9,6 +9,7 @@ import { Channel } from '../../models/channel';
 export class UserinteractionComponent implements OnInit {
 
     public newChannel = new Channel();
+    public amount: number;
     constructor() { }
 
     ngOnInit() {
