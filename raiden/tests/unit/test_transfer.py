@@ -177,7 +177,6 @@ def test_transfer(raiden_network):
 @pytest.mark.parametrize('number_of_nodes', [10])
 def test_mediated_transfer(raiden_network):
     alice_app = raiden_network[0]
-    messages = setup_messages_cb()
 
     graph = alice_app.raiden.channelgraphs.values()[0]
     token_address = graph.token_address
@@ -207,14 +206,6 @@ def test_mediated_transfer(raiden_network):
         charlie_address,
     )
 
-    # check for invitation ping
-    assert len(messages) == 2  # Ping, Ack
-    ping_message = decode(messages[0])
-    assert isinstance(ping_message, Ping)
-    decoded = decode(messages[1])
-    assert isinstance(decoded, Ack)
-    assert decoded.echo == sha3(ping_message.encode() + charlie_address)
-
     assert channel_ab.locked == amount
 
     # Cannot assert the intermediary state of the channels since the code is
@@ -225,11 +216,6 @@ def test_mediated_transfer(raiden_network):
 
     assert result.wait(timeout=10)
     gevent.sleep(.1)  # wait for the other nodes to sync
-
-    # check that transfer messages were added
-    assert len(messages) == 22  # Ping, Ack + tranfer messages
-    # make sure that the mediated transfer is sent after the invitation ping
-    assert isinstance(decode(messages[2]), MediatedTransfer)
 
     assert initial_balance_ab - amount == channel_ab.balance
     assert initial_balance_ba + amount == channel_ba.balance
@@ -352,7 +338,7 @@ def test_healthcheck_with_normal_peer(raiden_network):
     assert_ack_for(app1, direct_messages[0], decoded_messages)
 
     ping_messages = get_messages_by_type(decoded_messages, Ping)
-    assert len(ping_messages) > 0
+    assert ping_messages
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -532,7 +518,7 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     path = mt_helper.get_paths_of_length(initiator_address, 2)
 
     # make sure we have no messages before the transfer
-    assert len(messages) == 0
+    assert not messages
 
     alice_address, bob_address, charlie_address = path
     amount = 10
@@ -542,21 +528,8 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
         charlie_address,
     )
 
-    # check for invitation ping
-    assert len(messages) == 2  # Ping, Ack
-    ping_message = decode(messages[0])
-    assert isinstance(ping_message, Ping)
-    decoded = decode(messages[1])
-    assert isinstance(decoded, Ack)
-    assert decoded.echo == sha3(ping_message.encode() + charlie_address)
-
     assert result.wait(timeout=10)
     gevent.sleep(1.)
-
-    # check that transfer messages were added
-    assert len(messages) == 22  # Ping, Ack + tranfer messages
-    # make sure that the mediated transfer is sent after the invitation ping
-    assert isinstance(decode(messages[2]), MediatedTransfer)
 
     # and now send one more mediated transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
@@ -589,7 +562,6 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
 @pytest.mark.parametrize('channels_per_node', [2])
 def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     alice_app = raiden_network[0]
-    messages = setup_messages_cb()
 
     graph = alice_app.raiden.channelgraphs.values()[0]
     token_address = graph.token_address
@@ -606,21 +578,8 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
         charlie_address,
     )
 
-    # check for invitation ping
-    assert len(messages) == 2  # Ping, Ack
-    ping_message = decode(messages[0])
-    assert isinstance(ping_message, Ping)
-    decoded = decode(messages[1])
-    assert isinstance(decoded, Ack)
-    assert decoded.echo == sha3(ping_message.encode() + charlie_address)
-
     assert result.wait(timeout=10)
     gevent.sleep(1.)
-
-    # check that transfer messages were added
-    assert len(messages) == 22  # Ping, Ack + tranfer messages
-    # make sure that the mediated transfer is sent after the invitation ping
-    assert isinstance(decode(messages[2]), MediatedTransfer)
 
     # and now send one more mediated transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late

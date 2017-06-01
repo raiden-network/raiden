@@ -61,6 +61,7 @@ def test_ping_unreachable(raiden_network):
     UnreliableTransport.network.counter = 0
 
     ping = Ping(nonce=0)
+    app0.raiden.sign(ping)
     async_result = app0.raiden.protocol.send_async(
         app1.raiden.address,
         ping,
@@ -70,22 +71,6 @@ def test_ping_unreachable(raiden_network):
 
     for message in messages:
         assert decode(message) == ping
-
-
-@pytest.mark.parametrize('blockchain_type', ['tester'])
-@pytest.mark.parametrize('number_of_nodes', [2])
-def test_ping_udp(raiden_network):
-    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-    messages = setup_messages_cb()
-    ping = Ping(nonce=0)
-    app0.raiden.sign(ping)
-    app0.raiden.protocol.send_and_wait(app1.raiden.address, ping)
-    gevent.sleep(0.1)
-    assert len(messages) == 2  # Ping, Ack
-    assert decode(messages[0]) == ping
-    decoded = decode(messages[1])
-    assert isinstance(decoded, Ack)
-    assert decoded.echo == sha3(ping.encode() + app1.raiden.address)
 
 
 @pytest.mark.parametrize('privatekey_seed', ['ping_dropped_message:{}'])
