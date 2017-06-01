@@ -5,13 +5,14 @@ pysha3
 git+https://github.com/LefterisJP/pyethapp@raiden_pyethapp_fork#egg=pyethapp
 # temporary until pystun creates a new release
 git+https://github.com/konradkonrad/pystun@develop#egg=pystun
+# temporary until new version of pyethereum is released, that supports interfaces
+git+https://github.com/LefterisJP/pyethereum@take_solidity_interface_into_account#egg=ethereum
 ipython<5.0.0
 rlp>=0.4.3
 coincurve==4.5.1
 pycryptodome>=3.4.3
 miniupnpc
 networkx
-ethereum>=1.6.1
 ethereum-serpent
 repoze.lru
 gevent-websocket==0.9.4
