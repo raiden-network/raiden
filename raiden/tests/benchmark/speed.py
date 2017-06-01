@@ -84,16 +84,16 @@ def setup_apps(amount, tokens, num_transfers, num_nodes, channels_per_node):
 
 def test_throughput(apps, tokens, num_transfers, amount):
     def start_transfers(curr_app, curr_token, num_transfers):
-        graph = curr_app.raiden.channelgraphs[curr_token]
+        graph = curr_app.channelgraphs[curr_token]
 
         all_paths = graph.get_paths_of_length(
-            source=curr_app.raiden.address,
+            source=curr_app.address,
             num_hops=2,
         )
         path = all_paths[0]
         target = path[-1]
 
-        api = curr_app.raiden.api
+        api = curr_app.api
         events = list()
 
         for i in range(num_transfers):
@@ -127,10 +127,10 @@ def test_throughput(apps, tokens, num_transfers, amount):
 def test_latency(apps, tokens, num_transfers, amount):
     def start_transfers(idx, curr_token, num_transfers):
         curr_app = apps[idx]
-        graph = curr_app.raiden.channelgraphs[curr_token]
+        graph = curr_app.channelgraphs[curr_token]
 
         all_paths = graph.get_paths_of_length(
-            source=curr_app.raiden.address,
+            source=curr_app.address,
             num_hops=2,
         )
         path = all_paths[0]
@@ -139,7 +139,7 @@ def test_latency(apps, tokens, num_transfers, amount):
         finished = gevent.event.Event()
 
         def _transfer():
-            api = curr_app.raiden.api
+            api = curr_app.api
             for i in range(num_transfers):
                 async_result = api.transfer_async(
                     curr_token,

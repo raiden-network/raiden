@@ -15,10 +15,10 @@ import gevent
 import networkx
 
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
-from raiden.app import App
 from raiden.network.discovery import Discovery
 from raiden.network.rpc.client import BlockChainService
 from raiden.utils import sha3, privatekey_to_address
+from raiden.raiden_service import raiden_from_config
 
 TRANSFER_AMOUNT = 1
 TOKEN_ADDRESS = sha3('tps')[:20]
@@ -120,15 +120,15 @@ def setup_tps(
     )
 
 
-def random_transfer(app, token, transfer_amount):
-    channelgraph = app.raiden.token_managers[token].channelgraph
+def random_transfer(raiden, token, transfer_amount):
+    channelgraph = raiden.token_managers[token].channelgraph
 
     nodes = channelgraph.graph.nodes()
-    nodes.remove(app.raiden.address)
+    nodes.remove(raiden.address)
 
     while True:
         target = random.choice(nodes)
-        app.raiden.api.transfer(token, transfer_amount, target)
+        raiden.api.transfer(token, transfer_amount, target)
 
 
 def tps_run(
@@ -170,23 +170,32 @@ def tps_run(
         print('We are not registered in the configuration file')
         sys.exit(1)
 
-    app = App(config, blockchain_service, discovery)
+    raiden = raiden_from_config(
+        config,
+        blockchain_service,
+        discovery,
+    )
 
     for token_address in blockchain_service.token_addresses:
         all_netting_contracts = blockchain_service.nettingaddresses_by_token_participant(
             token_address,
-            app.raiden.address,
+            raiden.address,
         )
 
         for netting_contract_address in all_netting_contracts:
-            app.raiden.setup_channel(
+            raiden.setup_channel(
                 token_address,
                 netting_contract_address,
-                app.config['reveal_timeout'],
+                raiden.config['reveal_timeout'],
             )
 
     for _ in range(parallel):
-        gevent.spawn(random_transfer, app, token_address, transfer_amount)
+        gevent.spawn(
+            random_transfer,
+            raiden,
+            token_address,
+            transfer_amount,
+        )
 
     # wait for interrupt
     event = gevent.event.Event()
@@ -195,7 +204,7 @@ def tps_run(
     gevent.signal(signal.SIGINT, event.set)
     event.wait()
 
-    app.stop()
+    raiden.stop()
 
 
 def main():

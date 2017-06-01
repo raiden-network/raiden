@@ -363,8 +363,8 @@ def test_python_channel():
 def test_setup(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    tokens0 = app0.raiden.channelgraphs.keys()
-    tokens1 = app1.raiden.channelgraphs.keys()
+    tokens0 = app0.channelgraphs.keys()
+    tokens1 = app1.channelgraphs.keys()
 
     assert len(tokens0) == 1
     assert len(tokens1) == 1
@@ -411,8 +411,8 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
 
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
+    graph0 = app0.channelgraphs.values()[0]
+    graph1 = app1.channelgraphs.values()[0]
 
     channel0 = graph0.partneraddress_channel.values()[0]
     channel1 = graph1.partneraddress_channel.values()[0]
@@ -432,12 +432,12 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
     distributed_amount = 0
 
     for i, (amount, secret) in enumerate(zip(transfers_amount, transfers_secret)):
-        block_number = app0.raiden.chain.block_number()
+        block_number = app0.chain.block_number()
         expiration = block_number + settle_timeout - 1
         mediated_transfer = channel0.create_mediatedtransfer(
             block_number,
-            transfer_initiator=app0.raiden.address,
-            transfer_target=app1.raiden.address,
+            transfer_initiator=app0.address,
+            transfer_target=app1.address,
             fee=0,
             amount=amount,
             identifier=1,
@@ -446,7 +446,7 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
         )
 
         # synchronized registration
-        app0.raiden.sign(mediated_transfer)
+        app0.sign(mediated_transfer)
         channel0.register_transfer(
             block_number,
             mediated_transfer,
@@ -515,22 +515,22 @@ def test_transfer(raiden_network, token_addresses):
     address0 = channel0.our_state.address
     address1 = channel1.our_state.address
 
-    app0_token = app0.raiden.channelgraphs.keys()[0]
-    app1_token = app1.raiden.channelgraphs.keys()[0]
+    app0_token = app0.channelgraphs.keys()[0]
+    app1_token = app1.channelgraphs.keys()[0]
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
+    graph0 = app0.channelgraphs.values()[0]
+    graph1 = app1.channelgraphs.values()[0]
 
     app0_partners = graph0.partneraddress_channel.keys()
     app1_partners = graph1.partneraddress_channel.keys()
 
     assert channel0.token_address == channel1.token_address
     assert app0_token == app1_token
-    assert app1.raiden.address in app0_partners
-    assert app0.raiden.address in app1_partners
+    assert app1.address in app0_partners
+    assert app0.address in app1_partners
 
     netting_address = channel0.external_state.netting_channel.address
-    netting_channel = app0.raiden.chain.netting_channel(netting_address)
+    netting_channel = app0.chain.netting_channel(netting_address)
 
     # check balances of channel and contract are equal
     details0 = netting_channel.detail(address0)
@@ -549,13 +549,13 @@ def test_transfer(raiden_network, token_addresses):
         amount,
         identifier=1,
     )
-    app0.raiden.sign(direct_transfer)
+    app0.sign(direct_transfer)
     channel0.register_transfer(
-        app0.raiden.get_block_number(),
+        app0.get_block_number(),
         direct_transfer,
     )
     channel1.register_transfer(
-        app1.raiden.get_block_number(),
+        app1.get_block_number(),
         direct_transfer,
     )
 
@@ -577,8 +577,8 @@ def test_transfer(raiden_network, token_addresses):
 def test_locked_transfer(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
+    graph0 = app0.channelgraphs.values()[0]
+    graph1 = app1.channelgraphs.values()[0]
 
     channel0 = graph0.partneraddress_channel.values()[0]
     channel1 = graph1.partneraddress_channel.values()[0]
@@ -589,7 +589,7 @@ def test_locked_transfer(raiden_network, settle_timeout):
     amount = 10
 
     # reveal_timeout <= expiration < contract.lock_time
-    block_number = app0.raiden.chain.block_number()
+    block_number = app0.chain.block_number()
     expiration = block_number + settle_timeout - 1
 
     secret = 'secret'
@@ -597,21 +597,21 @@ def test_locked_transfer(raiden_network, settle_timeout):
 
     mediated_transfer = channel0.create_mediatedtransfer(
         block_number,
-        transfer_initiator=app0.raiden.address,
-        transfer_target=app1.raiden.address,
+        transfer_initiator=app0.address,
+        transfer_target=app1.address,
         fee=0,
         amount=amount,
         identifier=1,
         expiration=expiration,
         hashlock=hashlock,
     )
-    app0.raiden.sign(mediated_transfer)
+    app0.sign(mediated_transfer)
     channel0.register_transfer(
-        app0.raiden.chain.block_number(),
+        app0.chain.block_number(),
         mediated_transfer,
     )
     channel1.register_transfer(
-        app1.raiden.chain.block_number(),
+        app1.chain.block_number(),
         mediated_transfer,
     )
 
@@ -644,8 +644,8 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     """
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
+    graph0 = app0.channelgraphs.values()[0]
+    graph1 = app1.channelgraphs.values()[0]
 
     channel0 = graph0.partneraddress_channel.values()[0]
     channel1 = graph1.partneraddress_channel.values()[0]
@@ -654,7 +654,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     balance1 = channel1.balance
 
     amount = 10
-    block_number = app0.raiden.chain.block_number()
+    block_number = app0.chain.block_number()
     expiration = block_number + settle_timeout - 1
 
     secret = 'secret'
@@ -662,8 +662,8 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 
     transfer1 = channel0.create_mediatedtransfer(
         block_number,
-        transfer_initiator=app0.raiden.address,
-        transfer_target=app1.raiden.address,
+        transfer_initiator=app0.address,
+        transfer_target=app1.address,
         fee=0,
         amount=amount,
         identifier=1,
@@ -672,13 +672,13 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     )
 
     # register a locked transfer
-    app0.raiden.sign(transfer1)
+    app0.sign(transfer1)
     channel0.register_transfer(
-        app0.raiden.chain.block_number(),
+        app0.chain.block_number(),
         transfer1,
     )
     channel1.register_transfer(
-        app1.raiden.chain.block_number(),
+        app1.chain.block_number(),
         transfer1,
     )
 
@@ -697,7 +697,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
         recipient=channel0.partner_state.address,
         locksroot=channel0.partner_state.balance_proof.merkleroot_for_unclaimed(),
     )
-    app0.raiden.sign(transfer2)
+    app0.sign(transfer2)
 
     # this need to fail because the allowance is incorrect
     with pytest.raises(Exception):

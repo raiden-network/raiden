@@ -4,10 +4,11 @@ from __future__ import print_function, division
 
 from ethereum import slogging
 
-from raiden.app import App
 from raiden.network.transport import DummyPolicy
-from raiden.utils import privatekey_to_address
+from raiden.raiden_service import raiden_from_config
+from raiden.settings import RAIDEN_DEFAULT_CONFIG
 from raiden.tests.utils import OwnedNettingChannel
+from raiden.utils import privatekey_to_address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -17,13 +18,13 @@ CHAIN = object()  # Flag used by create a network does make a loop with the chan
 def check_channel(app1, app2, netting_channel_address, deposit_amount):
     # proxying the NettingChannel with OwnedNettingChannel allows us to use both, tester and mock.
     netcontract1 = OwnedNettingChannel(
-        app1.raiden.address,
-        app1.raiden.chain.netting_channel(netting_channel_address)
+        app1.address,
+        app1.chain.netting_channel(netting_channel_address)
     )
 
     netcontract2 = OwnedNettingChannel(
-        app2.raiden.address,
-        app2.raiden.chain.netting_channel(netting_channel_address)
+        app2.address,
+        app2.chain.netting_channel(netting_channel_address)
     )
 
     if deposit_amount > 0:
@@ -44,11 +45,11 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
     for first, second in app_pairs:
         assert token_address
 
-        manager = first.raiden.chain.manager_by_token(token_address)
+        manager = first.chain.manager_by_token(token_address)
 
         netcontract_address = manager.new_netting_channel(
-            first.raiden.address,
-            second.raiden.address,
+            first.address,
+            second.address,
             settle_timeout,
         )
 
@@ -56,16 +57,16 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
 
         # use each app's own chain because of the private key / local signing
         for app in [first, second]:
-            token = app.raiden.chain.token(token_address)
-            netting_channel = app.raiden.chain.netting_channel(netcontract_address)
-            previous_balance = token.balance_of(app.raiden.address)
+            token = app.chain.token(token_address)
+            netting_channel = app.chain.netting_channel(netcontract_address)
+            previous_balance = token.balance_of(app.address)
 
             assert previous_balance >= deposit
 
             token.approve(netcontract_address, deposit)
             netting_channel.deposit(deposit)
 
-            new_balance = token.balance_of(app.raiden.address)
+            new_balance = token.balance_of(app.address)
 
             assert previous_balance - deposit == new_balance
 
@@ -80,11 +81,11 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
             deposit,
         )
 
-        first_netting_channel = first.raiden.chain.netting_channel(netcontract_address)
-        second_netting_channel = second.raiden.chain.netting_channel(netcontract_address)
+        first_netting_channel = first.chain.netting_channel(netcontract_address)
+        second_netting_channel = second.chain.netting_channel(netcontract_address)
 
-        details1 = first_netting_channel.detail(first.raiden.address)
-        details2 = second_netting_channel.detail(second.raiden.address)
+        details1 = first_netting_channel.detail(first.address)
+        details2 = second_netting_channel.detail(second.address)
 
         assert details1['our_balance'] == deposit
         assert details1['partner_balance'] == deposit
@@ -126,28 +127,28 @@ def network_with_minimum_channels(apps, channels_per_node):
     for curr_app in apps:
         all_apps = list(apps)
         all_apps.remove(curr_app)
-        unconnected_apps[curr_app.raiden.address] = all_apps
-        channel_count[curr_app.raiden.address] = 0
+        unconnected_apps[curr_app.address] = all_apps
+        channel_count[curr_app.address] = 0
 
     # Create `channels_per_node` channels for each token in each app
     # for token_address, curr_app in product(tokens_list, sorted(apps, key=sort_by_address)):
 
     # sorting the apps and use the next n apps to make a channel to avoid edge
     # cases
-    for curr_app in sorted(apps, key=lambda app: app.raiden.address):
-        available_apps = unconnected_apps[curr_app.raiden.address]
+    for curr_app in sorted(apps, key=lambda app: app.address):
+        available_apps = unconnected_apps[curr_app.address]
 
-        while channel_count[curr_app.raiden.address] < channels_per_node:
+        while channel_count[curr_app.address] < channels_per_node:
             least_connect = sorted(
                 available_apps,
-                key=lambda app: channel_count[app.raiden.address]
+                key=lambda app: channel_count[app.address]
             )[0]
 
-            channel_count[curr_app.raiden.address] += 1
+            channel_count[curr_app.address] += 1
             available_apps.remove(least_connect)
 
-            channel_count[least_connect.raiden.address] += 1
-            unconnected_apps[least_connect.raiden.address].remove(curr_app)
+            channel_count[least_connect.address] += 1
+            unconnected_apps[least_connect.address].remove(curr_app)
 
             yield curr_app, least_connect
 
@@ -279,7 +280,7 @@ def create_apps(
 
         discovery.register(nodeid, host, port)
 
-        config = {
+        config_overwrite = {
             'host': host,
             'port': port,
             'external_ip': host,
@@ -300,16 +301,16 @@ def create_apps(
             'rpc': True,
             'console': False,
         }
-        copy = App.DEFAULT_CONFIG.copy()
-        copy.update(config)
+        config = RAIDEN_DEFAULT_CONFIG.copy()
+        config.update(config_overwrite)
 
-        app = App(
-            copy,
+        raiden = raiden_from_config(
+            config,
             blockchain,
             discovery,
             transport_class,
         )
-        app.raiden.protocol.transport.throttle_policy = DummyPolicy()
-        apps.append(app)
+        raiden.protocol.transport.throttle_policy = DummyPolicy()
+        apps.append(raiden)
 
     return apps

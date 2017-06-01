@@ -8,11 +8,11 @@ import psutil
 import gevent
 from gevent import Greenlet
 
-from raiden.app import App
-from raiden.api.rest import RestAPI, APIServer
 from raiden.api.python import RaidenAPI
-from raiden.raiden_service import RaidenService
+from raiden.api.rest import RestAPI, APIServer
 from raiden.network.discovery import Discovery
+from raiden.raiden_service import RaidenService
+from raiden.settings import RAIDEN_DEFAULT_CONFIG
 from raiden.tests.utils.apitestcontext import ApiTestContext
 
 
@@ -69,7 +69,7 @@ def api_raiden_service(
         tmpdir):
 
     blockchain = blockchain_services[0]
-    config = copy.deepcopy(App.DEFAULT_CONFIG)
+    config = copy.deepcopy(RAIDEN_DEFAULT_CONFIG)
 
     config['port'] = raiden_udp_ports[0]
     config['host'] = '127.0.0.1'

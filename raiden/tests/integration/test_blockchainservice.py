@@ -27,11 +27,11 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     # pylint: disable=line-too-long,too-many-statements,too-many-locals
 
     app0, app1, app2 = raiden_network
-    peer0_address = app0.raiden.address
-    peer1_address = app1.raiden.address
-    peer2_address = app2.raiden.address
+    peer0_address = app0.address
+    peer1_address = app1.address
+    peer2_address = app2.address
 
-    blockchain_service0 = app0.raiden.chain
+    blockchain_service0 = app0.chain
 
     token_address = blockchain_service0.deploy_and_register_token(
         contract_name='HumanStandardToken',
@@ -42,7 +42,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     token0 = blockchain_service0.token(token_address)
     for transfer_to in raiden_network[1:]:
         token0.transfer(
-            privatekey_to_address(transfer_to.raiden.privkey),
+            privatekey_to_address(transfer_to.privkey),
             token_amount // len(raiden_network),
         )
 
@@ -107,8 +107,9 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail(None)['our_balance'] == 0
 
     # single-funded channel
-    app0.raiden.chain.token(token_address).approve(netting_address_01, 100)
+    app0.chain.token(token_address).approve(netting_address_01, 100)
     netting_channel_01.deposit(100)
+
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is False
 
@@ -116,16 +117,18 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail(None)['our_balance'] == 0
 
     # double-funded channel
-    app0.raiden.chain.token(token_address).approve(netting_address_02, 70)
+    app0.chain.token(token_address).approve(netting_address_02, 70)
     netting_channel_02.deposit(70)
+
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is True
 
     assert netting_channel_02.detail(None)['our_balance'] == 70
     assert netting_channel_02.detail(None)['partner_balance'] == 0
 
-    app2.raiden.chain.token(token_address).approve(netting_address_02, 130)
-    app2.raiden.chain.netting_channel(netting_address_02).deposit(130)
+    app2.chain.token(token_address).approve(netting_address_02, 130)
+    app2.chain.netting_channel(netting_address_02).deposit(130)
+
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is True
 

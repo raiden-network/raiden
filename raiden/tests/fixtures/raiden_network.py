@@ -14,10 +14,10 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def _raiden_cleanup(request, raiden_apps):
-    """ Helper to do cleanup a Raiden App. """
+    """ Helper to do cleanup all Raiden objects. """
     def _cleanup():
-        for app in raiden_apps:
-            app.stop(graceful=False)
+        for raiden in raiden_apps:
+            raiden.stop(graceful=False)
 
         # Two tests in sequence could run a UDP server on the same port, a hanging
         # greenlet from the previous tests could send packet to the new server and
@@ -86,7 +86,7 @@ def raiden_chain(
         )
 
     for app in raiden_apps:
-        app.raiden.register_registry(app.raiden.chain.default_registry.address)
+        app.register_registry(app.chain.default_registry.address)
 
     _raiden_cleanup(request, raiden_apps)
 
@@ -145,7 +145,7 @@ def raiden_network(
         )
 
     for app in raiden_apps:
-        app.raiden.register_registry(app.raiden.chain.default_registry.address)
+        app.register_registry(app.chain.default_registry.address)
 
     _raiden_cleanup(request, raiden_apps)
 
@@ -155,6 +155,6 @@ def raiden_network(
     # apps' block_number to greatly fall behind.
     if not cached_genesis:
         for app in raiden_apps:
-            app.raiden.alarm.poll_for_new_block()
+            app.alarm.poll_for_new_block()
 
     return raiden_apps

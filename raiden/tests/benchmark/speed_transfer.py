@@ -98,10 +98,10 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
     )
 
     app0, app1 = apps  # pylint: disable=unbalanced-tuple-unpacking
-    channel0 = app0.raiden.channelgraphs[tokens[0]].address_channel.values()[0]
-    channel1 = app1.raiden.channelgraphs[tokens[0]].address_channel.values()[0]
+    channel0 = app0.channelgraphs[tokens[0]].address_channel.values()[0]
+    channel1 = app1.channelgraphs[tokens[0]].address_channel.values()[0]
 
-    expiration = app0.raiden.chain.block_number() + DEFAULT_REVEAL_TIMEOUT + 3
+    expiration = app0.chain.block_number() + DEFAULT_REVEAL_TIMEOUT + 3
 
     start = time.time()
 
@@ -114,14 +114,14 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
             expiration=expiration,
             hashlock=hashlock,
         )
-        app0.raiden.sign(locked_transfer)
+        app0.sign(locked_transfer)
 
         channel0.register_transfer(
-            app0.raiden.get_block_number(),
+            app0.get_block_number(),
             locked_transfer,
         )
         channel1.register_transfer(
-            app0.raiden.get_block_number(),
+            app0.get_block_number(),
             locked_transfer,
         )
 

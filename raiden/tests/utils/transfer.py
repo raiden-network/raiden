@@ -11,18 +11,18 @@ from raiden.channel.netting_channel import Channel
 
 def channel(app0, app1, token):
     """ Nice to read shortcut to get the channel. """
-    graph = app0.raiden.channelgraphs[token]
-    return graph.partneraddress_channel[app1.raiden.address]
+    graph = app0.channelgraphs[token]
+    return graph.partneraddress_channel[app1.address]
 
 
 def sleep(initiator_app, target_app, token, multiplier=1):
     """ Sleep long enough to conclude a transfer from `initiator_app` to
     `target_app`.
     """
-    graph = initiator_app.raiden.channelgraphs[token]
+    graph = initiator_app.channelgraphs[token]
     path = list(graph.channelgraph.get_shortest_paths(
-        initiator_app.raiden.address,
-        target_app.raiden.address,
+        initiator_app.address,
+        target_app.address,
     ))
 
     # 0.2 should be rougly how long it takes to process the transfer in a
@@ -48,10 +48,10 @@ def transfer(initiator_app, target_app, token, amount, identifier):
     will be revealed.
     """
 
-    async_result = initiator_app.raiden.transfer_async(
+    async_result = initiator_app.transfer_async(
         token,
         amount,
-        target_app.raiden.address,
+        target_app.address,
         identifier
     )
     assert async_result.wait()
@@ -59,14 +59,14 @@ def transfer(initiator_app, target_app, token, amount, identifier):
 
 def direct_transfer(initiator_app, target_app, token, amount, identifier=None):
     """ Nice to read shortcut to make a DirectTransfer. """
-    graph = initiator_app.raiden.channelgraphs[token]
-    has_channel = target_app.raiden.address in graph.partneraddress_channel
+    graph = initiator_app.channelgraphs[token]
+    has_channel = target_app.address in graph.partneraddress_channel
     assert has_channel, 'there is not a direct channel'
 
-    async_result = initiator_app.raiden.transfer_async(
+    async_result = initiator_app.transfer_async(
         token,
         amount,
-        target_app.raiden.address,
+        target_app.address,
         identifier,
     )
     assert async_result.wait()
@@ -79,8 +79,8 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
     """
     # pylint: disable=too-many-arguments
 
-    graph = initiator_app.raiden.channelgraphs[token]
-    has_channel = target_app.raiden.address in graph.partneraddress_channel
+    graph = initiator_app.channelgraphs[token]
+    has_channel = target_app.address in graph.partneraddress_channel
 
     if has_channel:
         raise NotImplementedError(
@@ -88,10 +88,10 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
         )
 
     else:
-        async_result = initiator_app.raiden.transfer_async(
+        async_result = initiator_app.transfer_async(
             token,
             amount,
-            target_app.raiden.address,
+            target_app.address,
             identifier
         )
         assert async_result.wait()
@@ -130,23 +130,23 @@ def pending_mediated_transfer(app_chain, token, amount, identifier, expiration):
             hashlock = sha3(secret)
 
         transfer_ = from_channel.create_mediatedtransfer(
-            from_app.raiden.get_block_number(),
-            initiator_app.raiden.address,
-            target_app.raiden.address,
+            from_app.get_block_number(),
+            initiator_app.address,
+            target_app.address,
             fee,
             amount,
             identifier,
             expiration,
             hashlock,
         )
-        from_app.raiden.sign(transfer_)
+        from_app.sign(transfer_)
 
         from_channel.register_transfer(
-            from_app.raiden.get_block_number(),
+            from_app.get_block_number(),
             transfer_,
         )
         to_channel.register_transfer(
-            to_app.raiden.get_block_number(),
+            to_app.get_block_number(),
             transfer_,
         )
 
