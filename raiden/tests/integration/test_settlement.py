@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from ethereum import slogging
-
 from raiden.mtree import check_proof
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.messages import setup_messages_cb
@@ -27,7 +25,6 @@ from raiden.transfer.state_change import Block
 from raiden.utils import sha3, privatekey_to_address
 
 # pylint: disable=too-many-locals,too-many-statements
-slogging.configure(':DEBUG')
 
 
 def assert_secretreveal_or_withdraw(state_change, secret, channel_address, raiden_address):
@@ -174,7 +171,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     state_change3 = state_changes[2]
     state_change4 = state_changes[3]
 
-    assert(isinstance(state_change1, ContractReceiveClosed))
+    assert isinstance(state_change1, ContractReceiveClosed)
     assert state_change1.channel_address == nettingaddress0
     assert state_change1.closing_address == bob_app.raiden.address
     assert state_change1.block_number == alice_bob_channel.external_state.closed_block
@@ -183,7 +180,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert_secretreveal_or_withdraw(state_change2, secret, nettingaddress0, bob_app.raiden.address)
     assert_secretreveal_or_withdraw(state_change3, secret, nettingaddress0, bob_app.raiden.address)
 
-    assert(isinstance(state_change4, ContractReceiveSettled))
+    assert isinstance(state_change4, ContractReceiveSettled)
     assert state_change4.channel_address == nettingaddress0
     assert state_change4.block_number == bob_alice_channel.external_state.settled_block
 
@@ -347,7 +344,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_automatic_dispute(raiden_network, deposit, settle_timeout, reveal_timeout):
+def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     app0, app1 = raiden_network
     channel0 = app0.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]
     channel1 = app1.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]

@@ -125,6 +125,9 @@ def cached_genesis(request, blockchain_type):
     if not request.config.option.blockchain_cache:
         return
 
+    if blockchain_type != 'geth':
+        return
+
     # this will create the tester _and_ deploy the Registry
     deploy_key = request.getfixturevalue('deploy_key')
     private_keys = request.getfixturevalue('private_keys')
