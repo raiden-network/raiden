@@ -1,8 +1,8 @@
 # temporary (?) until pyelliptic maintainers make it compatible with openssl>=1.1
--e git+https://github.com/LefterisJP/pyelliptic@make_compatible_with_openssl1_1#egg=pyelliptic
+git+https://github.com/LefterisJP/pyelliptic@make_compatible_with_openssl1_1#egg=pyelliptic
 pysha3
 # temporary until new version of pyethereum is released, that supports solc >= v0.4.9
--e git+https://github.com/LefterisJP/pyethapp@use_new_solc_combinedjson_key#egg=pyethapp
+git+https://github.com/LefterisJP/pyethapp@raiden_pyethapp_fork#egg=pyethapp
 # temporary until pystun creates a new release
 git+https://github.com/konradkonrad/pystun@develop#egg=pystun
 ipython<5.0.0
