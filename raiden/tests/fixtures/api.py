@@ -4,6 +4,8 @@ import copy
 
 import os
 import pytest
+import psutil
+import gevent
 from gevent import Greenlet
 
 from raiden.app import App
@@ -12,6 +14,17 @@ from raiden.api.python import RaidenAPI
 from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
 from raiden.tests.utils.apitestcontext import ApiTestContext
+
+
+def wait_for_listening_port(port_number, tries=10, sleep=0.1):
+    for _ in range(tries):
+        gevent.sleep(sleep)
+        connections = psutil.net_connections()
+        for conn in connections:
+            if conn.status == 'LISTEN' and conn.laddr[1] == port_number:
+                return
+
+    raise RuntimeError('{port} is not bound'.format(port_number))
 
 
 # TODO: Figure out why this fixture can't work as session scoped
@@ -33,6 +46,11 @@ def api_backend(rest_api_port_number):
         debug=False,
         use_evalex=False,
     )
+
+    # Fixes flaky test, were requests are done prior to the server initializing
+    # the listening socket.
+    # https://github.com/raiden-network/raiden/issues/389#issuecomment-305551563
+    wait_for_listening_port(rest_api_port_number)
 
     yield api_server, rest_api
 
