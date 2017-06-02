@@ -244,6 +244,7 @@ def test_fullnetwork(
         reveal_timeout=reveal_timeout,
         closed_block=None,
     )
+
     assert app3_state_changes[0].from_route == from_route
     assert len(app3_state_changes[0].routes.available_routes) == 1
     assert len(app3_state_changes[0].routes.ignored_routes) == 0
