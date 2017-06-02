@@ -14,6 +14,7 @@ from raiden.token_swap import (
     SwapKey,
     TokenSwap,
 )
+from raiden.transfer.mediated_transfer.events import SendRevealSecret
 from raiden.exceptions import (
     NoPathError,
     InvalidAddress,
@@ -553,15 +554,37 @@ class RaidenAPI(object):
             to_block=to_block,
         )
 
-    def get_channel_events(self, channel_address, from_block, to_block):
+    def get_channel_events(self, channel_address, from_block, to_block=None):
         if not isaddress(channel_address):
             raise InvalidAddress(
                 'Expected binary address format for channel in get_channel_events'
             )
-        return get_all_netting_channel_events(
+        returned_events = get_all_netting_channel_events(
             self.raiden.chain,
             channel_address,
             events=ALL_EVENTS,
             from_block=from_block,
             to_block=to_block,
         )
+        raiden_events = self.raiden.transaction_log.get_events_in_block_range(
+            from_block=from_block,
+            to_block=to_block
+        )
+        # Here choose which raiden internal events we want to expose to the end user
+        for event in raiden_events:
+            # As an example for the test I use SecretReveal here temporarilly
+            # Final types of events should be at least the following four:
+            # - TransferSentAndSuccess
+            # - TransferSentAndFailure
+            # - TransferReceivedAndSuccess
+            # - TransferReceivedAndFailure
+            if isinstance(event[3], SendRevealSecret):
+                new_event = {
+                    'block_number': event[3],
+                    'event_identifier': event[0],
+                    'type': 'SendRevealSecret',
+                }
+                new_event.update(event[3].__dict__)
+                returned_events.append(new_event)
+
+        return returned_events

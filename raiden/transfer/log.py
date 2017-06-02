@@ -188,6 +188,23 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
             result = result[0][0]
         return result
 
+    def get_events_in_range(self, from_block, to_block):
+        cursor = self.conn.cursor()
+        if from_block is None:
+            from_block = 0
+        if to_block is None:
+            result = cursor.execute(
+                'SELECT * from  state_events WHERE block_number >= ?',
+                (from_block,)
+            )
+        else:
+            result = cursor.execute(
+                'SELECT * from  state_events WHERE block_number '
+                'BETWEEN ? AND ?', (from_block, to_block)
+            )
+        result = result.fetchall()
+        return result
+
     def read(self):
         pass
 
@@ -227,8 +244,19 @@ class StateChangeLog(object):
         assert isinstance(events, list)
         self.storage.write_state_events(
             state_change_id,
-            [(None, state_change_id, current_block_number, self.serializer.serialize(event)) for event in events]
+            [(None, state_change_id, current_block_number, self.serializer.serialize(event))
+             for event in events]
         )
+
+    def get_events_in_block_range(self, from_block, to_block):
+        """Get the raiden events in the period (inclusive) ranging from
+        `from_block` to `to_block`.
+
+        This function returns a list of tuples of the form:
+        (identifier, generated_statechange_id, block_number, event_object)
+        """
+        results = self.storage.get_events_in_range(from_block, to_block)
+        return [(res[0], res[1], res[2], self.serializer.deserialize(res[3])) for res in results]
 
     def get_state_change_by_id(self, identifier):
         serialized_data = self.storage.get_state_change_by_id(identifier)
