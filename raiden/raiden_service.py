@@ -171,11 +171,10 @@ class RaidenService(object):
         greenlet_task_dispatcher = GreenletTasksDispatcher()
 
         alarm = AlarmTask(chain)
-        alarm.register_callback(lambda _: self.poll_blockchain_events())
-        alarm.start()
 
         # prime the block number cache and set the callbacks
         self._blocknumber = alarm.last_block_number
+        alarm.register_callback(lambda _: self.poll_blockchain_events())
         alarm.register_callback(self.set_block_number)
 
         alarm.start()
