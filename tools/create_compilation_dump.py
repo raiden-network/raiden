@@ -70,13 +70,7 @@ def deploy_all(token_groups=None):
         tokens[token_name] = address
         deployed[token_name] = address
 
-    deployed.update(
-        deploy_with_dependencies(
-            TARGETS['token'],
-            state
-        )
-    )
-    libraries = deployed.copy()
+    libraries = dict()
     deployed.update(
         deploy_with_dependencies(
             TARGETS['registry'],
@@ -202,6 +196,13 @@ def find_dependencies(contract_file):
     for dependency in dependencies:
         if dependency not in cleaned:
             cleaned.append(dependency)
+    dependencies = cleaned
+    cleaned = []
+    for dependency in dependencies:
+        with open(get_contract_path(dependency)) as handler:
+            if any(line.startswith('interface') for line in handler.readlines()):
+                continue
+        cleaned.append(dependency)
     return cleaned
 
 
