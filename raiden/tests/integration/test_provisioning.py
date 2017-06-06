@@ -50,7 +50,7 @@ def test_leaving(
 
     all_channels = list(
         itertools.chain.from_iterable(
-            connection_manager.open_channels for connection_manager in connection_managers
+            connection_manager.receiving_channels for connection_manager in connection_managers
         )
     )
 
@@ -74,7 +74,7 @@ def test_leaving(
                     gevent.sleep(app.raiden.alarm.wait_time)
 
     gevent.wait(leaving_async, timeout=50)
-    assert len(connection_managers[0].open_channels) == 0
+    assert len(connection_managers[0].receiving_channels) == 0
     assert all(channel.state == CHANNEL_STATE_SETTLED for channel in all_channels), [
         channel.state for channel in all_channels]
 
@@ -172,20 +172,70 @@ def test_participant_selection(
     except AssertionError:
         pass
 
+    # create a transfer to the leaving node, so we have a channel to settle
+    sender = raiden_network[-1].raiden
+    receiver = raiden_network[0].raiden
+
+    # assert there is a direct channel receiver -> sender (vv)
+    receiver_channel = RaidenAPI(receiver).get_channel_list(
+        token_address=token_address,
+        partner_address=sender.address
+    )
+    assert len(receiver_channel) == 1
+    receiver_channel = receiver_channel[0]
+    assert receiver_channel.external_state.opened_block != 0
+    assert len(receiver_channel.received_transfers) == 0
+
+    # assert there is a direct channel sender -> receiver
+    sender_channel = RaidenAPI(sender).get_channel_list(
+        token_address=token_address,
+        partner_address=receiver.address
+    )
+    assert len(sender_channel) == 1
+    sender_channel = sender_channel[0]
+    assert sender_channel.can_transfer
+    assert sender_channel.external_state.opened_block != 0
+
+    RaidenAPI(sender).transfer_and_wait(
+        token_address,
+        1,
+        receiver.address
+    )
+
+    # now receiver has a transfer
+    assert len(receiver_channel.received_transfers)
+
     # test `leave()` method
     connection_manager = connection_managers[0]
-    before = len(connection_manager.open_channels)
+    before = len(connection_manager.receiving_channels)
 
-    RaidenAPI(raiden_network[0].raiden).leave_token_network(token_address, wait_for_settle=False)
+    timeout = (
+        connection_manager.min_settle_blocks *
+        connection_manager.raiden.chain.estimate_blocktime() *
+        5
+    )
 
+    assert timeout > 0
+    with gevent.timeout.Timeout(timeout):
+        try:
+            RaidenAPI(raiden_network[0].raiden).leave_token_network(token_address)
+        except gevent.timeout.Timeout:
+            log.error('timeout while waiting for leave')
+
+    before_block = connection_manager.raiden.chain.block_number()
+    wait_blocks = connection_manager.min_settle_blocks + 10
     wait_until_block(
         connection_manager.raiden.chain,
-        (
-            connection_manager.raiden.chain.block_number() +
-            connection_manager.raiden.config['settle_timeout'] + 1
-        )
+        before_block + wait_blocks
     )
-    after = len(connection_manager.open_channels)
+    assert connection_manager.raiden.chain.block_number >= before_block + wait_blocks
+    wait_until_block(
+        receiver.chain,
+        before_block + wait_blocks
+    )
+    while receiver_channel.state != CHANNEL_STATE_SETTLED:
+        gevent.sleep(receiver.alarm.wait_time)
+    after = len(connection_manager.receiving_channels)
 
     assert before > after
     assert after == 0

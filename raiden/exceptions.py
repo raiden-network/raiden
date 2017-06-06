@@ -53,6 +53,11 @@ class TransferWhenClosed(Exception):
     pass
 
 
+class TransferUnwanted(Exception):
+    """Exception when we don't want accept new transfers."""
+    pass
+
+
 class UnknownAddress(Exception):
     pass
 
