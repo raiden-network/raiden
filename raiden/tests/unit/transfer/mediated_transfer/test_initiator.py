@@ -28,7 +28,6 @@ from raiden.transfer.events import (
     EventTransferSentFailed,
 )
 from raiden.transfer.mediated_transfer.events import (
-    EventUnlockFailed,
     EventUnlockSuccess,
     SendBalanceProof,
     SendMediatedTransfer,
@@ -246,9 +245,8 @@ def test_init_without_routes():
         init_state_change,
     )
 
-    assert len(events) == 2
+    assert len(events) == 1
     assert any(isinstance(e, EventTransferSentFailed) for e in events)
-    assert any(isinstance(e, EventUnlockFailed) for e in events)
     assert initiator_state_machine.current_state is None
 
 
@@ -437,9 +435,8 @@ def test_refund_transfer_next_route():
     assert initiator_state_machine.current_state is not None
 
     events = initiator_state_machine.dispatch(state_change)
-    assert len(events) == 2
+    assert len(events) == 1
     assert any(isinstance(e, SendMediatedTransfer) for e in events), 'trying a new route'
-    assert any(isinstance(e, EventUnlockFailed) for e in events), 'previous route unlock failed'
 
     assert initiator_state_machine.current_state is not None
     assert initiator_state_machine.current_state.routes.canceled_routes[0] == prior_state.route
@@ -484,9 +481,8 @@ def test_refund_transfer_no_more_routes():
     assert initiator_state_machine.current_state is not None
 
     events = initiator_state_machine.dispatch(state_change)
-    assert len(events) == 2
+    assert len(events) == 1
     assert any(isinstance(e, EventTransferSentFailed) for e in events)
-    assert any(isinstance(e, EventUnlockFailed) for e in events)
     assert initiator_state_machine.current_state is None
 
 
