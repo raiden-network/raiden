@@ -71,7 +71,7 @@ OPTIONS = [
         '--rpccorsdomain',
         help='Comma separated list of domains to accept cross origin requests. \n'
         '(localhost enabled by default)',
-        default=None,
+        default="http://localhost:*/*",
         type=str,
     ),
     click.option(
