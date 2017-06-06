@@ -41,17 +41,33 @@ class SendMediatedTransfer(Event):
 
 
 class SendRevealSecret(Event):
-    """ Event used to send a reveal the secret to another node, not the same as
-    a balance-proof.
+    """ Sends a RevealSecret to another node.
 
-    Used by payees: The target and mediator nodes.
+    This event is used once the secret is know locally and an action must be
+    performed on the receiver:
+
+        - For receivers in the payee role, it informs the node that the lock has
+        been released and the token can be withdraw, either on-chain or
+        off-chain.
+        - For receivers in the payer role, it tells the payer that the payee
+        knows the secret and wants to withdraw the lock off-chain, so the payer
+        may unlock the lock and send an up-to-date balance proof to the payee,
+        avoiding on-chain payments which would require the channel to be
+        closed.
+
+    For any mediated transfer:
+
+        - The initiator will only perform the payer role.
+        - The target will only perform the payee role.
+        - The mediators will have `n` channels at the payee role and `n` at the
+          payer role, where `n` is equal to `1 + number_of_refunds`.
 
     Note:
         The payee must only update it's local balance once the payer sends an
-        update message with a balance-proof. This is a requirement for keeping
-        the nodes synchronized. The reveal secret message flows from the
-        receiver to the sender, so when the secret is learned it is not yet
-        time to update the balance.
+        up-to-date balance-proof message. This is a requirement for keeping the
+        nodes synchronized. The reveal secret message flows from the receiver
+        to the sender, so when the secret is learned it is not yet time to
+        update the balance.
     """
     def __init__(self, identifier, secret, token, receiver, sender):
         self.identifier = identifier
@@ -62,8 +78,8 @@ class SendRevealSecret(Event):
 
 
 class SendBalanceProof(Event):
-    """ Event used to release a lock locally and send a balance-proof to the
-    counter-party, allowing the counter-party to withdraw the lock.
+    """ Event to send a balance-proof to the counter-party, used after a lock
+    is unlocked locally allowing the counter-party to withdraw.
 
     Used by payers: The initiator and mediator nodes.
 
