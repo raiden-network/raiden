@@ -17,4 +17,8 @@ contract AuxiliaryTester {
     {
         return NettingChannelLibrary.computeMerkleRoot(lock, merkle_proof);
     }
+
+    function signatureSplit(bytes signature) returns (bytes32 r, bytes32 s, uint8 v) {
+        return NettingChannelLibrary.signatureSplit(signature);
+    }
 }

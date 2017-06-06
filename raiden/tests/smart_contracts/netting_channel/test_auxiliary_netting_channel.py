@@ -11,6 +11,8 @@ from raiden.constants import INT64_MIN, INT64_MAX, UINT64_MIN, UINT64_MAX
 from raiden.utils import get_project_root, sha3
 from raiden.mtree import Merkletree
 from raiden.tests.utils.tests import get_relative_contract
+from raiden.utils import make_privkey_address
+from raiden.messages import DirectTransfer
 
 # The computeMerkleRoot function only computes the proof regardless of what the
 # hashes are encoding, so just use some arbitrary data to produce a merkle tree.
@@ -24,6 +26,8 @@ FAKE_TREE = [
     ARBITRARY_DATA[:3],
     ARBITRARY_DATA[:7],
 ]
+
+HASH = sha3('muchcodingsuchwow_______________')
 
 
 def deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address):
@@ -149,3 +153,43 @@ def test_merkle_proof_missing_byte(
                 element,
                 ''.join(tampered_proof),
             )
+
+
+def test_signature_split(tester_state, tester_nettingchannel_library_address):
+    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+
+    privkey, address = make_privkey_address()
+    msg = DirectTransfer(
+        identifier=1,
+        nonce=1,
+        token='x' * 20,
+        transferred_amount=10,
+        recipient='y' * 20,
+        locksroot=HASH
+    )
+    msg.sign(privkey, address)
+    msg = msg.encode()
+    # signature = len(msg) - 65
+    signature = msg[len(msg) - 65:]
+
+    signature = signature[:-1] + chr(27)
+    r, s, v = auxiliary.signatureSplit(signature)
+    assert v == 27
+    assert r == signature[:32]
+    assert s == signature[32:64]
+
+    signature = signature[:-1] + chr(28)
+    _, _, v = auxiliary.signatureSplit(signature)
+    assert v == 28
+
+    signature = signature[:-1] + chr(0)
+    _, _, v = auxiliary.signatureSplit(signature)
+    assert v == 27
+
+    signature = signature[:-1] + chr(1)
+    _, _, v = auxiliary.signatureSplit(signature)
+    assert v == 28
+
+    with pytest.raises(TransactionFailed):
+        signature = signature[:-1] + chr(4)
+        r, s, v = auxiliary.signatureSplit(signature)

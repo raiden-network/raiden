@@ -554,7 +554,7 @@ library NettingChannelLibrary {
         }
     }
 
-    function signatureSplit(bytes signature) private returns (bytes32 r, bytes32 s, uint8 v) {
+    function signatureSplit(bytes signature) internal returns (bytes32 r, bytes32 s, uint8 v) {
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
@@ -569,7 +569,11 @@ library NettingChannelLibrary {
             v := and(mload(add(signature, 65)), 0xff)
         }
         // old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]
-        if(v < 27) v += 27;
+        if(v == 0 || v == 1) {
+            v += 27;
+        }
+
+        require(v == 27 || v == 28);
     }
 
     function slice(bytes a, uint start, uint end) private returns (bytes n) {
