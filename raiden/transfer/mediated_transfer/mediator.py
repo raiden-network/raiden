@@ -23,6 +23,10 @@ from raiden.transfer.mediated_transfer.events import (
     mediatedtransfer,
     ContractSendChannelClose,
     ContractSendWithdraw,
+    EventUnlockFailed,
+    EventUnlockSuccess,
+    EventWithdrawFailed,
+    EventWithdrawSuccess,
     SendBalanceProof,
     SendRefundTransfer,
     SendRevealSecret,
@@ -227,10 +231,6 @@ def clear_if_finalized(iteration):
         for pair in state.transfers_pair
     )
 
-    # TODO: how to define a mediator's transfer result (success/failure) since
-    # the state of individual paths may differ? Perhaps individual/additional
-    # events for each transfer/pair?
-
     if all_finalized:
         return TransitionResult(None, iteration.events)
     return iteration
@@ -372,19 +372,36 @@ def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
 
 
 def set_expired_pairs(transfers_pair, block_number):
-    """ Set the state of expired transfers. """
+    """ Set the state of expired transfers, and return the failed events. """
     pending_transfers_pairs = get_pending_transfer_pairs(transfers_pair)
 
+    events = list()
     for pair in pending_transfers_pairs:
         if block_number > pair.payer_transfer.expiration:
             assert pair.payee_state == 'payee_expired'
             assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
             pair.payer_state = 'payer_expired'
 
+            withdraw_failed = EventWithdrawFailed(
+                pair.payer_transfer.identifier,
+                pair.payer_transfer.hashlock,
+                'lock expired',
+            )
+            events.append(withdraw_failed)
+
         elif block_number > pair.payee_transfer.expiration:
             assert pair.payee_state not in STATE_TRANSFER_PAID
             assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
             pair.payee_state = 'payee_expired'
+
+            unlock_failed = EventUnlockFailed(
+                pair.payee_transfer.identifier,
+                pair.payee_transfer.hashlock,
+                'lock expired',
+            )
+            events.append(unlock_failed)
+
+    return events
 
 
 def events_for_refund_transfer(refund_route, refund_transfer, timeout_blocks, block_number):
@@ -499,7 +516,12 @@ def events_for_balanceproof(transfers_pair, block_number):
                 pair.payee_route.node_address,
                 pair.payee_transfer.secret,
             )
+            unlock_success = EventUnlockSuccess(
+                pair.payer_transfer.identifier,
+                pair.payer_transfer.hashlock,
+            )
             events.append(balance_proof)
+            events.append(unlock_success)
 
     return events
 
@@ -674,14 +696,14 @@ def handle_block(state, state_change):
         state.transfers_pair,
     )
 
-    set_expired_pairs(
+    unlock_fail_events = set_expired_pairs(
         state.transfers_pair,
         block_number,
     )
 
     iteration = TransitionResult(
         state,
-        close_events + withdraw_events,
+        close_events + withdraw_events + unlock_fail_events,
     )
 
     return iteration
@@ -765,6 +787,8 @@ def handle_contractwithdraw(state, state_change):
     # mediated transfer and once when the refund transfer was received. A
     # ContractReceiveWithdraw state change may be used for each.
 
+    events = list()
+
     # This node withdrew the refund
     if state_change.receiver == state.our_address:
         for previous_pos, pair in enumerate(state.transfers_pair, -1):
@@ -772,6 +796,12 @@ def handle_contractwithdraw(state, state_change):
                 # always set the contract_withdraw regardless of the previous
                 # state (even expired)
                 pair.payer_state = 'payer_contract_withdraw'
+
+                withdraw = EventWithdrawSuccess(
+                    pair.payer_transfer.identifier,
+                    pair.payer_transfer.hashlock,
+                )
+                events.append(withdraw)
 
                 # if the current pair is backed by a refund set the sent
                 # mediated transfer to a 'secret known' state
@@ -785,6 +815,12 @@ def handle_contractwithdraw(state, state_change):
     else:
         for pair in state.transfers_pair:
             if pair.payer_route.channel_address == state_change.channel_address:
+                unlock = EventUnlockSuccess(
+                    pair.payee_transfer.identifier,
+                    pair.payee_transfer.hashlock,
+                )
+                events.append(unlock)
+
                 pair.payee_state = 'payee_contract_withdraw'
 
     iteration = secret_learned(
@@ -794,16 +830,25 @@ def handle_contractwithdraw(state, state_change):
         'payee_contract_withdraw',
     )
 
+    iteration.events.extend(events)
+
     return iteration
 
 
 def handle_balanceproof(state, state_change):
     """ Handle a ReceiveBalanceProof state change. """
+    events = list()
     for pair in state.transfers_pair:
         if pair.payer_route.channel_address == state_change.node_address:
+            withdraw = EventWithdrawSuccess(
+                pair.payee_transfer.identifier,
+                pair.payee_transfer.hashlock,
+            )
+            events.append(withdraw)
+
             pair.payer_state = 'payer_balance_proof'
 
-    iteration = TransitionResult(state, list())
+    iteration = TransitionResult(state, events)
 
     return iteration
 

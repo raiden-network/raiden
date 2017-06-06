@@ -23,9 +23,13 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretRequest,
     ReceiveSecretReveal,
 )
+from raiden.transfer.events import (
+    EventTransferSentSuccess,
+    EventTransferSentFailed,
+)
 from raiden.transfer.mediated_transfer.events import (
-    EventTransferCompleted,
-    EventTransferFailed,
+    EventUnlockFailed,
+    EventUnlockSuccess,
     SendBalanceProof,
     SendMediatedTransfer,
     SendRevealSecret,
@@ -127,9 +131,9 @@ def test_next_route():
     assert state.route == routes[0], 'a initialized state must use the first valid route'
 
     assert state.routes.available_routes == routes[1:]
-    assert len(state.routes.ignored_routes) == 0
-    assert len(state.routes.refunded_routes) == 0
-    assert len(state.routes.canceled_routes) == 0
+    assert not state.routes.ignored_routes
+    assert not state.routes.refunded_routes
+    assert not state.routes.canceled_routes
 
     with pytest.raises(AssertionError, message='cannot try a new route while one is in use'):
         initiator.try_new_route(state)
@@ -141,9 +145,9 @@ def test_next_route():
     # HOP3 should be ignored because it doesnt have enough balance
     assert len(state.routes.ignored_routes) == 1
 
-    assert len(state.routes.available_routes) == 0
-    assert len(state.routes.refunded_routes) == 0
-    assert len(state.routes.canceled_routes) == 1
+    assert not state.routes.available_routes
+    assert not state.routes.refunded_routes
+    assert state.routes.canceled_routes
 
 
 def test_init_with_usable_routes():
@@ -242,8 +246,9 @@ def test_init_without_routes():
         init_state_change,
     )
 
-    assert len(events) == 1
-    assert isinstance(events[0], EventTransferFailed)
+    assert len(events) == 2
+    assert any(isinstance(e, EventTransferSentFailed) for e in events)
+    assert any(isinstance(e, EventUnlockFailed) for e in events)
     assert initiator_state_machine.current_state is None
 
 
@@ -327,15 +332,14 @@ def test_state_wait_unlock_valid():
         sender=mediator_address,
     )
     events = initiator_state_machine.dispatch(state_change)
-    assert len(events) == 2
+    assert len(events) == 3
 
-    # The initiator must send a synchronizing message to its partner
     assert any(isinstance(e, SendBalanceProof) for e in events)
-    # Once the transfer is completed a notifying event must be emitted
-    assert any(isinstance(e, EventTransferCompleted) for e in events)
+    assert any(isinstance(e, EventTransferSentSuccess) for e in events)
+    assert any(isinstance(e, EventUnlockSuccess) for e in events)
 
     balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
-    complete = next(e for e in events if isinstance(e, EventTransferCompleted))
+    complete = next(e for e in events if isinstance(e, EventTransferSentSuccess))
 
     assert balance_proof.receiver == mediator_address
     assert complete.identifier == identifier
@@ -433,8 +437,10 @@ def test_refund_transfer_next_route():
     assert initiator_state_machine.current_state is not None
 
     events = initiator_state_machine.dispatch(state_change)
-    assert len(events) == 1
-    assert isinstance(events[0], SendMediatedTransfer)
+    assert len(events) == 2
+    assert any(isinstance(e, SendMediatedTransfer) for e in events), 'trying a new route'
+    assert any(isinstance(e, EventUnlockFailed) for e in events), 'previous route unlock failed'
+
     assert initiator_state_machine.current_state is not None
     assert initiator_state_machine.current_state.routes.canceled_routes[0] == prior_state.route
 
@@ -478,8 +484,9 @@ def test_refund_transfer_no_more_routes():
     assert initiator_state_machine.current_state is not None
 
     events = initiator_state_machine.dispatch(state_change)
-    assert len(events) == 1
-    assert isinstance(events[0], EventTransferFailed)
+    assert len(events) == 2
+    assert any(isinstance(e, EventTransferSentFailed) for e in events)
+    assert any(isinstance(e, EventUnlockFailed) for e in events)
     assert initiator_state_machine.current_state is None
 
 
@@ -562,7 +569,7 @@ def test_cancel_transfer():
 
     events = initiator_state_machine.dispatch(state_change)
     assert len(events) == 1
-    assert isinstance(events[0], EventTransferFailed)
+    assert isinstance(events[0], EventTransferSentFailed)
     assert initiator_state_machine.current_state is None
 
 

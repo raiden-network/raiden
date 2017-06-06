@@ -11,11 +11,14 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveBalanceProof,
     ReceiveSecretReveal,
 )
+from raiden.transfer.events import (
+    EventTransferReceivedSuccess,
+)
 from raiden.transfer.mediated_transfer.events import (
     ContractSendChannelClose,
     ContractSendWithdraw,
-    EventTransferCompleted,
-    EventTransferFailed,
+    EventWithdrawFailed,
+    EventWithdrawSuccess,
     SendRevealSecret,
     SendSecretRequest,
 )
@@ -180,19 +183,22 @@ def clear_if_finalized(iteration):
         return iteration
 
     if state.from_transfer.secret is None and state.block_number > state.from_transfer.expiration:
-        failed = EventTransferFailed(
+        failed = EventWithdrawFailed(
             identifier=state.from_transfer.identifier,
+            hashlock=state.from_transfer.hashlock,
             reason='lock expired',
         )
         iteration = TransitionResult(None, [failed])
 
     elif state.state == 'balance_proof':
-        completed = EventTransferCompleted(
+        transfer_success = EventTransferReceivedSuccess(
             state.from_transfer.identifier,
-            state.from_transfer.secret,
+        )
+        unlock_success = EventWithdrawSuccess(
+            state.from_transfer.identifier,
             state.from_transfer.hashlock,
         )
-        iteration = TransitionResult(None, completed)
+        iteration = TransitionResult(None, [transfer_success, unlock_success])
 
     return iteration
 

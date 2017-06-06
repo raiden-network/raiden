@@ -139,29 +139,6 @@ class SendRefundTransfer(Event):
         self.receiver = receiver
 
 
-class EventTransferFailed(Event):
-    """ Event emitted by the initiator when a transfer cannot be completed.
-
-    Note:
-        Mediator and target nodes cannot emit this event since they cannot
-        cancel the transfer, these nodes may only reject the transfer before
-        intereacting or wait for the lock expiration.
-    """
-
-    def __init__(self, identifier, reason):
-        self.identifier = identifier
-        self.reason = reason
-
-
-class EventTransferCompleted(Event):
-    """ Event emitted when the transfer is complete for the given node.  """
-
-    def __init__(self, identifier, secret, hashlock):
-        self.identifier = identifier
-        self.secret = secret
-        self.hashlock = hashlock
-
-
 class ContractSendChannelClose(Event):
     """ Event emitted to close the netting channel.
 
@@ -182,3 +159,33 @@ class ContractSendWithdraw(Event):
 
         self.transfer = transfer
         self.channel_address = channel_address
+
+
+class EventUnlockSuccess(Event):
+    """ Event emitted when a lock unlock succeded. """
+    def __init__(self, identifier, hashlock):
+        self.identifier = identifier
+        self.hashlock = hashlock
+
+
+class EventUnlockFailed(Event):
+    """ Event emitted when a lock unlock failed. """
+    def __init__(self, identifier, hashlock, reason):
+        self.identifier = identifier
+        self.hashlock = hashlock
+        self.reason = reason
+
+
+class EventWithdrawSuccess(Event):
+    """ Event emitted when a lock withdraw succeded. """
+    def __init__(self, identifier, hashlock):
+        self.identifier = identifier
+        self.hashlock = hashlock
+
+
+class EventWithdrawFailed(Event):
+    """ Event emitted when a lock withdraw failed. """
+    def __init__(self, identifier, hashlock, reason):
+        self.identifier = identifier
+        self.hashlock = hashlock
+        self.reason = reason

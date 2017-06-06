@@ -66,9 +66,11 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
+from raiden.transfer.events import (
+    EventTransferSentSuccess,
+    EventTransferSentFailed,
+)
 from raiden.transfer.mediated_transfer.events import (
-    EventTransferCompleted,
-    EventTransferFailed,
     SendBalanceProof,
     SendMediatedTransfer,
     SendRefundTransfer,
@@ -1213,13 +1215,13 @@ class StateMachineEventHandler(object):
         elif isinstance(event, SendRefundTransfer):
             pass
 
-        elif isinstance(event, EventTransferCompleted):
+        elif isinstance(event, EventTransferSentSuccess):
             for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(True)
 
-        elif isinstance(event, EventTransferFailed):
+        elif isinstance(event, EventTransferSentFailed):
             for result in self.raiden.identifier_to_results[event.identifier]:
-                result.set(True)
+                result.set(False)
 
     def on_blockchain_statechange(self, state_change):
         if log.isEnabledFor(logging.INFO):
