@@ -7,6 +7,7 @@ def recover_publickey(messagedata, signature):
     if len(signature) != 65:
         raise ValueError('invalid signature')
 
+    signature = signature[:-1] + chr(ord(signature[-1]) - 27)
     publickey = PublicKey.from_signature_and_message(
         signature,
         messagedata,
@@ -20,7 +21,7 @@ def sign(messagedata, private_key):
     if len(signature) != 65:
         raise ValueError('invalid signature')
 
-    return signature
+    return signature[:-1] + chr(ord(signature[-1]) + 27)
 
 
 def address_from_key(key):
