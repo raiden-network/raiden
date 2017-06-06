@@ -568,10 +568,6 @@ library NettingChannelLibrary {
             // use the second best option, 'and'
             v := and(mload(add(signature, 65)), 0xff)
         }
-        // old geth sends a `v` value of [0,1], while the new, in line with the YP sends [27,28]
-        if(v == 0 || v == 1) {
-            v += 27;
-        }
 
         require(v == 27 || v == 28);
     }

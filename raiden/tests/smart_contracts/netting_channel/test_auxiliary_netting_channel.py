@@ -182,14 +182,6 @@ def test_signature_split(tester_state, tester_nettingchannel_library_address):
     _, _, v = auxiliary.signatureSplit(signature)
     assert v == 28
 
-    signature = signature[:-1] + chr(0)
-    _, _, v = auxiliary.signatureSplit(signature)
-    assert v == 27
-
-    signature = signature[:-1] + chr(1)
-    _, _, v = auxiliary.signatureSplit(signature)
-    assert v == 28
-
     with pytest.raises(TransactionFailed):
         signature = signature[:-1] + chr(4)
         r, s, v = auxiliary.signatureSplit(signature)
