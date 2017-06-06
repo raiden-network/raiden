@@ -16,7 +16,7 @@ from pyethapp.jsonrpc import (
     data_encoder,
     default_gasprice,
 )
-from pyethapp.rpc_client import topic_encoder, JSONRPCClient
+from pyethapp.rpc_client import topic_encoder, JSONRPCClient, block_tag_encoder
 import requests
 
 from raiden import messages
@@ -284,6 +284,7 @@ class BlockChainService(object):
         return delta / interval
 
     def get_block_header(self, block_number):
+        block_number = block_tag_encoder(block_number)
         return self.client.call('eth_getBlockByNumber', block_number, False)
 
     def next_block(self):

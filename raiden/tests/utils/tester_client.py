@@ -227,6 +227,10 @@ class BlockChainServiceTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
         return self.tester_state.block.number
 
+    def estimate_blocktime(*args):
+        """dummy"""
+        return 1
+
     def token(self, token_address):
         """ Return a proxy to interact with an token. """
         if token_address not in self.address_token:
