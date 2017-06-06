@@ -79,6 +79,7 @@ from raiden.channel import ChannelEndState, ChannelExternalState
 from raiden.exceptions import (
     UnknownAddress,
     TransferWhenClosed,
+    TransferUnwanted,
     UnknownTokenAddress,
     InvalidAddress,
 )
@@ -550,9 +551,6 @@ class RaidenService(object):
                 connection_manager = self.connection_manager_for_token(token_address)
             except InvalidAddress:
                 pass
-            # TODO: estimate and set the `timeout` parameter in seconds
-            # based on connection_manager.min_settle_blocks and an average
-            # blocktime from the past
             leave_results.append(connection_manager.leave_async())
         return leave_results
 
@@ -582,6 +580,10 @@ class RaidenService(object):
 
         earliest_settlement = last_block + blocks_to_wait()
 
+        # TODO: estimate and set a `timeout` parameter in seconds
+        # based on connection_manager.min_settle_blocks and an average
+        # blocktime from the past
+
         current_block = last_block
         avg_block_time = self.chain.estimate_blocktime()
         wait_blocks_left = blocks_to_wait()
@@ -608,7 +610,11 @@ class RaidenService(object):
                     )
                 )
 
-        gevent.wait(leave_greenlets)
+        gevent.wait(
+            leave_greenlets,
+            timeout=blocks_to_wait() * self.chain.estimate_blocktime() * 1.5
+        )
+
         if any(channel.state != CHANNEL_STATE_SETTLED for channel in all_channels):
             log.error(
                 'Some channels were not settled!',
@@ -867,6 +873,7 @@ class RaidenMessageHandler(object):
     """
     def __init__(self, raiden):
         self.raiden = raiden
+        self.blocked_tokens = []
 
     def on_message(self, message, msghash):  # noqa pylint: disable=unused-argument
         """ Handles `message` and sends an ACK on success. """
@@ -1021,6 +1028,9 @@ class RaidenMessageHandler(object):
         if message.token not in self.raiden.channelgraphs:
             raise UnknownTokenAddress('Unknown token address {}'.format(pex(message.token)))
 
+        if message.token in self.blocked_tokens:
+            raise TransferUnwanted()
+
         graph = self.raiden.channelgraphs[message.token]
 
         if not graph.has_channel(self.raiden.address, message.sender):
@@ -1050,6 +1060,9 @@ class RaidenMessageHandler(object):
             message.token,
             message.lock.amount,
         )
+
+        if message.token in self.blocked_tokens:
+            raise TransferUnwanted()
 
         # TODO: add a separate message for token swaps to simplify message
         # handling (issue #487)

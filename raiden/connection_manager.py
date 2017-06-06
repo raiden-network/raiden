@@ -9,8 +9,8 @@ from raiden.api.python import RaidenAPI
 from raiden.utils import pex
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
-    CHANNEL_STATE_SETTLED,
     CHANNEL_STATE_CLOSED,
+    CHANNEL_STATE_SETTLED,
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -23,7 +23,7 @@ class ConnectionManager(object):
         It is initialized with 0 funds; a connection to the token network
         will be only established _after_ calling `connect(funds)`
     """
-    # XXX Hack: for bootstrapping the first node on a network opens a channel
+    # XXX Hack: for bootstrapping, the first node on a network opens a channel
     # with this address to become visible.
     BOOTSTRAP_ADDR_HEX = '2' * 40
     BOOTSTRAP_ADDR = BOOTSTRAP_ADDR_HEX.decode('hex')
@@ -69,6 +69,9 @@ class ConnectionManager(object):
         if funds <= 0:
             raise ValueError('connecting needs a positive value for `funds`')
 
+        if self.token_address in self.raiden.message_handler.blocked_tokens:
+            self.raiden.message_handler.blocked_tokens.pop(self.token_address)
+
         self.initial_channel_target = initial_channel_target
         self.joinable_funds_target = joinable_funds_target
 
@@ -95,12 +98,14 @@ class ConnectionManager(object):
                 )
 
         with self.lock:
+
             self.funds = funds
             funding = self.initial_funding_per_partner
             # this could be a subsequent call, or some channels already open
-            new_partner_count = max(0,
-                                    self.initial_channel_target - len(self.open_channels)
-                                    )
+            new_partner_count = max(
+                0,
+                self.initial_channel_target - len(self.open_channels)
+            )
             for partner in self.find_new_partners(new_partner_count):
                 self.api.open(
                     self.token_address,
@@ -112,82 +117,59 @@ class ConnectionManager(object):
                     funding
                 )
 
-    def leave_async(self, wait_for_settle=True, timeout=240):
+    def leave_async(self):
         """ Async version of `leave()`
         Args:
-            wait_for_settle (bool): block until successful settlement?
+
             timeout (float): maximum time to wait for settlement in seconds
         """
         leave_result = AsyncResult()
-        gevent.spawn(
-            self.leave,
-            wait_for_settle=wait_for_settle,
-            timeout=timeout,
-            async_result=leave_result
-        )
+        gevent.spawn(self.leave).link(leave_result)
         return leave_result
 
-    def leave(self, wait_for_settle=True, timeout=30, async_result=None):
+    def leave(self):
         """ Leave the token network.
-        This implies closing all open channels and optionally waiting for
-        settlement.
-        Args:
-            wait_for_settle (bool): block until successful settlement?
-            timeout (float): maximum time to wait for settlement in seconds
-            async_result (gevent.event.AsyncResult): for async usage.
+        This implies closing all channels and waiting for all channels to be settled.
         """
-        if async_result is None:
-            async_result = AsyncResult()
+        # set leaving state
+        if self.token_address not in self.raiden.message_handler.blocked_tokens:
+            self.raiden.message_handler.blocked_tokens.append(self.token_address)
+        if self.initial_channel_target > 0:
+            self.initial_channel_target = 0
+
+        self.close_all()
+        return self.wait_for_settle()
+
+    def close_all(self):
+        """ Close all open channels in the token network.
+        """
         with self.lock:
             self.initial_channel_target = 0
-            open_channels = self.open_channels
+            open_channels = self.receiving_channels
             channel_specs = [(
                 self.token_address,
-                c.partner_address) for c in open_channels]
+                c.partner_address) for c in open_channels
+            ]
             for channel in channel_specs:
                 try:
-                    self.api.close(*channel)
+                    channel = self.api.close(*channel)
                 # catch-all BUT: if the error wasn't that the channel was already closed: re-raise
                 except:
                     if channel[1] in [c.partner_address for c in self.open_channels]:
                         raise
 
+    def wait_for_settle(self):
+        """Wait for all channels of the token network to settle.
+        Note, that this does not time out.
+        """
+        not_settled_channels = [
+            channel for channel in self.receiving_channels
+            if not channel.state != CHANNEL_STATE_SETTLED
+        ]
+        while any(c.state != CHANNEL_STATE_SETTLED for c in not_settled_channels):
             # wait for events to propagate
             gevent.sleep(self.raiden.alarm.wait_time)
-
-        if wait_for_settle:
-            not_settled_channels = [
-                channel for channel in
-                self.api.get_channel_list(token_address=self.token_address)
-                if channel.state != CHANNEL_STATE_SETTLED
-            ]
-            try:
-                with gevent.timeout.Timeout(timeout):
-                    while any(c.state != CHANNEL_STATE_SETTLED for c in not_settled_channels):
-                        # wait for events to propagate
-                        gevent.sleep(self.raiden.alarm.wait_time)
-
-            except gevent.timeout.Timeout:
-                async_result.set(False)
-                log.debug(
-                    'timeout while waiting for settlement',
-                    not_settled=sum(
-                        1 for channel in not_settled_channels if
-                        channel.state != CHANNEL_STATE_SETTLED
-                    ),
-                    settled=sum(
-                        1 for channel in not_settled_channels if
-                        channel.state == CHANNEL_STATE_SETTLED
-                    )
-                )
-            else:
-                async_result.set(True)
-        # if we don't care for settlement
-        else:
-            if len(self.open_channels) == 0:
-                async_result.set(True)
-            else:
-                async_result.set(False)
+        return True
 
     def join_channel(self, partner_address, partner_deposit):
         """Will be called, when we were selected as channel partner by another
@@ -200,7 +182,7 @@ class ConnectionManager(object):
         if self.funds <= 0:
             return
         # in leaving state
-        if self.initial_channel_target < 1:
+        if self.leaving_state:
             return
         with self.lock:
             remaining = self.funds_remaining
@@ -236,7 +218,7 @@ class ConnectionManager(object):
         if self.funds <= 0:
             return
         # in leaving state
-        if self.initial_channel_target == 0:
+        if self.leaving_state:
             return
         with self.lock:
             if self.funds_remaining <= 0:
@@ -297,6 +279,8 @@ class ConnectionManager(object):
         """True, if funds available and the `initial_channel_target` was not yet
         reached.
         """
+        if self.token_address in self.raiden.message_handler.blocked_tokens:
+            return False
         return (
             self.funds_remaining > 0 and
             len(self.open_channels) < self.initial_channel_target
@@ -325,21 +309,36 @@ class ConnectionManager(object):
         ]
 
     @property
+    def receiving_channels(self):
+        """Shorthand for getting channels that had received any transfers in this token network.
+        """
+        return [
+            channel for channel in self.open_channels
+            if len(channel.received_transfers)
+        ]
+
+    @property
     def min_settle_blocks(self):
         """Returns the minimum necessary waiting time to settle all channels.
         """
-        channels = self.api.get_channel_list(
-            token_address=self.token_address
-        )
+        channels = self.receiving_channels
         timeouts = [0]
         current_block = self.raiden.get_block_number()
         for channel in channels:
             if channel.state == CHANNEL_STATE_CLOSED:
                 since_closed = current_block - channel.external_state._closed_block
-            elif channel.state != CHANNEL_STATE_SETTLED:
-                since_closed = 0
+            elif channel.state == CHANNEL_STATE_OPENED:
+                # it will at least take one more block to call close
+                since_closed = -1
             else:
                 since_closed = 0
             timeouts.append(channel.settle_timeout - since_closed)
 
         return max(timeouts)
+
+    @property
+    def leaving_state(self):
+        return (
+            self.token_address in self.raiden.message_handler.blocked_tokens or
+            self.initial_channel_target < 1
+        )
