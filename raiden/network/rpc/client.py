@@ -509,18 +509,18 @@ class Token(object):
 
         result = jsonrpc_client.call(
             'eth_getCode',
-            address_encoder(token_address),
+            token_address,
             'latest',
         )
 
         if result == '0x':
             raise ValueError('Token address {} does not contain code'.format(
-                address_encoder(token_address),
+                token_address,
             ))
 
-        proxy = jsonrpc_client.new_abi_contract(
+        proxy = jsonrpc_client.new_contract_proxy(
             HUMAN_TOKEN_ABI,
-            address_encoder(token_address),
+            token_address,
         )
 
         self.address = token_address
