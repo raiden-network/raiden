@@ -552,7 +552,9 @@ class RaidenService(object):
             except InvalidAddress:
                 pass
             leave_results.append(connection_manager.leave_async())
-        return leave_results
+        combined_result = AsyncResult()
+        gevent.spawn(gevent.wait, leave_results).link(combined_result)
+        return combined_result
 
     def close_and_settle(self):
         log.info('raiden will close and settle all channels now')
