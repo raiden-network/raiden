@@ -7,7 +7,7 @@ import transfer.mediated_transfer.factories as factories
 from raiden.tests.utils.log import get_all_state_events
 from raiden.transfer.log import StateChangeLog, StateChangeLogSQLiteBackend
 from raiden.transfer.mediated_transfer.state_change import ContractReceiveWithdraw
-from raiden.transfer.mediated_transfer.events import EventTransferFailed
+from raiden.transfer.events import EventTransferSentFailed
 from raiden.transfer.state_change import Block, ActionRouteChange
 from raiden.transfer.state import RouteState
 
@@ -70,7 +70,7 @@ def test_write_read_log(tmpdir, in_memory_database):
 
 def test_write_read_events(tmpdir, in_memory_database):
     log = init_database(tmpdir, in_memory_database)
-    event = EventTransferFailed(1, 'whatever')
+    event = EventTransferSentFailed(1, 'whatever')
     with pytest.raises(sqlite3.IntegrityError):
         log.storage.write_state_events(1, [(None, 1, log.serializer.serialize(event))])
     assert(len(get_all_state_events(log)) == 0)
@@ -81,4 +81,4 @@ def test_write_read_events(tmpdir, in_memory_database):
     assert(len(logged_events) == 1)
     assert(logged_events[0][0] == 1)
     assert(logged_events[0][1] == 1)
-    assert(isinstance(logged_events[0][2], EventTransferFailed))
+    assert(isinstance(logged_events[0][2], EventTransferSentFailed))

@@ -20,6 +20,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.mediated_transfer.events import (
     ContractSendChannelClose,
     ContractSendWithdraw,
+    EventUnlockSuccess,
     SendBalanceProof,
     SendMediatedTransfer,
     SendRefundTransfer,
@@ -812,8 +813,11 @@ def test_events_for_balanceproof():
         block_number,
     )
 
-    assert len(events) == 1
-    assert events[0].receiver == last_pair.payee_route.node_address
+    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
+
+    assert len(events) == 2
+    assert any(isinstance(e, EventUnlockSuccess) for e in events)
+    assert balance_proof.receiver == last_pair.payee_route.node_address
     assert last_pair.payee_state == 'payee_balance_proof'
 
 
@@ -843,7 +847,7 @@ def test_events_for_balanceproof_channel_closed():
             block_number,
         )
 
-        assert len(events) == 0
+        assert not events
 
 
 def test_events_for_balanceproof_middle_secret():
@@ -871,8 +875,11 @@ def test_events_for_balanceproof_middle_secret():
         block_number,
     )
 
-    assert len(events) == 1
-    assert events[0].receiver == middle_pair.payee_route.node_address
+    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
+
+    assert len(events) == 2
+    assert any(isinstance(e, EventUnlockSuccess) for e in events)
+    assert balance_proof.receiver == middle_pair.payee_route.node_address
     assert middle_pair.payee_state == 'payee_balance_proof'
 
 
@@ -946,8 +953,12 @@ def test_events_for_balanceproof_lock_expired():
         transfers_pair,
         block_number,
     )
-    assert len(events) == 1
-    assert events[0].receiver == middle_pair.payee_route.node_address
+
+    balance_proof = next(e for e in events if isinstance(e, SendBalanceProof))
+
+    assert len(events) == 2
+    assert any(isinstance(e, EventUnlockSuccess) for e in events)
+    assert balance_proof.receiver == middle_pair.payee_route.node_address
     assert middle_pair.payee_state == 'payee_balance_proof'
 
 

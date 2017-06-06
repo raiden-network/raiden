@@ -17,11 +17,13 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretRequest,
     ReceiveSecretReveal
 )
+from raiden.transfer.events import (
+    EventTransferSentSuccess,
+)
 from raiden.transfer.mediated_transfer.events import (
     SendMediatedTransfer,
     SendRevealSecret,
     SendBalanceProof,
-    EventTransferCompleted,
     SendSecretRequest,
 )
 from raiden.messages import DirectTransfer
@@ -172,7 +174,7 @@ def test_fullnetwork(raiden_chain, settle_timeout, reveal_timeout):
     assert app0_events[2].channel_address == channel_0_3.channel_address
     assert app0_events[2].receiver == app3.raiden.address
     assert app0_events[2].secret == secret
-    assert isinstance(app0_events[3], EventTransferCompleted)
+    assert isinstance(app0_events[3], EventTransferSentSuccess)
     assert app0_events[3].secret == secret
     assert app0_events[3].hashlock == hashlock
 

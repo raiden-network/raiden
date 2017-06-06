@@ -19,12 +19,16 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveSecretReveal,
     ReceiveTransferRefund,
 )
+from raiden.transfer.events import (
+    EventTransferSentSuccess,
+    EventTransferSentFailed,
+)
 from raiden.transfer.mediated_transfer.events import (
-    EventTransferCompleted,
-    EventTransferFailed,
     SendBalanceProof,
     SendMediatedTransfer,
     SendRevealSecret,
+    EventUnlockSuccess,
+    EventUnlockFailed,
 )
 from raiden.utils import sha3
 
@@ -61,7 +65,7 @@ def user_cancel_transfer(state):
     state.secretrequest = None
     state.revealsecret = None
 
-    cancel = EventTransferFailed(
+    cancel = EventTransferSentFailed(
         identifier=state.transfer.identifier,
         reason='user canceled transfer',
     )
@@ -96,6 +100,14 @@ def try_new_route(state):
             try_route = route
             break
 
+    unlock_failed = None
+    if state.transfer:
+        unlock_failed = EventUnlockFailed(
+            identifier=state.transfer.identifier,
+            hashlock=state.transfer.hashlock,
+            reason='route was canceled',
+        )
+
     if try_route is None:
         # No available route has sufficient balance for the current transfer,
         # cancel it.
@@ -103,11 +115,15 @@ def try_new_route(state):
         # At this point we can just discard all the state data, this is only
         # valid because we are the initiator and we know that the secret was
         # not released.
-        cancel = EventTransferFailed(
+        transfer_failed = EventTransferSentFailed(
             identifier=state.transfer.identifier,
             reason='no route available',
         )
-        iteration = TransitionResult(None, [cancel])
+
+        events = [transfer_failed]
+        if unlock_failed:
+            events.append(unlock_failed)
+        iteration = TransitionResult(None, events)
 
     else:
         state.route = try_route
@@ -149,7 +165,11 @@ def try_new_route(state):
         state.transfer = transfer
         state.message = message
 
-        iteration = TransitionResult(state, [message])
+        events = [message]
+        if unlock_failed:
+            events.append(unlock_failed)
+
+        iteration = TransitionResult(state, events)
 
     return iteration
 
@@ -209,7 +229,8 @@ def handle_secretrequest(state, state_change):
 
     if valid_secretrequest:
         # Reveal the secret to the target node and wait for it's confirmation,
-        # at this point the transfer is not cancellable anymore.
+        # at this point the transfer is not cancellable anymore either the lock
+        # timeouts or a secret reveal is received.
         #
         # Note: The target might be the first hop
         #
@@ -250,13 +271,16 @@ def handle_secretreveal(state, state_change):
             transfer.secret,
         )
 
-        completed = EventTransferCompleted(
+        transfer_success = EventTransferSentSuccess(
             transfer.identifier,
-            transfer.secret,
+        )
+
+        unlock_success = EventUnlockSuccess(
+            transfer.identifier,
             transfer.hashlock,
         )
 
-        iteration = TransitionResult(None, [unlock_lock, completed])
+        iteration = TransitionResult(None, [unlock_lock, transfer_success, unlock_success])
     else:
         iteration = TransitionResult(state, list())
 
