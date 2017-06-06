@@ -46,7 +46,6 @@ class App(object):  # pylint: disable=too-few-public-methods
             discovery,
             config,
         )
-        self.services = {'raiden': self.raiden}
 
         self.start_console = self.config['console']
 
