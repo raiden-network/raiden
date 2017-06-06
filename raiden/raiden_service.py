@@ -52,6 +52,10 @@ from raiden.transfer.mediated_transfer.state import (
     MediatorState,
     LockedTransferState,
 )
+from raiden.transfer.state_change import (
+    ActionTransferDirect,
+    ReceiveTransferDirect,
+)
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
@@ -69,6 +73,7 @@ from raiden.transfer.mediated_transfer.state_change import (
 from raiden.transfer.events import (
     EventTransferSentSuccess,
     EventTransferSentFailed,
+    EventTransferReceivedSuccess,
 )
 from raiden.transfer.mediated_transfer.events import (
     SendBalanceProof,
@@ -220,14 +225,16 @@ class RaidenService(object):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
 
     def set_block_number(self, blocknumber):
-        self._blocknumber = blocknumber
-
         state_change = Block(blocknumber)
         self.state_machine_event_handler.dispatch_to_all_tasks(state_change)
 
         for graph in self.channelgraphs.itervalues():
             for channel in graph.address_channel.itervalues():
                 channel.state_transition(state_change)
+
+        # To avoid races, only update the internal cache after all the state
+        # tasks have been updated.
+        self._blocknumber = blocknumber
 
     def get_block_number(self):
         return self._blocknumber
@@ -725,6 +732,21 @@ class RaidenService(object):
             self.sign(direct_transfer)
             direct_channel.register_transfer(direct_transfer)
 
+            direct_transfer_state_change = ActionTransferDirect(
+                identifier,
+                amount,
+                token_address,
+                direct_channel.partner_state.address,
+            )
+            state_change_id = self.transaction_log.log(direct_transfer_state_change)
+
+            transfer_success = EventTransferSentSuccess(
+                identifier,
+            )
+            self.transaction_log.log_events(
+                state_change_id, [transfer_success],
+            )
+
             async_result = self.protocol.send_async(
                 direct_channel.partner_state.address,
                 direct_transfer,
@@ -846,6 +868,7 @@ class RaidenService(object):
         )
 
         state_manager = StateManager(mediator.state_transition, None)
+
         self.state_machine_event_handler.log_and_dispatch(state_manager, init_mediator)
 
         self.identifier_to_statemanagers[identifier].append(state_manager)
@@ -1058,7 +1081,21 @@ class RaidenMessageHandler(object):
                 )
             )
 
+        amount = channel.partner_state.transferred_amount - message.transferred_amount
+        state_change = ReceiveTransferDirect(
+            message.identifier,
+            amount,
+            message.token,
+            message.sender,
+        )
+        state_change_id = self.raiden.transaction_log.log(state_change)
+
         channel.register_transfer(message)
+
+        receive_success = EventTransferReceivedSuccess(
+            message.identifier,
+        )
+        self.raiden.transaction_log.log_events(state_change_id, [receive_success])
 
     def message_mediatedtransfer(self, message):
         # TODO: Reject mediated transfer that the hashlock/identifier is known,
@@ -1101,7 +1138,6 @@ class RaidenMessageHandler(object):
 
         if message.target == self.raiden.address:
             self.raiden.target_mediated_transfer(message)
-
         else:
             self.raiden.mediate_mediated_transfer(message)
 

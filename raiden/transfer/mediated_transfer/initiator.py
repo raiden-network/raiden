@@ -101,7 +101,7 @@ def try_new_route(state):
             break
 
     unlock_failed = None
-    if state.transfer:
+    if state.message:
         unlock_failed = EventUnlockFailed(
             identifier=state.transfer.identifier,
             hashlock=state.transfer.hashlock,

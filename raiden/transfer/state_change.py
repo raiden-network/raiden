@@ -43,3 +43,29 @@ class ActionCancelTransfer(StateChange):
 
     def __init__(self, identifier):
         self.identifier = identifier
+
+
+class ActionTransferDirect(StateChange):
+    def __init__(self,
+                 identifier,
+                 amount,
+                 token_address,
+                 node_address):
+
+        self.identifier = identifier
+        self.amount = amount
+        self.token_address = token_address
+        self.node_address = node_address
+
+
+class ReceiveTransferDirect(StateChange):
+    def __init__(self,
+                 identifier,
+                 amount,
+                 token_address,
+                 sender):
+
+        self.identifier = identifier
+        self.amount = amount
+        self.token_address = token_address
+        self.sender = sender
