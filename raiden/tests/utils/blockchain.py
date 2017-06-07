@@ -91,7 +91,6 @@ def geth_to_cmd(node, datadir, verbosity):
         '--verbosity', str(verbosity),
         '--fakepow',
         '--datadir', datadir,
-        '--ethash.dagsondisk', '1',
     ])
 
     log.debug('geth command: {}'.format(cmd))
@@ -257,6 +256,7 @@ def geth_create_blockchain(
         config['address'] = privatekey_to_address(key)
         config['port'] = p2p_port
         config['rpcport'] = rpc_port
+        config['ethash.dagsondisk'] = '1'
         config['enode'] = 'enode://{pub}@127.0.0.1:{port}'.format(
             pub=config['pub'],
             port=config['port'],
