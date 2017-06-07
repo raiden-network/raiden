@@ -91,6 +91,7 @@ def geth_to_cmd(node, datadir, verbosity):
         '--verbosity', str(verbosity),
         '--fakepow',
         '--datadir', datadir,
+        '--ethash.dagsondisk', '1',
     ])
 
     log.debug('geth command: {}'.format(cmd))
