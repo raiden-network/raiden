@@ -243,10 +243,10 @@ class ChannelGraph(object):
                 if not valid_timeout:
                     continue
 
-            if channel.network_state == NODE_NETWORK_UNKNOWN:
+            if channel.network_state == NODE_NETWORK_REACHABLE:
                 online_nodes.append(Route(path, channel))
 
-            if channel.network_state == NODE_NETWORK_REACHABLE:
+            if channel.network_state == NODE_NETWORK_UNKNOWN:
                 unknown_nodes.append(Route(path, channel))
 
         return online_nodes + unknown_nodes

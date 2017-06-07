@@ -7,7 +7,11 @@ from itertools import repeat
 import cachetools
 import gevent
 from gevent.queue import Queue
-from gevent.event import AsyncResult, Event
+from gevent.event import (
+    _AbstractLinkable,
+    AsyncResult,
+    Event,
+)
 from ethereum import slogging
 
 from raiden.exceptions import (
@@ -51,8 +55,8 @@ HealthEvents = namedtuple('HealthEvents', (
 # - Each netting channel must have the messages processed in-order, the
 # protocol must detect unacknowledged messages and retry them.
 # - A queue must not stall because of synchronization problems in other queues.
-# - Assuming a queue can stall, the non-healthiness of a node must not be
-# inferred from the lack of acknowledged from a single queue, but healthiness
+# - Assuming a queue can stall, the unhealthiness of a node must not be
+# inferred from the lack of acknowledgement from a single queue, but healthiness
 # may be safely inferred from it.
 # - The state of the node must be synchronized among all tasks that are
 # handling messages.
@@ -61,15 +65,16 @@ HealthEvents = namedtuple('HealthEvents', (
 def event_first_of(*events):
     """ Waits until one of `events` is set.
 
-    The event returned is /not/ cleared with any of the `events`, this values
+    The event returned is /not/ cleared with any of the `events`, this value
     must not be reused if the clearing behavior is used.
     """
     first_finished = Event()
 
+    if not all(isinstance(e, _AbstractLinkable) for e in events):
+        raise ValueError('all events must be linkable')
+
     for event in events:
-        if event is not None:
-            # ignore the underlying event
-            event.rawlink(lambda _: first_finished.set())
+        event.rawlink(lambda _: first_finished.set())
 
     return first_finished
 
@@ -78,7 +83,7 @@ def timeout_exponential_backoff(retries, timeout, maximum):
     """ Timeouts generator with an exponential backoff strategy.
 
     Timeouts start spaced by `timeout`, after `retries` exponentially increase
-    the retry dealys until `maximum`, then maximum is returned indefinetely.
+    the retry delays until `maximum`, then maximum is returned indefinitely.
     """
     yield timeout
 
@@ -98,7 +103,7 @@ def timeout_exponential_backoff(retries, timeout, maximum):
 def retry(protocol, data, receiver_address, event_stop, timeout_backoff):
     """ Send data until it's acknowledged.
 
-    Exits when the first of following happen:
+    Exits when the first of the following happen:
 
     - The packet is acknowledged.
     - Event_stop is set.
@@ -222,7 +227,7 @@ def single_queue_send(
     - This task can be killed at any time, but the intended usage is to stop it
       with the event_stop.
     - If there are many queues for the same receiver_address, it is the
-      caller's responsability to not start them together to avoid congestion.
+      caller's responsibility to not start them together to avoid congestion.
     """
 
     # A NotifyingQueue is required to implement cancelability, otherwise the
@@ -288,7 +293,7 @@ def healthcheck(
         nat_invitation_timeout,
         ping_nonce=0):
 
-    """ Sends a periodical Ping to `receiver_address` to check it's health. """
+    """ Sends a periodical Ping to `receiver_address` to check its health. """
 
     # The state of the node is unknown, the events are set to allow the tasks
     # to do work.
@@ -447,7 +452,7 @@ class RaidenProtocol(object):
 
     def get_health_events(self, receiver_address):
         """ Starts a healthcheck taks for `receiver_address` and returns a
-        HealthEvents with locks to react on it's current state.
+        HealthEvents with locks to react on its current state.
         """
         if receiver_address not in self.addresses_events:
             self.start_health_check(
@@ -536,7 +541,7 @@ class RaidenProtocol(object):
             raise ValueError('Do not use send for Ack messages')
 
         # Messages that are not unique per receiver can result in hash
-        # colision, e.g. Secret messages. The hash collision has the undesired
+        # collision, e.g. Secret messages. The hash collision has the undesired
         # effect of aborting message resubmission once /one/ of the nodes
         # replied with an Ack, adding the receiver address into the echohash to
         # avoid these collisions.
@@ -548,9 +553,7 @@ class RaidenProtocol(object):
                 'message size exceeds the maximum {}'.format(UDP_MAX_MESSAGE_SIZE)
             )
 
-        # All messages must be ordered, but only on a per channel basis, since
-        # each channel correspond to a single token address this with the
-        # partner address gives an unique queue name.
+        # All messages must be ordered, but only on a per channel basis.
         token_address = getattr(message, 'token', '')
 
         # Ignore duplicated messages
