@@ -65,7 +65,7 @@ class ChannelExternalState(object):
     def set_opened(self, block_number):
         if self._opened_block != 0:
             raise RuntimeError(
-                'channel is already open on different block %s %s'
+                'channel is already open on different block prior:%s new:%s'
                 % (self._opened_block, block_number)
             )
 

@@ -235,16 +235,17 @@ class RaidenService(object):
             )
 
             if path.exists(self.channels_serialization_path):
-                restored_channels = list()
+                serialized_channels = list()
 
                 with open(self.channels_serialization_path, 'r') as handler:
                     try:
                         while True:
-                            restored_channels.append(pickle.load(handler))
+                            serialized_channels.append(pickle.load(handler))
                     except EOFError:
                         pass
 
-                map(self.restore_channel, restored_channels)
+                for channel in serialized_channels:
+                    self.restore_channel(channel)
 
             if path.exists(self.channels_queue_path):
                 restored_queues = list()
