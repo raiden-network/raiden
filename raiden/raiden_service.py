@@ -576,7 +576,7 @@ class RaidenService(object):
             )
         )
 
-        leave_greenlets = self.leave_all_token_networks_async()
+        leaving_greenlet = self.leave_all_token_networks_async()
         # using the un-cached block number here
         last_block = self.chain.block_number()
 
@@ -612,10 +612,7 @@ class RaidenService(object):
                     )
                 )
 
-        gevent.wait(
-            leave_greenlets,
-            timeout=blocks_to_wait() * self.chain.estimate_blocktime() * 1.5
-        )
+            leaving_greenlet.wait(timeout=blocks_to_wait() * self.chain.estimate_blocktime() * 1.5)
 
         if any(channel.state != CHANNEL_STATE_SETTLED for channel in all_channels):
             log.error(

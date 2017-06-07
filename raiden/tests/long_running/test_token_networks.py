@@ -54,11 +54,9 @@ def test_leaving(
         )
     )
 
-    leaving_async = list(
-        itertools.chain.from_iterable(
-            app.raiden.leave_all_token_networks_async() for app in raiden_network[1:]
-        )
-    )
+    leaving_async = [
+        app.raiden.leave_all_token_networks_async() for app in raiden_network[1:]
+    ]
 
     with gevent.timeout.Timeout(30):
         # tester needs manual block progress
