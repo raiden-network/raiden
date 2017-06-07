@@ -172,7 +172,8 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     })
 
     netting_channel0 = app0.raiden.chain.netting_channel(netcontract_address)
-    gevent.sleep(events_poll_timeout)
+
+    gevent.sleep(events_poll_timeout * 2)
 
     # channel is created but not opened and without funds
     assert len(app0.raiden.channelgraphs[token_address].address_channel) == 1
