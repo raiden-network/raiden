@@ -277,11 +277,10 @@ class BlockChainService(object):
         else:
             interval = last_block_number - oldest
         assert interval > 0
-        delta = (
-            int(self.get_block_header(last_block_number)['timestamp'], 16) -
-            int(self.get_block_header(last_block_number - interval)['timestamp'], 16)
-        )
-        return delta / interval
+        last_timestamp = int(self.get_block_header(last_block_number)['timestamp'], 16)
+        first_timestamp = int(self.get_block_header(last_block_number - interval)['timestamp'], 16)
+        delta = last_timestamp - first_timestamp
+        return float(delta) / interval
 
     def get_block_header(self, block_number):
         block_number = block_tag_encoder(block_number)
