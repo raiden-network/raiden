@@ -60,16 +60,6 @@ class RaidenAPI(object):
 
         raise ValueError("Channel not found")
 
-    def create_default_identifier(self, target, token_address):
-        """
-        The default message identifier value is the first 8 bytes of the sha3 of:
-            - Our Address
-            - Our target address
-            - The token address
-            - A random 8 byte number for uniqueness
-        """
-        return self.raiden.create_default_identifier(target, token_address)
-
     def connect_token_network(
         self,
         token_address,

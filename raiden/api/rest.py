@@ -40,6 +40,9 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
+from raiden.raiden_service import (
+    create_default_identifier,
+)
 from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
 from raiden.utils import channel_to_api_dict
 
@@ -299,10 +302,7 @@ class RestAPI(object):
     def initiate_transfer(self, token_address, target_address, amount, identifier):
 
         if identifier is None:
-            identifier = self.raiden_api.create_default_identifier(
-                target_address,
-                token_address
-            )
+            identifier = create_default_identifier()
 
         try:
             self.raiden_api.transfer(
