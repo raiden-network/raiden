@@ -406,6 +406,15 @@ class RaidenAPI(object):
 
             return all_channels
 
+    def get_node_network_state(self, node_address):
+        """ Returns the currently network status of `node_address`. """
+        return self.raiden.protocol.nodeaddresses_networkstatuses[node_address]
+
+    def start_health_check_for(self, node_address):
+        """ Returns the currently network status of `node_address`. """
+        self.raiden.start_health_check_for(node_address)
+        return self.raiden.protocol.nodeaddresses_networkstatuses[node_address]
+
     def get_tokens_list(self):
         """Returns a list of tokens the node knows about"""
         tokens_list = list(self.raiden.channelgraphs.iterkeys())

@@ -102,6 +102,7 @@ from raiden.exceptions import (
     InvalidAddress,
 )
 from raiden.network.channelgraph import (
+    get_best_routes,
     channel_to_routestate,
     route_to_routestate,
     ChannelGraph,
@@ -290,6 +291,11 @@ class RaidenService(object):
 
             if channel:
                 channel.network_state = network_state
+
+    def start_health_check_for(self, node_address):
+        # TODO: recover ping nonce
+        ping_nonce = 0
+        self.protocol.start_health_check(node_address, ping_nonce)
 
     def get_block_number(self):
         return self._blocknumber
@@ -918,7 +924,9 @@ class RaidenService(object):
     def start_mediated_transfer(self, token_address, amount, identifier, target):
         # pylint: disable=too-many-locals
         graph = self.channelgraphs[token_address]
-        routes = graph.get_best_routes(
+        routes = get_best_routes(
+            graph,
+            self.protocol.nodeaddresses_networkstatuses,
             self.address,
             target,
             amount,
@@ -991,7 +999,9 @@ class RaidenService(object):
         target = message.target
         token = message.token
         graph = self.channelgraphs[token]
-        routes = graph.get_best_routes(
+        routes = get_best_routes(
+            graph,
+            self.protocol.nodeaddresses_networkstatuses,
             self.address,
             target,
             amount,

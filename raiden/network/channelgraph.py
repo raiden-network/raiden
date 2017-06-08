@@ -12,6 +12,8 @@ from raiden.transfer.state import (
 )
 from raiden.channel.netting_channel import (
     Channel,
+)
+from raiden.network.protocol import (
     NODE_NETWORK_UNKNOWN,
     NODE_NETWORK_REACHABLE,
 )
@@ -95,6 +97,86 @@ def channel_to_routestate(channel, node_address):
     return state
 
 
+def get_best_routes(
+        channel_graph,
+        nodeaddresses_statuses,
+        our_address,
+        target_address,
+        amount,
+        lock_timeout):
+
+    """ Yield a two-tuple (path, channel) that can be used to mediate the
+    transfer. The result is ordered from the best to worst path.
+    """
+    available_paths = channel_graph.get_shortest_paths(
+        our_address,
+        target_address,
+    )
+
+    # XXX: consider using multiple channels for a single transfer. Useful
+    # for cases were the `amount` is larger than what is available
+    # individually in any of the channels.
+    #
+    # One possible approach is to _not_ filter these channels based on the
+    # distributable amount, but to sort them based on available balance and
+    # let the task use as many as required to finish the transfer.
+
+    online_nodes = list()
+    unknown_nodes = list()
+    for path in available_paths:
+        partner = path[1]
+        channel = channel_graph.partneraddress_channel[partner]
+
+        if not channel.can_transfer:
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'channel %s - %s is closed or has zero funding, ignoring',
+                    pex(path[0]),
+                    pex(path[1]),
+                )
+
+            continue
+
+        if amount > channel.distributable:
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'channel %s - %s doesnt have enough funds [%s], ignoring',
+                    pex(path[0]),
+                    pex(path[1]),
+                    amount,
+                )
+            continue
+
+        if lock_timeout:
+            # Our partner won't accept a lock timeout smaller than reveal
+            # timeout. Doing a best effort guess and using the local reveal
+            # timeout as an estimation of the remote reveal_timeout.
+            valid_timeout = channel.reveal_timeout <= lock_timeout
+
+            if not valid_timeout and log.isEnabledFor(logging.INFO):
+                log.info(
+                    'lock_expiration is too small, channel/path cannot be used',
+                    lock_timeout=lock_timeout,
+                    reveal_timeout=channel.reveal_timeout,
+                    settle_timeout=channel.settle_timeout,
+                    nodeid=pex(path[0]),
+                    partner=pex(path[1]),
+                )
+
+            if not valid_timeout:
+                continue
+
+        network_state = nodeaddresses_statuses[channel.partner_state.address]
+
+        if network_state == NODE_NETWORK_REACHABLE:
+            online_nodes.append(Route(path, channel))
+
+        elif network_state == NODE_NETWORK_UNKNOWN:
+            unknown_nodes.append(Route(path, channel))
+
+    return online_nodes + unknown_nodes
+
+
 class ChannelGraph(object):
     """ Has Graph based on the channels and can find path between participants. """
 
@@ -175,81 +257,6 @@ class ChannelGraph(object):
             for path in all_paths.values()
             if len(path) == num_hops + 1
         ]
-
-    def get_best_routes(self, our_address, target_address, amount, lock_timeout=None):
-        """ Yield a two-tuple (path, channel) that can be used to mediate the
-        transfer. The result is ordered from the best to worst path.
-        """
-        available_paths = self.get_shortest_paths(
-            our_address,
-            target_address,
-        )
-
-        # XXX: consider using multiple channels for a single transfer. Useful
-        # for cases were the `amount` is larger than what is available
-        # individually in any of the channels.
-        #
-        # One possible approach is to _not_ filter these channels based on the
-        # distributable amount, but to sort them based on available balance and
-        # let the task use as many as required to finish the transfer.
-
-        online_nodes = list()
-        unknown_nodes = list()
-        for path in available_paths:
-            partner = path[1]
-            channel = self.partneraddress_channel[partner]
-
-            if not channel.can_transfer:
-                if log.isEnabledFor(logging.INFO):
-                    log.info(
-                        'channel %s - %s is closed or has zero funding, ignoring',
-                        pex(path[0]),
-                        pex(path[1]),
-                    )
-
-                continue
-
-            # we can't intermediate the transfer if we don't have enough funds
-            if amount > channel.distributable:
-                if log.isEnabledFor(logging.INFO):
-                    log.info(
-                        'channel %s - %s doesnt have enough funds [%s], ignoring',
-                        pex(path[0]),
-                        pex(path[1]),
-                        amount,
-                    )
-                continue
-
-            if lock_timeout:
-                # Our partner wont accept a lock timeout that:
-                # - is larger than the settle timeout, otherwise the lock's
-                #   secret could be released /after/ the channel is settled.
-                # - is smaller than the reveal timeout, because that is the
-                #   minimum number of blocks required by the partner to learn the
-                #   secret.
-                valid_timeout = channel.reveal_timeout <= lock_timeout <= channel.settle_timeout
-
-                if not valid_timeout and log.isEnabledFor(logging.INFO):
-                    log.info(
-                        'lock_expiration is too large, channel/path cannot be used',
-                        lock_timeout=lock_timeout,
-                        reveal_timeout=channel.reveal_timeout,
-                        settle_timeout=channel.settle_timeout,
-                        nodeid=pex(path[0]),
-                        partner=pex(path[1]),
-                    )
-
-                # do not try the route since we know the transfer will be rejected.
-                if not valid_timeout:
-                    continue
-
-            if channel.network_state == NODE_NETWORK_REACHABLE:
-                online_nodes.append(Route(path, channel))
-
-            if channel.network_state == NODE_NETWORK_UNKNOWN:
-                unknown_nodes.append(Route(path, channel))
-
-        return online_nodes + unknown_nodes
 
     def has_path(self, source_address, target_address):
         """ True if there is a connecting path regardless of the number of hops. """

@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
 import random
-from collections import namedtuple
+from collections import (
+    namedtuple,
+    defaultdict,
+)
 from itertools import repeat
 
 import cachetools
@@ -29,11 +32,6 @@ from raiden.constants import (
 from raiden.settings import (
     CACHE_TTL,
 )
-from raiden.channel.netting_channel import (
-    NODE_NETWORK_UNKNOWN,
-    NODE_NETWORK_UNREACHABLE,
-    NODE_NETWORK_REACHABLE,
-)
 from raiden.messages import decode, Ack, Ping, SignedMessage
 from raiden.utils import isaddress, sha3, pex
 
@@ -50,6 +48,10 @@ HealthEvents = namedtuple('HealthEvents', (
     'event_healthy',
     'event_unhealthy',
 ))
+
+NODE_NETWORK_UNKNOWN = 'unknown'
+NODE_NETWORK_UNREACHABLE = 'unreachable'
+NODE_NETWORK_REACHABLE = 'reachable'
 
 # GOALS:
 # - Each netting channel must have the messages processed in-order, the
@@ -421,6 +423,7 @@ class RaidenProtocol(object):
         self.channel_queue = dict()  # TODO: Change keys to the channel address
         self.greenlets = list()
         self.addresses_events = dict()
+        self.nodeaddresses_networkstatuses = defaultdict(lambda: NODE_NETWORK_UNKNOWN)
 
         # TODO: remove old ACKs from the dict to free memory
         # The Ack for a processed message, used to avoid re-processing a known
@@ -637,10 +640,7 @@ class RaidenProtocol(object):
         return async_result
 
     def set_node_network_state(self, node_address, node_state):
-        self.raiden.set_node_network_state(
-            node_address,
-            node_state,
-        )
+        self.nodeaddresses_networkstatuses[node_address] = node_state
 
     def receive(self, data):
         if len(data) > UDP_MAX_MESSAGE_SIZE:
