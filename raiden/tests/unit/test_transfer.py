@@ -484,11 +484,7 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
 
     # and now send one more direct transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
-    identifier = create_default_identifier(
-        app0.raiden.address,
-        graph0.token_address,
-        app1.raiden.address,
-    )
+    identifier = create_default_identifier()
     direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=1,
@@ -533,11 +529,7 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     # an out-of-order/resent message that arrives late
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
-    identifier = create_default_identifier(
-        alice_app.raiden.address,
-        graph.token_address,
-        charlie_address,
-    )
+    identifier = create_default_identifier()
     mediated_transfer = MediatedTransfer(
         identifier=identifier,
         nonce=1,
@@ -583,11 +575,7 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     # an out-of-order/resent message that arrives late
     locksroot = HASH
     lock = Lock(amount, 1, locksroot)
-    identifier = create_default_identifier(
-        alice_app.raiden.address,
-        graph.token_address,
-        charlie_address,
-    )
+    identifier = create_default_identifier()
     mediated_transfer = MediatedTransfer(
         identifier=identifier,
         nonce=1,
@@ -643,11 +631,7 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     )
 
     # and now send one more direct transfer with a mistaken token address
-    identifier = create_default_identifier(
-        app0.raiden.address,
-        graph0.token_address,
-        app1.raiden.address,
-    )
+    identifier = create_default_identifier()
     direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=2,
@@ -694,11 +678,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     )
 
     # and now send one more direct transfer with the locksroot not set correctly
-    identifier = create_default_identifier(
-        app0.raiden.address,
-        graph0.token_address,
-        app1.raiden.address,
-    )
+    identifier = create_default_identifier()
     direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=2,

@@ -129,21 +129,9 @@ from raiden.utils import (
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def create_default_identifier(node_address, token_address, target):
-    """
-    The default message identifier value is the first 8 bytes of the sha3 of:
-        - Our Address
-        - Our target address
-        - The token address
-        - A random 8 byte number for uniqueness
-    """
-    hash_ = sha3('{}{}{}{}'.format(
-        node_address,
-        target,
-        token_address,
-        random.randint(0, UINT64_MAX)
-    ))
-    return int(hash_[0:8].encode('hex'), 16)
+def create_default_identifier():
+    """ Generates a random identifier. """
+    return random.randint(0, UINT64_MAX)
 
 
 class RandomSecretGenerator(object):  # pylint: disable=too-few-public-methods
@@ -832,7 +820,7 @@ class RaidenService(object):
         graph = self.channelgraphs[token_address]
 
         if identifier is None:
-            identifier = create_default_identifier(self.address, token_address, target)
+            identifier = create_default_identifier()
 
         direct_channel = graph.partneraddress_channel.get(target)
         if direct_channel:
@@ -941,7 +929,9 @@ class RaidenService(object):
 
         self.protocol.start_health_check(target, ping_nonce=0)
 
-        identifier = create_default_identifier(self.address, token_address, target)
+        if identifier is None:
+            identifier = create_default_identifier()
+
         route_state = RoutesState(available_routes)
         our_address = self.address
         block_number = self.get_block_number()
