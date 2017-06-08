@@ -33,7 +33,7 @@ from raiden.tests.utils.network import CHAIN
 from raiden.utils import pex, sha3, privatekey_to_address
 from raiden.raiden_service import create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block
-from raiden.channel.netting_channel import (
+from raiden.network.protocol import (
     NODE_NETWORK_UNREACHABLE,
     NODE_NETWORK_UNKNOWN,
 )
@@ -359,16 +359,14 @@ def test_healthcheck_with_bad_peer(raiden_network, nat_keepalive_retries, nat_ke
         ping_nonce=0,
     )
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    partner_channel = graph0.partneraddress_channel[app1.raiden.address]
-
-    assert partner_channel.network_state == NODE_NETWORK_UNKNOWN
+    statuses = app0.raiden.protocol.nodeaddresses_networkstatuses
+    assert statuses[app1.raiden.address] == NODE_NETWORK_UNKNOWN
 
     gevent.sleep(
         nat_keepalive_retries * nat_keepalive_timeout + 0.5
     )
 
-    assert partner_channel.network_state == NODE_NETWORK_UNREACHABLE
+    assert statuses[app1.raiden.address] == NODE_NETWORK_UNREACHABLE
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])

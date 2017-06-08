@@ -9,6 +9,9 @@ from gevent.queue import Empty
 from ethereum import slogging
 from ethereum.utils import sha3
 
+from raiden.network.channelgraph import (
+    get_best_routes,
+)
 from raiden.tasks import Task
 from raiden.messages import (
     MediatedTransfer,
@@ -319,7 +322,9 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
         from_graph = raiden.channelgraphs[from_token]
         to_graph = raiden.channelgraphs[to_token]
 
-        from_routes = from_graph.get_best_routes(
+        from_routes = get_best_routes(
+            from_graph,
+            raiden.protocol.nodeaddresses_networkstatuses,
             raiden.address,
             to_nodeaddress,
             from_amount,
@@ -595,7 +600,9 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
 
         # Note: taker may only try different routes if a RefundTransfer is
         # received, because the maker is the node controlling the secret
-        available_routes = to_graph.get_best_routes(
+        available_routes = get_best_routes(
+            to_graph,
+            raiden.protocol.nodeaddresses_networkstatuses,
             raiden.address,
             maker_address,
             maker_paying_transfer.lock.amount,
