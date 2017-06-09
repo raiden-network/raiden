@@ -2,6 +2,9 @@
 from ethereum import tester
 from ethereum.utils import decode_hex
 
+from raiden.constants import (
+    NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+)
 from raiden.blockchain.abi import (
     CHANNEL_MANAGER_ABI,
     NETTING_CHANNEL_ABI,
@@ -161,6 +164,11 @@ def new_channelmanager(our_key, tester_state, log_listener, tester_registry, tes
 
 def new_nettingcontract(our_key, partner_key, tester_state, log_listener,
                         channelmanager, settle_timeout):
+
+    if settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
+        raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
+            NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+        ))
 
     netting_channel_address0_hex = channelmanager.newChannel(
         privatekey_to_address(partner_key),

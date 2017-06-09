@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=redefined-outer-name
+import os
 from itertools import count
 
 import pytest
 import psutil
-import os
 from ethereum.utils import sha3
 
 from raiden.settings import (
