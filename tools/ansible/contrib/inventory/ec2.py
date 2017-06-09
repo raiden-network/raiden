@@ -135,7 +135,7 @@ from ansible.module_utils import ec2 as ec2_utils
 
 HAS_BOTO3 = False
 try:
-    import boto3
+    import boto3  # NOQA
     HAS_BOTO3 = True
 except ImportError:
     pass
@@ -152,7 +152,7 @@ except ImportError:
 class Ec2Inventory(object):
 
     def _empty_inventory(self):
-        return {"_meta" : {"hostvars" : {}}}
+        return {"_meta": {"hostvars": {}}}
 
     def __init__(self):
         ''' Main execution path '''
@@ -199,7 +199,6 @@ class Ec2Inventory(object):
 
         print(data_to_print)
 
-
     def is_cache_valid(self):
         ''' Determines if the cache files have expired, or if it is still valid '''
 
@@ -212,7 +211,6 @@ class Ec2Inventory(object):
 
         return False
 
-
     def read_settings(self):
         ''' Reads the settings from the ec2.ini file '''
         if six.PY3:
@@ -220,7 +218,8 @@ class Ec2Inventory(object):
         else:
             config = configparser.SafeConfigParser()
         ec2_default_ini_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'ec2.ini')
-        ec2_ini_path = os.path.expanduser(os.path.expandvars(os.environ.get('EC2_INI_PATH', ec2_default_ini_path)))
+        ec2_ini_path = os.environ.get('EC2_INI_PATH', ec2_default_ini_path)
+        ec2_ini_path = os.path.expanduser(os.path.expandvars(ec2_ini_path))
         config.read(ec2_ini_path)
 
         # is eucalyptus?
@@ -237,7 +236,10 @@ class Ec2Inventory(object):
         configRegions_exclude = config.get('ec2', 'regions_exclude')
         if (configRegions == 'all'):
             if self.eucalyptus_host:
-                self.regions.append(boto.connect_euca(host=self.eucalyptus_host).region.name, **self.credentials)
+                self.regions.append(
+                    boto.connect_euca(host=self.eucalyptus_host).region.name,
+                    **self.credentials
+                )
             else:
                 for regionInfo in ec2.regions():
                     if regionInfo.name not in configRegions_exclude:
@@ -305,13 +307,13 @@ class Ec2Inventory(object):
         if self.all_instances:
             self.ec2_instance_states = ec2_valid_instance_states
         elif config.has_option('ec2', 'instance_states'):
-          for instance_state in config.get('ec2', 'instance_states').split(','):
-            instance_state = instance_state.strip()
-            if instance_state not in ec2_valid_instance_states:
-              continue
-            self.ec2_instance_states.append(instance_state)
+            for instance_state in config.get('ec2', 'instance_states').split(','):
+                instance_state = instance_state.strip()
+                if instance_state not in ec2_valid_instance_states:
+                    continue
+                self.ec2_instance_states.append(instance_state)
         else:
-          self.ec2_instance_states = ['running']
+            self.ec2_instance_states = ['running']
 
         # Return all RDS instances? (if RDS is enabled)
         if config.has_option('ec2', 'all_rds_instances') and self.rds_enabled:
@@ -320,8 +322,12 @@ class Ec2Inventory(object):
             self.all_rds_instances = False
 
         # Return all ElastiCache replication groups? (if ElastiCache is enabled)
-        if config.has_option('ec2', 'all_elasticache_replication_groups') and self.elasticache_enabled:
-            self.all_elasticache_replication_groups = config.getboolean('ec2', 'all_elasticache_replication_groups')
+        if (config.has_option('ec2', 'all_elasticache_replication_groups') and
+                self.elasticache_enabled):
+            self.all_elasticache_replication_groups = config.getboolean(
+                'ec2',
+                'all_elasticache_replication_groups',
+            )
         else:
             self.all_elasticache_replication_groups = False
 
@@ -438,7 +444,7 @@ class Ec2Inventory(object):
 
         # Do we need to exclude hosts that match a pattern?
         try:
-            pattern_exclude = config.get('ec2', 'pattern_exclude');
+            pattern_exclude = config.get('ec2', 'pattern_exclude')
             if pattern_exclude and len(pattern_exclude) > 0:
                 self.pattern_exclude = re.compile(pattern_exclude)
             else:
@@ -464,17 +470,32 @@ class Ec2Inventory(object):
     def parse_cli_args(self):
         ''' Command line argument processing '''
 
-        parser = argparse.ArgumentParser(description='Produce an Ansible Inventory file based on EC2')
-        parser.add_argument('--list', action='store_true', default=True,
-                           help='List instances (default: True)')
-        parser.add_argument('--host', action='store',
-                           help='Get all the variables about a specific instance')
-        parser.add_argument('--refresh-cache', action='store_true', default=False,
-                           help='Force refresh of cache by making API requests to EC2 (default: False - use cache files)')
-        parser.add_argument('--profile', '--boto-profile', action='store', dest='boto_profile',
-                           help='Use boto profile for connections to EC2')
+        parser = argparse.ArgumentParser(
+            description='Produce an Ansible Inventory file based on EC2',
+        )
+        parser.add_argument(
+            '--list', action='store_true', default=True, help='List instances (default: True)',
+        )
+        parser.add_argument(
+            '--host', action='store', help='Get all the variables about a specific instance',
+        )
+        parser.add_argument(
+            '--refresh-cache',
+            action='store_true',
+            default=False,
+            help=(
+                'Force refresh of cache by making API requests to EC2 '
+                '(default: False - use cache files)'
+            ),
+        )
+        parser.add_argument(
+            '--profile',
+            '--boto-profile',
+            action='store',
+            dest='boto_profile',
+            help='Use boto profile for connections to EC2',
+        )
         self.args = parser.parse_args()
-
 
     def do_api_calls_update_cache(self):
         ''' Do API calls to each region, and save data in cache files '''
@@ -520,9 +541,13 @@ class Ec2Inventory(object):
             self.boto_fix_security_token_in_profile(connect_args)
 
         conn = module.connect_to_region(region, **connect_args)
-        # connect_to_region will fail "silently" by returning None if the region name is wrong or not supported
+        # connect_to_region will fail "silently" by returning None if the
+        # region name is wrong or not supported.
         if conn is None:
-            self.fail_with_error("region name: %s likely not supported, or AWS is down.  connection to region failed." % region)
+            self.fail_with_error(
+                "region name: %s likely not supported, or AWS is down. "
+                "connection to region failed." % region
+            )
         return conn
 
     def get_instances_by_region(self, region):
@@ -534,13 +559,17 @@ class Ec2Inventory(object):
             reservations = []
             if self.ec2_instance_filters:
                 for filter_key, filter_values in self.ec2_instance_filters.items():
-                    reservations.extend(conn.get_all_instances(filters = { filter_key : filter_values }))
+                    reservations.extend(conn.get_all_instances(
+                        filters={filter_key: filter_values}
+                    ))
             else:
                 reservations = conn.get_all_instances()
 
             # Pull the tags back in a second step
-            # AWS are on record as saying that the tags fetched in the first `get_all_instances` request are not
-            # reliable and may be missing, and the only way to guarantee they are there is by calling `get_all_tags`
+            # AWS are on record as saying that the tags fetched in the first
+            # `get_all_instances` request are not reliable and may be missing,
+            # and the only way to guarantee they are there is by calling
+            # `get_all_tags`.
             instance_ids = []
             for reservation in reservations:
                 instance_ids.extend([instance.id for instance in reservation.instances])
@@ -548,7 +577,10 @@ class Ec2Inventory(object):
             max_filter_value = 199
             tags = []
             for i in range(0, len(instance_ids), max_filter_value):
-                tags.extend(conn.get_all_tags(filters={'resource-type': 'instance', 'resource-id': instance_ids[i:i+max_filter_value]}))
+                tags.extend(conn.get_all_tags(filters={
+                    'resource-type': 'instance',
+                    'resource-id': instance_ids[i:i + max_filter_value],
+                }))
 
             tags_by_instance_id = defaultdict(dict)
             for tag in tags:
@@ -593,9 +625,10 @@ class Ec2Inventory(object):
 
     def include_rds_clusters_by_region(self, region):
         if not HAS_BOTO3:
-            self.fail_with_error("Working with RDS clusters requires boto3 - please install boto3 and try again",
-                                 "getting RDS clusters")
-
+            self.fail_with_error(
+                "Working with RDS clusters requires boto3 - please install boto3 and try again",
+                "getting RDS clusters",
+            )
         client = ec2_utils.boto3_inventory_conn('client', 'rds', region, **self.credentials)
 
         marker, clusters = '', []
@@ -621,25 +654,31 @@ class Ec2Inventory(object):
 
             try:
                 # arn:aws:rds:<region>:<account number>:<resourcetype>:<name>
-                tags = client.list_tags_for_resource(
-                    ResourceName='arn:aws:rds:' + region + ':' + account_id + ':cluster:' + c['DBClusterIdentifier'])
+                tags = client.list_tags_for_resource(ResourceName=(
+                    'arn:aws:rds:%s:%s:cluster:%s'
+                    % (region, account_id, c['DBClusterIdentifier'])
+                ))
                 c['Tags'] = tags['TagList']
 
                 if self.ec2_instance_filters:
                     for filter_key, filter_values in self.ec2_instance_filters.items():
                         # get AWS tag key e.g. tag:env will be 'env'
                         tag_name = filter_key.split(":", 1)[1]
-                        # Filter values is a list (if you put multiple values for the same tag name)
-                        matches_filter = any(d['Key'] == tag_name and d['Value'] in filter_values for d in c['Tags'])
-
+                        # Filter values is a list (if you put multiple values
+                        # for the same tag name).
+                        matches_filter = any(
+                            d['Key'] == tag_name and d['Value'] in filter_values
+                            for d in c['Tags']
+                        )
                         if matches_filter:
                             # it matches a filter, so stop looking for further matches
                             break
 
             except Exception as e:
                 if e.message.find('DBInstanceNotFound') >= 0:
-                    # AWS RDS bug (2016-01-06) means deletion does not fully complete and leave an 'empty' cluster.
-                    # Ignore errors when trying to find tags for these
+                    # AWS RDS bug (2016-01-06) means deletion does not fully
+                    # complete and leave an 'empty' cluster. Ignore errors when
+                    # trying to find tags for these.
                     pass
 
             # ignore empty clusters caused by AWS bug
@@ -677,8 +716,10 @@ class Ec2Inventory(object):
             # Boto also doesn't provide wrapper classes to CacheClusters or
             # CacheNodes. Because of that wo can't make use of the get_list
             # method in the AWSQueryConnection. Let's do the work manually
-            clusters = response['DescribeCacheClustersResponse']['DescribeCacheClustersResult']['CacheClusters']
-
+            clusters = (
+                response['DescribeCacheClustersResponse']['DescribeCacheClustersResult']
+                ['CacheClusters']
+            )
         except KeyError as e:
             error = "ElastiCache query to AWS failed (unexpected format)."
             self.fail_with_error(error, 'getting ElastiCache clusters')
@@ -711,7 +752,10 @@ class Ec2Inventory(object):
             # Boto also doesn't provide wrapper classes to ReplicationGroups
             # Because of that wo can't make use of the get_list method in the
             # AWSQueryConnection. Let's do the work manually
-            replication_groups = response['DescribeReplicationGroupsResponse']['DescribeReplicationGroupsResult']['ReplicationGroups']
+            replication_groups = (
+                response['DescribeReplicationGroupsResponse']['DescribeReplicationGroupsResult']
+                ['ReplicationGroups']
+            )
 
         except KeyError as e:
             error = "ElastiCache [Replication Groups] query to AWS failed (unexpected format)."
@@ -724,16 +768,27 @@ class Ec2Inventory(object):
         ''' create an informative error message if there is an issue authenticating'''
         errors = ["Authentication error retrieving ec2 inventory."]
         if None in [os.environ.get('AWS_ACCESS_KEY_ID'), os.environ.get('AWS_SECRET_ACCESS_KEY')]:
-            errors.append(' - No AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY environment vars found')
+            errors.append(
+                ' - No AWS_ACCESS_KEY_ID or AWS_SECRET_ACCESS_KEY environment '
+                'vars found'
+            )
         else:
-            errors.append(' - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment vars found but may not be correct')
+            errors.append(
+                ' - AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment '
+                'vars found but may not be correct'
+            )
 
         boto_paths = ['/etc/boto.cfg', '~/.boto', '~/.aws/credentials']
         boto_config_found = list(p for p in boto_paths if os.path.isfile(os.path.expanduser(p)))
         if len(boto_config_found) > 0:
-            errors.append(" - Boto configs found at '%s', but the credentials contained may not be correct" % ', '.join(boto_config_found))
+            errors.append(
+                " - Boto configs found at '%s', but the credentials contained may not be correct"
+                % ', '.join(boto_config_found))
         else:
-            errors.append(" - No Boto config found at any expected location '%s'" % ', '.join(boto_paths))
+            errors.append(
+                " - No Boto config found at any expected location '%s'"
+                % ', '.join(boto_paths)
+            )
 
         return '\n'.join(errors)
 
@@ -763,7 +818,9 @@ class Ec2Inventory(object):
 
         # Select the best destination address
         if self.destination_format and self.destination_format_tags:
-            dest = self.destination_format.format(*[ getattr(instance, 'tags').get(tag, '') for tag in self.destination_format_tags ])
+            dest = self.destination_format.format(
+                *[getattr(instance, 'tags').get(tag, '') for tag in self.destination_format_tags]
+            )
         elif instance.subnet_id:
             dest = getattr(instance, self.vpc_destination_variable, None)
             if dest is None:
@@ -859,8 +916,9 @@ class Ec2Inventory(object):
                     if self.nested_groups:
                         self.push_group(self.inventory, 'security_groups', key)
             except AttributeError:
-                self.fail_with_error('\n'.join(['Package boto seems a bit older.',
-                                            'Please upgrade boto >= 2.3.0.']))
+                self.fail_with_error('\n'.join(
+                    ['Package boto seems a bit older.', 'Please upgrade boto >= 2.3.0.']
+                ))
 
         # Inventory: Group by tag keys
         if self.group_by_tag_keys:
@@ -898,9 +956,10 @@ class Ec2Inventory(object):
         # Global Tag: tag all EC2 instances
         self.push(self.inventory, 'ec2', hostname)
 
-        self.inventory["_meta"]["hostvars"][hostname] = self.get_host_info_dict_from_instance(instance)
+        self.inventory["_meta"]["hostvars"][hostname] = (
+            self.get_host_info_dict_from_instance(instance)
+        )
         self.inventory["_meta"]["hostvars"][hostname]['ansible_ssh_host'] = dest
-
 
     def add_rds_instance(self, instance, region):
         ''' Adds an RDS instance to the inventory and index, as long as it is
@@ -978,26 +1037,35 @@ class Ec2Inventory(object):
                         self.push_group(self.inventory, 'security_groups', key)
 
             except AttributeError:
-                self.fail_with_error('\n'.join(['Package boto seems a bit older.',
-                                            'Please upgrade boto >= 2.3.0.']))
-
+                self.fail_with_error('\n'.join(
+                    ['Package boto seems a bit older.', 'Please upgrade boto >= 2.3.0.']
+                ))
 
         # Inventory: Group by engine
         if self.group_by_rds_engine:
             self.push(self.inventory, self.to_safe("rds_" + instance.engine), hostname)
             if self.nested_groups:
-                self.push_group(self.inventory, 'rds_engines', self.to_safe("rds_" + instance.engine))
+                self.push_group(
+                    self.inventory,
+                    'rds_engines',
+                    self.to_safe('rds_' + instance.engine),
+                )
 
         # Inventory: Group by parameter group
         if self.group_by_rds_parameter_group:
-            self.push(self.inventory, self.to_safe("rds_parameter_group_" + instance.parameter_group.name), hostname)
+            rds_param_group_name = self.to_safe(
+                'rds_parameter_group_' + instance.parameter_group.name
+            )
+            self.push(self.inventory, rds_param_group_name, hostname)
             if self.nested_groups:
-                self.push_group(self.inventory, 'rds_parameter_groups', self.to_safe("rds_parameter_group_" + instance.parameter_group.name))
+                self.push_group(self.inventory, 'rds_parameter_groups', rds_param_group_name)
 
         # Global Tag: all RDS instances
         self.push(self.inventory, 'rds', hostname)
 
-        self.inventory["_meta"]["hostvars"][hostname] = self.get_host_info_dict_from_instance(instance)
+        self.inventory["_meta"]["hostvars"][hostname] = (
+            self.get_host_info_dict_from_instance(instance)
+        )
         self.inventory["_meta"]["hostvars"][hostname]['ansible_ssh_host'] = dest
 
     def add_elasticache_cluster(self, cluster, region):
@@ -1074,19 +1142,42 @@ class Ec2Inventory(object):
         if self.group_by_elasticache_engine and not is_redis:
             self.push(self.inventory, self.to_safe("elasticache_" + cluster['Engine']), dest)
             if self.nested_groups:
-                self.push_group(self.inventory, 'elasticache_engines', self.to_safe(cluster['Engine']))
+                self.push_group(
+                    self.inventory,
+                    'elasticache_engines',
+                    self.to_safe(cluster['Engine']),
+                )
 
         # Inventory: Group by parameter group
         if self.group_by_elasticache_parameter_group:
-            self.push(self.inventory, self.to_safe("elasticache_parameter_group_" + cluster['CacheParameterGroup']['CacheParameterGroupName']), dest)
+            cache_param_group_name = cluster['CacheParameterGroup']['CacheParameterGroupName']
+            self.push(
+                self.inventory,
+                self.to_safe('elasticache_parameter_group_' + cache_param_group_name),
+                dest,
+            )
             if self.nested_groups:
-                self.push_group(self.inventory, 'elasticache_parameter_groups', self.to_safe(cluster['CacheParameterGroup']['CacheParameterGroupName']))
+                self.push_group(
+                    self.inventory,
+                    'elasticache_parameter_groups',
+                    self.to_safe(cache_param_group_name),
+                )
 
         # Inventory: Group by replication group
-        if self.group_by_elasticache_replication_group and 'ReplicationGroupId' in cluster and cluster['ReplicationGroupId']:
-            self.push(self.inventory, self.to_safe("elasticache_replication_group_" + cluster['ReplicationGroupId']), dest)
+        if (self.group_by_elasticache_replication_group and
+                'ReplicationGroupId' in cluster and
+                cluster['ReplicationGroupId']):
+            self.push(
+                self.inventory,
+                self.to_safe("elasticache_replication_group_" + cluster['ReplicationGroupId']),
+                dest,
+            )
             if self.nested_groups:
-                self.push_group(self.inventory, 'elasticache_replication_groups', self.to_safe(cluster['ReplicationGroupId']))
+                self.push_group(
+                    self.inventory,
+                    'elasticache_replication_groups',
+                    self.to_safe(cluster['ReplicationGroupId']),
+                )
 
         # Global Tag: all ElastiCache clusters
         self.push(self.inventory, 'elasticache_clusters', cluster['CacheClusterId'])
@@ -1166,7 +1257,11 @@ class Ec2Inventory(object):
         if self.group_by_elasticache_engine:
             self.push(self.inventory, self.to_safe("elasticache_" + cluster['Engine']), dest)
             if self.nested_groups:
-                self.push_group(self.inventory, 'elasticache_engines', self.to_safe("elasticache_" + cluster['Engine']))
+                self.push_group(
+                    self.inventory,
+                    'elasticache_engines',
+                    self.to_safe("elasticache_" + cluster['Engine']),
+                )
 
         # Inventory: Group by parameter group (done at cluster level)
 
@@ -1174,7 +1269,11 @@ class Ec2Inventory(object):
 
         # Inventory: Group by ElastiCache Cluster
         if self.group_by_elasticache_cluster:
-            self.push(self.inventory, self.to_safe("elasticache_cluster_" + cluster['CacheClusterId']), dest)
+            self.push(
+                self.inventory,
+                self.to_safe("elasticache_cluster_" + cluster['CacheClusterId']),
+                dest,
+            )
 
         # Global Tag: all ElastiCache nodes
         self.push(self.inventory, 'elasticache_nodes', dest)
@@ -1190,7 +1289,8 @@ class Ec2Inventory(object):
         ''' Adds an ElastiCache replication group to the inventory and index '''
 
         # Only want available clusters unless all_elasticache_replication_groups is True
-        if not self.all_elasticache_replication_groups and replication_group['Status'] != 'available':
+        if (not self.all_elasticache_replication_groups and
+                replication_group['Status'] != 'available'):
             return
 
         # Select the best destination address (PrimaryEndpoint)
@@ -1207,7 +1307,11 @@ class Ec2Inventory(object):
         if self.group_by_instance_id:
             self.inventory[replication_group['ReplicationGroupId']] = [dest]
             if self.nested_groups:
-                self.push_group(self.inventory, 'instances', replication_group['ReplicationGroupId'])
+                self.push_group(
+                    self.inventory,
+                    'instances',
+                    replication_group['ReplicationGroupId'],
+                )
 
         # Inventory: Group by region
         if self.group_by_region:
@@ -1232,7 +1336,11 @@ class Ec2Inventory(object):
                 self.push_group(self.inventory, 'elasticache_engines', 'redis')
 
         # Global Tag: all ElastiCache clusters
-        self.push(self.inventory, 'elasticache_replication_groups', replication_group['ReplicationGroupId'])
+        self.push(
+            self.inventory,
+            'elasticache_replication_groups',
+            replication_group['ReplicationGroupId'],
+        )
 
         host_info = self.get_host_info_dict_from_describe_dict(replication_group)
 
@@ -1245,8 +1353,10 @@ class Ec2Inventory(object):
         r53_conn = route53.Route53Connection()
         all_zones = r53_conn.get_zones()
 
-        route53_zones = [ zone for zone in all_zones if zone.name[:-1]
-                          not in self.route53_excluded_zones ]
+        route53_zones = [
+            zone for zone in all_zones
+            if zone.name[:-1] not in self.route53_excluded_zones
+        ]
 
         self.route53_records = {}
 
@@ -1263,14 +1373,13 @@ class Ec2Inventory(object):
                     self.route53_records.setdefault(resource, set())
                     self.route53_records[resource].add(record_name)
 
-
     def get_instance_route53_names(self, instance):
         ''' Check if an instance is referenced in the records we have from
         Route53. If it is, return the list of domain names pointing to said
         instance. If nothing points to it, return an empty list. '''
-
-        instance_attributes = [ 'public_dns_name', 'private_dns_name',
-                                'ip_address', 'private_ip_address' ]
+        instance_attributes = [
+            'public_dns_name', 'private_dns_name', 'ip_address', 'private_ip_address',
+        ]
 
         name_list = set()
 
@@ -1292,7 +1401,8 @@ class Ec2Inventory(object):
             key = self.to_safe('ec2_' + key)
 
             # Handle complex types
-            # state/previous_state changed to properties in boto in https://github.com/boto/boto/commit/a23c379837f698212252720d2af8dec0325c9518
+            # state/previous_state changed to properties in boto in
+            # https://github.com/boto/boto/commit/a23c379837f698212252720d2af8dec0325c9518
             if key == 'ec2__state':
                 instance_vars['ec2_state'] = instance.state or ''
                 instance_vars['ec2_state_code'] = instance.state_code
@@ -1303,7 +1413,7 @@ class Ec2Inventory(object):
                 instance_vars[key] = value
             elif isinstance(value, six.string_types):
                 instance_vars[key] = value.strip()
-            elif type(value) == type(None):
+            elif value is None:
                 instance_vars[key] = ''
             elif key == 'ec2_region':
                 instance_vars[key] = value.name
@@ -1326,9 +1436,9 @@ class Ec2Inventory(object):
             else:
                 pass
                 # TODO Product codes if someone finds them useful
-                #print key
-                #print type(value)
-                #print value
+                # print key
+                # print type(value)
+                # print value
 
         return instance_vars
 
@@ -1363,17 +1473,16 @@ class Ec2Inventory(object):
             if key == 'ec2_node_groups' and value:
                 host_info['ec2_endpoint_address'] = value[0]['PrimaryEndpoint']['Address']
                 host_info['ec2_endpoint_port'] = value[0]['PrimaryEndpoint']['Port']
-                replica_count = 0
-                for node in value[0]['NodeGroupMembers']:
+                for key, node in enumerate(value[0]['NodeGroupMembers']):
+                    prefix = 'ec2_primary_cluster_'
                     if node['CurrentRole'] == 'primary':
-                        host_info['ec2_primary_cluster_address'] = node['ReadEndpoint']['Address']
-                        host_info['ec2_primary_cluster_port'] = node['ReadEndpoint']['Port']
-                        host_info['ec2_primary_cluster_id'] = node['CacheClusterId']
+                        host_info[prefix + 'address'] = node['ReadEndpoint']['Address']
+                        host_info[prefix + 'port'] = node['ReadEndpoint']['Port']
+                        host_info[prefix + 'id'] = node['CacheClusterId']
                     elif node['CurrentRole'] == 'replica':
-                        host_info['ec2_replica_cluster_address_'+ str(replica_count)] = node['ReadEndpoint']['Address']
-                        host_info['ec2_replica_cluster_port_'+ str(replica_count)] = node['ReadEndpoint']['Port']
-                        host_info['ec2_replica_cluster_id_'+ str(replica_count)] = node['CacheClusterId']
-                        replica_count += 1
+                        host_info[prefix + 'address_' + str(key)] = node['ReadEndpoint']['Address']
+                        host_info[prefix + 'port_' + str(key)] = node['ReadEndpoint']['Port']
+                        host_info[prefix + 'id_' + str(key)] = node['CacheClusterId']
 
             # Target: Redis Replication Groups
             if key == 'ec2_member_clusters' and value:
@@ -1381,7 +1490,9 @@ class Ec2Inventory(object):
 
             # Target: All Cache Clusters
             elif key == 'ec2_cache_parameter_group':
-                host_info["ec2_cache_node_ids_to_reboot"] = ','.join([str(i) for i in value['CacheNodeIdsToReboot']])
+                host_info["ec2_cache_node_ids_to_reboot"] = ','.join(
+                    [str(i) for i in value['CacheNodeIdsToReboot']]
+                )
                 host_info['ec2_cache_parameter_group_name'] = value['CacheParameterGroupName']
                 host_info['ec2_cache_parameter_apply_status'] = value['ParameterApplyStatus']
 
@@ -1408,7 +1519,7 @@ class Ec2Inventory(object):
 
             # Target: Everything
             # Replace None by an empty string
-            elif type(value) == type(None):
+            elif value is None:
                 host_info[key] = ''
 
             else:
@@ -1424,10 +1535,10 @@ class Ec2Inventory(object):
             # Need to load index from cache
             self.load_index_from_cache()
 
-        if not self.args.host in self.index:
+        if self.args.host not in self.index:
             # try updating the cache
             self.do_api_calls_update_cache()
-            if not self.args.host in self.index:
+            if self.args.host not in self.index:
                 # host might not exist anymore
                 return self.json_format_dict({}, True)
 
@@ -1458,23 +1569,18 @@ class Ec2Inventory(object):
     def get_inventory_from_cache(self):
         ''' Reads the inventory from the cache file and returns it as a JSON
         object '''
-
         cache = open(self.cache_path_cache, 'r')
         json_inventory = cache.read()
         return json_inventory
 
-
     def load_index_from_cache(self):
         ''' Reads the index from the cache file sets self.index '''
-
         cache = open(self.cache_path_index, 'r')
         json_index = cache.read()
         self.index = json.loads(json_index)
 
-
     def write_to_cache(self, data, filename):
         ''' Writes data in JSON format to a file '''
-
         json_data = self.json_format_dict(data, True)
         cache = open(filename, 'w')
         cache.write(json_data)
@@ -1485,7 +1591,10 @@ class Ec2Inventory(object):
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', temp).lower()
 
     def to_safe(self, word):
-        ''' Converts 'bad' characters in a string to underscores so they can be used as Ansible groups '''
+        '''
+        Converts 'bad' characters in a string to underscores so they can be
+        used as Ansible groups.
+        '''
         regex = "[^A-Za-z0-9\_"
         if not self.replace_dash_in_groups:
             regex += "\-"
