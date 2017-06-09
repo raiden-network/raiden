@@ -12,7 +12,10 @@ from ethereum.utils import encode_hex
 
 from coincurve import PrivateKey
 
-from raiden.constants import UINT64_MAX
+from raiden.constants import (
+    UINT64_MAX,
+    NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+)
 from raiden.blockchain.events import (
     get_relevant_proxies,
     PyethappBlockchainEvents,
@@ -140,6 +143,11 @@ class RaidenService(object):
     def __init__(self, chain, private_key_bin, transport, discovery, config):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
+
+        if config['settle_timeout'] < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
+            raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+            ))
 
         private_key = PrivateKey(private_key_bin)
         pubkey = private_key.public_key.format(compressed=False)

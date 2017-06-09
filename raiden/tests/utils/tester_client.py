@@ -10,6 +10,7 @@ from pyethapp.jsonrpc import address_decoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
 from raiden import messages
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
 from raiden.utils import (
     get_contract_path,
     isaddress,
@@ -488,6 +489,11 @@ class ChannelManagerTesterMock(object):
 
         if not isaddress(peer2):
             raise ValueError('The peer2 must be a valid address')
+
+        if settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
+            raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+            ))
 
         if privatekey_to_address(self.private_key) == peer1:
             other = peer2

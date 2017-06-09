@@ -20,6 +20,7 @@ from pyethapp.rpc_client import topic_encoder, JSONRPCClient, block_tag_encoder
 import requests
 
 from raiden import messages
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
     GAS_LIMIT,
@@ -735,6 +736,11 @@ class ChannelManager(object):
 
         if not isaddress(peer2):
             raise ValueError('The peer2 must be a valid address')
+
+        if settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
+            raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+            ))
 
         if privatekey_to_address(self.client.privkey) == peer1:
             other = peer2
