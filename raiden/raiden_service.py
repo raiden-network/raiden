@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
+import os
 import logging
 import random
 import itertools
@@ -130,8 +131,7 @@ def create_default_identifier(node_address, token_address, target):
 
 class RandomSecretGenerator(object):  # pylint: disable=too-few-public-methods
     def __next__(self):  # pylint: disable=no-self-use
-        secret = sha3(hex(random.getrandbits(256)))
-        return secret
+        return os.urandom(32)
 
     next = __next__
 
