@@ -19,11 +19,10 @@
       "testTsconfig": "tsconfig.spec.json",
       "prefix": "app",
       "styles": [
-        "../node_modules/font-awesome/css/font-awesome.min.css",
-        "../node_modules/@angular/material/prebuilt-themes/deeppurple-amber.css",
         "../node_modules/bootstrap/dist/css/bootstrap.min.css",
         "../node_modules/primeng/resources/primeng.min.css",
         "../node_modules/primeng/resources/themes/redmond/theme.css",
+        "../node_modules/font-awesome/css/font-awesome.min.css",
         "styles.css"
       ],
       "scripts": [

@@ -1,42 +1,37 @@
-<nav class="navbar navbar-default">
-  <div class="container-fluid">
-    <!-- Brand and toggle get grouped for better mobile display -->
-    <div class="navbar-header">
-      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
-        <span class="sr-only">Toggle navigation</span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-        <span class="icon-bar"></span>
-      </button>
-      <a class="navbar-brand" href="#">{{title}}</a>
-    </div>
+<div class="topnav" id="myTopnav">
+  <a>Raiden</a>
+  <a>{{raidenAddress}}</a>
+  <a>Participate Now</a>
+  <a href="javascript:void(0);" class="icon" onclick="myFunction()">&#9776;</a>
+</div>
+<div class="nav-side-menu">
+    <i class="fa fa-bars fa-2x toggle-btn" data-toggle="collapse" data-target="#menu-content"></i>
+    <div class="menu-list">
+        <ul id="menu-content" class="menu-content collapse out">
+            <li>
+                <a href="#">
+                    <i class="fa fa-dashboard fa-lg"></i>Home
+                </a>
+            </li>
+            <li>
+                <a routerLink='/channels' routerLinkActive="active">
+                  <i class="fa fa-user-plus fa-lg"></i>Channels
+                </a>
+            </li>
 
-    <!-- Collect the nav links, forms, and other content for toggling -->
-    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-      <ul class="nav navbar-nav">
-        <p class="navbar-text">{{raidenAddress}}</p>
-        <button type="button" class="btn btn-default navbar-btn">Participate Now</button>
-      </ul>
-
-    </div><!-- /.navbar-collapse -->
-  </div><!-- /.container-fluid -->
-</nav>
-
-<div class="container-fluid top10">
-  <div class="row">
-    <div class="col-md-8">
-      <p-accordion [multiple]="true">
-        <p-accordionTab header="Token Balances">
-            <app-token-network [channelsToken]="channeltable.channels"></app-token-network>
-        </p-accordionTab>
-        <p-accordionTab header="Channels">
-            <app-channel-table #channeltable></app-channel-table>
-        </p-accordionTab>
-        <app-userinteraction></app-userinteraction>
-      </p-accordion>
+            <li>
+                <a routerLink='/balances' routerLinkActive="active">
+                  <i class="fa fa-money fa-lg"></i>Balances
+                </a>
+            </li>
+        </ul>
     </div>
-    <div class="col-md-4">
-      <app-event-list></app-event-list>
+</div>
+<div class="container" id="main">
+    <div class="row">
+        <div class="col-md-12">
+          <router-outlet></router-outlet>
+          <!-- Routed views go here -->
+        </div>
     </div>
-  </div>
 </div>

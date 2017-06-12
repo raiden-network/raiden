@@ -3,10 +3,11 @@ import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpModule } from '@angular/http';
 import { DataTableModule, SharedModule, DataListModule, CarouselModule,
-ButtonModule, AccordionModule, GrowlModule, DialogModule } from 'primeng/primeng';
+ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule } from 'primeng/primeng';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule } from '@angular/material';
-
+import { MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule,
+MdMenuModule } from '@angular/material';
+import { RouterModule, Routes } from '@angular/router';
 import { AppComponent } from './app.component';
 import { ChannelTableComponent } from './components/channel-table/channel-table.component';
 import { EventListComponent } from './components/event-list/event-list.component';
@@ -19,6 +20,11 @@ import { SharedService } from './services/shared.service';
 import { RaidenConfig } from './services/raiden.config';
 import { environment } from '../environments/environment';
 
+const appRoutes: Routes = [
+  { path: 'channels', component: ChannelTableComponent },
+  { path: 'balances', component: TokenNetworkComponent }
+];
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -28,6 +34,7 @@ import { environment } from '../environments/environment';
     TokenNetworkComponent
   ],
   imports: [
+    RouterModule.forRoot(appRoutes),
     BrowserModule,
     FormsModule,
     HttpModule,
@@ -39,13 +46,17 @@ import { environment } from '../environments/environment';
     AccordionModule,
     GrowlModule,
     DialogModule,
+    SplitButtonModule,
     NoopAnimationsModule,
     MdTabsModule,
     MdInputModule,
     MdSelectModule,
     MdToolbarModule,
+    MdButtonModule,
+    MdMenuModule,
   ],
-  exports: [ MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule ],
+  exports: [ MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule,
+  MdMenuModule ],
   providers: [ RaidenConfig,
               {
                   provide: APP_INITIALIZER,
