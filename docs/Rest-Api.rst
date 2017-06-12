@@ -75,6 +75,27 @@ Endpoints
 
 Following are the available API endpoints with which you can interact with Raiden.
 
+Querying Information About Your Raiden Node
+===============================================
+
+Querying your address
+---------------------
+
+When raiden starts you choose an ethereum address which will also be your raiden address. You can query that address by making a ``GET`` request to the ``/api/<version>/address`` endpoint.
+
+Example Request
+^^^^^^^^^^^^^^^
+
+``GET /api/1/address``
+
+Example Response
+^^^^^^^^^^^^^^^^
+``200 OK`` and
+
+::
+
+    {"our_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"}
+
 Querying Information About Channels and Tokens
 ===============================================
 

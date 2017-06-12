@@ -7,6 +7,7 @@ from flask_restful import Api, abort
 from flask_cors import CORS
 from webargs.flaskparser import parser
 
+from pyethapp.jsonrpc import address_encoder
 from raiden.exceptions import (
     InvalidAddress,
     InvalidAmount,
@@ -22,6 +23,7 @@ from raiden.api.v1.encoding import (
 )
 from raiden.api.v1.resources import (
     create_blueprint,
+    AddressResource,
     ChannelsResource,
     ChannelsResourceByChannelAddress,
     TokensResource,
@@ -98,6 +100,7 @@ class APIServer(object):
         self.flask_app.register_blueprint(self.blueprint)
 
     def _add_default_resources(self):
+        self.add_resource(AddressResource, '/address')
         self.add_resource(ChannelsResource, '/channels')
         self.add_resource(
             ChannelsResourceByChannelAddress,
@@ -168,6 +171,9 @@ class RestAPI(object):
         self.tokens_list_schema = TokensListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.transfer_schema = TransferSchema()
+
+    def get_our_address(self):
+        return {'our_address': address_encoder(self.raiden_api.address)}
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
         raiden_service_result = self.raiden_api.open(

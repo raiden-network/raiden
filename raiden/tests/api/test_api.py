@@ -170,6 +170,19 @@ def test_payload_with_address_invalid_length(api_backend):
     assert response.status_code == httplib.BAD_REQUEST
 
 
+def test_api_query_our_address(
+        api_backend,
+        api_test_context,
+        api_raiden_service):
+
+    request = grequests.get(
+        api_url_for(api_backend, 'addressresource')
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    assert response.json() == dict(our_address=address_encoder(api_raiden_service.address))
+
+
 def test_api_query_channels(
         api_backend,
         api_test_context,

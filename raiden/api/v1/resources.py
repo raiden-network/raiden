@@ -26,6 +26,15 @@ class BaseResource(Resource):
         self.rest_api = kwargs['rest_api_object']
 
 
+class AddressResource(BaseResource):
+
+    def __init__(self, **kwargs):
+        super(AddressResource, self).__init__(**kwargs)
+
+    def get(self):
+        return self.rest_api.get_our_address()
+
+
 class ChannelsResource(BaseResource):
 
     put_schema = ChannelRequestSchema(
