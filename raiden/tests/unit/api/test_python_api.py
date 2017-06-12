@@ -154,5 +154,7 @@ def test_api_channel_events(raiden_chain):
             max_block = result
     assert max_block != 0
 
-    results = RaidenAPI(app2.raiden).get_channel_events(channel_3_2.channel_address, max_block, max_block + 100)
+    results = RaidenAPI(app2.raiden).get_channel_events(
+        channel_3_2.channel_address, max_block, max_block + 100
+    )
     assert len(results) == 0
