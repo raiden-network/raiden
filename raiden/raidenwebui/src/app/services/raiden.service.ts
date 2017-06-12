@@ -21,12 +21,15 @@ export class RaidenService {
         this.raidenAddress = this.web3.eth.coinbase;
     }
 
+    public getRaidenAddress(): string {
+        return this.raidenAddress;
+    }
+
     public getChannels(): Observable<any> {
         console.log(this.raidenAddress);
         return this.http.get(this.config.apiCall + '/channels')
         .map((response) => {
-            const data = response.json();
-            const channelArray = <Array<any>>JSON.parse(data.replace(/\\'/g, '"'));
+            const channelArray = <Array<any>>response.json();
             return channelArray;
         }).catch(this.handleError);
     }
@@ -39,8 +42,7 @@ export class RaidenService {
     public getTokenBalancesOf(raidenAddress: string): Observable<any> {
         return this.http.get(this.config.apiCall + '/tokens')
         .map((response) => {
-            const data = response.json();
-            const tokenArray = <Array<any>>JSON.parse(data.replace(/\\'/g, '"'));
+            const tokenArray = <Array<any>>response.json();
             return tokenArray.map((tokeninfo) => {
                 const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
                 return new Usertoken(
