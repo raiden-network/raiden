@@ -436,7 +436,9 @@ def test_refund_transfer_next_route():
 
     events = initiator_state_machine.dispatch(state_change)
     assert len(events) == 1
-    assert any(isinstance(e, SendMediatedTransfer) for e in events), 'trying a new route'
+    assert any(
+        isinstance(e, SendMediatedTransfer) for e in events
+    ), 'No mediated transfer event emitted, should have tried a new route'
 
     assert initiator_state_machine.current_state is not None
     assert initiator_state_machine.current_state.routes.canceled_routes[0] == prior_state.route

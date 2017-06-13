@@ -8,7 +8,7 @@ class EventTransferSentSuccess(Event):
 
     A transfer is considered sucessful when the initiator's payee hop sends the
     reveal secret message, assuming that each hop in the mediator chain has
-    also learned the secret and unlock/withdraw it's token.
+    also learned the secret and unlock/withdraw its token.
 
     This definition of sucessful is used to avoid the following corner case:
 
@@ -22,7 +22,7 @@ class EventTransferSentSuccess(Event):
       EventTransferSentSuccess.
 
     Note:
-        Mediators cannot use this event, since a unlock may be locally
+        Mediators cannot use this event, since an unlock may be locally
         sucessful but there is no knowledge about the global transfer.
     """
 

@@ -134,7 +134,7 @@ def test_fullnetwork(
     assert len(app1_state_changes) == 1
     assert len(app1_events) == 1
 
-    # app0 initiates the direct transfre and mediated_transfer
+    # app0 initiates the direct transfer and mediated_transfer
     assert len(app0_state_changes) == 4
     assert isinstance(app0_state_changes[1], ActionInitInitiator)
     assert app0_state_changes[1].our_address == app0.raiden.address

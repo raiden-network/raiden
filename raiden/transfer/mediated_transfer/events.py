@@ -43,11 +43,11 @@ class SendMediatedTransfer(Event):
 class SendRevealSecret(Event):
     """ Sends a RevealSecret to another node.
 
-    This event is used once the secret is know locally and an action must be
+    This event is used once the secret is known locally and an action must be
     performed on the receiver:
 
         - For receivers in the payee role, it informs the node that the lock has
-        been released and the token can be withdraw, either on-chain or
+        been released and the token can be withdrawn, either on-chain or
         off-chain.
         - For receivers in the payer role, it tells the payer that the payee
         knows the secret and wants to withdraw the lock off-chain, so the payer
@@ -63,7 +63,7 @@ class SendRevealSecret(Event):
           payer role, where `n` is equal to `1 + number_of_refunds`.
 
     Note:
-        The payee must only update it's local balance once the payer sends an
+        The payee must only update its local balance once the payer sends an
         up-to-date balance-proof message. This is a requirement for keeping the
         nodes synchronized. The reveal secret message flows from the receiver
         to the sender, so when the secret is learned it is not yet time to

@@ -228,7 +228,7 @@ def handle_secretrequest(state, state_change):
     )
 
     if valid_secretrequest:
-        # Reveal the secret to the target node and wait for it's confirmation,
+        # Reveal the secret to the target node and wait for its confirmation,
         # at this point the transfer is not cancellable anymore either the lock
         # timeouts or a secret reveal is received.
         #
