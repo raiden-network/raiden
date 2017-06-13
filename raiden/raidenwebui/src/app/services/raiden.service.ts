@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Http } from '@angular/http';
+import { Http, Headers, RequestOptions, Response } from '@angular/http';
 import { Observable } from 'rxjs/Observable';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/observable/throw';
@@ -52,6 +52,52 @@ export class RaidenService {
                 tokenContractInstance.balanceOf(this.raidenAddress).toNumber());
             });
         }).catch(this.handleError);
+    }
+
+    public initiateTransfer(
+        tokenAddress: string,
+        partnerAddress: string,
+        amount: number): Observable<any> {
+        const data = {
+            'amount': amount
+        };
+        const headers = new Headers({ 'Content-Type': 'application/json' });
+        const options = new RequestOptions({ headers: headers });
+        console.log(`${this.config.apiCall}/transfers/${tokenAddress}/${partnerAddress}`);
+        return this.http.post(`${this.config.apiCall}/transfers/${tokenAddress}/${partnerAddress}`
+        , JSON.stringify(data), options)
+        .map((response) => response.json()).catch(this.handleError);
+    }
+
+    public depositToChannel(channelAddress: string, balance: number): Observable<any> {
+        const data = {
+            'balance': balance
+        };
+        const headers = new Headers({ 'Content-Type': 'application/json' });
+        const options = new RequestOptions({ headers: headers });
+        return this.http.patch(`${this.config.apiCall}/channels/${channelAddress}`,
+            JSON.stringify(data), options)
+            .map((response) => response.json()).catch(this.handleError);
+    }
+
+    public closeChannel(channelAddress: string): Observable<any> {
+        const data = {
+            'state': 'closed'
+        };
+        const headers = new Headers({ 'Content-Type': 'application/json' });
+        const options = new RequestOptions({ headers: headers });
+        return this.http.patch(`${this.config.apiCall}/channels/${channelAddress}`,
+            JSON.stringify(data), options).map((response) => response.json()).catch(this.handleError);
+    }
+
+    public settleChannel(channelAddress: string): Observable<any> {
+        const data = {
+            'state': 'settled'
+        };
+        const headers = new Headers({ 'Content-Type': 'application/json' });
+        const options = new RequestOptions({ headers: headers });
+        return this.http.patch(`${this.config.apiCall}/channels/${channelAddress}`,
+            JSON.stringify(data), options).map((response) => response.json()).catch(this.handleError);
     }
 
     private handleError (error: Response | any) {
