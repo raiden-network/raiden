@@ -507,13 +507,17 @@ class Channel(object):
 
                 raise InvalidLocksRoot(expected_locksroot, transfer.locksroot)
 
-            # If the lock expires after the settle_period a secret could be
-            # revealed after the channel is settled and we won't be able to
-            # claim the token.
+            # For the sender: If the lock expires after the settle_period a
+            # secret could be revealed after the channel is settled and we
+            # won't be able to claim the token.
+            #
+            # For the receiver: A lock that expires after the settle period
+            # just means there is more time to withdraw it.
             end_settle_period = self.block_number + self.settle_timeout
             expires_after_settle = transfer.lock.expiration > end_settle_period
+            is_sender = transfer.sender == self.our_address
 
-            if expires_after_settle:
+            if is_sender and expires_after_settle:
                 log.error(
                     'Lock expires after the settlement period.',
                     lock_expiration=transfer.lock.expiration,
@@ -655,18 +659,6 @@ class Channel(object):
 
         if not self.can_transfer:
             raise ValueError('Transfer not possible, no funding or channel closed.')
-
-        # the lock timeout cannot be larger than the settle timeout (otherwise
-        # the smart contract cannot check the locks)
-        if timeout > self.settle_timeout:
-            log.debug(
-                'Lock expiration is larger than settle timeout.',
-                expiration=expiration,
-                block_number=self.block_number,
-                settle_timeout=self.settle_timeout,
-            )
-
-            raise ValueError('Invalid expiration.')
 
         # the expiration cannot be lower than the reveal timeout (otherwise we
         # dont have enough time to listen for the ChannelSecretRevealed event)

@@ -134,10 +134,14 @@ def try_new_route(state):
         # The initiator doesn't need to learn the secret, so there is no need
         # to decrement reveal_timeout from the lock timeout.
         #
-        # A value larger than settle_timeout could be used but wouldn't
-        # improve, since the next hop will take settle_timeout as an upper
-        # limit for expiration.
+        # The lock_expiration could be set to a value larger than
+        # settle_timeout, this is not useful since the next hop will take this
+        # channel settle_timeout as an upper limit for expiration.
+        #
+        # The two nodes will most likely disagree on latest block, as far as
+        # the expiration goes this is no problem.
         lock_expiration = state.block_number + try_route.settle_timeout
+
         identifier = state.transfer.identifier
 
         transfer = LockedTransferState(
