@@ -516,7 +516,7 @@ library NettingChannelLibrary {
         returns (uint64 nonce, address recipient, bytes32 locksroot, uint256 transferred_amount)
     {
         // size of the raw message without the signature
-        require(message.length == 196);
+        require(message.length == 268);
 
         // Message format:
         // [0:1] cmdid
@@ -533,8 +533,8 @@ library NettingChannelLibrary {
         assembly {
             nonce := mload(add(message, 12))
             recipient := mload(add(message, 68))
-            locksroot := mload(add(message, 100))
-            transferred_amount := mload(add(message, 132))
+            locksroot := mload(add(message, 140))
+            transferred_amount := mload(add(message, 204))
         }
     }
 

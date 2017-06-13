@@ -18,7 +18,11 @@ from raiden.messages import (
     SecretRequest,
 )
 from raiden.network.transport import UnreliableTransport
-from raiden.tests.utils.messages import setup_messages_cb, MessageLogger
+from raiden.tests.utils.messages import (
+    setup_messages_cb,
+    make_refund_transfer,
+    MessageLogger,
+)
 from raiden.tests.utils.transfer import assert_synched_channels, channel, direct_transfer, transfer
 from raiden.tests.utils.network import CHAIN
 from raiden.utils import pex, sha3, privatekey_to_address
@@ -461,15 +465,15 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
     other_key = PrivateKey(HASH2)
     other_address = privatekey_to_address(HASH2)
     amount = 10
-    lock = Lock(amount, 1, HASH)
-    refund_transfer = RefundTransfer(
+    refund_transfer = make_refund_transfer(
         identifier=1,
         nonce=1,
         token=graph0.token_address,
         transferred_amount=amount,
         recipient=app0.raiden.address,
         locksroot=HASH,
-        lock=lock
+        amount=amount,
+        hashlock=HASH,
     )
     sign_and_send(refund_transfer, other_key, other_address, app0)
 
