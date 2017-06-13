@@ -183,11 +183,14 @@ RefundTransfer = namedbuffer(
         expiration,             # [20:28]
         token,                  # [28:48]
         recipient,              # [48:68]
-        locksroot,              # [68:100]
-        transferred_amount,     # [100:132]
-        amount,                 # [132:164]
-        hashlock,               # [164:196]
-        signature,
+        target,                 # [68:88]
+        initiator,              # [88:108]
+        locksroot,              # [108:140]
+        hashlock,               # [140:172]
+        transferred_amount,     # [172:204]
+        amount,                 # [204:236]
+        fee,                    # [236:268]
+        signature,              # [268:333]
     ]
 )
 

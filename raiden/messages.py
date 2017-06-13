@@ -637,32 +637,12 @@ class MediatedTransfer(LockedTransfer):
         packed.signature = self.signature
 
 
-class RefundTransfer(LockedTransfer):
-    """ Indicates that no route is available and transfer the amount back to
-    the previous node, allowing it to try another path to complete the
-    transfer.
+class RefundTransfer(MediatedTransfer):
+    """ A special MediatedTransfer sent from a payee to a payer indicating that
+    no route is available, this transfer will effectively refund the payer the
+    transfer amount allowing him to try a new path to complete the transfer.
     """
     cmdid = messages.REFUNDTRANSFER
-
-    def __init__(
-            self,
-            identifier,
-            nonce,
-            token,
-            transferred_amount,
-            recipient,
-            locksroot,
-            lock):
-
-        super(RefundTransfer, self).__init__(
-            identifier,
-            nonce,
-            token,
-            transferred_amount,
-            recipient,
-            locksroot,
-            lock,
-        )
 
     @staticmethod
     def unpack(packed):
@@ -680,23 +660,12 @@ class RefundTransfer(LockedTransfer):
             packed.recipient,
             packed.locksroot,
             lock,
+            packed.target,
+            packed.initiator,
+            packed.fee,
         )
         locked_transfer.signature = packed.signature
         return locked_transfer
-
-    def pack(self, packed):
-        packed.nonce = self.nonce
-        packed.token = self.token
-        packed.transferred_amount = self.transferred_amount
-        packed.recipient = self.recipient
-        packed.locksroot = self.locksroot
-
-        lock = self.lock
-        packed.amount = lock.amount
-        packed.expiration = lock.expiration
-        packed.hashlock = lock.hashlock
-
-        packed.signature = self.signature
 
 
 CMDID_TO_CLASS = {

@@ -84,7 +84,11 @@ def make_refund_transfer(
         transferred_amount=0,
         amount=1,
         locksroot='',
-        recipient=ADDRESS):
+        recipient=ADDRESS,
+        target=ADDRESS,
+        initiator=ADDRESS,
+        fee=0,
+        hashlock=VALID_HASHLOCKS[0]):
 
     return RefundTransfer(
         identifier,
@@ -93,7 +97,10 @@ def make_refund_transfer(
         transferred_amount,
         recipient,
         locksroot,
-        make_lock(amount=amount),
+        make_lock(amount=amount, hashlock=hashlock),
+        target,
+        initiator,
+        fee,
     )
 
 
