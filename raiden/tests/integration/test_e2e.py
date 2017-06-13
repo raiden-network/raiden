@@ -59,11 +59,12 @@ def assert_path_mediated_transfer(*transfers):
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('settle_timeout', [50])
-def test_fullnetwork(raiden_chain,
-                     token_addresses,
-                     deposit,
-                     settle_timeout,
-                     reveal_timeout):
+def test_fullnetwork(
+        raiden_chain,
+        token_addresses,
+        deposit,
+        settle_timeout,
+        reveal_timeout):
 
     # The network has the following topology:
     #
