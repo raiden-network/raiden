@@ -261,6 +261,8 @@ library NettingChannelLibrary {
         }
         counterparty.withdrawn_locks[hashlock] = true;
 
+        // The lock must not have expired, it does not matter how far in the
+        // future it would have expired
         require(expiration >= block.number);
 
         if (hashlock != sha3(secret)) {

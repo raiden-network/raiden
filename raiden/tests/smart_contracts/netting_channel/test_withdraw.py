@@ -506,3 +506,68 @@ def test_withdraw_tampered_lock_amount(
                 secret,
                 sender=pkey1,
             )
+
+
+def test_withdraw_lock_with_a_large_expiration(
+        deposit,
+        tester_channels,
+        tester_state,
+        tester_token,
+        settle_timeout):
+
+    """ Withdraw must accept a lock that expires after the settlement period. """
+    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    address0 = privatekey_to_address(pkey0)
+    address1 = privatekey_to_address(pkey1)
+
+    initial_balance0 = tester_token.balanceOf(address0, sender=pkey0)
+    initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
+
+    # use a really large expiration
+    lock_expiration = tester_state.block.number + settle_timeout * 5
+
+    # work around for the python expiration validation
+    bad_block_number = lock_expiration - 10
+    channel0.state_transition(Block(bad_block_number))
+
+    lock_amount = 29
+    secret = sha3('test_withdraw_lock_with_a_large_expiration')
+    lock_hashlock = sha3(secret)
+    lock = Lock(
+        amount=lock_amount,
+        expiration=lock_expiration,
+        hashlock=lock_hashlock,
+    )
+    mediated = make_mediated_transfer(
+        channel0,
+        channel1,
+        address0,
+        address1,
+        lock,
+        pkey0,
+        bad_block_number,
+        secret,
+    )
+
+    nettingchannel.close('', sender=pkey0)
+    transfer_data = str(mediated.packed().data)
+    nettingchannel.updateTransfer(transfer_data, sender=pkey1)
+
+    unlock_proofs = list(channel1.our_state.balance_proof.get_known_unlocks())
+    proof = unlock_proofs[0]
+
+    nettingchannel.withdraw(
+        proof.lock_encoded,
+        ''.join(proof.merkle_proof),
+        proof.secret,
+        sender=pkey1,
+    )
+
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    nettingchannel.settle(sender=pkey0)
+
+    balance0 = initial_balance0 + deposit - lock_amount
+    balance1 = initial_balance1 + deposit + lock_amount
+    assert tester_token.balanceOf(address0, sender=pkey0) == balance0
+    assert tester_token.balanceOf(address1, sender=pkey0) == balance1
+    assert tester_token.balanceOf(nettingchannel.address, sender=pkey0) == 0
