@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
+import { Router, ActivatedRoute, Params } from '@angular/router';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { Channel } from '../../models/channel';
-import { MenuModule, MenuItem} from 'primeng/primeng';
+import { MenuModule, MenuItem, Message} from 'primeng/primeng';
 declare var blockies;
 @Component({
     selector: 'app-channel-table',
@@ -14,8 +15,15 @@ export class ChannelTableComponent implements OnInit {
 
     public channels: Channel[];
     public items: MenuItem[];
-    constructor(private raidenService: RaidenService,
-    private sharedService: SharedService) { }
+    public amount: number;
+    public displayDialog: boolean;
+    public action: string;
+    public tempChannel: Channel;
+    public msgs: Message[] = [];
+    constructor(private route: ActivatedRoute,
+                private router: Router,
+                private raidenService: RaidenService,
+                private sharedService: SharedService) { }
 
     ngOnInit() {
       this.getChannels();
@@ -37,19 +45,65 @@ export class ChannelTableComponent implements OnInit {
     }
 
     public onTransfer(channel: Channel) {
-        console.log('Inside onTransfer');
+        this.action = 'transfer';
+        this.tempChannel = channel;
+        this.displayDialog = true;
     }
 
     public onDeposit(channel: Channel) {
-        console.log('Inside onDeposit');
+        this.action = 'deposit';
+        this.tempChannel = channel;
+        this.displayDialog = true;
     }
 
     public onClose(channel: Channel) {
-        console.log('Inside onClose');
+        this.action = 'close';
+        this.tempChannel = channel;
+        this.manageChannel();
     }
 
     public onSettle(channel: Channel) {
-        console.log('Inside onSettle');
+        this.action = 'settle';
+        this.tempChannel = channel;
+        this.manageChannel();
     }
 
+    public manageChannel() {
+        switch (this.action) {
+            case 'transfer':
+                this.raidenService.initiateTransfer(
+                    this.tempChannel.token_address,
+                    this.tempChannel.partner_address,
+                    this.amount).subscribe(
+                        (response) => {
+                            this.showmessage(response);
+                        }
+                    );
+                break;
+            case 'deposit':
+                this.raidenService.depositToChannel(
+                    this.tempChannel.channel_address,
+                    this.amount).subscribe((response) => {
+                        this.showmessage(response);
+                    });
+                break;
+            case 'close':
+                this.raidenService.closeChannel(this.tempChannel.channel_address)
+                .subscribe((response) => {
+                    this.showmessage(response);
+                });
+                break;
+            case 'settle':
+                this.raidenService.settleChannel(this.tempChannel.channel_address)
+                .subscribe((response) => {
+                    this.showmessage(response);
+                });
+            break;
+        }
+    }
+
+    public showmessage(response: any) {
+        this.msgs = [];
+        this.msgs.push({severity: 'info', summary: 'Message', detail: JSON.stringify(response)});
+    }
 }

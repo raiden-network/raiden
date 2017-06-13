@@ -19,19 +19,19 @@
             <i class="fa fa-ellipsis-v"></i>
           </button>
           <md-menu #menu="mdMenu">
-            <button md-menu-item (onclick)="onTransfer(channel)">
+            <button md-menu-item (click)="onTransfer(channel)">
               <i class="fa fa-exchange"></i>
               <span>Transfer</span>
             </button>
-            <button md-menu-item (onclick)="onDeposit(channel)">
+            <button md-menu-item (click)="onDeposit(channel)">
               <i class="fa fa-money"></i>
               <span>Deposit</span>
             </button>
-            <button md-menu-item (onclick)="onClose(channel)">
+            <button md-menu-item (click)="onClose(channel)">
               <i class="fa fa-close"></i>
               <span>Close</span>
             </button>
-            <button md-menu-item (onclick)="onSettle(channel)">
+            <button md-menu-item (click)="onSettle(channel)">
               <i class="fa fa-book"></i>
               <span>Settle</span>
             </button>
@@ -41,3 +41,19 @@
   </p-dataTable>
 </ng-template>
 <ng-template #msg>You have no Channels yet.</ng-template>
+
+<p-dialog [(visible)]="displayDialog" [responsive]="true" showEffect="fade" [modal]="true">
+  <div class="ui-grid ui-grid-responsive ui-fluid">
+    <div class="ui-grid-row">
+      <div class="ui-grid-col-4"><label for="amount">Enter amount to {{action}}</label></div>
+      <div class="ui-grid-col-8"><input pInputText id="amount" [(ngModel)]="amount"/></div>
+    </div>
+  </div>
+  <p-footer>
+    <div class="ui-dialog-buttonpane ui-helper-clearfix">
+      <button type="button" pButton icon="fa-exchange" (click)="manageChannel()" label="{{action}}"></button>
+    </div>
+  </p-footer>
+</p-dialog>
+
+<p-growl [(value)]="msgs"></p-growl>
