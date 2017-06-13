@@ -29,6 +29,14 @@ class EventTransferSentSuccess(Event):
     def __init__(self, identifier):
         self.identifier = identifier
 
+    def __eq__(self, other):
+        if not isinstance(other, EventTransferSentSuccess):
+            return False
+
+        return (
+            self.identifier == other.identifier
+        )
+
 
 class EventTransferSentFailed(Event):
     """ Event emitted by the payer when a transfer has failed.
@@ -41,6 +49,15 @@ class EventTransferSentFailed(Event):
     def __init__(self, identifier, reason):
         self.identifier = identifier
         self.reason = reason
+
+    def __eq__(self, other):
+        if not isinstance(other, EventTransferSentFailed):
+            return False
+
+        return (
+            self.identifier == other.identifier and
+            self.reason == other.reason
+        )
 
 
 class EventTransferReceivedSuccess(Event):
@@ -55,3 +72,11 @@ class EventTransferReceivedSuccess(Event):
 
     def __init__(self, identifier):
         self.identifier = identifier
+
+    def __eq__(self, other):
+        if not isinstance(other, EventTransferReceivedSuccess):
+            return False
+
+        return (
+            self.identifier == other.identifier
+        )

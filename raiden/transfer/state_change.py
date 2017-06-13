@@ -14,6 +14,17 @@ class Block(StateChange):
     def __init__(self, block_number):
         self.block_number = block_number
 
+    def __eq__(self, other):
+        if not isinstance(other, Block):
+            return False
+
+        return (
+            self.block_number == other.block_number
+        )
+
+    def __str__(self):
+        return 'Block({})'.format(self.block_number)
+
 
 class ActionRouteChange(StateChange):
     """ A route change.
@@ -33,6 +44,12 @@ class ActionRouteChange(StateChange):
         self.identifier = identifier
         self.route = route
 
+    def __str__(self):
+        return 'ActionRouteChange(identifier:{} route:{})'.format(
+            self.identifier,
+            self.route,
+        )
+
 
 class ActionCancelTransfer(StateChange):
     """ The user requests the transfer to be cancelled.
@@ -43,6 +60,19 @@ class ActionCancelTransfer(StateChange):
 
     def __init__(self, identifier):
         self.identifier = identifier
+
+    def __eq__(self, other):
+        if not isinstance(other, ActionCancelTransfer):
+            return False
+
+        return (
+            self.identifier == other.identifier
+        )
+
+    def __str__(self):
+        return 'ActionCancelTransfer(identifier:{})'.format(
+            self.identifier,
+        )
 
 
 class ActionTransferDirect(StateChange):
@@ -57,6 +87,29 @@ class ActionTransferDirect(StateChange):
         self.token_address = token_address
         self.node_address = node_address
 
+    def __eq__(self, other):
+        if not isinstance(other, ActionTransferDirect):
+            return False
+
+        return (
+            self.identifier == other.identifier and
+            self.amount == other.amount and
+            self.token_address == other.token_address and
+            self.node_address == other.node_address
+        )
+
+    def __str__(self):
+        return (
+            'ActionTransferDirect('
+            'identifier:{} amount:{} token_address:{} node_address:{}'
+            ')'
+        ).format(
+            self.identifier,
+            self.amount,
+            self.token_address,
+            self.node_address,
+        )
+
 
 class ReceiveTransferDirect(StateChange):
     def __init__(self,
@@ -69,3 +122,26 @@ class ReceiveTransferDirect(StateChange):
         self.amount = amount
         self.token_address = token_address
         self.sender = sender
+
+    def __eq__(self, other):
+        if not isinstance(other, ReceiveTransferDirect):
+            return False
+
+        return (
+            self.identifier == other.identifier and
+            self.amount == other.amount and
+            self.token_address == other.token_address and
+            self.sender == other.sender
+        )
+
+    def __str__(self):
+        return (
+            'ReceiveTransferDirect('
+            'identifier:{} amount:{} token_address:{} sender:{}'
+            ')'
+        ).format(
+            self.identifier,
+            self.amount,
+            self.token_address,
+            self.sender,
+        )

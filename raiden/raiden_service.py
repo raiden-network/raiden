@@ -738,8 +738,10 @@ class RaidenService(object):
                 token_address,
                 direct_channel.partner_state.address,
             )
+            # TODO: add the transfer sent event
             state_change_id = self.transaction_log.log(direct_transfer_state_change)
 
+            # TODO: This should be set once the direct transfer is acknowledged
             transfer_success = EventTransferSentSuccess(
                 identifier,
             )
@@ -1081,7 +1083,7 @@ class RaidenMessageHandler(object):
                 )
             )
 
-        amount = channel.partner_state.transferred_amount - message.transferred_amount
+        amount = message.transferred_amount - channel.partner_state.transferred_amount
         state_change = ReceiveTransferDirect(
             message.identifier,
             amount,
