@@ -139,7 +139,11 @@ class ConnectionManager(object):
 
     def close_all(self):
         """ Close all receiving channels in the token network.
-        Note: we're just discarding all channels we haven't received anything.
+        Note: we're just discarding all channels we haven't received anything. This potentially
+        leaves deposits locked in channels after `closing`. This is "safe" from an accounting
+        point of view (deposits can not be lost), but may still be undesirable from a liquidity
+        point of view (deposits will only be freed after manually closing or after the partner
+        closed the channel).
         """
         with self.lock:
             self.initial_channel_target = 0
