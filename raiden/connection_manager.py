@@ -141,21 +141,18 @@ class ConnectionManager(object):
         return self.wait_for_settle()
 
     def close_all(self):
-        """ Close all open channels in the token network.
+        """ Close all receiving channels in the token network.
+        Note: we're just discarding all channels we haven't received anything.
         """
         with self.lock:
             self.initial_channel_target = 0
-            open_channels = self.receiving_channels
-            channel_specs = [(
-                self.token_address,
-                c.partner_address) for c in open_channels
-            ]
-            for channel in channel_specs:
+            channels_to_close = self.receiving_channels[:]
+            for channel in channels_to_close:
                 try:
-                    channel = self.api.close(*channel)
+                    self.api.close(self.token_address, channel.partner_address)
                 # catch-all BUT: if the error wasn't that the channel was already closed: re-raise
                 except:
-                    if channel[1] in [c.partner_address for c in self.open_channels]:
+                    if channel in self.receiving_channels:
                         raise
 
     def wait_for_settle(self):
