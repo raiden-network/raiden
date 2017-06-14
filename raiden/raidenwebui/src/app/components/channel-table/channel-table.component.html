@@ -1,46 +1,52 @@
-<div *ngIf="channels?.length > 0; then channelData else msg"></div>
-<ng-template #channelData>
-  <p-dataTable [value]="channels">
-      <p-header>Raiden Channels</p-header>
-      <p-column field="channel_address" header="Channel"></p-column>
-      <p-column field="partner_address" header="Partner"></p-column>
-      <p-column field="token_address" header="Token"></p-column>
-      <p-column field="balance" header="Balance"
-      [style]="{width: '70px', 'text-align': 'center'}"></p-column>
-      <p-column field="state" header="State"
-      [style]="{width: '70px', 'text-align': 'center'}"></p-column>
-      <p-column field="settle_timeout" header="SettleTimeout"
-      [style]="{width: '100px', 'text-align': 'center'}"></p-column>
-      <p-column field="reveal_timeout" header="RevealTimeout"
-      [style]="{width: '100px', 'text-align': 'center'}"></p-column>
-      <p-column [style]="{width: '100px', 'text-align': 'center'}">
-        <ng-template let-channel="rowData" pTemplate="body">
-          <button md-icon-button [mdMenuTriggerFor]="menu">
-            <i class="fa fa-ellipsis-v"></i>
-          </button>
-          <md-menu #menu="mdMenu">
-            <button md-menu-item (click)="onTransfer(channel)">
-              <i class="fa fa-exchange"></i>
-              <span>Transfer</span>
-            </button>
-            <button md-menu-item (click)="onDeposit(channel)">
-              <i class="fa fa-money"></i>
-              <span>Deposit</span>
-            </button>
-            <button md-menu-item (click)="onClose(channel)">
-              <i class="fa fa-close"></i>
-              <span>Close</span>
-            </button>
-            <button md-menu-item (click)="onSettle(channel)">
-              <i class="fa fa-book"></i>
-              <span>Settle</span>
-            </button>
-          </md-menu>
-        </ng-template>
-      </p-column>
-  </p-dataTable>
-</ng-template>
-<ng-template #msg>You have no Channels yet.</ng-template>
+<button type="text" (click)="onOpen()" pButton icon="fa-external-link-square" label="Open Channel"></button>
+<p-tabView>
+  <p-tabPanel header="Channels">
+    <div *ngIf="channels?.length > 0; then channelData else msg"></div>
+    <ng-template #channelData>
+      <p-dataTable [value]="channels">
+          <p-column field="channel_address" header="Channel"></p-column>
+          <p-column field="partner_address" header="Partner"></p-column>
+          <p-column field="token_address" header="Token"></p-column>
+          <p-column field="balance" header="Balance"
+          [style]="{width: '70px', 'text-align': 'center'}"></p-column>
+          <p-column field="state" header="State"
+          [style]="{width: '70px', 'text-align': 'center'}"></p-column>
+          <p-column field="settle_timeout" header="SettleTimeout"
+          [style]="{width: '100px', 'text-align': 'center'}"></p-column>
+          <p-column field="reveal_timeout" header="RevealTimeout"
+          [style]="{width: '100px', 'text-align': 'center'}"></p-column>
+          <p-column [style]="{width: '100px', 'text-align': 'center'}">
+            <ng-template let-channel="rowData" pTemplate="body">
+              <button md-icon-button [mdMenuTriggerFor]="menu">
+                <i class="fa fa-ellipsis-v"></i>
+              </button>
+              <md-menu #menu="mdMenu">
+                <button md-menu-item (click)="onTransfer(channel)">
+                  <i class="fa fa-exchange"></i>
+                  <span>Transfer</span>
+                </button>
+                <button md-menu-item (click)="onDeposit(channel)">
+                  <i class="fa fa-money"></i>
+                  <span>Deposit</span>
+                </button>
+                <button md-menu-item (click)="onClose(channel)">
+                  <i class="fa fa-close"></i>
+                  <span>Close</span>
+                </button>
+                <button md-menu-item (click)="onSettle(channel)">
+                  <i class="fa fa-book"></i>
+                  <span>Settle</span>
+                </button>
+              </md-menu>
+            </ng-template>
+          </p-column>
+      </p-dataTable>
+    </ng-template>
+    <ng-template #msg>You have no Channels yet.</ng-template>
+  </p-tabPanel>
+  <p-tabPanel header="Events">
+  </p-tabPanel>
+</p-tabView>
 
 <p-dialog [(visible)]="displayDialog" [responsive]="true" showEffect="fade" [modal]="true">
   <div class="ui-grid ui-grid-responsive ui-fluid">
@@ -54,6 +60,32 @@
       <button type="button" pButton icon="fa-exchange" (click)="manageChannel()" label="{{action}}"></button>
     </div>
   </p-footer>
+</p-dialog>
+
+<p-dialog header="Open Channel" [(visible)]="displayChannelDialog" [responsive]="true" showEffect="fade" [modal]="true">
+    <div class="ui-grid ui-grid-responsive ui-fluid">
+        <div class="ui-grid-row">
+            <div class="ui-grid-col-4"><label for="partner">Partner Address</label></div>
+            <div class="ui-grid-col-8"><input pInputText id="partner" [(ngModel)]="tempChannel.partner_address" /></div>
+        </div>
+        <div class="ui-grid-row">
+            <div class="ui-grid-col-4"><label for="token">Token</label></div>
+            <div class="ui-grid-col-8"><p-dropdown [options]="tokenAddressMapping" [(ngModel)]="tempChannel.token_address" id="token" placeholder="Select a Token" [style]="{'width':'150px'}"></p-dropdown></div>
+        </div>
+        <div class="ui-grid-row">
+            <div class="ui-grid-col-4 top10 "><label for="balance">Balance</label></div>
+            <div class="ui-grid-col-8 top10 "><input pInputText id="balance" [(ngModel)]="tempChannel.balance" type="number"/></div>
+        </div>
+        <div class="ui-grid-row">
+            <div class="ui-grid-col-4"><label for="settle">Settle Timeout</label></div>
+            <div class="ui-grid-col-8"><input pInputText id="settle" [(ngModel)]="tempChannel.settle_timeout" type="number"/></div>
+        </div>
+    </div>
+    <p-footer>
+        <div class="ui-dialog-buttonpane ui-helper-clearfix">
+            <button type="button" pButton icon="" (click)="manageChannel()" label="Open"></button>
+        </div>
+    </p-footer>
 </p-dialog>
 
 <p-growl [(value)]="msgs"></p-growl>

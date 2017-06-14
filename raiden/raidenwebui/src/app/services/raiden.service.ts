@@ -35,12 +35,12 @@ export class RaidenService {
     }
 
     public getEvents(): Observable<any> {
-        return this.http.get(this.config.apiCall + '/events')
+        return this.http.get(`${this.config.apiCall}/events`)
         .map((response) => response.json()).catch(this.handleError);
     }
 
     public getTokenBalancesOf(raidenAddress: string): Observable<any> {
-        return this.http.get(this.config.apiCall + '/tokens')
+        return this.http.get(`${this.config.apiCall}/tokens`)
         .map((response) => {
             const tokenArray = <Array<any>>response.json();
             return tokenArray.map((tokeninfo) => {
@@ -54,19 +54,57 @@ export class RaidenService {
         }).catch(this.handleError);
     }
 
+    public getTokenNameAddresMappings() {
+        console.log('Inside token address mapping');
+        return this.http.get(`${this.config.apiCall}/tokens`)
+        .map((response) => {
+            const tokenArray = <Array<any>>response.json();
+            return tokenArray.map((tokeninfo) => {
+                const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
+                return {
+                    'value': tokeninfo.address,
+                    'label': tokenContractInstance.name()
+                };
+            });
+        });
+    }
+    public openChannel(
+        partnerAddress: string,
+        tokenAddress: string,
+        balance: number,
+        settleTimeout: number): Observable<any> {
+        console.log('Inside the open channel service');
+        const data = {
+            'partner_address': partnerAddress,
+            'token_address': tokenAddress,
+            'balance': balance,
+            'settle_timeout': settleTimeout
+        };
+        console.log(data);
+        const headers = new Headers({ 'Content-Type': 'application/json' });
+        const options = new RequestOptions({ headers: headers });
+        return this.http.put(`${this.config.apiCall}/channels`,
+                      JSON.stringify(data), options)
+                      .map((response) => response.json())
+                      .catch(this.handleError);
+
+    }
+
     public initiateTransfer(
         tokenAddress: string,
         partnerAddress: string,
-        amount: number): Observable<any> {
+        amount: number,
+        identifier: number): Observable<any> {
         const data = {
-            'amount': amount
+            'amount': amount,
+            'identifier': identifier
         };
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
         console.log(`${this.config.apiCall}/transfers/${tokenAddress}/${partnerAddress}`);
-        return this.http.post(`${this.config.apiCall}/transfers/${tokenAddress}/${partnerAddress}`
-        , JSON.stringify(data), options)
-        .map((response) => response.json()).catch(this.handleError);
+        return this.http.post(
+            `${this.config.apiCall}/transfers/${tokenAddress}/${partnerAddress}`, JSON.stringify(data), options)
+            .map((response) => response.json()).catch(this.handleError);
     }
 
     public depositToChannel(channelAddress: string, balance: number): Observable<any> {

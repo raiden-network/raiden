@@ -17,9 +17,11 @@ export class ChannelTableComponent implements OnInit {
     public items: MenuItem[];
     public amount: number;
     public displayDialog: boolean;
+    public displayChannelDialog: boolean;
     public action: string;
-    public tempChannel: Channel;
+    public tempChannel: Channel = new Channel();
     public msgs: Message[] = [];
+    public tokenAddressMapping: Array<{ value: string, label: string}>;
     constructor(private route: ActivatedRoute,
                 private router: Router,
                 private raidenService: RaidenService,
@@ -27,6 +29,7 @@ export class ChannelTableComponent implements OnInit {
 
     ngOnInit() {
       this.getChannels();
+      this.getTokenNameAddresMappings();
     }
 
     public getChannels() {
@@ -36,6 +39,13 @@ export class ChannelTableComponent implements OnInit {
                 this.sharedService.setChannelData(this.channels);
             }
         );
+    }
+
+    public getTokenNameAddresMappings() {
+      this.raidenService.getTokenNameAddresMappings().subscribe(
+          (mappings) => {
+              this.tokenAddressMapping = mappings;
+          });
     }
 
     public generateBlockies(icon: any, address: string) {
@@ -68,13 +78,22 @@ export class ChannelTableComponent implements OnInit {
         this.manageChannel();
     }
 
+    public onOpen() {
+        this.action = 'open';
+        this.tempChannel = new Channel();
+        this.displayChannelDialog = true;
+    }
+
     public manageChannel() {
+        this.displayDialog = false;
+        this.displayChannelDialog = false;
         switch (this.action) {
             case 'transfer':
                 this.raidenService.initiateTransfer(
                     this.tempChannel.token_address,
                     this.tempChannel.partner_address,
-                    this.amount).subscribe(
+                    this.amount,
+                    Math.floor(Math.random() * 101)).subscribe(
                         (response) => {
                             this.showmessage(response);
                         }
@@ -96,6 +115,19 @@ export class ChannelTableComponent implements OnInit {
             case 'settle':
                 this.raidenService.settleChannel(this.tempChannel.channel_address)
                 .subscribe((response) => {
+                    this.showmessage(response);
+                });
+            break;
+            case 'open':
+                console.log('inside open');
+                this.raidenService.openChannel(
+                    this.tempChannel.partner_address,
+                    this.tempChannel.token_address,
+                    this.tempChannel.balance,
+                    this.tempChannel.settle_timeout)
+                .subscribe((response) => {
+                    console.log('logging the response');
+                    console.log(response);
                     this.showmessage(response);
                 });
             break;
