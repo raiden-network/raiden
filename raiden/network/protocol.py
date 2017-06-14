@@ -40,7 +40,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 # - async_result available for code that wants to block on message acknowledgment
 # - receiver_address used to tie back the echohash to the receiver (mainly for
 #   logging purposes)
-WaitAck = namedtuple('WaitAck', (
+SentMessageState = namedtuple('SentMessageState', (
     'async_result',
     'receiver_address',
 ))
@@ -425,13 +425,12 @@ class RaidenProtocol(object):
         self.addresses_events = dict()
         self.nodeaddresses_networkstatuses = defaultdict(lambda: NODE_NETWORK_UNKNOWN)
 
-        # TODO: remove old ACKs from the dict to free memory
-        # The Ack for a processed message, used to avoid re-processing a known
-        # message
-        self.echohash_acks = dict()
+        # Maps the echohash of received and *sucessfully* processed messages to
+        # it's Ack, used to ignored duplicate messages and resend the Ack.
+        self.receivedhashes_acks = dict()
 
-        # Maps the echo hash `sha3(message + address)` to a WaitAck tuple
-        self.echohash_asyncresult = dict()
+        # Maps the echohash to a SentMessageState
+        self.senthashes_states = dict()
 
         cache = cachetools.TTLCache(
             maxsize=50,
@@ -443,7 +442,7 @@ class RaidenProtocol(object):
     def stop_and_wait(self):
         self.event_stop.set()
 
-        for waitack in self.echohash_asyncresult.itervalues():
+        for waitack in self.senthashes_states.itervalues():
             waitack.async_result.set(False)
 
         gevent.wait(self.greenlets)
@@ -560,9 +559,9 @@ class RaidenProtocol(object):
         token_address = getattr(message, 'token', '')
 
         # Ignore duplicated messages
-        if echohash not in self.echohash_asyncresult:
+        if echohash not in self.senthashes_states:
             async_result = AsyncResult()
-            self.echohash_asyncresult[echohash] = WaitAck(
+            self.senthashes_states[echohash] = SentMessageState(
                 async_result,
                 receiver_address,
             )
@@ -574,7 +573,7 @@ class RaidenProtocol(object):
 
             queue.put(messagedata)
         else:
-            waitack = self.echohash_asyncresult[echohash]
+            waitack = self.senthashes_states[echohash]
             async_result = waitack.async_result
 
         return async_result
@@ -601,9 +600,9 @@ class RaidenProtocol(object):
 
         messagedata = message.encode()
         host_port = self.get_host_port(receiver_address)
-        self.echohash_acks[message.echo] = (host_port, messagedata)
+        self.receivedhashes_acks[message.echo] = (host_port, messagedata)
 
-        self._send_ack(*self.echohash_acks[message.echo])
+        self._send_ack(*self.receivedhashes_acks[message.echo])
 
     def get_ping(self, nonce):
         message = Ping(nonce)
@@ -621,14 +620,14 @@ class RaidenProtocol(object):
         host_port = self.get_host_port(receiver_address)
         echohash = sha3(data + receiver_address)
 
-        if echohash not in self.echohash_asyncresult:
+        if echohash not in self.senthashes_states:
             async_result = AsyncResult()
-            self.echohash_asyncresult[echohash] = WaitAck(
+            self.senthashes_states[echohash] = SentMessageState(
                 async_result,
                 receiver_address,
             )
         else:
-            async_result = self.echohash_asyncresult[echohash].async_result
+            async_result = self.senthashes_states[echohash].async_result
 
         if not async_result.ready():
             self.transport.send(
@@ -650,14 +649,14 @@ class RaidenProtocol(object):
         echohash = sha3(data + self.raiden.address)
 
         # check if we handled this message already, if so repeat Ack
-        if echohash in self.echohash_acks:
-            return self._send_ack(*self.echohash_acks[echohash])
+        if echohash in self.receivedhashes_acks:
+            return self._send_ack(*self.receivedhashes_acks[echohash])
 
         # We ignore the sending endpoint as this can not be known w/ UDP
         message = decode(data)
 
         if isinstance(message, Ack):
-            waitack = self.echohash_asyncresult.get(message.echo)
+            waitack = self.senthashes_states.get(message.echo)
 
             if waitack is None:
                 if log.isEnabledFor(logging.INFO):
