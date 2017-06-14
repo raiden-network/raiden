@@ -130,6 +130,7 @@ def pending_mediated_transfer(app_chain, token, amount, identifier, expiration):
             hashlock = sha3(secret)
 
         transfer_ = from_channel.create_mediatedtransfer(
+            from_app.raiden.get_block_number(),
             initiator_app.raiden.address,
             target_app.raiden.address,
             fee,
@@ -303,7 +304,8 @@ def make_mediated_transfer(
     identifier = channel.our_state.nonce
     fee = 0
 
-    mediated_transfer = channel.create_mediatedtransfer(
+    mediated_transfer = channel.create_mediatedtransfer(  # pylint: disable=redefined-outer-name
+        block_number,
         initiator,
         target,
         fee,

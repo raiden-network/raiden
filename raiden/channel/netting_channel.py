@@ -669,12 +669,12 @@ class Channel(object):
             locksroot=current_locksroot,
         )
 
-    def create_lockedtransfer(self, amount, identifier, expiration, hashlock):
+    def create_lockedtransfer(self, block_number, amount, identifier, expiration, hashlock):
         """ Return a LockedTransfer message.
 
         This message needs to be signed and registered with the channel before sent.
         """
-        timeout = expiration - self.block_number
+        timeout = expiration - block_number
 
         if not self.can_transfer:
             raise ValueError('Transfer not possible, no funding or channel closed.')
@@ -733,6 +733,7 @@ class Channel(object):
 
     def create_mediatedtransfer(
             self,
+            block_number,
             transfer_initiator,
             transfer_target,
             fee,
@@ -755,6 +756,7 @@ class Channel(object):
         """
 
         locked_transfer = self.create_lockedtransfer(
+            block_number,
             amount,
             identifier,
             expiration,
