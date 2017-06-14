@@ -200,16 +200,13 @@ class RaidenService(object):
                     self.restore_channel(channel)
 
             if path.exists(self.channels_queue_path):
-                restored_queues = list()
-
                 with open(self.channels_queue_path, 'r') as handler:
-                    try:
-                        while True:
-                            restored_queues.append(pickle.load(handler))
-                    except EOFError:
-                        pass
+                    channel_state = pickle.load(handler)
 
-                map(self.restore_queue, restored_queues)
+                for restored_queue in channel_state['channel_queues']:
+                    self.restore_queue(restored_queue)
+
+                self.protocol.receivedhashes_acks = channel_state['receivedhashes_acks']
 
         self.alarm = alarm
         self.message_handler = message_handler
@@ -753,6 +750,7 @@ class RaidenService(object):
 
         if self.channels_queue_path:
             with open(self.channels_queue_path, 'wb') as handler:
+                queues = list()
                 for key, queue in self.protocol.channel_queue.iteritems():
                     queue_data = {
                         'receiver_address': key[0],
@@ -762,10 +760,15 @@ class RaidenService(object):
                             for queue_item in queue
                         ]
                     }
-                    pickle.dump(
-                        queue_data,
-                        handler,
-                    )
+                    queues.append(queue_data)
+
+                pickle.dump(
+                    {
+                        'channel_queues': queues,
+                        'receivedhashes_acks': self.protocol.receivedhashes_acks,
+                    },
+                    handler,
+                )
 
         gevent.wait(wait_for)
 
