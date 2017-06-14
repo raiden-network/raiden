@@ -354,10 +354,7 @@ def test_healthcheck_with_bad_peer(raiden_network, nat_keepalive_retries, nat_ke
     UnreliableTransport.droprate = 1
     UnreliableTransport.network.counter = 0
 
-    app0.raiden.protocol.start_health_check(
-        app1.raiden.address,
-        ping_nonce=0,
-    )
+    app0.raiden.protocol.start_health_check(app1.raiden.address)
 
     statuses = app0.raiden.protocol.nodeaddresses_networkstatuses
     assert statuses[app1.raiden.address] == NODE_NETWORK_UNKNOWN
