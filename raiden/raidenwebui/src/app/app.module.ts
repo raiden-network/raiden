@@ -3,7 +3,8 @@ import { NgModule } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { HttpModule } from '@angular/http';
 import { DataTableModule, SharedModule, DataListModule, CarouselModule,
-ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule } from 'primeng/primeng';
+ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule,
+TabViewModule, DropdownModule } from 'primeng/primeng';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule,
 MdMenuModule } from '@angular/material';
@@ -47,6 +48,8 @@ const appRoutes: Routes = [
     GrowlModule,
     DialogModule,
     SplitButtonModule,
+    TabViewModule,
+    DropdownModule,
     NoopAnimationsModule,
     MdTabsModule,
     MdInputModule,
