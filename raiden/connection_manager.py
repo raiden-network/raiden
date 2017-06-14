@@ -119,9 +119,6 @@ class ConnectionManager(object):
 
     def leave_async(self):
         """ Async version of `leave()`
-        Args:
-
-            timeout (float): maximum time to wait for settlement in seconds
         """
         leave_result = AsyncResult()
         gevent.spawn(self.leave).link(leave_result)
