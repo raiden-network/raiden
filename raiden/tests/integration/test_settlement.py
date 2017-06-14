@@ -79,6 +79,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     identifier = 1
     fee = 0
     transfermessage = alice_bob_channel.create_mediatedtransfer(
+        alice_app.raiden.get_block_number(),
         alice_app.raiden.address,
         bob_app.raiden.address,
         fee,

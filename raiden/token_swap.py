@@ -342,6 +342,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
             )
 
             from_mediated_transfer = from_channel.create_mediatedtransfer(
+                raiden.get_block_number(),
                 raiden.address,
                 to_nodeaddress,
                 fee,
@@ -628,6 +629,7 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
             # make a paying MediatedTransfer with same hashlock/identifier and the
             # taker's paying token/amount
             taker_paying_transfer = taker_paying_channel.create_mediatedtransfer(
+                raiden.get_block_number(),
                 raiden.address,
                 maker_address,
                 fee,
