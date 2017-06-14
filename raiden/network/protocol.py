@@ -293,7 +293,7 @@ def healthcheck(
         nat_keepalive_retries,
         nat_keepalive_timeout,
         nat_invitation_timeout,
-        ping_nonce=0):
+        ping_nonce):
 
     """ Sends a periodical Ping to `receiver_address` to check its health. """
 
@@ -315,10 +315,10 @@ def healthcheck(
     while not event_stop.wait(sleep) is True:
         sleep = nat_keepalive_timeout
 
+        ping_nonce['nonce'] += 1
         data = protocol.get_ping(
-            ping_nonce,
+            ping_nonce['nonce'],
         )
-        ping_nonce += 1
 
         # Send Ping a few times before setting the node as unreachable
         acknowledged = retry(
@@ -432,6 +432,10 @@ class RaidenProtocol(object):
         # Maps the echohash to a SentMessageState
         self.senthashes_states = dict()
 
+        # Maps the addresses to the a dict with the latest nonce (using a dict
+        # because python integers are imutable)
+        self.nodeaddresses_nonces = dict()
+
         cache = cachetools.TTLCache(
             maxsize=50,
             ttl=CACHE_TTL,
@@ -457,18 +461,20 @@ class RaidenProtocol(object):
         HealthEvents with locks to react on its current state.
         """
         if receiver_address not in self.addresses_events:
-            self.start_health_check(
-                receiver_address,
-                ping_nonce=0,
-            )
+            self.start_health_check(receiver_address)
 
         return self.addresses_events[receiver_address]
 
-    def start_health_check(self, receiver_address, ping_nonce):
+    def start_health_check(self, receiver_address):
         """ Starts a task for healthchecking `receiver_address` if there is not
         one yet.
         """
         if receiver_address not in self.addresses_events:
+            ping_nonce = self.nodeaddresses_nonces.setdefault(
+                receiver_address,
+                {'nonce': 0},  # HACK: Allows the task to mutate the object
+            )
+
             events = HealthEvents(
                 event_healthy=Event(),
                 event_unhealthy=Event(),

@@ -207,6 +207,7 @@ class RaidenService(object):
                     self.restore_queue(restored_queue)
 
                 self.protocol.receivedhashes_acks = channel_state['receivedhashes_acks']
+                self.protocol.nodeaddresses_nonces = channel_state['nodeaddresses_nonces']
 
         self.alarm = alarm
         self.message_handler = message_handler
@@ -241,9 +242,7 @@ class RaidenService(object):
                 channel.network_state = network_state
 
     def start_health_check_for(self, node_address):
-        # TODO: recover ping nonce
-        ping_nonce = 0
-        self.protocol.start_health_check(node_address, ping_nonce)
+        self.protocol.start_health_check(node_address)
 
     def get_block_number(self):
         return self._blocknumber
@@ -766,6 +765,7 @@ class RaidenService(object):
                     {
                         'channel_queues': queues,
                         'receivedhashes_acks': self.protocol.receivedhashes_acks,
+                        'nodeaddresses_nonces': self.protocol.nodeaddresses_nonces,
                     },
                     handler,
                 )
@@ -893,7 +893,7 @@ class RaidenService(object):
             if route.state == CHANNEL_STATE_OPENED
         ]
 
-        self.protocol.start_health_check(target, ping_nonce=0)
+        self.protocol.start_health_check(target)
 
         if identifier is None:
             identifier = create_default_identifier()
