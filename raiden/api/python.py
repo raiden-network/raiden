@@ -14,7 +14,11 @@ from raiden.token_swap import (
     SwapKey,
     TokenSwap,
 )
-from raiden.transfer.mediated_transfer.events import SendRevealSecret
+from raiden.transfer.events import (
+    EventTransferSentSuccess,
+    EventTransferSentFailed,
+    EventTransferReceivedSuccess,
+)
 from raiden.exceptions import (
     NoPathError,
     InvalidAddress,
@@ -572,17 +576,17 @@ class RaidenAPI(object):
         )
         # Here choose which raiden internal events we want to expose to the end user
         for event in raiden_events:
-            # As an example for the test I use SecretReveal here temporarilly
-            # Final types of events should be at least the following four:
-            # - TransferSentAndSuccess
-            # - TransferSentAndFailure
-            # - TransferReceivedAndSuccess
-            # - TransferReceivedAndFailure
-            if isinstance(event[3], SendRevealSecret):
+            is_user_transfer_event = (
+                isinstance(event[3], EventTransferSentSuccess) or
+                isinstance(event[3], EventTransferSentFailed) or
+                isinstance(event[3], EventTransferReceivedSuccess)
+            )
+
+            if is_user_transfer_event:
                 new_event = {
-                    'block_number': event[3],
+                    'block_number': event[2],
                     'event_identifier': event[0],
-                    'type': 'SendRevealSecret',
+                    '_event_type': type(event[3]).__name__,
                 }
                 new_event.update(event[3].__dict__)
                 returned_events.append(new_event)

@@ -148,6 +148,15 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
         'token_address': address_encoder(token_address),
     })
 
+    events = get_all_registry_events(
+        app0.raiden.chain,
+        app0.raiden.chain.default_registry.address,
+        events=ALL_EVENTS,
+        from_block=999999998,
+        to_block=999999999,
+    )
+    assert not events
+
     netcontract_address = manager0.new_netting_channel(
         app0.raiden.address,
         app1.raiden.address,
@@ -170,6 +179,15 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
         'participant1': address_encoder(app0.raiden.address),
         'participant2': address_encoder(app1.raiden.address),
     })
+
+    events = get_all_channel_manager_events(
+        app0.raiden.chain,
+        manager0.address,
+        events=ALL_EVENTS,
+        from_block=999999998,
+        to_block=999999999,
+    )
+    assert not events
 
     netting_channel0 = app0.raiden.chain.netting_channel(netcontract_address)
 

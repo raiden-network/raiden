@@ -897,7 +897,9 @@ class RaidenService(object):
                 identifier,
             )
             self.transaction_log.log_events(
-                state_change_id, [transfer_success],
+                state_change_id,
+                [transfer_success],
+                self.get_block_number()
             )
 
             async_result = self.protocol.send_async(
@@ -1248,7 +1250,11 @@ class RaidenMessageHandler(object):
         receive_success = EventTransferReceivedSuccess(
             message.identifier,
         )
-        self.raiden.transaction_log.log_events(state_change_id, [receive_success])
+        self.raiden.transaction_log.log_events(
+            state_change_id,
+            [receive_success],
+            self.raiden.get_block_number()
+        )
 
     def message_mediatedtransfer(self, message):
         # TODO: Reject mediated transfer that the hashlock/identifier is known,
