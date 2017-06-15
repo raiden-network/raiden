@@ -119,9 +119,6 @@ class ConnectionManager(object):
 
     def leave_async(self):
         """ Async version of `leave()`
-        Args:
-
-            timeout (float): maximum time to wait for settlement in seconds
         """
         leave_result = AsyncResult()
         gevent.spawn(self.leave).link(leave_result)
@@ -141,22 +138,19 @@ class ConnectionManager(object):
         return self.wait_for_settle()
 
     def close_all(self):
-        """ Close all open channels in the token network.
+        """ Close all receiving channels in the token network.
+        Note: we're just discarding all channels we haven't received anything. This potentially
+        leaves deposits locked in channels after `closing`. This is "safe" from an accounting
+        point of view (deposits can not be lost), but may still be undesirable from a liquidity
+        point of view (deposits will only be freed after manually closing or after the partner
+        closed the channel).
         """
         with self.lock:
             self.initial_channel_target = 0
-            open_channels = self.receiving_channels
-            channel_specs = [(
-                self.token_address,
-                c.partner_address) for c in open_channels
-            ]
-            for channel in channel_specs:
-                try:
-                    channel = self.api.close(*channel)
-                # catch-all BUT: if the error wasn't that the channel was already closed: re-raise
-                except:
-                    if channel[1] in [c.partner_address for c in self.open_channels]:
-                        raise
+            channels_to_close = self.receiving_channels[:]
+            for channel in channels_to_close:
+                # FIXME: race condition, this can fail if channel was closed externally
+                self.api.close(self.token_address, channel.partner_address)
 
     def wait_for_settle(self):
         """Wait for all channels of the token network to settle.
