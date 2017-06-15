@@ -509,8 +509,7 @@ Connecting to a token network
 ------------------------------
 
 You can automatically join a token network by making a ``PUT`` request to the following endpoint along with a json payload
-containing the connection details such as the funding you want to put into the network, the initial target for 
-amount of channels to create and the target for joinable funds.
+containing the connection details such as the funding you want to put into the network, the initial target for amount of channels to create and the target for joinable funds.
 
 ``PUT /api/<version>/connection/<token_address>``
 
@@ -768,6 +767,11 @@ Example Response
             "event_type": "TransferUpdated",
             "token_address": "0x91337a300e0361bddb2e377dd4e88ccb7796663d",
             "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
+        }, {
+            "event_type": "EventTransferSentSuccess",
+            "event_identifier": 1,
+            "identifier": 14909067296492875713,
+            "block_number": 26
         }
     ]
 

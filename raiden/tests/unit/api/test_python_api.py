@@ -5,7 +5,7 @@ import gevent
 from raiden.tests.utils.transfer import (
     assert_synched_channels,
     channel,
-    mediated_transfer,
+    direct_transfer,
     get_sent_transfer,
 )
 from raiden.exceptions import NoPathError
@@ -124,37 +124,36 @@ def test_token_swap(raiden_network, deposit, settle_timeout):
 
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
-@pytest.mark.parametrize('channels_per_node', [2])
-@pytest.mark.parametrize('number_of_nodes', [4])
+@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.parametrize('number_of_nodes', [2])
 def test_api_channel_events(raiden_chain):
-    app0, app1, app2, app3 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
+    app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
     token_address = app0.raiden.chain.default_registry.token_addresses()[0]
-    channel_0_3 = channel(app0, app3, token_address)
-    channel_3_2 = channel(app3, app2, token_address)
+    channel_0_1 = channel(app0, app1, token_address)
 
     amount = 30
-    mediated_transfer(
+    direct_transfer(
         app0,
-        app2,
+        app1,
         token_address,
         amount
     )
 
-    initiator_transfer = get_sent_transfer(channel_0_3, 0)
-    mediator_transfer = get_sent_transfer(channel_3_2, 0)
-    assert initiator_transfer.identifier == mediator_transfer.identifier
-    assert initiator_transfer.lock.amount == amount
-    assert mediator_transfer.lock.amount == amount
-
-    results = RaidenAPI(app2.raiden).get_channel_events(channel_3_2.channel_address, 0)
-    assert len(results) != 0
+    results = RaidenAPI(app0.raiden).get_channel_events(channel_0_1.channel_address, 0)
+    assert len(results) == 3
     max_block = 0
-    for result in results:
+    for idx, result in enumerate(results):
         if result['block_number'] > max_block:
-            max_block = result
+            max_block = result['block_number']
+
+        if idx == 2:
+            assert result['_event_type'] == 'EventTransferSentSuccess'
+        else:
+            assert result['_event_type'] == 'ChannelNewBalance'
+
     assert max_block != 0
 
-    results = RaidenAPI(app2.raiden).get_channel_events(
-        channel_3_2.channel_address, max_block, max_block + 100
+    results = RaidenAPI(app0.raiden).get_channel_events(
+        channel_0_1.channel_address, max_block + 1, max_block + 100
     )
-    assert len(results) == 0
+    assert not results
