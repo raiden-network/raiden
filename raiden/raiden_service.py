@@ -275,7 +275,7 @@ class RaidenService(object):
 
     def set_block_number(self, blocknumber):
         state_change = Block(blocknumber)
-        self.state_machine_event_handler.dispatch_to_all_tasks(state_change)
+        self.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
 
         for graph in self.channelgraphs.itervalues():
             for channel in graph.address_channel.itervalues():
@@ -1116,7 +1116,7 @@ class RaidenMessageHandler(object):
         self.raiden.register_secret(secret)
 
         state_change = ReceiveSecretReveal(secret, sender)
-        self.raiden.state_machine_event_handler.dispatch_to_all_tasks(state_change)
+        self.raiden.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
 
     def message_secretrequest(self, message):
         self.raiden.greenlet_task_dispatcher.dispatch_message(
@@ -1131,7 +1131,7 @@ class RaidenMessageHandler(object):
             message.sender,
         )
 
-        self.raiden.state_machine_event_handler.dispatch_by_identifier(
+        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
             message.identifier,
             state_change,
         )
@@ -1169,7 +1169,7 @@ class RaidenMessageHandler(object):
             message.sender,
         )
 
-        self.raiden.state_machine_event_handler.dispatch_by_identifier(
+        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
             message.identifier,
             state_change,
         )
@@ -1214,7 +1214,7 @@ class RaidenMessageHandler(object):
             message.sender,
             transfer_state,
         )
-        self.raiden.state_machine_event_handler.dispatch_by_identifier(
+        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
             message.identifier,
             state_change,
         )
@@ -1335,7 +1335,8 @@ class StateMachineEventHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
 
-    def dispatch_to_all_tasks(self, state_change):
+    def log_and_dispatch_to_all_tasks(self, state_change):
+        """Log a state change, dispatch it to all state managers and log generated events"""
         state_change_id = self.raiden.transaction_log.log(state_change)
         manager_lists = self.raiden.identifier_to_statemanagers.itervalues()
 
@@ -1343,7 +1344,9 @@ class StateMachineEventHandler(object):
             events = self.dispatch(manager, state_change)
             self.raiden.transaction_log.log_events(state_change_id, events)
 
-    def dispatch_by_identifier(self, identifier, state_change):
+    def log_and_dispatch_by_identifier(self, identifier, state_change):
+        """Log a state change, dispatch it to the state manager corresponding to `idenfitier`
+        and log generated events"""
         state_change_id = self.raiden.transaction_log.log(state_change)
         manager_list = self.raiden.identifier_to_statemanagers[identifier]
 
@@ -1352,6 +1355,7 @@ class StateMachineEventHandler(object):
             self.raiden.transaction_log.log_events(state_change_id, events)
 
     def log_and_dispatch(self, state_manager, state_change):
+        """Log a state change, dispatch it to the given state manager and log generated events"""
         state_change_id = self.raiden.transaction_log.log(state_change)
         events = self.dispatch(state_manager, state_change)
         self.raiden.transaction_log.log_events(state_change_id, events)
