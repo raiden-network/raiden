@@ -6,7 +6,6 @@ from raiden.tests.utils.transfer import (
     assert_synched_channels,
     channel,
     direct_transfer,
-    get_sent_transfer,
 )
 from raiden.exceptions import NoPathError
 from raiden.api.python import RaidenAPI

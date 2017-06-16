@@ -83,7 +83,8 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         )
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS state_events ('
-            'identifier integer primary key, source_statechange_id integer NOT NULL, block_number integer NOT NULL, data binary, '
+            'identifier integer primary key, source_statechange_id integer NOT NULL, '
+            'block_number integer NOT NULL, data binary, '
             'FOREIGN KEY(source_statechange_id) REFERENCES state_changes(id)'
             ')'
         )
