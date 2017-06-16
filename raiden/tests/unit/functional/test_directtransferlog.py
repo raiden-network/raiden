@@ -80,7 +80,7 @@ def test_initiator_log_directransfer_success(
     app0_events = get_all_state_events(app0.raiden.transaction_log)
     sucessful_transfers = [
         event
-        for _, _, event in app0_events
+        for _, _, _, event in app0_events
         if isinstance(event, EventTransferSentSuccess)
     ]
     assert sucessful_transfers[0] == EventTransferSentSuccess(
@@ -149,7 +149,7 @@ def test_target_log_directransfer_successevent(
     app1_state_changes = get_all_state_events(app1.raiden.transaction_log)
     sucessful_received_transfers = [
         event
-        for _, _, event in app1_state_changes
+        for _, _, _, event in app1_state_changes
         if isinstance(event, EventTransferReceivedSuccess)
     ]
     assert sucessful_received_transfers[0] == EventTransferReceivedSuccess(
