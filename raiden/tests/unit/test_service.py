@@ -29,7 +29,7 @@ def test_ping(raiden_network):
         ping_encoded,
         app1.raiden.address,
     )
-    async_result.wait()
+    assert async_result.wait(2), "The message was not acknowledged"
 
     expected_echohash = sha3(ping_encoded + app1.raiden.address)
 
@@ -57,17 +57,19 @@ def test_ping_unreachable(raiden_network):
     messages = setup_messages_cb()
     UnreliableTransport.network.counter = 0
 
-    ping = Ping(nonce=0)
-    app0.raiden.sign(ping)
-    async_result = app0.raiden.protocol.send_async(
+    ping_message = Ping(nonce=0)
+    app0.raiden.sign(ping_message)
+    ping_encoded = ping_message.encode()
+
+    async_result = app0.raiden.protocol.send_raw_with_result(
+        ping_encoded,
         app1.raiden.address,
-        ping,
     )
 
-    assert async_result.wait(2) is None, "the message was dropped, it can't be acknowledged"
+    assert async_result.wait(2) is None, "The message was dropped, it can't be acknowledged"
 
     for message in messages:
-        assert decode(message) == ping
+        assert decode(message) == ping_message
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
