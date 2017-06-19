@@ -545,8 +545,8 @@ class RaidenProtocol(object):
         if not isaddress(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
-        if isinstance(message, Ack):
-            raise ValueError('Do not use send for Ack messages')
+        if isinstance(message, (Ack, Ping)):
+            raise ValueError('Do not use send for Ack or Ping messages')
 
         # Messages that are not unique per receiver can result in hash
         # collision, e.g. Secret messages. The hash collision has the undesired

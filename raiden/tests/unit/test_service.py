@@ -25,27 +25,24 @@ def test_ping(raiden_network):
     app0.raiden.sign(ping_message)
     ping_encoded = ping_message.encode()
 
-    app0.raiden.protocol.send_and_wait(
+    async_result = app0.raiden.protocol.send_raw_with_result(
+        ping_encoded,
         app1.raiden.address,
-        ping_message,
     )
-    gevent.sleep(0.1)
+    async_result.wait()
 
-    # mesages may have more than two entries depending on the retry logic, so
-    # fiter duplicates
-    assert len(set(messages)) == 2
+    expected_echohash = sha3(ping_encoded + app1.raiden.address)
 
-    assert ping_encoded in messages
-    messages_decoded = [
-        decode(m)
-        for m in messages
-    ]
+    messages_decoded = [decode(m) for m in messages]
     ack_message = next(
         decoded
         for decoded in messages_decoded
-        if isinstance(decoded, Ack)
+        if isinstance(decoded, Ack) and decoded.echo == expected_echohash
     )
-    assert ack_message.echo == sha3(ping_encoded + app1.raiden.address)
+
+    # the ping message was sent and acknowledged
+    assert ping_encoded in messages
+    assert ack_message
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
