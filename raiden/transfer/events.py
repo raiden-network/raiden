@@ -37,6 +37,9 @@ class EventTransferSentSuccess(Event):
             self.identifier == other.identifier
         )
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class EventTransferSentFailed(Event):
     """ Event emitted by the payer when a transfer has failed.
@@ -59,6 +62,9 @@ class EventTransferSentFailed(Event):
             self.reason == other.reason
         )
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class EventTransferReceivedSuccess(Event):
     """ Event emitted when a payee has received a payment.
@@ -80,3 +86,6 @@ class EventTransferReceivedSuccess(Event):
         return (
             self.identifier == other.identifier
         )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
