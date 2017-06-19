@@ -201,6 +201,9 @@ class LockedTransferState(State):
 
         return False
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class MediationPairState(State):
     """ State for a mediated transfer.

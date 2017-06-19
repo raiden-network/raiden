@@ -84,6 +84,9 @@ class RouteState(State):
             )
         return False
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class RoutesState(State):
     """ Routing state.
@@ -133,3 +136,6 @@ class RoutesState(State):
             )
 
         return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

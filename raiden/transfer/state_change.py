@@ -22,6 +22,9 @@ class Block(StateChange):
             self.block_number == other.block_number
         )
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __str__(self):
         return 'Block({})'.format(self.block_number)
 
@@ -69,6 +72,9 @@ class ActionCancelTransfer(StateChange):
             self.identifier == other.identifier
         )
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __str__(self):
         return 'ActionCancelTransfer(identifier:{})'.format(
             self.identifier,
@@ -98,6 +104,9 @@ class ActionTransferDirect(StateChange):
             self.token_address == other.token_address and
             self.node_address == other.node_address
         )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __str__(self):
         return (
@@ -135,6 +144,9 @@ class ReceiveTransferDirect(StateChange):
             self.token_address == other.token_address and
             self.sender == other.sender
         )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __str__(self):
         return (
