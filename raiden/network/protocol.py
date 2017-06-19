@@ -611,6 +611,11 @@ class RaidenProtocol(object):
         self._send_ack(*self.receivedhashes_acks[message.echo])
 
     def get_ping(self, nonce):
+        """ Returns a signed Ping message.
+
+        Note: Ping messages don't have an enforced ordering, so a Ping message
+        with a higher nonce may be acknowledged first.
+        """
         message = Ping(nonce)
         self.raiden.sign(message)
         message_data = message.encode()

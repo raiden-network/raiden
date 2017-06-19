@@ -73,47 +73,6 @@ def test_ping_unreachable(raiden_network):
         assert decode(message) == ping
 
 
-@pytest.mark.parametrize('privatekey_seed', ['ping_dropped_message:{}'])
-@pytest.mark.parametrize('blockchain_type', ['tester'])
-@pytest.mark.parametrize('number_of_nodes', [2])
-@pytest.mark.parametrize('transport_class', [UnreliableTransport])
-def test_ping_ordering(raiden_network):
-    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-
-    # mock transport with packet loss, every 3rd is lost, starting with first message
-    droprate = UnreliableTransport.droprate = 3
-    app0.raiden.protocol.retry_interval = 0.1  # for fast tests
-
-    messages = setup_messages_cb()
-    UnreliableTransport.network.counter = 0
-
-    ping_amount = 5
-
-    hashes = []
-    for nonce in range(ping_amount):
-        ping = Ping(nonce=nonce)
-        app0.raiden.sign(ping)
-        app0.raiden.protocol.send_and_wait(app1.raiden.address, ping)
-        pinghash = sha3(ping.encode() + app1.raiden.address)
-        hashes.append(pinghash)
-
-    gevent.sleep(2)  # give some time for messages to be handled
-
-    expected_message_amount = ping_amount * droprate
-    assert len(messages) == expected_message_amount
-
-    for i in range(0, expected_message_amount, droprate):
-        assert isinstance(decode(messages[i]), Ping)
-
-    for i in range(1, expected_message_amount, droprate):
-        assert isinstance(decode(messages[i]), Ping)
-
-    for i, j in zip(range(2, expected_message_amount, droprate), range(ping_amount)):
-        decoded = decode(messages[i])
-        assert isinstance(decoded, Ack)
-        assert decoded.echo == hashes[j]
-
-
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('deposit', [0])
 def test_receive_direct_before_deposit(raiden_network):
