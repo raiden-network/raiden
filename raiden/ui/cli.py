@@ -13,18 +13,14 @@ from ethereum import slogging
 from pyethapp.jsonrpc import address_decoder
 
 from raiden.accounts import AccountManager
-from raiden.api.python import RaidenAPI
 from raiden.api.rest import APIServer, RestAPI
-from raiden.app import App
 from raiden.constants import ROPSTEN_REGISTRY_ADDRESS, ROPSTEN_DISCOVERY_ADDRESS
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.rpc.client import BlockChainService
 from raiden.network.sockfactory import socket_factory
 from raiden.settings import (
     INITIAL_PORT,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
 )
-from raiden.ui.console import Console
 from raiden.utils import split_endpoint
 
 gevent.monkey.patch_all()
@@ -160,6 +156,9 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         rpc,
         console):
 
+    from raiden.app import App
+    from raiden.network.rpc.client import BlockChainService
+
     slogging.configure(logging, log_file=logfile)
 
     # config_file = args.config_file
@@ -279,6 +278,9 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
 @click.command()
 @click.pass_context
 def run(ctx, **kwargs):
+    from raiden.api.python import RaidenAPI
+    from raiden.ui.console import Console
+
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
