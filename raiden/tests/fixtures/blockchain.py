@@ -57,12 +57,12 @@ def genesis_path_from_testfunction(request):
 
 
 def _token_addresses(
-    token_amount,
-    number_of_tokens,
-    deploy_service,
-    blockchain_services,
-    register
-):
+        token_amount,
+        number_of_tokens,
+        deploy_service,
+        blockchain_services,
+        register):
+
     result = list()
     for _ in range(number_of_tokens):
         if register:
