@@ -1,5 +1,6 @@
 dist: trusty
 sudo: true
+group: edge
 
 language: python
 python:
