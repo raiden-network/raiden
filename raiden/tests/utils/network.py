@@ -5,7 +5,6 @@ from __future__ import print_function, division
 from ethereum import slogging
 
 from raiden.app import App
-from raiden.network.discovery import Discovery
 from raiden.network.transport import DummyPolicy
 from raiden.utils import privatekey_to_address
 from raiden.tests.utils import OwnedNettingChannel
@@ -226,6 +225,7 @@ def create_sequential_channels(
 
 def create_apps(
         blockchain_services,
+        endpoint_discovery_services,
         raiden_udp_ports,
         transport_class,
         verbosity,
@@ -258,10 +258,11 @@ def create_apps(
     """
     # pylint: disable=too-many-locals
     half_of_nodes = len(blockchain_services) // 2
-    discovery = Discovery()
+
+    services = zip(blockchain_services, endpoint_discovery_services)
 
     apps = []
-    for idx, blockchain in enumerate(blockchain_services):
+    for idx, (blockchain, discovery) in enumerate(services):
         port = raiden_udp_ports[idx]
         private_key = blockchain.private_key
         nodeid = privatekey_to_address(private_key)
@@ -281,6 +282,8 @@ def create_apps(
         config = {
             'host': host,
             'port': port,
+            'external_ip': host,
+            'external_port': port,
             'privatekey_hex': private_key.encode('hex'),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,

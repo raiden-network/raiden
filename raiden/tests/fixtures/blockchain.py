@@ -23,6 +23,9 @@ from raiden.network.rpc.client import (
     patch_send_message,
     BlockChainService,
 )
+from raiden.network.discovery import (
+    ContractDiscovery,
+)
 from raiden.tests.utils.blockchain import (
     geth_create_blockchain,
 )
@@ -38,13 +41,6 @@ BlockchainServices = namedtuple(
 )
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 EPOCH0_DAGSIZE = 1073739912
-
-__all__ = (
-    'token_addresses',
-    'register_tokens',
-    'blockchain_services',
-    'blockchain_backend',
-)
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
@@ -96,7 +92,7 @@ def dagpath():
     return os.path.expanduser('~/.ethash/full-R23-0000000000000000')
 
 
-@pytest.fixture(scope='session', autouse=True)
+@pytest.fixture(autouse=True)
 def pregenerate_dag(request, blockchain_type, dagpath):
     missing_dag = (
         not os.path.exists(dagpath) or
@@ -148,8 +144,22 @@ def cached_genesis(request, blockchain_type):
         register
     )
 
+    endpoint_discovery_address = deploy_service.deploy_contract(
+        'EndpointRegistry',
+        'EndpointRegistry.sol',
+    )
+
+    endpoint_discovery_services = [
+        ContractDiscovery(
+            chain.node_address,
+            chain.discovery(endpoint_discovery_address),
+        )
+        for chain in blockchain_services
+    ]
+
     raiden_apps = create_apps(
         blockchain_services,
+        endpoint_discovery_services,
         request.getfixturevalue('raiden_udp_ports'),
         DummyTransport,  # Do not use a UDP server to avoid port reuse in MacOSX
         request.config.option.verbose,
@@ -235,6 +245,7 @@ def cached_genesis(request, blockchain_type):
 
     genesis = GENESIS_STUB.copy()
     genesis['alloc'] = alloc
+    genesis['config']['defaultDiscoveryAddress'] = address_encoder(endpoint_discovery_address)
     genesis['config']['defaultRegistryAddress'] = address_encoder(registry_address)
     genesis['config']['tokenAddresses'] = [
         address_encoder(token_address)
@@ -290,24 +301,20 @@ def blockchain_services(
         tester_blockgas_limit,
         cached_genesis):
 
-    verbose = request.config.option.verbose
+    registry_address = None
+    if cached_genesis and 'defaultRegistryAddress' in cached_genesis['config']:
+        registry_address = address_decoder(
+            cached_genesis['config']['defaultRegistryAddress']
+        )
 
-    if blockchain_type in ('geth',):
-
-        registry_address = None
-        if cached_genesis:
-            registry_address = cached_genesis['config'].get('defaultRegistryAddress')
-
-            if registry_address:
-                registry_address = address_decoder(registry_address)
-
+    if blockchain_type == 'geth':
         return _jsonrpc_services(
             deploy_key,
             private_keys,
-            verbose,
+            request.config.option.verbose,
             poll_timeout,
             blockchain_rpc_ports[0],
-            registry_address,
+            registry_address,  # _jsonrpc_services will handle the None value
         )
 
     if blockchain_type == 'tester':
@@ -318,6 +325,27 @@ def blockchain_services(
         )
 
     raise ValueError('unknown cluster type {}'.format(blockchain_type))
+
+
+@pytest.fixture
+def endpoint_discovery_services(blockchain_services, blockchain_type, cached_genesis):
+    discovery_address = None
+
+    if cached_genesis and 'defaultDiscoveryAddress' in cached_genesis['config']:
+        discovery_address = address_decoder(
+            cached_genesis['config']['defaultDiscoveryAddress']
+        )
+
+    if discovery_address is None:
+        discovery_address = blockchain_services.deploy_service.deploy_contract(
+            'EndpointRegistry',
+            'EndpointRegistry.sol',
+        )
+
+    return [
+        ContractDiscovery(chain.node_address, chain.discovery(discovery_address))
+        for chain in blockchain_services.blockchain_services
+    ]
 
 
 @pytest.fixture
