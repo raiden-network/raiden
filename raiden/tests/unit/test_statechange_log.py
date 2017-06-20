@@ -72,13 +72,13 @@ def test_write_read_events(tmpdir, in_memory_database):
     log = init_database(tmpdir, in_memory_database)
     event = EventTransferSentFailed(1, 'whatever')
     with pytest.raises(sqlite3.IntegrityError):
-        log.storage.write_state_events(1, [(None, 1, log.serializer.serialize(event))])
+        log.storage.write_state_events(1, [(None, 1, 1, log.serializer.serialize(event))])
     assert(len(get_all_state_events(log)) == 0)
 
     log.storage.write_state_change('statechangedata')
-    log.storage.write_state_events(1, [(None, 1, log.serializer.serialize(event))])
+    log.storage.write_state_events(1, [(None, 1, 1, log.serializer.serialize(event))])
     logged_events = get_all_state_events(log)
     assert(len(logged_events) == 1)
     assert(logged_events[0][0] == 1)
     assert(logged_events[0][1] == 1)
-    assert(isinstance(logged_events[0][2], EventTransferSentFailed))
+    assert(isinstance(logged_events[0][3], EventTransferSentFailed))
