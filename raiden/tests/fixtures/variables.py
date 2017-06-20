@@ -146,6 +146,8 @@ def token_amount(number_of_nodes, deposit):
 @pytest.fixture
 def private_keys(number_of_nodes, privatekey_seed):
     """ Private keys for each raiden node. """
+
+    # Note: The fixtures depend on the order of the private keys
     result = [
         sha3(privatekey_seed.format(position))
         for position in range(number_of_nodes)

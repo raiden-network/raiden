@@ -202,6 +202,7 @@ class BlockChainServiceTesterMock(object):
 
         self.address = privatekey_to_address(private_key)
         self.private_key = private_key
+        self.node_address = privatekey_to_address(private_key)
         self.default_registry = default_registry
 
         self.address_token = dict()

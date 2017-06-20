@@ -152,7 +152,7 @@ def test_transfer(raiden_network):
     )
 
     result.wait(timeout=10)
-    gevent.sleep(1)
+    gevent.sleep(5)
 
     assert_synched_channels(
         channel0, balance0 - amount, [],
