@@ -74,10 +74,13 @@ setup(
     packages=[
         'raiden',
         'raiden.api',
+        'raiden.api.v1',
         'raiden.blockchain',
         'raiden.encoding',
         'raiden.network',
         'raiden.network.rpc',
+        'raiden.transfer',
+        'raiden.transfer.mediated_transfer',
         'raiden.ui',
         'raiden.utils',
         'raiden.utils.profiling',
