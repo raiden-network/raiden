@@ -20,7 +20,10 @@ from raiden.constants import ROPSTEN_REGISTRY_ADDRESS, ROPSTEN_DISCOVERY_ADDRESS
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.rpc.client import BlockChainService
 from raiden.network.sockfactory import socket_factory
-from raiden.settings import INITIAL_PORT
+from raiden.settings import (
+    INITIAL_PORT,
+    DEFAULT_NAT_KEEPALIVE_RETRIES,
+)
 from raiden.ui.console import Console
 from raiden.utils import split_endpoint
 
@@ -90,7 +93,7 @@ OPTIONS = [
         '--max-unresponsive-time',
         help=(
             'Max time in seconds for which an address can send no packets and '
-            'still be considered healthy. Give 0 in order to disable healthcheck.'
+            'still be considered healthy.'
         ),
         default=120,
         type=int,
@@ -151,6 +154,8 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
         socket,
         logging,
         logfile,
+        max_unresponsive_time,
+        send_ping_time,
         api_port,
         rpc,
         console):
@@ -167,6 +172,10 @@ def app(address,  # pylint: disable=too-many-arguments,too-many-locals
     config['rpc'] = rpc
     config['api_port'] = api_port
     config['socket'] = socket
+
+    retries = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
+    config['protocol']['nat_keepalive_retries'] = retries
+    config['protocol']['nat_keepalive_timeout'] = send_ping_time
 
     accmgr = AccountManager(keystore_path)
     if not accmgr.accounts:
