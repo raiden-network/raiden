@@ -140,13 +140,13 @@ def options(func):
 
 @options
 @click.command()
-def app(address,  # pylint: disable=too-many-arguments,too-many-locals
+def app(address,
         keystore_path,
         eth_rpc_endpoint,
         registry_contract_address,
         discovery_contract_address,
         listen_address,
-        rpccorsdomain,
+        rpccorsdomain,  # pylint: disable=unused-argument
         socket,
         logging,
         logfile,
