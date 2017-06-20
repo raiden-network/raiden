@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+import getpass
+import json
 import os
 import sys
-import json
-import getpass
 
 from pyethapp.accounts import Account
+from ethereum.slogging import get_logger
+
+
+log = get_logger(__name__)
 
 
 def find_datadir():
@@ -52,9 +56,18 @@ class AccountManager(object):
             for f in os.listdir(self.keystore_path):
                 fullpath = os.path.join(self.keystore_path, f)
                 if os.path.isfile(fullpath):
-                    with open(fullpath) as data_file:
-                        data = json.load(data_file)
-                        self.accounts[str(data['address'])] = str(fullpath)
+                    try:
+                        with open(fullpath) as data_file:
+                            data = json.load(data_file)
+                            self.accounts[str(data['address'])] = str(fullpath)
+                    except (ValueError, KeyError, IOError) as ex:
+                        # Invalid file - skip
+                        if f.startswith("UTC--"):
+                            # Should be a valid account file - warn user
+                            msg = "Invalid account file"
+                            if isinstance(ex, IOError):
+                                msg = "Can not read account file"
+                            log.warning("%s %s: %s", msg, fullpath, ex)
 
     def address_in_keystore(self, address):
         if address is not None and address.startswith('0x'):
