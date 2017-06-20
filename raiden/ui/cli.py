@@ -179,6 +179,13 @@ def app(address,
     config['api_port'] = api_port
     config['socket'] = socket
 
+    if socket:
+        config['external_ip'] = socket.external_ip
+        config['external_port'] = socket.external_port
+    else:
+        config['external_ip'] = listen_host
+        config['external_port'] = listen_port
+
     retries = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['protocol']['nat_keepalive_retries'] = retries
     config['protocol']['nat_keepalive_timeout'] = send_ping_time
@@ -310,13 +317,6 @@ def run(ctx, **kwargs):
 
         app_ = ctx.invoke(app, **kwargs)
 
-        # spawn address registration to avoid block while waiting for the next block
-        registry_event = gevent.spawn(
-            app_.discovery.register,
-            app_.raiden.address,
-            mapped_socket.external_ip,
-            mapped_socket.external_port,
-        )
         app_.raiden.register_registry(app_.raiden.chain.default_registry.address)
 
         domain_list = []
@@ -354,7 +354,6 @@ def run(ctx, **kwargs):
             console = Console(app_)
             console.start()
 
-        registry_event.join()
         # wait for interrupt
         event = gevent.event.Event()
         gevent.signal(signal.SIGQUIT, event.set)

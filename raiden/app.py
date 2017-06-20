@@ -22,6 +22,8 @@ class App(object):  # pylint: disable=too-few-public-methods
     DEFAULT_CONFIG = {
         'host': '',
         'port': INITIAL_PORT,
+        'external_ip': '',
+        'external_port': INITIAL_PORT,
         'privatekey_hex': '',
         'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
         'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
