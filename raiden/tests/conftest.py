@@ -151,6 +151,8 @@ __all__ = (
 gevent.get_hub().SYSTEM_ERROR = BaseException
 PBKDF2_CONSTANTS['c'] = 100
 
+CATCH_LOG_HANDLER_NAME = 'catch_log_handler'
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -221,3 +223,16 @@ def monkey_patch_tester():
         return result
 
     tester.processblock.apply_transaction = apply_transaction
+
+
+# Connect catchlog's handler to slogging's root logger
+@pytest.hookimpl(hookwrapper=True, trylast=True)
+def pytest_runtest_call(item):
+    catchlog_handler = getattr(item, CATCH_LOG_HANDLER_NAME, None)
+    if catchlog_handler and catchlog_handler not in slogging.rootLogger.handlers:
+        slogging.rootLogger.addHandler(catchlog_handler)
+
+    yield
+
+    if catchlog_handler and catchlog_handler in slogging.rootLogger.handlers:
+        slogging.rootLogger.removeHandler(catchlog_handler)
