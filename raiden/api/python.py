@@ -585,7 +585,6 @@ class RaidenAPI(object):
             if is_user_transfer_event:
                 new_event = {
                     'block_number': event.block_number,
-                    'event_identifier': event.identifier,
                     '_event_type': type(event.event_object).__name__,
                 }
                 new_event.update(event.event_object.__dict__)

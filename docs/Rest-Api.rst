@@ -769,7 +769,6 @@ Example Response
             "channel_manager_address": "0xc0ea08a2d404d3172d2add29a45be56da40e2949"
         }, {
             "event_type": "EventTransferSentSuccess",
-            "event_identifier": 1,
             "identifier": 14909067296492875713,
             "block_number": 26
         }
