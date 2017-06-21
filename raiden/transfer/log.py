@@ -3,6 +3,12 @@ import pickle
 import sqlite3
 import threading
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
+
+InternalEvent = namedtuple(
+    'InternalEvent',
+    ('identifier', 'state_change_id', 'block_number', 'event_object'),
+)
 
 
 # TODO:
@@ -257,7 +263,10 @@ class StateChangeLog(object):
         (identifier, generated_statechange_id, block_number, event_object)
         """
         results = self.storage.get_events_in_range(from_block, to_block)
-        return [(res[0], res[1], res[2], self.serializer.deserialize(res[3])) for res in results]
+        return [
+            InternalEvent(res[0], res[1], res[2], self.serializer.deserialize(res[3]))
+            for res in results
+        ]
 
     def get_state_change_by_id(self, identifier):
         serialized_data = self.storage.get_state_change_by_id(identifier)

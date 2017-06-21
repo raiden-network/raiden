@@ -106,28 +106,28 @@ def test_fullnetwork(
         if not isinstance(change[1], Block)
     ]
     app0_events = [
-        event[3] for event in get_all_state_events(app0.raiden.transaction_log)
+        event.event_object for event in get_all_state_events(app0.raiden.transaction_log)
     ]
     app1_state_changes = [
         change[1] for change in get_all_state_changes(app1.raiden.transaction_log)
         if not isinstance(change[1], Block)
     ]
     app1_events = [
-        event[3] for event in get_all_state_events(app1.raiden.transaction_log)
+        event.event_object for event in get_all_state_events(app1.raiden.transaction_log)
     ]
     app2_state_changes = [
         change[1] for change in get_all_state_changes(app2.raiden.transaction_log)
         if not isinstance(change[1], Block)
     ]
     app2_events = [
-        event[3] for event in get_all_state_events(app2.raiden.transaction_log)
+        event.event_object for event in get_all_state_events(app2.raiden.transaction_log)
     ]
     app3_state_changes = [
         change[1] for change in get_all_state_changes(app3.raiden.transaction_log)
         if not isinstance(change[1], Block)
     ]
     app3_events = [
-        event[3] for event in get_all_state_events(app3.raiden.transaction_log)
+        event.event_object for event in get_all_state_events(app3.raiden.transaction_log)
     ]
 
     # app1 received one direct transfers

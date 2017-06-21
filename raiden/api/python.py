@@ -576,19 +576,19 @@ class RaidenAPI(object):
         )
         # Here choose which raiden internal events we want to expose to the end user
         for event in raiden_events:
-            is_user_transfer_event = (
-                isinstance(event[3], EventTransferSentSuccess) or
-                isinstance(event[3], EventTransferSentFailed) or
-                isinstance(event[3], EventTransferReceivedSuccess)
-            )
+            is_user_transfer_event = isinstance(event.event_object, (
+                EventTransferSentSuccess,
+                EventTransferSentFailed,
+                EventTransferReceivedSuccess
+            ))
 
             if is_user_transfer_event:
                 new_event = {
-                    'block_number': event[2],
-                    'event_identifier': event[0],
-                    '_event_type': type(event[3]).__name__,
+                    'block_number': event.block_number,
+                    'event_identifier': event.identifier,
+                    '_event_type': type(event.event_object).__name__,
                 }
-                new_event.update(event[3].__dict__)
+                new_event.update(event.event_object.__dict__)
                 returned_events.append(new_event)
 
         return returned_events
