@@ -18,15 +18,24 @@ export class RaidenService {
     constructor(private http: Http, private config: RaidenConfig) {
         this.web3 = this.config.web3;
         this.tokenContract = this.web3.eth.contract(tokenabi);
-        this.raidenAddress = this.web3.eth.coinbase;
+        this.initialiseRaidenAddress();
+        this.getRaidenAddress();
     }
 
-    public getRaidenAddress(): string {
-        return this.raidenAddress;
+    public initialiseRaidenAddress(): Observable<any> {
+        return this.http.get(`${this.config.apiCall}/address`)
+        .map((response) => {
+            return response.json().our_address;
+        }).catch(this.handleError);
+    }
+
+    public getRaidenAddress() {
+        this.initialiseRaidenAddress().subscribe((address) => {
+            this.raidenAddress = address;
+        });
     }
 
     public getChannels(): Observable<any> {
-        console.log(this.raidenAddress);
         return this.http.get(this.config.apiCall + '/channels')
         .map((response) => {
             const channelArray = <Array<any>>response.json();

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { RaidenService } from './services/raiden.service';
 
 @Component({
@@ -6,11 +6,16 @@ import { RaidenService } from './services/raiden.service';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })
-export class AppComponent {
+export class AppComponent implements OnInit {
     public title = 'Raiden';
     public raidenAddress;
     constructor(private raidenService: RaidenService) {
-        this.raidenAddress = raidenService.getRaidenAddress();
     }
+
+    ngOnInit() {
+        this.raidenService.initialiseRaidenAddress()
+        .subscribe((address) => this.raidenAddress = address);
+    }
+
 
 }
