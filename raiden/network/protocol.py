@@ -526,7 +526,7 @@ class RaidenProtocol(object):
             events.event_unhealthy,
             self.retries_before_backoff,
             self.retry_interval,
-            self.retry_interval * 10,
+            self.retry_interval * 10,  # FIXME: magic number
         ))
 
         if log.isEnabledFor(logging.DEBUG):
