@@ -1,19 +1,17 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
 import os
-import logging
-import random
+from os import path
 import itertools
 import pickle
+import random
 from collections import defaultdict
-from os import path
 
 import gevent
 from gevent.event import AsyncResult
+from coincurve import PrivateKey
 from ethereum import slogging
 from ethereum.utils import encode_hex
-
-from coincurve import PrivateKey
 
 from raiden.constants import (
     UINT64_MAX,
@@ -23,20 +21,14 @@ from raiden.blockchain.events import (
     get_relevant_proxies,
     PyethappBlockchainEvents,
 )
+from raiden.event_handler import StateMachineEventHandler
+from raiden.message_handler import RaidenMessageHandler
 from raiden.tasks import (
     AlarmTask,
 )
-from raiden.token_swap import (
-    GreenletTasksDispatcher,
-    SwapKey,
-    TakerTokenSwapTask,
-)
-from raiden.transfer.architecture import (
-    StateManager,
-)
-from raiden.transfer.state_change import (
-    Block,
-)
+from raiden.token_swap import GreenletTasksDispatcher
+from raiden.transfer.architecture import StateManager
+from raiden.transfer.state_change import Block
 from raiden.transfer.state import (
     RoutesState,
     CHANNEL_STATE_OPENED,
@@ -49,39 +41,18 @@ from raiden.transfer.mediated_transfer import (
 from raiden.transfer.mediated_transfer import target as target_task
 from raiden.transfer.mediated_transfer.state import (
     lockedtransfer_from_message,
-    InitiatorState,
-    MediatorState,
     LockedTransferState,
 )
 from raiden.transfer.state_change import (
     ActionTransferDirect,
-    ReceiveTransferDirect,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
     ActionInitTarget,
-    ContractReceiveBalance,
-    ContractReceiveClosed,
-    ContractReceiveNewChannel,
-    ContractReceiveSettled,
-    ContractReceiveTokenAdded,
-    ContractReceiveWithdraw,
-    ReceiveSecretRequest,
-    ReceiveSecretReveal,
-    ReceiveTransferRefund,
 )
 from raiden.transfer.events import (
     EventTransferSentSuccess,
-    EventTransferSentFailed,
-    EventTransferReceivedSuccess,
-)
-from raiden.transfer.mediated_transfer.events import (
-    SendBalanceProof,
-    SendMediatedTransfer,
-    SendRefundTransfer,
-    SendRevealSecret,
-    SendSecretRequest,
 )
 from raiden.transfer.log import (
     StateChangeLog,
@@ -94,13 +65,7 @@ from raiden.channel import (
 from raiden.channel.netting_channel import (
     ChannelSerialization,
 )
-from raiden.exceptions import (
-    UnknownAddress,
-    TransferWhenClosed,
-    TransferUnwanted,
-    UnknownTokenAddress,
-    InvalidAddress,
-)
+from raiden.exceptions import InvalidAddress
 from raiden.network.channelgraph import (
     get_best_routes,
     channel_to_routestate,
@@ -108,11 +73,9 @@ from raiden.network.channelgraph import (
     ChannelGraph,
     ChannelDetails,
 )
-from raiden.encoding import messages
 from raiden.messages import (
     RevealSecret,
     Secret,
-    SecretRequest,
     SignedMessage,
 )
 from raiden.network.protocol import (
@@ -464,7 +427,7 @@ class RaidenService(object):
         for channel in channels_to_remove:
             channels_list.remove(channel)
 
-        if len(channels_list) == 0:
+        if not channels_list:
             del self.tokens_hashlocks_channels[token_address][hashlock]
 
     def get_channel_details(self, token_address, netting_channel):
@@ -706,7 +669,7 @@ class RaidenService(object):
 
         connection_managers = [
             self.connection_manager_for_token(token_address) for
-            token_address in self.channelgraphs.keys()
+            token_address in self.channelgraphs
         ]
 
         def blocks_to_wait():
@@ -832,15 +795,14 @@ class RaidenService(object):
             )
             return async_result
 
-        else:
-            async_result = self._mediated_transfer(
-                token_address,
-                amount,
-                identifier,
-                target,
-            )
+        async_result = self._mediated_transfer(
+            token_address,
+            amount,
+            identifier,
+            target,
+        )
 
-            return async_result
+        return async_result
 
     def _direct_or_mediated_transfer(self, token_address, amount, identifier, direct_channel):
         """ Check the direct channel and if possible use it, otherwise start a
@@ -860,7 +822,6 @@ class RaidenService(object):
                 identifier,
                 direct_channel.partner_state.address,
             )
-            return async_result
 
         elif amount > direct_channel.distributable:
             log.info(
@@ -876,7 +837,6 @@ class RaidenService(object):
                 identifier,
                 direct_channel.partner_state.address,
             )
-            return async_result
 
         else:
             direct_transfer = direct_channel.create_directtransfer(amount, identifier)
@@ -906,7 +866,8 @@ class RaidenService(object):
                 direct_channel.partner_state.address,
                 direct_transfer,
             )
-            return async_result
+
+        return async_result
 
     def _mediated_transfer(self, token_address, amount, identifier, target):
         return self.start_mediated_transfer(token_address, amount, identifier, target)
@@ -1049,481 +1010,3 @@ class RaidenService(object):
 
         identifier = message.identifier
         self.identifier_to_statemanagers[identifier].append(state_manager)
-
-
-class RaidenMessageHandler(object):
-    """ Class responsible to handle the protocol messages.
-
-    Note:
-        This class is not intended to be used standalone, use RaidenService
-        instead.
-    """
-    def __init__(self, raiden):
-        self.raiden = raiden
-        self.blocked_tokens = []
-
-    def on_message(self, message, msghash):  # noqa pylint: disable=unused-argument
-        """ Handles `message` and sends an ACK on success. """
-        if log.isEnabledFor(logging.INFO):
-            log.info('message received', message=message)
-
-        cmdid = message.cmdid
-
-        # using explicity dispatch to make the code grepable
-        if cmdid == messages.ACK:
-            pass
-
-        elif cmdid == messages.PING:
-            pass
-
-        elif cmdid == messages.SECRETREQUEST:
-            self.message_secretrequest(message)
-
-        elif cmdid == messages.REVEALSECRET:
-            self.message_revealsecret(message)
-
-        elif cmdid == messages.SECRET:
-            self.message_secret(message)
-
-        elif cmdid == messages.DIRECTTRANSFER:
-            self.message_directtransfer(message)
-
-        elif cmdid == messages.MEDIATEDTRANSFER:
-            self.message_mediatedtransfer(message)
-
-        elif cmdid == messages.REFUNDTRANSFER:
-            self.message_refundtransfer(message)
-
-        else:
-            raise Exception("Unhandled message cmdid '{}'.".format(cmdid))
-
-    def message_revealsecret(self, message):
-        secret = message.secret
-        sender = message.sender
-
-        self.raiden.greenlet_task_dispatcher.dispatch_message(
-            message,
-            message.hashlock,
-        )
-        self.raiden.register_secret(secret)
-
-        state_change = ReceiveSecretReveal(secret, sender)
-        self.raiden.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
-
-    def message_secretrequest(self, message):
-        self.raiden.greenlet_task_dispatcher.dispatch_message(
-            message,
-            message.hashlock,
-        )
-
-        state_change = ReceiveSecretRequest(
-            message.identifier,
-            message.amount,
-            message.hashlock,
-            message.sender,
-        )
-
-        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
-            message.identifier,
-            state_change,
-        )
-
-    def message_secret(self, message):
-        self.raiden.greenlet_task_dispatcher.dispatch_message(
-            message,
-            message.hashlock,
-        )
-
-        try:
-            # register the secret with all channels interested in it (this
-            # must not withdraw or unlock otherwise the state changes could
-            # flow in the wrong order in the path)
-            self.raiden.register_secret(message.secret)
-
-            secret = message.secret
-            identifier = message.identifier
-            token = message.token
-            secret = message.secret
-            hashlock = sha3(secret)
-
-            self.raiden.handle_secret(
-                identifier,
-                token,
-                secret,
-                message,
-                hashlock,
-            )
-        except:  # pylint: disable=bare-except
-            log.exception('Unhandled exception')
-
-        state_change = ReceiveSecretReveal(
-            message.secret,
-            message.sender,
-        )
-
-        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
-            message.identifier,
-            state_change,
-        )
-
-    def message_refundtransfer(self, message):
-        self.raiden.greenlet_task_dispatcher.dispatch_message(
-            message,
-            message.lock.hashlock,
-        )
-
-        identifier = message.identifier
-        token_address = message.token
-        target = message.target
-        amount = message.lock.amount
-        expiration = message.lock.expiration
-        hashlock = message.lock.hashlock
-
-        manager = self.raiden.identifier_to_statemanagers[identifier]
-
-        if isinstance(manager.current_state, InitiatorState):
-            initiator_address = self.raiden.address
-
-        elif isinstance(manager.current_state, MediatorState):
-            last_pair = manager.current_state.transfers_pair[-1]
-            initiator_address = last_pair.payee_transfer.initiator
-
-        else:
-            # TODO: emit a proper event for the reject message
-            return
-
-        transfer_state = LockedTransferState(
-            identifier=identifier,
-            amount=amount,
-            token=token_address,
-            initiator=initiator_address,
-            target=target,
-            expiration=expiration,
-            hashlock=hashlock,
-            secret=None,
-        )
-        state_change = ReceiveTransferRefund(
-            message.sender,
-            transfer_state,
-        )
-        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
-            message.identifier,
-            state_change,
-        )
-
-    def message_directtransfer(self, message):
-        if message.token not in self.raiden.channelgraphs:
-            raise UnknownTokenAddress('Unknown token address {}'.format(pex(message.token)))
-
-        if message.token in self.blocked_tokens:
-            raise TransferUnwanted()
-
-        graph = self.raiden.channelgraphs[message.token]
-
-        if not graph.has_channel(self.raiden.address, message.sender):
-            raise UnknownAddress(
-                'Direct transfer from node without an existing channel: {}'.format(
-                    pex(message.sender),
-                )
-            )
-
-        channel = graph.partneraddress_channel[message.sender]
-
-        if channel.state != CHANNEL_STATE_OPENED:
-            raise TransferWhenClosed(
-                'Direct transfer received for a closed channel: {}'.format(
-                    pex(channel.channel_address),
-                )
-            )
-
-        amount = message.transferred_amount - channel.partner_state.transferred_amount
-        state_change = ReceiveTransferDirect(
-            message.identifier,
-            amount,
-            message.token,
-            message.sender,
-        )
-        state_change_id = self.raiden.transaction_log.log(state_change)
-
-        channel.register_transfer(message)
-
-        receive_success = EventTransferReceivedSuccess(
-            message.identifier,
-        )
-        self.raiden.transaction_log.log_events(
-            state_change_id,
-            [receive_success],
-            self.raiden.get_block_number()
-        )
-
-    def message_mediatedtransfer(self, message):
-        # TODO: Reject mediated transfer that the hashlock/identifier is known,
-        # this is a downstream bug and the transfer is going in cycles (issue #490)
-
-        key = SwapKey(
-            message.identifier,
-            message.token,
-            message.lock.amount,
-        )
-
-        if message.token in self.blocked_tokens:
-            raise TransferUnwanted()
-
-        # TODO: add a separate message for token swaps to simplify message
-        # handling (issue #487)
-        if key in self.raiden.swapkeys_tokenswaps:
-            self.message_tokenswap(message)
-            return
-
-        graph = self.raiden.channelgraphs[message.token]
-
-        if not graph.has_channel(self.raiden.address, message.sender):
-            raise UnknownAddress(
-                'Mediated transfer from node without an existing channel: {}'.format(
-                    pex(message.sender),
-                )
-            )
-
-        channel = graph.partneraddress_channel[message.sender]
-
-        if channel.state != CHANNEL_STATE_OPENED:
-            raise TransferWhenClosed(
-                'Mediated transfer received but the channel is closed: {}'.format(
-                    pex(channel.channel_address),
-                )
-            )
-
-        channel.register_transfer(message)  # raises if the message is invalid
-
-        if message.target == self.raiden.address:
-            self.raiden.target_mediated_transfer(message)
-        else:
-            self.raiden.mediate_mediated_transfer(message)
-
-    def message_tokenswap(self, message):
-        key = SwapKey(
-            message.identifier,
-            message.token,
-            message.lock.amount,
-        )
-
-        # If we are the maker the task is already running and waiting for the
-        # taker's MediatedTransfer
-        task = self.raiden.swapkeys_greenlettasks.get(key)
-        if task:
-            task.response_queue.put(message)
-
-        # If we are the taker we are receiving the maker transfer and should
-        # start our new task
-        else:
-            token_swap = self.raiden.swapkeys_tokenswaps[key]
-            task = TakerTokenSwapTask(
-                self.raiden,
-                token_swap,
-                message,
-            )
-            task.start()
-
-            self.raiden.swapkeys_greenlettasks[key] = task
-
-
-class StateMachineEventHandler(object):
-    def __init__(self, raiden):
-        self.raiden = raiden
-
-    def log_and_dispatch_to_all_tasks(self, state_change):
-        """Log a state change, dispatch it to all state managers and log generated events"""
-        state_change_id = self.raiden.transaction_log.log(state_change)
-        manager_lists = self.raiden.identifier_to_statemanagers.itervalues()
-
-        for manager in itertools.chain(*manager_lists):
-            events = self.dispatch(manager, state_change)
-            self.raiden.transaction_log.log_events(
-                state_change_id,
-                events,
-                self.raiden.get_block_number()
-            )
-
-    def log_and_dispatch_by_identifier(self, identifier, state_change):
-        """Log a state change, dispatch it to the state manager corresponding to `idenfitier`
-        and log generated events"""
-        state_change_id = self.raiden.transaction_log.log(state_change)
-        manager_list = self.raiden.identifier_to_statemanagers[identifier]
-
-        for manager in manager_list:
-            events = self.dispatch(manager, state_change)
-            self.raiden.transaction_log.log_events(
-                state_change_id,
-                events,
-                self.raiden.get_block_number()
-            )
-
-    def log_and_dispatch(self, state_manager, state_change):
-        """Log a state change, dispatch it to the given state manager and log generated events"""
-        state_change_id = self.raiden.transaction_log.log(state_change)
-        events = self.dispatch(state_manager, state_change)
-        self.raiden.transaction_log.log_events(
-            state_change_id,
-            events,
-            self.raiden.get_block_number()
-        )
-
-    def dispatch(self, state_manager, state_change):
-        all_events = state_manager.dispatch(state_change)
-
-        for event in all_events:
-            self.on_event(event)
-
-        return all_events
-
-    def on_event(self, event):
-        if isinstance(event, SendMediatedTransfer):
-            receiver = event.receiver
-            fee = 0
-            graph = self.raiden.channelgraphs[event.token]
-            channel = graph.partneraddress_channel[receiver]
-
-            mediated_transfer = channel.create_mediatedtransfer(
-                self.raiden.get_block_number(),
-                event.initiator,
-                event.target,
-                fee,
-                event.amount,
-                event.identifier,
-                event.expiration,
-                event.hashlock,
-            )
-
-            self.raiden.sign(mediated_transfer)
-            channel.register_transfer(mediated_transfer)
-            self.raiden.send_async(receiver, mediated_transfer)
-
-        elif isinstance(event, SendRevealSecret):
-            reveal_message = RevealSecret(event.secret)
-            self.raiden.sign(reveal_message)
-            self.raiden.send_async(event.receiver, reveal_message)
-
-        elif isinstance(event, SendBalanceProof):
-            # TODO: issue #189
-
-            # unlock and update remotely (send the Secret message)
-            self.raiden.handle_secret(
-                event.identifier,
-                event.token,
-                event.secret,
-                None,
-                sha3(event.secret),
-            )
-
-        elif isinstance(event, SendSecretRequest):
-            secret_request = SecretRequest(
-                event.identifier,
-                event.hashlock,
-                event.amount,
-            )
-            self.raiden.sign(secret_request)
-            self.raiden.send_async(event.receiver, secret_request)
-
-        elif isinstance(event, SendRefundTransfer):
-            pass
-
-        elif isinstance(event, EventTransferSentSuccess):
-            for result in self.raiden.identifier_to_results[event.identifier]:
-                result.set(True)
-
-        elif isinstance(event, EventTransferSentFailed):
-            for result in self.raiden.identifier_to_results[event.identifier]:
-                result.set(False)
-
-    def on_blockchain_statechange(self, state_change):
-        if log.isEnabledFor(logging.INFO):
-            log.info('state_change received', state_change=state_change)
-        self.raiden.transaction_log.log(state_change)
-
-        if isinstance(state_change, ContractReceiveTokenAdded):
-            self.handle_tokenadded(state_change)
-
-        elif isinstance(state_change, ContractReceiveNewChannel):
-            self.handle_channelnew(state_change)
-
-        elif isinstance(state_change, ContractReceiveBalance):
-            self.handle_balance(state_change)
-
-        elif isinstance(state_change, ContractReceiveClosed):
-            self.handle_closed(state_change)
-
-        elif isinstance(state_change, ContractReceiveSettled):
-            self.handle_settled(state_change)
-
-        elif isinstance(state_change, ContractReceiveWithdraw):
-            self.handle_withdraw(state_change)
-
-        elif log.isEnabledFor(logging.ERROR):
-            log.error('Unknown state_change', state_change=state_change)
-
-    def handle_tokenadded(self, state_change):
-        manager_address = state_change.manager_address
-        self.raiden.register_channel_manager(manager_address)
-
-    def handle_channelnew(self, state_change):
-        manager_address = state_change.manager_address
-        channel_address = state_change.channel_address
-        participant1 = state_change.participant1
-        participant2 = state_change.participant2
-
-        token_address = self.raiden.manager_token[manager_address]
-        graph = self.raiden.channelgraphs[token_address]
-        graph.add_path(participant1, participant2)
-
-        connection_manager = self.raiden.connection_manager_for_token(token_address)
-
-        if participant1 == self.raiden.address or participant2 == self.raiden.address:
-            self.raiden.register_netting_channel(
-                token_address,
-                channel_address,
-            )
-        elif connection_manager.wants_more_channels:
-            gevent.spawn(connection_manager.retry_connect)
-        else:
-            log.info('ignoring new channel, this node is not a participant.')
-
-    def handle_balance(self, state_change):
-        channel_address = state_change.channel_address
-        token_address = state_change.token_address
-        participant_address = state_change.participant_address
-        balance = state_change.balance
-        block_number = state_change.block_number
-
-        graph = self.raiden.channelgraphs[token_address]
-        channel = graph.address_channel[channel_address]
-        channel_state = channel.get_state_for(participant_address)
-
-        if channel_state.contract_balance != balance:
-            channel_state.update_contract_balance(balance)
-
-        connection_manager = self.raiden.connection_manager_for_token(
-            token_address
-        )
-        if channel.deposit == 0:
-            gevent.spawn(
-                connection_manager.join_channel,
-                participant_address,
-                balance
-            )
-
-        if channel.external_state.opened_block == 0:
-            channel.external_state.set_opened(block_number)
-
-    def handle_closed(self, state_change):
-        channel_address = state_change.channel_address
-        channel = self.raiden.find_channel_by_address(channel_address)
-        channel.state_transition(state_change)
-
-    def handle_settled(self, state_change):
-        channel_address = state_change.channel_address
-        channel = self.raiden.find_channel_by_address(channel_address)
-        channel.state_transition(state_change)
-
-    def handle_withdraw(self, state_change):
-        secret = state_change.secret
-        self.raiden.register_secret(secret)
