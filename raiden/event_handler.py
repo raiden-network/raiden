@@ -28,6 +28,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
+    EventUnlockSuccess,
 )
 from raiden.utils import sha3
 
@@ -181,6 +182,8 @@ class StateMachineEventHandler(object):
         elif isinstance(event, EventTransferReceivedSuccess):
             self.do_channel_snapshot(event.channel_address)
 
+        # FIXME: @hackaugusto should we `pass` on EventUnlockSuccess?
+        elif isinstance(event, EventUnlockSuccess):
             pass
 
         else:
