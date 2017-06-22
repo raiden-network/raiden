@@ -193,6 +193,7 @@ def clear_if_finalized(iteration):
     elif state.state == 'balance_proof':
         transfer_success = EventTransferReceivedSuccess(
             state.from_transfer.identifier,
+            state.from_route.channel_address,
         )
         unlock_success = EventWithdrawSuccess(
             state.from_transfer.identifier,

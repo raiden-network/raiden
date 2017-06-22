@@ -16,6 +16,7 @@ from raiden.tests.utils.log import (
     get_all_state_changes,
     get_all_state_events,
 )
+from raiden.tests.utils.network import get_direct_channel_address
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -77,6 +78,8 @@ def test_initiator_log_directransfer_success(
         identifier,
     )
 
+    channel_address = get_direct_channel_address(app1, app0, token_address)
+
     app0_events = get_all_state_events(app0.raiden.transaction_log)
     sucessful_transfers = [
         event.event_object for event in app0_events
@@ -84,6 +87,7 @@ def test_initiator_log_directransfer_success(
     ]
     assert sucessful_transfers[0] == EventTransferSentSuccess(
         identifier,
+        channel_address,
     )
 
 
@@ -145,6 +149,8 @@ def test_target_log_directransfer_successevent(
         identifier,
     )
 
+    channel_address = get_direct_channel_address(app1, app0, token_address)
+
     app1_state_events = get_all_state_events(app1.raiden.transaction_log)
     sucessful_received_transfers = [
         event.event_object for event in app1_state_events
@@ -152,4 +158,7 @@ def test_target_log_directransfer_successevent(
     ]
     assert sucessful_received_transfers[0] == EventTransferReceivedSuccess(
         identifier,
+        channel_address,
+
     )
+    app1.raiden.state_machine_event_handler.on_event(sucessful_received_transfers[0])

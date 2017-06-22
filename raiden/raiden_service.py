@@ -855,6 +855,7 @@ class RaidenService(object):
             # TODO: This should be set once the direct transfer is acknowledged
             transfer_success = EventTransferSentSuccess(
                 identifier,
+                direct_channel.channel_address,
             )
             self.transaction_log.log_events(
                 state_change_id,

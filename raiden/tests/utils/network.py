@@ -92,6 +92,16 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
         assert details2['our_balance'] == deposit
         assert details2['partner_balance'] == deposit
 
+def get_direct_channel_address(app_from, app_to, token_address):
+    """ Return the channel address for the direct channel between `app_from` and `app_to`
+    for `token_address`.
+    """
+    return app_from.raiden.channelgraphs.get(
+        token_address
+    ).partneraddress_channel.get(
+        app_to.raiden.address
+    ).channel_address
+
 
 def network_with_minimum_channels(apps, channels_per_node):
     """ Return the channels that should be created so that each app has at

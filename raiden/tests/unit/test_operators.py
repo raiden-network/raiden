@@ -97,9 +97,9 @@ def test_state_operators():
 
 
 def test_event_operators():
-    a = EventTransferSentSuccess(2)
-    b = EventTransferSentSuccess(2)
-    c = EventTransferSentSuccess(3)
+    a = EventTransferSentSuccess(2, 'address')
+    b = EventTransferSentSuccess(2, 'address')
+    c = EventTransferSentSuccess(3, 'address')
 
     assert a == b
     assert not a != b
@@ -115,9 +115,9 @@ def test_event_operators():
     assert a != c
     assert not a == c
 
-    a = EventTransferReceivedSuccess(2)
-    b = EventTransferReceivedSuccess(2)
-    c = EventTransferReceivedSuccess(3)
+    a = EventTransferReceivedSuccess(2, 'address')
+    b = EventTransferReceivedSuccess(2, 'address')
+    c = EventTransferReceivedSuccess(3, 'address')
 
     assert a == b
     assert not a != b
