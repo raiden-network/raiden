@@ -64,7 +64,6 @@ export class RaidenService {
     }
 
     public getTokenNameAddresMappings() {
-        console.log('Inside token address mapping');
         return this.http.get(`${this.config.apiCall}/tokens`)
         .map((response) => {
             const tokenArray = <Array<any>>response.json();
@@ -77,6 +76,7 @@ export class RaidenService {
             });
         });
     }
+
     public openChannel(
         partnerAddress: string,
         tokenAddress: string,
@@ -89,7 +89,6 @@ export class RaidenService {
             'balance': balance,
             'settle_timeout': settleTimeout
         };
-        console.log(data);
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
         return this.http.put(`${this.config.apiCall}/channels`,

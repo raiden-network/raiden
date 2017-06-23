@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpModule } from '@angular/http';
 import { DataTableModule, SharedModule, DataListModule, CarouselModule,
 ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule,
-TabViewModule, DropdownModule } from 'primeng/primeng';
+TabViewModule, DropdownModule, MessagesModule } from 'primeng/primeng';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule,
 MdMenuModule } from '@angular/material';
@@ -20,8 +20,11 @@ import { RaidenService } from './services/raiden.service';
 import { SharedService } from './services/shared.service';
 import { RaidenConfig } from './services/raiden.config';
 import { environment } from '../environments/environment';
+import { HomeComponent } from './components/home/home.component';
 
 const appRoutes: Routes = [
+  { path: 'home', component: HomeComponent},
+  { path: '', redirectTo: '/home', pathMatch: 'full'},
   { path: 'channels', component: ChannelTableComponent },
   { path: 'balances', component: TokenNetworkComponent }
 ];
@@ -32,7 +35,8 @@ const appRoutes: Routes = [
     ChannelTableComponent,
     EventListComponent,
     UserinteractionComponent,
-    TokenNetworkComponent
+    TokenNetworkComponent,
+    HomeComponent
   ],
   imports: [
     RouterModule.forRoot(appRoutes),
@@ -50,6 +54,7 @@ const appRoutes: Routes = [
     SplitButtonModule,
     TabViewModule,
     DropdownModule,
+    MessagesModule,
     NoopAnimationsModule,
     MdTabsModule,
     MdInputModule,

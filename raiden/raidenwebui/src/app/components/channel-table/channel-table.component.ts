@@ -55,6 +55,7 @@ export class ChannelTableComponent implements OnInit {
     }
 
     public onTransfer(channel: Channel) {
+        console.log('Transfer');
         this.action = 'transfer';
         this.tempChannel = channel;
         this.displayDialog = true;
@@ -89,6 +90,7 @@ export class ChannelTableComponent implements OnInit {
         this.displayChannelDialog = false;
         switch (this.action) {
             case 'transfer':
+                console.log('Inside Manage Channel TRansfer');
                 this.raidenService.initiateTransfer(
                     this.tempChannel.token_address,
                     this.tempChannel.partner_address,
@@ -117,7 +119,7 @@ export class ChannelTableComponent implements OnInit {
                 .subscribe((response) => {
                     this.showmessage(response);
                 });
-            break;
+                break;
             case 'open':
                 console.log('inside open');
                 this.raidenService.openChannel(
@@ -130,12 +132,61 @@ export class ChannelTableComponent implements OnInit {
                     console.log(response);
                     this.showmessage(response);
                 });
-            break;
+                break;
         }
     }
 
     public showmessage(response: any) {
         this.msgs = [];
-        this.msgs.push({severity: 'info', summary: 'Message', detail: JSON.stringify(response)});
+        switch (this.action) {
+            case 'open':
+                if ('channel_address' in response) {
+                    this.msgs.push({severity: 'info', summary: this.action,
+                    detail: `Channel with address ${response.channel_address} has been
+                    created with partner ${response.partner_address}`});
+                } else {
+
+                }
+                break;
+            case 'transfer':
+                if ('target_address' in response && 'identifier' in response) {
+                    this.msgs.push({severity: 'info', summary: this.action,
+                    detail: `A transfer of amount ${response.amount} is successful with the partner ${response.target_address}`});
+                } else {
+                    this.msgs.push({severity: 'error', summary: this.action,
+                    detail: JSON.stringify(response)});
+                }
+                break;
+            case 'deposit':
+                if ('balance' in response && 'state' in response) {
+                    this.msgs.push({severity: 'info', summary: this.action,
+                    detail: `The channel ${response.channel_address} has been modified with a deposit of ${response.balance}`});
+                } else {
+                    this.msgs.push({severity: 'error', summary: this.action,
+                    detail: JSON.stringify(response)});
+                }
+                break;
+            case 'close':
+                if ('state' in response && response.state === 'closed') {
+                    this.msgs.push({severity: 'info', summary: this.action,
+                    detail: `The channel ${response.channel_address} with partner
+                    ${response.partner_address} has been closed successfully`});
+                } else {
+                    this.msgs.push({severity: 'error', summary: this.action,
+                    detail: JSON.stringify(response)});
+                }
+                break;
+            case 'settle':
+                if ('state' in response && response.state === 'settled') {
+                    this.msgs.push({severity: 'info', summary: this.action,
+                    detail: `The channel ${response.channel_address} with partner
+                    ${response.partner_address} has been settled successfully`});
+                } else {
+                    this.msgs.push({severity: 'error', summary: this.action,
+                    detail: JSON.stringify(response)});
+                }
+                break;
+        }
+
     }
 }
