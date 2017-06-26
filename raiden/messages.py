@@ -474,7 +474,7 @@ class LockedTransfer(SignedMessage):
             fee,
         )
 
-    def to_refundtransfer(self):
+    def to_refundtransfer(self, target, initiator='', fee=0):
         return RefundTransfer(
             self.identifier,
             self.nonce,
@@ -483,6 +483,9 @@ class LockedTransfer(SignedMessage):
             self.recipient,
             self.locksroot,
             self.lock,
+            target,
+            initiator,
+            fee,
         )
 
     @staticmethod

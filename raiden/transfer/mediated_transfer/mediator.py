@@ -435,6 +435,8 @@ def events_for_refund_transfer(refund_route, refund_transfer, timeout_blocks, bl
             refund_transfer.token,
             refund_transfer.amount,
             refund_transfer.hashlock,
+            refund_transfer.initiator,
+            refund_transfer.target,
             new_lock_expiration,
             refund_route.node_address,
         )
