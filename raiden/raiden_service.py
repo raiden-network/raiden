@@ -759,7 +759,7 @@ class RaidenService(object):
                         'token_address': key[1],
                         'messages': [
                             queue_item.messagedata
-                            for queue_item in queue
+                            for queue_item in queue.snapshot()
                         ]
                     }
                     pickle.dump(

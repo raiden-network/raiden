@@ -48,7 +48,7 @@ class StateMachineEventHandler(object):
                 channel.partner_address,
                 channel.token_address
             )]
-            for queue_item in queue:
+            for queue_item in queue.snapshot():
                 serialization.message_queue.append(queue_item)
             log.DEV('queue done')
         log.DEV(serialization)
