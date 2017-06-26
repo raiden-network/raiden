@@ -19,8 +19,6 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.transfer.mediated_transfer.state import (
-    InitiatorState,
-    MediatorState,
     LockedTransferState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
@@ -155,34 +153,14 @@ class RaidenMessageHandler(object):
             message.lock.hashlock,
         )
 
-        identifier = message.identifier
-        token_address = message.token
-        target = message.target
-        amount = message.lock.amount
-        expiration = message.lock.expiration
-        hashlock = message.lock.hashlock
-
-        manager = self.raiden.identifier_to_statemanagers[identifier]
-
-        if isinstance(manager.current_state, InitiatorState):
-            initiator_address = self.raiden.address
-
-        elif isinstance(manager.current_state, MediatorState):
-            last_pair = manager.current_state.transfers_pair[-1]
-            initiator_address = last_pair.payee_transfer.initiator
-
-        else:
-            # TODO: emit a proper event for the reject message
-            return
-
         transfer_state = LockedTransferState(
-            identifier=identifier,
-            amount=amount,
-            token=token_address,
-            initiator=initiator_address,
-            target=target,
-            expiration=expiration,
-            hashlock=hashlock,
+            identifier=message.identifier,
+            amount=message.lock.amount,
+            token=message.token,
+            initiator=message.initiator,
+            target=message.target,
+            expiration=message.lock.expiration,
+            hashlock=message.lock.hashlock,
             secret=None,
         )
         state_change = ReceiveTransferRefund(

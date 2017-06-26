@@ -739,6 +739,32 @@ class Channel(object):
         )
         return mediated_transfer
 
+    def create_refundtransfer(
+            self,
+            block_number,
+            transfer_initiator,
+            transfer_target,
+            fee,
+            amount,
+            identifier,
+            expiration,
+            hashlock):
+
+        locked_transfer = self.create_lockedtransfer(
+            block_number,
+            amount,
+            identifier,
+            expiration,
+            hashlock,
+        )
+
+        refund_transfer = locked_transfer.to_refundtransfer(
+            transfer_target,
+            transfer_initiator,
+            fee,
+        )
+        return refund_transfer
+
     def state_transition(self, state_change):
         if isinstance(state_change, Block):
             self.block_number = state_change.block_number
