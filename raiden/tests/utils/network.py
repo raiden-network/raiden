@@ -92,6 +92,7 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
         assert details2['our_balance'] == deposit
         assert details2['partner_balance'] == deposit
 
+
 def get_direct_channel_address(app_from, app_to, token_address):
     """ Return the channel address for the direct channel between `app_from` and `app_to`
     for `token_address`.
