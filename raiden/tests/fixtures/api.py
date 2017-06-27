@@ -24,7 +24,7 @@ def wait_for_listening_port(port_number, tries=10, sleep=0.1):
             if conn.status == 'LISTEN' and conn.laddr[1] == port_number:
                 return
 
-    raise RuntimeError('{port} is not bound'.format(port_number))
+    raise RuntimeError('{port} is not bound'.format(port=port_number))
 
 
 # TODO: Figure out why this fixture can't work as session scoped
