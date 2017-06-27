@@ -11,8 +11,9 @@ from raiden.api.v1.encoding import (
     AddressField,
     HexAddressConverter,
 )
+from raiden.channel.netting_channel import Channel
+from raiden.channel.participant_state import ChannelEndState
 from raiden.utils import channel_to_api_dict
-from raiden.tests.utils.transfer import channel
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
@@ -84,22 +85,58 @@ def test_address_field():
     assert field._deserialize('0x414d72a6f6e28f4950117696081450d63d56c354', attr, data) == address
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
-@pytest.mark.parametrize('number_of_nodes', [2])
-def test_channel_to_api_dict(raiden_network, token_addresses, settle_timeout):
-    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-    channel0 = channel(app0, app1, token_addresses[0])
+def test_channel_to_api_dict():
+    channel_address = b'\x00' * 20
+    token_address = b'\x01' * 20
+    our_address = b'\x02' * 20
+    partner_address = b'\x03' * 20
 
-    netting_address = channel0.external_state.netting_channel.address
-    netting_channel = app0.raiden.chain.netting_channel(netting_address)
+    reveal_timeout = 10
+    settle_timeout = 50
+    opened_block = 900
+    block_number = 1000
+    our_balance = 13
+    partner_balance = 21
 
-    result = channel_to_api_dict(channel0)
+    our_state = ChannelEndState(
+        our_address,
+        our_balance,
+        opened_block,
+    )
+    partner_state = ChannelEndState(
+        partner_address,
+        partner_balance,
+        opened_block,
+    )
+
+    # mock external state to provide the channel address
+    class NettingChannel(object):
+        address = channel_address
+
+    class ExternalState(object):
+        def __init__(self, opened_block):
+            self.netting_channel = NettingChannel()
+            self.settled_block = 0
+            self.closed_block = 0
+            self.opened_block = opened_block
+
+    channel = Channel(
+        our_state,
+        partner_state,
+        ExternalState(opened_block),
+        token_address,
+        reveal_timeout,
+        settle_timeout,
+        block_number,
+    )
+
+    result = channel_to_api_dict(channel)
     expected_result = {
-        'channel_address': netting_channel.address,
-        'token_address': channel0.token_address,
-        'partner_address': app1.raiden.address,
+        'channel_address': channel_address,
+        'token_address': token_address,
+        'partner_address': partner_address,
         'settle_timeout': settle_timeout,
-        'balance': channel0.contract_balance,
+        'balance': our_balance,
         'state': CHANNEL_STATE_OPENED
     }
     assert result == expected_result
