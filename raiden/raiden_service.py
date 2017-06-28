@@ -182,6 +182,8 @@ class RaidenService(object):
 
         self.channels_serialization_path = None
         self.channels_queue_path = None
+        self.transfer_states_path = None
+
         if config['database_path'] != ':memory:':
             self.channels_serialization_path = path.join(
                 path.dirname(self.config['database_path']),
@@ -191,6 +193,10 @@ class RaidenService(object):
             self.channels_queue_path = path.join(
                 path.dirname(self.config['database_path']),
                 'queues.pickle',
+            )
+            self.transfer_states_path = path.join(
+                path.dirname(self.config['database_path']),
+                'transfer_states.pickle',
             )
 
             if path.exists(self.channels_serialization_path):
@@ -215,6 +221,12 @@ class RaidenService(object):
 
                 self.protocol.receivedhashes_to_acks = channel_state['receivedhashes_to_acks']
                 self.protocol.nodeaddresses_to_nonces = channel_state['nodeaddresses_to_nonces']
+
+            if path.exists(self.transfer_states_path):
+                with open(self.transfer_states_path, 'rb') as handler:
+                    transfer_states = pickle.load(handler)
+
+                self.restore_transfer_states(transfer_states)
 
         self.alarm = alarm
         self.message_handler = message_handler
@@ -557,6 +569,9 @@ class RaidenService(object):
         for messagedata in serialized_queue['messages']:
             queue.put(messagedata)
 
+    def restore_transfer_states(self, transfer_states):
+        self.identifier_to_statemanagers = transfer_states
+
     def register_registry(self, registry_address):
         proxies = get_relevant_proxies(
             self.chain,
@@ -776,6 +791,22 @@ class RaidenService(object):
                         'receivedhashes_to_acks': self.protocol.receivedhashes_to_acks,
                         'nodeaddresses_to_nonces': self.protocol.nodeaddresses_to_nonces,
                     },
+                    handler,
+                )
+
+        if self.transfer_states_path:
+            # ensure that all state managers are unique
+            assert (
+                len(
+                    set(itertools.chain.from_iterable(self.identifier_to_statemanagers.values()))
+                ) == sum(
+                    len(state_managers)
+                    for state_managers in self.identifier_to_statemanagers.values()
+                )
+            )
+            with open(self.transfer_states_path, 'wb') as handler:
+                pickle.dump(
+                    self.identifier_to_statemanagers,
                     handler,
                 )
 
