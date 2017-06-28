@@ -196,7 +196,7 @@ class RaidenService(object):
             if path.exists(self.channels_serialization_path):
                 serialized_channels = list()
 
-                with open(self.channels_serialization_path, 'r') as handler:
+                with open(self.channels_serialization_path, 'rb') as handler:
                     try:
                         while True:
                             serialized_channels.append(pickle.load(handler))
@@ -207,7 +207,7 @@ class RaidenService(object):
                     self.restore_channel(channel)
 
             if path.exists(self.channels_queue_path):
-                with open(self.channels_queue_path, 'r') as handler:
+                with open(self.channels_queue_path, 'rb') as handler:
                     channel_state = pickle.load(handler)
 
                 for restored_queue in channel_state['channel_queues']:
