@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 import pytest
 import gevent
 import itertools
@@ -19,17 +20,24 @@ log = slogging.getLogger(__name__)
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
+@pytest.mark.parametrize('in_memory_database', [False])
 def test_close_raiden_app_gracefully(
     raiden_network,
     token_addresses,
     settle_timeout,
-    blockchain_type
+    blockchain_type,
 ):
     # it's pretty tedious to get tester to mine during `app.stop`, so we just skip it
     if blockchain_type == 'tester':
         return
     for app in raiden_network:
         app.stop(graceful=True)
+        for path in [
+            app.raiden.channels_serialization_path,
+            app.raiden.channels_queue_path,
+            app.raiden.transfer_states_path,
+        ]:
+            assert os.path.exists(path)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
