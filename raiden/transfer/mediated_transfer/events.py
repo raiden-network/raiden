@@ -128,6 +128,8 @@ class SendRefundTransfer(Event):
             token,
             amount,
             hashlock,
+            initiator,
+            target,
             expiration,
             receiver):
 
@@ -135,6 +137,8 @@ class SendRefundTransfer(Event):
         self.token = token
         self.amount = amount
         self.hashlock = hashlock
+        self.initiator = initiator
+        self.target = target
         self.expiration = expiration
         self.receiver = receiver
 
