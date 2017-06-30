@@ -3,6 +3,7 @@ from __future__ import division
 
 import json
 import os
+from os import path
 import subprocess
 from collections import namedtuple
 
@@ -43,13 +44,6 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 EPOCH0_DAGSIZE = 1073739912
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
-
-
-def genesis_path_from_testfunction(request):
-    cached_dir = request.config.cache.makedir(request.node.name)
-    genesis_path = cached_dir.join('generated_genesis.json')
-
-    return str(genesis_path)  # makedir returns a py.path.LocalPath object
 
 
 def _token_addresses(
@@ -362,13 +356,12 @@ def blockchain_backend(
 
     genesis_path = None
     if cached_genesis:
-        genesis_path = genesis_path_from_testfunction(request)
+        genesis_path = path.join(str(tmpdir), 'generated_genesis.json')
+
+        with open(genesis_path, 'w') as handler:
+            json.dump(cached_genesis, handler)
 
     if blockchain_type == 'geth':
-        if genesis_path and not os.path.exists(genesis_path):
-            with open(genesis_path, 'w') as handler:
-                json.dump(cached_genesis, handler)
-
         return _geth_blockchain(
             request,
             deploy_key,
