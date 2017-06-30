@@ -21,7 +21,9 @@ Dependencies
 ---------------
 
 * You need to make sure that your system has `solc`, the ethereum solidity compiler installed. Refer to `its documentation <http://solidity.readthedocs.io/en/latest/installing-solidity.html>`_ for the installation steps.
-* You will need to have the go-ethereum client installed in your system. Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ for instructions.
+* You will need to have an ethereum client installed in your system.
+   * Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ for instructions on the go-ethereum client.
+   * Check `this link <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ for instructions on the parity client.
 * You will also need to obtain the `system dependencies for pyethapp <https://github.com/ethereum/pyethapp/#installation-on-ubuntudebian>`_.
 
 
@@ -48,9 +50,27 @@ After you have done that you can proceed to install the dependencies::
 
 You will also need an ethereum client that is connected to the Ropsten testnet.  In example, download the parity client::
 
-    sudo snap install parity --edge && sudo cp /snap/parity/current/bin/parity /usr/bin/parity
+Firing it up
+------------
 
-Run the parity client and let it sync to the Ropsten testnet::
+Using geth
+~~~~~~~~~~
+
+Run the client and let it sync with the Ropsten testnet::
+  geth --testnet --fast --nodiscover console
+
+And then when in the console add a few peers by using ``admin.addPeer()`` and the latest peers shown `here <https://gist.github.com/rfikki/7a95067f8cc02ae8b11bc34544f6aa3e>`_.
+
+Unless you already have an account you can also create one in the console by invoking ``personal.newAccount()``.
+
+Then launch raiden with the default testnet keystore path::
+
+       raiden --keystore-path  ~/.ethereum/testnet/keystore
+
+Using parity
+~~~~~~~~~~~~
+
+Run the client and let it sync with the Ropsten testnet::
 
      parity --chain ropsten --bootnodes "enode://20c9ad97c081d63397d7b685a412227a40e23c8bdc6688c6f37e97cfbc22d2b4d1db1510d8f61e6a8866ad7f0e17c02b14182d37ea7c3c8b9c2683aeb6b733a1@52.169.14.227:30303,enode://6ce05930c72abc632c58e2e4324f7c7ea478cec0ed4fa2528982cf34483094e9cbc9216e7aa349691242576d552a2a56aaeae426c5303ded677ce455ba1acd9d@13.84.180.240:30303"
 
