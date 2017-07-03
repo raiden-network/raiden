@@ -26,7 +26,7 @@ PendingLock = namedtuple('PendingLock', ('lock', 'lockhashed'))
 # The lock and the secret to unlock it, this is all the data required to
 # construct an unlock proof. The proof is not calculated because we only need
 # it when the contract is closed.
-UnlockPartialProof = namedtuple('UnlockProof', ('lock', 'lockhashed', 'secret'))
+UnlockPartialProof = namedtuple('UnlockPartialProof', ('lock', 'lockhashed', 'secret'))
 
 # The proof that can be used to unlock a secret with a smart contract
 UnlockProof = namedtuple('UnlockProof', ('merkle_proof', 'lock_encoded', 'secret'))
