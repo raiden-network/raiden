@@ -74,19 +74,27 @@ For other ways to install `solc` or Geth see the official docs:
 
 #### Setup
 
-    pip install -r requirements-dev.txt
+First, create a `virtualenv` to keep your `pip` packages clean. If you haven't already, install `virtualenv`:
 
-If you are installing these packages globally you might need to run this command with `sudo` privileges. Alternatively, you might want to consider creating a new `virtualenv`.
+    sudo pip install virtualenv
+
+Create the virtual environment:
+
+    virtualenv env
+
+Install required packages:
+
+    env/bin/pip install -r requirements-dev.txt -e .
 
 #### Testing
 
 Run the tests using
 
-    pytest raiden
+    env/bin/pytest raiden
 
 Tests, especially integration tests, will take some time. If you want to run single tests simply specify them on the command line, like so:
 
-    pytest raiden/tests/<path-to-test(s)>
+    env/bin/pytest raiden/tests/<path-to-test(s)>
 
 ## Development Guidelines
 
