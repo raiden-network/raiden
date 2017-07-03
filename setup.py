@@ -2,12 +2,8 @@
 # -*- coding: utf-8 -*-
 import os
 
-try:
-    from setuptools import setup
-    from setuptools import Command
-except ImportError:
-    from distutils.core import setup
-    from distutils.cmd import Command
+from setuptools import setup, find_packages
+from setuptools import Command
 from setuptools.command.test import test as TestCommand
 
 
@@ -71,20 +67,9 @@ setup(
     author='HeikoHeiko',
     author_email='heiko@brainbot.com',
     url='https://github.com/raiden-network/raiden',
-    packages=[
-        'raiden',
-        'raiden.api',
-        'raiden.api.v1',
-        'raiden.blockchain',
-        'raiden.encoding',
-        'raiden.network',
-        'raiden.network.rpc',
-        'raiden.transfer',
-        'raiden.transfer.mediated_transfer',
-        'raiden.ui',
-        'raiden.utils',
-        'raiden.utils.profiling',
-    ],
+    packages=find_packages(
+        exclude=["raiden.tests", "raiden.tests.*"]
+    ),
     include_package_data=True,
     license='BSD',
     zip_safe=False,
@@ -103,8 +88,9 @@ setup(
     },
     install_requires=install_requires,
     tests_require=test_requirements,
-    entry_points='''
-    [console_scripts]
-    raiden=raiden.__main__:main
-    '''
+    entry_points={
+        'console_scripts': [
+            'raiden = raiden.__main__:main'
+        ]
+    }
 )
