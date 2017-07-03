@@ -170,7 +170,7 @@ class StateMachineEventHandler(object):
             pass
 
         else:
-            log.error('Unknow event {}'.format(type(event)))
+            log.error('Unknown event {}'.format(type(event)))
 
     def on_blockchain_statechange(self, state_change):
         if log.isEnabledFor(logging.INFO):
