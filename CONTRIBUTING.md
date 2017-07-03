@@ -43,6 +43,51 @@ All PRs should be:
 In order for a Pull Request to get merged into the main repository you should have one
 approved review from one of the core developers of Raiden and also all Continuous Integration tests should be passing and the CI build should be green.
 
+## Setup
+
+### System dependencies
+
+#### Debian/Ubuntu
+
+Raiden requires Python 2, Geth (Ethereum client), and the Solidity compiler `solc`. The easiest way to get the last two is to add the official Ethereum ppa to your repositories:
+
+    sudo add-apt-repository -y ppa:ethereum/ethereum
+    sudo apt-get update
+
+Then simply install all required packages:
+
+    sudo apt-get install build-essential git libffi-dev libgmp-dev libssl-dev \
+      libtool pkg-config python-dev python-pip ethereum solc
+
+For other ways to install `solc` or Geth see the official docs:
+
+* http://solidity.readthedocs.io/en/latest/installing-solidity.html
+* https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum
+
+
+### Raiden
+
+#### Get the code
+
+    git clone https://github.com/raiden-network/raiden.git
+    cd raiden
+
+#### Setup
+
+    pip install -r requirements-dev.txt
+
+If you are installing these packages globally you might need to run this command with `sudo` privileges. Alternatively, you might want to consider creating a new `virtualenv`.
+
+#### Testing
+
+Run the tests using
+
+    pytest raiden
+
+Tests, especially integration tests, will take some time. If you want to run single tests simply specify them on the command line, like so:
+
+    pytest raiden/tests/<path-to-test(s)>
+
 ## Development Guidelines
 
 In this section we are going to describe the coding rules for contributing to the raiden repository. All code you write should strive to comply with these rules.
