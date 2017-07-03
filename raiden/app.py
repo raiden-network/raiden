@@ -69,7 +69,7 @@ class App(object):  # pylint: disable=too-few-public-methods
         )
         self.start_console = self.config['console']
 
-        # Compat with raiden.ui.console:Console , it assumes that a services
+        # raiden.ui.console:Console assumes that a services
         # attribute is available for auto-registration
         self.services = list()
 
