@@ -206,8 +206,8 @@ class RaidenService(object):
                 for restored_queue in channel_state['channel_queues']:
                     self.restore_queue(restored_queue)
 
-                self.protocol.receivedhashes_acks = channel_state['receivedhashes_acks']
-                self.protocol.nodeaddresses_nonces = channel_state['nodeaddresses_nonces']
+                self.protocol.receivedhashes_to_acks = channel_state['receivedhashes_to_acks']
+                self.protocol.nodeaddresses_to_nonces = channel_state['nodeaddresses_to_nonces']
 
         self.alarm = alarm
         self.message_handler = message_handler
@@ -764,8 +764,8 @@ class RaidenService(object):
                 pickle.dump(
                     {
                         'channel_queues': queues,
-                        'receivedhashes_acks': self.protocol.receivedhashes_acks,
-                        'nodeaddresses_nonces': self.protocol.nodeaddresses_nonces,
+                        'receivedhashes_to_acks': self.protocol.receivedhashes_to_acks,
+                        'nodeaddresses_to_nonces': self.protocol.nodeaddresses_to_nonces,
                     },
                     handler,
                 )
