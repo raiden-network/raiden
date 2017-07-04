@@ -21,7 +21,7 @@ log = slogging.getLogger(__name__)
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
 @pytest.mark.parametrize('in_memory_database', [False])
-def test_close_raiden_app_gracefully(
+def test_close_raiden_app_leave_channels(
     raiden_network,
     token_addresses,
     settle_timeout,
@@ -31,7 +31,7 @@ def test_close_raiden_app_gracefully(
     if blockchain_type == 'tester':
         return
     for app in raiden_network:
-        app.stop(graceful=True)
+        app.stop(leave_channels=True)
         for path in [
             app.raiden.channels_serialization_path,
             app.raiden.channels_queue_path,

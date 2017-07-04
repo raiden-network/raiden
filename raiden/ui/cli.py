@@ -364,4 +364,4 @@ def run(ctx, **kwargs):
         gevent.signal(signal.SIGINT, event.set)
         event.wait()
 
-        app_.stop(graceful=True)
+        app_.stop(leave_channels=True)
