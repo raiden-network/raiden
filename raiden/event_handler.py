@@ -28,6 +28,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
+    EventUnlockSuccess,
 )
 from raiden.utils import sha3
 
@@ -166,7 +167,7 @@ class StateMachineEventHandler(object):
             for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(False)
 
-        elif isinstance(event, EventTransferReceivedSuccess):
+        elif isinstance(event, (EventTransferReceivedSuccess, EventUnlockSuccess)):
             pass
 
         else:
