@@ -164,8 +164,6 @@ def app(address,
     from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
 
-    slogging.configure(logging, log_file=logfile)
-
     # config_file = args.config_file
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)
