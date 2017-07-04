@@ -53,7 +53,7 @@ def test_hex_converter():
 
     # invalid address, too short
     with pytest.raises(Exception):
-        converter.to_python('1234')
+        converter.to_python('0x1234')
 
     # missing prefix 0x
     with pytest.raises(Exception):
@@ -75,7 +75,7 @@ def test_address_field():
 
     # invalid address, too short
     with pytest.raises(Exception):
-        field._deserialize('1234', attr, data)
+        field._deserialize('0x1234', attr, data)
 
     # missing prefix 0x
     with pytest.raises(Exception):
