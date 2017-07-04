@@ -206,35 +206,7 @@ class RaidenService(object):
                 snapshot_dir,
                 'transfer_states.pickle',
             )
-
-            if path.exists(self.channels_serialization_path):
-                serialized_channels = list()
-
-                with open(self.channels_serialization_path, 'rb') as handler:
-                    try:
-                        while True:
-                            serialized_channels.append(pickle.load(handler))
-                    except EOFError:
-                        pass
-
-                for channel in serialized_channels:
-                    self.restore_channel(channel)
-
-            if path.exists(self.channels_queue_path):
-                with open(self.channels_queue_path, 'rb') as handler:
-                    channel_state = pickle.load(handler)
-
-                for restored_queue in channel_state['channel_queues']:
-                    self.restore_queue(restored_queue)
-
-                self.protocol.receivedhashes_to_acks = channel_state['receivedhashes_to_acks']
-                self.protocol.nodeaddresses_to_nonces = channel_state['nodeaddresses_to_nonces']
-
-            if path.exists(self.transfer_states_path):
-                with open(self.transfer_states_path, 'rb') as handler:
-                    transfer_states = pickle.load(handler)
-
-                self.restore_transfer_states(transfer_states)
+            self.restore_from_snapshots()
 
         self.alarm = alarm
         self.message_handler = message_handler
@@ -250,6 +222,36 @@ class RaidenService(object):
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+
+    def restore_from_snapshots(self):
+        if path.exists(self.channels_serialization_path):
+            serialized_channels = list()
+
+            with open(self.channels_serialization_path, 'rb') as handler:
+                try:
+                    while True:
+                        serialized_channels.append(pickle.load(handler))
+                except EOFError:
+                    pass
+
+            for channel in serialized_channels:
+                self.restore_channel(channel)
+
+        if path.exists(self.channels_queue_path):
+            with open(self.channels_queue_path, 'rb') as handler:
+                channel_state = pickle.load(handler)
+
+            for restored_queue in channel_state['channel_queues']:
+                self.restore_queue(restored_queue)
+
+            self.protocol.receivedhashes_to_acks = channel_state['receivedhashes_to_acks']
+            self.protocol.nodeaddresses_to_nonces = channel_state['nodeaddresses_to_nonces']
+
+        if path.exists(self.transfer_states_path):
+            with open(self.transfer_states_path, 'rb') as handler:
+                transfer_states = pickle.load(handler)
+
+            self.restore_transfer_states(transfer_states)
 
     def set_block_number(self, blocknumber):
         state_change = Block(blocknumber)
