@@ -522,6 +522,7 @@ class RaidenService(object):
             channel_details['partner_balance'],
             opened_block,
         )
+        # FIXME: incomplete?
 
         def register_channel_for_hashlock(channel, hashlock):
             self.register_channel_for_hashlock(
@@ -544,7 +545,7 @@ class RaidenService(object):
         )
 
         graph = self.channelgraphs[token_address]
-        graph.add_channel(details)
+        graph.add_channel(details, serialized_channel.block_number)
         channel = graph.address_channel.get(
             serialized_channel.channel_address,
         )
