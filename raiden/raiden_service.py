@@ -185,13 +185,14 @@ class RaidenService(object):
         self.transfer_states_path = None
 
         if config['database_path'] != ':memory:':
-            snapshot_dir = os.path.join(
+            snapshot_dir = path.join(
                 path.dirname(self.config['database_path']),
                 pex(self.address)
             )
-            os.mkdir(
-                snapshot_dir
-            )
+            if not os.path.exists(snapshot_dir):
+                os.makedirs(
+                    snapshot_dir
+                )
 
             self.channels_serialization_path = path.join(
                 snapshot_dir,
