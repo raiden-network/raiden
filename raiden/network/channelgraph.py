@@ -203,6 +203,22 @@ class ChannelGraph(object):
         for details in channels_details:
             self.add_channel(details, block_number)
 
+    def __eq__(self, other):
+        if isinstance(other, ChannelGraph):
+            return (
+                self.address_channel == other.address_channel and
+                # networkx.classes.graph.Graph has no __eq__
+                self.graph.__dict__ == other.graph.__dict__ and
+                self.our_address == other.our_address and
+                self.partneraddress_channel == other.partneraddress_channel and
+                self.token_address == other.token_address and
+                self.channelmanager_address == other.channelmanager_address
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def add_channel(self, details, block_number):
         channel_address = details.channel_address
         partner_state = details.partner_state

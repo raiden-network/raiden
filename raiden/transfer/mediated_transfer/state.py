@@ -55,6 +55,26 @@ class InitiatorState(State):
         self.revealsecret = None
         self.canceled_transfers = list()
 
+    def __eq__(self, other):
+        if isinstance(other, InitiatorState):
+            return all(
+                self.__getattribute__(field) == other.__getattribute__(field)
+                for field in self.__slots__
+                if hasattr(self, field) and hasattr(other, field)
+            ) and all(
+                hasattr(self, field)
+                for field in self.__slots__
+                if hasattr(other, field)
+            ) and all(
+                hasattr(other, field)
+                for field in self.__slots__
+                if hasattr(self, field)
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class MediatorState(State):
     """ State of a node mediating a transfer.
@@ -93,6 +113,26 @@ class MediatorState(State):
         # reveal and simplifies secret setting
         self.transfers_pair = list()
 
+    def __eq__(self, other):
+        if isinstance(other, MediatorState):
+            return all(
+                self.__getattribute__(field) == other.__getattribute__(field)
+                for field in self.__slots__
+                if hasattr(self, field) and hasattr(other, field)
+            ) and all(
+                hasattr(self, field)
+                for field in self.__slots__
+                if hasattr(other, field)
+            ) and all(
+                hasattr(other, field)
+                for field in self.__slots__
+                if hasattr(self, field)
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class TargetState(State):
     """ State of mediated transfer target.  """
@@ -124,6 +164,27 @@ class TargetState(State):
         self.block_number = block_number
 
         self.state = 'secret_request'
+
+    def __eq__(self, other):
+        if isinstance(other, TargetState):
+            return all(
+                self.__getattribute__(field) == other.__getattribute__(field)
+                for field in self.__slots__
+                if hasattr(self, field) and hasattr(other, field)
+            ) and all(
+                hasattr(self, field)
+                for field in self.__slots__
+                if hasattr(other, field)
+            ) and all(
+                hasattr(other, field)
+                for field in self.__slots__
+                if hasattr(self, field)
+            )
+
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class LockedTransferState(State):
@@ -291,3 +352,23 @@ class MediationPairState(State):
         # the states of each mediated transfer in respect to each channel.
         self.payer_state = 'payer_pending'
         self.payee_state = 'payee_pending'
+
+    def __eq__(self, other):
+        if isinstance(other, MediationPairState):
+            return all(
+                self.__getattribute__(field) == other.__getattribute__(field)
+                for field in self.__slots__
+                if hasattr(self, field) and hasattr(other, field)
+            ) and all(
+                hasattr(self, field)
+                for field in self.__slots__
+                if hasattr(other, field)
+            ) and all(
+                hasattr(other, field)
+                for field in self.__slots__
+                if hasattr(self, field)
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

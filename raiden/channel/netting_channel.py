@@ -802,6 +802,14 @@ class Channel(object):
     def serialize(self):
         return ChannelSerialization(self)
 
+    def __eq__(self, other):
+        if isinstance(other, Channel):
+            return self.serialize() == other.serialize()
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class ChannelSerialization(object):
 
@@ -813,3 +821,20 @@ class ChannelSerialization(object):
 
         self.our_balance_proof = channel_instance.our_state.balance_proof
         self.partner_balance_proof = channel_instance.partner_state.balance_proof
+
+    def __eq__(self, other):
+        if isinstance(other, ChannelSerialization):
+            return (
+                self.channel_address == other.channel_address and
+                self.token_address == other.token_address and
+                self.partner_address == other.partner_address and
+                self.our_address == other.our_address and
+                self.reveal_timeout == other.reveal_timeout and
+                self.block_number == other.block_number and
+                self.our_balance_proof == other.our_balance_proof and
+                self.partner_balance_proof == other.partner_balance_proof
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

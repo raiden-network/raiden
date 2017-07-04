@@ -244,3 +244,16 @@ class BalanceProof(object):
             self.hashlock_unlockedlocks.values()
         )
         return Merkletree(lock.lockhashed for lock in alllocks)
+
+    def __eq__(self, other):
+        if isinstance(other, BalanceProof):
+            return (
+                self.hashlock_pendinglocks == other.hashlock_pendinglocks and
+                self.hashlock_unclaimedlocks == other.hashlock_unclaimedlocks and
+                self.hashlock_unlockedlocks == other.hashlock_unlockedlocks and
+                self.transfer == other.transfer
+            )
+        return False
+
+    def __ne__(self, other):
+        return self.__eq__(other)

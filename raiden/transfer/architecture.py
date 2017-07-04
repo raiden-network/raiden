@@ -138,3 +138,23 @@ class StateManager(object):
         assert all(isinstance(e, Event) for e in events)
 
         return events
+
+    def __eq__(self, other):
+        if isinstance(other, StateManager):
+            return all(
+                self.__getattribute__(field) == other.__getattribute__(field)
+                for field in self.__slots__
+                if hasattr(self, field) and hasattr(other, field)
+            ) and all(
+                hasattr(self, field)
+                for field in self.__slots__
+                if hasattr(other, field)
+            ) and all(
+                hasattr(other, field)
+                for field in self.__slots__
+                if hasattr(self, field)
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
