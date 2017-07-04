@@ -185,17 +185,25 @@ class RaidenService(object):
         self.transfer_states_path = None
 
         if config['database_path'] != ':memory:':
-            self.channels_serialization_path = path.join(
+            snapshot_dir = os.path.join(
                 path.dirname(self.config['database_path']),
+                pex(self.address)
+            )
+            os.mkdir(
+                snapshot_dir
+            )
+
+            self.channels_serialization_path = path.join(
+                snapshot_dir,
                 'channels.pickle',
             )
 
             self.channels_queue_path = path.join(
-                path.dirname(self.config['database_path']),
+                snapshot_dir,
                 'queues.pickle',
             )
             self.transfer_states_path = path.join(
-                path.dirname(self.config['database_path']),
+                snapshot_dir,
                 'transfer_states.pickle',
             )
 
