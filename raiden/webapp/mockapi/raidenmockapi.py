@@ -29,14 +29,14 @@ channels = [
         "state": "open",
         "settle_timeout": 100
     }
-  ]
+]
 
 
 assets = [
-            {"address": "0x6266e28f62a851295a4afb9e3ceac754853b5a62"},
-            {"address": "0xbad3562ffc159d295a4afb9e3ceac754853b5a62"},
-            {"address": "0x78ac32bfa09845cc43abcdef785effee976efe54"}
-        ]
+    {"address": "0x6266e28f62a851295a4afb9e3ceac754853b5a62"},
+    {"address": "0xbad3562ffc159d295a4afb9e3ceac754853b5a62"},
+    {"address": "0x78ac32bfa09845cc43abcdef785effee976efe54"}
+]
 
 
 events = [
@@ -64,6 +64,7 @@ events = [
     }
 ]
 
+
 @app.route('/api/<version>/channels/', methods=['GET'])
 def get_channels(version):
     return jsonify(channels)
@@ -77,8 +78,6 @@ def get_assets(version):
 @app.route('/api/<version>/events/', methods=['GET'])
 def get_events(version):
     return jsonify(events)
-
-
 
 
 if __name__ == '__main__':
