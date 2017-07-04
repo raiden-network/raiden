@@ -3,7 +3,7 @@
 import os
 from os import path
 import itertools
-import pickle
+import cPickle as pickle
 import random
 from collections import defaultdict
 
@@ -769,6 +769,7 @@ class RaidenService(object):
                         pickle.dump(
                             ChannelSerialization(channel),
                             handler,
+                            protocol=-1
                         )
 
         if self.channels_queue_path:
@@ -792,6 +793,7 @@ class RaidenService(object):
                         'nodeaddresses_to_nonces': self.protocol.nodeaddresses_to_nonces,
                     },
                     handler,
+                    protocol=-1
                 )
 
         if self.transfer_states_path:
@@ -808,6 +810,7 @@ class RaidenService(object):
                 pickle.dump(
                     self.identifier_to_statemanagers,
                     handler,
+                    protocol=-1
                 )
 
         gevent.wait(wait_for)
