@@ -6,7 +6,7 @@ import json
 
 from ethereum import tester
 from ethereum import slogging
-from raiden.utils import privatekey_to_address, get_contract_path, safe_lstrip_hex
+from raiden.utils import privatekey_to_address, get_contract_path
 
 slogging.configure(":INFO")
 log = slogging.getLogger(__name__)
@@ -87,10 +87,8 @@ def deploy_all(token_groups=None):
 
     genesis_alloc = dict()
     for account_address in deployed.itervalues():
-        genesis_alloc[account_address] = account_alloc = dict()
-
-        for key, value in state.block.account_to_dict(account_address).iteritems():
-            account_alloc[key] = safe_lstrip_hex(value)
+        genesis_alloc[account_address] = state.block.account_to_dict(
+            account_address).copy()
 
     raiden_flags = (
         '--registry-contract-address {Registry}'
