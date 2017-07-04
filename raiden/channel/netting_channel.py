@@ -816,6 +816,8 @@ class ChannelSerialization(object):
     def __init__(self, channel_instance):
         self.channel_address = channel_instance.channel_address
         self.token_address = channel_instance.token_address
+        self.partner_address = channel_instance.partner_address
+        self.our_address = channel_instance.our_address
         self.reveal_timeout = channel_instance.reveal_timeout
         self.block_number = channel_instance.block_number
 
