@@ -184,6 +184,16 @@ class RaidenService(object):
         self.channels_queue_path = None
         self.transfer_states_path = None
 
+        self.alarm = alarm
+        self.message_handler = message_handler
+        self.state_machine_event_handler = state_machine_event_handler
+        self.pyethapp_blockchain_events = pyethapp_blockchain_events
+        self.greenlet_task_dispatcher = greenlet_task_dispatcher
+
+        self.on_message = message_handler.on_message
+
+        self.tokens_connectionmanagers = dict()  # token_address: ConnectionManager
+
         if config['database_path'] != ':memory:':
             snapshot_dir = path.join(
                 path.dirname(self.config['database_path']),
@@ -207,19 +217,10 @@ class RaidenService(object):
                 snapshot_dir,
                 'transfer_states.pickle',
             )
+            self.register_registry(self.chain.default_registry.address)
             self.restore_from_snapshots()
 
-        self.alarm = alarm
-        self.message_handler = message_handler
-        self.state_machine_event_handler = state_machine_event_handler
-        self.pyethapp_blockchain_events = pyethapp_blockchain_events
-        self.greenlet_task_dispatcher = greenlet_task_dispatcher
-
-        self.on_message = message_handler.on_message
-
-        self.tokens_connectionmanagers = dict()  # token_address: ConnectionManager
-
-        registry_event.join()
+            registry_event.join()
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -774,6 +775,11 @@ class RaidenService(object):
 
         self.protocol.stop_and_wait()
 
+        self.store_state()
+
+        gevent.wait(wait_for)
+
+    def store_state(self):
         if self.channels_serialization_path:
             with open(self.channels_serialization_path, 'wb') as handler:
                 for network in self.channelgraphs.values():
@@ -792,8 +798,7 @@ class RaidenService(object):
                         'receiver_address': key[0],
                         'token_address': key[1],
                         'messages': [
-                            queue_item.messagedata
-                            for queue_item in queue.snapshot()
+                            queue_item for queue_item in queue.snapshot()
                         ]
                     }
                     queues.append(queue_data)
@@ -824,8 +829,6 @@ class RaidenService(object):
                     handler,
                     protocol=-1
                 )
-
-        gevent.wait(wait_for)
 
     def transfer_async(self, token_address, amount, target, identifier=None):
         """ Transfer `amount` between this node and `target`.

@@ -3,6 +3,7 @@ import pytest
 
 from ethereum import slogging
 
+from raiden.raiden_service import RaidenService
 from raiden.api.python import RaidenAPI
 
 log = slogging.get_logger(__name__)
@@ -40,14 +41,28 @@ def test_snapshotting(
             channelgraphs=app.raiden.channelgraphs.copy(),
         )
 
-    app0.stop(leave_channels=False)
-    app1.stop(leave_channels=False)
-    app2.stop(leave_channels=False)
+    app0.raiden.protocol.stop_and_wait()
+    app0.raiden.store_state()
+    app1.raiden.protocol.stop_and_wait()
+    app1.raiden.store_state()
+    app2.raiden.protocol.stop_and_wait()
+    app2.raiden.store_state()
 
     assert app0.raiden.transfer_states_path != app1.raiden.transfer_states_path
 
     for num, app in enumerate(raiden_network):
-        app.raiden.restore_from_snapshots()
-        assert states[num]['identifiers_to_statemanagers'] == app.raiden.identifier_to_statemanagers
-        assert states[num]['channelgraphs'] == app.raiden.channelgraphs
+        app.raiden.identifier_to_statemanagers = dict()
+        app.raiden.channelgraphs = dict()
+        # restore_from_snapshot is called during __init__
+        newservice = RaidenService(
+            app.raiden.chain,
+            app.raiden.privkey,
+            app.raiden.protocol.transport,
+            app.raiden.protocol.discovery,
+            app.config
+        )
+        assert states[num]['identifiers_to_statemanagers'] == newservice.identifier_to_statemanagers
+        assert states[num]['channelgraphs'] == newservice.channelgraphs
+        assert len(newservice.channelgraphs)
+        assert len(newservice.identifier_to_statemanagers)
         # FIXME: testing the queue snapshot is missing
