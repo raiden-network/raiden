@@ -756,7 +756,7 @@ class RaidenService(object):
                         'token_address': key[1],
                         'messages': [
                             queue_item.messagedata
-                            for queue_item in queue
+                            for queue_item in queue.snapshot()
                         ]
                     }
                     queues.append(queue_data)
@@ -858,6 +858,7 @@ class RaidenService(object):
             # TODO: This should be set once the direct transfer is acknowledged
             transfer_success = EventTransferSentSuccess(
                 identifier,
+                direct_channel.channel_address,
             )
             self.transaction_log.log_events(
                 state_change_id,

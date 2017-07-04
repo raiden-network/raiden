@@ -15,6 +15,7 @@ from gevent.event import (
     AsyncResult,
     Event,
 )
+from gevent.lock import Semaphore
 from ethereum import slogging
 
 from raiden.exceptions import (
@@ -366,24 +367,38 @@ class NotifyingQueue(Event):
     def __init__(self):
         super(NotifyingQueue, self).__init__()
         self._queue = Queue()
+        self.lock = Semaphore()
 
     def put(self, item):
         """ Add new item to the queue. """
-        self._queue.put(item)
-        self.set()
+        with self.lock:
+            self._queue.put(item)
+            self.set()
 
     def get(self, block=True, timeout=None):
         """ Removes and returns an item from the queue. """
-        value = self._queue.get(block, timeout)
-        if self._queue.empty():
-            self.clear()
-        return value
+        with self.lock:
+            value = self._queue.get(block, timeout)
+            if self._queue.empty():
+                self.clear()
+            return value
 
     def peek(self, block=True, timeout=None):
         return self._queue.peek(block, timeout)
 
     def __len__(self):
         return len(self._queue)
+
+    def snapshot(self):
+        """ Allows to iterate over all items currently queued.
+        Note: Queue items will not be consumed but will be kept. """
+        items = []
+        with self.lock:
+            for i in range(self._queue.qsize()):
+                item = self._queue.get(block=True)
+                items.append(item)
+                self._queue.put(item)
+            return items
 
 
 class RaidenProtocol(object):
@@ -519,7 +534,7 @@ class RaidenProtocol(object):
             events.event_unhealthy,
             self.retries_before_backoff,
             self.retry_interval,
-            self.retry_interval * 10,
+            self.retry_interval * 10,  # FIXME: magic number
         ))
 
         if log.isEnabledFor(logging.DEBUG):

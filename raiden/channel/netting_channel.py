@@ -796,3 +796,12 @@ class ChannelSerialization(object):
 
         self.our_balance_proof = channel_instance.our_state.balance_proof
         self.partner_balance_proof = channel_instance.partner_state.balance_proof
+        self.message_queue = []
+
+    def __repr__(self):
+        return "<ChannelSerialization addr={} token={} block={} queue_len={}".format(
+            pex(self.channel_address),
+            pex(self.token_address),
+            self.block_number,
+            len(self.message_queue),
+        )

@@ -210,6 +210,7 @@ class RaidenMessageHandler(object):
 
         receive_success = EventTransferReceivedSuccess(
             message.identifier,
+            channel.channel_address,
         )
         self.raiden.transaction_log.log_events(
             state_change_id,

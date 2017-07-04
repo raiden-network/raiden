@@ -96,7 +96,7 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
         )
         self.conn.commit()
         self.sanity_check()
-        # When writting to a table where the primary key is the identifier and we want
+        # When writing to a table where the primary key is the identifier and we want
         # to return said identifier we use cursor.lastrowid, which uses sqlite's last_insert_rowid
         # https://github.com/python/cpython/blob/2.7/Modules/_sqlite/cursor.c#L727-L732
         #

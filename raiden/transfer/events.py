@@ -26,15 +26,17 @@ class EventTransferSentSuccess(Event):
         sucessful but there is no knowledge about the global transfer.
     """
 
-    def __init__(self, identifier):
+    def __init__(self, identifier, channel_address):
         self.identifier = identifier
+        self.channel_address = channel_address
 
     def __eq__(self, other):
         if not isinstance(other, EventTransferSentSuccess):
             return False
 
         return (
-            self.identifier == other.identifier
+            self.identifier == other.identifier and
+            self.channel_address == other.channel_address
         )
 
     def __ne__(self, other):
@@ -76,15 +78,17 @@ class EventTransferReceivedSuccess(Event):
         there is no correspoding `EventTransferReceivedFailed`.
     """
 
-    def __init__(self, identifier):
+    def __init__(self, identifier, channel_address):
         self.identifier = identifier
+        self.channel_address = channel_address
 
     def __eq__(self, other):
         if not isinstance(other, EventTransferReceivedSuccess):
             return False
 
         return (
-            self.identifier == other.identifier
+            self.identifier == other.identifier and
+            self.channel_address == other.channel_address
         )
 
     def __ne__(self, other):

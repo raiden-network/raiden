@@ -28,6 +28,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
+    EventUnlockSuccess,
 )
 from raiden.utils import sha3
 
@@ -37,6 +38,20 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 class StateMachineEventHandler(object):
     def __init__(self, raiden):
         self.raiden = raiden
+
+    def do_channel_snapshot(self, channel_address):
+        channel = self.raiden.find_channel_by_address(channel_address)
+        serialization = channel.serialize()
+
+        if (channel.partner_address, channel.token_address) in self.raiden.protocol.channel_queue:
+            queue = self.raiden.protocol.channel_queue[(
+                channel.partner_address,
+                channel.token_address
+            )]
+            for queue_item in queue.snapshot():
+                serialization.message_queue.append(queue_item)
+            log.DEV('queue done')
+        log.DEV(serialization)
 
     def log_and_dispatch_to_all_tasks(self, state_change):
         """Log a state change, dispatch it to all state managers and log generated events"""
@@ -153,18 +168,26 @@ class StateMachineEventHandler(object):
             self.raiden.send_async(receiver, refund_transfer)
 
         elif isinstance(event, EventTransferSentSuccess):
+            self.do_channel_snapshot(event.channel_address)
+            # XXX channel snapshot
             for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(True)
 
         elif isinstance(event, EventTransferSentFailed):
+            self.do_channel_snapshot(event.channel_address)
+            # XXX channel snapshot
             for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(False)
 
         elif isinstance(event, EventTransferReceivedSuccess):
+            self.do_channel_snapshot(event.channel_address)
+
+        # FIXME: @hackaugusto should we `pass` on EventUnlockSuccess?
+        elif isinstance(event, EventUnlockSuccess):
             pass
 
         else:
-            log.error('Unknow event {}'.format(type(event)))
+            log.error('Unknown event {}'.format(type(event)))
 
     def on_blockchain_statechange(self, state_change):
         if log.isEnabledFor(logging.INFO):
