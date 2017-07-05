@@ -33,7 +33,6 @@ OPTIONS = [
               'a keystore file exists in your local system.'),
         default=None,
         type=str,
-        envvar='ETH_ADDRESS',
     ),
     click.option(
         '--keystore-path',
