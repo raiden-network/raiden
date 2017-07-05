@@ -33,6 +33,7 @@ OPTIONS = [
               'a keystore file exists in your local system.'),
         default=None,
         type=str,
+        envvar='ETH_ADDRESS',
     ),
     click.option(
         '--keystore-path',
@@ -204,23 +205,35 @@ def app(address,
 
         address = addresses[idx]
 
-    unlock_tries = 3
-    while True:
+    password = os.environ.get('ETH_PASSWORD')
+    # if environ has password, try it
+    # avoid using click method to avoid password in command line
+    if password:
         try:
-            privatekey_bin = accmgr.get_privkey(address)
-            break
+            privatekey_bin = accmgr.get_privkey(address, password)
         except ValueError as e:
             # ValueError exception raised if the password is incorrect
-            if unlock_tries == 0:
-                print('Exhausted passphrase unlock attempts for {}. Aborting ...'.format(address))
-                sys.exit(1)
+            print('Incorret password for {} in environment variable ETH_PASSWORD. Aborting '
+                    '...'.format(address))
+            sys.exit(1)
+    else:
+        unlock_tries = 3
+        while True:
+            try:
+                privatekey_bin = accmgr.get_privkey(address)
+                break
+            except ValueError as e:
+                # ValueError exception raised if the password is incorrect
+                if unlock_tries == 0:
+                    print('Exhausted passphrase unlock attempts for {}. Aborting ...'.format(address))
+                    sys.exit(1)
 
-            print(
-                'Incorrect passphrase to unlock the private key. {} tries remaining. '
-                'Please try again or kill the process to quit. '
-                'Usually Ctrl-c.'.format(unlock_tries)
-            )
-            unlock_tries -= 1
+                print(
+                    'Incorrect passphrase to unlock the private key. {} tries remaining. '
+                    'Please try again or kill the process to quit. '
+                    'Usually Ctrl-c.'.format(unlock_tries)
+                )
+                unlock_tries -= 1
 
     privatekey_hex = privatekey_bin.encode('hex')
     config['privatekey_hex'] = privatekey_hex
@@ -311,20 +324,22 @@ def run(ctx, **kwargs):
             raiden_api = RaidenAPI(app_.raiden)
             rest_api = RestAPI(raiden_api)
             api_server = APIServer(rest_api, cors_domain_list=domain_list)
+            (api_host, api_port) = split_endpoint(kwargs["api_address"])
 
             Greenlet.spawn(
                 api_server.run,
-                ctx.params['api_host'],
-                ctx.params['api_port'],
+                api_host,
+                api_port,
                 debug=False,
                 use_evalex=False
             )
 
             print(
-                "The RPC server is now running at http://{}:{}/.\n\n"
+                "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
                 "See the Raiden documentation for all available endpoints at\n"
                 "https://github.com/raiden-network/raiden/blob/master/docs/Rest-Api.rst".format(
-                    ctx.params['api_host'], ctx.params['api_port'],
+                    api_host,
+                    api_port,
                 )
             )
 
