@@ -255,6 +255,8 @@ def app(address,
 
     endpoint = eth_rpc_endpoint
 
+    # Fallback default port if only an IP address is given
+    rpc_port = 8545
     if eth_rpc_endpoint.startswith("http://"):
         endpoint = eth_rpc_endpoint[len("http://"):]
         rpc_port = 80
