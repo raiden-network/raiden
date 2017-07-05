@@ -120,12 +120,10 @@ OPTIONS = [
         default=True,
     ),
     click.option(
-        '--api-port',
-        help=(
-            'Port for the RPC server to run from'
-        ),
-        default=5001,
-        type=int,
+        '--api-address',
+        help='"host:port" for the RPC server to listen on.',
+        default="127.0.0.1:5001",
+        type=str,
     ),
 ]
 
@@ -152,7 +150,7 @@ def app(address,
         logfile,
         max_unresponsive_time,
         send_ping_time,
-        api_port,
+        api_address,
         rpc,
         console):
 
@@ -163,12 +161,14 @@ def app(address,
 
     # config_file = args.config_file
     (listen_host, listen_port) = split_endpoint(listen_address)
+    (api_host, api_port) = split_endpoint(api_address)
 
     config = App.DEFAULT_CONFIG.copy()
     config['host'] = listen_host
     config['port'] = listen_port
     config['console'] = console
     config['rpc'] = rpc
+    config['api_host'] = api_host
     config['api_port'] = api_port
     config['socket'] = socket
 
@@ -314,16 +314,17 @@ def run(ctx, **kwargs):
 
             Greenlet.spawn(
                 api_server.run,
+                ctx.params['api_host'],
                 ctx.params['api_port'],
                 debug=False,
                 use_evalex=False
             )
 
             print(
-                "The RPC server is now running at http://localhost:{}/.\n\n"
+                "The RPC server is now running at http://{}:{}/.\n\n"
                 "See the Raiden documentation for all available endpoints at\n"
                 "https://github.com/raiden-network/raiden/blob/master/docs/Rest-Api.rst".format(
-                    ctx.params['api_port'],
+                    ctx.params['api_host'], ctx.params['api_port'],
                 )
             )
 

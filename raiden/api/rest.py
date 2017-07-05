@@ -74,7 +74,7 @@ class APIServer(object):
     api_server = APIServer(rest_api)
 
     # run the server
-    api_server.run(5001, debug=True)
+    api_server.run('127.0.0.1', 5001, debug=True)
     ```
     """
 
@@ -153,10 +153,8 @@ class APIServer(object):
             resource_class_kwargs={'rest_api_object': self.rest_api}
         )
 
-    def run(self, port, **kwargs):
-        if 'host' in kwargs:
-            raise ValueError('The server host is hardcoded, can\'t set it')
-        self.flask_app.run(port=port, host='localhost', **kwargs)
+    def run(self, host='127.0.0.1', port=5001, **kwargs):
+        self.flask_app.run(host=host, port=port, **kwargs)
 
 
 class RestAPI(object):
