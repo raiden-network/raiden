@@ -4,6 +4,7 @@ import pytest
 from ethereum import slogging
 
 from raiden.raiden_service import RaidenService
+from raiden.network.transport import UDPTransport
 from raiden.api.python import RaidenAPI
 
 log = slogging.get_logger(__name__)
@@ -53,11 +54,15 @@ def test_snapshotting(
     for num, app in enumerate(raiden_network):
         app.raiden.identifier_to_statemanagers = dict()
         app.raiden.channelgraphs = dict()
+        transport = UDPTransport(
+            app.raiden.config['host'],
+            app.raiden.config['port'],
+        )
         # restore_from_snapshot is called during __init__
         service = RaidenService(
             app.raiden.chain,
             app.raiden.privkey,
-            app.raiden.protocol.transport,
+            transport,
             app.raiden.protocol.discovery,
             app.config
         )
