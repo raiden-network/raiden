@@ -5,4 +5,4 @@ from raiden.ui.cli import run
 
 
 if __name__ == '__main__':
-    run()
+    run(auto_envvar_prefix='RAIDEN')
