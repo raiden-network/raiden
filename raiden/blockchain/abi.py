@@ -3,6 +3,8 @@ import os
 import json
 import hashlib
 
+from threading import Lock
+
 from ethereum import _solidity
 from ethereum.abi import event_id, normalize_name, ContractTranslator
 
@@ -95,44 +97,47 @@ class ContractManager():
 
     def __init__(self):
         self.is_instantiated = False
+        self.lock = Lock()
 
     def instantiate(self):
-        self.human_standard_token_compiled = get_static_or_compile(
-            get_contract_path('HumanStandardToken.sol'),
-            'HumanStandardToken',
-            combined='abi',
-        )
+        with self.lock:
+            if self.is_instantiated:
+                return
 
-        self.channel_manager_compiled = get_static_or_compile(
-            get_contract_path('ChannelManagerContract.sol'),
-            'ChannelManagerContract',
-            combined='abi',
-        )
+            self.human_standard_token_compiled = get_static_or_compile(
+                get_contract_path('HumanStandardToken.sol'),
+                'HumanStandardToken',
+                combined='abi',
+            )
 
-        self.endpoint_registry_compiled = get_static_or_compile(
-            get_contract_path('EndpointRegistry.sol'),
-            'EndpointRegistry',
-            combined='abi',
-        )
+            self.channel_manager_compiled = get_static_or_compile(
+                get_contract_path('ChannelManagerContract.sol'),
+                'ChannelManagerContract',
+                combined='abi',
+            )
 
-        self.netting_channel_compiled = get_static_or_compile(
-            get_contract_path('NettingChannelContract.sol'),
-            'NettingChannelContract',
-            combined='abi',
-        )
+            self.endpoint_registry_compiled = get_static_or_compile(
+                get_contract_path('EndpointRegistry.sol'),
+                'EndpointRegistry',
+                combined='abi',
+            )
 
-        self.registry_compiled = get_static_or_compile(
-            get_contract_path('Registry.sol'),
-            'Registry',
-            combined='abi',
-        )
+            self.netting_channel_compiled = get_static_or_compile(
+                get_contract_path('NettingChannelContract.sol'),
+                'NettingChannelContract',
+                combined='abi',
+            )
 
-        self.is_instantiated = True
+            self.registry_compiled = get_static_or_compile(
+                get_contract_path('Registry.sol'),
+                'Registry',
+                combined='abi',
+            )
+
+            self.is_instantiated = True
 
     def get_abi(self, contract_name):
-        if not self.is_instantiated:
-            self.instantiate()
-
+        self.instantiate()
         compiled = getattr(self, '{}_compiled'.format(contract_name))
         return compiled['abi']
 
