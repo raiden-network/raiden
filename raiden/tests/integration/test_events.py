@@ -12,11 +12,7 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.network import CHAIN
-from raiden.blockchain.abi import (
-    CHANNELNEWBALANCE_EVENTID,
-    CHANNELCLOSED_EVENTID,
-    CHANNELSETTLED_EVENTID,
-)
+from raiden.blockchain.abi import CONTRACT_MANAGER
 from raiden.blockchain.events import (
     ALL_EVENTS,
     get_all_channel_manager_events,
@@ -218,7 +214,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     events = get_all_netting_channel_events(
         app0.raiden.chain,
         netcontract_address,
-        events=[CHANNELNEWBALANCE_EVENTID],
+        events=[CONTRACT_MANAGER.get_event_id('ChannelNewBalance')],
     )
 
     assert len(all_netting_channel_events) == 1
@@ -247,7 +243,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     events = get_all_netting_channel_events(
         app0.raiden.chain,
         netcontract_address,
-        events=[CHANNELCLOSED_EVENTID],
+        events=[CONTRACT_MANAGER.get_event_id('ChannelClosed')],
     )
 
     assert len(all_netting_channel_events) == 2
@@ -277,7 +273,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     events = get_all_netting_channel_events(
         app0.raiden.chain,
         netcontract_address,
-        events=[CHANNELSETTLED_EVENTID],
+        events=[CONTRACT_MANAGER.get_event_id('ChannelSettled')],
     )
 
     assert len(all_netting_channel_events) == 3
