@@ -524,7 +524,6 @@ class RaidenService(object):
             channel_details['partner_balance'],
             opened_block,
         )
-        # FIXME: incomplete?
 
         def register_channel_for_hashlock(channel, hashlock):
             self.register_channel_for_hashlock(
@@ -787,7 +786,7 @@ class RaidenService(object):
                         pickle.dump(
                             ChannelSerialization(channel),
                             handler,
-                            protocol=-1
+                            protocol=-1  # __slots__ without __getstate__ require `-1`
                         )
 
         if self.channels_queue_path:
@@ -810,7 +809,7 @@ class RaidenService(object):
                         'nodeaddresses_to_nonces': self.protocol.nodeaddresses_to_nonces,
                     },
                     handler,
-                    protocol=-1
+                    protocol=-1  # __slots__ without __getstate__ require `-1`
                 )
 
         if self.transfer_states_path:
@@ -827,7 +826,7 @@ class RaidenService(object):
                 pickle.dump(
                     self.identifier_to_statemanagers,
                     handler,
-                    protocol=-1
+                    protocol=-1  # __slots__ without __getstate__ require `-1`
                 )
 
     def transfer_async(self, token_address, amount, target, identifier=None):
