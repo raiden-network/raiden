@@ -4,7 +4,14 @@ from collections import namedtuple, defaultdict
 
 from pyethapp.jsonrpc import address_decoder
 
-from raiden.blockchain.abi import CONTRACT_MANAGER
+from raiden.blockchain.abi import (
+    CONTRACT_MANAGER,
+    CONTRACT_CHANNEL_MANAGER,
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CONTRACT_NETTING_CHANNEL,
+    CONTRACT_REGISTRY,
+)
 from raiden.utils import pex
 from raiden.network.rpc.client import new_filter, Filter
 
@@ -106,7 +113,7 @@ def get_all_channel_manager_events(
 
     return get_contract_events(
         pyethapp_chain,
-        CONTRACT_MANAGER.get_translator('channel_manager'),
+        CONTRACT_MANAGER.get_translator(CONTRACT_CHANNEL_MANAGER),
         channel_manager_address,
         events,
         from_block,
@@ -125,7 +132,7 @@ def get_all_registry_events(
     """
     return get_contract_events(
         pyethapp_chain,
-        CONTRACT_MANAGER.get_translator('registry'),
+        CONTRACT_MANAGER.get_translator(CONTRACT_REGISTRY),
         registry_address,
         events,
         from_block,
@@ -145,7 +152,7 @@ def get_all_netting_channel_events(
 
     return get_contract_events(
         pyethapp_chain,
-        CONTRACT_MANAGER.get_translator('netting_channel'),
+        CONTRACT_MANAGER.get_translator(CONTRACT_NETTING_CHANNEL),
         netting_channel_address,
         events,
         from_block,
@@ -281,7 +288,7 @@ class PyethappBlockchainEvents(object):
         self.add_event_listener(
             'Registry {}'.format(pex(registry_address)),
             tokenadded,
-            CONTRACT_MANAGER.get_translator('registry'),
+            CONTRACT_MANAGER.get_translator(CONTRACT_REGISTRY),
         )
 
     def add_channel_manager_listener(self, channel_manager_proxy):
