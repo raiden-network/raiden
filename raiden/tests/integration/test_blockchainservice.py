@@ -14,7 +14,7 @@ from raiden.network.rpc.client import (
     decode_topic, patch_send_transaction, patch_send_message
 )
 from raiden.utils import privatekey_to_address, get_contract_path
-from raiden.blockchain.abi import CONTRACT_MANAGER
+from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
@@ -246,7 +246,7 @@ def test_blockchain(
     assert token_proxy.address == event['token_address'].decode('hex')
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
-        CONTRACT_MANAGER.get_abi('channel_manager'),
+        CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
         channel_manager_address,
     )
 

@@ -10,7 +10,35 @@ from ethereum.abi import event_id, normalize_name, ContractTranslator
 
 from raiden.utils import get_contract_path
 
-__all__ = ('CONTRACT_MANAGER',)
+__all__ = (
+    'CONTRACT_MANAGER',
+
+    'CONTRACT_CHANNEL_MANAGER',
+    'CONTRACT_ENDPOINT_REGISTRY',
+    'CONTRACT_HUMAN_STANDARD_TOKEN',
+    'CONTRACT_NETTING_CHANNEL',
+    'CONTRACT_REGISTRY',
+
+    'EVENT_CHANNEL_NEW',
+    'EVENT_CHANNEL_NEW_BALANCE',
+    'EVENT_CHANNEL_CLOSED',
+    'EVENT_CHANNEL_SECRET_REVEALED',
+    'EVENT_CHANNEL_SETTLED',
+    'EVENT_TOKEN_ADDED',
+)
+
+CONTRACT_CHANNEL_MANAGER = 'channel_manager'
+CONTRACT_ENDPOINT_REGISTRY = 'endpoint_registry'
+CONTRACT_HUMAN_STANDARD_TOKEN = 'human_standard_token'
+CONTRACT_NETTING_CHANNEL = 'netting_channel'
+CONTRACT_REGISTRY = 'registry'
+
+EVENT_CHANNEL_NEW = 'ChannelNew'
+EVENT_CHANNEL_NEW_BALANCE = 'ChannelNewBalance'
+EVENT_CHANNEL_CLOSED = 'ChannelClosed'
+EVENT_CHANNEL_SECRET_REVEALED = 'ChannelSecretRevealed'
+EVENT_CHANNEL_SETTLED = 'ChannelSettled'
+EVENT_TOKEN_ADDED = 'TokenAdded'
 
 
 def get_event(full_abi, event_name):
@@ -98,6 +126,14 @@ class ContractManager():
     def __init__(self):
         self.is_instantiated = False
         self.lock = Lock()
+        self.event_to_contract = dict(
+            ChannelNew=CONTRACT_CHANNEL_MANAGER,
+            ChannelNewBalance=CONTRACT_NETTING_CHANNEL,
+            ChannelClosed=CONTRACT_NETTING_CHANNEL,
+            ChannelSecretRevealed=CONTRACT_NETTING_CHANNEL,
+            ChannelSettled=CONTRACT_NETTING_CHANNEL,
+            TokenAdded=CONTRACT_REGISTRY,
+        )
 
     def instantiate(self):
         with self.lock:
@@ -145,21 +181,7 @@ class ContractManager():
         """ Not really generic, as it maps event names to events of specific contracts,
         but it is good enough for what we want to accomplish.
         """
-        if event_name == 'TokenAdded':
-            event = get_event(self.get_abi('registry'), event_name)
-        elif event_name == 'ChannelNew':
-            event = get_event(self.get_abi('channel_manager'), event_name)
-        elif event_name == 'ChannelNewBalance':
-            event = get_event(self.get_abi('netting_channel'), event_name)
-        elif event_name == 'ChannelClosed':
-            event = get_event(self.get_abi('netting_channel'), event_name)
-        elif event_name == 'ChannelSecretRevealed':
-            event = get_event(self.get_abi('netting_channel'), event_name)
-        elif event_name == 'ChannelSettled':
-            event = get_event(self.get_abi('netting_channel'), event_name)
-        else:
-            raise ValueError('Unknown event: {}'.format(event_name))
-
+        event = get_event(self.get_abi(self.event_to_contract[event_name]), event_name)
         return event_id(*get_eventname_types(event))
 
     def get_translator(self, contract_name):

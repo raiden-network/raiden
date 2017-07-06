@@ -32,7 +32,17 @@ from raiden.utils import (
     pex,
     privatekey_to_address,
 )
-from raiden.blockchain.abi import CONTRACT_MANAGER
+from raiden.blockchain.abi import (
+    CONTRACT_MANAGER,
+    CONTRACT_CHANNEL_MANAGER,
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CONTRACT_NETTING_CHANNEL,
+    CONTRACT_REGISTRY,
+
+    EVENT_CHANNEL_NEW,
+    EVENT_TOKEN_ADDED,
+)
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
@@ -472,7 +482,7 @@ class Discovery(object):
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
-            CONTRACT_MANAGER.get_abi('endpoint_registry'),
+            CONTRACT_MANAGER.get_abi(CONTRACT_ENDPOINT_REGISTRY),
             address_encoder(discovery_address),
         )
 
@@ -538,7 +548,7 @@ class Token(object):
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
-            CONTRACT_MANAGER.get_abi('human_standard_token'),
+            CONTRACT_MANAGER.get_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             address_encoder(token_address),
         )
 
@@ -608,7 +618,7 @@ class Registry(object):
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
-            CONTRACT_MANAGER.get_abi('registry'),
+            CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
             address_encoder(registry_address),
         )
 
@@ -668,7 +678,7 @@ class Registry(object):
         ]
 
     def tokenadded_filter(self, from_block=None, to_block=None):
-        topics = [CONTRACT_MANAGER.get_event_id('TokenAdded')]
+        topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
 
         registry_address_bin = self.proxy.address
         filter_id_raw = new_filter(
@@ -707,7 +717,7 @@ class ChannelManager(object):
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
-            CONTRACT_MANAGER.get_abi('channel_manager'),
+            CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
             address_encoder(manager_address),
         )
 
@@ -811,7 +821,7 @@ class ChannelManager(object):
         Return:
             Filter: The filter instance.
         """
-        topics = [CONTRACT_MANAGER.get_event_id('ChannelNew')]
+        topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW)]
 
         channel_manager_address_bin = self.proxy.address
         filter_id_raw = new_filter(
@@ -850,7 +860,7 @@ class NettingChannel(object):
             ))
 
         proxy = jsonrpc_client.new_abi_contract(
-            CONTRACT_MANAGER.get_abi('netting_channel'),
+            CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
             address_encoder(channel_address),
         )
 
