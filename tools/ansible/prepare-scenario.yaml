@@ -1,0 +1,273 @@
+- hosts: localhost
+  name: init
+  connection: local
+  gather_facts: yes
+  roles:
+    - scenario
+    - common
+  tags:
+    - init
+
+  tasks:
+    - name: Create scenario name
+      set_fact: scenario_name="scenario-{{ ansible_date_time.epoch }}-{{ number_of_nodes }}-{{ raiden_per_node }}"
+
+    - include: roles/common/tasks/scenario_ami_id_from_name.yaml
+
+    - name: Provision a set of instances
+      local_action:
+        module: ec2
+        # this allows to refer to them later via 'hosts: key_raiden'
+        key_name: raiden
+        region: "{{ region }}"
+        group: raiden
+        instance_type: "{{ instance_type }}"
+        image: "{{ scenario_ami_id }}"
+        wait: true
+        count: "{{ number_of_nodes }}"
+        instance_tags:
+          Name: Scenario
+          Scenario: "{{ scenario_name }}"
+          user: "{{ user_tag }}"
+      register: ec2
+
+    - name: Add all instance public IPs to host group
+      add_host: hostname={{ item.public_ip }} groups=tag_Name_Scenario
+      with_items: "{{ ec2.instances }}"
+
+    - name: Collect all private IPs for use in configuration to 'node_ip'
+      set_fact: node_ips="{{ ec2.instances | map(attribute='private_ip') | list }}"
+
+    - name: Wait for SSH to come up
+      wait_for: host={{ item.public_ip }} port=22 delay=60 timeout=320 state=started
+      with_items: "{{ ec2.instances }}"
+
+    - include: roles/scenario/tasks/read_scenario_params.yaml
+
+    - name: create scenario global folder
+      local_action:
+        module: file
+        path: "{{ scenario_folder }}"
+        state: directory
+
+    - name: store node_ips in scenario folder
+      copy:
+        content:
+          node_ips: "{{ node_ips }}"
+        dest: "{{ scenario_folder }}/node_ips.json"
+
+    - name: create scenario folders
+      local_action:
+        module: file
+        path: "{{ scenario_folder }}/{{ item }}/geth/keystore"
+        state: directory
+      with_items: "{{ node_ips }}"
+
+- hosts: tag_Name_Scenario
+  name: read DAG into fs-cache
+  remote_user: "{{ remote_user }}"
+  gather_facts: no
+  roles:
+    - scenario
+    - common
+  tags:
+    - read_dag
+
+  tasks:
+    - name: cat DAG file (in background) to update fs-cache
+      shell: "cat {{ user_home }}/.ethash/full-R23-0000000000000000 > /dev/null"
+      async: 600
+      poll: 0
+
+- hosts: localhost
+  name: build scenario description
+  gather_facts: no
+  roles:
+    - scenario
+    - common
+  tags:
+    - prepare_scenario
+
+  tasks:
+    - include: roles/scenario/tasks/read_scenario_params.yaml
+
+    - name: create scenario.json
+      shell:
+        chdir: "../"
+        cmd: "python config_builder.py build_scenario 3 {{ raiden_per_node }} {{ node_ips | join(' ') }}"
+      register: out
+
+    - name: jsonify
+      set_fact:
+        scenario_description: "{{ out.stdout | from_json }}"
+
+    - name: store scenario file toplevel
+      copy:
+        content: "{{ scenario_description }}"
+        dest: "{{ scenario_folder }}/scenario.json"
+        mode: a+r
+
+
+- hosts: localhost
+  name: prepare geth
+  gather_facts: true
+  roles:
+    - scenario
+    - common
+  tags:
+    - prepare_geth
+
+  tasks:
+    - include: roles/scenario/tasks/read_scenario_params.yaml
+
+    - name: run 'geth_commands'
+      shell:
+        chdir: "../"
+        cmd: "python config_builder.py geth_commands {{ geth_datadir }} {{ node_ips | join(' ') }}"
+      register: out
+
+    - name: jsonify
+      set_fact:
+        geth_commands: "{{ out.stdout | from_json }}"
+
+
+    - name: store geth_commands
+      copy:
+        content:
+          geth_commands: "{{ geth_commands }}"
+        dest: "{{ scenario_folder }}/geth_commands.json"
+
+    - name: put geth_command per node
+      copy:
+        content: "#!/usr/bin/env sh\n{{ geth_commands[item] }}"
+        dest: "{{ scenario_folder }}/{{ item }}/geth/start.sh"
+        mode: a+rx
+      with_items: "{{ node_ips }}"
+
+    - name: put static-nodes.json per node
+      copy:
+        content: "{{ geth_commands.static_nodes }}"
+        dest: "{{ scenario_folder }}/{{ item }}/geth/static-nodes.json"
+      with_items: "{{ node_ips }}"
+
+    - name: create default account (for mining)
+      shell:
+        chdir: "../"
+        cmd: python config_builder.py account_file
+      register: out
+
+    - name: jsonify
+      set_fact:
+        account_file: "{{ out.stdout | from_json }}"
+
+    - name: store account file per node
+      copy:
+        content: "{{ account_file }}"
+        dest: "{{ scenario_folder }}/{{ item }}/geth/keystore/default.json"
+      with_items: "{{ node_ips }}"
+
+    - name: create blockchain config (genesis & raiden flags)
+      shell:
+        chdir: "../"
+        cmd: "python config_builder.py full_genesis {{ raiden_per_node }} {{ node_ips | join(' ') }} --scenario {{ scenario_folder }}/scenario.json"
+      register: out
+
+    - name: jsonify
+      set_fact:
+        blockchain_config: "{{ out.stdout | from_json }}"
+
+    - name: store genesis
+      copy:
+        content: "{{ blockchain_config }}"
+        dest: "{{ scenario_folder }}/{{ item }}/geth/genesis.json"
+      with_items: "{{ node_ips }}"
+
+    - name: store contract_flags
+      copy:
+        content: "{{ blockchain_config.config.raidenFlags }}"
+        dest: "{{ scenario_folder }}/{{ item }}/raiden_flags.txt"
+      with_items: "{{ node_ips }}"
+
+- hosts: localhost
+  name: prepare raiden
+  gather_facts: no
+  roles:
+    - scenario
+    - common
+  tags:
+    - prepare_raiden
+
+  tasks:
+    - include: roles/scenario/tasks/read_scenario_params.yaml
+
+    - name: create raiden node_list
+      shell:
+        chdir: "../"
+        cmd: "python config_builder.py accounts {{ raiden_per_node }} {{ node_ips | join(' ') }}"
+      register: out
+
+    - name: jsonify
+      set_fact:
+        raiden_accounts: "{{ out.stdout | from_json }}"
+
+    - name: create raiden instance folders
+      file:
+        path: "{{ scenario_folder }}/{{ item.key.split(':').0 }}/{{ item.key.split(':').1 }}"
+        state: directory
+      with_dict: "{{ raiden_accounts }}"
+
+    - name: store private key per raiden node
+      copy:
+        content: "{{ item.value.privatekey }}"
+        dest: "{{ scenario_folder }}/{{ item.key.split(':').0 }}/{{ item.key.split(':').1 }}/privatekey.txt"
+      with_dict: "{{ raiden_accounts }}"
+
+    - name: store address per raiden node
+      copy:
+        content: "{{ item.value.address }}"
+        dest: "{{ scenario_folder }}/{{ item.key.split(':').0 }}/{{ item.key.split(':').1 }}/address.txt"
+      with_dict: "{{ raiden_accounts }}"
+
+    - name: distribute scenario.json
+      copy:
+        src: "{{ scenario_folder }}/scenario.json"
+        dest: "{{ scenario_folder }}/{{ item.key.split(':').0 }}/{{ item.key.split(':').1 }}/scenario.json"
+      with_dict: "{{ raiden_accounts }}"
+
+
+- hosts: tag_Name_Scenario
+  name: put configuration on hosts and init geth
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - scenario
+    - common
+  tags:
+    - init_host
+
+  tasks:
+    - include: roles/scenario/tasks/read_scenario_params.yaml
+
+    - action: ec2_facts
+
+    - name: debug node ip from facts
+      debug:
+        var: ansible_ec2_local_ipv4
+
+    - name: copy scenario folder for host
+      synchronize:
+        src: "{{ scenario_folder }}/{{ ansible_ec2_local_ipv4 }}/"
+        dest: "{{ user_home }}"
+
+- hosts: tag_Name_Scenario
+  name: terminate
+  remote_user: "{{ remote_user }}"
+  gather_facts: true
+  roles:
+    - scenario
+    - common
+  tags:
+    - terminate
+
+  tasks:
+    - include: roles/scenario/tasks/terminate.yaml

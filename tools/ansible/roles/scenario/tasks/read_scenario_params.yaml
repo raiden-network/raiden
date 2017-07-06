@@ -1,0 +1,42 @@
+# include this to collect the facts
+# - scenario_name
+# - scenario_folder
+# - node_ips
+# from a previously set up scenario on a running set of instances tagged with 'tag_Name_Scenario'
+
+- name: read scenario name from ec2_facts
+  run_once: yes
+  local_action:
+    module: ec2_remote_facts
+    region: "{{ region }}"
+    filters:
+      instance-state-name: running
+      "tag:Name": Scenario
+      "tag:user": "{{ user_tag }}"
+  register: remote_facts
+  when: scenario_name is not defined
+
+- name: collect all Scenario-tags from remote_facts
+  run_once: yes
+  set_fact:
+    scenario_names: "{{ remote_facts.instances | map(attribute='tags') | map(attribute='Scenario') | list | unique}}"
+  when: scenario_name is not defined
+
+- name: fail if multiple scenarios are online
+  fail: 
+    msg: "there are more than one scenarios running: {{ scenario_names }}, please chose one by defining '-e scenario_name=<name>'"
+  when: scenario_name is not defined and scenario_names|length > 1
+
+- name: set scenario_name fact
+  set_fact:
+    scenario_name: "{{ scenario_names | first }}"
+  when: scenario_name is not defined
+
+- name: set scenario_folder fact
+  set_fact:
+    scenario_folder: "/tmp/{{ scenario_name }}"
+  when: scenario_folder is not defined
+
+- name: read node_ips from scenario folder
+  include_vars: "{{ scenario_folder }}/node_ips.json"
+  when: node_ips is not defined

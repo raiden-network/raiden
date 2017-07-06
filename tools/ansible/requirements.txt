@@ -1,0 +1,8 @@
+boto==2.42.0
+ansible==2.1.1.0
+enum34==1.1.6
+idna==2.1
+Jinja2==2.8
+MarkupSafe==0.23
+paramiko==2.0.2
+pyasn1==0.1.9

@@ -1,0 +1,3 @@
+ami_id: ami-d732f0b7  # Ubuntu Server 14.04 LTS (HVM), SSD Volume Type 64bit
+instance_type: t2.micro
+raiden_version: HEAD

@@ -1,0 +1,20 @@
+{
+    "tokens": [{
+        "channels": [
+            "node1", "node2", "node3"
+        ],
+        "transfers_with_amount": {
+            "node1": "50",
+            "node2": "50",
+            "node3": "50"
+        }
+    },
+    {
+        "channels": [
+            "node4"
+        ],
+        "transfers_with_amount": {
+            "node4": "50"
+        }
+    }]
+}

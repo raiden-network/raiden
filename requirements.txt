@@ -1,11 +1,24 @@
-pytest
+# temporary (?) until pyelliptic maintainers make it compatible with openssl>=1.1
+git+https://github.com/LefterisJP/pyelliptic@make_compatible_with_openssl1_1#egg=pyelliptic
 pysha3
-gevent>=1.1b3
+# temporary until new version of pyethereum is released, that supports solc >= v0.4.9
+git+https://github.com/LefterisJP/pyethapp@raiden_pyethapp_fork#egg=pyethapp
+# temporary until pystun creates a new release
+git+https://github.com/konradkonrad/pystun@develop#egg=pystun
+# temporary until new version of pyethereum is released, that supports interfaces
+git+https://github.com/LefterisJP/pyethereum@take_solidity_interface_into_account#egg=ethereum
+ipython<5.0.0
 rlp>=0.4.3
-c_secp256k1==0.0.8
-pycryptodome>=3.3.1
+coincurve==4.5.1
+pycryptodome>=3.4.3
+miniupnpc
 networkx
-ethereum
-u-msgpack-python
+ethereum-serpent
 repoze.lru
-gevent-websocket>=0.9.5
+gevent-websocket==0.9.4
+cachetools>=2.0.0,<3.0.0
+Flask>=0.11.1
+flask-restful
+webargs
+marshmallow_polyfield==3.0
+Flask-Cors==3.0.2

@@ -1,0 +1,12 @@
+diff --git a/requirements.txt b/requirements.txt
+index 04b50e7..5541a0a 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -8,7 +8,6 @@ secp256k1==0.12.1
+ pycryptodome>=3.3.1
+ networkx
+ ethereum>=1.3.2
+-ethereum-serpent
+ u-msgpack-python
+ repoze.lru
+ gevent-websocket==0.9.4

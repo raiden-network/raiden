@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Raiden
+Version=XXVERSIONXX
+Exec=raiden
+Icon=raiden
+Type=Application
+StartupNotify=true

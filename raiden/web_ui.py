@@ -1,7 +1,8 @@
 from geventwebsocket.server import WebSocketServer
 from geventwebsocket.resource import Resource, WebSocketApplication
 from geventwebsocket.protocols.wamp import WampProtocol, export_rpc
-from raiden.raiden_service import RaidenAPI, RaidenService, NoPathError, InvalidAddress, InvalidAmount
+from raiden.api.python import RaidenAPI, NoPathError, InvalidAddress, InvalidAmount
+from raiden.raiden_service import RaidenService
 # from raiden.utils import isaddress
 # from raiden.channel import InsufficientBalance
 import os, json

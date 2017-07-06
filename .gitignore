@@ -1,3 +1,6 @@
+# ignore private keys
+*.pem
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -8,6 +11,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 env/
+devenv/
 build/
 develop-eggs/
 dist/
@@ -43,6 +47,9 @@ nosetests.xml
 coverage.xml
 *,cover
 
+# Pyenv
+.python-version
+
 # Translations
 *.mo
 *.pot
@@ -55,3 +62,11 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# truffle related
+truffle/.babel.json
+truffle/environments/development/contracts/
+truffle/.bash_history
+
+# never check in .static-abi.json files
+*.static-abi.json

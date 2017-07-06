@@ -1,0 +1,10 @@
+# Collect instance id: http://stackoverflow.com/a/27307254 
+- action: ec2_facts
+
+- name: shutdown all ec2.instances (pass '-e keep=True' if you actually want to use the scenario!)
+  local_action:
+    module: ec2
+    region: "{{ region }}"
+    state: absent
+    instance_ids: "{{ ansible_ec2_instance_id }}"
+  when: keep is not defined

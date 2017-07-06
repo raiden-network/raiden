@@ -1,2 +1,4 @@
 include README.md
 include requirements.txt
+include raiden/smart_contracts/*
+prune raiden/tests

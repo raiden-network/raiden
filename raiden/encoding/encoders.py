@@ -1,4 +1,4 @@
-# -*- coding: utf8 -*-
+# -*- coding: utf-8 -*-
 import codecs
 import sys
 
@@ -18,12 +18,14 @@ class integer(object):  # pylint: disable=invalid-name
         self.maximum = maximum
 
     def validate(self, value):
-        ''' Validates the intenger is in the value range. '''
+        ''' Validates the integer is in the value range. '''
         if not isinstance(value, (int, long)):
             raise ValueError('value is not an integer')
 
         if self.minimum > value or self.maximum < value:
-            msg = '{} is outside the valide range [{},{}]'.format(value, self.minimum, self.maximum)
+            msg = (
+                '{} is outside the valide range [{},{}]'
+            ).format(value, self.minimum, self.maximum)
             raise ValueError(msg)
 
     if PY2:

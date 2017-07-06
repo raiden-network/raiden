@@ -1,7 +1,5 @@
-# -*- coding: utf8 -*-
-from c_secp256k1 import ecdsa_recover_compact as c_ecdsa_recover_compact
-from c_secp256k1 import ecdsa_sign_compact as c_ecdsa_sign_compact
-
+# -*- coding: utf-8 -*-
+from coincurve import PublicKey
 from raiden.utils import sha3
 
 
@@ -9,25 +7,21 @@ def recover_publickey(messagedata, signature):
     if len(signature) != 65:
         raise ValueError('invalid signature')
 
-    message_hash = sha3(messagedata)
-    publickey = c_ecdsa_recover_compact(message_hash, signature)
+    signature = signature[:-1] + chr(ord(signature[-1]) - 27)
+    publickey = PublicKey.from_signature_and_message(
+        signature,
+        messagedata,
+        hasher=sha3,
+    )
+    return publickey.format(compressed=False)
 
-    return publickey
 
-
-def sign(data, private_key):
-    if not isinstance(private_key, bytes) or len(private_key) != 32:
-        raise ValueError('invalid private_key')
-
-    message_hash = sha3(data)
-    signature = c_ecdsa_sign_compact(message_hash, private_key)
-
+def sign(messagedata, private_key):
+    signature = private_key.sign_recoverable(messagedata, hasher=sha3)
     if len(signature) != 65:
         raise ValueError('invalid signature')
 
-    publickey = c_ecdsa_recover_compact(message_hash, signature)
-
-    return signature, publickey
+    return signature[:-1] + chr(ord(signature[-1]) + 27)
 
 
 def address_from_key(key):

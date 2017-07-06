@@ -1,13 +1,68 @@
+dist: trusty
+sudo: true
+
 language: python
 python:
-- '2.7'
+  - '2.7'
+
+env:
+  global:
+    - GETH_URL='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.6.6-10a45cb5.tar.gz'
+    - GETH_VERSION='1.6.6'
+    - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.11/solc-static-linux'
+    - SOLC_VERSION='v0.4.11'
+  matrix:
+    - TEST_TYPE='unit'
+    - TEST_TYPE='smart_contracts'
+    - TEST_TYPE='long_running' BLOCKCHAIN_TYPE='--blockchain-type=tester'
+    - TEST_TYPE='long_running' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
+    - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=tester'
+    - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
+    - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=tester'
+    - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
+
+cache:
+  pip: true
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/.ethash
+    - $HOME/.bin
+
+before_install:
+  - mkdir -p $HOME/.bin
+  - export PATH=$PATH:$HOME/.bin
+  - ./.travis/download_geth.sh
+  - ./.travis/download_solc.sh
+
 install:
-- pip install -r requirements.txt
-- pip install coveralls
+  - pip install -U pip wheel coveralls "coverage<4.4"
+  - pip install pytest-travis-fold
+  - pip install flake8
+  - pip install -r requirements-dev.txt
+
+before_script:
+  - flake8 raiden/ tools/
+  - ./.travis/make_dag.sh
+
+script:
+  - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
+
+after_success:
+  - coveralls
+
 notifications:
   slack:
-    secure: S95dDs65iw6rea1MKY5BNb7HrPDDeLPVNiU9KrVrJ9wk5mvDjpGxoFyzrop1IG7s+Ekqx0TKi0fX27btOyzy5R1Jue73N8KhRptcvC18Z4n8rrvXi28bgmGqp/5amhiQnyFuWjIjOylwDsvgXUqrqcOnOafFnodbm+QP1qWIFkPlw9mUEPcNUNqOrW5u+erE66yK50WqBd4l9eiK5J/fYEgxXXJLZhr4f0cue7OY/iH6ZsL68thvdXhYFmZZWWEdpLGU7HYJ389mlUXEuXa2ZoSGB+eDuoHYvi8CIFPmDsIs8qHZxG/XTquTv7yCymn6bLWdQ4zRMdjY4tXB8kVUAKJtGe/x9xsfEJ9ZAJm0MhFIswThiTN+t9bRsGecG8+3IA43bLD+svoZWOIo9pCdA800FkNvqf9xdAwHVRpYDRlVFRYYuCvnXpsNr+wzi03kAE5WksgVflgwuoU/FXyBZya9bO+IlEfvVTceGb1RV1b8WsKEcGJfSj3XFR5JSSutbl/JeeHVqc6qgiJPnaDymM7BrnbhBEoGviz72aaKxeXyAcYTcYOu1vGLjxxEo1pE9rEtgQjyUZEMwXKtap76L94EY/YmCiOpWGzs2DlwZ7g0y/69qMg3frxJGuMng4WhoJy/inithu6xCpFSZpzkFQq/kzCeKAZdrpvsEJ+CzX8=
-script:
-- coverage run --source raiden setup.py test
-after_success:
-- coveralls
+    secure: Q8/IZikyfs/tzB6UsAgdQ9PAXQUeU5SN6uBRayvFX/gqVoLhB0uQLNXgHoM8x/mnR6w3voVtpNtEqIsCEbxhVqk5ckybVup4pt7vGH9ssElTffhu09TwbfUZpDCUUUMXjBbELAaO9ArOI0h0QLu5yR54eJtX3/EjcP1vUye/urn24YarAwLeV3lSEIQsWpaCAMM0WpRrKcYKb09bWI+uzSumZclUEV3oal84cTEFiZ5YAcUOVB89pfjg4gyl2nIk93v58UeDdxrFBtuGs4AjDpP3xDiPgFlRPgD9xZM4VD99+osVlKi9xJ5jly4c6sg5t5HvU6UXbkYjHZN6EV8n+RYxxR4c3/EL7OkD3PxUBqNyN0YjAkQbXOrmc7MndNJyAx3X+btgC9FbyzB9KALlzb+BWNMBXyZC/IFWiu3TtESz9f7wIxmkLyGwkzw7NvJBKmwqQRXLFnkL61AQESTA8X0U1Ibwy6tt8UK6UqkrU6NELMGd/F3wppLBgKCWJDWqgppG3Da2ZaP829KlmwioSWK/ZrqESRLysJ1bk8XPMlBF4SwVFIxBrWDM33QYjKTzifSEItfxP9y0PnQ0fMzdLgbXRMF3ubmbBE0PZdxibY9K+cueP0aKtkswSP+KUfpKtHmV2LKgtsRXEgM1AnTOoQJ2kQ4KszT6sljIvncxVx8=
+  webhooks:
+  - secure: IXBsyQtH29Vkh+Pe2exrbE3L8FJMQFqJ8ZRxkACts7cQtB8Iz1vyjWg9nYE9ZuCj/JWEeMZd/09JvwwKUj8ZEzwj59gFwVQFwTAxJbiDLRsn7WpdI5Q2fQ9ZPZIAbPo/mJejeHC+z3d5UgY72hbhqWuPJAa4ApWWKE5mPFUIr9uxgs01ReWs/y5HaPawQkSQAKVWWsS5R52Oyr9CYQNbfqfWcoLvzdiIZpsBi2r4ZK3NGrBZPGo4b+PkDkWjuBhMJ0FVABFCJT/bT2ORFsmsCDwZ4I3vOrKtJGDybmwONZqr0ymfYo1lbcUp0mE0zJ0ApyRtLqEFiTzaQqenlAZmBAtpDZVvpxFuDwZgFxafpNutO3Aj3Xbfe+aaooPfHA7SoxmxG/3gWY+OyaME8EDePfBHM0c1gGsNHmbPLt8k0lmwYKlNTFtFFyRAbL3700j19utkGroOK6CUYbed9YD96UehQTj7HN8rpLTZzSMh39c1JHVyqxsUZKkhQgY4GPgx2RAIiCVrwc6wN3Ebtwft0hA2UhvDodsc/qBAyz/YnSp2oKZKagLy5747torZybtNOGKCaV2fT3mSTxV2UNwPJ/N94dlTquJNx3StHT0IqD3Kfo5HYKJKHeri6lttTDul3rjAs1xxB2aAMutsyg7dRbBMmuKlK9gAtoS3UKthQdk=
+deploy:
+  provider: pypi
+  user: raiden_pypi_automated
+  password:
+      secure: pGSz00xatE6rLdmEvyHW2wM6VJvDeTY8s/huZzPLdAxX30UHZZACugdDNBCYgLmBpKN4pRrw5hXZ+09/6+MUpXHwFZ7tExJftUkHdLt9kY6bD/orFeHLU0hGzXJHSvCmGv2sTJ018j6MoKPiF+AzLaqExbHoOJZxtOf3O9a5LjP7M0uMDmUuCkBu2Y59Ozf3K5/uHio4pFDKTVg/jT5UzQ183LDvSPyfm/n0vbpvGyhfkThE+Nyk2Qs9Lu6WJjWj/Z96TZmnfqTfk9HIzePbkQSc1GLW2emCCYg5J8sGhKKShZ+1fGdhzN2nZQ2ccqnpLn+VJOumBQC+7fNlk7iKGBf10kESNlua/ccmD/jksdvYPlRQe12M0MqMh3cLRZU5EzEBMh/eIjQKj3MMPCk+YtSbXn6dITvZD/tkLXwQljNXHZvj4JEfdkP2dxORhMJ+TFwmvMgWyKhoSKTrZnN17qK2X9Agsr3taJ6RyzBMSzXDeSglNoYh/0mChLARjIXyz3WcoiIzpaRL8wPot1aRe4np/Rg+6c6PLMNvIAjgvNAvRFHCwKWzYwFaHjmi7bgDS6dirWdFd+TjAXCb8HFq+m670a0GY7u5JgHrU30QcfbeXhFJBUaBFkvDpJw53JogURlL+Et9So5xcJjYsYocUtrZi6YZ58UUu8A7ZWF0DNk=
+  on:
+    tags: true
+    distributions: sdist bdist_wheel
+    repo: raiden-network/raiden
+    branch: master
+    python: 2.7

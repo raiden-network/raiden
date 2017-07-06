@@ -1,69 +1,90 @@
-from raiden_service import RaidenService
-from transport import DummyTransport, Discovery
-from contracts import BlockChain, ChannelManagerContract
-from utils import sha3
-import copy
+# -*- coding: utf-8 -*-
+from ethereum.utils import decode_hex
+
+from raiden.raiden_service import RaidenService
+from raiden.settings import (
+    DEFAULT_NAT_INVITATION_TIMEOUT,
+    DEFAULT_NAT_KEEPALIVE_RETRIES,
+    DEFAULT_NAT_KEEPALIVE_TIMEOUT,
+    DEFAULT_PROTOCOL_RETRIES_BEFORE_BACKOFF,
+    DEFAULT_PROTOCOL_THROTTLE_CAPACITY,
+    DEFAULT_PROTOCOL_THROTTLE_FILL_RATE,
+    DEFAULT_PROTOCOL_RETRY_INTERVAL,
+    DEFAULT_REVEAL_TIMEOUT,
+    DEFAULT_SETTLE_TIMEOUT,
+    INITIAL_PORT,
+)
+from raiden.network.transport import UDPTransport, TokenBucket
+from raiden.utils import pex
 
 
-class App(object):
+class App(object):  # pylint: disable=too-few-public-methods
+    DEFAULT_CONFIG = {
+        'host': '',
+        'port': INITIAL_PORT,
+        'privatekey_hex': '',
+        'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
+        'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
+        'database_path': '',
+        'msg_timeout': 100.0,
+        'protocol': {
+            'retry_interval': DEFAULT_PROTOCOL_RETRY_INTERVAL,
+            'retries_before_backoff': DEFAULT_PROTOCOL_RETRIES_BEFORE_BACKOFF,
+            'throttle_capacity': DEFAULT_PROTOCOL_THROTTLE_CAPACITY,
+            'throttle_fill_rate': DEFAULT_PROTOCOL_THROTTLE_FILL_RATE,
+            'nat_invitation_timeout': DEFAULT_NAT_INVITATION_TIMEOUT,
+            'nat_keepalive_retries': DEFAULT_NAT_KEEPALIVE_RETRIES,
+            'nat_keepalive_timeout': DEFAULT_NAT_KEEPALIVE_TIMEOUT,
+        },
+        'rpc': True,
+        'console': False,
+    }
 
-    default_config = dict(host='', port=40000, privkey='')
-
-    def __init__(self, config, chain, discovery, transport_class=DummyTransport):
+    def __init__(self, config, chain, discovery, transport_class=UDPTransport):
         self.config = config
-        self.transport = transport_class(config['host'], config['port'])
-        self.raiden = RaidenService(chain, config['privkey'], self.transport, discovery)
-        discovery.register(self.raiden.address, self.transport.host, self.transport.port)
         self.discovery = discovery
 
+        if config.get('socket'):
+            transport = transport_class(
+                None,
+                None,
+                socket=config['socket'],
+            )
+        else:
+            transport = transport_class(
+                config['host'],
+                config['port'],
+            )
 
-def mk_app(num, chain, discovery, transport_class):
-    config = copy.deepcopy(App.default_config)
-    config['privkey'] = sha3(str(num))
-    config['port'] += num
-    return App(config, chain, discovery, transport_class)
+        transport.throttle_policy = TokenBucket(
+            config['protocol']['throttle_capacity'],
+            config['protocol']['throttle_fill_rate']
+        )
+        self.raiden = RaidenService(
+            chain,
+            decode_hex(config['privatekey_hex']),
+            transport,
+            discovery,
+            config,
+        )
+        self.start_console = self.config['console']
 
+        # raiden.ui.console:Console assumes that a services
+        # attribute is available for auto-registration
+        self.services = list()
 
-def create_network(num_nodes=8, num_assets=1, channels_per_node=3, transport_class=DummyTransport):
-    import random
-    random.seed(42)
+    def __repr__(self):
+        return '<{} {}>'.format(
+            self.__class__.__name__,
+            pex(self.raiden.address),
+        )
 
-    # globals
-    discovery = Discovery()
-    chain = BlockChain()
+    def stop(self, graceful=False):
+        """Stop the raiden app.
+        Args:
+            graceful (bool): if True, also close and settle all channels before stopping
+        """
+        if graceful:
+            self.raiden.close_and_settle()
 
-    # create apps
-    apps = [mk_app(i, chain, discovery, transport_class) for i in range(num_nodes)]
-
-    # create assets
-    for i in range(num_assets):
-        chain.add_asset(asset_address=sha3('asset:%d' % i)[:20])
-    assert len(chain.asset_addresses) == num_assets
-
-    # create channel contracts
-    for asset_address in chain.asset_addresses:
-        channelmanager = chain.channelmanager_by_asset(asset_address)
-        assert isinstance(channelmanager, ChannelManagerContract)
-        assert channels_per_node < len(apps)
-        for app in apps:
-            capps = list(apps)  # copy
-            capps.remove(app)
-            netting_contracts = channelmanager.nettingcontracts_by_address(app.raiden.address)
-            while len(netting_contracts) < channels_per_node and capps:
-                a = random.choice(capps)
-                assert a != app
-                capps.remove(a)
-                a_nettting_contracts = channelmanager.nettingcontracts_by_address(a.raiden.address)
-                if not set(netting_contracts).intersection(set(a_nettting_contracts)) \
-                        and len(a_nettting_contracts) < channels_per_node:
-                    c = channelmanager.new(a.raiden.address, app.raiden.address)
-                    netting_contracts.append(c)
-
-                    # add deposit of asset
-                    for address in (app.raiden.address, a.raiden.address):
-                        c.deposit(address, amount=2 ** 240)
-
-    for app in apps:
-        app.raiden.setup_assets()
-
-    return apps
+        self.raiden.stop()

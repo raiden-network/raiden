@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import os
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup, find_packages
+from setuptools import Command
 from setuptools.command.test import test as TestCommand
 
 
@@ -22,6 +21,21 @@ class PyTest(TestCommand):
         raise SystemExit(errno)
 
 
+class CompileContracts(Command):
+    description = "compile contracts to json"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        os.environ['STORE_PRECOMPILED'] = 'yes'
+        from raiden.blockchain import abi
+
+
 with open('README.md') as readme_file:
     readme = readme_file.read()
 
@@ -29,30 +43,35 @@ with open('README.md') as readme_file:
 history = ''
 
 
-install_requires = set(x.strip() for x in open('requirements.txt'))
 install_requires_replacements = {
-    'https://github.com/HydraChain/hydrachain/tarball/develop': 'hydrachain',
+    "git+https://github.com/LefterisJP/pyethapp@raiden_pyethapp_fork#egg=pyethapp": "pyethapp",
+    "git+https://github.com/LefterisJP/pyethereum@take_solidity_interface_into_account#egg=ethereum": "ethereum",
+    "git+https://github.com/LefterisJP/pyelliptic@make_compatible_with_openssl1_1#egg=pyelliptic": "pyelliptic",
+    "git+https://github.com/konradkonrad/pystun@develop#egg=pystun": "pystun",
 }
 
-install_requires = [install_requires_replacements.get(r, r) for r in install_requires]
+install_requires = list(set(
+    install_requires_replacements.get(requirement.strip(), requirement.strip())
+    for requirement in open('requirements.txt') if not requirement.lstrip().startswith('#')
+))
 
 test_requirements = []
 
-version = '0.0.1'  # preserve format, this is read from __init__.py
+version = '0.0.5'  # preserve format, this is read from __init__.py
 
 setup(
     name='raiden',
     version=version,
     description="",
     long_description=readme + '\n\n' + history,
-    author="HeikoHeiko",
+    author='HeikoHeiko',
     author_email='heiko@brainbot.com',
-    url='https://github.com/heikoheiko/raiden',
-    packages=[
-        'raiden'
-    ],
+    url='https://github.com/raiden-network/raiden',
+    packages=find_packages(
+        exclude=["raiden.tests", "raiden.tests.*"]
+    ),
     include_package_data=True,
-    license="BSD",
+    license='BSD',
     zip_safe=False,
     keywords='raiden',
     classifiers=[
@@ -63,11 +82,15 @@ setup(
         "Programming Language :: Python :: 2",
         'Programming Language :: Python :: 2.7',
     ],
-    cmdclass={'test': PyTest},
+    cmdclass={
+        'test': PyTest,
+        'compile_contracts': CompileContracts,
+    },
     install_requires=install_requires,
     tests_require=test_requirements,
-    entry_points='''
-    [console_scripts]
-    raiden=raiden.app:app
-    '''
+    entry_points={
+        'console_scripts': [
+            'raiden = raiden.__main__:main'
+        ]
+    }
 )

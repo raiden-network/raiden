@@ -1,0 +1,6 @@
+scenario_ami_name: raiden_preinstalled
+instance_type: t2.micro
+number_of_nodes: 2
+raiden_per_node: 2
+geth_datadir: "/home/ubuntu/geth"
+user_tag: developer
