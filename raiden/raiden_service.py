@@ -192,7 +192,7 @@ class RaidenService(object):
 
         self.on_message = message_handler.on_message
 
-        self.tokens_connectionmanagers = dict()  # token_address: ConnectionManager
+        self.tokens_to_connectionmanagers = dict()
 
         if config['database_path'] != ':memory:':
             snapshot_dir = path.join(
@@ -620,7 +620,7 @@ class RaidenService(object):
             self.manager_token[manager_address] = token_address
             self.channelgraphs[token_address] = graph
 
-            self.tokens_connectionmanagers[token_address] = ConnectionManager(
+            self.tokens_to_connectionmanagers[token_address] = ConnectionManager(
                 self,
                 token_address,
                 graph
@@ -659,7 +659,7 @@ class RaidenService(object):
         self.manager_token[manager_address] = token_address
         self.channelgraphs[token_address] = graph
 
-        self.tokens_connectionmanagers[token_address] = ConnectionManager(
+        self.tokens_to_connectionmanagers[token_address] = ConnectionManager(
             self,
             token_address,
             graph
@@ -677,8 +677,8 @@ class RaidenService(object):
     def connection_manager_for_token(self, token_address):
         if not isaddress(token_address):
             raise InvalidAddress('token address is not valid.')
-        if token_address in self.tokens_connectionmanagers.keys():
-            manager = self.tokens_connectionmanagers[token_address]
+        if token_address in self.tokens_to_connectionmanagers.keys():
+            manager = self.tokens_to_connectionmanagers[token_address]
         else:
             raise InvalidAddress('token is not registered.')
         return manager
