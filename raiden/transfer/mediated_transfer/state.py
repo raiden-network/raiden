@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import State
+from raiden.utils import safe_equal_attributes
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
@@ -57,18 +58,17 @@ class InitiatorState(State):
 
     def __eq__(self, other):
         if isinstance(other, InitiatorState):
-            return all(
-                self.__getattribute__(field) == other.__getattribute__(field)
-                for field in self.__slots__
-                if hasattr(self, field) and hasattr(other, field)
-            ) and all(
-                hasattr(self, field)
-                for field in self.__slots__
-                if hasattr(other, field)
-            ) and all(
-                hasattr(other, field)
-                for field in self.__slots__
-                if hasattr(self, field)
+            return (
+                safe_equal_attributes('our_address', self, other) and
+                safe_equal_attributes('transfer', self, other) and
+                safe_equal_attributes('routes', self, other) and
+                safe_equal_attributes('random_generator', self, other) and
+                safe_equal_attributes('block_number', self, other) and
+                safe_equal_attributes('message', self, other) and
+                safe_equal_attributes('route', self, other) and
+                safe_equal_attributes('secretrequest', self, other) and
+                safe_equal_attributes('revealsecret', self, other) and
+                safe_equal_attributes('canceled_transfers', self, other)
             )
         return False
 
@@ -115,18 +115,13 @@ class MediatorState(State):
 
     def __eq__(self, other):
         if isinstance(other, MediatorState):
-            return all(
-                self.__getattribute__(field) == other.__getattribute__(field)
-                for field in self.__slots__
-                if hasattr(self, field) and hasattr(other, field)
-            ) and all(
-                hasattr(self, field)
-                for field in self.__slots__
-                if hasattr(other, field)
-            ) and all(
-                hasattr(other, field)
-                for field in self.__slots__
-                if hasattr(self, field)
+            return (
+                safe_equal_attributes('our_address', self, other) and
+                safe_equal_attributes('routes', self, other) and
+                safe_equal_attributes('block_number', self, other) and
+                safe_equal_attributes('hashlock', self, other) and
+                safe_equal_attributes('secret', self, other) and
+                safe_equal_attributes('transfers_pair', self, other)
             )
         return False
 
@@ -167,18 +162,13 @@ class TargetState(State):
 
     def __eq__(self, other):
         if isinstance(other, TargetState):
-            return all(
-                self.__getattribute__(field) == other.__getattribute__(field)
-                for field in self.__slots__
-                if hasattr(self, field) and hasattr(other, field)
-            ) and all(
-                hasattr(self, field)
-                for field in self.__slots__
-                if hasattr(other, field)
-            ) and all(
-                hasattr(other, field)
-                for field in self.__slots__
-                if hasattr(self, field)
+            return (
+                safe_equal_attributes('our_address', self, other) and
+                safe_equal_attributes('from_route', self, other) and
+                safe_equal_attributes('from_transfer', self, other) and
+                safe_equal_attributes('block_number', self, other) and
+                safe_equal_attributes('secret', self, other) and
+                safe_equal_attributes('state', self, other)
             )
 
         return False
@@ -355,18 +345,14 @@ class MediationPairState(State):
 
     def __eq__(self, other):
         if isinstance(other, MediationPairState):
-            return all(
-                self.__getattribute__(field) == other.__getattribute__(field)
-                for field in self.__slots__
-                if hasattr(self, field) and hasattr(other, field)
-            ) and all(
-                hasattr(self, field)
-                for field in self.__slots__
-                if hasattr(other, field)
-            ) and all(
-                hasattr(other, field)
-                for field in self.__slots__
-                if hasattr(self, field)
+            return (
+                safe_equal_attributes('payee_route', self, other) and
+                safe_equal_attributes('payee_transfer', self, other) and
+                safe_equal_attributes('payee_state', self, other) and
+
+                safe_equal_attributes('payer_route', self, other) and
+                safe_equal_attributes('payer_transfer', self, other) and
+                safe_equal_attributes('payer_state', self, other)
             )
         return False
 
