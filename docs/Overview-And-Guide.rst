@@ -78,9 +78,18 @@ After syncing the chain, create an account on the Ropsten testnet by navigating 
 
      http://127.0.0.1:8180
 
+<<<<<<< HEAD
+After account creation, launch raiden with the path of your keystore supplied and the RPC endpoint of the parity client (defaults show): 
+
+     raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test --eth-rpc-endpoint 127.0.0.1:8545
+
+Select the ethereum account when prompted, and type in the account's password. 
+ 
+=======
 After account creation, launch raiden with the path of your keystore supplied and the RPC endpoint of the parity client (defaults show)::
 
      raiden --keystore-path "~/.local/share/io.parity.ethereum/keys/test" --eth-rpc-endpoint "127.0.0.1:8545"
 
 Select the ethereum account when prompted, and type in the account's password. 
  
+>>>>>>> 4f7acf3ceb31feea378db73b6161d82626760c9e
