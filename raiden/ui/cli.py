@@ -14,6 +14,7 @@ from pyethapp.jsonrpc import address_decoder
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
+from raiden.web_ui import WebUI
 from raiden.constants import ROPSTEN_REGISTRY_ADDRESS, ROPSTEN_DISCOVERY_ADDRESS
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.sockfactory import socket_factory
@@ -330,6 +331,9 @@ def run(ctx, **kwargs):
         if ctx.params['console']:
             console = Console(app_)
             console.start()
+        
+        webUI = WebUI(app_)
+        webUI.run()
 
         registry_event.join()
         # wait for interrupt
