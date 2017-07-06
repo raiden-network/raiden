@@ -174,6 +174,9 @@ def test_participant_selection(
     sender = raiden_network[-1].raiden
     receiver = raiden_network[0].raiden
 
+    # wait for the receiver service to update the channel mappings:
+    while sender.address not in receiver.channelgraphs[token_address].partneraddress_channel:
+        gevent.sleep(receiver.alarm.wait_time)
     # assert there is a direct channel receiver -> sender (vv)
     receiver_channel = RaidenAPI(receiver).get_channel_list(
         token_address=token_address,
