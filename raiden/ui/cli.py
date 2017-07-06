@@ -125,6 +125,12 @@ OPTIONS = [
         default="127.0.0.1:5001",
         type=str,
     ),
+    click.option(
+        '--password-file',
+        help='Text file containing password for provided account',
+        default=None,
+        type=click.File(lazy=True),
+    ),
 ]
 
 
@@ -152,7 +158,8 @@ def app(address,
         send_ping_time,
         api_address,
         rpc,
-        console):
+        console,
+        password_file):
 
     from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
@@ -204,16 +211,15 @@ def app(address,
 
         address = addresses[idx]
 
-    password = os.environ.get('ETH_PASSWORD')
-    # if environ has password, try it
-    # avoid using click method to avoid password in command line
+    password = None
+    if password_file:
+        password = password_file.read().splitlines()[0]
     if password:
         try:
             privatekey_bin = accmgr.get_privkey(address, password)
         except ValueError as e:
             # ValueError exception raised if the password is incorrect
-            print('Incorret password for {} in environment variable ETH_PASSWORD. Aborting '
-                    '...'.format(address))
+            print('Incorret password for {} in file. Aborting ...'.format(address))
             sys.exit(1)
     else:
         unlock_tries = 3
@@ -224,7 +230,9 @@ def app(address,
             except ValueError as e:
                 # ValueError exception raised if the password is incorrect
                 if unlock_tries == 0:
-                    print('Exhausted passphrase unlock attempts for {}. Aborting ...'.format(address))
+                    print(
+                        'Exhausted passphrase unlock attempts for {}. Aborting ...'.format(address)
+                    )
                     sys.exit(1)
 
                 print(
