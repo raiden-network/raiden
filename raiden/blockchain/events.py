@@ -7,8 +7,6 @@ from pyethapp.jsonrpc import address_decoder
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_CHANNEL_MANAGER,
-    CONTRACT_ENDPOINT_REGISTRY,
-    CONTRACT_HUMAN_STANDARD_TOKEN,
     CONTRACT_NETTING_CHANNEL,
     CONTRACT_REGISTRY,
 )
