@@ -71,7 +71,7 @@ export class RaidenService {
                 const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
                 return {
                     'value': tokeninfo.address,
-                    'label': tokenContractInstance.name()
+                    'label': tokenContractInstance.name()+" ("+tokeninfo.address+")"
                 };
             });
         });

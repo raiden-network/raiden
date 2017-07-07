@@ -70,7 +70,12 @@
         </div>
         <div class="ui-grid-row">
             <div class="ui-grid-col-4"><label for="token">Token</label></div>
-            <div class="ui-grid-col-8"><p-dropdown [options]="tokenAddressMapping" [(ngModel)]="tempChannel.token_address" id="token" placeholder="Select a Token" [style]="{'width':'150px'}"></p-dropdown></div>
+            <div class="ui-grid-col-8">
+                <p-dropdown [options]="tokenAddressMapping" [(ngModel)]="tempChannel.token_address"
+                    id="token" placeholder="Select a Token" [style]="{'width':'100%'}"
+                    editable="editable" appendTo="body" autoWidth="false" [filter]="true" >
+                </p-dropdown>
+            </div>
         </div>
         <div class="ui-grid-row">
             <div class="ui-grid-col-4 top10 "><label for="balance">Balance</label></div>

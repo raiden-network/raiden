@@ -14,7 +14,7 @@ export class AppComponent implements OnInit {
 
     ngOnInit() {
         this.raidenService.initialiseRaidenAddress()
-        .subscribe((address) => this.raidenAddress = address);
+            .subscribe((address) => this.raidenAddress = address);
     }
 
 
