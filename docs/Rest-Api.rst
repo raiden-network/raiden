@@ -172,8 +172,7 @@ Possible Responses
 Querying all traded Tokens
 --------------------------
 
-By making a ``GET`` request to ``/api/<version>/tokens`` you can get a list of addresses of all
-tokens we have channels open for.
+By making a ``GET`` request to ``/api/<version>/tokens`` you get a list of addresses of all registered tokens.
 
 
 Example Request
