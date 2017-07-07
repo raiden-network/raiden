@@ -87,7 +87,7 @@ def dagpath():
 
 
 @pytest.fixture(autouse=True)
-def pregenerate_dag(request, blockchain_type, dagpath):
+def ensure_dag_is_generated(request, blockchain_type, dagpath):
     missing_dag = (
         not os.path.exists(dagpath) or
         os.path.getsize(dagpath) != EPOCH0_DAGSIZE
