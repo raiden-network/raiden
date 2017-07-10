@@ -151,7 +151,7 @@ def app(address,
         discovery_contract_address,
         listen_address,
         rpccorsdomain,  # pylint: disable=unused-argument
-        socket,
+        mapped_socket,
         logging,
         logfile,
         max_unresponsive_time,
@@ -177,12 +177,13 @@ def app(address,
     config['rpc'] = rpc
     config['api_host'] = api_host
     config['api_port'] = api_port
-    config['socket'] = socket
 
-    if socket:
-        config['external_ip'] = socket.external_ip
-        config['external_port'] = socket.external_port
+    if mapped_socket:
+        config['socket'] = mapped_socket.socket
+        config['external_ip'] = mapped_socket.external_ip
+        config['external_port'] = mapped_socket.external_port
     else:
+        config['socket'] = None
         config['external_ip'] = listen_host
         config['external_port'] = listen_port
 
@@ -313,7 +314,7 @@ def run(ctx, **kwargs):
     # not timeout.
     (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
     with socket_factory(listen_host, listen_port) as mapped_socket:
-        kwargs['socket'] = mapped_socket.socket
+        kwargs['mapped_socket'] = mapped_socket
 
         app_ = ctx.invoke(app, **kwargs)
 
