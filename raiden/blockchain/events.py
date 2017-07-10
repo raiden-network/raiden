@@ -5,9 +5,10 @@ from collections import namedtuple, defaultdict
 from pyethapp.jsonrpc import address_decoder
 
 from raiden.blockchain.abi import (
-    REGISTRY_TRANSLATOR,
-    CHANNEL_MANAGER_TRANSLATOR,
-    NETTING_CHANNEL_TRANSLATOR,
+    CONTRACT_MANAGER,
+    CONTRACT_CHANNEL_MANAGER,
+    CONTRACT_NETTING_CHANNEL,
+    CONTRACT_REGISTRY,
 )
 from raiden.utils import pex
 from raiden.network.rpc.client import new_filter, Filter
@@ -110,7 +111,7 @@ def get_all_channel_manager_events(
 
     return get_contract_events(
         pyethapp_chain,
-        CHANNEL_MANAGER_TRANSLATOR,
+        CONTRACT_MANAGER.get_translator(CONTRACT_CHANNEL_MANAGER),
         channel_manager_address,
         events,
         from_block,
@@ -129,7 +130,7 @@ def get_all_registry_events(
     """
     return get_contract_events(
         pyethapp_chain,
-        REGISTRY_TRANSLATOR,
+        CONTRACT_MANAGER.get_translator(CONTRACT_REGISTRY),
         registry_address,
         events,
         from_block,
@@ -149,7 +150,7 @@ def get_all_netting_channel_events(
 
     return get_contract_events(
         pyethapp_chain,
-        NETTING_CHANNEL_TRANSLATOR,
+        CONTRACT_MANAGER.get_translator(CONTRACT_NETTING_CHANNEL),
         netting_channel_address,
         events,
         from_block,
@@ -285,7 +286,7 @@ class PyethappBlockchainEvents(object):
         self.add_event_listener(
             'Registry {}'.format(pex(registry_address)),
             tokenadded,
-            REGISTRY_TRANSLATOR,
+            CONTRACT_MANAGER.get_translator(CONTRACT_REGISTRY),
         )
 
     def add_channel_manager_listener(self, channel_manager_proxy):
@@ -295,7 +296,7 @@ class PyethappBlockchainEvents(object):
         self.add_event_listener(
             'ChannelManager {}'.format(pex(manager_address)),
             channelnew,
-            CHANNEL_MANAGER_TRANSLATOR,
+            CONTRACT_MANAGER.get_translator('channel_manager'),
         )
 
     def add_netting_channel_listener(self, netting_channel_proxy):
@@ -305,7 +306,7 @@ class PyethappBlockchainEvents(object):
         self.add_event_listener(
             'NettingChannel Event {}'.format(pex(channel_address)),
             netting_channel_events,
-            NETTING_CHANNEL_TRANSLATOR,
+            CONTRACT_MANAGER.get_translator('netting_channel'),
         )
 
     def add_proxies_listeners(self, pyethapp_proxies):

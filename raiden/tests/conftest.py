@@ -1,152 +1,17 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=wrong-import-position,redefined-outer-name,unused-wildcard-import,wildcard-import
+import gevent
 from gevent import monkey
 monkey.patch_all()
 
 import pytest
-import gevent
-import gevent.monkey
 from ethereum import slogging
 from ethereum.keys import PBKDF2_CONSTANTS
 from ethereum import processblock
 from ethereum import tester
 
 from raiden.network.rpc.client import GAS_LIMIT
-
-from raiden.tests.fixtures import (
-    api_raiden_service,
-    api_test_context,
-    api_backend,
-    token_abi,
-    registry_abi,
-    channel_manager_abi,
-    netting_channel_abi,
-
-    token_addresses,
-    register_tokens,
-    cached_genesis,
-    blockchain_services,
-    blockchain_backend,
-
-    raiden_chain,
-    raiden_network,
-
-    tester_blockgas_limit,
-    tester_events,
-    tester_state,
-    tester_token_address,
-    tester_nettingchannel_library_address,
-    tester_channelmanager_library_address,
-    tester_registry_address,
-    tester_token_raw,
-    tester_token,
-    tester_registry,
-    tester_channelmanager,
-    tester_nettingcontracts,
-    tester_channels,
-
-    settle_timeout,
-    reveal_timeout,
-    events_poll_timeout,
-    deposit,
-    both_participants_deposit,
-    number_of_tokens,
-    number_of_nodes,
-    channels_per_node,
-    poll_timeout,
-    transport_class,
-    retry_interval,
-    retries_before_backoff,
-    throttle_capacity,
-    throttle_fill_rate,
-    nat_invitation_timeout,
-    nat_keepalive_retries,
-    nat_keepalive_timeout,
-    privatekey_seed,
-    token_amount,
-    private_keys,
-    deploy_key,
-    blockchain_type,
-    blockchain_number_of_nodes,
-    blockchain_key_seed,
-    blockchain_private_keys,
-    port_generator,
-    blockchain_rpc_ports,
-    blockchain_p2p_ports,
-    raiden_udp_ports,
-    rest_api_port_number,
-    database_paths,
-    in_memory_database,
-)
-
-__all__ = (
-    'api_raiden_service',
-    'api_test_context',
-    'api_backend',
-    'token_abi',
-    'registry_abi',
-    'channel_manager_abi',
-    'netting_channel_abi',
-
-    'token_addresses',
-    'register_tokens',
-    'cached_genesis',
-    'blockchain_services',
-    'blockchain_backend',
-
-    'raiden_chain',
-    'raiden_network',
-
-    'tester_blockgas_limit',
-    'tester_events',
-    'tester_state',
-    'tester_token_address',
-    'tester_nettingchannel_library_address',
-    'tester_channelmanager_library_address',
-    'tester_registry_address',
-    'tester_token_raw',
-    'tester_token',
-    'tester_registry',
-    'tester_channelmanager',
-    'tester_nettingcontracts',
-    'tester_channels',
-
-    'settle_timeout',
-    'reveal_timeout',
-    'events_poll_timeout',
-    'deposit',
-    'both_participants_deposit',
-    'number_of_tokens',
-    'number_of_nodes',
-    'channels_per_node',
-    'poll_timeout',
-    'transport_class',
-    'retry_interval',
-    'retries_before_backoff',
-    'throttle_capacity',
-    'throttle_fill_rate',
-    'nat_invitation_timeout',
-    'nat_keepalive_retries',
-    'nat_keepalive_timeout',
-    'privatekey_seed',
-    'token_amount',
-    'private_keys',
-    'deploy_key',
-    'blockchain_type',
-    'blockchain_number_of_nodes',
-    'blockchain_key_seed',
-    'blockchain_private_keys',
-    'port_generator',
-    'blockchain_rpc_ports',
-    'blockchain_p2p_ports',
-    'raiden_udp_ports',
-    'rest_api_port_number',
-    'database_paths',
-    'in_memory_database',
-
-    'pytest_addoption',
-    'logging_level',
-    'enable_greenlet_debugger',
-)
+from raiden.tests.fixtures import *  # noqa: F401,F403
 
 gevent.get_hub().SYSTEM_ERROR = BaseException
 PBKDF2_CONSTANTS['c'] = 100

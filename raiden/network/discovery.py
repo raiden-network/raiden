@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import socket
+
 from raiden.utils import (
     host_port_to_endpoint,
     isaddress,
@@ -14,15 +16,25 @@ class Discovery(object):
     def __init__(self):
         self.nodeid_hostport = dict()
 
-    def register(self, nodeid, host, port):
-        assert isaddress(nodeid)  # fixme, this is H(pubkey)
-        self.nodeid_hostport[nodeid] = (host, port)
+    def register(self, node_address, host, port):
+        if not isaddress(node_address):
+            raise ValueError('node_address must be a valid address')
 
-    def get(self, nodeid):
         try:
-            return self.nodeid_hostport[nodeid]
+            socket.inet_pton(socket.AF_INET, host)
+        except OSError:
+            raise ValueError('invalid ip address provided: {}'.format(host))
+
+        if not isinstance(port, (int, long)):
+            raise ValueError('port must be a valid number')
+
+        self.nodeid_hostport[node_address] = (host, port)
+
+    def get(self, node_address):
+        try:
+            return self.nodeid_hostport[node_address]
         except KeyError:
-            raise InvalidAddress('Unknown address {}'.format(pex(nodeid)))
+            raise InvalidAddress('Unknown address {}'.format(pex(node_address)))
 
     def nodeid_by_host_port(self, host_port):
         for nodeid, value_hostport in self.nodeid_hostport.items():
@@ -46,6 +58,17 @@ class ContractDiscovery(Discovery):
     def register(self, node_address, host, port):
         if node_address != self.node_address:
             raise ValueError('You can only register your own endpoint.')
+
+        if not isaddress(node_address):
+            raise ValueError('node_address must be a valid address')
+
+        try:
+            socket.inet_pton(socket.AF_INET, host)
+        except OSError:
+            raise ValueError('invalid ip address provided: {}'.format(host))
+
+        if not isinstance(port, (int, long)):
+            raise ValueError('port must be a valid number')
 
         endpoint = host_port_to_endpoint(host, port)
         self.discovery_proxy.register_endpoint(node_address, endpoint)

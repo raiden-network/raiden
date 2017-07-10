@@ -3,36 +3,42 @@ import os
 import json
 import hashlib
 
+from threading import Lock
+
 from ethereum import _solidity
 from ethereum.abi import event_id, normalize_name, ContractTranslator
 
 from raiden.utils import get_contract_path
 
 __all__ = (
-    'REGISTRY_ABI',
-    'TOKENADDED_EVENT',
-    'TOKENADDED_EVENTID',
+    'CONTRACT_MANAGER',
 
-    'CHANNEL_MANAGER_ABI',
-    'CHANNELNEW_EVENT',
-    'CHANNELNEW_EVENTID',
+    'CONTRACT_CHANNEL_MANAGER',
+    'CONTRACT_ENDPOINT_REGISTRY',
+    'CONTRACT_HUMAN_STANDARD_TOKEN',
+    'CONTRACT_NETTING_CHANNEL',
+    'CONTRACT_REGISTRY',
 
-    'NETTING_CHANNEL_ABI',
-    'CHANNELNEWBALANCE_EVENT',
-    'CHANNELNEWBALANCE_EVENTID',
-    'CHANNELCLOSED_EVENT',
-    'CHANNELCLOSED_EVENTID',
-    'CHANNELSECRETREVEALED_EVENT',
-    'CHANNELSECRETREVEALED_EVENTID',
-    'CHANNELSETTLED_EVENT',
-    'CHANNELSETTLED_EVENTID',
-
-    'HUMAN_TOKEN_ABI',
-
-    'REGISTRY_TRANSLATOR',
-    'CHANNEL_MANAGER_TRANSLATOR',
-    'NETTING_CHANNEL_TRANSLATOR',
+    'EVENT_CHANNEL_NEW',
+    'EVENT_CHANNEL_NEW_BALANCE',
+    'EVENT_CHANNEL_CLOSED',
+    'EVENT_CHANNEL_SECRET_REVEALED',
+    'EVENT_CHANNEL_SETTLED',
+    'EVENT_TOKEN_ADDED',
 )
+
+CONTRACT_CHANNEL_MANAGER = 'channel_manager'
+CONTRACT_ENDPOINT_REGISTRY = 'endpoint_registry'
+CONTRACT_HUMAN_STANDARD_TOKEN = 'human_standard_token'
+CONTRACT_NETTING_CHANNEL = 'netting_channel'
+CONTRACT_REGISTRY = 'registry'
+
+EVENT_CHANNEL_NEW = 'ChannelNew'
+EVENT_CHANNEL_NEW_BALANCE = 'ChannelNewBalance'
+EVENT_CHANNEL_CLOSED = 'ChannelClosed'
+EVENT_CHANNEL_SECRET_REVEALED = 'ChannelSecretRevealed'
+EVENT_CHANNEL_SETTLED = 'ChannelSettled'
+EVENT_TOKEN_ADDED = 'TokenAdded'
 
 
 def get_event(full_abi, event_name):
@@ -115,63 +121,71 @@ def contract_checksum(contract_path):
         return checksum
 
 
-# pylint: disable=invalid-name
-human_token_compiled = get_static_or_compile(
-    get_contract_path('HumanStandardToken.sol'),
-    'HumanStandardToken',
-    combined='abi',
-)
+class ContractManager():
 
-channel_manager_compiled = get_static_or_compile(
-    get_contract_path('ChannelManagerContract.sol'),
-    'ChannelManagerContract',
-    combined='abi',
-)
+    def __init__(self):
+        self.is_instantiated = False
+        self.lock = Lock()
+        self.event_to_contract = dict(
+            ChannelNew=CONTRACT_CHANNEL_MANAGER,
+            ChannelNewBalance=CONTRACT_NETTING_CHANNEL,
+            ChannelClosed=CONTRACT_NETTING_CHANNEL,
+            ChannelSecretRevealed=CONTRACT_NETTING_CHANNEL,
+            ChannelSettled=CONTRACT_NETTING_CHANNEL,
+            TokenAdded=CONTRACT_REGISTRY,
+        )
 
-endpoint_registry_compiled = get_static_or_compile(
-    get_contract_path('EndpointRegistry.sol'),
-    'EndpointRegistry',
-    combined='abi',
-)
+    def instantiate(self):
+        with self.lock:
+            if self.is_instantiated:
+                return
 
-netting_channel_compiled = get_static_or_compile(
-    get_contract_path('NettingChannelContract.sol'),
-    'NettingChannelContract',
-    combined='abi',
-)
+            self.human_standard_token_compiled = get_static_or_compile(
+                get_contract_path('HumanStandardToken.sol'),
+                'HumanStandardToken',
+                combined='abi',
+            )
 
-registry_compiled = get_static_or_compile(
-    get_contract_path('Registry.sol'),
-    'Registry',
-    combined='abi',
-)
+            self.channel_manager_compiled = get_static_or_compile(
+                get_contract_path('ChannelManagerContract.sol'),
+                'ChannelManagerContract',
+                combined='abi',
+            )
 
-# pylint: enable=invalid-name
+            self.endpoint_registry_compiled = get_static_or_compile(
+                get_contract_path('EndpointRegistry.sol'),
+                'EndpointRegistry',
+                combined='abi',
+            )
 
-HUMAN_TOKEN_ABI = human_token_compiled['abi']
-CHANNEL_MANAGER_ABI = channel_manager_compiled['abi']
-NETTING_CHANNEL_ABI = netting_channel_compiled['abi']
-REGISTRY_ABI = registry_compiled['abi']
-ENDPOINT_REGISTRY_ABI = endpoint_registry_compiled['abi']
+            self.netting_channel_compiled = get_static_or_compile(
+                get_contract_path('NettingChannelContract.sol'),
+                'NettingChannelContract',
+                combined='abi',
+            )
 
-TOKENADDED_EVENT = get_event(REGISTRY_ABI, 'TokenAdded')
-TOKENADDED_EVENTID = event_id(*get_eventname_types(TOKENADDED_EVENT))
+            self.registry_compiled = get_static_or_compile(
+                get_contract_path('Registry.sol'),
+                'Registry',
+                combined='abi',
+            )
 
-CHANNELNEW_EVENT = get_event(CHANNEL_MANAGER_ABI, 'ChannelNew')
-CHANNELNEW_EVENTID = event_id(*get_eventname_types(CHANNELNEW_EVENT))
+            self.is_instantiated = True
 
-CHANNELNEWBALANCE_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelNewBalance')
-CHANNELNEWBALANCE_EVENTID = event_id(*get_eventname_types(CHANNELNEWBALANCE_EVENT))
+    def get_abi(self, contract_name):
+        self.instantiate()
+        compiled = getattr(self, '{}_compiled'.format(contract_name))
+        return compiled['abi']
 
-CHANNELCLOSED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelClosed')
-CHANNELCLOSED_EVENTID = event_id(*get_eventname_types(CHANNELCLOSED_EVENT))
+    def get_event_id(self, event_name):
+        """ Not really generic, as it maps event names to events of specific contracts,
+        but it is good enough for what we want to accomplish.
+        """
+        event = get_event(self.get_abi(self.event_to_contract[event_name]), event_name)
+        return event_id(*get_eventname_types(event))
 
-CHANNELSECRETREVEALED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelSecretRevealed')
-CHANNELSECRETREVEALED_EVENTID = event_id(*get_eventname_types(CHANNELSECRETREVEALED_EVENT))
+    def get_translator(self, contract_name):
+        return ContractTranslator(self.get_abi(contract_name))
 
-CHANNELSETTLED_EVENT = get_event(NETTING_CHANNEL_ABI, 'ChannelSettled')
-CHANNELSETTLED_EVENTID = event_id(*get_eventname_types(CHANNELSETTLED_EVENT))
 
-REGISTRY_TRANSLATOR = ContractTranslator(REGISTRY_ABI)
-CHANNEL_MANAGER_TRANSLATOR = ContractTranslator(CHANNEL_MANAGER_ABI)
-NETTING_CHANNEL_TRANSLATOR = ContractTranslator(NETTING_CHANNEL_ABI)
+CONTRACT_MANAGER = ContractManager()

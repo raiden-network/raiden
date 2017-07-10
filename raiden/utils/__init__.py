@@ -117,6 +117,8 @@ def publickey_to_address(publickey):
 
 
 def privatekey_to_address(private_key_bin):
+    if not len(private_key_bin) == 32:
+        raise ValueError('private_key_bin format mismatch. maybe hex encoded?')
     private_key = PrivateKey(private_key_bin)
     pubkey = private_key.public_key.format(compressed=False)
     return publickey_to_address(pubkey)

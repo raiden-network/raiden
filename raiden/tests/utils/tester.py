@@ -6,10 +6,11 @@ from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
 )
 from raiden.blockchain.abi import (
-    CHANNEL_MANAGER_ABI,
-    NETTING_CHANNEL_ABI,
-    HUMAN_TOKEN_ABI,
-    REGISTRY_ABI,
+    CONTRACT_MANAGER,
+    CONTRACT_CHANNEL_MANAGER,
+    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CONTRACT_NETTING_CHANNEL,
+    CONTRACT_REGISTRY,
 )
 from raiden.channel import Channel, ChannelEndState
 from raiden.utils import privatekey_to_address
@@ -44,7 +45,9 @@ def approve_and_deposit(tester_token, nettingcontract, deposit, key):
 
 
 def create_tokenproxy(tester_state, tester_token_address, log_listener):
-    translator = tester.ContractTranslator(HUMAN_TOKEN_ABI)
+    translator = tester.ContractTranslator(
+        CONTRACT_MANAGER.get_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
+    )
     token_abi = tester.ABIContract(
         tester_state,
         translator,
@@ -56,7 +59,7 @@ def create_tokenproxy(tester_state, tester_token_address, log_listener):
 
 
 def create_registryproxy(tester_state, tester_registry_address, log_listener):
-    translator = tester.ContractTranslator(REGISTRY_ABI)
+    translator = tester.ContractTranslator(CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY))
     registry_abi = tester.ABIContract(
         tester_state,
         translator,
@@ -68,7 +71,9 @@ def create_registryproxy(tester_state, tester_registry_address, log_listener):
 
 
 def create_channelmanager_proxy(tester_state, tester_channelmanager_address, log_listener):
-    translator = tester.ContractTranslator(CHANNEL_MANAGER_ABI)
+    translator = tester.ContractTranslator(
+        CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER)
+    )
     channel_manager_abi = tester.ABIContract(
         tester_state,
         translator,
@@ -80,7 +85,9 @@ def create_channelmanager_proxy(tester_state, tester_channelmanager_address, log
 
 
 def create_nettingchannel_proxy(tester_state, tester_nettingchannel_address, log_listener):
-    translator = tester.ContractTranslator(NETTING_CHANNEL_ABI)
+    translator = tester.ContractTranslator(
+        CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL)
+    )
     netting_channel_abi = tester.ABIContract(
         tester_state,
         translator,
@@ -177,7 +184,9 @@ def new_nettingcontract(our_key, partner_key, tester_state, log_listener,
     )
     tester_state.mine(number_of_blocks=1)
 
-    nettingchannel_translator = tester.ContractTranslator(NETTING_CHANNEL_ABI)
+    nettingchannel_translator = tester.ContractTranslator(
+        CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL)
+    )
 
     nettingchannel = tester.ABIContract(
         tester_state,

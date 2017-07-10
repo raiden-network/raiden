@@ -3,9 +3,7 @@ import pytest
 from ethereum import tester
 from ethereum.tester import TransactionFailed
 
-from raiden.blockchain.abi import (
-    NETTING_CHANNEL_TRANSLATOR,
-)
+from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_NETTING_CHANNEL
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
 )
@@ -43,7 +41,7 @@ def test_nettingchannel_minimum_settle_timeout(private_keys, tester_channelmanag
 
     netting_channel = tester.ABIContract(
         tester_state,
-        NETTING_CHANNEL_TRANSLATOR,
+        CONTRACT_MANAGER.get_translator(CONTRACT_NETTING_CHANNEL),
         netting_channel_address0_hex,
         log_listener=log_listener,
         default_key=INVALID_KEY,
