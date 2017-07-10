@@ -385,14 +385,12 @@ class NotifyingQueue(Event):
     def __len__(self):
         return len(self._queue)
 
-    def snapshot(self):
-        """ Get all items from the queue.
-        Note: this must be done after stopping the protocol, since it will destroy the queue.
-        """
-        items = []
-        for i in range(self._queue.qsize()):
-            items.append(self.get())
-        return items
+    def copy(self):
+        """ Copies the current queue items. """
+        return [
+            self.peek(i)
+            for i in range(self._queue.qsize())
+        ]
 
 
 class RaidenProtocol(object):
