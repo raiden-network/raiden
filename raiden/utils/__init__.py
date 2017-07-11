@@ -177,13 +177,3 @@ def channel_to_api_dict(channel):
         "balance": channel.contract_balance,
         "state": channel.state
     }
-
-
-def safe_equal_attributes(attribute, first, second):
-    """ Helper for implementing `__eq__` on `__slots__` classes.
-    `__slots__` do not guarantee the existence of the attribute, which can lead to AttributErrors
-    in a simplistic `first.attribute == second.attribute` implementation. """
-    if hasattr(first, attribute) and hasattr(second, attribute):
-        return first.__getattribute__(attribute) == second.__getattribute__(attribute)
-    else:
-        return not hasattr(first, attribute) and not hasattr(second, attribute)

@@ -4,8 +4,6 @@ import types
 from collections import namedtuple
 from copy import deepcopy
 
-from raiden.utils import safe_equal_attributes
-
 TransitionResult = namedtuple('TransitionResult', ('new_state', 'events'))
 
 
@@ -144,8 +142,8 @@ class StateManager(object):
     def __eq__(self, other):
         if isinstance(other, StateManager):
             return (
-                safe_equal_attributes('state_transition', self, other) and
-                safe_equal_attributes('current_state', self, other)
+                self.state_transition == other.state_transition and
+                self.current_state == other.current_state
             )
         return False
 

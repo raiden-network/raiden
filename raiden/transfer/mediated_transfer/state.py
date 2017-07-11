@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import State
-from raiden.utils import safe_equal_attributes
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 
@@ -34,8 +33,8 @@ class InitiatorState(State):
         'our_address',
         'transfer',
         'routes',
-        'random_generator',
         'block_number',
+        'random_generator',
         'message',
         'route',
         'secretrequest',
@@ -59,16 +58,16 @@ class InitiatorState(State):
     def __eq__(self, other):
         if isinstance(other, InitiatorState):
             return (
-                safe_equal_attributes('our_address', self, other) and
-                safe_equal_attributes('transfer', self, other) and
-                safe_equal_attributes('routes', self, other) and
-                safe_equal_attributes('random_generator', self, other) and
-                safe_equal_attributes('block_number', self, other) and
-                safe_equal_attributes('message', self, other) and
-                safe_equal_attributes('route', self, other) and
-                safe_equal_attributes('secretrequest', self, other) and
-                safe_equal_attributes('revealsecret', self, other) and
-                safe_equal_attributes('canceled_transfers', self, other)
+                self.our_address == other.our_address and
+                self.transfer == other.transfer and
+                self.routes == other.routes and
+                self.random_generator == other.random_generator and
+                self.block_number == other.block_number and
+                self.message == other.message and
+                self.route == other.route and
+                self.secretrequest == other.secretrequest and
+                self.revealsecret == other.revealsecret and
+                self.canceled_transfers == other.canceled_transfers
             )
         return False
 
@@ -116,12 +115,12 @@ class MediatorState(State):
     def __eq__(self, other):
         if isinstance(other, MediatorState):
             return (
-                safe_equal_attributes('our_address', self, other) and
-                safe_equal_attributes('routes', self, other) and
-                safe_equal_attributes('block_number', self, other) and
-                safe_equal_attributes('hashlock', self, other) and
-                safe_equal_attributes('secret', self, other) and
-                safe_equal_attributes('transfers_pair', self, other)
+                self.our_address == other.our_address and
+                self.routes == other.routes and
+                self.block_number == other.block_number and
+                self.hashlock == other.hashlock and
+                self.secret == other.secret and
+                self.transfers_pair == other.transfers_pair
             )
         return False
 
@@ -158,17 +157,18 @@ class TargetState(State):
         self.from_transfer = from_transfer
         self.block_number = block_number
 
+        self.secret = None
         self.state = 'secret_request'
 
     def __eq__(self, other):
         if isinstance(other, TargetState):
             return (
-                safe_equal_attributes('our_address', self, other) and
-                safe_equal_attributes('from_route', self, other) and
-                safe_equal_attributes('from_transfer', self, other) and
-                safe_equal_attributes('block_number', self, other) and
-                safe_equal_attributes('secret', self, other) and
-                safe_equal_attributes('state', self, other)
+                self.our_address == other.our_address and
+                self.from_route == other.from_route and
+                self.from_transfer == other.from_transfer and
+                self.block_number == other.block_number and
+                self.secret == other.secret and
+                self.state == other.state
             )
 
         return False
@@ -346,13 +346,13 @@ class MediationPairState(State):
     def __eq__(self, other):
         if isinstance(other, MediationPairState):
             return (
-                safe_equal_attributes('payee_route', self, other) and
-                safe_equal_attributes('payee_transfer', self, other) and
-                safe_equal_attributes('payee_state', self, other) and
+                self.payee_route == other.payee_route and
+                self.payee_transfer == other.payee_transfer and
+                self.payee_state == other.payee_state and
 
-                safe_equal_attributes('payer_route', self, other) and
-                safe_equal_attributes('payer_transfer', self, other) and
-                safe_equal_attributes('payer_state', self, other)
+                self.payer_route == other.payer_route and
+                self.payer_transfer == other.payer_transfer and
+                self.payer_state == other.payer_state
             )
         return False
 
