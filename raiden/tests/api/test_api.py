@@ -94,7 +94,6 @@ def test_channel_to_api_dict():
     reveal_timeout = 10
     settle_timeout = 50
     opened_block = 900
-    block_number = 1000
     our_balance = 13
     partner_balance = 21
 
@@ -127,7 +126,6 @@ def test_channel_to_api_dict():
         token_address,
         reveal_timeout,
         settle_timeout,
-        block_number,
     )
 
     result = channel_to_api_dict(channel)

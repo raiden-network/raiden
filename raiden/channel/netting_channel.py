@@ -133,8 +133,7 @@ class Channel(object):
             external_state,
             token_address,
             reveal_timeout,
-            settle_timeout,
-            block_number):
+            settle_timeout):
 
         if settle_timeout <= reveal_timeout:
             raise ValueError('reveal_timeout can not be larger-or-equal to settle_timeout')
@@ -174,7 +173,6 @@ class Channel(object):
         self.reveal_timeout = reveal_timeout
         self.settle_timeout = settle_timeout
         self.external_state = external_state
-        self.block_number = block_number
 
         self.received_transfers = list()
         self.sent_transfers = list()
@@ -530,7 +528,7 @@ class Channel(object):
             #
             # For the receiver: A lock that expires after the settle period
             # just means there is more time to withdraw it.
-            end_settle_period = self.get_settle_expiration(self.block_number)
+            end_settle_period = self.get_settle_expiration(block_number)
             expires_after_settle = transfer.lock.expiration > end_settle_period
             is_sender = transfer.sender == self.our_address
 
@@ -538,8 +536,8 @@ class Channel(object):
                 log.error(
                     'Lock expires after the settlement period.',
                     lock_expiration=transfer.lock.expiration,
-                    current_block=self.block_number,
-                    settle_timeout=self.settle_timeout,
+                    current_block=block_number,
+                    end_settle_period=end_settle_period,
                 )
 
                 raise ValueError('Lock expires after the settlement period.')
@@ -547,14 +545,14 @@ class Channel(object):
             # If the lock expires within the unsafe_period we cannot accept the
             # transfer, since there is not enough time to properly settle
             # on-chain.
-            end_unsafe_period = self.block_number + self.reveal_timeout
+            end_unsafe_period = block_number + self.reveal_timeout
             expires_unsafe = transfer.lock.expiration < end_unsafe_period
 
             if expires_unsafe:
                 log.error(
                     'Lock expires within the unsafe_period.',
                     lock_expiration=transfer.lock.expiration,
-                    current_block=self.block_number,
+                    current_block=block_number,
                     reveal_timeout=self.reveal_timeout,
                 )
 
@@ -683,7 +681,7 @@ class Channel(object):
             log.debug(
                 'Lock expiration is lower than reveal timeout.',
                 expiration=expiration,
-                block_number=self.block_number,
+                block_number=block_number,
                 reveal_timeout=self.reveal_timeout,
             )
 
@@ -784,10 +782,9 @@ class Channel(object):
 
     def state_transition(self, state_change):
         if isinstance(state_change, Block):
-            self.block_number = state_change.block_number
             settlement_end = self.external_state.closed_block + self.settle_timeout
 
-            if self.state == CHANNEL_STATE_CLOSED and self.block_number > settlement_end:
+            if self.state == CHANNEL_STATE_CLOSED and state_change.block_number > settlement_end:
                 self.external_state.settle()
 
         elif isinstance(state_change, ContractReceiveClosed):
@@ -819,7 +816,6 @@ class ChannelSerialization(object):
         self.partner_address = channel_instance.partner_address
         self.our_address = channel_instance.our_address
         self.reveal_timeout = channel_instance.reveal_timeout
-        self.block_number = channel_instance.block_number
 
         self.our_balance_proof = channel_instance.our_state.balance_proof
         self.partner_balance_proof = channel_instance.partner_state.balance_proof
@@ -832,7 +828,6 @@ class ChannelSerialization(object):
                 self.partner_address == other.partner_address and
                 self.our_address == other.our_address and
                 self.reveal_timeout == other.reveal_timeout and
-                self.block_number == other.block_number and
                 self.our_balance_proof == other.our_balance_proof and
                 self.partner_balance_proof == other.partner_balance_proof
             )

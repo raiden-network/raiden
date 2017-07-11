@@ -200,7 +200,6 @@ def test_invalid_timeouts():
     address2 = make_address()
     balance1 = 10
     balance2 = 10
-    block_number = 10
 
     our_state = ChannelEndState(address1, balance1, netting_channel.opened())
     partner_state = ChannelEndState(address2, balance2, netting_channel.opened())
@@ -218,7 +217,6 @@ def test_invalid_timeouts():
             token_address,
             large_reveal_timeout,
             small_settle_timeout,
-            block_number,
         )
 
     for invalid_value in (-1, 0, 1.1, 1.0, 'a', [], {}):
@@ -230,7 +228,6 @@ def test_invalid_timeouts():
                 token_address,
                 invalid_value,
                 settle_timeout,
-                block_number,
             )
 
         with pytest.raises(ValueError):
@@ -241,7 +238,6 @@ def test_invalid_timeouts():
                 token_address,
                 reveal_timeout,
                 invalid_value,
-                block_number,
             )
 
 
@@ -269,7 +265,6 @@ def test_python_channel():
         token_address,
         reveal_timeout,
         settle_timeout,
-        block_number,
     )
 
     assert test_channel.contract_balance == our_state.contract_balance

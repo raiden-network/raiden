@@ -230,7 +230,6 @@ class ChannelGraph(object):
             self.token_address,
             details.reveal_timeout,
             details.settle_timeout,
-            block_number,
         )
 
         self.partneraddress_channel[partner_state.address] = channel
