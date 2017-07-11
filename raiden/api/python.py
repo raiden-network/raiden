@@ -65,6 +65,11 @@ class RaidenAPI(object):
 
         raise ValueError("Channel not found")
 
+    def register_token(self, token_address):
+        self.raiden.chain.default_registry.add_token(token_address)
+        channel_manager = self.raiden.chain.manager_by_token(token_address)
+        return channel_manager.channel_manager_address
+
     def connect_token_network(
         self,
         token_address,

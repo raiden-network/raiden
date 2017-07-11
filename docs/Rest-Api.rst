@@ -104,15 +104,12 @@ Registering a Token
 
 If a Token is not registered (i.e.: A channel manager for that token does not exist in the network) then we need to register it by deploying a Channel Manager contract for that token.
 
-We can do that by doing a ``PUT`` request to the endpoint ``/api/<version>/tokens`` with the address as payload. The request should return the deployed manager's address.
+We can do that by doing a ``PUT`` request to the endpoint ``/api/<version>/tokens/<token_address>``. The request should return the deployed channel manager's address.
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``PUT /api/1/tokens`` with payload:::
-
-
-    {"token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"}
+``PUT /api/1/tokens/0xea674fdde714fd979de3edf0f56aa9716b898ec8``
 
 Example Response
 ^^^^^^^^^^^^^^^^
