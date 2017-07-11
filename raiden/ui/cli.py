@@ -18,10 +18,12 @@ from raiden.constants import ROPSTEN_REGISTRY_ADDRESS, ROPSTEN_DISCOVERY_ADDRESS
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.sockfactory import socket_factory
 from raiden.settings import (
-    INITIAL_PORT,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
+    INITIAL_PORT,
+    RAIDEN_DEFAULT_CONFIG,
 )
 from raiden.utils import split_endpoint
+from raiden.raiden_service import raiden_from_config
 
 gevent.monkey.patch_all()
 
@@ -161,7 +163,6 @@ def app(address,
         console,
         password_file):
 
-    from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
 
     slogging.configure(logging, log_file=logfile)
@@ -170,7 +171,7 @@ def app(address,
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)
 
-    config = App.DEFAULT_CONFIG.copy()
+    config = RAIDEN_DEFAULT_CONFIG.copy()
     config['host'] = listen_host
     config['port'] = listen_port
     config['console'] = console
@@ -301,7 +302,13 @@ def app(address,
     database_path = os.path.join(raiden_directory, 'log.db')
     config['database_path'] = database_path
 
-    return App(config, blockchain_service, discovery)
+    raiden = raiden_from_config(
+        config,
+        blockchain_service,
+        discovery,
+    )
+
+    return raiden
 
 
 @options

@@ -48,29 +48,29 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     setup_messages_cb()
 
-    alice_graph = alice_app.raiden.channelgraphs.values()[0]
-    bob_graph = bob_app.raiden.channelgraphs.values()[0]
+    alice_graph = alice_app.channelgraphs.values()[0]
+    bob_graph = bob_app.channelgraphs.values()[0]
     assert alice_graph.token_address == bob_graph.token_address
 
-    alice_bob_channel = alice_graph.partneraddress_channel[bob_app.raiden.address]
-    bob_alice_channel = bob_graph.partneraddress_channel[alice_app.raiden.address]
+    alice_bob_channel = alice_graph.partneraddress_channel[bob_app.address]
+    bob_alice_channel = bob_graph.partneraddress_channel[alice_app.address]
 
     alice_deposit = alice_bob_channel.balance
     bob_deposit = bob_alice_channel.balance
 
-    token = alice_app.raiden.chain.token(alice_bob_channel.token_address)
+    token = alice_app.chain.token(alice_bob_channel.token_address)
 
-    alice_balance = token.balance_of(alice_app.raiden.address)
-    bob_balance = token.balance_of(bob_app.raiden.address)
+    alice_balance = token.balance_of(alice_app.address)
+    bob_balance = token.balance_of(bob_app.address)
 
-    alice_chain = alice_app.raiden.chain
+    alice_chain = alice_app.chain
 
     alice_to_bob_amount = 10
-    expiration = alice_app.raiden.chain.block_number() + reveal_timeout + 1
+    expiration = alice_app.chain.block_number() + reveal_timeout + 1
     secret = 'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
-    assert bob_app.raiden.address in alice_graph.partneraddress_channel
+    assert bob_app.address in alice_graph.partneraddress_channel
 
     nettingaddress0 = alice_bob_channel.external_state.netting_channel.address
     nettingaddress1 = bob_alice_channel.external_state.netting_channel.address
@@ -79,22 +79,22 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     identifier = 1
     fee = 0
     transfermessage = alice_bob_channel.create_mediatedtransfer(
-        alice_app.raiden.get_block_number(),
-        alice_app.raiden.address,
-        bob_app.raiden.address,
+        alice_app.get_block_number(),
+        alice_app.address,
+        bob_app.address,
         fee,
         alice_to_bob_amount,
         identifier,
         expiration,
         hashlock,
     )
-    alice_app.raiden.sign(transfermessage)
+    alice_app.sign(transfermessage)
     alice_bob_channel.register_transfer(
-        alice_app.raiden.get_block_number(),
+        alice_app.get_block_number(),
         transfermessage,
     )
     bob_alice_channel.register_transfer(
-        bob_app.raiden.get_block_number(),
+        bob_app.get_block_number(),
         transfermessage,
     )
 
@@ -143,7 +143,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # unlock will not be called by Channel.channel_closed because we did not
     # register the secret
-    assert lock.expiration > alice_app.raiden.chain.block_number()
+    assert lock.expiration > alice_app.chain.block_number()
     assert lock.hashlock == sha3(secret)
 
     bob_alice_channel.external_state.netting_channel.withdraw([unlock_proof])
@@ -158,8 +158,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert alice_bob_channel.external_state.settled_block != 0
     assert bob_alice_channel.external_state.settled_block != 0
 
-    address0 = alice_app.raiden.address
-    address1 = bob_app.raiden.address
+    address0 = alice_app.address
+    address1 = bob_app.address
 
     alice_netted_balance = alice_balance + alice_deposit - alice_to_bob_amount
     bob_netted_balance = bob_balance + bob_deposit + alice_to_bob_amount
@@ -169,7 +169,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # Now let's query the WAL to see if the state changes were logged as expected
     state_changes = [
-        change[1] for change in get_all_state_changes(alice_app.raiden.transaction_log)
+        change[1] for change in get_all_state_changes(alice_app.transaction_log)
         if not isinstance(change[1], Block)
     ]
 
@@ -180,12 +180,12 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     assert isinstance(state_change1, ContractReceiveClosed)
     assert state_change1.channel_address == nettingaddress0
-    assert state_change1.closing_address == bob_app.raiden.address
+    assert state_change1.closing_address == bob_app.address
     assert state_change1.block_number == alice_bob_channel.external_state.closed_block
 
     # Can't be sure of the order in which we encounter the SecretReveal and the withdraw
-    assert_secretreveal_or_withdraw(state_change2, secret, nettingaddress0, bob_app.raiden.address)
-    assert_secretreveal_or_withdraw(state_change3, secret, nettingaddress0, bob_app.raiden.address)
+    assert_secretreveal_or_withdraw(state_change2, secret, nettingaddress0, bob_app.address)
+    assert_secretreveal_or_withdraw(state_change3, secret, nettingaddress0, bob_app.address)
 
     assert isinstance(state_change4, ContractReceiveSettled)
     assert state_change4.channel_address == nettingaddress0
@@ -205,8 +205,8 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
 
     app0, app1, app2, _ = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    address0 = app0.raiden.address
-    address1 = app1.raiden.address
+    address0 = app0.address
+    address1 = app1.address
 
     forward_channel = channel(app0, app1, token)
     back_channel = channel(app1, app0, token)
@@ -214,13 +214,13 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     deposit0 = forward_channel.deposit
     deposit1 = back_channel.deposit
 
-    token_contract = app0.raiden.chain.token(token)
+    token_contract = app0.chain.token(token)
     balance0 = token_contract.balance_of(address0)
     balance1 = token_contract.balance_of(address1)
 
     # mediated transfer
     identifier = 1
-    expiration = app0.raiden.chain.block_number() + settle_timeout - reveal_timeout
+    expiration = app0.chain.block_number() + settle_timeout - reveal_timeout
     secret = pending_mediated_transfer(
         raiden_network,
         token,
@@ -253,8 +253,8 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
         )
 
     # forward the block number to allow settle
-    settle_expiration = app2.raiden.chain.block_number() + settle_timeout
-    wait_until_block(app2.raiden.chain, settle_expiration)
+    settle_expiration = app2.chain.block_number() + settle_timeout
+    wait_until_block(app2.chain, settle_expiration)
 
     back_channel.external_state.netting_channel.settle()
 
@@ -309,7 +309,7 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout
 
     # wait until the last block to reveal the secret, hopefully we are not
     # missing a block during the test
-    wait_until_block(app2.raiden.chain, attack_transfer.lock.expiration - 1)
+    wait_until_block(app2.chain, attack_transfer.lock.expiration - 1)
 
     # since the attacker knows the secret he can net the lock
     attack_channel.netting_channel.withdraw(
@@ -321,45 +321,45 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout
     # claim the token from the channel A1 - H
 
     # the attacker settle the contract
-    app2.raiden.chain.next_block()
+    app2.chain.next_block()
 
     attack_channel.netting_channel.settle(token, attack_contract)
 
     # at this point the attack has the "stolen" funds
-    attack_contract = app2.raiden.chain.token_hashchannel[token][attack_contract]
-    assert attack_contract.participants[app2.raiden.address]['netted'] == deposit + amount
-    assert attack_contract.participants[app1.raiden.address]['netted'] == deposit - amount
+    attack_contract = app2.chain.token_hashchannel[token][attack_contract]
+    assert attack_contract.participants[app2.address]['netted'] == deposit + amount
+    assert attack_contract.participants[app1.address]['netted'] == deposit - amount
 
     # and the hub's channel A1-H doesn't
-    hub_contract = app1.raiden.chain.token_hashchannel[token][hub_contract]
-    assert hub_contract.participants[app0.raiden.address]['netted'] == deposit
-    assert hub_contract.participants[app1.raiden.address]['netted'] == deposit
+    hub_contract = app1.chain.token_hashchannel[token][hub_contract]
+    assert hub_contract.participants[app0.address]['netted'] == deposit
+    assert hub_contract.participants[app1.address]['netted'] == deposit
 
     # to mitigate the attack the Hub _needs_ to use a lower expiration for the
     # locked transfer between H-A2 than A1-H, since for A2 to acquire the token
     # it needs to make the secret public in the block chain we publish the
     # secret through an event and the Hub will be able to require it's funds
-    app1.raiden.chain.next_block()
+    app1.chain.next_block()
 
     # XXX: verify that the Hub has found the secret, close and settle the channel
 
     # the hub has acquired its token
-    hub_contract = app1.raiden.chain.token_hashchannel[token][hub_contract]
-    assert hub_contract.participants[app0.raiden.address]['netted'] == deposit + amount
-    assert hub_contract.participants[app1.raiden.address]['netted'] == deposit - amount
+    hub_contract = app1.chain.token_hashchannel[token][hub_contract]
+    assert hub_contract.participants[app0.address]['netted'] == deposit + amount
+    assert hub_contract.participants[app1.address]['netted'] == deposit - amount
 
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     app0, app1 = raiden_network
-    channel0 = app0.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]
-    privatekey0 = app0.raiden.private_key
-    privatekey1 = app1.raiden.private_key
+    channel0 = app0.channelgraphs.values()[0].partneraddress_channel.values()[0]
+    channel1 = app1.channelgraphs.values()[0].partneraddress_channel.values()[0]
+    privatekey0 = app0.private_key
+    privatekey1 = app1.private_key
     address0 = privatekey_to_address(privatekey0.secret)
     address1 = privatekey_to_address(privatekey1.secret)
-    token = app0.raiden.chain.token(channel0.token_address)
+    token = app0.chain.token(channel0.token_address)
     initial_balance0 = token.balance_of(address0)
     initial_balance1 = token.balance_of(address1)
 
@@ -419,7 +419,8 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     # Alice can only provide one of Bob's transfer, so she is incetivized to
     # use the one with the largest transferred_amount.
     channel0.external_state.close(bob_last_transaction)
-    chain0 = app0.raiden.chain
+    chain0 = app0.chain
+
     wait_until_block(chain0, chain0.block_number() + 1)
 
     assert channel0.external_state.close_event.wait(timeout=25)

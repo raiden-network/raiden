@@ -72,11 +72,11 @@ class Console(BaseService):
 
         self.console_locals = dict(
             _raiden=Raiden(self.app),
-            raiden=self.app.raiden,
-            chain=self.app.raiden.chain,
+            raiden=self.app,
+            chain=self.app.chain,
             discovery=self.app.discovery,
             tools=ConsoleTools(
-                self.app.raiden,
+                self.app,
                 self.app.discovery,
                 self.app.config['settle_timeout'],
                 self.app.config['reveal_timeout'],

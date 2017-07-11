@@ -45,7 +45,7 @@ def test_leaving(
 
     token_address = token_addresses[0]
     connection_managers = [
-        app.raiden.connection_manager_for_token(token_address) for app in raiden_network
+        app.connection_manager_for_token(token_address) for app in raiden_network
     ]
 
     all_channels = list(
@@ -55,21 +55,21 @@ def test_leaving(
     )
 
     leaving_async = [
-        app.raiden.leave_all_token_networks_async() for app in raiden_network[1:]
+        app.leave_all_token_networks_async() for app in raiden_network[1:]
     ]
 
     with gevent.timeout.Timeout(30):
         # tester needs manual block progress
         if blockchain_type == 'tester':
             for app in raiden_network:
-                connection_manager = app.raiden.connection_manager_for_token(token_address)
+                connection_manager = app.connection_manager_for_token(token_address)
                 wait_blocks = connection_manager.min_settle_blocks
                 if wait_blocks > 0:
                     wait_until_block(
-                        app.raiden.chain,
-                        app.raiden.chain.block_number() + wait_blocks
+                        app.chain,
+                        app.chain.block_number() + wait_blocks
                     )
-                    gevent.sleep(app.raiden.alarm.wait_time)
+                    gevent.sleep(app.alarm.wait_time)
 
     gevent.wait(leaving_async, timeout=50)
     assert len(connection_managers[0].receiving_channels) == 0
@@ -95,11 +95,11 @@ def test_participant_selection(
     token_address = token_addresses[0]
 
     # connect the first node (will register the token if necessary)
-    RaidenAPI(raiden_network[0].raiden).connect_token_network(token_address, 100)
+    RaidenAPI(raiden_network[0]).connect_token_network(token_address, 100)
 
     # connect the other nodes
     connect_greenlets = [
-        gevent.spawn(RaidenAPI(app.raiden).connect_token_network, token_address, 100)
+        gevent.spawn(RaidenAPI(app).connect_token_network, token_address, 100)
         for app in raiden_network[1:]
     ]
     gevent.wait(connect_greenlets)
@@ -109,15 +109,15 @@ def test_participant_selection(
     for i in range(wait_blocks):
         for app in raiden_network:
             wait_until_block(
-                app.raiden.chain,
-                app.raiden.chain.block_number() + 1
+                app.chain,
+                app.chain.block_number() + 1
             )
         # tester needs an explicit context switch :(
         if blockchain_type == 'tester':
             gevent.sleep(1)
 
     connection_managers = [
-        app.raiden.connection_manager_for_token(token_address) for app in raiden_network
+        app.connection_manager_for_token(token_address) for app in raiden_network
     ]
 
     def open_channels_count(connection_managers_):
@@ -133,7 +133,7 @@ def test_participant_selection(
             if connection_manager.open_channels < connection_manager.initial_channel_target
         ]
 
-    chain = raiden_network[-1].raiden.chain
+    chain = raiden_network[-1].chain
     max_wait = 12
 
     while len(not_saturated(connection_managers)) > 0 and max_wait > 0:
@@ -143,7 +143,7 @@ def test_participant_selection(
     assert len(not_saturated(connection_managers)) == 0
 
     # Ensure unpartitioned network
-    addresses = [app.raiden.address for app in raiden_network]
+    addresses = [app.address for app in raiden_network]
     for connection_manager in connection_managers:
         assert all(
             connection_manager.channelgraph.has_path(
@@ -171,8 +171,8 @@ def test_participant_selection(
         pass
 
     # create a transfer to the leaving node, so we have a channel to settle
-    sender = raiden_network[-1].raiden
-    receiver = raiden_network[0].raiden
+    sender = raiden_network[-1]
+    receiver = raiden_network[0]
 
     # assert there is a direct channel receiver -> sender (vv)
     receiver_channel = RaidenAPI(receiver).get_channel_list(
@@ -209,24 +209,24 @@ def test_participant_selection(
 
     timeout = (
         connection_manager.min_settle_blocks *
-        connection_manager.raiden.chain.estimate_blocktime() *
+        connection_manager.chain.estimate_blocktime() *
         5
     )
 
     assert timeout > 0
     with gevent.timeout.Timeout(timeout):
         try:
-            RaidenAPI(raiden_network[0].raiden).leave_token_network(token_address)
+            RaidenAPI(raiden_network[0]).leave_token_network(token_address)
         except gevent.timeout.Timeout:
             log.error('timeout while waiting for leave')
 
-    before_block = connection_manager.raiden.chain.block_number()
+    before_block = connection_manager.chain.block_number()
     wait_blocks = connection_manager.min_settle_blocks + 10
     wait_until_block(
-        connection_manager.raiden.chain,
+        connection_manager.chain,
         before_block + wait_blocks
     )
-    assert connection_manager.raiden.chain.block_number >= before_block + wait_blocks
+    assert connection_manager.chain.block_number >= before_block + wait_blocks
     wait_until_block(
         receiver.chain,
         before_block + wait_blocks

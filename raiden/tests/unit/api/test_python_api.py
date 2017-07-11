@@ -27,25 +27,25 @@ def test_get_channel_list(raiden_network, token_addresses):
     channel1 = channel(app1, app0, token_addresses[0])
     channel2 = channel(app0, app2, token_addresses[0])
 
-    api0 = RaidenAPI(app0.raiden)
-    api1 = RaidenAPI(app1.raiden)
-    api2 = RaidenAPI(app2.raiden)
+    api0 = RaidenAPI(app0)
+    api1 = RaidenAPI(app1)
+    api2 = RaidenAPI(app2)
 
     assert channel0, channel2 in api0.get_channel_list()
-    assert channel0 in api0.get_channel_list(partner_address=app1.raiden.address)
+    assert channel0 in api0.get_channel_list(partner_address=app1.address)
     assert channel1 in api1.get_channel_list(token_address=token_addresses[0])
-    assert channel1 in api1.get_channel_list(token_addresses[0], app0.raiden.address)
-    assert not api1.get_channel_list(partner_address=app2.raiden.address)
+    assert channel1 in api1.get_channel_list(token_addresses[0], app0.address)
+    assert not api1.get_channel_list(partner_address=app2.address)
 
     with pytest.raises(KeyError):
         api1.get_channel_list(
             token_address=token_addresses[0],
-            partner_address=app2.raiden.address,
+            partner_address=app2.address,
         )
 
     with pytest.raises(KeyError):
         api2.get_channel_list(
-            token_address=app2.raiden.address,
+            token_address=app2.address,
         )
 
 
@@ -55,14 +55,14 @@ def test_get_channel_list(raiden_network, token_addresses):
 def test_transfer_to_unknownchannel(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
+    graph0 = app0.channelgraphs.values()[0]
+    graph1 = app1.channelgraphs.values()[0]
 
     assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
+    assert app1.address in graph0.partneraddress_channel
 
     with pytest.raises(NoPathError):
-        RaidenAPI(app0.raiden).transfer(
+        RaidenAPI(app0).transfer(
             graph0.token_address,
             10,
             # sending to an unknown/non-existant address
@@ -78,15 +78,15 @@ def test_transfer_to_unknownchannel(raiden_network):
 def test_token_swap(raiden_network, deposit, settle_timeout):
     app0, app1 = raiden_network
 
-    maker_address = app0.raiden.address
-    taker_address = app1.raiden.address
+    maker_address = app0.address
+    taker_address = app1.address
 
-    maker_token, taker_token = app0.raiden.channelgraphs.keys()[:2]
+    maker_token, taker_token = app0.channelgraphs.keys()[:2]
     maker_amount = 70
     taker_amount = 30
 
     identifier = 313
-    RaidenAPI(app1.raiden).expect_token_swap(
+    RaidenAPI(app1).expect_token_swap(
         identifier,
         maker_token,
         maker_amount,
@@ -96,7 +96,7 @@ def test_token_swap(raiden_network, deposit, settle_timeout):
         taker_address,
     )
 
-    async_result = RaidenAPI(app0.raiden).token_swap_async(
+    async_result = RaidenAPI(app0).token_swap_async(
         identifier,
         maker_token,
         maker_amount,

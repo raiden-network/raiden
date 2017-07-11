@@ -41,7 +41,7 @@ def test_initiator_log_directransfer_action(
         identifier,
     )
 
-    app0_state_changes = get_all_state_changes(app0.raiden.transaction_log)
+    app0_state_changes = get_all_state_changes(app0.transaction_log)
     direct_transfers = [
         state_change
         for _, state_change in app0_state_changes
@@ -51,7 +51,7 @@ def test_initiator_log_directransfer_action(
         identifier,
         amount,
         token_address,
-        app1.raiden.address,
+        app1.address,
     )
 
 
@@ -77,7 +77,7 @@ def test_initiator_log_directransfer_success(
         identifier,
     )
 
-    app0_events = get_all_state_events(app0.raiden.transaction_log)
+    app0_events = get_all_state_events(app0.transaction_log)
     sucessful_transfers = [
         event.event_object for event in app0_events
         if isinstance(event.event_object, EventTransferSentSuccess)
@@ -109,7 +109,7 @@ def test_target_log_directransfer_message(
         identifier,
     )
 
-    app1_state_changes = get_all_state_changes(app1.raiden.transaction_log)
+    app1_state_changes = get_all_state_changes(app1.transaction_log)
     received_transfers = [
         state_change
         for _, state_change in app1_state_changes
@@ -119,7 +119,7 @@ def test_target_log_directransfer_message(
         identifier,
         amount,
         token_address,
-        app0.raiden.address,
+        app0.address,
     )
 
 
@@ -145,7 +145,7 @@ def test_target_log_directransfer_successevent(
         identifier,
     )
 
-    app1_state_events = get_all_state_events(app1.raiden.transaction_log)
+    app1_state_events = get_all_state_events(app1.transaction_log)
     sucessful_received_transfers = [
         event.event_object for event in app1_state_events
         if isinstance(event.event_object, EventTransferReceivedSuccess)

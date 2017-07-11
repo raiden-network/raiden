@@ -22,16 +22,16 @@ def test_ping(raiden_network):
     messages = setup_messages_cb()
 
     ping_message = Ping(nonce=0)
-    app0.raiden.sign(ping_message)
+    app0.sign(ping_message)
     ping_encoded = ping_message.encode()
 
-    async_result = app0.raiden.protocol.send_raw_with_result(
+    async_result = app0.protocol.send_raw_with_result(
         ping_encoded,
-        app1.raiden.address,
+        app1.address,
     )
     assert async_result.wait(2), "The message was not acknowledged"
 
-    expected_echohash = sha3(ping_encoded + app1.raiden.address)
+    expected_echohash = sha3(ping_encoded + app1.address)
 
     messages_decoded = [decode(m) for m in messages]
     ack_message = next(
@@ -52,24 +52,20 @@ def test_ping_unreachable(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     UnreliableTransport.droprate = 1  # drop everything to force disabling of re-sends
-    app0.raiden.protocol.retry_interval = 0.1  # for fast tests
+    app0.protocol.retry_interval = 0.1  # for fast tests
 
-    messages = setup_messages_cb()
     UnreliableTransport.network.counter = 0
 
     ping_message = Ping(nonce=0)
-    app0.raiden.sign(ping_message)
+    app0.sign(ping_message)
     ping_encoded = ping_message.encode()
 
-    async_result = app0.raiden.protocol.send_raw_with_result(
+    async_result = app0.protocol.send_raw_with_result(
         ping_encoded,
-        app1.raiden.address,
+        app1.address,
     )
 
     assert async_result.wait(2) is None, "The message was dropped, it can't be acknowledged"
-
-    for message in messages:
-        assert decode(message) == ping_message
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -79,7 +75,7 @@ def test_receive_direct_before_deposit(raiden_network):
     any back channel balance.  """
     app0, app1, _ = raiden_network
 
-    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
+    token_address = app0.chain.default_registry.token_addresses()[0]
     channel_0_1 = channel(app0, app1, token_address)
     back_channel = channel(app1, app0, token_address)
 
@@ -88,17 +84,17 @@ def test_receive_direct_before_deposit(raiden_network):
 
     deposit_amount = 2
     transfer_amount = 1
-    api0 = RaidenAPI(app0.raiden)
-    api0.deposit(token_address, app1.raiden.address, deposit_amount)
-    app0.raiden.chain.next_block()
-    gevent.sleep(app0.raiden.alarm.wait_time)
+    api0 = RaidenAPI(app0)
+    api0.deposit(token_address, app1.address, deposit_amount)
+    app0.chain.next_block()
+    gevent.sleep(app0.alarm.wait_time)
 
     assert channel_0_1.can_transfer
     assert not back_channel.can_transfer
     assert back_channel.distributable == 0
 
-    api0.transfer_and_wait(token_address, transfer_amount, app1.raiden.address)
-    gevent.sleep(app1.raiden.alarm.wait_time)
+    api0.transfer_and_wait(token_address, transfer_amount, app1.address)
+    gevent.sleep(app1.alarm.wait_time)
 
     assert back_channel.can_transfer
     assert back_channel.distributable == transfer_amount
@@ -111,9 +107,9 @@ def test_receive_mediated_before_deposit(raiden_network):
     any back channel balance. """
     app_bob, app_alice, app_charlie = raiden_network
 
-    chain = app_bob.raiden.chain
+    chain = app_bob.chain
 
-    token_address = app_bob.raiden.chain.default_registry.token_addresses()[0]
+    token_address = app_bob.chain.default_registry.token_addresses()[0]
     # path alice -> bob -> charlie
     alice_bob = channel(app_alice, app_bob, token_address)
     bob_alice = channel(app_bob, app_alice, token_address)
@@ -137,15 +133,15 @@ def test_receive_mediated_before_deposit(raiden_network):
     deposit_amount = 3
     transfer_amount = 1
 
-    api_alice = RaidenAPI(app_alice.raiden)
-    api_alice.deposit(token_address, app_bob.raiden.address, deposit_amount)
+    api_alice = RaidenAPI(app_alice)
+    api_alice.deposit(token_address, app_bob.address, deposit_amount)
     chain.next_block()
-    gevent.sleep(app_alice.raiden.alarm.wait_time)
+    gevent.sleep(app_alice.alarm.wait_time)
 
-    api_bob = RaidenAPI(app_bob.raiden)
-    api_bob.deposit(token_address, app_charlie.raiden.address, deposit_amount)
+    api_bob = RaidenAPI(app_bob)
+    api_bob.deposit(token_address, app_charlie.address, deposit_amount)
     chain.next_block()
-    gevent.sleep(app_bob.raiden.alarm.wait_time)
+    gevent.sleep(app_bob.alarm.wait_time)
 
     assert alice_bob.can_transfer
     assert alice_bob.distributable == deposit_amount
@@ -153,8 +149,8 @@ def test_receive_mediated_before_deposit(raiden_network):
     assert bob_charlie.distributable == deposit_amount
     assert not bob_alice.can_transfer
 
-    api_alice.transfer_and_wait(token_address, transfer_amount, app_charlie.raiden.address)
-    gevent.sleep(app_alice.raiden.alarm.wait_time)
+    api_alice.transfer_and_wait(token_address, transfer_amount, app_charlie.address)
+    gevent.sleep(app_alice.alarm.wait_time)
 
     assert alice_bob.distributable == deposit_amount - transfer_amount
     assert bob_charlie.distributable == deposit_amount - transfer_amount

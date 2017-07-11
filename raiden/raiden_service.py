@@ -11,7 +11,7 @@ import gevent
 from gevent.event import AsyncResult
 from coincurve import PrivateKey
 from ethereum import slogging
-from ethereum.utils import encode_hex
+from ethereum.utils import encode_hex, decode_hex
 
 from raiden.constants import (
     UINT64_MAX,
@@ -73,6 +73,7 @@ from raiden.network.channelgraph import (
     ChannelGraph,
     ChannelDetails,
 )
+from raiden.network.transport import UDPTransport, TokenBucket
 from raiden.messages import (
     RevealSecret,
     Secret,
@@ -95,6 +96,35 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 def create_default_identifier():
     """ Generates a random identifier. """
     return random.randint(0, UINT64_MAX)
+
+
+def raiden_from_config(config, chain, discovery, transport_class=UDPTransport):
+    if config.get('socket'):
+        transport = transport_class(
+            None,
+            None,
+            socket=config['socket'],
+        )
+    else:
+        transport = transport_class(
+            config['host'],
+            config['port'],
+        )
+
+    transport.throttle_policy = TokenBucket(
+        config['protocol']['throttle_capacity'],
+        config['protocol']['throttle_fill_rate'],
+    )
+
+    raiden = RaidenService(
+        chain,
+        decode_hex(config['privatekey_hex']),
+        transport,
+        discovery,
+        config,
+    )
+
+    return raiden
 
 
 class RandomSecretGenerator(object):  # pylint: disable=too-few-public-methods
@@ -736,7 +766,10 @@ class RaidenService(object):
                 ]
             )
 
-    def stop(self):
+    def stop(self, graceful=False):
+        if graceful:
+            self.close_and_settle()
+
         wait_for = [self.alarm]
         wait_for.extend(self.greenlet_task_dispatcher.stop())
 

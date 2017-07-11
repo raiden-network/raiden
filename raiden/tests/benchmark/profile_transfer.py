@@ -239,11 +239,11 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
     main_app = apps[0]
 
     # channels
-    main_graph = main_app.raiden.channelgraphs[tokens[0]]
+    main_graph = main_app.channelgraphs[tokens[0]]
 
     # search for a path of length=2 A > B > C
     num_hops = 2
-    source = main_app.raiden.address
+    source = main_app.address
     paths = main_graph.get_paths_of_length(source, num_hops)
 
     # sanity check
@@ -260,7 +260,7 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
 
     # measure the hot path
     with profiling.profile():
-        result = main_app.raiden.transfer_async(
+        result = main_app.transfer_async(
             token_address,
             amount,
             target,
