@@ -1,0 +1,62 @@
+- name: Create storage fs
+  become: yes
+  filesystem:
+    dev: /dev/xvdb
+    fstype: ext4
+
+- name: Mount storage fs
+  become: yes
+  mount:
+    fstype: ext4
+    path: "{{ eth_data_dir_base }}"
+    src: /dev/xvdb
+    state: mounted
+
+- name: Create eth node data dir
+  become: true
+  file:
+    name: "{{ eth_data_dir_base }}/{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: 0770
+  with_items:
+    - geth
+    - parity
+
+- name: Eth node (parity) docker container
+  docker_container:
+    name: testnet_parity
+    state: "{{ 'started' if eth_node_type == 'parity' else 'absent' }}"
+    restart_policy: always
+    pull: yes
+    image: "{{ docker_repo_eth_parity }}"
+    ports:
+      - "8545:8545"
+      - "30303:30303"
+      - "30303:30303/udp"
+    volumes:
+      - "{{ eth_data_dir_base }}/parity:/root/.local/share/io.parity.ethereum"
+    command:
+      - "--chain"
+      - "ropsten"
+      - "--warp"
+      - "--jsonrpc-interface"
+      - "0.0.0.0"
+      - "--jsonrpc-hosts"
+      - "all"
+      - "--nat"
+      - "extip:{{ ansible_host }}"
+
+- name: Eth node (geth) docker container
+  docker_container:
+    name: testnet_geth
+    state: "{{ 'started' if eth_node_type == 'geth' else 'absent' }}"
+    restart_policy: always
+    pull: yes
+    image: "{{ docker_repo_eth_geth }}"
+    ports:
+      - "8545:8545"
+      - "30303:30303"
+      - "30303:30303/udp"
+    volumes:
+      - "{{ eth_data_dir_base }}/geth:/root/.ethereum"

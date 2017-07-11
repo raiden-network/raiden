@@ -1,0 +1,27 @@
+- hosts: name_raiden_testnet
+  gather_facts: no
+  become: yes
+  roles:
+    - docker
+
+- hosts: role_eth
+  gather_facts: no
+  roles:
+    - role: gather_private_ips
+      target_group_name: private_ips_eth_nodes
+    - eth_node
+
+- hosts: role_raiden
+  gather_facts: no
+  roles:
+    - role: gather_private_ips
+      target_group_name: private_ips_raiden
+    - raiden
+
+- hosts: name_raiden_testnet
+  gather_facts: no
+  roles:
+    - role: motd_info
+      display_groups:
+        Eth: private_ips_eth_nodes
+        Raiden: private_ips_raiden
