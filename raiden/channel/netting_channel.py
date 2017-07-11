@@ -421,11 +421,12 @@ class Channel(object):
 
         self.our_state.release_lock(self.partner_state, secret)
 
-    def register_transfer(self, transfer):
+    def register_transfer(self, block_number, transfer):
         """ Register a signed transfer, updating the channel's state accordingly. """
 
         if transfer.recipient == self.partner_state.address:
             self.register_transfer_from_to(
+                block_number,
                 transfer,
                 from_state=self.our_state,
                 to_state=self.partner_state,
@@ -435,6 +436,7 @@ class Channel(object):
 
         elif transfer.recipient == self.our_state.address:
             self.register_transfer_from_to(
+                block_number,
                 transfer,
                 from_state=self.partner_state,
                 to_state=self.our_state,
@@ -451,7 +453,13 @@ class Channel(object):
                 )
             raise UnknownAddress(transfer)
 
-    def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa pylint: disable=too-many-branches,too-many-statements
+    def register_transfer_from_to(
+            self,
+            block_number,
+            transfer,
+            from_state,
+            to_state):  # noqa pylint: disable=too-many-branches,too-many-statements
+
         """ Validates and register a signed transfer, updating the channel's state accordingly.
 
         Note:

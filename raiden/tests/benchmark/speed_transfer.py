@@ -115,8 +115,15 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
             hashlock=hashlock,
         )
         app0.raiden.sign(locked_transfer)
-        channel0.register_transfer(locked_transfer)
-        channel1.register_transfer(locked_transfer)
+
+        channel0.register_transfer(
+            app0.raiden.get_block_number(),
+            locked_transfer,
+        )
+        channel1.register_transfer(
+            app0.raiden.get_block_number(),
+            locked_transfer,
+        )
 
         if i > max_locked:
             idx = i - max_locked

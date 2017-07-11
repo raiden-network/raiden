@@ -102,7 +102,10 @@ class StateMachineEventHandler(object):
             )
 
             self.raiden.sign(mediated_transfer)
-            channel.register_transfer(mediated_transfer)
+            channel.register_transfer(
+                self.raiden.get_block_number(),
+                mediated_transfer,
+            )
             self.raiden.send_async(receiver, mediated_transfer)
 
         elif isinstance(event, SendRevealSecret):
@@ -149,7 +152,10 @@ class StateMachineEventHandler(object):
             )
 
             self.raiden.sign(refund_transfer)
-            channel.register_transfer(refund_transfer)
+            channel.register_transfer(
+                self.raiden.get_block_number(),
+                refund_transfer,
+            )
             self.raiden.send_async(receiver, refund_transfer)
 
         elif isinstance(event, EventTransferSentSuccess):

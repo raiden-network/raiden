@@ -65,11 +65,18 @@ def test_close_only_participant_can_close(tester_nettingcontracts):
         nettingchannel.close('', sender=nonparticipant_key)
 
 
-def test_close_first_argument_is_for_partner_transfer(tester_channels):
+def test_close_first_argument_is_for_partner_transfer(tester_state, tester_channels):
     """ Close must not accept a transfer from the closing address. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=90, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=90,
+        pkey=pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
     with pytest.raises(TransactionFailed):
@@ -189,7 +196,14 @@ def test_close_tampered_identifier(tester_state, tester_channels):
     """ Messages with a tampered identifier must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=90, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=90,
+        pkey=pkey0,
+    )
     transfer0_data = transfer0.encode()
 
     tampered_transfer = DirectTransfer.decode(transfer0_data)
@@ -204,7 +218,14 @@ def test_close_tampered_nonce(tester_state, tester_channels):
     """ Messages with a tampered nonce must be rejected. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=90, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=90,
+        pkey=pkey0,
+    )
     transfer0_data = transfer0.encode()
 
     tampered_transfer = DirectTransfer.decode(transfer0_data)
