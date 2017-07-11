@@ -522,9 +522,15 @@ class Channel(object):
 
                 raise InvalidLocksRoot(expected_locksroot, transfer.locksroot)
 
-            # For the sender: If the lock expires after the settle_period a
-            # secret could be revealed after the channel is settled and we
-            # won't be able to claim the token.
+            # For mediators: This is registering the *mediator* paying
+            # transfer. The expiration of the lock must be `reveal_timeout`
+            # blocks smaller than the *received* paying transfer. This cannot
+            # be checked by the paying channel alone.
+            #
+            # For the initiators: As there is no backing transfer, the
+            # expiration is arbitrary, using the channel settle_timeout as an
+            # upper limit because the node receiving the transfer will use it
+            # as an upper bound while mediating.
             #
             # For the receiver: A lock that expires after the settle period
             # just means there is more time to withdraw it.
