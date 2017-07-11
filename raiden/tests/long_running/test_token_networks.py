@@ -31,13 +31,7 @@ def test_close_raiden_app_leave_channels(
     if blockchain_type == 'tester':
         return
     for app in raiden_network:
-        app.stop(leave_channels=True)
-        for path in [
-            app.raiden.channels_serialization_path,
-            app.raiden.channels_queue_path,
-            app.raiden.transfer_states_path,
-        ]:
-            assert os.path.exists(path)
+        assert os.path.exists(app.raiden.serialization_file)
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
