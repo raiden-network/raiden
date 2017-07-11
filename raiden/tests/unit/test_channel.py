@@ -300,7 +300,10 @@ def test_python_channel():
         identifier=1,
     )
     directtransfer.sign(privkey1, address1)
-    test_channel.register_transfer(directtransfer)
+    test_channel.register_transfer(
+        block_number,
+        directtransfer,
+    )
 
     assert test_channel.contract_balance == balance1
     assert test_channel.balance == balance1 - amount1
@@ -329,7 +332,10 @@ def test_python_channel():
     )
     mediatedtransfer.sign(privkey1, address1)
 
-    test_channel.register_transfer(mediatedtransfer)
+    test_channel.register_transfer(
+        block_number,
+        mediatedtransfer,
+    )
 
     assert test_channel.contract_balance == balance1
     assert test_channel.balance == balance1 - amount1
@@ -441,8 +447,14 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
 
         # synchronized registration
         app0.raiden.sign(mediated_transfer)
-        channel0.register_transfer(mediated_transfer)
-        channel1.register_transfer(mediated_transfer)
+        channel0.register_transfer(
+            block_number,
+            mediated_transfer,
+        )
+        channel1.register_transfer(
+            block_number,
+            mediated_transfer,
+        )
 
         # update test state
         distributed_amount += amount
@@ -538,8 +550,14 @@ def test_transfer(raiden_network, token_addresses):
         identifier=1,
     )
     app0.raiden.sign(direct_transfer)
-    channel0.register_transfer(direct_transfer)
-    channel1.register_transfer(direct_transfer)
+    channel0.register_transfer(
+        app0.raiden.get_block_number(),
+        direct_transfer,
+    )
+    channel1.register_transfer(
+        app1.raiden.get_block_number(),
+        direct_transfer,
+    )
 
     # check the contract is intact
     assert details0 == netting_channel.detail(address0)
@@ -588,8 +606,14 @@ def test_locked_transfer(raiden_network, settle_timeout):
         hashlock=hashlock,
     )
     app0.raiden.sign(mediated_transfer)
-    channel0.register_transfer(mediated_transfer)
-    channel1.register_transfer(mediated_transfer)
+    channel0.register_transfer(
+        app0.raiden.chain.block_number(),
+        mediated_transfer,
+    )
+    channel1.register_transfer(
+        app1.raiden.chain.block_number(),
+        mediated_transfer,
+    )
 
     # don't update balances but update the locked/distributable/outstanding
     # values
@@ -649,8 +673,14 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 
     # register a locked transfer
     app0.raiden.sign(transfer1)
-    channel0.register_transfer(transfer1)
-    channel1.register_transfer(transfer1)
+    channel0.register_transfer(
+        app0.raiden.chain.block_number(),
+        transfer1,
+    )
+    channel1.register_transfer(
+        app1.raiden.chain.block_number(),
+        transfer1,
+    )
 
     # assert the locked transfer is registered
     assert_synched_channels(
@@ -671,10 +701,16 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 
     # this need to fail because the allowance is incorrect
     with pytest.raises(Exception):
-        channel0.register_transfer(transfer2)
+        channel0.register_transfer(
+            app0.raiden.chain.block_number(),
+            transfer2,
+        )
 
     with pytest.raises(Exception):
-        channel1.register_transfer(transfer2)
+        channel1.register_transfer(
+            app1.raiden.chain.block_number(),
+            transfer2,
+        )
 
     # the registration of a bad transfer need fail equaly on both channels
     assert_synched_channels(

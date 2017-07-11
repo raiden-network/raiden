@@ -252,6 +252,15 @@ class Channel(object):
     def outstanding(self):
         return self.our_state.locked()
 
+    def get_settle_expiration(self, block_number):
+        closed_block = self.external_state.closed_block
+        if closed_block != 0:
+            blocks_until_settlement = closed_block + self.settle_timeout
+        else:
+            blocks_until_settlement = block_number + self.settle_timeout
+
+        return blocks_until_settlement
+
     def channel_closed(self, block_number):  # pylint: disable=unused-argument
         balance_proof = self.our_state.balance_proof
         transfer = balance_proof.transfer
@@ -412,11 +421,12 @@ class Channel(object):
 
         self.our_state.release_lock(self.partner_state, secret)
 
-    def register_transfer(self, transfer):
+    def register_transfer(self, block_number, transfer):
         """ Register a signed transfer, updating the channel's state accordingly. """
 
         if transfer.recipient == self.partner_state.address:
             self.register_transfer_from_to(
+                block_number,
                 transfer,
                 from_state=self.our_state,
                 to_state=self.partner_state,
@@ -426,6 +436,7 @@ class Channel(object):
 
         elif transfer.recipient == self.our_state.address:
             self.register_transfer_from_to(
+                block_number,
                 transfer,
                 from_state=self.partner_state,
                 to_state=self.our_state,
@@ -442,7 +453,13 @@ class Channel(object):
                 )
             raise UnknownAddress(transfer)
 
-    def register_transfer_from_to(self, transfer, from_state, to_state):  # noqa pylint: disable=too-many-branches,too-many-statements
+    def register_transfer_from_to(
+            self,
+            block_number,
+            transfer,
+            from_state,
+            to_state):  # noqa pylint: disable=too-many-branches,too-many-statements
+
         """ Validates and register a signed transfer, updating the channel's state accordingly.
 
         Note:
@@ -513,7 +530,7 @@ class Channel(object):
             #
             # For the receiver: A lock that expires after the settle period
             # just means there is more time to withdraw it.
-            end_settle_period = self.block_number + self.settle_timeout
+            end_settle_period = self.get_settle_expiration(self.block_number)
             expires_after_settle = transfer.lock.expiration > end_settle_period
             is_sender = transfer.sender == self.our_address
 

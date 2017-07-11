@@ -357,7 +357,10 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
                 hashlock,
             )
             raiden.sign(from_mediated_transfer)
-            from_channel.register_transfer(from_mediated_transfer)
+            from_channel.register_transfer(
+                raiden.get_block_number(),
+                from_mediated_transfer,
+            )
 
             # wait for the SecretRequest and MediatedTransfer
             to_mediated_transfer = self.send_and_wait_valid_state(
@@ -377,7 +380,10 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
                 to_hop = to_mediated_transfer.sender
                 to_channel = to_graph.partneraddress_channel[to_hop]
 
-                to_channel.register_transfer(to_mediated_transfer)
+                to_channel.register_transfer(
+                    raiden.get_block_number(),
+                    to_mediated_transfer,
+                )
                 raiden.register_channel_for_hashlock(to_token, to_channel, hashlock)
 
                 # A swap is composed of two mediated transfers, we need to
@@ -578,7 +584,10 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
         to_graph = raiden.channelgraphs[maker_receiving_token]
 
         # update the channel's distributable and merkle tree
-        from_channel.register_transfer(maker_paying_transfer)
+        from_channel.register_transfer(
+            raiden.get_block_number(),
+            maker_paying_transfer,
+        )
 
         # register the task to receive Refund/Secrect/RevealSecret messages
         raiden.greenlet_task_dispatcher.register_task(self, hashlock)
@@ -646,7 +655,10 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
                 hashlock,
             )
             raiden.sign(taker_paying_transfer)
-            taker_paying_channel.register_transfer(taker_paying_transfer)
+            taker_paying_channel.register_transfer(
+                raiden.get_block_number(),
+                taker_paying_transfer,
+            )
 
             if not first_transfer:
                 first_transfer = taker_paying_transfer
@@ -682,7 +694,10 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
                     raiden.greenlet_task_dispatcher.unregister_task(self, hashlock, False)
                     return
                 else:
-                    taker_paying_channel.register_transfer(response)
+                    taker_paying_channel.register_transfer(
+                        raiden.get_block_number(),
+                        response,
+                    )
 
             elif isinstance(response, RevealSecret):
                 # the secret was registered by the message handler

@@ -2,28 +2,29 @@
 import pytest
 
 from raiden.blockchain.abi import (
-    HUMAN_TOKEN_ABI,
-    CHANNEL_MANAGER_ABI,
-    NETTING_CHANNEL_ABI,
-    REGISTRY_ABI,
+    CONTRACT_MANAGER,
+    CONTRACT_CHANNEL_MANAGER,
+    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CONTRACT_NETTING_CHANNEL,
+    CONTRACT_REGISTRY,
 )
 
 
 @pytest.fixture(scope='session')
 def token_abi():
-    return HUMAN_TOKEN_ABI
+    return CONTRACT_MANAGER.get_abi(CONTRACT_HUMAN_STANDARD_TOKEN)
 
 
 @pytest.fixture(scope='session')
 def registry_abi():
-    return REGISTRY_ABI
+    return CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY)
 
 
 @pytest.fixture(scope='session')
 def channel_manager_abi():
-    return CHANNEL_MANAGER_ABI
+    return CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER)
 
 
 @pytest.fixture(scope='session')
 def netting_channel_abi():
-    return NETTING_CHANNEL_ABI
+    return CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL)

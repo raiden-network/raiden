@@ -1,0 +1,3 @@
+{% for item in groups['role_raiden'] %}
+0x{{ hostvars[item]['keystore_content']['address'] }}
+{% endfor %}

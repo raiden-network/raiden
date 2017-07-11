@@ -120,12 +120,16 @@ OPTIONS = [
         default=True,
     ),
     click.option(
-        '--api-port',
-        help=(
-            'Port for the RPC server to run from'
-        ),
-        default=5001,
-        type=int,
+        '--api-address',
+        help='"host:port" for the RPC server to listen on.',
+        default="127.0.0.1:5001",
+        type=str,
+    ),
+    click.option(
+        '--password-file',
+        help='Text file containing password for provided account',
+        default=None,
+        type=click.File(lazy=True),
     ),
 ]
 
@@ -147,14 +151,15 @@ def app(address,
         discovery_contract_address,
         listen_address,
         rpccorsdomain,  # pylint: disable=unused-argument
-        socket,
+        mapped_socket,
         logging,
         logfile,
         max_unresponsive_time,
         send_ping_time,
-        api_port,
+        api_address,
         rpc,
-        console):
+        console,
+        password_file):
 
     from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
@@ -163,14 +168,24 @@ def app(address,
 
     # config_file = args.config_file
     (listen_host, listen_port) = split_endpoint(listen_address)
+    (api_host, api_port) = split_endpoint(api_address)
 
     config = App.DEFAULT_CONFIG.copy()
     config['host'] = listen_host
     config['port'] = listen_port
     config['console'] = console
     config['rpc'] = rpc
+    config['api_host'] = api_host
     config['api_port'] = api_port
-    config['socket'] = socket
+
+    if mapped_socket:
+        config['socket'] = mapped_socket.socket
+        config['external_ip'] = mapped_socket.external_ip
+        config['external_port'] = mapped_socket.external_port
+    else:
+        config['socket'] = None
+        config['external_ip'] = listen_host
+        config['external_port'] = listen_port
 
     retries = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
     config['protocol']['nat_keepalive_retries'] = retries
@@ -204,29 +219,44 @@ def app(address,
 
         address = addresses[idx]
 
-    unlock_tries = 3
-    while True:
+    password = None
+    if password_file:
+        password = password_file.read().splitlines()[0]
+    if password:
         try:
-            privatekey_bin = accmgr.get_privkey(address)
-            break
+            privatekey_bin = accmgr.get_privkey(address, password)
         except ValueError as e:
             # ValueError exception raised if the password is incorrect
-            if unlock_tries == 0:
-                print('Exhausted passphrase unlock attempts for {}. Aborting ...'.format(address))
-                sys.exit(1)
+            print('Incorret password for {} in file. Aborting ...'.format(address))
+            sys.exit(1)
+    else:
+        unlock_tries = 3
+        while True:
+            try:
+                privatekey_bin = accmgr.get_privkey(address)
+                break
+            except ValueError as e:
+                # ValueError exception raised if the password is incorrect
+                if unlock_tries == 0:
+                    print(
+                        'Exhausted passphrase unlock attempts for {}. Aborting ...'.format(address)
+                    )
+                    sys.exit(1)
 
-            print(
-                'Incorrect passphrase to unlock the private key. {} tries remaining. '
-                'Please try again or kill the process to quit. '
-                'Usually Ctrl-c.'.format(unlock_tries)
-            )
-            unlock_tries -= 1
+                print(
+                    'Incorrect passphrase to unlock the private key. {} tries remaining. '
+                    'Please try again or kill the process to quit. '
+                    'Usually Ctrl-c.'.format(unlock_tries)
+                )
+                unlock_tries -= 1
 
     privatekey_hex = privatekey_bin.encode('hex')
     config['privatekey_hex'] = privatekey_hex
 
     endpoint = eth_rpc_endpoint
 
+    # Fallback default port if only an IP address is given
+    rpc_port = 8545
     if eth_rpc_endpoint.startswith("http://"):
         endpoint = eth_rpc_endpoint[len("http://"):]
         rpc_port = 80
@@ -281,22 +311,17 @@ def run(ctx, **kwargs):
     from raiden.api.python import RaidenAPI
     from raiden.ui.console import Console
 
+    slogging.configure(kwargs['logging'], log_file=kwargs['logfile'])
+
     # TODO:
     # - Ask for confirmation to quit if there are any locked transfers that did
     # not timeout.
     (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
     with socket_factory(listen_host, listen_port) as mapped_socket:
-        kwargs['socket'] = mapped_socket.socket
+        kwargs['mapped_socket'] = mapped_socket
 
         app_ = ctx.invoke(app, **kwargs)
 
-        # spawn address registration to avoid block while waiting for the next block
-        registry_event = gevent.spawn(
-            app_.discovery.register,
-            app_.raiden.address,
-            mapped_socket.external_ip,
-            mapped_socket.external_port,
-        )
         app_.raiden.register_registry(app_.raiden.chain.default_registry.address)
 
         domain_list = []
@@ -311,19 +336,22 @@ def run(ctx, **kwargs):
             raiden_api = RaidenAPI(app_.raiden)
             rest_api = RestAPI(raiden_api)
             api_server = APIServer(rest_api, cors_domain_list=domain_list)
+            (api_host, api_port) = split_endpoint(kwargs["api_address"])
 
             Greenlet.spawn(
                 api_server.run,
-                ctx.params['api_port'],
+                api_host,
+                api_port,
                 debug=False,
                 use_evalex=False
             )
 
             print(
-                "The RPC server is now running at http://localhost:{}/.\n\n"
+                "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
                 "See the Raiden documentation for all available endpoints at\n"
                 "https://github.com/raiden-network/raiden/blob/master/docs/Rest-Api.rst".format(
-                    ctx.params['api_port'],
+                    api_host,
+                    api_port,
                 )
             )
 
@@ -331,7 +359,6 @@ def run(ctx, **kwargs):
             console = Console(app_)
             console.start()
 
-        registry_event.join()
         # wait for interrupt
         event = gevent.event.Event()
         gevent.signal(signal.SIGQUIT, event.set)

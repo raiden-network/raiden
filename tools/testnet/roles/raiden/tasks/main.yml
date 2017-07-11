@@ -1,0 +1,26 @@
+- name: Raiden docker container
+  docker_container:
+    name: testnet_raiden
+    state: started
+    restart_policy: always
+    pull: yes
+    image: "{{ docker_repo_raiden }}"
+    ports:
+      - 40001:40001/udp
+      - 5001:5001
+    volumes:
+      - "{{ raiden_root }}:/root/.raiden"
+    command:
+      - "--eth-nodes"
+      - "{{ ','.join(groups['private_ips_eth_nodes']) }}"
+      - "--seed"
+      - "{{ private_ip }}"
+      - "--"
+      - "--api-address"
+      - "0.0.0.0:5001"
+      - "--keystore-path"
+      - "/root/.raiden/keystore"
+      - "--address"
+      - "{{ keystore_address }}"
+      - "--password-file"
+      - "/root/.raiden/password"

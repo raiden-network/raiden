@@ -42,7 +42,7 @@ def api_backend(rest_api_port_number):
     # TODO: Find out why tests fail with debug=True
     server = Greenlet.spawn(
         api_server.run,
-        rest_api_port_number,
+        port=rest_api_port_number,
         debug=False,
         use_evalex=False,
     )
@@ -73,6 +73,8 @@ def api_raiden_service(
 
     config['port'] = raiden_udp_ports[0]
     config['host'] = '127.0.0.1'
+    config['external_ip'] = '127.0.0.1'
+    config['external_port'] = raiden_udp_ports[0]
     config['privatekey_hex'] = blockchain.private_key.encode('hex')
     config['reveal_timeout'] = reveal_timeout
     config['database_path'] = os.path.join(tmpdir.strpath, 'database.db')

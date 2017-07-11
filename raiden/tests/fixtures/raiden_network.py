@@ -35,6 +35,7 @@ def raiden_chain(
         deposit,
         settle_timeout,
         blockchain_services,
+        endpoint_discovery_services,
         raiden_udp_ports,
         transport_class,
         cached_genesis,
@@ -59,6 +60,7 @@ def raiden_chain(
     verbosity = request.config.option.verbose
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
+        endpoint_discovery_services,
         raiden_udp_ports,
         transport_class,
         verbosity,
@@ -99,6 +101,7 @@ def raiden_network(
         deposit,
         settle_timeout,
         blockchain_services,
+        endpoint_discovery_services,
         raiden_udp_ports,
         transport_class,
         cached_genesis,
@@ -116,6 +119,7 @@ def raiden_network(
 
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
+        endpoint_discovery_services,
         raiden_udp_ports,
         transport_class,
         verbosity,

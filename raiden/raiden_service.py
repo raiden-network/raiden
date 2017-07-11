@@ -165,12 +165,19 @@ class RaidenService(object):
         alarm.register_callback(lambda _: self.poll_blockchain_events())
         alarm.register_callback(self.set_block_number)
 
-        alarm.start()
-
         self.transaction_log = StateChangeLog(
             storage_instance=StateChangeLogSQLiteBackend(
                 database_path=config['database_path']
             )
+        )
+
+        alarm.start()
+
+        registry_event = gevent.spawn(
+            discovery.register,
+            self.address,
+            config['external_ip'],
+            config['external_port'],
         )
 
         self.channels_serialization_path = None
@@ -218,6 +225,8 @@ class RaidenService(object):
         self.on_message = message_handler.on_message
 
         self.tokens_connectionmanagers = dict()  # token_address: ConnectionManager
+
+        registry_event.join()
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -844,7 +853,10 @@ class RaidenService(object):
         else:
             direct_transfer = direct_channel.create_directtransfer(amount, identifier)
             self.sign(direct_transfer)
-            direct_channel.register_transfer(direct_transfer)
+            direct_channel.register_transfer(
+                self.get_block_number(),
+                direct_transfer,
+            )
 
             direct_transfer_state_change = ActionTransferDirect(
                 identifier,

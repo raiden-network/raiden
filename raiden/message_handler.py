@@ -206,7 +206,10 @@ class RaidenMessageHandler(object):
         )
         state_change_id = self.raiden.transaction_log.log(state_change)
 
-        channel.register_transfer(message)
+        channel.register_transfer(
+            self.raiden.get_block_number(),
+            message,
+        )
 
         receive_success = EventTransferReceivedSuccess(
             message.identifier,
@@ -254,7 +257,11 @@ class RaidenMessageHandler(object):
                 )
             )
 
-        channel.register_transfer(message)  # raises if the message is invalid
+        # raises if the message is invalid
+        channel.register_transfer(
+            self.raiden.get_block_number(),
+            message
+        )
 
         if message.target == self.raiden.address:
             self.raiden.target_mediated_transfer(message)

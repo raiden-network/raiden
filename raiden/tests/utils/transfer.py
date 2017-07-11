@@ -140,8 +140,15 @@ def pending_mediated_transfer(app_chain, token, amount, identifier, expiration):
             hashlock,
         )
         from_app.raiden.sign(transfer_)
-        from_channel.register_transfer(transfer_)
-        to_channel.register_transfer(transfer_)
+
+        from_channel.register_transfer(
+            from_app.raiden.get_block_number(),
+            transfer_,
+        )
+        to_channel.register_transfer(
+            to_app.raiden.get_block_number(),
+            transfer_,
+        )
 
     return secret
 
@@ -265,7 +272,7 @@ def increase_transferred_amount(from_channel, to_channel, amount):
     to_channel.partner_state.transferred_amount += amount
 
 
-def make_direct_transfer_from_channel(channel, partner_channel, amount, pkey):
+def make_direct_transfer_from_channel(block_number, channel, partner_channel, amount, pkey):
     """ Helper to create and register a direct transfer from `channel` to
     `partner_channel`.
     """
@@ -283,8 +290,14 @@ def make_direct_transfer_from_channel(channel, partner_channel, amount, pkey):
     # if this fails it's not the right key for the current `channel`
     assert direct_transfer.sender == channel.our_state.address
 
-    channel.register_transfer(direct_transfer)
-    partner_channel.register_transfer(direct_transfer)
+    channel.register_transfer(
+        block_number,
+        direct_transfer,
+    )
+    partner_channel.register_transfer(
+        block_number,
+        direct_transfer,
+    )
 
     return direct_transfer
 
@@ -325,8 +338,14 @@ def make_mediated_transfer(
     # if this fails it's not the right key for the current `channel`
     assert mediated_transfer.sender == channel.our_state.address
 
-    channel.register_transfer(mediated_transfer)
-    partner_channel.register_transfer(mediated_transfer)
+    channel.register_transfer(
+        block_number,
+        mediated_transfer,
+    )
+    partner_channel.register_transfer(
+        block_number,
+        mediated_transfer,
+    )
 
     if secret is not None:
         channel.register_secret(secret)

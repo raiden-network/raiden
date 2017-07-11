@@ -18,13 +18,15 @@ from raiden.utils import (
     privatekey_to_address,
 )
 from raiden.blockchain.abi import (
-    TOKENADDED_EVENTID,
-    CHANNEL_MANAGER_ABI,
-    CHANNELNEW_EVENTID,
-    ENDPOINT_REGISTRY_ABI,
-    HUMAN_TOKEN_ABI,
-    NETTING_CHANNEL_ABI,
-    REGISTRY_ABI,
+    CONTRACT_MANAGER,
+    CONTRACT_CHANNEL_MANAGER,
+    CONTRACT_ENDPOINT_REGISTRY,
+    CONTRACT_HUMAN_STANDARD_TOKEN,
+    CONTRACT_NETTING_CHANNEL,
+    CONTRACT_REGISTRY,
+
+    EVENT_CHANNEL_NEW,
+    EVENT_TOKEN_ADDED,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -200,6 +202,7 @@ class BlockChainServiceTesterMock(object):
 
         self.address = privatekey_to_address(private_key)
         self.private_key = private_key
+        self.node_address = privatekey_to_address(private_key)
         self.default_registry = default_registry
 
         self.address_token = dict()
@@ -335,7 +338,7 @@ class DiscoveryTesterMock(object):
 
         self.proxy = tester.ABIContract(
             tester_state,
-            ENDPOINT_REGISTRY_ABI,
+            CONTRACT_MANAGER.get_abi(CONTRACT_ENDPOINT_REGISTRY),
             address,
             default_key=private_key,
         )
@@ -376,7 +379,7 @@ class TokenTesterMock(object):
 
         self.proxy = tester.ABIContract(
             tester_state,
-            HUMAN_TOKEN_ABI,
+            CONTRACT_MANAGER.get_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             address,
             default_key=private_key,
         )
@@ -406,7 +409,7 @@ class RegistryTesterMock(object):
 
         self.registry_proxy = tester.ABIContract(
             self.tester_state,
-            REGISTRY_ABI,
+            CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
             self.address,
             default_key=private_key,
         )
@@ -439,7 +442,7 @@ class RegistryTesterMock(object):
 
     def tokenadded_filter(self, **kwargs):
         """May also receive from_block, to_block but they are not used here"""
-        topics = [TOKENADDED_EVENTID]
+        topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
         filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
@@ -456,7 +459,7 @@ class ChannelManagerTesterMock(object):
 
         self.proxy = tester.ABIContract(
             tester_state,
-            CHANNEL_MANAGER_ABI,
+            CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
             address,
             default_key=private_key,
         )
@@ -524,7 +527,7 @@ class ChannelManagerTesterMock(object):
         return result
 
     def channelnew_filter(self):
-        topics = [CHANNELNEW_EVENTID]
+        topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW)]
         filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
@@ -541,7 +544,7 @@ class NettingChannelTesterMock(object):
 
         self.proxy = tester.ABIContract(
             tester_state,
-            NETTING_CHANNEL_ABI,
+            CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
             address,
             default_key=private_key,
         )
