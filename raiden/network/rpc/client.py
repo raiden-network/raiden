@@ -631,7 +631,10 @@ class Registry(object):
 
     def manager_address_by_token(self, token_address):
         """ Return the channel manager address for the given token. """
-        return self.proxy.channelManagerByToken.call(token_address)
+        manager_address_encoded = self.proxy.channelManagerByToken.call(token_address)
+        if not manager_address_encoded or manager_address_encoded == '0x':
+            manager_address_encoded = self.add_token(token_address)
+        return manager_address_encoded
 
     def add_token(self, token_address):
         transaction_hash = estimate_and_transact(
@@ -664,6 +667,8 @@ class Registry(object):
             registry_address=pex(self.address),
             channel_manager_address=pex(channel_manager_address_bin),
         )
+
+        return channel_manager_address_encoded
 
     def token_addresses(self):
         return [
