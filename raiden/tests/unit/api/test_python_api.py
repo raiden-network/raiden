@@ -9,6 +9,9 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.exceptions import NoPathError
 from raiden.api.python import RaidenAPI
+from raiden.transfer.state import (
+    CHANNEL_STATE_CLOSED,
+)
 
 # Use a large enough settle timeout to have valid transfer messages
 TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
@@ -156,3 +159,59 @@ def test_api_channel_events(raiden_chain):
         channel_0_1.channel_address, max_block + 1, max_block + 100
     )
     assert not results
+
+
+@pytest.mark.parametrize('blockchain_type', ['geth'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.parametrize('register_tokens', [True, False])
+@pytest.mark.parametrize('settle_timeout', [600])
+def test_channel_open_close(raiden_network, token_addresses, register_tokens, settle_timeout):
+    app0, app1 = raiden_network
+
+    opening_address = app0.raiden.address
+    partner_address = app1.raiden.address
+
+    token_address = token_addresses[0]
+
+    api0 = RaidenAPI(app0.raiden)
+    api1 = RaidenAPI(app1.raiden)
+
+    if register_tokens:
+        assert token_address in app0.raiden.chain.default_registry.token_addresses()
+    else:
+        assert token_address not in app0.raiden.chain.default_registry.token_addresses()
+
+    api0.open(
+        token_address,
+        partner_address,
+        settle_timeout,
+    )
+
+    # wait for the taker to receive and process the messages
+    gevent.sleep(1)
+
+    channel0 = channel(app0, app1, token_address)
+    channel1 = channel(app1, app0, token_address)
+
+    assert channel0 in api0.get_channel_list(
+        partner_address=partner_address,
+        token_address=token_address,
+    )
+    assert channel1 in api1.get_channel_list(
+        partner_address=opening_address,
+        token_address=token_address,
+    )
+
+    api0.close(token_address, partner_address)
+
+    gevent.sleep(1)
+
+    assert all(channel.state == CHANNEL_STATE_CLOSED for channel in api0.get_channel_list(
+        partner_address=partner_address,
+        token_address=token_address,
+    ))
+    assert all(channel.state == CHANNEL_STATE_CLOSED for channel in api1.get_channel_list(
+        partner_address=opening_address,
+        token_address=token_address,
+    ))
