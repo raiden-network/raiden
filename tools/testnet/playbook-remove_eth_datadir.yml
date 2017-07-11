@@ -1,0 +1,26 @@
+- hosts: role_eth
+  gather_facts: no
+  tasks:
+    - name: Stop container
+      docker_container:
+        name: "testnet_{{ item }}"
+        state: stopped
+      ignore_errors: yes
+      with_items:
+        - geth
+        - parity
+
+    - name: Destroy eth data dir
+      become: true
+      file:
+        name: "{{ eth_data_dir_base }}/{{ item }}"
+        state: absent
+      with_items:
+        - geth
+        - parity
+
+    - name: Start container
+      docker_container:
+        name: "testnet_{{ eth_node_type }}"
+        state: started
+      ignore_errors: yes

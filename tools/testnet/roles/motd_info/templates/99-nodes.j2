@@ -1,0 +1,16 @@
+#!/bin/sh
+
+echo
+echo "Public IP:  {{ ansible_host }}"
+echo "Private IP: {{ private_ip }}"
+echo "Role:       {{ hostvars[ansible_host]['tags.Role'] }}"
+echo
+
+echo "Available nodes:"
+{% for name, group in display_groups.items()|sort %}
+    echo "{{ name }}:"
+    {% for item in groups[group]|sort %}
+        echo "  - {{ item }}"
+    {% endfor %}
+    echo
+{% endfor %}

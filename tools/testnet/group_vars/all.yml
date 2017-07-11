@@ -1,0 +1,17 @@
+ansible_user: ubuntu
+aws_account: 147258760518
+
+# either "geth" or "parity"
+eth_node_type: parity
+eth_data_dir_base: "/data"
+
+docker_channel: edge
+docker_version: "17.05.0-ce"
+
+docker_repo_empty:      "{{ aws_account }}.dkr.ecr.us-east-1.amazonaws.com/brainbot/empty"
+docker_repo_eth_parity: "parity/parity:beta"
+docker_repo_eth_geth:   "{{ aws_account }}.dkr.ecr.us-east-1.amazonaws.com/brainbot/geth-testnet"
+docker_repo_mkkeystore: "{{ aws_account }}.dkr.ecr.us-east-1.amazonaws.com/brainbot/mkkeystore"
+docker_repo_raiden:     "{{ aws_account }}.dkr.ecr.us-east-1.amazonaws.com/brainbot/raiden"
+
+raiden_root: /etc/raiden
