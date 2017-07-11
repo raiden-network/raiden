@@ -79,7 +79,14 @@ def test_settle_single_direct_transfer_for_closing_party(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount = 90
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount, pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount,
+        pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
     nettingchannel.close(transfer0_data, sender=pkey1)
@@ -112,7 +119,14 @@ def test_settle_single_direct_transfer_for_counterparty(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount = 90
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount, pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount,
+        pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -144,11 +158,25 @@ def test_settle_two_direct_transfers(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount0 = 10
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount0, pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount0,
+        pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
     amount1 = 30
-    transfer1 = make_direct_transfer_from_channel(channel1, channel0, amount1, pkey1)
+    block_number = tester_state.block.number
+    transfer1 = make_direct_transfer_from_channel(
+        block_number,
+        channel1,
+        channel0,
+        amount1,
+        pkey1,
+    )
     transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close(transfer1_data, sender=pkey0)
@@ -353,10 +381,24 @@ def test_two_direct_transfers(
     initial1 = tester_token.balanceOf(address1, sender=pkey0)
 
     first_amount0 = 90
-    make_direct_transfer_from_channel(channel0, channel1, first_amount0, pkey0)
+    block_number = tester_state.block.number
+    make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        first_amount0,
+        pkey0,
+    )
 
     second_amount0 = 90
-    second_direct0 = make_direct_transfer_from_channel(channel0, channel1, second_amount0, pkey0)
+    block_number = tester_state.block.number
+    second_direct0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        second_amount0,
+        pkey0,
+    )
     second_direct0_data = str(second_direct0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -391,7 +433,14 @@ def test_mediated_after_direct_transfer(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     first_amount0 = 90
-    make_direct_transfer_from_channel(channel0, channel1, first_amount0, pkey0)
+    block_number = tester_state.block.number
+    make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        first_amount0,
+        pkey0,
+    )
 
     lock_expiration = tester_state.block.number + reveal_timeout + 5
     new_block = Block(tester_state.block.number)
@@ -440,11 +489,25 @@ def test_settlement_with_unauthorized_token_transfer(
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
     amount0 = 10
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount0, pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount0,
+        pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
     amount1 = 30
-    transfer1 = make_direct_transfer_from_channel(channel1, channel0, amount1, pkey1)
+    block_number = tester_state.block.number
+    transfer1 = make_direct_transfer_from_channel(
+        block_number,
+        channel1,
+        channel0,
+        amount1,
+        pkey1,
+    )
     transfer1_data = str(transfer1.packed().data)
 
     extra_amount = 10
@@ -483,12 +546,26 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_state, tester_
 
     amount0 = 10
     transferred_amount0 += amount0
-    direct0 = make_direct_transfer_from_channel(channel0, channel1, amount0, pkey0)
+    block_number = tester_state.block.number
+    direct0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount0,
+        pkey0,
+    )
     direct0_data = str(direct0.packed().data)
 
     amount1 = 30
     transferred_amount1 += amount1
-    direct1 = make_direct_transfer_from_channel(channel1, channel0, amount1, pkey1)
+    block_number = tester_state.block.number
+    direct1 = make_direct_transfer_from_channel(
+        block_number,
+        channel1,
+        channel0,
+        amount1,
+        pkey1,
+    )
     direct1_data = str(direct1.packed().data)
 
     nettingchannel.close(direct1_data, sender=pkey0)

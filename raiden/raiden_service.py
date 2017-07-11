@@ -853,7 +853,10 @@ class RaidenService(object):
         else:
             direct_transfer = direct_channel.create_directtransfer(amount, identifier)
             self.sign(direct_transfer)
-            direct_channel.register_transfer(direct_transfer)
+            direct_channel.register_transfer(
+                self.get_block_number(),
+                direct_transfer,
+            )
 
             direct_transfer_state_change = ActionTransferDirect(
                 identifier,

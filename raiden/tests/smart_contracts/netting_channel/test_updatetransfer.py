@@ -16,7 +16,14 @@ def test_transfer_update_event(tester_state, tester_channels, tester_events):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     address1 = privatekey_to_address(pkey1)
 
-    direct0 = make_direct_transfer_from_channel(channel0, channel1, amount=90, pkey=pkey0)
+    block_number = tester_state.block.number
+    direct0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=90,
+        pkey=pkey0,
+    )
     direct0_data = str(direct0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -32,11 +39,18 @@ def test_transfer_update_event(tester_state, tester_channels, tester_events):
     }
 
 
-def test_update_fails_on_open_channel(tester_channels):
+def test_update_fails_on_open_channel(tester_state, tester_channels):
     """ Cannot call updateTransfer on a open channel. """
     pkey0, _, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=10,
+        pkey=pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
     with pytest.raises(TransactionFailed):
@@ -47,7 +61,14 @@ def test_update_not_allowed_after_settlement_period(settle_timeout, tester_chann
     """ updateTransfer cannot be called after the settlement period. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    direct0 = make_direct_transfer_from_channel(channel0, channel1, amount=70, pkey=pkey0)
+    block_number = tester_state.block.number
+    direct0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=70,
+        pkey=pkey0,
+    )
     direct0_data = str(direct0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -57,14 +78,28 @@ def test_update_not_allowed_after_settlement_period(settle_timeout, tester_chann
         nettingchannel.updateTransfer(direct0_data, sender=pkey1)
 
 
-def test_update_not_allowed_for_the_closing_address(tester_channels):
+def test_update_not_allowed_for_the_closing_address(tester_state, tester_channels):
     """ Closing address cannot call updateTransfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=10,
+        pkey=pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
-    transfer1 = make_direct_transfer_from_channel(channel1, channel0, amount=10, pkey=pkey1)
+    block_number = tester_state.block.number
+    transfer1 = make_direct_transfer_from_channel(
+        block_number,
+        channel1,
+        channel0,
+        amount=10,
+        pkey=pkey1,
+    )
     transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -110,7 +145,7 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_update_must_fail_with_a_wrong_recipient(tester_channels, private_keys):
     """ updateTransfer must not accept a transfer from a non participant. """
-    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
+    pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
     opened_block = nettingchannel.opened(sender=pkey0)
     nonparticipant_address = privatekey_to_address(private_keys[2])
 
@@ -136,11 +171,18 @@ def test_update_must_fail_with_a_wrong_recipient(tester_channels, private_keys):
         nettingchannel.updateTransfer(transfer_wrong_recipient_data, sender=pkey1)
 
 
-def test_update_called_multiple_times_same_transfer(tester_channels):
+def test_update_called_multiple_times_same_transfer(tester_state, tester_channels):
     """ updateTransfer can be called only once. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=10,
+        pkey=pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -150,14 +192,28 @@ def test_update_called_multiple_times_same_transfer(tester_channels):
         nettingchannel.updateTransfer(transfer0_data, sender=pkey1)
 
 
-def test_update_called_multiple_times_new_transfer(tester_channels):
+def test_update_called_multiple_times_new_transfer(tester_state, tester_channels):
     """ updateTransfer second call must fail even if there is a new transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=10,
+        pkey=pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
-    transfer1 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer1 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=10,
+        pkey=pkey0,
+    )
     transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close('', sender=pkey0)
@@ -167,14 +223,28 @@ def test_update_called_multiple_times_new_transfer(tester_channels):
         nettingchannel.updateTransfer(transfer1_data, sender=pkey1)
 
 
-def test_update_called_multiple_times_older_transfer(tester_channels):
+def test_update_called_multiple_times_older_transfer(tester_state, tester_channels):
     """ updateTransfer second call must fail even if called with an older transfer. """
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
-    transfer0 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer0 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=10,
+        pkey=pkey0,
+    )
     transfer0_data = str(transfer0.packed().data)
 
-    transfer1 = make_direct_transfer_from_channel(channel0, channel1, amount=10, pkey=pkey0)
+    block_number = tester_state.block.number
+    transfer1 = make_direct_transfer_from_channel(
+        block_number,
+        channel0,
+        channel1,
+        amount=10,
+        pkey=pkey0,
+    )
     transfer1_data = str(transfer1.packed().data)
 
     nettingchannel.close('', sender=pkey0)

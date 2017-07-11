@@ -89,8 +89,14 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
         hashlock,
     )
     alice_app.raiden.sign(transfermessage)
-    alice_bob_channel.register_transfer(transfermessage)
-    bob_alice_channel.register_transfer(transfermessage)
+    alice_bob_channel.register_transfer(
+        alice_app.raiden.get_block_number(),
+        transfermessage,
+    )
+    bob_alice_channel.register_transfer(
+        bob_app.raiden.get_block_number(),
+        transfermessage,
+    )
 
     assert_synched_channels(
         alice_bob_channel, alice_deposit, [],
@@ -359,33 +365,54 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
 
     # Alice sends Bob 10 tokens
     amount_alice1 = 10
+    identifier_alice1 = 1
     alice_first_transfer = channel0.create_directtransfer(
         amount_alice1,
-        1  # TODO: fill in identifier
+        identifier_alice1,
     )
     alice_first_transfer.sign(privatekey0, address0)
-    channel0.register_transfer(alice_first_transfer)
-    channel1.register_transfer(alice_first_transfer)
+    channel0.register_transfer(
+        app0.raiden.get_block_number(),
+        alice_first_transfer,
+    )
+    channel1.register_transfer(
+        app1.raiden.get_block_number(),
+        alice_first_transfer,
+    )
 
     # Bob sends Alice 50 tokens
     amount_bob1 = 50
+    identifier_bob1 = 1
     bob_first_transfer = channel1.create_directtransfer(
         amount_bob1,
-        1  # TODO: fill in identifier
+        identifier_bob1,
     )
     bob_first_transfer.sign(privatekey1, address1)
-    channel0.register_transfer(bob_first_transfer)
-    channel1.register_transfer(bob_first_transfer)
+    channel0.register_transfer(
+        app0.raiden.get_block_number(),
+        bob_first_transfer,
+    )
+    channel1.register_transfer(
+        app1.raiden.get_block_number(),
+        bob_first_transfer,
+    )
 
     # Finally Alice sends Bob 60 tokens
+    identifier_alice2 = 2
     amount_alice2 = 60
     alice_second_transfer = channel0.create_directtransfer(
         amount_alice2,
-        1  # TODO: fill in identifier
+        identifier_alice2,
     )
     alice_second_transfer.sign(privatekey0, address0)
-    channel0.register_transfer(alice_second_transfer)
-    channel1.register_transfer(alice_second_transfer)
+    channel0.register_transfer(
+        app0.raiden.get_block_number(),
+        alice_second_transfer,
+    )
+    channel1.register_transfer(
+        app1.raiden.get_block_number(),
+        alice_second_transfer,
+    )
 
     bob_last_transaction = bob_first_transfer
 
