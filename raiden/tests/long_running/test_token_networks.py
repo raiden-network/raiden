@@ -31,6 +31,7 @@ def test_close_raiden_app_leave_channels(
     if blockchain_type == 'tester':
         return
     for app in raiden_network:
+        app.stop(leave_channels=True)
         assert os.path.exists(app.raiden.serialization_file)
 
 
