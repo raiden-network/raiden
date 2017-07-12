@@ -31,8 +31,12 @@ DAGSIZE = 1073739912
 GENESIS_STUB = {
     'config': {
         'homesteadBlock': 0,
+        'eip150Block': 0,
+        'eip150Hash': '0x0000000000000000000000000000000000000000000000000000000000000000',
+        'eip155Block': 0,
+        'eip158Block': 0,
     },
-    'nonce': '0x0000000000000042',
+    'nonce': '0x0',
     'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
     'difficulty': '0x1',
     'coinbase': '0x0000000000000000000000000000000000000000',
@@ -40,6 +44,8 @@ GENESIS_STUB = {
     'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
     'extraData': '0x' + 'raiden'.encode('hex'),
     'gasLimit': GAS_LIMIT_HEX,
+    # add precompile addresses with minimal balance to avoid deletion
+    'alloc': {'%040x' % precompile: {"balance": "0x1"} for precompile in range(256)}
 }
 
 
@@ -144,7 +150,7 @@ def geth_bare_genesis(genesis_path, private_keys):
         for address in account_addresses
     }
     genesis = GENESIS_STUB.copy()
-    genesis['alloc'] = alloc
+    genesis['alloc'].update(alloc)
 
     with open(genesis_path, 'w') as handler:
         json.dump(genesis, handler)
