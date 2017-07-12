@@ -33,8 +33,8 @@ class InitiatorState(State):
         'our_address',
         'transfer',
         'routes',
-        'random_generator',
         'block_number',
+        'random_generator',
         'message',
         'route',
         'secretrequest',
@@ -54,6 +54,25 @@ class InitiatorState(State):
         self.secretrequest = None
         self.revealsecret = None
         self.canceled_transfers = list()
+
+    def __eq__(self, other):
+        if isinstance(other, InitiatorState):
+            return (
+                self.our_address == other.our_address and
+                self.transfer == other.transfer and
+                self.routes == other.routes and
+                self.random_generator == other.random_generator and
+                self.block_number == other.block_number and
+                self.message == other.message and
+                self.route == other.route and
+                self.secretrequest == other.secretrequest and
+                self.revealsecret == other.revealsecret and
+                self.canceled_transfers == other.canceled_transfers
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class MediatorState(State):
@@ -93,6 +112,21 @@ class MediatorState(State):
         # reveal and simplifies secret setting
         self.transfers_pair = list()
 
+    def __eq__(self, other):
+        if isinstance(other, MediatorState):
+            return (
+                self.our_address == other.our_address and
+                self.routes == other.routes and
+                self.block_number == other.block_number and
+                self.hashlock == other.hashlock and
+                self.secret == other.secret and
+                self.transfers_pair == other.transfers_pair
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class TargetState(State):
     """ State of mediated transfer target.  """
@@ -123,7 +157,24 @@ class TargetState(State):
         self.from_transfer = from_transfer
         self.block_number = block_number
 
+        self.secret = None
         self.state = 'secret_request'
+
+    def __eq__(self, other):
+        if isinstance(other, TargetState):
+            return (
+                self.our_address == other.our_address and
+                self.from_route == other.from_route and
+                self.from_transfer == other.from_transfer and
+                self.block_number == other.block_number and
+                self.secret == other.secret and
+                self.state == other.state
+            )
+
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class LockedTransferState(State):
@@ -291,3 +342,19 @@ class MediationPairState(State):
         # the states of each mediated transfer in respect to each channel.
         self.payer_state = 'payer_pending'
         self.payee_state = 'payee_pending'
+
+    def __eq__(self, other):
+        if isinstance(other, MediationPairState):
+            return (
+                self.payee_route == other.payee_route and
+                self.payee_transfer == other.payee_transfer and
+                self.payee_state == other.payee_state and
+
+                self.payer_route == other.payer_route and
+                self.payer_transfer == other.payer_transfer and
+                self.payer_state == other.payer_state
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

@@ -94,7 +94,7 @@ class RaidenAPI(object):
             self.raiden.chain.default_registry.add_token(token_address)
 
             # wait for registration
-            while token_address not in self.raiden.tokens_connectionmanagers:
+            while token_address not in self.raiden.tokens_to_connectionmanagers:
                 gevent.sleep(self.raiden.alarm.wait_time)
             connection_manager = self.raiden.connection_manager_for_token(token_address)
 

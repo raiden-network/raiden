@@ -355,7 +355,7 @@ class DiscoveryTesterMock(object):
         endpoint = self.proxy.findEndpointByAddress(node_address_hex)
 
         if endpoint is '':
-            raise KeyError('Unknow address {}'.format(pex(node_address_bin)))
+            raise KeyError('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
 

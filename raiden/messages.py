@@ -425,6 +425,14 @@ class Lock(MessageHashable):
             packed.hashlock,
         )
 
+    def __eq__(self, other):
+        if isinstance(other, Lock):
+            return self.as_bytes == other.as_bytes
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class LockedTransfer(SignedMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if

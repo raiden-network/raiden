@@ -158,7 +158,6 @@ class ApiTestContext():
             token_address,
             reveal_timeout,
             settle_timeout,
-            block_number,
         )
 
     def make_channel_and_add(self):
