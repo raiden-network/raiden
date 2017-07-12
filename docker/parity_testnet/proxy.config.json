@@ -1,0 +1,12 @@
+[
+  {
+    "context": ["*/*"],
+    "target": "http://parity:8545",
+    "secure": false
+  },
+  {
+    "context": ["*/api/*"],
+    "target": "http://raiden:5001",
+    "secure": false
+  }
+]
