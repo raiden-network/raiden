@@ -126,6 +126,19 @@ OPTIONS = [
         type=str,
     ),
     click.option(
+        '--database-dir',
+        help='Directory for storing raiden data.',
+        default=None,
+        type=click.Path(
+            exists=False,
+            dir_okay=True,
+            file_okay=False,
+            writable=True,
+            resolve_path=True,
+            allow_dash=False,
+        ),
+    ),
+    click.option(
         '--password-file',
         help='Text file containing password for provided account',
         default=None,
@@ -159,7 +172,8 @@ def app(address,
         api_address,
         rpc,
         console,
-        password_file):
+        password_file,
+        database_dir):
 
     from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
@@ -225,7 +239,7 @@ def app(address,
             privatekey_bin = accmgr.get_privkey(address, password)
         except ValueError as e:
             # ValueError exception raised if the password is incorrect
-            print('Incorret password for {} in file. Aborting ...'.format(address))
+            print('Incorrect password for {} in file. Aborting ...'.format(address))
             sys.exit(1)
     else:
         unlock_tries = 3
@@ -292,8 +306,12 @@ def app(address,
         blockchain_service.discovery(discovery_contract_address)
     )
 
-    # default database directory
-    raiden_directory = os.path.join(os.path.expanduser('~'), '.raiden')
+    if database_dir is None:
+        # default database directory
+        raiden_directory = os.path.join(os.path.expanduser('~'), '.raiden')
+    else:
+        raiden_directory = database_dir
+
     if not os.path.exists(raiden_directory):
         os.makedirs(raiden_directory)
     database_path = os.path.join(raiden_directory, 'log.db')
