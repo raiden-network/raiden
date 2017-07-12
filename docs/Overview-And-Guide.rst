@@ -48,7 +48,8 @@ After you have done that you can proceed to install the dependencies::
     pip install --upgrade -r requirements.txt
     python setup.py develop
 
-You will also need an ethereum client that is connected to the Ropsten testnet.  In example, download the parity client::
+You will also need an ethereum client that is connected to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
+
 
 Firing it up
 ------------
@@ -57,7 +58,8 @@ Using geth
 ~~~~~~~~~~
 
 Run the client and let it sync with the Ropsten testnet::
-  geth --testnet --fast --nodiscover console
+
+    geth --testnet --fast --nodiscover console
 
 And then when in the console add a few peers by using ``admin.addPeer()`` and the latest peers shown `here <https://gist.github.com/rfikki/7a95067f8cc02ae8b11bc34544f6aa3e>`_.
 
@@ -82,5 +84,5 @@ After account creation, launch raiden with the path of your keystore supplied an
 
      raiden --keystore-path "~/.local/share/io.parity.ethereum/keys/test" --eth-rpc-endpoint "127.0.0.1:8545"
 
-Select the ethereum account when prompted, and type in the account's password. 
+Select the ethereum account when prompted, and type in the account's password.
  
