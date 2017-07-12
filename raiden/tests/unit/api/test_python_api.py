@@ -49,7 +49,6 @@ def test_get_channel_list(raiden_network, token_addresses):
         )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('channels_per_node', [0])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('register_tokens', [False])

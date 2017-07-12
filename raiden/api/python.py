@@ -80,13 +80,11 @@ class RaidenAPI(object):
         """ Will register the token at `token_address` with raiden. If it's already
         registered, will throw an exception."""
         try:
-            channel_manager = self.raiden.chain.manager_by_token(token_address)
+            self.raiden.chain.manager_by_token(token_address)
         except:
-            self.raiden.chain.default_registry.add_token(token_address)
-            channel_manager = self.raiden.chain.manager_by_token(token_address)
-            # Register the channel manager with the raiden registry
-            self.raiden.register_channel_manager(channel_manager.address)
-            return channel_manager.address
+            channel_manager_address = self.raiden.chain.default_registry.add_token(token_address)
+            self.raiden.register_channel_manager(channel_manager_address)
+            return channel_manager_address
 
         # If we get the channel manager correctly then, error
         raise ValueError("Token already registered")

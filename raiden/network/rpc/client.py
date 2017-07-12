@@ -664,6 +664,7 @@ class Registry(object):
             registry_address=pex(self.address),
             channel_manager_address=pex(channel_manager_address_bin),
         )
+        return channel_manager_address_bin
 
     def token_addresses(self):
         return [
