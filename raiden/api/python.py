@@ -2,6 +2,8 @@
 import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
+from ethereum.tester import TransactionFailed
+from pyethapp.rpc_client import JSONRPCClientReplyError
 
 from raiden.blockchain.events import (
     ALL_EVENTS,
@@ -73,7 +75,7 @@ class RaidenAPI(object):
         try:
             manager = self.raiden.chain.manager_by_token(token_address)
             return manager.address
-        except:
+        except (JSONRPCClientReplyError, TransactionFailed):
             return None
 
     def register_token(self, token_address):

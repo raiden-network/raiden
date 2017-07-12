@@ -278,6 +278,9 @@ class BlockChainServiceTesterMock(object):
     def manager_by_token(self, token_address):
         """ Find the channel manager for `token_address` and return a proxy to
         interact with it.
+
+        If the token is not already registered it raises `TransactionFailed` when
+        we do `self.registry_proxy.channelManagerByToken(token_address)`
         """
         if token_address not in self.token_manager:
             manager_address = self.default_registry.manager_address_by_token(token_address)

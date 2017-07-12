@@ -57,7 +57,8 @@ def test_register_token(raiden_chain, token_addresses):
     app0, _ = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
     api0 = RaidenAPI(app0.raiden)
-    assert not api0.manager_address_if_token_registered(token_addresses[0])
+    assert api0.manager_address_if_token_registered(token_addresses[0]) is None
+
     manager_0token = api0.register_token(token_addresses[0])
 
     assert manager_0token == api0.manager_address_if_token_registered(token_addresses[0])
