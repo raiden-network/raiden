@@ -69,6 +69,25 @@ def test_register_token(raiden_chain, token_addresses):
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('register_tokens', [False])
+@pytest.mark.parametrize('number_of_tokens', [1])
+def test_register_token(raiden_chain, token_addresses):
+    app0, _ = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
+
+    api0 = RaidenAPI(app0.raiden)
+    assert not api0.manager_address_if_token_registered(token_addresses[0])
+    manager_0token = api0.register_token(token_addresses[0])
+
+    assert manager_0token == api0.manager_address_if_token_registered(token_addresses[0])
+
+    # Exception if we try to reregister
+    with pytest.raises(ValueError):
+        api0.register_token(token_addresses[0])
+
+
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_transfer_to_unknownchannel(raiden_network):
