@@ -130,13 +130,12 @@ def geth_create_account(datadir, privkey):
 
 
 def geth_bare_genesis(genesis_path, private_keys):
-    """Creates a bare genesis inside `datadir`.
+    """Writes a bare genesis to `genesis_path`.
 
     Args:
-        datadir (str): the datadir in which the blockchain is initialized.
-
-    Returns:
-        str: The path to the genisis file.
+        genesis_path (str): the path in which the genesis block is written.
+        private_keys list(str): iterable list of privatekeys which accounts will have a
+                    premined balance available.
     """
     account_addresses = [
         privatekey_to_address(key)

@@ -484,7 +484,7 @@ class ChannelManagerTesterMock(object):
             ValueError: If peer1 or peer2 is not a valid address.
         """
         if not isaddress(peer1):
-            raise ValueError('The pee1 must be a valid address')
+            raise ValueError('The peer1 must be a valid address')
 
         if not isaddress(peer2):
             raise ValueError('The peer2 must be a valid address')
