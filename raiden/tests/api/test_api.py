@@ -980,3 +980,16 @@ def test_connect_and_leave_token_network(
     assert channels[0]['state'] == CHANNEL_STATE_SETTLED
     assert channels[1]['state'] == CHANNEL_STATE_SETTLED
     assert channels[2]['state'] == CHANNEL_STATE_SETTLED
+
+
+def test_register_token(api_backend, api_test_context, api_raiden_service):
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    request = grequests.put(api_url_for(
+        api_backend,
+        'registertokenresource',
+        token_address=token_address)
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    response = response.json()
+    assert 'channel_manager_address' in response

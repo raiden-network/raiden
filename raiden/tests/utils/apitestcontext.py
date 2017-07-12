@@ -44,6 +44,7 @@ class ApiTestContext():
         self.channel_schema = ChannelSchema()
         self.channel_list_schema = ChannelListSchema()
         self.reveal_timeout = reveal_timeout
+        self.tokens_to_manager_address = dict()
 
     def add_events(self, events):
         self.events += events
@@ -159,6 +160,18 @@ class ApiTestContext():
             reveal_timeout,
             settle_timeout,
         )
+
+    def register_token(self, token_address):
+        self.tokens.add(token_address)
+        manager_address = make_address()
+        self.tokens_to_manager_address[token_address] = manager_address
+        return manager_address
+
+    def manager_address_if_token_registered(self, token_address):
+        if token_address not in self.tokens:
+            return None
+
+        return self.tokens_to_manager_address(token_address)
 
     def make_channel_and_add(self):
         channel = self.make_channel()

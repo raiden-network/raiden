@@ -182,9 +182,8 @@ class RestAPI(object):
         return {'our_address': address_encoder(self.raiden_api.address)}
 
     def register_token(self, token_address):
-        try:
-            manager_address = self.raiden.chain.manager_by_token(token_address)
-        except:
+        manager_address = self.raiden_api.manager_address_if_token_registered(token_address)
+        if manager_address is None:
             manager_address = self.raiden_api.register_token(token_address)
 
         return jsonify(dict(channel_manager_address=address_encoder(manager_address)))
