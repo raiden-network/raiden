@@ -101,6 +101,12 @@ def api_raiden_service(
     monkeypatch.setattr(api, 'expect_token_swap', api_test_context.expect_token_swap)
     monkeypatch.setattr(api, 'connect_token_network', api_test_context.connect)
     monkeypatch.setattr(api, 'leave_token_network', api_test_context.leave)
+    monkeypatch.setattr(api, 'register_token', api_test_context.register_token)
+    monkeypatch.setattr(
+        api,
+        'manager_address_if_token_registered',
+        api_test_context.manager_address_if_token_registered
+    )
 
     # also make sure that the test server's raiden_api uses this mock
     # raiden service

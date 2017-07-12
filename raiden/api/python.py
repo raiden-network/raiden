@@ -2,6 +2,8 @@
 import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
+from ethereum.tester import TransactionFailed
+from pyethapp.rpc_client import JSONRPCClientReplyError
 
 from raiden.blockchain.events import (
     ALL_EVENTS,
@@ -64,6 +66,30 @@ class RaidenAPI(object):
                 return channel
 
         raise ValueError("Channel not found")
+
+    def manager_address_if_token_registered(self, token_address):
+        """
+        If the token is registered then, return the channel manager address.
+        Returns None otherwise.
+        """
+        try:
+            manager = self.raiden.chain.manager_by_token(token_address)
+            return manager.address
+        except (JSONRPCClientReplyError, TransactionFailed):
+            return None
+
+    def register_token(self, token_address):
+        """ Will register the token at `token_address` with raiden. If it's already
+        registered, will throw an exception."""
+        try:
+            self.raiden.chain.manager_by_token(token_address)
+        except:
+            channel_manager_address = self.raiden.chain.default_registry.add_token(token_address)
+            self.raiden.register_channel_manager(channel_manager_address)
+            return channel_manager_address
+
+        # If we get the channel manager correctly then, error
+        raise ValueError("Token already registered")
 
     def connect_token_network(
         self,

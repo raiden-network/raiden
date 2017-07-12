@@ -29,6 +29,7 @@ from raiden.api.v1.resources import (
     TokensResource,
     PartnersResourceByTokenAddress,
     NetworkEventsResource,
+    RegisterTokenResource,
     TokenEventsResource,
     ChannelEventsResource,
     TokenSwapsResource,
@@ -114,6 +115,10 @@ class APIServer(object):
             PartnersResourceByTokenAddress,
             '/tokens/<hexaddress:token_address>/partners'
         )
+        self.add_resource(
+            RegisterTokenResource,
+            '/tokens/<hexaddress:token_address>'
+        )
         self.add_resource(NetworkEventsResource, '/events/network')
         self.add_resource(
             TokenEventsResource,
@@ -175,6 +180,13 @@ class RestAPI(object):
 
     def get_our_address(self):
         return {'our_address': address_encoder(self.raiden_api.address)}
+
+    def register_token(self, token_address):
+        manager_address = self.raiden_api.manager_address_if_token_registered(token_address)
+        if manager_address is None:
+            manager_address = self.raiden_api.register_token(token_address)
+
+        return jsonify(dict(channel_manager_address=address_encoder(manager_address)))
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
         raiden_service_result = self.raiden_api.open(

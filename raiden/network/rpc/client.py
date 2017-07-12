@@ -352,6 +352,9 @@ class BlockChainService(object):
     def manager_by_token(self, token_address):
         """ Find the channel manager for `token_address` and return a proxy to
         interact with it.
+
+        If the token is not already registered it raises `JSONRPCClientReplyError`,
+        since we try to instantiate a Channel manager with an empty address.
         """
         if token_address not in self.token_manager:
             token = self.token(token_address)  # check that the token exists
@@ -664,6 +667,7 @@ class Registry(object):
             registry_address=pex(self.address),
             channel_manager_address=pex(channel_manager_address_bin),
         )
+        return channel_manager_address_bin
 
     def token_addresses(self):
         return [

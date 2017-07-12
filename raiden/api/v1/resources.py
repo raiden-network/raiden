@@ -137,6 +137,14 @@ class ChannelEventsResource(BaseResource):
         )
 
 
+class RegisterTokenResource(BaseResource):
+    def __init__(self, **kwargs):
+        super(RegisterTokenResource, self).__init__(**kwargs)
+
+    def put(self, token_address):
+        return self.rest_api.register_token(token_address)
+
+
 class TokenSwapsResource(BaseResource):
 
     put_schema = TokenSwapsSchema()
