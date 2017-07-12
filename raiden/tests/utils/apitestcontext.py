@@ -171,7 +171,7 @@ class ApiTestContext():
         if token_address not in self.tokens:
             return None
 
-        return self.tokens_to_manager_address(token_address)
+        return self.tokens_to_manager_address[token_address]
 
     def make_channel_and_add(self):
         channel = self.make_channel()

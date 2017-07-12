@@ -144,6 +144,7 @@ class RegisterTokenResource(BaseResource):
     def put(self, token_address):
         return self.rest_api.register_token(token_address)
 
+
 class TokenSwapsResource(BaseResource):
 
     put_schema = TokenSwapsSchema()
