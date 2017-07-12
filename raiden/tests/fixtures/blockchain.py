@@ -13,7 +13,7 @@ from ethereum._solidity import compile_file
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import address_decoder, address_encoder, default_gasprice
 
-from raiden.utils import privatekey_to_address, get_contract_path
+from raiden.utils import privatekey_to_address, get_contract_path, fix_tester_storage
 from raiden.network.transport import DummyTransport
 from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
@@ -204,16 +204,7 @@ def cached_genesis(request, blockchain_type):
         # Both keys and values of the account storage associative array
         # must now be encoded with 64 hex digits
         if account_alloc['storage']:
-            new_storage = dict()
-            for key, val in account_alloc['storage'].iteritems():
-                # account_to_dict() from pyethereum can return 0x for a storage
-                # position. That is an invalid way of representing 0x0, which we
-                # have to take care of here.
-                new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
-                new_val = '0x%064x' % int(val, 16)
-                new_storage[new_key] = new_val
-
-            account_alloc['storage'] = new_storage
+            account_alloc['storage'] = fix_tester_storage(account_alloc['storage'])
 
         # code must be hex encoded with 0x prefix
         account_alloc['code'] = account_alloc.get('code', '')

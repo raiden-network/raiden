@@ -26,7 +26,8 @@ __all__ = (
     'lpex',
     'get_contract_path',
     'safe_lstrip_hex',
-    'camel_to_snake_case'
+    'camel_to_snake_case',
+    'fix_tester_storage'
 )
 
 LETTERS = string.printable
@@ -177,3 +178,21 @@ def channel_to_api_dict(channel):
         "balance": channel.contract_balance,
         "state": channel.state
     }
+
+
+def fix_tester_storage(storage):
+    """ pyethereum tester doesn't follow the canonical storage encoding:
+    Both keys and values of the account storage associative array must be encoded with 64 hex
+    digits. Also account_to_dict() from pyethereum can return 0x for a storage
+    position. That is an invalid way of representing 0x0.
+    Args:
+        storage (dict): the storage dictionary from tester
+    Returns:
+        newstorage (dict): the canonical representation
+    """
+    new_storage = dict()
+    for key, val in storage.iteritems():
+        new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
+        new_val = '0x%064x' % int(val, 16)
+        new_storage[new_key] = new_val
+    return new_storage
