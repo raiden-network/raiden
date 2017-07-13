@@ -25,11 +25,11 @@ from raiden.settings import (
 )
 
 
-def assert_proper_response(response):
+def assert_proper_response(response, status_code=httplib.OK):
     """ Make sure the API response is of the proper type"""
     assert (
         response and
-        response.status_code == httplib.OK and
+        response.status_code == status_code and
         response.headers['Content-Type'] == 'application/json'
     )
 
@@ -990,6 +990,14 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
         token_address=token_address)
     )
     response = request.send().response
-    assert_proper_response(response)
-    response = response.json()
-    assert 'channel_manager_address' in response
+    assert_proper_response(response, status_code=httplib.CREATED)
+    assert 'channel_manager_address' in response.json()
+
+    # now try to reregister it and get the error
+    request = grequests.put(api_url_for(
+        api_backend,
+        'registertokenresource',
+        token_address=token_address)
+    )
+    response = request.send().response
+    assert response is not None and response.status_code == httplib.CONFLICT
