@@ -1,14 +1,14 @@
 <p-growl [value]="msgs"></p-growl>
 
 <p-dataTable [value]="tokenBalances" [(selection)]="selectedToken" dataKey="address">
-    <p-column [style]="{'width':'38px'}" selectionMode="single"></p-column>
-    <p-column field="symbol" header="Symbol"
-    [style]="{width: '40px', 'text-align': 'center'}"></p-column>
+    <p-column selectionMode="single" [style]="{'width':'2.3em'}"></p-column>
+    <p-column field="symbol" header="Symbol" [style]="{'width':'5em', 'text-align': 'center'}"></p-column>
     <p-column field="address" header="Address"></p-column>
     <p-column field="name" header="Name"></p-column>
-    <p-column field="balance" header="Balance"
-    [style]="{width: '60px', 'text-align': 'center'}"></p-column>
-    <p-footer><div class="ui-helper-clearfix" style="width:100%"><button type="button" pButton icon="fa-plus" style="float:left" (click)="joinTokenNetwork()" label="Join"></button></div></p-footer>
+    <p-column field="balance" header="Balance" [style]="{width: '5em', 'text-align': 'center'}"></p-column>
+    <p-footer><div class="ui-helper-clearfix" style="width:100%">
+        <button type="button" pButton icon="fa-plus" style="float:left" (click)="joinTokenNetwork()" label="Join"></button>
+    </div></p-footer>
 </p-dataTable>
 
 <p-dialog header="Join Token Network" [(visible)]="displayDialog" [responsive]="true"  showEffect="fade" [modal]="true" [resizable]="true">
