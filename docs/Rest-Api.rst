@@ -126,7 +126,7 @@ Example Response
 
 And with a 201 response we also get::
 
-    {"channel_manager_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"}
+    {"channel_manager_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"}
 
 Querying Information About Channels and Tokens
 ===============================================

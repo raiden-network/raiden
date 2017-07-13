@@ -34,7 +34,7 @@ Adding an unregistered token to Raiden
 ======================================
 In this scenario we assume that a user holds some ERC20 tokens of a type that has not yet been registered in the Raiden smart contracts. Let's assume that the address of the token is ``0x9aBa529db3FF2D8409A1da4C9eB148879b046700``.
 
-The user wants to register the token, which will create a `Channel Manager <https://github.com/raiden-network/raiden/blob/master/raiden/smart_contracts/ChannelManagerContract.sol>`_. For each registered token there is a channel manager. Channel managers are responsible of opening new raiden channels between two parties.
+The user wants to register the token, which will create a `Channel Manager <https://github.com/raiden-network/raiden/blob/master/raiden/smart_contracts/ChannelManagerContract.sol>`_. For each registered token there is a channel manager. Channel managers are responsible of opening new payment channels between two parties.
 
 
 Checking if a token is already registered
@@ -58,7 +58,7 @@ To register a token simply use the endpoint listed below::
 
 If successful this call will return the address of the fresly created Channel Manager like this::
 
-    {"channel_manager_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"}
+    {"channel_manager_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"}
 
 The token is now registered. However, since we're the ones registering the token, there will be nobody else to connect to right away. This means that we need to bootstrap the network for this specific token. If we know of some other Raiden node that holds some of the tokens we just added or we simply want to transfer some tokens to another Raiden node in a one way channel, we can do this quite easily by simply opening a channel with this node. The way we open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
 
@@ -94,20 +94,60 @@ Succesfully opening a channel will return the following information::
         "settle_timeout": 600
     }
 
-Here it's interesting to notice that a `"channel_address"` has been generated. This means that a :ref:`Netting Channel contract <https://github.com/raiden-network/raiden/blob/master/raiden/smart_contracts/NettingChannelContract.sol>` has been deployed to the blockchain. Furthermore it also represents the address of the raiden channel between two parties for a specific token.
+Here it's interesting to notice that a `"channel_address"` has been generated. This means that a `Netting Channel contract <https://github.com/raiden-network/raiden/blob/master/raiden/smart_contracts/NettingChannelContract.sol>`_ has been deployed to the blockchain. Furthermore it also represents the address of the payment channel between two parties for a specific token.
+
 
 .. _depositing-to-a-channel:
 Depositing to a channel
 -----------------------
+A payment channel is now open between our own address and ``0x61c808d82a3ac53231750dadc13c777b59310bd9``. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be the time to notify our counterparty that we have opened a channel with him/her/it, so that they can also deposit to the channel. All the counterparty needs in order to do this is the address of the payment channel::
 
+    PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
+
+with the payload::
+
+    {"balance": 7331}
+
+We can then query the channel for events to see when our counterparty deposits::
+
+    GET /api/1/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337
+
+This will return a list of events that has happened in the specific payment channel. The relevant event we are looking for in this case will be::
+
+    {
+        "event_type": "ChannelNewBalance",
+        "participant": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "balance": 7331,
+        "block_number": 54388
+    }
+
+If we see above event we know that our partner has deposited to the channel.
+It is possible for both parties to query the state of the specific payment channel by calling::
+
+    GET /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
+
+This will give you a result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
+
+We have now registered a new token resulting in a new token network. We have opened a channel between two Raiden nodes, and both nodes have deposited to the channel. From here on we can start :ref:`transferring tokens <transferring-tokens>` between the two nodes.
+
+Above is not how a user would normally join an already existing token network. We will take a closer look at how to join already bootstrapped token networks in :ref:`the next scenario <scenario2>`. Above shows how a user would bootstrap a new token network. This would not be the steps that most users would have to follow, since these steps are only needed when bootstrapping a new token network.
 
 
 * bootstrapping
+* TODO should the addresses used in the documentation actually be deployed contracts etc., or is it fine that it's just some random adresses?
 
 
 .. _scenario2:
 Joining an already existing token network
 =========================================
+
+
+
+.. _transferring-tokens:
+Transferring tokens
+===================
+
+
 
 
 
