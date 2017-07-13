@@ -200,7 +200,7 @@ class ConnectionsResource(BaseResource):
     def __init__(self, **kwargs):
         super(ConnectionsResource, self).__init__(**kwargs)
 
-    @use_kwargs(put_schema, locations=('json',))
+    @use_kwargs(put_schema)
     def put(self, token_address, funds, initial_channel_target, joinable_funds_target):
         return self.rest_api.connect(
             token_address=token_address,
@@ -209,7 +209,7 @@ class ConnectionsResource(BaseResource):
             joinable_funds_target=joinable_funds_target,
         )
 
-    @use_kwargs(delete_schema, locations=('json',))
+    @use_kwargs(delete_schema)
     def delete(self, token_address, wait_for_settle, timeout):
         return self.rest_api.leave(
             token_address=token_address,
