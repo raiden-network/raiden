@@ -68,9 +68,7 @@ setup(
     author='HeikoHeiko',
     author_email='heiko@brainbot.com',
     url='https://github.com/raiden-network/raiden',
-    packages=find_packages(
-        exclude=["raiden.tests", "raiden.tests.*"]
-    ),
+    packages=find_packages(),
     include_package_data=True,
     license='BSD',
     zip_safe=False,
