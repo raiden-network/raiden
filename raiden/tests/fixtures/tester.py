@@ -91,7 +91,7 @@ def tester_state(deploy_key, private_keys, tester_blockgas_limit):
 
 
 @pytest.fixture
-def tester_token_address(private_keys, token_amount, tester_state):
+def tester_token_address(private_keys, token_amount, tester_state, sender_index=0):
     standard_token_path = get_contract_path('StandardToken.sol')
     human_token_path = get_contract_path('HumanStandardToken.sol')
 
@@ -112,7 +112,7 @@ def tester_token_address(private_keys, token_amount, tester_state):
         language='solidity',
         libraries=human_token_libraries,
         constructor_parameters=[token_amount, 'raiden', 0, 'rd'],
-        sender=private_keys[0],
+        sender=private_keys[sender_index],
     )
     tester_state.mine(number_of_blocks=1)
 
