@@ -6,13 +6,10 @@ import { DataTableModule, SharedModule, DataListModule, CarouselModule,
     ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule,
     TabViewModule, DropdownModule, MessagesModule, MenuModule } from 'primeng/primeng';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule,
-MdMenuModule } from '@angular/material';
 import { RouterModule, Routes } from '@angular/router';
 import { AppComponent } from './app.component';
 import { ChannelTableComponent } from './components/channel-table/channel-table.component';
 import { EventListComponent } from './components/event-list/event-list.component';
-import { UserinteractionComponent } from './components/userinteraction/userinteraction.component';
 import { TokenNetworkComponent } from './components/token-network/token-network.component';
 
 import { APP_INITIALIZER } from '@angular/core';
@@ -34,7 +31,6 @@ const appRoutes: Routes = [
     AppComponent,
     ChannelTableComponent,
     EventListComponent,
-    UserinteractionComponent,
     TokenNetworkComponent,
     HomeComponent
   ],
@@ -57,15 +53,7 @@ const appRoutes: Routes = [
     MessagesModule,
     MenuModule,
     NoopAnimationsModule,
-    MdTabsModule,
-    MdInputModule,
-    MdSelectModule,
-    MdToolbarModule,
-    MdButtonModule,
-    MdMenuModule,
   ],
-  exports: [ MdTabsModule, MdInputModule, MdSelectModule, MdToolbarModule, MdButtonModule,
-  MdMenuModule ],
   providers: [ RaidenConfig,
               {
                   provide: APP_INITIALIZER,

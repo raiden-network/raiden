@@ -14,7 +14,6 @@ declare var blockies;
 export class ChannelTableComponent implements OnInit {
 
     public channels: Channel[];
-    public items: MenuItem[];
     public amount: number;
     public displayDialog: boolean;
     public displayChannelDialog: boolean;
