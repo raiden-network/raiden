@@ -15,7 +15,6 @@
     "@angular/animations": "4.2.5",
     "@angular/common": "4.2.5",
     "@angular/compiler": "4.2.5",
-    "@angular/compiler-cli": "4.0.2",
     "@angular/core": "4.2.5",
     "@angular/flex-layout": "2.0.0-beta.8",
     "@angular/forms": "4.2.5",
@@ -31,7 +30,6 @@
     "ng-sidebar": "6.0.1",
     "primeng": "4.1.0-rc.3",
     "rxjs": "5.4.2",
-    "typescript": "2.2.2",
     "web3": "0.19.1",
     "zone.js": "0.8.12"
   },

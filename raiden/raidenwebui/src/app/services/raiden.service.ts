@@ -13,7 +13,7 @@ import { Channel } from '../models/channel';
 export class RaidenService {
 
     public tokenContract: any;
-    public web3; any;
+    public web3: any;
     public raidenAddress: string;
     constructor(private http: Http, private config: RaidenConfig) {
         this.web3 = this.config.web3;
@@ -50,30 +50,44 @@ export class RaidenService {
 
     public getTokenBalancesOf(raidenAddress: string): Observable<any> {
         return this.http.get(`${this.config.apiCall}/tokens`)
-        .map((response) => {
-            const tokenArray = <Array<any>>response.json();
-            return tokenArray.map((tokeninfo) => {
-                const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
-                return new Usertoken(
-                tokeninfo.address,
-                tokenContractInstance.symbol(),
-                tokenContractInstance.name(),
-                tokenContractInstance.balanceOf(this.raidenAddress).toNumber());
-            });
-        }).catch(this.handleError);
+            .map((response) => {
+                const tokenArray: Array<{address:string}> = response.json();
+                let usertokens: Usertoken[] = [];
+                // TODO: cache these usertokens, to avoid calling API multiple times
+                for (const tokeninfo of tokenArray) {
+                    try {
+                        const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
+                        usertokens.push(new Usertoken(
+                            tokeninfo.address,
+                            tokenContractInstance.symbol(),
+                            tokenContractInstance.name(),
+                            tokenContractInstance.balanceOf(this.raidenAddress).toNumber()
+                        ));
+                    } catch (error) {
+                        console.log("Error getting token", tokeninfo, error);
+                    }
+                }
+                return usertokens;
+            }).catch(this.handleError);
     }
 
     public getTokenNameAddresMappings() {
         return this.http.get(`${this.config.apiCall}/tokens`)
         .map((response) => {
-            const tokenArray = <Array<any>>response.json();
-            return tokenArray.map((tokeninfo) => {
-                const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
-                return {
-                    'value': tokeninfo.address,
-                    'label': tokenContractInstance.name()+" ("+tokeninfo.address+")"
-                };
-            });
+            const tokenArray: Array<{address:string}> = response.json();
+            let tokens: Array<{label,value}> = [];
+            for (const tokeninfo of tokenArray) {
+                try {
+                    const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
+                    tokens.push({
+                        'value': tokeninfo.address,
+                        'label': tokenContractInstance.name()+" ("+tokeninfo.address+")"
+                    });
+                } catch (error) {
+                    console.log("Error getting token", tokeninfo, error);
+                }
+            }
+            return tokens;
         });
     }
 
