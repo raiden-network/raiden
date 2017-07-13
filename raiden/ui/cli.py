@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import sys
 import os
+import tempfile
 
 import signal
 import click
@@ -22,6 +23,11 @@ from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
 )
 from raiden.utils import split_endpoint
+from raiden.tests.utils.smoketest import (
+    load_or_create_smoketest_config,
+    start_ethereum,
+    run_smoketests,
+)
 
 gevent.monkey.patch_all()
 
@@ -323,25 +329,26 @@ def app(address,
     return App(config, blockchain_service, discovery)
 
 
+@click.group(invoke_without_command=True)
 @options
-@click.command()
 @click.pass_context
 def run(ctx, **kwargs):
-    from raiden.api.python import RaidenAPI
-    from raiden.ui.console import Console
+    if ctx.invoked_subcommand is None:
+        from raiden.api.python import RaidenAPI
+        from raiden.ui.console import Console
 
-    slogging.configure(kwargs['logging'], log_file=kwargs['logfile'])
+        slogging.configure(kwargs['logging'], log_file=kwargs['logfile'])
 
-    # TODO:
-    # - Ask for confirmation to quit if there are any locked transfers that did
-    # not timeout.
-    (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
-    with socket_factory(listen_host, listen_port) as mapped_socket:
-        kwargs['mapped_socket'] = mapped_socket
+        # TODO:
+        # - Ask for confirmation to quit if there are any locked transfers that did
+        # not timeout.
+        (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
+        with socket_factory(listen_host, listen_port) as mapped_socket:
+            kwargs['mapped_socket'] = mapped_socket
 
-        app_ = ctx.invoke(app, **kwargs)
+            app_ = ctx.invoke(app, **kwargs)
 
-        app_.raiden.register_registry(app_.raiden.chain.default_registry.address)
+            app_.raiden.register_registry(app_.raiden.chain.default_registry.address)
 
         domain_list = []
         if kwargs['rpccorsdomain']:
@@ -374,17 +381,102 @@ def run(ctx, **kwargs):
                 )
             )
 
-        if ctx.params['console']:
-            console = Console(app_)
-            console.start()
+            if ctx.params['console']:
+                console = Console(app_)
+                console.start()
 
-        # wait for interrupt
-        event = gevent.event.Event()
-        gevent.signal(signal.SIGQUIT, event.set)
-        gevent.signal(signal.SIGTERM, event.set)
-        gevent.signal(signal.SIGINT, event.set)
-        event.wait()
+            # wait for interrupt
+            event = gevent.event.Event()
+            gevent.signal(signal.SIGQUIT, event.set)
+            gevent.signal(signal.SIGTERM, event.set)
+            gevent.signal(signal.SIGINT, event.set)
+            event.wait()
 
         if http_server:
             http_server.stop(5)
         app_.stop(leave_channels=False)
+
+
+@run.command()
+@click.option(
+    '--debug/--no-debug',
+    default=False,
+    help='Drop into pdb on errors (default: False).'
+)
+@click.pass_context
+def smoketest(ctx, debug, **kwargs):
+    """ Test, that the raiden installation is sane.
+    """
+    report_file = tempfile.mktemp(suffix=".log")
+    open(report_file, 'w+')
+
+    def append_report(subject, data):
+        with open(report_file, 'a') as handler:
+            handler.write('{:=^80}'.format(' %s ' % subject.upper()) + os.linesep)
+            if data is not None:
+                handler.writelines([(data + os.linesep).encode('utf-8')])
+
+    append_report('raiden log', None)
+
+    print("[1/5] getting smoketest configuration")
+    smoketest_config = load_or_create_smoketest_config()
+
+    print("[2/5] starting ethereum")
+    ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
+
+    print('[3/5] starting raiden')
+
+    # setup logging to log only into our report file
+    slogging.configure(':DEBUG', log_file=report_file)
+    root = slogging.getLogger()
+    for handler in root.handlers:
+        if isinstance(handler, slogging.logging.StreamHandler):
+            root.handlers.remove(handler)
+            break
+    # setup cli arguments for starting raiden
+    args = dict(
+        discovery_contract_address=smoketest_config['contracts']['discovery_address'],
+        registry_contract_address=smoketest_config['contracts']['registry_address'],
+        eth_rpc_endpoint='http://127.0.0.1:{}'.format(ethereum_config['rpc']),
+        keystore_path=ethereum_config['keystore'],
+        address=ethereum_config['address'],
+    )
+    for option in app.params:
+        if option.name in args.keys():
+            args[option.name] = option.process_value(ctx, args[option.name])
+        else:
+            args[option.name] = option.default
+
+    password_file = os.path.join(args['keystore_path'], 'password')
+    with open(password_file, 'w') as handler:
+        handler.write('password')
+
+    args['mapped_socket'] = None
+    args['password_file'] = click.File()(password_file)
+    args['datadir'] = args['keystore_path']
+
+    # invoke the raiden app
+    app_ = ctx.invoke(app, **args)
+
+    success = False
+    try:
+        print('[4/5] running smoketests...')
+        error = run_smoketests(app_.raiden, smoketest_config, debug=debug)
+        if error is not None:
+            append_report('smoketest assertion error', error)
+        else:
+            success = True
+    finally:
+        app_.stop()
+        ethereum.send_signal(2)
+
+        err, out = ethereum.communicate()
+        append_report('geth init stdout', ethereum_config['init_log_out'].decode('utf-8'))
+        append_report('geth init stderr', ethereum_config['init_log_err'].decode('utf-8'))
+        append_report('ethereum stdout', out)
+        append_report('ethereum stderr', err)
+    if success:
+        print('[5/5] smoketest successful, report was written to {}'.format(report_file))
+    else:
+        print('[5/5] smoketest had errors, report was written to {}'.format(report_file))
+        sys.exit(1)
