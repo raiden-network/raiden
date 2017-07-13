@@ -255,7 +255,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = 0
@@ -281,7 +281,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -429,7 +429,7 @@ def test_api_channel_state_change_errors(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     channel_address = response['channel_address']
 
@@ -542,7 +542,7 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
 
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -557,7 +557,7 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
 
     # and now let's get the token list
     request = grequests.get(
@@ -592,7 +592,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     first_channel_address = response['channel_address']
 
@@ -602,7 +602,7 @@ def test_query_partners_by_token(
         json=channel_data_obj,
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     second_channel_address = response['channel_address']
 
@@ -614,7 +614,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
 
     # and now let's query our partners per token for the first token
     request = grequests.get(
