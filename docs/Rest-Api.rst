@@ -96,6 +96,38 @@ Example Response
 
     {"our_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"}
 
+Deploying
+=========
+
+Registering a Token
+-------------------
+
+If a Token is not registered (i.e.: A channel manager for that token does not exist in the network) then we need to register it by deploying a Channel Manager contract for that token.
+
+We can do that by doing a ``PUT`` request to the endpoint ``/api/<version>/tokens/<token_address>``. The request should return the deployed channel manager's address.
+
+If the token is already registered then a 409 Conflict error is returned.
+
+Example Request
+^^^^^^^^^^^^^^^
+
+``PUT /api/1/tokens/0xea674fdde714fd979de3edf0f56aa9716b898ec8``
+
+Example Response
+^^^^^^^^^^^^^^^^
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 201 Created      | For succesful Registration|
++------------------+---------------------------+
+| 409 Conflict     | If the token is already   |
+|                  | registered                |
++------------------+---------------------------+
+
+And with a 201 response we also get::
+
+    {"channel_manager_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"}
+
 Querying Information About Channels and Tokens
 ===============================================
 
@@ -288,7 +320,7 @@ Please note that the sending/reveiving amount and token is always from the persp
 
 Example Response
 ^^^^^^^^^^^^^^^^
-``200 OK``
+``201 CREATED``
 
 Possible Responses
 ^^^^^^^^^^^^^^^^^^

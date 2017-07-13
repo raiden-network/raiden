@@ -15,7 +15,8 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
-from raiden.utils import pex
+from raiden.utils import pex, isaddress
+from raiden.exceptions import InvalidAddress
 
 
 class NettingChannelMock(object):
@@ -44,6 +45,7 @@ class ApiTestContext():
         self.channel_schema = ChannelSchema()
         self.channel_list_schema = ChannelListSchema()
         self.reveal_timeout = reveal_timeout
+        self.tokens_to_manager_address = dict()
 
     def add_events(self, events):
         self.events += events
@@ -158,8 +160,19 @@ class ApiTestContext():
             token_address,
             reveal_timeout,
             settle_timeout,
-            block_number,
         )
+
+    def register_token(self, token_address):
+        self.tokens.add(token_address)
+        manager_address = make_address()
+        self.tokens_to_manager_address[token_address] = manager_address
+        return manager_address
+
+    def manager_address_if_token_registered(self, token_address):
+        if token_address not in self.tokens:
+            return None
+
+        return self.tokens_to_manager_address[token_address]
 
     def make_channel_and_add(self):
         channel = self.make_channel()
@@ -268,6 +281,9 @@ class ApiTestContext():
             initial_channel_target,
             joinable_funds_target):
 
+        if not isaddress(token_address):
+            raise InvalidAddress('not an address %s' % pex(token_address))
+
         funding = int((funds * joinable_funds_target) / initial_channel_target)
         for i in range(0, initial_channel_target):
             channel = self.make_channel(token_address=token_address, balance=funding)
@@ -278,6 +294,9 @@ class ApiTestContext():
             token_address,
             wait_for_settle=True,
             timeout=30):
+
+        if not isaddress(token_address):
+            raise InvalidAddress('not an address %s' % pex(token_address))
 
         channels = self.get_all_channels_for_token(token_address)
         for channel in channels:

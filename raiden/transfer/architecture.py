@@ -138,3 +138,14 @@ class StateManager(object):
         assert all(isinstance(e, Event) for e in events)
 
         return events
+
+    def __eq__(self, other):
+        if isinstance(other, StateManager):
+            return (
+                self.state_transition == other.state_transition and
+                self.current_state == other.current_state
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

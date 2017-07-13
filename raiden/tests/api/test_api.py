@@ -25,11 +25,11 @@ from raiden.settings import (
 )
 
 
-def assert_proper_response(response):
+def assert_proper_response(response, status_code=httplib.OK):
     """ Make sure the API response is of the proper type"""
     assert (
         response and
-        response.status_code == httplib.OK and
+        response.status_code == status_code and
         response.headers['Content-Type'] == 'application/json'
     )
 
@@ -94,7 +94,6 @@ def test_channel_to_api_dict():
     reveal_timeout = 10
     settle_timeout = 50
     opened_block = 900
-    block_number = 1000
     our_balance = 13
     partner_balance = 21
 
@@ -127,7 +126,6 @@ def test_channel_to_api_dict():
         token_address,
         reveal_timeout,
         settle_timeout,
-        block_number,
     )
 
     result = channel_to_api_dict(channel)
@@ -257,7 +255,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = 0
@@ -283,7 +281,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -359,7 +357,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
 
     balance = 0
-    assert_proper_response(response)
+    assert_proper_response(response, status_code=httplib.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -431,7 +429,7 @@ def test_api_channel_state_change_errors(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     channel_address = response['channel_address']
 
@@ -544,7 +542,7 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
 
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -559,7 +557,7 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
 
     # and now let's get the token list
     request = grequests.get(
@@ -594,7 +592,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     first_channel_address = response['channel_address']
 
@@ -604,7 +602,7 @@ def test_query_partners_by_token(
         json=channel_data_obj,
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
     response = response.json()
     second_channel_address = response['channel_address']
 
@@ -616,7 +614,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, httplib.CREATED)
 
     # and now let's query our partners per token for the first token
     request = grequests.get(
@@ -856,7 +854,7 @@ def test_api_token_swaps(
         json=tokenswap_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, status_code=httplib.CREATED)
 
     tokenswap_obj = {
         'role': 'taker',
@@ -881,7 +879,7 @@ def test_api_token_swaps(
         json=tokenswap_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, status_code=httplib.CREATED)
 
 
 def test_api_transfers(
@@ -982,3 +980,24 @@ def test_connect_and_leave_token_network(
     assert channels[0]['state'] == CHANNEL_STATE_SETTLED
     assert channels[1]['state'] == CHANNEL_STATE_SETTLED
     assert channels[2]['state'] == CHANNEL_STATE_SETTLED
+
+
+def test_register_token(api_backend, api_test_context, api_raiden_service):
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    request = grequests.put(api_url_for(
+        api_backend,
+        'registertokenresource',
+        token_address=token_address)
+    )
+    response = request.send().response
+    assert_proper_response(response, status_code=httplib.CREATED)
+    assert 'channel_manager_address' in response.json()
+
+    # now try to reregister it and get the error
+    request = grequests.put(api_url_for(
+        api_backend,
+        'registertokenresource',
+        token_address=token_address)
+    )
+    response = request.send().response
+    assert response is not None and response.status_code == httplib.CONFLICT

@@ -26,7 +26,7 @@ PendingLock = namedtuple('PendingLock', ('lock', 'lockhashed'))
 # The lock and the secret to unlock it, this is all the data required to
 # construct an unlock proof. The proof is not calculated because we only need
 # it when the contract is closed.
-UnlockPartialProof = namedtuple('UnlockProof', ('lock', 'lockhashed', 'secret'))
+UnlockPartialProof = namedtuple('UnlockPartialProof', ('lock', 'lockhashed', 'secret'))
 
 # The proof that can be used to unlock a secret with a smart contract
 UnlockProof = namedtuple('UnlockProof', ('merkle_proof', 'lock_encoded', 'secret'))
@@ -244,3 +244,16 @@ class BalanceProof(object):
             self.hashlock_unlockedlocks.values()
         )
         return Merkletree(lock.lockhashed for lock in alllocks)
+
+    def __eq__(self, other):
+        if isinstance(other, BalanceProof):
+            return (
+                self.hashlock_pendinglocks == other.hashlock_pendinglocks and
+                self.hashlock_unclaimedlocks == other.hashlock_unclaimedlocks and
+                self.hashlock_unlockedlocks == other.hashlock_unlockedlocks and
+                self.transfer == other.transfer
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

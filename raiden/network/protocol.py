@@ -385,6 +385,13 @@ class NotifyingQueue(Event):
     def __len__(self):
         return len(self._queue)
 
+    def copy(self):
+        """ Copies the current queue items. """
+        return [
+            self.peek(i)
+            for i in range(self._queue.qsize())
+        ]
+
 
 class RaidenProtocol(object):
     """ Encode the message into a packet and send it.

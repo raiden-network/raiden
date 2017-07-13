@@ -278,6 +278,9 @@ class BlockChainServiceTesterMock(object):
     def manager_by_token(self, token_address):
         """ Find the channel manager for `token_address` and return a proxy to
         interact with it.
+
+        If the token is not already registered it raises `TransactionFailed` when
+        we do `self.registry_proxy.channelManagerByToken(token_address)`
         """
         if token_address not in self.token_manager:
             manager_address = self.default_registry.manager_address_by_token(token_address)
@@ -355,7 +358,7 @@ class DiscoveryTesterMock(object):
         endpoint = self.proxy.findEndpointByAddress(node_address_hex)
 
         if endpoint is '':
-            raise KeyError('Unknow address {}'.format(pex(node_address_bin)))
+            raise KeyError('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
 
@@ -423,6 +426,8 @@ class RegistryTesterMock(object):
     def add_token(self, token_address):
         self.registry_proxy.addToken(token_address)
         self.tester_state.mine(number_of_blocks=1)
+        channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
+        return channel_manager_address_hex.decode('hex')
 
     def token_addresses(self):
         result = [

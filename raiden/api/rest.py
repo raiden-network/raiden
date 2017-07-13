@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import httplib
+import json
 from flask import Flask, make_response, url_for
 from flask.json import jsonify
 from flask_restful import Api, abort
@@ -29,6 +30,7 @@ from raiden.api.v1.resources import (
     TokensResource,
     PartnersResourceByTokenAddress,
     NetworkEventsResource,
+    RegisterTokenResource,
     TokenEventsResource,
     ChannelEventsResource,
     TokenSwapsResource,
@@ -56,6 +58,15 @@ def normalize_events_list(old_list):
         new_event['event_type'] = new_event.pop('_event_type')
         new_list.append(new_event)
     return new_list
+
+
+def jsonify_with_response(data, status_code):
+    response = make_response((
+        json.dumps(data),
+        status_code,
+        {'mimetype': 'application/json', 'Content-Type': 'application/json'}
+    ))
+    return response
 
 
 class APIServer(object):
@@ -113,6 +124,10 @@ class APIServer(object):
         self.add_resource(
             PartnersResourceByTokenAddress,
             '/tokens/<hexaddress:token_address>/partners'
+        )
+        self.add_resource(
+            RegisterTokenResource,
+            '/tokens/<hexaddress:token_address>'
         )
         self.add_resource(NetworkEventsResource, '/events/network')
         self.add_resource(
@@ -176,6 +191,20 @@ class RestAPI(object):
     def get_our_address(self):
         return {'our_address': address_encoder(self.raiden_api.address)}
 
+    def register_token(self, token_address):
+        manager_address = self.raiden_api.manager_address_if_token_registered(token_address)
+
+        if manager_address is not None:
+            return make_response('Token is already registered', httplib.CONFLICT)
+
+        if manager_address is None:
+            manager_address = self.raiden_api.register_token(token_address)
+
+        return jsonify_with_response(
+            data=dict(channel_manager_address=address_encoder(manager_address)),
+            status_code=httplib.CREATED
+        )
+
     def open(self, partner_address, token_address, settle_timeout, balance=None):
         raiden_service_result = self.raiden_api.open(
             token_address,
@@ -192,7 +221,7 @@ class RestAPI(object):
             )
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-        return jsonify(result.data)
+        return jsonify_with_response(data=result.data, status_code=httplib.CREATED)
 
     def deposit(self, token_address, partner_address, amount):
 
@@ -418,6 +447,8 @@ class RestAPI(object):
                 'Provided invalid token swap role {}'.format(role),
                 httplib.BAD_REQUEST,
             )
+
+        return jsonify_with_response(dict(), httplib.CREATED)
 
 
 @parser.error_handler

@@ -263,10 +263,12 @@ class TransferSchema(BaseSchema):
 
 
 class ConnectionsConnectSchema(BaseSchema):
-    token_address = AddressField()
-    funds = fields.Integer()
-    initial_channel_target = fields.Integer(missing=DEFAULT_INITIAL_CHANNEL_TARGET)
-    joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET)
+    funds = fields.Integer(required=True, location='json')
+    initial_channel_target = fields.Integer(
+        missing=DEFAULT_INITIAL_CHANNEL_TARGET,
+        location='json'
+    )
+    joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET, location='json')
 
     class Meta:
         strict = True
@@ -274,9 +276,8 @@ class ConnectionsConnectSchema(BaseSchema):
 
 
 class ConnectionsLeaveSchema(BaseSchema):
-    token_address = AddressField()
-    wait_for_settle = fields.Bool(missing=DEFAULT_WAIT_FOR_SETTLE)
-    timeout = fields.Integer(missing=DEFAULT_REVEAL_TIMEOUT)
+    wait_for_settle = fields.Bool(missing=DEFAULT_WAIT_FOR_SETTLE, location='json')
+    timeout = fields.Integer(missing=DEFAULT_REVEAL_TIMEOUT, location='json')
 
     class Meta:
         strict = True

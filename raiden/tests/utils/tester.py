@@ -148,7 +148,6 @@ def channel_from_nettingcontract(
         token_address,
         reveal_timeout,
         settle_timeout,
-        block_number,
     )
 
     return channel

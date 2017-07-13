@@ -3,7 +3,7 @@
 import os
 from os import path
 import itertools
-import pickle
+import cPickle as pickle
 import random
 from collections import defaultdict
 
@@ -97,6 +97,47 @@ def create_default_identifier():
     return random.randint(0, UINT64_MAX)
 
 
+def load_snapshot(serialization_file):
+    if path.exists(serialization_file):
+        with open(serialization_file, 'rb') as handler:
+            return pickle.load(handler)
+
+
+def save_snapshot(serialization_file, raiden):
+    all_channels = [
+        ChannelSerialization(channel)
+        for network in raiden.channelgraphs.values()
+        for channel in network.address_channel.values()
+    ]
+
+    all_queues = list()
+    for key, queue in raiden.protocol.channel_queue.iteritems():
+        queue_data = {
+            'receiver_address': key[0],
+            'token_address': key[1],
+            'messages': [
+                queue_item for queue_item in queue.copy()
+            ]
+        }
+        all_queues.append(queue_data)
+
+    data = {
+        'channels': all_channels,
+        'queues': all_queues,
+        'receivedhashes_to_acks': raiden.protocol.receivedhashes_to_acks,
+        'nodeaddresses_to_nonces': raiden.protocol.nodeaddresses_to_nonces,
+        'transfers': raiden.identifier_to_statemanagers,
+    }
+
+    with open(serialization_file, 'wb') as handler:
+        # __slots__ without __getstate__ require `-1`
+        pickle.dump(
+            data,
+            handler,
+            protocol=-1,
+        )
+
+
 class RandomSecretGenerator(object):  # pylint: disable=too-few-public-methods
     def __next__(self):  # pylint: disable=no-self-use
         return os.urandom(32)
@@ -180,42 +221,6 @@ class RaidenService(object):
             config['external_port'],
         )
 
-        self.channels_serialization_path = None
-        self.channels_queue_path = None
-        if config['database_path'] != ':memory:':
-            self.channels_serialization_path = path.join(
-                path.dirname(self.config['database_path']),
-                'channels.pickle',
-            )
-
-            self.channels_queue_path = path.join(
-                path.dirname(self.config['database_path']),
-                'queues.pickle',
-            )
-
-            if path.exists(self.channels_serialization_path):
-                serialized_channels = list()
-
-                with open(self.channels_serialization_path, 'r') as handler:
-                    try:
-                        while True:
-                            serialized_channels.append(pickle.load(handler))
-                    except EOFError:
-                        pass
-
-                for channel in serialized_channels:
-                    self.restore_channel(channel)
-
-            if path.exists(self.channels_queue_path):
-                with open(self.channels_queue_path, 'r') as handler:
-                    channel_state = pickle.load(handler)
-
-                for restored_queue in channel_state['channel_queues']:
-                    self.restore_queue(restored_queue)
-
-                self.protocol.receivedhashes_to_acks = channel_state['receivedhashes_to_acks']
-                self.protocol.nodeaddresses_to_nonces = channel_state['nodeaddresses_to_nonces']
-
         self.alarm = alarm
         self.message_handler = message_handler
         self.state_machine_event_handler = state_machine_event_handler
@@ -224,12 +229,46 @@ class RaidenService(object):
 
         self.on_message = message_handler.on_message
 
-        self.tokens_connectionmanagers = dict()  # token_address: ConnectionManager
+        self.tokens_to_connectionmanagers = dict()
 
-        registry_event.join()
+        self.serialization_file = None
+        if config['database_path'] != ':memory:':
+            snapshot_dir = path.join(
+                path.dirname(self.config['database_path']),
+                pex(self.address)
+            )
+            if not os.path.exists(snapshot_dir):
+                os.makedirs(
+                    snapshot_dir
+                )
+
+            self.serialization_file = path.join(
+                snapshot_dir,
+                'data.pickle',
+            )
+
+            self.register_registry(self.chain.default_registry.address)
+            self.restore_from_snapshots()
+
+            registry_event.join()
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
+
+    def restore_from_snapshots(self):
+        data = load_snapshot(self.serialization_file)
+
+        if data:
+            for channel in data['channels']:
+                self.restore_channel(channel)
+
+            for restored_queue in data['queues']:
+                self.restore_queue(restored_queue)
+
+            self.protocol.receivedhashes_to_acks = data['receivedhashes_to_acks']
+            self.protocol.nodeaddresses_to_nonces = data['nodeaddresses_to_nonces']
+
+            self.restore_transfer_states(data['transfers'])
 
     def set_block_number(self, blocknumber):
         state_change = Block(blocknumber)
@@ -522,7 +561,7 @@ class RaidenService(object):
         )
 
         graph = self.channelgraphs[token_address]
-        graph.add_channel(details)
+        graph.add_channel(details, serialized_channel.block_number)
         channel = graph.address_channel.get(
             serialized_channel.channel_address,
         )
@@ -556,6 +595,9 @@ class RaidenService(object):
 
         for messagedata in serialized_queue['messages']:
             queue.put(messagedata)
+
+    def restore_transfer_states(self, transfer_states):
+        self.identifier_to_statemanagers = transfer_states
 
     def register_registry(self, registry_address):
         proxies = get_relevant_proxies(
@@ -593,7 +635,7 @@ class RaidenService(object):
             self.manager_token[manager_address] = token_address
             self.channelgraphs[token_address] = graph
 
-            self.tokens_connectionmanagers[token_address] = ConnectionManager(
+            self.tokens_to_connectionmanagers[token_address] = ConnectionManager(
                 self,
                 token_address,
                 graph
@@ -632,7 +674,7 @@ class RaidenService(object):
         self.manager_token[manager_address] = token_address
         self.channelgraphs[token_address] = graph
 
-        self.tokens_connectionmanagers[token_address] = ConnectionManager(
+        self.tokens_to_connectionmanagers[token_address] = ConnectionManager(
             self,
             token_address,
             graph
@@ -650,8 +692,8 @@ class RaidenService(object):
     def connection_manager_for_token(self, token_address):
         if not isaddress(token_address):
             raise InvalidAddress('token address is not valid.')
-        if token_address in self.tokens_connectionmanagers.keys():
-            manager = self.tokens_connectionmanagers[token_address]
+        if token_address in self.tokens_to_connectionmanagers.keys():
+            manager = self.tokens_to_connectionmanagers[token_address]
         else:
             raise InvalidAddress('token is not registered.')
         return manager
@@ -747,39 +789,11 @@ class RaidenService(object):
 
         self.protocol.stop_and_wait()
 
-        if self.channels_serialization_path:
-            with open(self.channels_serialization_path, 'wb') as handler:
-                for network in self.channelgraphs.values():
-                    for channel in network.address_channel.values():
-                        pickle.dump(
-                            ChannelSerialization(channel),
-                            handler,
-                        )
-
-        if self.channels_queue_path:
-            with open(self.channels_queue_path, 'wb') as handler:
-                queues = list()
-                for key, queue in self.protocol.channel_queue.iteritems():
-                    queue_data = {
-                        'receiver_address': key[0],
-                        'token_address': key[1],
-                        'messages': [
-                            queue_item.messagedata
-                            for queue_item in queue
-                        ]
-                    }
-                    queues.append(queue_data)
-
-                pickle.dump(
-                    {
-                        'channel_queues': queues,
-                        'receivedhashes_to_acks': self.protocol.receivedhashes_to_acks,
-                        'nodeaddresses_to_nonces': self.protocol.nodeaddresses_to_nonces,
-                    },
-                    handler,
-                )
-
         gevent.wait(wait_for)
+
+        # save the state after all tasks are done
+        if self.serialization_file:
+            save_snapshot(self.serialization_file, self)
 
     def transfer_async(self, token_address, amount, target, identifier=None):
         """ Transfer `amount` between this node and `target`.

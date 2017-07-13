@@ -28,6 +28,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
+    EventUnlockSuccess,
 )
 from raiden.utils import sha3
 
@@ -166,11 +167,11 @@ class StateMachineEventHandler(object):
             for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(False)
 
-        elif isinstance(event, EventTransferReceivedSuccess):
+        elif isinstance(event, (EventTransferReceivedSuccess, EventUnlockSuccess)):
             pass
 
         else:
-            log.error('Unknow event {}'.format(type(event)))
+            log.error('Unknown event {}'.format(type(event)))
 
     def on_blockchain_statechange(self, state_change):
         if log.isEnabledFor(logging.INFO):

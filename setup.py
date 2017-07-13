@@ -33,7 +33,8 @@ class CompileContracts(Command):
 
     def run(self):
         os.environ['STORE_PRECOMPILED'] = 'yes'
-        from raiden.blockchain import abi
+        from raiden.blockchain.abi import CONTRACT_MANAGER
+        CONTRACT_MANAGER.instantiate()
 
 
 with open('README.md') as readme_file:
