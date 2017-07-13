@@ -221,7 +221,7 @@ class RestAPI(object):
             )
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-        return jsonify(result.data)
+        return jsonify_with_response(data=result.data, status_code=httplib.CREATED)
 
     def deposit(self, token_address, partner_address, amount):
 
@@ -447,6 +447,8 @@ class RestAPI(object):
                 'Provided invalid token swap role {}'.format(role),
                 httplib.BAD_REQUEST,
             )
+
+        return jsonify_with_response(dict(), httplib.CREATED)
 
 
 @parser.error_handler

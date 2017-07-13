@@ -357,7 +357,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
 
     balance = 0
-    assert_proper_response(response)
+    assert_proper_response(response, status_code=httplib.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -854,7 +854,7 @@ def test_api_token_swaps(
         json=tokenswap_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, status_code=httplib.CREATED)
 
     tokenswap_obj = {
         'role': 'taker',
@@ -879,7 +879,7 @@ def test_api_token_swaps(
         json=tokenswap_obj
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_proper_response(response, status_code=httplib.CREATED)
 
 
 def test_api_transfers(
