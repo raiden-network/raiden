@@ -14,7 +14,15 @@ contract Registry {
     }
 
     modifier doesNotExist(address _address) {
+        // Check if it's already registered or token contract missing
         require(registry[_address] == 0x0);
+        uint size;
+        assembly {
+            size := extcodesize(_address)
+        }
+        if (size == 0) {
+            throw;
+        }
         _;
     }
 
