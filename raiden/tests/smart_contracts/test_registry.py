@@ -4,17 +4,43 @@ import pytest
 from ethereum import slogging
 from ethereum import tester
 
-from raiden.utils import sha3
+from raiden.utils import sha3, get_contract_path
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def test_registry(tester_registry, tester_events):
+def deploy_token(state, sender_key):
+    human_token_path = get_contract_path('HumanStandardToken.sol')
+    standard_token_path = get_contract_path('StandardToken.sol')
+    standard_token = state.abi_contract(
+        None,
+        path=standard_token_path,
+        language='solidity',
+    )
+    contract_libraries = {
+        'StandardToken': standard_token.address.encode('hex'),
+    }
+    token = state.abi_contract(
+        None,
+        sender=sender_key,
+        path=human_token_path,
+        language='solidity',
+        libraries=contract_libraries,
+        constructor_parameters=[10000, 'raiden', 0, 'rd'],
+    )
+    return token
+
+
+def test_registry(tester_registry, tester_events, private_keys, tester_state):
     privatekey0 = tester.DEFAULT_KEY
 
-    token_address1 = sha3('token')[:20]
-    token_address2 = sha3('address')[:20]
-    unregistered_address = sha3('mainz')[:20]
+    token1 = deploy_token(tester_state, private_keys[0])
+    token2 = deploy_token(tester_state, private_keys[1])
+    token3 = deploy_token(tester_state, private_keys[2])
+
+    token_address1 = token1.address
+    token_address2 = token2.address
+    unregistered_address = token3.address
 
     contract_address1 = tester_registry.addToken(token_address1, sender=privatekey0)
     channel_manager_address1 = tester_registry.channelManagerByToken(
@@ -54,3 +80,11 @@ def test_registry(tester_registry, tester_events):
     assert tester_events[1]['_event_type'] == 'TokenAdded'
     assert tester_events[1]['token_address'] == token_address2.encode('hex')
     assert tester_events[1]['channel_manager_address'] == contract_address2
+
+
+def test_registry_nonexistent_token(tester_registry, tester_events):
+    privatekey0 = tester.DEFAULT_KEY
+
+    fake_token_address = sha3('token')[:20]
+    with pytest.raises(tester.TransactionFailed):
+        tester_registry.addToken(fake_token_address, sender=privatekey0)
