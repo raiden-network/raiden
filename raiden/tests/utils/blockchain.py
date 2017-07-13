@@ -19,7 +19,7 @@ from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
 from raiden.utils import privatekey_to_address
-from raiden.settings import GAS_LIMIT_HEX
+from raiden.tests.utils.genesis import GENESIS_STUB
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -27,26 +27,6 @@ DEFAULT_BALANCE = denoms.ether * 10000000
 DEFAULT_BALANCE_BIN = str(denoms.ether * 10000000)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 DAGSIZE = 1073739912
-
-GENESIS_STUB = {
-    'config': {
-        'homesteadBlock': 0,
-        'eip150Block': 0,
-        'eip150Hash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-        'eip155Block': 0,
-        'eip158Block': 0,
-    },
-    'nonce': '0x0',
-    'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'difficulty': '0x1',
-    'coinbase': '0x0000000000000000000000000000000000000000',
-    'timestamp': '0x00',
-    'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'extraData': '0x' + 'raiden'.encode('hex'),
-    'gasLimit': GAS_LIMIT_HEX,
-    # add precompile addresses with minimal balance to avoid deletion
-    'alloc': {'%040x' % precompile: {"balance": "0x1"} for precompile in range(256)}
-}
 
 
 def wait_until_block(chain, block):

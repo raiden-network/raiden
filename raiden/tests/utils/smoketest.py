@@ -20,7 +20,7 @@ from raiden.tests.utils.tester_client import (
 from raiden.utils import get_contract_path, get_project_root, fix_tester_storage
 from raiden.blockchain.abi import contract_checksum
 from raiden.transfer.state import CHANNEL_STATE_OPENED
-from raiden.tests.utils import blockchain
+from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.tests.fixtures import tester_state
 
 # the smoketest will assert that a different endpoint got successfully registered
@@ -258,7 +258,7 @@ def deploy_and_open_channel_alloc(deployment_key):
 
 
 def complete_genesis():
-    smoketest_genesis = blockchain.GENESIS_STUB.copy()
+    smoketest_genesis = GENESIS_STUB.copy()
     smoketest_genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
     smoketest_genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
         'raiden'.encode('hex'),
