@@ -3,7 +3,7 @@ import { Router, ActivatedRoute, Params } from '@angular/router';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { Channel } from '../../models/channel';
-import { MenuModule, MenuItem, Message} from 'primeng/primeng';
+import { MenuItem, Message} from 'primeng/primeng';
 declare var blockies;
 @Component({
     selector: 'app-channel-table',
@@ -188,5 +188,14 @@ export class ChannelTableComponent implements OnInit {
                 break;
         }
 
+    }
+
+    public menuFor(channel: Channel): MenuItem[] {
+        return [
+            {label: "Transfer", icon: "fa-exchange", command: () => this.onTransfer(channel)},
+            {label: "Deposit", icon: "fa-money", command: () => this.onDeposit(channel)},
+            {label: "Close", icon: "fa-close", command: () => this.onClose(channel)},
+            {label: "Settle", icon: "fa-book", command: () => this.onSettle(channel)},
+        ];
     }
 }

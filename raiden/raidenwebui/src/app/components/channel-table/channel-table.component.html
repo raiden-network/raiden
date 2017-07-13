@@ -1,9 +1,11 @@
-<button type="text" (click)="onOpen()" pButton icon="fa-external-link-square" label="Open Channel"></button>
-<p-tabView>
+<p-tabView class="ui-g">
   <p-tabPanel header="Channels">
     <div *ngIf="channels?.length > 0; then channelData else msg"></div>
     <ng-template #channelData>
-      <p-dataTable [value]="channels">
+      <div class="ui-g-12">
+        <button type="text" (click)="onOpen()" pButton icon="fa-external-link-square" label="Open Channel"></button>
+      </div>
+      <p-dataTable [value]="channels" class="ui-g-12">
           <p-column field="channel_address" header="Channel"></p-column>
           <p-column field="partner_address" header="Partner"></p-column>
           <p-column field="token_address" header="Token"></p-column>
@@ -17,27 +19,9 @@
           [style]="{width: '100px', 'text-align': 'center'}"></p-column>
           <p-column [style]="{width: '100px', 'text-align': 'center'}">
             <ng-template let-channel="rowData" pTemplate="body">
-              <button md-icon-button [mdMenuTriggerFor]="menu">
-                <i class="fa fa-ellipsis-v"></i>
-              </button>
-              <md-menu #menu="mdMenu">
-                <button md-menu-item (click)="onTransfer(channel)">
-                  <i class="fa fa-exchange"></i>
-                  <span>Transfer</span>
-                </button>
-                <button md-menu-item (click)="onDeposit(channel)">
-                  <i class="fa fa-money"></i>
-                  <span>Deposit</span>
-                </button>
-                <button md-menu-item (click)="onClose(channel)">
-                  <i class="fa fa-close"></i>
-                  <span>Close</span>
-                </button>
-                <button md-menu-item (click)="onSettle(channel)">
-                  <i class="fa fa-book"></i>
-                  <span>Settle</span>
-                </button>
-              </md-menu>
+              <p-menu #menu popup="popup" [model]="menuFor(channel)" appendTo="body" ></p-menu>
+              <button pButton #menuButton type="button" icon="fa-ellipsis-v"
+                class="ui-button-secondary" (click)="menu.toggle($event)"></button>
             </ng-template>
           </p-column>
       </p-dataTable>
@@ -45,6 +29,7 @@
     <ng-template #msg>You have no Channels yet.</ng-template>
   </p-tabPanel>
   <p-tabPanel header="Events">
+    <span>Events</span>
   </p-tabPanel>
 </p-tabView>
 
