@@ -15,7 +15,8 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
-from raiden.utils import pex
+from raiden.utils import pex, isaddress
+from raiden.exceptions import InvalidAddress
 
 
 class NettingChannelMock(object):
@@ -280,6 +281,9 @@ class ApiTestContext():
             initial_channel_target,
             joinable_funds_target):
 
+        if not isaddress(token_address):
+            raise InvalidAddress('not an address %s' % pex(token_address))
+
         funding = int((funds * joinable_funds_target) / initial_channel_target)
         for i in range(0, initial_channel_target):
             channel = self.make_channel(token_address=token_address, balance=funding)
@@ -290,6 +294,9 @@ class ApiTestContext():
             token_address,
             wait_for_settle=True,
             timeout=30):
+
+        if not isaddress(token_address):
+            raise InvalidAddress('not an address %s' % pex(token_address))
 
         channels = self.get_all_channels_for_token(token_address)
         for channel in channels:
