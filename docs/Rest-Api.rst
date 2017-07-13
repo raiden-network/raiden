@@ -106,6 +106,8 @@ If a Token is not registered (i.e.: A channel manager for that token does not ex
 
 We can do that by doing a ``PUT`` request to the endpoint ``/api/<version>/tokens/<token_address>``. The request should return the deployed channel manager's address.
 
+If the token is already registered then a 401 Conflict error is returned.
+
 Example Request
 ^^^^^^^^^^^^^^^
 
@@ -113,9 +115,16 @@ Example Request
 
 Example Response
 ^^^^^^^^^^^^^^^^
-``200 OK`` and
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 201 Created      | For succesful Registration|
++------------------+---------------------------+
+| 409 Conflict     | If the token is already   |
+|                  | registered                |
++------------------+---------------------------+
 
-::
+And with a 201 response we also get::
 
     {"channel_manager_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"}
 

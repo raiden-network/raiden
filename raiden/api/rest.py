@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import httplib
+import json
 from flask import Flask, make_response, url_for
 from flask.json import jsonify
 from flask_restful import Api, abort
@@ -57,6 +58,15 @@ def normalize_events_list(old_list):
         new_event['event_type'] = new_event.pop('_event_type')
         new_list.append(new_event)
     return new_list
+
+
+def jsonify_with_response(data, status_code):
+    response = make_response((
+        json.dumps(data),
+        status_code,
+        {'mimetype': 'application/json', 'Content-Type': 'application/json'}
+    ))
+    return response
 
 
 class APIServer(object):
@@ -183,10 +193,17 @@ class RestAPI(object):
 
     def register_token(self, token_address):
         manager_address = self.raiden_api.manager_address_if_token_registered(token_address)
+
+        if manager_address is not None:
+            return make_response('Token is already registered', httplib.CONFLICT)
+
         if manager_address is None:
             manager_address = self.raiden_api.register_token(token_address)
 
-        return jsonify(dict(channel_manager_address=address_encoder(manager_address)))
+        return jsonify_with_response(
+            data=dict(channel_manager_address=address_encoder(manager_address)),
+            status_code=httplib.CREATED
+        )
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
         raiden_service_result = self.raiden_api.open(
