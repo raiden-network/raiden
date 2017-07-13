@@ -264,7 +264,10 @@ class TransferSchema(BaseSchema):
 
 class ConnectionsConnectSchema(BaseSchema):
     funds = fields.Integer(required=True, location='json')
-    initial_channel_target = fields.Integer(missing=DEFAULT_INITIAL_CHANNEL_TARGET, location='json')
+    initial_channel_target = fields.Integer(
+        missing=DEFAULT_INITIAL_CHANNEL_TARGET,
+        location='json'
+    )
     joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET, location='json')
 
     class Meta:
