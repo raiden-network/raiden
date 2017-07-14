@@ -98,10 +98,7 @@ def test_deposit_events(
         '_value': deposit_amount,
     }
 
-    assert newbalance_event == {
-        '_event_type': 'ChannelNewBalance',
-        'token_address': encode_hex(tester_token.address),
-        'participant': encode_hex(address),
-        'balance': deposit_amount,
-        'block_number': 0,  # the block number in the event is deprecated
-    }
+    assert newbalance_event['_event_type'] == 'ChannelNewBalance'
+    assert newbalance_event['token_address'] == encode_hex(tester_token.address)
+    assert newbalance_event['participant'] == encode_hex(address)
+    assert newbalance_event['balance'] == deposit_amount
