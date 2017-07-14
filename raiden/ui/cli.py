@@ -126,7 +126,7 @@ OPTIONS = [
         type=str,
     ),
     click.option(
-        '--database-dir',
+        '--datadir',
         help='Directory for storing raiden data.',
         default=None,
         type=click.Path(
@@ -173,7 +173,7 @@ def app(address,
         rpc,
         console,
         password_file,
-        database_dir):
+        datadir):
 
     from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
@@ -306,11 +306,11 @@ def app(address,
         blockchain_service.discovery(discovery_contract_address)
     )
 
-    if database_dir is None:
+    if datadir is None:
         # default database directory
         raiden_directory = os.path.join(os.path.expanduser('~'), '.raiden')
     else:
-        raiden_directory = database_dir
+        raiden_directory = datadir
 
     if not os.path.exists(raiden_directory):
         os.makedirs(raiden_directory)
