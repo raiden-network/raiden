@@ -4,6 +4,7 @@ from __future__ import print_function
 import sys
 import os
 import tempfile
+import json
 
 import signal
 import click
@@ -474,6 +475,7 @@ def smoketest(ctx, debug, **kwargs):
         append_report('geth init stderr', ethereum_config['init_log_err'].decode('utf-8'))
         append_report('ethereum stdout', out)
         append_report('ethereum stderr', err)
+        append_report('smoketest configuration', json.dumps(smoketest_config))
     if success:
         print('[5/5] smoketest successful, report was written to {}'.format(report_file))
     else:
