@@ -15,6 +15,7 @@ export class RaidenService {
     public tokenContract: any;
     public web3: any;
     public raidenAddress: string;
+    private userTokens: {[id:string]: Usertoken|null} = {};
 
     constructor(private http: Http, private config: RaidenConfig) {
         this.web3 = this.config.web3;
@@ -53,22 +54,9 @@ export class RaidenService {
         return this.http.get(`${this.config.apiCall}/tokens`)
             .map((response) => {
                 const tokenArray: Array<{address:string}> = response.json();
-                let usertokens: Usertoken[] = [];
-                // TODO: cache these usertokens, to avoid calling API multiple times
-                for (const tokeninfo of tokenArray) {
-                    try {
-                        const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
-                        usertokens.push(new Usertoken(
-                            tokeninfo.address,
-                            tokenContractInstance.symbol(),
-                            tokenContractInstance.name(),
-                            tokenContractInstance.balanceOf(this.raidenAddress).toNumber()
-                        ));
-                    } catch (error) {
-                        console.log("Error getting token", tokeninfo, error);
-                    }
-                }
-                return usertokens;
+                return tokenArray
+                    .map((tokeninfo) => this.getUsertoken(tokeninfo.address))
+                    .filter((u) => u !== null);
             }).catch(this.handleError);
     }
 
@@ -76,17 +64,15 @@ export class RaidenService {
         return this.http.get(`${this.config.apiCall}/tokens`)
         .map((response) => {
             const tokenArray: Array<{address:string}> = response.json();
-            let tokens: Array<{label,value}> = [];
+            let tokens: Array<{label:string,value:string}> = [];
             for (const tokeninfo of tokenArray) {
-                try {
-                    const tokenContractInstance = this.tokenContract.at(tokeninfo.address);
-                    tokens.push({
-                        'value': tokeninfo.address,
-                        'label': tokenContractInstance.name()+" ("+tokeninfo.address+")"
-                    });
-                } catch (error) {
-                    console.log("Error getting token", tokeninfo, error);
-                }
+                let userToken = this.getUsertoken(tokeninfo.address, false);
+                if (!userToken)
+                    continue;
+                tokens.push({
+                    'value': tokeninfo.address,
+                    'label': userToken.name+" ("+tokeninfo.address+")"
+                });
             }
             return tokens;
         });
@@ -169,14 +155,41 @@ export class RaidenService {
         return this.http.put(`${this.config.apiCall}/tokens/${tokenAddress}`, '{}')
             .map((response) => {
                 this.tokenContract = this.web3.eth.contract(tokenabi);
-                const tokenContractInstance = this.tokenContract.at(tokenAddress);
-                return new Usertoken(
+                const userToken: Usertoken|null = this.getUsertoken(tokenAddress);
+                if (userToken === null)
+                    throw "No contract on address "+tokenAddress;
+                return <Usertoken>userToken;
+            }).catch(this.handleError);
+    }
+
+    private getUsertoken(tokenAddress: string, refresh: boolean = true): Usertoken|null {
+        const tokenContractInstance = this.tokenContract.at(tokenAddress);
+        let userToken: Usertoken|null|undefined = this.userTokens[tokenAddress];
+        if (userToken === undefined) {
+            let name: string = null;
+            let symbol: string = null;
+            try {
+                symbol = tokenContractInstance.symbol();
+            } catch (e) {}
+            try {
+                name = tokenContractInstance.name();
+            } catch (e) {}
+            try {
+                userToken = new Usertoken(
                     tokenAddress,
-                    tokenContractInstance.symbol(),
-                    tokenContractInstance.name(),
+                    symbol,
+                    name,
                     tokenContractInstance.balanceOf(this.raidenAddress).toNumber()
                 );
-            }).catch(this.handleError);
+            } catch(e) {
+                userToken = null;
+            }
+            this.userTokens[tokenAddress] = userToken;
+        }
+        else if (refresh && userToken !== null) {
+            userToken.balance = tokenContractInstance.balanceOf(this.raidenAddress).toNumber();
+        }
+        return userToken;
     }
 
     private handleError(error: Response | any) {

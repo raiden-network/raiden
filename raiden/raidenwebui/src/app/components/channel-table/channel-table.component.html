@@ -1,10 +1,10 @@
 <p-tabView class="ui-g-12">
   <p-tabPanel header="Channels">
+    <div class="ui-g-12">
+      <button type="text" (click)="onOpen()" pButton icon="fa-external-link-square" label="Open Channel"></button>
+    </div>
     <div *ngIf="channels?.length > 0; then channelData else msg"></div>
     <ng-template #channelData>
-      <div class="ui-g-12">
-        <button type="text" (click)="onOpen()" pButton icon="fa-external-link-square" label="Open Channel"></button>
-      </div>
       <p-dataTable [value]="channels" class="ui-g-12">
           <p-column field="channel_address" header="Channel"></p-column>
           <p-column field="partner_address" header="Partner"></p-column>
