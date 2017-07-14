@@ -112,7 +112,6 @@ def run_smoketests(raiden_service, test_config, debug=False):
         discovery = chain.address_discovery.values()[0]
         assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
-        raiden_service.register_registry(chain.default_registry.address)
         assert len(raiden_service.channelgraphs.values()) == 1
         graph = raiden_service.channelgraphs.values()[0]
         channel = graph.partneraddress_channel[TEST_PARTNER_ADDRESS.decode('hex')]
