@@ -94,14 +94,14 @@ def open_port(upnp, internal_port, external_start_port=None):
                 internal_mapped == internal
             ):
                 log.debug(
-                    'keeping pre existing portmapping',
+                    'keeping pre-existing portmapping',
                     internal=internal,
                     external=external,
                     lanaddr=lanaddr
                 )
                 return True
             elif lanaddr != upnp.lanaddr:
-                # don't touch other peoples mappings
+                # don't touch other people's mappings
                 log.debug(
                     'ignoring existing mapping for other IP',
                     internal=internal,
@@ -115,7 +115,7 @@ def open_port(upnp, internal_port, external_start_port=None):
                 name != RAIDEN_IDENTIFICATOR
             ):
                 log.debug(
-                    'ignoring existing mapping for other programm',
+                    'ignoring existing mapping for other program',
                     name=name
                 )
                 # some other program uses our port
@@ -166,10 +166,10 @@ def open_port(upnp, internal_port, external_start_port=None):
 
 
 def release_port(upnp, external_port):
-    """Try to release the port mapping for `internal_port`.
+    """Try to release the port mapping for `external_port`.
 
     Args:
-        internal_port (int): the port that was previously forwarded to.
+        external_port (int): the port that was previously forwarded to.
 
     Returns:
         success (boolean): if the release was successful.
