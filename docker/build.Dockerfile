@@ -27,7 +27,7 @@ RUN curl -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
     usr/bin/python get-pip.py && \
     rm get-pip.py
 
-RUN curl -L -o /usr/bin/solc https://github.com/brainbot-com/solidity-static/releases/download/v0.4.9/solc && \
+RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.13/solc-static-linux && \
     chmod +x /usr/bin/solc
 
 # use --build-arg RAIDEN_VERSION=v0.0.3 to build a specific (tagged) version
