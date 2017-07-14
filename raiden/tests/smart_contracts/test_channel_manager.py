@@ -236,15 +236,19 @@ def test_reopen_channel(
     nettingchannel.settle(sender=pkey0)
 
     tester_state.mine(1)
+    assert tester_state.block.get_code(nettingchannel.address) != 0
 
-    # now a single new channel can be opened
-    # if channel with address is settled a new can be opened
-    # old entry will be deleted when calling newChannel
+    # Now that channel with address1 is settled a new one can be opened.
+    # Old entry will be deleted when calling newChannel
     tester_channelmanager.newChannel(
         address1,
         settle_timeout,
         sender=pkey0,
     )
+
+    # make sure the old channel is properly selfdestructed
+    tester_state.mine(1)
+    assert tester_state.block.get_code(nettingchannel.address) != 0
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
