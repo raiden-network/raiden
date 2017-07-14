@@ -8,16 +8,27 @@ RAIDEN_IDENTIFICATOR = "raiden-network udp service"
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
+NON_MAPPABLE = [
+    u'127.0.0.1',
+    u'0.0.0.0',
+]
 
-def valid_ip_v4(address):
+
+def valid_mappable_ipv4(address):
+    if unicode(address, errors='ignore') in NON_MAPPABLE:
+        return False
+    parsed = None
     try:
-        ipaddress.ip_address(address)
+        parsed = ipaddress.ip_address(address)
     except ipaddress.AddressValueError:
-        return valid_ip_v4(unicode(address))
+        return valid_mappable_ipv4(unicode(address, errors='ignore'))
     except ValueError:
         log.debug('invalid IPv4 address', input=address)
         return False
-    return True
+    if parsed is not None and parsed.version == 4:
+        return True
+    else:
+        return False
 
 
 def connect():
@@ -42,11 +53,11 @@ def connect():
         log.error('Error when connecting to uPnP provider', exception_info=e)
         return None
 
-    if not valid_ip_v4(upnp.lanaddr):
+    if not valid_mappable_ipv4(upnp.lanaddr):
         log.error('could not query your lanaddr', reported=upnp.lanaddr)
         return
     try:  # this can fail if router advertises uPnP incorrectly
-        if not valid_ip_v4(upnp.externalipaddress()):
+        if not valid_mappable_ipv4(upnp.externalipaddress()):
             log.error('could not query your externalipaddress', reported=upnp.externalipaddress())
             return
         return upnp, location
