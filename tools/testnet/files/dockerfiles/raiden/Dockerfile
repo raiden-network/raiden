@@ -5,7 +5,7 @@ RUN \
     apt update && \
     apt install -y build-essential curl git libffi-dev libgmp-dev libssl-dev libtool pkg-config && \
     rm -rf /var/lib/apt/lists/* && \
-    curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.11/solc-static-linux && \
+    curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.13/solc-static-linux && \
     chmod +x /usr/bin/solc && \
     git clone -b testnet_wip https://github.com/ulope/raiden.git /app && \
     pip install -r /app/requirements.txt -e /app
