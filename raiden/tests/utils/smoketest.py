@@ -37,9 +37,9 @@ GENESIS_PATH = Template('$RST_DATADIR/genesis.json').substitute(os.environ)
 # We use DEFAULT_ETH_COMMAND, unless '$RST_ETH_COMMAND' is defined (all environment variables
 # specific to the raiden smoke test are prefixed 'RST_' for Raiden Smoke Test).
 # For customization, set the environment variable to fit your client like this:
-# RST_ETH_COMMAND="ethereum --p2p-port \$RST_P2P_PORT --rpc-port \$RST_RPC_PORT \
+# RST_ETH_COMMAND="ethereum --rpc-port \$RST_RPC_PORT \
 #        --data-dir \$RST_DATADIR" raiden smoketest
-
+# FIXME: this does not work: the `init` phase is not customizable
 DEFAULT_ETH_COMMAND = """
 $RST_GETH_BINARY
     --nodiscover
@@ -61,13 +61,11 @@ if RST_GETH_BINARY is not None and 'RST_GETH_BINARY' not in os.environ:
     os.environ['RST_GETH_BINARY'] = RST_GETH_BINARY
 
 ports = iter(range(27854, 28000))
+# FIXME: get_free_port does not check for free ports
 get_free_port = lambda: str(next(ports))
 
 RST_RPC_PORT = get_free_port()
 os.environ['RST_RPC_PORT'] = RST_RPC_PORT
-
-RST_P2P_PORT = get_free_port()
-os.environ['RST_P2P_PORT'] = RST_P2P_PORT
 
 TEST_ACCOUNT = {
     "version": 3,
