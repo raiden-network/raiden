@@ -6,7 +6,9 @@ from itertools import count
 import pytest
 import psutil
 from ethereum.utils import sha3
+from pyethapp.jsonrpc import address_encoder
 
+from raiden.utils import privatekey_to_address
 from raiden.settings import (
     DEFAULT_EVENTS_POLL_TIMEOUT,
     DEFAULT_POLL_TIMEOUT,
@@ -281,7 +283,11 @@ def database_paths(tmpdir, private_keys, in_memory_database):
             for position in range(len(private_keys))
         ]
 
-    return [
-        os.path.join(tmpdir.strpath, 'transaction_log_{}.db'.format(position))
-        for position in range(len(private_keys))
-    ]
+    database_paths = list()
+    for idx, pkey in enumerate(private_keys):
+        app_dir = os.path.join(tmpdir.strpath, address_encoder(privatekey_to_address(pkey))[2:8])
+        if not os.path.exists(app_dir):
+            os.makedirs(app_dir)
+        database_paths.append(os.path.join(app_dir, 'log.db'))
+
+    return database_paths
