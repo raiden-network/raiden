@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.11;
 
 import "./Token.sol";
 import "./NettingChannelContract.sol";
