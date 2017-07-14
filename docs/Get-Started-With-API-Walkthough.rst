@@ -24,7 +24,7 @@ Scenarios
 *********
 Below you'll find a series of different scenarios showing different ways that the Raiden API can be used and interacted with.
 
-A good way to check that you started Raiden correctly before proceeding is to check that your Raiden address is the same address as the ethereum address that you chose, when starting the Raiden node::
+A good way to check that you started Raiden correctly before proceeding is to check that your Raiden address is the same address as the Ethereum address that you chose, when starting the Raiden node::
 
     GET /api/1/address
 
@@ -205,18 +205,62 @@ If there is a path in the network with enough capacity and the address sending t
 Which will return a list of events. All we then need to do is to filter for incoming transfers.
 
 Please note that one of the most powerful features of Raiden is that we can send transfers to anyone connected to the network as long as there is a path with enough capacity, and not just to the nodes that we are directly connected to.
+
+
 .. _close:
 Close
 -----
+If at any point in time we should want to close a specific channel we can do so with the ``close`` endpoint::
 
+    PATCH /api/1/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224
+
+with the payload::
+
+    {
+        "state":"closed"
+    }
+
+When successful this will give a response with a channel object where the state is set to ``"closed"``::
+
+    {
+        "channel_address": "0x000397DFD32aFAAE870E6b5FB44154FD43e43224",
+        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "token_address": "0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671",
+        "balance": 350,
+        "state": "closed",
+        "settle_timeout": 600
+    }
+
+Notice how the ``state`` is set to ``"closed"`` compared to the channel objects we've seen earlier where it was ``"open"``.
 
 .. _settle:
 Settle
 ------
+Once ``"close"`` has been called there is a timeout period, where the counterparty of the channel can provide the last received message from our node. When this timeout settlement timeout period is over, we can finally settle the channel::
 
+    PATCH /api/1/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224
+
+with the payload::
+
+    {
+        "state":"settled"
+    }
+
+this will trigger the ``settle()`` function in the `NettingChannelContract <https://github.com/raiden-network/raiden/blob/master/raiden/smart_contracts/NettingChannelContract.sol#L104>`_ smart contract. Once settlement is successful a channel object will be returned::
+
+    {
+        "channel_address": "0x000397DFD32aFAAE870E6b5FB44154FD43e43224",
+        "partner_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
+        "token_address": "0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671",
+        "balance": 0,
+        "state": "settled",
+        "settle_timeout": 600
+    }
+
+Here it's interesting to notice that the balance of the channel is now ``0`` and that the state is set to ``"settled"``. This means that netted balance that we are owed from our counterparty has now been transferred to us on the blockchain and that the life cycle of the payment channel is ended.
 
 
 
 Interacting with the Raiden echo node
 =====================================
-
+TODO once the echo node is ready
