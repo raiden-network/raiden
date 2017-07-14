@@ -163,6 +163,7 @@ def test_api_channel_events(raiden_chain):
     for idx, result in enumerate(results):
         if result['block_number'] > max_block:
             max_block = result['block_number']
+            assert max_block != 0
 
         if idx == 2:
             assert result['_event_type'] == 'EventTransferSentSuccess'
