@@ -1,39 +1,41 @@
 # -*- coding: utf-8 -*-
 import pytest
-
-from ethereum import tester
+from ethereum.tester import TransactionFailed
 from ethereum.utils import encode_hex, sha3
-from raiden.utils import get_contract_path, privatekey_to_address
-from ethereum.tester import ABIContract, ContractTranslator, TransactionFailed
-from coincurve import PrivateKey
 
-from raiden.tests.utils.tester import new_channelmanager
-from raiden.tests.utils.tester import new_nettingcontract
+from raiden.utils import privatekey_to_address
+from raiden.tests.utils.tester import (
+    new_channelmanager,
+    new_nettingcontract,
+)
 
 
 def test_channelnew_event(
         settle_timeout,
+        private_keys,
         tester_state,
         tester_events,
         tester_registry,
         tester_token):
+    """ When a new channel is created the channel new event must be emitted. """
 
-    privatekey0 = tester.DEFAULT_KEY
-    address0 = tester.DEFAULT_ACCOUNT
-    address1 = tester.a1
+    pkey0 = private_keys[0]
+    address0 = privatekey_to_address(pkey0)
+    address1 = privatekey_to_address(private_keys[1])
 
     channel_manager = new_channelmanager(
-        privatekey0,
+        pkey0,
         tester_state,
         tester_events.append,
         tester_registry,
         tester_token,
     )
 
+    # pylint: disable=no-member
     netting_channel_address1_hex = channel_manager.newChannel(
         address1,
         settle_timeout,
-        sender=privatekey0,
+        sender=pkey0,
     )
 
     last_event = tester_events[-1]
@@ -46,152 +48,31 @@ def test_channelnew_event(
     }
 
 
-def test_channelmanager(
-        tester_state,
-        tester_token,
-        tester_events,
-        tester_channelmanager_library_address,
+def test_channeldeleted_event(
         settle_timeout,
-        netting_channel_abi):  # pylint: disable=too-many-locals,too-many-statements
-
-    address0 = tester.DEFAULT_ACCOUNT
-    address1 = tester.a1
-    address2 = tester.a2
-    nonexisting_address = sha3('this_does_not_exist')[:20]
-
-    channelmanager_path = get_contract_path('ChannelManagerContract.sol')
-    channel_manager = tester_state.abi_contract(
-        None,
-        path=channelmanager_path,
-        language='solidity',
-        constructor_parameters=[tester_token.address],
-        contract_name='ChannelManagerContract',
-        log_listener=tester_events.append,
-        libraries={
-            'ChannelManagerLibrary': tester_channelmanager_library_address.encode('hex'),
-        }
-    )
-
-    participants_count = len(channel_manager.getChannelsParticipants())
-    assert participants_count == 0, 'newly deployed contract must be empty'
-
-    netting_channel_translator = ContractTranslator(netting_channel_abi)
-
-    previous_events = list(tester_events)
-    netting_channel_address1_hex = channel_manager.newChannel(
-        address1,
-        settle_timeout,
-    )
-    assert len(previous_events) + 1 == len(tester_events), 'ChannelNew event must be fired.'
-
-    channelnew_event = tester_events[-1]
-    assert channelnew_event == {
-        '_event_type': 'ChannelNew',
-        'participant1': address0.encode('hex'),
-        'participant2': address1.encode('hex'),
-        'netting_channel': netting_channel_address1_hex,
-        'settle_timeout': settle_timeout,
-    }
-
-    # should fail if settleTimeout is too low
-    with pytest.raises(TransactionFailed):
-        channel_manager.newChannel(address1, 5)
-
-    # cannot have two channels at the same time
-    with pytest.raises(TransactionFailed):
-        channel_manager.newChannel(address1, settle_timeout)
-
-    # should be zero address if there is no channel for the given address
-    assert channel_manager.getChannelWith(nonexisting_address) == '0' * 40
-
-    assert len(channel_manager.getChannelsParticipants()) == 2
-
-    netting_contract_proxy1 = ABIContract(
-        tester_state,
-        netting_channel_translator,
-        netting_channel_address1_hex,
-    )
-
-    assert netting_contract_proxy1.settleTimeout() == settle_timeout
-
-    previous_events = list(tester_events)
-    netting_channel_address2_hex = channel_manager.newChannel(
-        address2,
-        settle_timeout,
-    )
-    assert len(previous_events) + 1 == len(tester_events), 'ChannelNew event must be fired.'
-
-    assert channel_manager.getChannelWith(address1) == netting_channel_address1_hex
-    assert channel_manager.getChannelWith(address2) == netting_channel_address2_hex
-
-    msg_sender_channels = channel_manager.nettingContractsByAddress(tester.DEFAULT_ACCOUNT)
-    address1_channels = channel_manager.nettingContractsByAddress(address1)
-    nonexisting_channels = channel_manager.nettingContractsByAddress(nonexisting_address)
-
-    assert len(msg_sender_channels) == 2
-    assert len(address1_channels) == 1
-    assert len(nonexisting_channels) == 0
-
-    assert len(channel_manager.getChannelsParticipants()) == 4
-
-    channelnew_event = tester_events[-1]
-    assert channelnew_event == {
-        '_event_type': 'ChannelNew',
-        'participant1': address0.encode('hex'),
-        'participant2': address2.encode('hex'),
-        'netting_channel': netting_channel_address2_hex,
-        'settle_timeout': settle_timeout,
-    }
-
-
-def test_reopen_channel(
-        tester_state,
-        tester_events,
         tester_channelmanager,
-        tester_channels,
-        settle_timeout,
-        netting_channel_abi):
+        tester_events,
+        tester_nettingcontracts,
+        tester_state):
+    """ A channel deleted event must be emmited when the channel is cleaned.
 
-    privatekey0_raw, privatekey1_raw, nettingchannel, channel0, _ = tester_channels[0]
+    This happens once a *new* channel with *the same parties* is created,
+    overwritting the old one. This behavior may be unexpected due to the weird
+    timming.
+    """
+    pkey0, pkey1, nettingchannel = tester_nettingcontracts[0]
+    address0 = privatekey_to_address(pkey0)
+    address1 = privatekey_to_address(pkey1)
 
-    privatekey0 = PrivateKey(privatekey0_raw)
-    address0 = privatekey_to_address(privatekey0_raw)
-    address1 = privatekey_to_address(privatekey1_raw)
-    address2 = tester.a2
-
-    # We need to close the channel before it can be deleted, to do so we need
-    # one transfer to pass in close()
-    transfer_amount = 10
-    identifier = 1
-    direct_transfer = channel0.create_directtransfer(
-        transfer_amount,
-        identifier,
-    )
-    direct_transfer.sign(privatekey0, address0)
-    direct_transfer_data = str(direct_transfer.packed().data)
-
-    should_be_nonce = nettingchannel.opened(sender=privatekey0_raw) * (2**32)
-    should_be_nonce_plus_one = (nettingchannel.opened(sender=privatekey0_raw) + 1) * (2**32)
-    assert should_be_nonce <= direct_transfer.nonce < should_be_nonce_plus_one
-
-    # settle the channel should not change the channel manager state
-    nettingchannel.close(
-        direct_transfer_data,
-        sender=privatekey1_raw,
-    )
+    nettingchannel.close('', sender=pkey0)
     tester_state.mine(number_of_blocks=settle_timeout + 1)
+    nettingchannel.settle(sender=pkey0)
 
-    nettingchannel.settle(sender=privatekey0_raw)
-
-    tester_state.mine(1)
-
-    # now a single new channel can be opened
-    # if channel with address is settled a new can be opened
     # old entry will be deleted when calling newChannel
-    netting_channel_address1_hex = tester_channelmanager.newChannel(
+    tester_channelmanager.newChannel(
         address1,
         settle_timeout,
-        sender=privatekey0_raw,
+        sender=pkey0,
     )
 
     channeldelete_event = tester_events[-2]
@@ -201,39 +82,173 @@ def test_reopen_channel(
         'partner': address1.encode('hex')
     }
 
-    netting_channel_translator = ContractTranslator(netting_channel_abi)
 
-    netting_contract_proxy1 = ABIContract(
+def test_newchannel_fails_until_channel_is_settled(
+        settle_timeout,
         tester_state,
-        netting_channel_translator,
-        netting_channel_address1_hex,
-    )
+        tester_channelmanager,
+        tester_nettingcontracts):
+    """ A call to newChannel must fail if both participants have an existing
+    channel open, that is not settled.
 
-    # transfer not in nonce range
-    with pytest.raises(TransactionFailed):
-        netting_contract_proxy1.close(
-            direct_transfer_data,
-            sender=privatekey0_raw,
-        )
+    This is required since because the channel manager tracks only one channel
+    per participants pair, and the channel address information must be
+    available until the settlement is over to provide the required channel
+    information to the client. It's not assumed the client will cache the data
+    locally.
+    """
+    pkey0, pkey1, nettingchannel = tester_nettingcontracts[0]
+    address1 = privatekey_to_address(pkey1)
 
-    # channel already exists
+    # the channel exists and it's open
     with pytest.raises(TransactionFailed):
         tester_channelmanager.newChannel(
             address1,
             settle_timeout,
-            sender=privatekey0_raw,
+            sender=pkey0,
         )
 
-    # opening a new channel that did not exist before
-    tester_channelmanager.newChannel(
-        address2,
+    nettingchannel.close('', sender=pkey0)
+
+    # the old channel is closed but not settled yet
+    with pytest.raises(TransactionFailed):
+        tester_channelmanager.newChannel(
+            address1,
+            settle_timeout,
+            sender=pkey0,
+        )
+
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+
+    # the settlement period is over but the channel is not settled yet
+    with pytest.raises(TransactionFailed):
+        tester_channelmanager.newChannel(
+            address1,
+            settle_timeout,
+            sender=pkey0,
+        )
+
+    nettingchannel.settle(sender=pkey0)
+
+    # now a new channel can be open
+    new_nettingchannel = tester_channelmanager.newChannel(
+        address1,
         settle_timeout,
-        sender=privatekey0_raw,
+        sender=pkey0,
+    )
+
+    assert new_nettingchannel != nettingchannel.address
+
+
+@pytest.mark.parametrize('number_of_nodes', [10])
+def test_getchannelwith_must_return_zero_for_inexisting_channels(
+        tester_channelmanager,
+        private_keys,
+        settle_timeout):
+    """ Queries to the channel manager for an unexisting channel with a partner
+    must return zero.
+    """
+    addresses = map(privatekey_to_address, private_keys)
+
+    test_key = private_keys[0]
+    test_addr = privatekey_to_address(test_key)
+    for addr in addresses:
+        if addr == test_addr:
+            continue
+
+        channel_address = tester_channelmanager.getChannelWith(addr, sender=test_key)
+        assert channel_address == '0' * 40
+
+        tester_channelmanager.newChannel(addr, settle_timeout, sender=test_key)
+
+
+def test_channelmanager_start_with_zero_entries(
+        private_keys,
+        tester_events,
+        tester_registry,
+        tester_state,
+        tester_token):
+    """ A new channel manager must start empty. """
+
+    pkey0 = private_keys[0]
+    channel_manager = new_channelmanager(
+        pkey0,
+        tester_state,
+        tester_events.append,
+        tester_registry,
+        tester_token,
+    )
+
+    # pylint: disable=no-member
+    assert not channel_manager.getChannelsAddresses(sender=pkey0)
+    assert not channel_manager.getChannelsParticipants(sender=pkey0)
+
+
+def test_channelmanager(private_keys, settle_timeout, tester_channelmanager):
+    # pylint: disable=too-many-locals,too-many-statements
+
+    pkey0 = private_keys[0]
+    address0 = privatekey_to_address(private_keys[0])
+    address1 = privatekey_to_address(private_keys[1])
+    address2 = privatekey_to_address(private_keys[2])
+
+    total_pairs = 0
+    for addr in [address1, address2]:
+        channel_address_hex = tester_channelmanager.newChannel(
+            addr,
+            settle_timeout,
+            sender=pkey0,
+        )
+
+        assert tester_channelmanager.getChannelWith(addr, sender=pkey0) == channel_address_hex
+
+        total_pairs += 2
+        participant_pairs = tester_channelmanager.getChannelsParticipants(sender=pkey0)
+        assert len(participant_pairs) == total_pairs
+
+    # pylint: disable=no-member
+    addr0_channels = tester_channelmanager.nettingContractsByAddress(address0, sender=pkey0)
+    addr1_channels = tester_channelmanager.nettingContractsByAddress(address1, sender=pkey0)
+
+    nonexisting_address = sha3('this_does_not_exist')[:20]
+    nonaddr_channels = tester_channelmanager.nettingContractsByAddress(
+        nonexisting_address,
+        sender=pkey0,
+    )
+
+    assert len(addr0_channels) == 2
+    assert len(addr1_channels) == 1
+    assert not nonaddr_channels
+
+
+def test_reopen_channel(
+        settle_timeout,
+        tester_channelmanager,
+        tester_nettingcontracts,
+        tester_state):
+    """ Reopen must be possible after settlement. """
+
+    pkey0, pkey1, nettingchannel = tester_nettingcontracts[0]
+    address1 = privatekey_to_address(pkey1)
+
+    nettingchannel.close('', sender=pkey0)
+    tester_state.mine(number_of_blocks=settle_timeout + 1)
+    nettingchannel.settle(sender=pkey0)
+
+    tester_state.mine(1)
+
+    # now a single new channel can be opened
+    # if channel with address is settled a new can be opened
+    # old entry will be deleted when calling newChannel
+    tester_channelmanager.newChannel(
+        address1,
+        settle_timeout,
+        sender=pkey0,
     )
 
 
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_new_channel(private_keys, tester_state, tester_channelmanager):
+def test_new_channel_state(private_keys, tester_state, tester_channelmanager):
     """ Tests the state of a newly created netting channel. """
     pkey0, pkey1 = private_keys
 
@@ -248,6 +263,7 @@ def test_new_channel(private_keys, tester_state, tester_channelmanager):
         settle_timeout,
     )
 
+    # pylint: disable=no-member
     assert channel.settleTimeout(sender=pkey0) == settle_timeout
     assert channel.tokenAddress(sender=pkey0) == tester_channelmanager.tokenAddress(sender=pkey0)
     assert channel.opened(sender=pkey0) == tester_state.block.number - 1
