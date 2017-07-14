@@ -200,10 +200,6 @@ class Channel(object):
         return self.partner_state.address
 
     @property
-    def deposit(self):
-        return self.our_state.contract_balance
-
-    @property
     def can_transfer(self):
         return (
             self.state == CHANNEL_STATE_OPENED and

@@ -242,7 +242,7 @@ class StateMachineEventHandler(object):
         connection_manager = self.raiden.connection_manager_for_token(
             token_address
         )
-        if channel.deposit == 0:
+        if channel.contract_balance == 0:
             gevent.spawn(
                 connection_manager.join_channel,
                 participant_address,

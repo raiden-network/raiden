@@ -83,7 +83,7 @@ class ConnectionManager(object):
                 token_address=pex(self.token_address),
                 open_channels=len(open_channels),
                 sum_deposits=sum(
-                    channel.deposit for channel in open_channels
+                    channel.contract_balance for channel in open_channels
                 ),
                 funds=funds,
             )
@@ -286,7 +286,7 @@ class ConnectionManager(object):
         """
         if self.funds > 0:
             remaining = self.funds - sum(
-                channel.deposit for channel in self.open_channels
+                channel.contract_balance for channel in self.open_channels
             )
             assert isinstance(remaining, int)
             return remaining

@@ -211,8 +211,8 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     forward_channel = channel(app0, app1, token)
     back_channel = channel(app1, app0, token)
 
-    deposit0 = forward_channel.deposit
-    deposit1 = back_channel.deposit
+    deposit0 = forward_channel.contract_balance
+    deposit1 = back_channel.contract_balance
 
     token_contract = app0.raiden.chain.token(token)
     balance0 = token_contract.balance_of(address0)
