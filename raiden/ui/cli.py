@@ -314,7 +314,10 @@ def app(address,
 
     if not os.path.exists(raiden_directory):
         os.makedirs(raiden_directory)
-    database_path = os.path.join(raiden_directory, 'log.db')
+    user_db_dir = os.path.join(raiden_directory, address[:6])
+    if not os.path.exists(user_db_dir):
+        os.makedirs(user_db_dir)
+    database_path = os.path.join(user_db_dir, 'log.db')
     config['database_path'] = database_path
 
     return App(config, blockchain_service, discovery)

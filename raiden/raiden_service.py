@@ -233,9 +233,9 @@ class RaidenService(object):
 
         self.serialization_file = None
         if config['database_path'] != ':memory:':
-            snapshot_dir = path.join(
+            snapshot_dir = os.path.join(
                 path.dirname(self.config['database_path']),
-                pex(self.address)
+                'snapshots'
             )
             if not os.path.exists(snapshot_dir):
                 os.makedirs(
