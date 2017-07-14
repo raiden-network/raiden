@@ -148,6 +148,10 @@ The main focus of this section will be the usage of the ``connect`` and the ``le
 
 Let's assume that a user holds 2000 of some awesome ERC20 token (AET). The user knows that a Raiden based token network already exists for this token.
 
+
+.. _connect:
+Connect
+-------
 Connecting to an already existing token network is quite simple and all you need, is as mentioned above, the address of the token network you want to join and some of the corresponding tokens::
 
     PUT /api/v1/connection/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
@@ -162,16 +166,53 @@ This will automatically connect you to and open channels with three random peers
 
 We are now connected to the token network for the AET token, and we should have a path to all other nodes that have joined this token network, so that we can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
 
+
+.. _leave:
+Leave
+-----
 If we at some point want to leave the token network the ``leave`` endpoint is available. This endpoint will take care of closing and settling all open channels in the token network::
 
     DELETE /api/v1/connection/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
 
-This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For more information on the the nature of settlement see :doc:`TODO ADD DOCUMENT ON RAIDEN PAYMENT CHANNEL NATURE <link-to-doc.rst>`.
+This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For more information on the nature of settlement see :doc:`TODO ADD DOCUMENT ON RAIDEN PAYMENT CHANNEL NATURE <link-to-doc.rst>`.
+
 
 .. _transferring-tokens:
 Transferring tokens
 ===================
+So far we know how to bootstrap a token network, how to join an already existing token network, and how to leave a token network. However, we still need to take a look at what Raiden is really all about - transferring tokens from one node to another in off-chain payment channels. Let's assume that we are connected to the token network of the AET token mentioned above. In this case we are connected to five peers, since we used that standard ``connect()`` parameters. 
 
+
+.. _transfer:
+Transfer
+--------
+Transferring tokens to another node is quite easy. We know the address of the token we want to transfer ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All we then need to know is the address of the node we want to transfer to. Let's say the address of the node we want to transfer to is ``0x61c808d82a3ac53231750dadc13c777b59310bd9``::
+
+    POST /api/1/transfers/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61c808d82a3ac53231750dadc13c777b59310bd9
+
+We also need to know the amount that we want to transfer. We add this as the payload::
+
+    {
+        "amount": 42,
+    }
+
+An ``"identifier": some_integer`` can also be added to the payload, but it's optional.
+
+If there is a path in the network with enough capacity and the address sending the transfer holds enough tokens to transfer the amount in the payload, the transfer will go through. The receiving node should then be able to see incoming transfers by querying all its open channels. This is done by doing the following for all addresses of open channels::
+
+    GET /api/1/events/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224?from_block=1337
+
+Which will return a list of events. All we then need to do is to filter for incoming transfers.
+
+Please note that one of the most powerful features of Raiden is that we can send transfers to anyone connected to the network as long as there is a path with enough capacity, and not just to the nodes that we are directly connected to.
+.. _close:
+Close
+-----
+
+
+.. _settle:
+Settle
+------
 
 
 
