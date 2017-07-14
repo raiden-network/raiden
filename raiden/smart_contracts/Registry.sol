@@ -16,8 +16,7 @@ contract Registry {
     modifier doesNotExist(address _address) {
         // Check if it's already registered or token contract is invalid.
         // We assume if it has a valid totalSupply() function it's a valid Token contract
-        if (registry[_address] != 0x0)
-            throw;
+        require(registry[_address] == 0x0);
         Token token = Token(_address);
         token.totalSupply();
         _;
