@@ -58,7 +58,7 @@ def test_channeldeleted_event(
 
     This happens once a *new* channel with *the same parties* is created,
     overwritting the old one. This behavior may be unexpected due to the weird
-    timming.
+    timing.
     """
     pkey0, pkey1, nettingchannel = tester_nettingcontracts[0]
     address0 = privatekey_to_address(pkey0)
@@ -89,9 +89,9 @@ def test_newchannel_fails_until_channel_is_settled(
         tester_channelmanager,
         tester_nettingcontracts):
     """ A call to newChannel must fail if both participants have an existing
-    channel open, that is not settled.
+    channel open with each other, that is not settled.
 
-    This is required since because the channel manager tracks only one channel
+    This is required because the channel manager tracks only one channel
     per participants pair, and the channel address information must be
     available until the settlement is over to provide the required channel
     information to the client. It's not assumed the client will cache the data
@@ -130,7 +130,7 @@ def test_newchannel_fails_until_channel_is_settled(
 
     nettingchannel.settle(sender=pkey0)
 
-    # now a new channel can be open
+    # now a new channel can be opened
     new_nettingchannel = tester_channelmanager.newChannel(
         address1,
         settle_timeout,
@@ -141,11 +141,11 @@ def test_newchannel_fails_until_channel_is_settled(
 
 
 @pytest.mark.parametrize('number_of_nodes', [10])
-def test_getchannelwith_must_return_zero_for_inexisting_channels(
+def test_getchannelwith_must_return_zero_for_non_existing_channels(
         tester_channelmanager,
         private_keys,
         settle_timeout):
-    """ Queries to the channel manager for an unexisting channel with a partner
+    """ Queries to the channel manager for a non-existing channel with a partner
     must return zero.
     """
     addresses = map(privatekey_to_address, private_keys)
