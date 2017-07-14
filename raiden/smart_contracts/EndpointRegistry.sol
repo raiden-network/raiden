@@ -18,9 +18,7 @@ contract EndpointRegistry{
 
     modifier noEmptyString(string str)
     {
-        if (equals(str, "") == true) {
-            throw;
-        }
+        require(equals(str, "") != true);
         _;
     }
 
