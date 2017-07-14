@@ -1,4 +1,5 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.11;
+
 interface Token {
 
     /// @return total amount of tokens

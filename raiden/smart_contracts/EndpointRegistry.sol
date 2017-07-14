@@ -4,7 +4,7 @@
  * The Ethereum address registers his address in this registry.
 */
 
-pragma solidity ^0.4.0;
+pragma solidity ^0.4.11;
 
 contract EndpointRegistry{
     event AddressRegistered(address indexed eth_address, string socket);
