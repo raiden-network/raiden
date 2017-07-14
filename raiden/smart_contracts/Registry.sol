@@ -9,14 +9,16 @@ contract Registry {
     event TokenAdded(address token_address, address channel_manager_address);
 
     modifier addressExists(address _address) {
-        if (registry[_address] == 0x0)
-            throw;
+        require(registry[_address] != 0x0);
         _;
     }
 
     modifier doesNotExist(address _address) {
-        if (registry[_address] != 0x0)
-            throw;
+        // Check if it's already registered or token contract is invalid.
+        // We assume if it has a valid totalSupply() function it's a valid Token contract
+        require(registry[_address] == 0x0);
+        Token token = Token(_address);
+        token.totalSupply();
         _;
     }
 
@@ -79,5 +81,5 @@ contract Registry {
         return result;
     }
 
-    function () { throw; }
+    function () { revert(); }
 }

@@ -85,10 +85,7 @@ library NettingChannelLibrary {
 
         require(self.opened > 0);
         require(self.closed == 0);
-
-        if (self.token.balanceOf(msg.sender) < amount) {
-            throw;
-        }
+        require(self.token.balanceOf(msg.sender) >= amount);
 
         index = index_or_throw(self, msg.sender);
         Participant storage participant = self.participants[index];
@@ -122,15 +119,12 @@ library NettingChannelLibrary {
         uint256 transferred_amount;
 
         // close can be called only once
-        if (self.closed > 0) {
-            throw;
-        }
+        require(self.closed == 0);
+        self.closed = block.number;
 
         // Only a participant can call close
         closer_index = index_or_throw(self, msg.sender);
-
         self.closing_address = msg.sender;
-        self.closed = block.number;
 
         // Only the closing party can provide a transfer from the counterparty,
         // and only when this function is called, i.e. this value can not be
@@ -145,9 +139,7 @@ library NettingChannelLibrary {
             counterparty_index = index_or_throw(self, transfer_address);
 
             // only a message from the counter party is valid
-            if (closer_index == counterparty_index) {
-                throw;
-            }
+            require(closer_index != counterparty_index);
 
             // update the structure of the counterparty with its data provided
             // by the closing node
@@ -156,9 +148,7 @@ library NettingChannelLibrary {
             (nonce, recipient, locksroot, transferred_amount) = decodeTransfer(transfer_raw);
 
             // only accept messages with a valid nonce
-            if (!isValidNonce(self, nonce)) {
-                throw;
-            }
+            require(isValidNonce(self, nonce));
 
             // the registered message recipient should be the closing party
             require(recipient == self.closing_address);
@@ -187,25 +177,19 @@ library NettingChannelLibrary {
         uint8 closer_index;
 
         // updateTransfer can be called by the counter party only once
-        if (self.updated) {
-            throw;
-        }
+        require(!self.updated);
         self.updated = true;
 
         // Only a participant can call updateTransfer (#293 for third parties)
         caller_index = index_or_throw(self, msg.sender);
 
         // The closer is not allowed to call updateTransfer
-        if (self.closing_address == msg.sender) {
-            throw;
-        }
+        require(self.closing_address != msg.sender);
 
         (transfer_raw, transfer_address) = getTransferRawAddress(their_transfer);
 
         // Counter party can only update the closer transfer
-        if (transfer_address != self.closing_address) {
-            throw;
-        }
+        require(transfer_address == self.closing_address);
 
         // Update the structure of the closer with its data provided by the
         // counterparty
@@ -214,9 +198,7 @@ library NettingChannelLibrary {
         (nonce, recipient, locksroot, transferred_amount) = decodeTransfer(transfer_raw);
 
         // only accept messages with a valid nonce
-        if (!isValidNonce(self, nonce)) {
-            throw;
-        }
+        require(isValidNonce(self, nonce));
 
         // the registered recipient in the message should be us
         // Note: could have taken msg.sender here but trying to be future-proof
@@ -249,25 +231,19 @@ library NettingChannelLibrary {
         Participant storage counterparty = self.participants[index];
 
         // An empty locksroot means there are no pending locks
-        if (counterparty.locksroot == 0) {
-            throw;
-        }
+        require(counterparty.locksroot != 0);
 
         (expiration, amount, hashlock) = decodeLock(locked_encoded);
 
         // A lock can be withdrawn only once per participant
-        if (counterparty.withdrawn_locks[hashlock]) {
-            throw;
-        }
+        require(!counterparty.withdrawn_locks[hashlock]);
+
         counterparty.withdrawn_locks[hashlock] = true;
 
         // The lock must not have expired, it does not matter how far in the
         // future it would have expired
         require(expiration >= block.number);
-
-        if (hashlock != sha3(secret)) {
-            throw;
-        }
+        require(hashlock == sha3(secret));
 
         h = computeMerkleRoot(locked_encoded, merkle_proof);
 
@@ -364,15 +340,11 @@ library NettingChannelLibrary {
         closer_amount = total_deposit - counter_amount;
 
         if (counter_amount > 0) {
-            if (!self.token.transfer(counter_party.node_address, counter_amount)) {
-                throw;
-            }
+            require(self.token.transfer(counter_party.node_address, counter_amount));
         }
 
         if (closer_amount > 0) {
-            if (!self.token.transfer(closing_party.node_address, closer_amount)) {
-                throw;
-            }
+            require(self.token.transfer(closing_party.node_address, closer_amount));
         }
 
         kill(self);
@@ -454,7 +426,7 @@ library NettingChannelLibrary {
             return decodeRefundTransfer(transfer_raw);
         }
 
-        throw;
+        revert();
     }
 
     function decodeDirectTransfer(bytes memory message)
@@ -462,9 +434,7 @@ library NettingChannelLibrary {
         returns (uint64 nonce, address recipient, bytes32 locksroot, uint256 transferred_amount)
     {
         // size of the raw message without the signature
-        if (message.length != 124) {
-            throw;
-        }
+        require(message.length == 124);
 
         // Message format:
         // [0:1] cmdid
@@ -541,9 +511,7 @@ library NettingChannelLibrary {
     }
 
     function decodeLock(bytes lock) internal returns (uint64 expiration, uint amount, bytes32 hashlock) {
-        if (lock.length != 72) {
-            throw;
-        }
+        require(lock.length == 72);
 
         // Lock format:
         // [0:8] expiration
@@ -575,12 +543,8 @@ library NettingChannelLibrary {
     }
 
     function slice(bytes a, uint start, uint end) private returns (bytes n) {
-        if (a.length < end) {
-            throw;
-        }
-        if (start < 0) {
-            throw;
-        }
+        assert(end <= a.length);
+        assert(start < end);
 
         n = new bytes(end - start);
         for (uint i = start; i < end; i++) { //python style slice
@@ -592,9 +556,7 @@ library NettingChannelLibrary {
         uint8 n;
         // Return index of participant, or throw
         n = self.participant_index[participant_address];
-        if (n == 0) {
-            throw;
-        }
+        assert(n != 0);
         return n - 1;
     }
 

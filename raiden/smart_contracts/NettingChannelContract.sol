@@ -24,9 +24,7 @@ contract NettingChannelContract {
         uint timeout)
         settleTimeoutNotTooLow(timeout)
     {
-        if (participant1 == participant2) {
-            throw;
-        }
+        require(participant1 != participant2);
 
         data.participants[0].node_address = participant1;
         data.participants[1].node_address = participant2;
@@ -48,7 +46,7 @@ contract NettingChannelContract {
         (success, balance) = data.deposit(amount);
 
         if (success == true) {
-            ChannelNewBalance(data.token, msg.sender, balance, 0);
+            ChannelNewBalance(data.token, msg.sender, balance, block.number);
         }
 
         return success;
@@ -144,5 +142,5 @@ contract NettingChannelContract {
         return data.closing_address;
     }
 
-    function () { throw; }
+    function () { revert(); }
 }

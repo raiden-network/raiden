@@ -58,7 +58,7 @@ library ChannelManagerLibrary {
         } else if (address_one > address_two){
             return sha3(address_two, address_one);
         } else {
-            throw; // if the two addresses provided are identical
+            revert(); // if the two addresses provided are identical
         }
     }
 
