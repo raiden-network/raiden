@@ -19,7 +19,6 @@ export class ChannelTableComponent implements OnInit {
     public displayChannelDialog: boolean;
     public action: string;
     public tempChannel: Channel = new Channel();
-    public msgs: Message[] = [];
     public tokenAddressMapping: Array<{ value: string, label: string}>;
     constructor(private route: ActivatedRoute,
                 private router: Router,
@@ -96,7 +95,7 @@ export class ChannelTableComponent implements OnInit {
                     this.amount,
                     Math.floor(Math.random() * 101)).subscribe(
                         (response) => {
-                            this.showmessage(response);
+                            this.showMessage(response);
                         }
                     );
                 break;
@@ -104,19 +103,19 @@ export class ChannelTableComponent implements OnInit {
                 this.raidenService.depositToChannel(
                     this.tempChannel.channel_address,
                     this.amount).subscribe((response) => {
-                        this.showmessage(response);
+                        this.showMessage(response);
                     });
                 break;
             case 'close':
                 this.raidenService.closeChannel(this.tempChannel.channel_address)
                 .subscribe((response) => {
-                    this.showmessage(response);
+                    this.showMessage(response);
                 });
                 break;
             case 'settle':
                 this.raidenService.settleChannel(this.tempChannel.channel_address)
                 .subscribe((response) => {
-                    this.showmessage(response);
+                    this.showMessage(response);
                 });
                 break;
             case 'open':
@@ -129,18 +128,17 @@ export class ChannelTableComponent implements OnInit {
                 .subscribe((response) => {
                     console.log('logging the response');
                     console.log(response);
-                    this.showmessage(response);
+                    this.showMessage(response);
                 });
                 break;
         }
     }
 
-    public showmessage(response: any) {
-        this.msgs = [];
+    public showMessage(response: any) {
         switch (this.action) {
             case 'open':
                 if ('channel_address' in response) {
-                    this.msgs.push({severity: 'info', summary: this.action,
+                    this.sharedService.msg({severity: 'info', summary: this.action,
                     detail: `Channel with address ${response.channel_address} has been
                     created with partner ${response.partner_address}`});
                 } else {
@@ -149,39 +147,39 @@ export class ChannelTableComponent implements OnInit {
                 break;
             case 'transfer':
                 if ('target_address' in response && 'identifier' in response) {
-                    this.msgs.push({severity: 'info', summary: this.action,
+                    this.sharedService.msg({severity: 'info', summary: this.action,
                     detail: `A transfer of amount ${response.amount} is successful with the partner ${response.target_address}`});
                 } else {
-                    this.msgs.push({severity: 'error', summary: this.action,
+                    this.sharedService.msg({severity: 'error', summary: this.action,
                     detail: JSON.stringify(response)});
                 }
                 break;
             case 'deposit':
                 if ('balance' in response && 'state' in response) {
-                    this.msgs.push({severity: 'info', summary: this.action,
+                    this.sharedService.msg({severity: 'info', summary: this.action,
                     detail: `The channel ${response.channel_address} has been modified with a deposit of ${response.balance}`});
                 } else {
-                    this.msgs.push({severity: 'error', summary: this.action,
+                    this.sharedService.msg({severity: 'error', summary: this.action,
                     detail: JSON.stringify(response)});
                 }
                 break;
             case 'close':
                 if ('state' in response && response.state === 'closed') {
-                    this.msgs.push({severity: 'info', summary: this.action,
+                    this.sharedService.msg({severity: 'info', summary: this.action,
                     detail: `The channel ${response.channel_address} with partner
                     ${response.partner_address} has been closed successfully`});
                 } else {
-                    this.msgs.push({severity: 'error', summary: this.action,
+                    this.sharedService.msg({severity: 'error', summary: this.action,
                     detail: JSON.stringify(response)});
                 }
                 break;
             case 'settle':
                 if ('state' in response && response.state === 'settled') {
-                    this.msgs.push({severity: 'info', summary: this.action,
+                    this.sharedService.msg({severity: 'info', summary: this.action,
                     detail: `The channel ${response.channel_address} with partner
                     ${response.partner_address} has been settled successfully`});
                 } else {
-                    this.msgs.push({severity: 'error', summary: this.action,
+                    this.sharedService.msg({severity: 'error', summary: this.action,
                     detail: JSON.stringify(response)});
                 }
                 break;

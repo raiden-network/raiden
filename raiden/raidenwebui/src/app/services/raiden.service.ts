@@ -8,6 +8,7 @@ import { RaidenConfig } from './raiden.config';
 import { tokenabi } from './tokenabi';
 import { Usertoken } from '../models/usertoken';
 import { Channel } from '../models/channel';
+import { SharedService } from './shared.service';
 
 @Injectable()
 export class RaidenService {
@@ -17,7 +18,9 @@ export class RaidenService {
     public raidenAddress: string;
     private userTokens: {[id:string]: Usertoken|null} = {};
 
-    constructor(private http: Http, private config: RaidenConfig) {
+    constructor(private http: Http,
+                private config: RaidenConfig,
+                private sharedService: SharedService) {
         this.web3 = this.config.web3;
         this.tokenContract = this.web3.eth.contract(tokenabi);
         this.initialiseRaidenAddress();
@@ -159,7 +162,8 @@ export class RaidenService {
                 if (userToken === null)
                     throw "No contract on address "+tokenAddress;
                 return <Usertoken>userToken;
-            }).catch(this.handleError);
+            })
+            .catch(this.handleError);
     }
 
     private getUsertoken(tokenAddress: string, refresh: boolean = true): Usertoken|null {
@@ -203,6 +207,11 @@ export class RaidenService {
           errMsg = error.message ? error.message : error.toString();
         }
         console.error(errMsg);
+        this.sharedService.msg({
+            severity: 'error',
+            summary: 'Raiden Error',
+            detail: errMsg,
+        });
         return Observable.throw(errMsg);
     }
 

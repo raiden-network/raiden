@@ -7,16 +7,15 @@ import { Message } from 'primeng/primeng';
 import { Channel } from '../../models/channel';
 
 @Component({
-  selector: 'app-token-network',
-  templateUrl: './token-network.component.html',
-  styleUrls: ['./token-network.component.css']
+    selector: 'app-token-network',
+    templateUrl: './token-network.component.html',
+    styleUrls: ['./token-network.component.css']
 })
 export class TokenNetworkComponent implements OnInit {
 
     @Input() raidenAddress: string;
     public tokenBalances: Usertoken[];
     public selectedToken: Usertoken;
-    public msgs: Message[] = [];
     @Input() channelsToken: Channel[];
     public displayDialog: boolean = false;
     public displayRegisterDialog: boolean = false;
@@ -38,7 +37,7 @@ export class TokenNetworkComponent implements OnInit {
 
     public joinTokenNetwork() {
         if (this.selectedToken.balance === 0) {
-            this.msgs.push({
+            this.sharedService.msg({
                 severity: 'error',
                 summary: 'Insufficient Balance',
                 detail: 'Your Balance in this token network is zero.'
@@ -47,7 +46,7 @@ export class TokenNetworkComponent implements OnInit {
         }
         for (const channel of this.channelsToken) {
             if (this.selectedToken.address === channel.token_address) {
-                this.msgs.push({
+                this.sharedService.msg({
                     severity: 'warn',
                     summary: 'Warining message',
                     detail: 'You already participate in this token network'
@@ -68,7 +67,7 @@ export class TokenNetworkComponent implements OnInit {
             this.raidenService.registerToken(this.tokenAddress.value)
                 .subscribe((userToken: Usertoken) => {
                     this.tokenBalances.push(userToken);
-                    this.msgs.push({
+                    this.sharedService.msg({
                         severity: 'success',
                         summary: 'Token registered',
                         detail: 'Your token was successfully registered: '+userToken.address,
