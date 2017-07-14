@@ -59,7 +59,7 @@ class AccountManager(object):
                     try:
                         with open(fullpath) as data_file:
                             data = json.load(data_file)
-                            self.accounts[str(data['address'])] = str(fullpath)
+                            self.accounts[str(data['address']).lower()] = str(fullpath)
                     except (ValueError, KeyError, IOError) as ex:
                         # Invalid file - skip
                         if f.startswith("UTC--"):
@@ -73,7 +73,7 @@ class AccountManager(object):
         if address is not None and address.startswith('0x'):
             address = address[2:]
 
-        return address in self.accounts
+        return address.lower() in self.accounts
 
     def get_privkey(self, address, password=None):
         """Find the keystore file for an account, unlock it and get the private key
@@ -87,6 +87,8 @@ class AccountManager(object):
 
         if address.startswith('0x'):
             address = address[2:]
+
+        address = address.lower()
 
         if not self.address_in_keystore(address):
             raise ValueError("Keystore file not found for %s" % address)
