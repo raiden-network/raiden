@@ -1,11 +1,22 @@
 # -*- coding: utf-8 -*-
 import miniupnpc
+import ipaddress
 from ethereum import slogging
 
 MAX_PORT = 65535
 RAIDEN_IDENTIFICATOR = "raiden-network udp service"
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+def valid_ip_v4(address):
+    try:
+        ipaddress.ip_address(address)
+    except ipaddress.AddressValueError:
+        return valid_ip_v4(unicode(address))
+    except ValueError:
+        return False
+    return True
 
 
 def connect():
@@ -30,11 +41,11 @@ def connect():
         log.error('Error when connecting to uPnP provider', exception_info=e)
         return None
 
-    if upnp.lanaddr == '0.0.0.0':
+    if not valid_ip_v4(upnp.lanaddr):
         log.error('could not query your lanaddr')
         return
     try:  # this can fail if router advertises uPnP incorrectly
-        if upnp.externalipaddress() == '0.0.0.0' or upnp.externalipaddress() is None:
+        if not valid_ip_v4(upnp.externalipaddress()):
             log.error('could not query your externalipaddress')
             return
         return upnp, location
