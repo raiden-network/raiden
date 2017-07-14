@@ -11,6 +11,14 @@ This will install all the dependencies needed by Angular to run the project.
 
 You can read more about this [here](https://github.com/angular/angular-cli/blob/master/docs/documentation/stories/proxy.md)
 
+* If the `@angular/cli`'s `ng` command isn't available globally, you can find locally installed one at:
+
+> **./node_modules/.bin/ng**
+
+* You can also run it with a simple
+
+> **npm start**
+
 * Inside the folder src/assets/config we have a config.development.json. This file contains configuration details about host port etc for the raiden as well as geth because we query both the api servers simultaneously. We need to change this file so that it can pick up details according our local configuration.
 ```
 {
