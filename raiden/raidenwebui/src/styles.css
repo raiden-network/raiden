@@ -18,3 +18,10 @@ html, body, .my-content {
   width: 100%;
   height: 100%;
 }
+
+.ui-inputtext.ng-dirty.ng-invalid {
+    border-left: 5px solid #a94442;
+}
+.ui-inputtext.ng-dirty.ng-valid {
+    border-left: 5px solid #42A948;
+}

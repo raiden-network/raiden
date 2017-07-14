@@ -15,6 +15,7 @@ export class RaidenService {
     public tokenContract: any;
     public web3: any;
     public raidenAddress: string;
+
     constructor(private http: Http, private config: RaidenConfig) {
         this.web3 = this.config.web3;
         this.tokenContract = this.web3.eth.contract(tokenabi);
@@ -48,7 +49,7 @@ export class RaidenService {
         .map((response) => response.json()).catch(this.handleError);
     }
 
-    public getTokenBalancesOf(raidenAddress: string): Observable<any> {
+    public getTokenBalancesOf(raidenAddress: string): Observable<Usertoken[]> {
         return this.http.get(`${this.config.apiCall}/tokens`)
             .map((response) => {
                 const tokenArray: Array<{address:string}> = response.json();
@@ -136,7 +137,7 @@ export class RaidenService {
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
         return this.http.patch(`${this.config.apiCall}/channels/${channelAddress}`,
-            JSON.stringify(data), options)
+                JSON.stringify(data), options)
             .map((response) => response.json()).catch(this.handleError);
     }
 
@@ -147,7 +148,9 @@ export class RaidenService {
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
         return this.http.patch(`${this.config.apiCall}/channels/${channelAddress}`,
-            JSON.stringify(data), options).map((response) => response.json()).catch(this.handleError);
+                JSON.stringify(data), options)
+            .map((response) => response.json())
+            .catch(this.handleError);
     }
 
     public settleChannel(channelAddress: string): Observable<any> {
@@ -157,10 +160,26 @@ export class RaidenService {
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
         return this.http.patch(`${this.config.apiCall}/channels/${channelAddress}`,
-            JSON.stringify(data), options).map((response) => response.json()).catch(this.handleError);
+                JSON.stringify(data), options)
+            .map((response) => response.json())
+            .catch(this.handleError);
     }
 
-    private handleError (error: Response | any) {
+    public registerToken(tokenAddress: string): Observable<Usertoken> {
+        return this.http.put(`${this.config.apiCall}/tokens/${tokenAddress}`, '{}')
+            .map((response) => {
+                this.tokenContract = this.web3.eth.contract(tokenabi);
+                const tokenContractInstance = this.tokenContract.at(tokenAddress);
+                return new Usertoken(
+                    tokenAddress,
+                    tokenContractInstance.symbol(),
+                    tokenContractInstance.name(),
+                    tokenContractInstance.balanceOf(this.raidenAddress).toNumber()
+                );
+            }).catch(this.handleError);
+    }
+
+    private handleError(error: Response | any) {
         // In a real world app, you might use a remote logging infrastructure
         let errMsg: string;
         if (error instanceof Response) {

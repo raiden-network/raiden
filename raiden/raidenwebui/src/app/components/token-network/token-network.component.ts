@@ -1,8 +1,9 @@
 import { Component, OnInit, Input } from '@angular/core';
+import { FormControl } from '@angular/forms';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { Usertoken } from '../../models/usertoken';
-import {Message} from 'primeng/primeng';
+import { Message } from 'primeng/primeng';
 import { Channel } from '../../models/channel';
 
 @Component({
@@ -18,17 +19,20 @@ export class TokenNetworkComponent implements OnInit {
     public msgs: Message[] = [];
     @Input() channelsToken: Channel[];
     public displayDialog: boolean = false;
+    public displayRegisterDialog: boolean = false;
     public channelOpened: Channel = new Channel();
+    public tokenAddress: FormControl = new FormControl();
+
     constructor(private raidenService: RaidenService,
-    private sharedService: SharedService) { }
+                private sharedService: SharedService)
+    { }
 
 
     ngOnInit() {
         this.raidenService.getTokenBalancesOf(this.raidenAddress).subscribe(
-            (balances) => {
-                this.tokenBalances = <Usertoken[]> balances;
+            (balances: Usertoken[]) => {
+                this.tokenBalances = balances;
             }
-
         );
     }
 
@@ -52,6 +56,25 @@ export class TokenNetworkComponent implements OnInit {
             }
         }
         this.displayDialog = true;
+    }
+
+    public showRegisterDialog(show: boolean) {
+        this.tokenAddress.reset();
+        this.displayRegisterDialog = show;
+    }
+
+    public registerToken() {
+        if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value))
+            this.raidenService.registerToken(this.tokenAddress.value)
+                .subscribe((userToken: Usertoken) => {
+                    this.tokenBalances.push(userToken);
+                    this.msgs.push({
+                        severity: 'success',
+                        summary: 'Token registered',
+                        detail: 'Your token was successfully registered: '+userToken.address,
+                    });
+                })
+        this.showRegisterDialog(false);
     }
 
 }
