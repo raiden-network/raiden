@@ -161,6 +161,9 @@ def test_getchannelwith_must_return_zero_for_non_existing_channels(
         # can not open a channel with itself
         if addr != sender_addr:
             tester_channelmanager.newChannel(addr, settle_timeout, sender=sender_key)
+        else:
+            with pytest.raises(TransactionFailed):
+                tester_channelmanager.newChannel(addr, settle_timeout, sender=sender_key)
 
 
 def test_channelmanager_start_with_zero_entries(
@@ -227,8 +230,8 @@ def test_reopen_channel(
         settle_timeout,
         tester_channelmanager,
         tester_state):
-    """ A new channel can be open after the old one is settled, when this
-    happens the channel manager must update it's internal data strucutres to
+    """ A new channel can be opened after the old one is settled. When this
+    happens the channel manager must update its internal data structures to
     point to the new channel address.
     """
 
@@ -282,11 +285,12 @@ def test_reopen_regression_bad_index_update(
         settle_timeout,
         tester_channelmanager,
         tester_state):
-    """ deleteChannel used the wrong addres to update the mapping:
+    """ deleteChannel used the wrong address to update the node_index mapping.
+        Correct usage would be
 
         (addr0, addr1) => channel_idx
 
-    Instead of overwriting the exiting index, a new entry was added as:
+    But instead of overwriting the existing index, a new entry was added as:
 
         (addr0, channel_addr) => channel_idx
     """

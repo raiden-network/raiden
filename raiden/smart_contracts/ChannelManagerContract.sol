@@ -96,16 +96,16 @@ contract ChannelManagerContract {
         address[] storage partner_channels = node_channels[partner];
 
         if (settled_channel != 0) {
-            // Checking the channel was settled indirectly. Once the channel is
-            // settled it kill itself, so address must not have code.
+            // Check if the channel was settled. Once a channel is
+            // settled it kills itself, so address must not have code.
             require(!contractExists(settled_channel));
             ChannelDeleted(msg.sender, partner);
         }
 
         address new_channel = data.newChannel(partner, settle_timeout);
 
-        // replace the channel address in-place
         if (settled_channel != 0) {
+            // if an old channel existed, replace the channel address in-place
             uint channels_idx = all_channels_index[settled_channel];
             uint caller_idx = node_index[msg.sender][partner];
             uint partner_idx = node_index[partner][msg.sender];
@@ -114,8 +114,8 @@ contract ChannelManagerContract {
             caller_channels[caller_idx] = new_channel;
             partner_channels[partner_idx] = new_channel;
 
-        // first channel open among the participants, create a new entry
         } else {
+            // first channel opening between the participants, create a new entry
             all_channels.push(new_channel);
             caller_channels.push(new_channel);
             partner_channels.push(new_channel);

@@ -57,6 +57,9 @@ library ChannelManagerLibrary {
         if (address_one < address_two) {
             return sha3(address_one, address_two);
         } else {
+            // The two participants can't be the same here due to this check in
+            // the netting channel constructor:
+            // https://github.com/raiden-network/raiden/blob/e17d96db375d31b134ae7b4e2ad2c1f905b47857/raiden/smart_contracts/NettingChannelContract.sol#L27
             return sha3(address_two, address_one);
         }
     }
