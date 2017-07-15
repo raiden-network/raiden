@@ -208,7 +208,7 @@ class Channel(object):
 
     @property
     def contract_balance(self):
-        """ Return the amount of token used to open the channel. """
+        """Return the total amount of token we deposited in the channel"""
         return self.our_state.contract_balance
 
     @property
