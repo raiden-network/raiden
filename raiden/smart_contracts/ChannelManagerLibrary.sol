@@ -37,15 +37,16 @@ library ChannelManagerLibrary {
             settle_timeout
         );
 
-        self.channel_addresses[partyHash(msg.sender, partner)] = channel_address;
+        bytes32 party_hash = partyHash(msg.sender, partner);
+        self.channel_addresses[party_hash] = channel_address;
     }
 
     /// @notice Remove a channel after it's been settled
     /// @param partner of the partner
     function deleteChannel(Data storage self, address partner) internal
     {
-        // remove channel from channel_addresses.
-        self.channel_addresses[partyHash(msg.sender, partner)] = 0x0;
+        bytes32 party_hash = partyHash(msg.sender, partner);
+        self.channel_addresses[party_hash] = 0x0;
     }
 
     /// @notice Get the hash of the two addresses
@@ -55,10 +56,11 @@ library ChannelManagerLibrary {
     function partyHash(address address_one, address address_two) private constant returns (bytes32) {
         if (address_one < address_two) {
             return sha3(address_one, address_two);
-        } else if (address_one > address_two){
-            return sha3(address_two, address_one);
         } else {
-            revert(); // if the two addresses provided are identical
+            // The two participants can't be the same here due to this check in
+            // the netting channel constructor:
+            // https://github.com/raiden-network/raiden/blob/e17d96db375d31b134ae7b4e2ad2c1f905b47857/raiden/smart_contracts/NettingChannelContract.sol#L27
+            return sha3(address_two, address_one);
         }
     }
 
