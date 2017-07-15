@@ -301,11 +301,7 @@ class ApiTestContext():
             channel = self.make_channel(token_address=token_address, balance=funding)
             self.channels.append(channel)
 
-    def leave(
-            self,
-            token_address,
-            wait_for_settle=True,
-            timeout=30):
+    def leave(self, token_address):
 
         if not isaddress(token_address):
             raise InvalidAddress('not an address %s' % pex(token_address))

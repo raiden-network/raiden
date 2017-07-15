@@ -262,13 +262,8 @@ class RestAPI(object):
             joinable_funds_target
         )
 
-    def leave(self, token_address, wait_for_settle=None, timeout=None):
-
-        self.raiden_api.leave_token_network(
-            token_address,
-            wait_for_settle,
-            timeout
-        )
+    def leave(self, token_address):
+        self.raiden_api.leave_token_network(token_address)
 
     def get_channel_list(self, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
