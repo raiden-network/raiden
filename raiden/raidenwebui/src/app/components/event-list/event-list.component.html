@@ -1,39 +1,39 @@
 <p-dataList [value]="events" [paginator]="true" [rows]="5">
-    <p-header>
-        Events
-    </p-header>
-    <ng-template let-event pTemplate="item">
-        <div class="ui-grid ui-grid-responsive ui-fluid" style="font-size:12px;padding:10px;border-bottom:1px solid #D5D5D5;">
-            <div class="ui-grid-row">
-                <div class="ui-grid-col-2" style="text-align:center">
-                    <i class="fa fa-money"></i>
-                </div>
-                <div class="ui-grid-col-11">
-                    <div class="ui-grid ui-grid-responsive ui-fluid">
-                      <div class="ui-grid-row">
-                          <div class="ui-grid-col-2">Partner </div>
-                          <div class="ui-grid-col-10">{{event.partner}}</div>
-                      </div>
-                      <div class="ui-grid-row">
-                          <div class="ui-grid-col-2">Block </div>
-                          <div class="ui-grid-col-10">{{event.block}}</div>
-                      </div>
-                      <div class="ui-grid-row">
-                          <div class="ui-grid-col-2">Asset </div>
-                          <div class="ui-grid-col-10">{{event.asset}}</div>
-                      </div>
-                      <div class="ui-grid-row">
-                          <div class="ui-grid-col-2">Status </div>
-                          <div class="ui-grid-col-10">{{event.status}}</div>
-                      </div>
-                      <div class="ui-grid-row">
-                          <div class="ui-grid-col-2">Time </div>
-                          <div class="ui-grid-col-10">{{event.timestamp | date: 'HH:mm:ss'}}</div>
-                      </div>
-                    </div>
-                </div>
-            </div>
+  <p-header>
+    Events
+  </p-header>
+  <ng-template let-event pTemplate="item">
+    <div class="ui-grid ui-grid-responsive ui-fluid" style="font-size:12px;padding:10px;border-bottom:1px solid #D5D5D5;">
+      <div class="ui-grid-row">
+        <div class="ui-grid-col-2" style="text-align:center">
+          <i class="fa fa-money"></i>
         </div>
-    </ng-template>
+        <div class="ui-grid-col-11">
+          <div class="ui-grid ui-grid-responsive ui-fluid">
+            <div class="ui-grid-row">
+              <div class="ui-grid-col-2">Partner </div>
+              <div class="ui-grid-col-10">{{event.partner}}</div>
+            </div>
+            <div class="ui-grid-row">
+              <div class="ui-grid-col-2">Block </div>
+              <div class="ui-grid-col-10">{{event.block}}</div>
+            </div>
+            <div class="ui-grid-row">
+              <div class="ui-grid-col-2">Asset </div>
+              <div class="ui-grid-col-10">{{event.asset}}</div>
+            </div>
+            <div class="ui-grid-row">
+              <div class="ui-grid-col-2">Status </div>
+              <div class="ui-grid-col-10">{{event.status}}</div>
+            </div>
+            <div class="ui-grid-row">
+              <div class="ui-grid-col-2">Time </div>
+              <div class="ui-grid-col-10">{{event.timestamp | date: 'HH:mm:ss'}}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
 
 </p-dataList>
