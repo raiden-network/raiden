@@ -273,12 +273,3 @@ class ConnectionsConnectSchema(BaseSchema):
     class Meta:
         strict = True
         decoding_class = dict
-
-
-class ConnectionsLeaveSchema(BaseSchema):
-    wait_for_settle = fields.Bool(missing=DEFAULT_WAIT_FOR_SETTLE, location='json')
-    timeout = fields.Integer(missing=DEFAULT_REVEAL_TIMEOUT, location='json')
-
-    class Meta:
-        strict = True
-        decoding_class = dict
