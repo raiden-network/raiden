@@ -200,10 +200,6 @@ class Channel(object):
         return self.partner_state.address
 
     @property
-    def deposit(self):
-        return self.our_state.contract_balance
-
-    @property
     def can_transfer(self):
         return (
             self.state == CHANNEL_STATE_OPENED and
@@ -212,7 +208,7 @@ class Channel(object):
 
     @property
     def contract_balance(self):
-        """ Return the amount of token used to open the channel. """
+        """Return the total amount of token we deposited in the channel"""
         return self.our_state.contract_balance
 
     @property
