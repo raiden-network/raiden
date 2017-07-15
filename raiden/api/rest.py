@@ -12,6 +12,7 @@ from pyethapp.jsonrpc import address_encoder
 from raiden.exceptions import (
     InvalidAddress,
     InvalidAmount,
+    InvalidSettleTimeout,
     NoPathError,
 )
 from raiden.api.v1.encoding import (
@@ -206,11 +207,14 @@ class RestAPI(object):
         )
 
     def open(self, partner_address, token_address, settle_timeout, balance=None):
-        raiden_service_result = self.raiden_api.open(
-            token_address,
-            partner_address,
-            settle_timeout
-        )
+        try:
+            raiden_service_result = self.raiden_api.open(
+                token_address,
+                partner_address,
+                settle_timeout
+            )
+        except (InvalidAddress, InvalidSettleTimeout) as e:
+            return make_response(str(e), httplib.CONFLICT)
 
         if balance:
             # make initial deposit

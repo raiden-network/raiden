@@ -41,6 +41,12 @@ class InvalidAmount(RaidenError):
     pass
 
 
+class InvalidSettleTimeout(RaidenError):
+    """ Raised when the user provided timeout value is less than the minimum
+    settle timeout"""
+    pass
+
+
 class NoPathError(RaidenError):
     """ Raised when there is no path to the requested target address in the
     payment network.
