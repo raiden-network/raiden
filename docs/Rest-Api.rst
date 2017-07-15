@@ -397,6 +397,10 @@ Possible Responses
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
 +------------------+---------------------------+
+| 409 Conflict     | If the input is invalid,  |
+|                  | such as too low settle    |
+|                  | timeout                   |
++------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 

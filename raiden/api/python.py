@@ -25,6 +25,7 @@ from raiden.exceptions import (
     NoPathError,
     InvalidAddress,
     InvalidAmount,
+    InvalidSettleTimeout,
     InvalidState,
     InsufficientFunds,
 )
@@ -153,7 +154,7 @@ class RaidenAPI(object):
             settle_timeout = self.raiden.config['settle_timeout']
 
         if settle_timeout < self.raiden.config['settle_timeout']:
-            raise ValueError('Configured minimum `settle_timeout` is {} blocks.'.format(
+            raise InvalidSettleTimeout('Configured minimum `settle_timeout` is {} blocks.'.format(
                 self.raiden.config['settle_timeout']
             ))
 

@@ -23,13 +23,16 @@ from raiden.settings import (
     DEFAULT_JOINABLE_FUNDS_TARGET,
     DEFAULT_INITIAL_CHANNEL_TARGET,
 )
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+
+
+def assert_response_with_code(response, status_code):
+    assert (response is not None and response.status_code == status_code)
 
 
 def assert_proper_response(response, status_code=httplib.OK):
-    """ Make sure the API response is of the proper type"""
     assert (
-        response and
-        response.status_code == status_code and
+        response is not None and response.status_code == status_code and
         response.headers['Content-Type'] == 'application/json'
     )
 
@@ -409,6 +412,28 @@ def test_api_open_close_and_settle_channel(
         'balance': balance
     }
     assert response.json() == expected_response
+
+
+def test_api_open_channel_invalid_input(
+        api_backend,
+        api_test_context,
+        api_raiden_service):
+
+    # let's create a new channel
+    partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    settle_timeout = NETTINGCHANNEL_SETTLE_TIMEOUT_MIN - 1
+    channel_data_obj = {
+        'partner_address': partner_address,
+        'token_address': token_address,
+        'settle_timeout': settle_timeout
+    }
+    request = grequests.put(
+        api_url_for(api_backend, 'channelsresource'),
+        json=channel_data_obj
+    )
+    response = request.send().response
+    assert_response_with_code(response, status_code=httplib.CONFLICT)
 
 
 def test_api_channel_state_change_errors(

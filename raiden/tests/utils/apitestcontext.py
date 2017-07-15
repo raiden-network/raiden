@@ -16,7 +16,8 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
 )
 from raiden.utils import pex, isaddress
-from raiden.exceptions import InvalidAddress
+from raiden.exceptions import InvalidAddress, InvalidSettleTimeout
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
 
 
 class NettingChannelMock(object):
@@ -217,6 +218,17 @@ class ApiTestContext():
             partner_address,
             settle_timeout=None,
             reveal_timeout=None):
+
+        if settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
+            raise InvalidSettleTimeout('Configured minimum `settle_timeout` is {} blocks.'.format(
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+            ))
+
+        if not isaddress(token_address):
+            raise InvalidAddress('Expected binary address format for token in channel open')
+
+        if not isaddress(partner_address):
+            raise InvalidAddress('Expected binary address format for partner in channel open')
 
         reveal_value = reveal_timeout if reveal_timeout is not None else self.reveal_timeout
         channel = self.make_channel(
