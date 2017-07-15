@@ -1,11 +1,5 @@
 Raiden System Overview and User Guide
-===============================================
-
-
-.. toctree::
-   :maxdepth: 2
-
-
+=============================================
 
 Introduction
 =============
@@ -20,11 +14,13 @@ In order to install Raiden at the moment you need to clone it from Github and co
 Dependencies
 ---------------
 
-* You need to make sure that your system has `solc`, the ethereum solidity compiler installed. Refer to `its documentation <http://solidity.readthedocs.io/en/latest/installing-solidity.html>`_ for the installation steps.
+* You need to make sure that your system has `solc`, the ethereum solidity compiler installed. Refer to `its documentation <http://solidity.readthedocs.io/en/latest/installing-solidity.html>`_ for the installation steps.  Install the binaries, not the npm package.
 * You will need to have an ethereum client installed in your system.
    * Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ for instructions on the go-ethereum client.
    * Check `this link <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ for instructions on the parity client.
 * You will also need to obtain the `system dependencies for pyethapp <https://github.com/ethereum/pyethapp/#installation-on-ubuntudebian>`_.
+* If you encounter any wheel errors, you will need to install the following::
+    sudo apt-get install build-essential libssl-dev libffi-dev python-dev
 
 
 
@@ -57,7 +53,7 @@ Using geth
 ~~~~~~~~~~
 
 Run the client and let it sync with the Ropsten testnet::
-  geth --testnet --fast --nodiscover console
+  geth --testnet --fast --nodiscover --rpc console
 
 And then when in the console add a few peers by using ``admin.addPeer()`` and the latest peers shown `here <https://gist.github.com/rfikki/7a95067f8cc02ae8b11bc34544f6aa3e>`_.
 
