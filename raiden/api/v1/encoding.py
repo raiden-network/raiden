@@ -29,10 +29,8 @@ from raiden.api.objects import (
 )
 from raiden.settings import (
     DEFAULT_SETTLE_TIMEOUT,
-    DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_JOINABLE_FUNDS_TARGET,
     DEFAULT_INITIAL_CHANNEL_TARGET,
-    DEFAULT_WAIT_FOR_SETTLE,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
