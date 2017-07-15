@@ -29,7 +29,7 @@ contract EndpointRegistry{
      */
     function registerEndpoint(string socket) noEmptyString(socket)
     {
-        string old_socket = address_to_socket[msg.sender];
+        string storage old_socket = address_to_socket[msg.sender];
 
         // Compare if the new socket matches the old one, if it does just return
         if (equals(old_socket, socket)) {
