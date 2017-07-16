@@ -15,9 +15,9 @@ Raiden has a Restful API with URL endpoints corresponding to actions that the us
 
 In this guide we will walk through the steps necessary in order to participate in a Raiden Token Network. We will provide some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels.
 
-Before you get started with below guides, please see :doc:`Overview and Guide <./Overview-And-Guide.rst>`, to make sure that you are connected to Raiden.
+Before you get started with below guides, please see :doc:`Overview and Guide <Overview-And-Guide>`, to make sure that you are connected to Raiden.
 
-Furthermore, to see all available endpoints, please see :doc:`REST API Endpoints <./Rest-Api.rst>`.
+Furthermore, to see all available endpoints, please see :doc:`REST API Endpoints <Rest-Api>`.
 
 
 Scenarios
@@ -31,6 +31,7 @@ A good way to check that you started Raiden correctly before proceeding is to ch
 If this returns your address, you know that your Raiden node has the API up and running.
 
 .. _bootstrapping-a-token-network:
+
 Bootstrapping a token network
 =============================
 In this scenario we assume that a user holds some ERC20 tokens of a type that has not yet been registered in the Raiden smart contracts. Let's assume that the address of the token is ``0x9aBa529db3FF2D8409A1da4C9eB148879b046700``.
@@ -49,6 +50,7 @@ If it does not exist in the list, we need to :ref:`register the token <adding-a-
 
 
 .. _adding-a-token:
+
 Registering a token
 -------------------
 In order to register a token all we need is its address. When a new token is registered a Channel Manager contract is deployed, which makes it quite an expensive thing to do in terms of gas usage ``TODO insert estimated gas price``.
@@ -65,6 +67,7 @@ The token is now registered. However, since we're the ones registering the token
 
 
 .. _opening-a-channel:
+
 Opening a channel
 -----------------
 To open a channel with another Raiden node we need four things: the address of the token, the address of the partner node, the amount of tokens we want to deposit, and the settlement timeout period. With these things ready we can open a channel::
@@ -99,6 +102,7 @@ Here it's interesting to notice that a `"channel_address"` has been generated. T
 
 
 .. _depositing-to-a-channel:
+
 Depositing to a channel
 -----------------------
 A payment channel is now open between our own address and ``0x61c808d82a3ac53231750dadc13c777b59310bd9``. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be the time to notify our counterparty that we have opened a channel with them, so that they can also deposit to the channel. All the counterparty needs in order to do this is the address of the payment channel and a call like the following::
@@ -135,11 +139,12 @@ The above is not how a user would normally join an already existing token networ
 
 We will take a closer look at how to join already bootstrapped token networks in :ref:`the next scenario <joining-existing-token-network>`. 
 
-
+``TODO``
 * bootstrapping
 
 
 .. _joining-existing-token-network:
+
 Joining an already existing token network
 =========================================
 In :ref:`Above scenario <bootstrapping-a-token-network>` we saw how to bootstrap a token network for an unregistered token. In this section we will take a look at the most common way of joining a token network. In most cases users don't want to create a new token network, but they want to join an already existing token network for an ERC20 token that they already hold.
@@ -150,6 +155,7 @@ Let's assume that a user holds 2000 of some awesome ERC20 token (AET). The user 
 
 
 .. _connect:
+
 Connect
 -------
 Connecting to an already existing token network is quite simple and all you need, is as mentioned above, the address of the token network you want to join and how much of the corresponding token you are willing to use for depositing in channels::
@@ -168,6 +174,7 @@ We are now connected to the token network for the AET token, and we should have 
 
 
 .. _leave:
+
 Leave
 -----
 If we at some point want to leave the token network the ``leave`` endpoint is available. This endpoint will take care of closing and settling all open channels in the token network::
@@ -178,12 +185,14 @@ This call will take some time to finalize, due to the nature of the way that set
 
 
 .. _transferring-tokens:
+
 Transferring tokens
 ===================
 So far we know how to bootstrap a token network, how to join an already existing token network, and how to leave a token network. However, we still need to take a look at what Raiden is really all about - transferring tokens from one node to another in off-chain payment channels. Let's assume that we are connected to the token network of the AET token mentioned above. In this case we are connected to five peers, since we used the standard ``connect()`` parameters. 
 
 
 .. _transfer:
+
 Transfer
 --------
 Transferring tokens to another node is quite easy. We know the address of the token we want to transfer ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All we then need to know is the address of the node we want to transfer to. Let's say the address of the node we want to transfer to is ``0x61c808d82a3ac53231750dadc13c777b59310bd9``::
@@ -208,6 +217,7 @@ Please note that one of the most powerful features of Raiden is that we can send
 
 
 .. _close:
+
 Close
 -----
 If at any point in time we should want to close a specific channel we can do so with the ``close`` endpoint::
@@ -234,6 +244,7 @@ When successful this will give a response with a channel object where the state 
 Notice how the ``state`` is set to ``"closed"`` compared to the channel objects we've seen earlier where it was ``"open"``.
 
 .. _settle:
+
 Settle
 ------
 Once ``"close"`` has been called then start the settle timeout period, where the counterparty of the channel can provide the last received message from our node. When this timeout settlement timeout period is over, we can finally settle the channel by doing::
