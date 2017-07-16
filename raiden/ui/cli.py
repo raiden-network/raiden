@@ -7,7 +7,7 @@ import os
 import signal
 import click
 import gevent
-from gevent import Greenlet
+from gevent.wsgi import WSGIServer
 import gevent.monkey
 from ethereum import slogging
 from pyethapp.jsonrpc import address_decoder
@@ -351,19 +351,19 @@ def run(ctx, **kwargs):
             else:
                 domain_list.append(str(kwargs['rpccorsdomain']))
 
+        http_server = None
         if ctx.params['rpc']:
             raiden_api = RaidenAPI(app_.raiden)
             rest_api = RestAPI(raiden_api)
             api_server = APIServer(rest_api, cors_domain_list=domain_list)
             (api_host, api_port) = split_endpoint(kwargs["api_address"])
 
-            Greenlet.spawn(
-                api_server.run,
-                api_host,
-                api_port,
-                debug=False,
-                use_evalex=False
+            http_server = WSGIServer(
+                (api_host, api_port),
+                api_server.flask_app,
+                log=slogging.getLogger('flask')
             )
+            http_server.start()
 
             print(
                 "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
@@ -385,4 +385,6 @@ def run(ctx, **kwargs):
         gevent.signal(signal.SIGINT, event.set)
         event.wait()
 
+        if http_server:
+            http_server.stop(5)
         app_.stop(leave_channels=False)
