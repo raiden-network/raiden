@@ -126,7 +126,7 @@ Example Response
 
 And with a 201 response we also get::
 
-    {"channel_manager_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"}
+    {"channel_manager_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"}
 
 Querying Information About Channels and Tokens
 ===============================================
@@ -642,9 +642,9 @@ Example Response
 ::
 
     {
-        "initiator_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
+        "initiator_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
         "target_address": "0x61c808d82a3ac53231750dadc13c777b59310bd9",
-        "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "token_address": "0x2a65aca4d5fc5b5c859090a6c34d164135398226",
         "amount": 200,
         "identifier": 42
     }
