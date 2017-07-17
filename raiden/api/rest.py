@@ -261,9 +261,11 @@ class RestAPI(object):
             initial_channel_target,
             joinable_funds_target
         )
+        return make_response('', httplib.NO_CONTENT)
 
     def leave(self, token_address):
         self.raiden_api.leave_token_network(token_address)
+        return make_response('', httplib.NO_CONTENT)
 
     def get_channel_list(self, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
