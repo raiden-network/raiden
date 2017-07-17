@@ -5,6 +5,17 @@ import os
 from setuptools import setup, find_packages
 from setuptools import Command
 from setuptools.command.test import test as TestCommand
+from setuptools.command.build_py import build_py
+
+
+class BuildPyCommand(build_py):
+
+    def run(self):
+        self.run_command('compile_contracts')
+        # ensure smoketest_config.json is generated
+        from raiden.tests.utils.smoketest import load_or_create_smoketest_config
+        load_or_create_smoketest_config()
+        build_py.run(self)
 
 
 class PyTest(TestCommand):
@@ -68,9 +79,7 @@ setup(
     author='HeikoHeiko',
     author_email='heiko@brainbot.com',
     url='https://github.com/raiden-network/raiden',
-    packages=find_packages(
-        exclude=["raiden.tests", "raiden.tests.*"]
-    ),
+    packages=find_packages(),
     include_package_data=True,
     license='BSD',
     zip_safe=False,
@@ -86,6 +95,7 @@ setup(
     cmdclass={
         'test': PyTest,
         'compile_contracts': CompileContracts,
+        'build_py': BuildPyCommand,
     },
     install_requires=install_requires,
     tests_require=test_requirements,

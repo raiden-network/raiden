@@ -19,7 +19,7 @@ from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
 from raiden.utils import privatekey_to_address
-from raiden.settings import GAS_LIMIT_HEX
+from raiden.tests.utils.genesis import GENESIS_STUB
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -27,20 +27,6 @@ DEFAULT_BALANCE = denoms.ether * 10000000
 DEFAULT_BALANCE_BIN = str(denoms.ether * 10000000)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
 DAGSIZE = 1073739912
-
-GENESIS_STUB = {
-    'config': {
-        'homesteadBlock': 0,
-    },
-    'nonce': '0x0000000000000042',
-    'mixhash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'difficulty': '0x1',
-    'coinbase': '0x0000000000000000000000000000000000000000',
-    'timestamp': '0x00',
-    'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'extraData': '0x' + 'raiden'.encode('hex'),
-    'gasLimit': GAS_LIMIT_HEX,
-}
 
 
 def wait_until_block(chain, block):
@@ -124,13 +110,12 @@ def geth_create_account(datadir, privkey):
 
 
 def geth_bare_genesis(genesis_path, private_keys):
-    """Creates a bare genesis inside `datadir`.
+    """Writes a bare genesis to `genesis_path`.
 
     Args:
-        datadir (str): the datadir in which the blockchain is initialized.
-
-    Returns:
-        str: The path to the genisis file.
+        genesis_path (str): the path in which the genesis block is written.
+        private_keys list(str): iterable list of privatekeys whose corresponding accounts will
+                    have a premined balance available.
     """
     account_addresses = [
         privatekey_to_address(key)
@@ -144,7 +129,7 @@ def geth_bare_genesis(genesis_path, private_keys):
         for address in account_addresses
     }
     genesis = GENESIS_STUB.copy()
-    genesis['alloc'] = alloc
+    genesis['alloc'].update(alloc)
 
     with open(genesis_path, 'w') as handler:
         json.dump(genesis, handler)

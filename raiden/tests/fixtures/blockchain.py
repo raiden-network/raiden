@@ -13,7 +13,7 @@ from ethereum._solidity import compile_file
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import address_decoder, address_encoder, default_gasprice
 
-from raiden.utils import privatekey_to_address, get_contract_path
+from raiden.utils import privatekey_to_address, get_contract_path, fix_tester_storage
 from raiden.network.transport import DummyTransport
 from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
@@ -50,9 +50,18 @@ def _token_addresses(
         token_amount,
         number_of_tokens,
         deploy_service,
-        blockchain_services,
+        participants,
         register):
-
+    """ Deploy `number_of_tokens` ERC20 token instances with `token_amount` minted and
+    distributed among `blockchain_services`. Optionally the instances will be registered with
+    the raiden registry.
+    Args:
+        token_amount (int): number of units that will be created per token
+        number_of_tokens (int): number of token instances that will be created
+        deploy_service (BlockchainService): the blockchain connection that will deploy
+        participants (list(address)): participant addresses that will receive tokens
+        register (bool): switch to control registration with the raiden Registry contract
+    """
     result = list()
     for _ in range(number_of_tokens):
         if register:
@@ -72,10 +81,10 @@ def _token_addresses(
 
         # only the creator of the token starts with a balance (deploy_service),
         # transfer from the creator to the other nodes
-        for transfer_to in blockchain_services:
+        for transfer_to in participants:
             deploy_service.token(token_address).transfer(
-                privatekey_to_address(transfer_to.private_key),
-                token_amount // len(blockchain_services),
+                transfer_to,
+                token_amount // len(participants),
             )
 
     return result
@@ -130,11 +139,12 @@ def cached_genesis(request, blockchain_type):
     # create_network only registers the tokens,
     # the contracts must be deployed previously
     register = True
+    participants = [privatekey_to_address(privatekey) for privatekey in private_keys]
     token_contract_addresses = _token_addresses(
         request.getfixturevalue('token_amount'),
         request.getfixturevalue('number_of_tokens'),
         deploy_service,
-        blockchain_services,
+        participants,
         register
     )
 
@@ -204,16 +214,7 @@ def cached_genesis(request, blockchain_type):
         # Both keys and values of the account storage associative array
         # must now be encoded with 64 hex digits
         if account_alloc['storage']:
-            new_storage = dict()
-            for key, val in account_alloc['storage'].iteritems():
-                # account_to_dict() from pyethereum can return 0x for a storage
-                # position. That is an invalid way of representing 0x0, which we
-                # have to take care of here.
-                new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
-                new_val = '0x%064x' % int(val, 16)
-                new_storage[new_key] = new_val
-
-            account_alloc['storage'] = new_storage
+            account_alloc['storage'] = fix_tester_storage(account_alloc['storage'])
 
         # code must be hex encoded with 0x prefix
         account_alloc['code'] = account_alloc.get('code', '')
@@ -251,8 +252,7 @@ def cached_genesis(request, blockchain_type):
 
 @pytest.fixture
 def register_tokens():
-    """Should fixture generated tokens be registered with raiden (default: True)
-    """
+    """ Should fixture generated tokens be registered with raiden (default: True). """
     return True
 
 
@@ -264,6 +264,16 @@ def token_addresses(
         blockchain_services,
         cached_genesis,
         register_tokens):
+    """ Fixture that yields `number_of_tokens` ERC20 token addresses, where the
+    `token_amount` (per token) is distributed among the addresses behind `blockchain_services` and
+    potentially pre-registered with the raiden Registry.
+    The following arguments can control the behavior:
+
+    Args:
+        token_amount (int): the overall number of units minted per token
+        number_of_tokens (int): the number of token instances
+        register_tokens (bool): controls if tokens will be registered with raiden Registry
+    """
 
     if cached_genesis:
         token_addresses = [
@@ -271,11 +281,15 @@ def token_addresses(
             for token_address in cached_genesis['config']['tokenAddresses']
         ]
     else:
+        participants = [
+            privatekey_to_address(blockchain_service.private_key) for
+            blockchain_service in blockchain_services.blockchain_services
+        ]
         token_addresses = _token_addresses(
             token_amount,
             number_of_tokens,
             blockchain_services.deploy_service,
-            blockchain_services.blockchain_services,
+            participants,
             register_tokens
         )
 
