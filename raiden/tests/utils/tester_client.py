@@ -602,13 +602,15 @@ class NettingChannelTesterMock(object):
         self.proxy.deposit(amount)
         self.tester_state.mine(number_of_blocks=1)
 
+    #  tester's opened() and closed() methods must return empty string to be compatible with
+    # a JSON RPC client that uses geth as a backend
     def opened(self):
         opened = self.proxy.opened()
-        return opened
+        return opened if opened is not None else ''
 
     def closed(self):
         closed = self.proxy.closed()
-        return closed
+        return closed if closed is not None else ''
 
     def closing_address(self):
         """Returns the address of the participant that called close, or None if the channel is
