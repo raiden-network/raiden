@@ -26,6 +26,14 @@ from raiden.settings import (
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
 
 
+def assert_empty_response_with_code(response, status_code):
+    assert (
+        response is not None and
+        response._content == '' and
+        response.status_code == status_code
+    )
+
+
 def assert_response_with_code(response, status_code):
     assert (response is not None and response.status_code == status_code)
 
@@ -966,7 +974,7 @@ def test_connect_and_leave_token_network(
         json=connect_data_obj,
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_empty_response_with_code(response, httplib.NO_CONTENT)
 
     # check that channels got created
     request = grequests.get(
@@ -992,7 +1000,7 @@ def test_connect_and_leave_token_network(
         api_url_for(api_backend, 'connectionsresource', token_address=token_address),
     )
     response = request.send().response
-    assert_proper_response(response)
+    assert_empty_response_with_code(response, httplib.NO_CONTENT)
 
     # check that all channels were settled after calling `leave`
     request = grequests.get(

@@ -564,7 +564,7 @@ with payload::
 
 Example Response
 ^^^^^^^^^^^^^^^^
-``200 OK``
+``204 NO CONTENT``
 
 Possible Responses
 ^^^^^^^^^^^^^^^^^^
@@ -572,7 +572,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For a successful          |
+| 204 NO CONTENT   | For a successful          |
 |                  | connection creation       |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
@@ -596,7 +596,7 @@ Example Request
 
 Example Response
 ^^^^^^^^^^^^^^^^
-``200 OK``
+``204 NO CONTENT``
 
 Possible Responses
 ^^^^^^^^^^^^^^^^^^
@@ -604,7 +604,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For successfully leaving  |
+| 204 NO CONTENT   | For successfully leaving  |
 |                  | a token network           |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
