@@ -561,7 +561,7 @@ class RaidenService(object):
         )
 
         graph = self.channelgraphs[token_address]
-        graph.add_channel(details, serialized_channel.block_number)
+        graph.add_channel(details)
         channel = graph.address_channel.get(
             serialized_channel.channel_address,
         )
@@ -684,10 +684,9 @@ class RaidenService(object):
         netting_channel = self.chain.netting_channel(channel_address)
         self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
 
-        block_number = self.get_block_number()
         detail = self.get_channel_details(token_address, netting_channel)
         graph = self.channelgraphs[token_address]
-        graph.add_channel(detail, block_number)
+        graph.add_channel(detail)
 
     def connection_manager_for_token(self, token_address):
         if not isaddress(token_address):

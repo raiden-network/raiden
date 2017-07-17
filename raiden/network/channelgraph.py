@@ -201,7 +201,7 @@ class ChannelGraph(object):
         self.channelmanager_address = channelmanager_address
 
         for details in channels_details:
-            self.add_channel(details, block_number)
+            self.add_channel(details)
 
     def __eq__(self, other):
         if isinstance(other, ChannelGraph):
@@ -219,7 +219,7 @@ class ChannelGraph(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    def add_channel(self, details, block_number):
+    def add_channel(self, details):
         channel_address = details.channel_address
         partner_state = details.partner_state
 
