@@ -73,7 +73,7 @@ class App(object):  # pylint: disable=too-few-public-methods
 
         # raiden.ui.console:Console assumes that a services
         # attribute is available for auto-registration
-        self.services = list()
+        self.services = dict()
 
     def __repr__(self):
         return '<{} {}>'.format(
