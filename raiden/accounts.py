@@ -70,7 +70,10 @@ class AccountManager(object):
                             log.warning("%s %s: %s", msg, fullpath, ex)
 
     def address_in_keystore(self, address):
-        if address is not None and address.startswith('0x'):
+        if address is None:
+            return False
+
+        if address.startswith('0x'):
             address = address[2:]
 
         return address.lower() in self.accounts
