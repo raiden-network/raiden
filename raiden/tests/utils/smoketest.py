@@ -114,7 +114,7 @@ def run_smoketests(raiden_service, test_config, debug=False):
         graph = raiden_service.channelgraphs.values()[0]
         channel = graph.partneraddress_channel[TEST_PARTNER_ADDRESS.decode('hex')]
         assert channel.can_transfer
-        assert channel.deposit == channel.distributable == TEST_DEPOSIT_AMOUNT
+        assert channel.contract_balance == channel.distributable == TEST_DEPOSIT_AMOUNT
         assert channel.state == CHANNEL_STATE_OPENED
     except Exception:
         error = traceback.format_exc()
