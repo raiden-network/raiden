@@ -70,3 +70,6 @@ truffle/.bash_history
 
 # never check in .static-abi.json files
 *.static-abi.json
+
+# ignore node_modules
+raiden/raidenwebui/node_modules/
