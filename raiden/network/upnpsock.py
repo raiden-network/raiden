@@ -15,7 +15,7 @@ NON_MAPPABLE = [
 
 
 def valid_mappable_ipv4(address):
-    if unicode(address, errors='ignore') in NON_MAPPABLE:
+    if unicode(address) in NON_MAPPABLE:
         return False
     parsed = None
     try:
