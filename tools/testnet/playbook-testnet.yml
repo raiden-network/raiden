@@ -25,3 +25,7 @@
       display_groups:
         Eth: private_ips_eth_nodes
         Raiden: private_ips_raiden
+    - role: hosts_file
+      display_groups:
+        Eth: private_ips_eth_nodes
+        Raiden: private_ips_raiden

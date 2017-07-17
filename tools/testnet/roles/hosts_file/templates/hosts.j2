@@ -1,0 +1,5 @@
+127.0.0.1 localhost
+
+{% for name, group in display_groups.items()|sort %}{% for item in groups[group]|sort %}
+{{ item }} {{ "{}_{:02d}".format(name.lower(), item.rpartition('.')[2]|int) }}
+{% endfor %}{% endfor %}
