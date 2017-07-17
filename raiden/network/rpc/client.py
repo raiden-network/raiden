@@ -767,8 +767,8 @@ class ChannelManager(object):
         except InvalidTransaction as e:
             raise e
 
-        # TODO: raise if the transaction failed because there is an existing
-        # channel in place
+        if check_transaction_threw(self.client, transaction_hash):
+            raise Exception('Duplicated channel')
 
         netting_channel_results_encoded = self.proxy.getChannelWith.call(
             other,
