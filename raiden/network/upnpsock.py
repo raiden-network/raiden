@@ -15,13 +15,16 @@ NON_MAPPABLE = [
 
 
 def valid_mappable_ipv4(address):
-    if unicode(address) in NON_MAPPABLE:
-        return False
-    parsed = None
     try:
-        parsed = ipaddress.ip_address(address)
-    except ipaddress.AddressValueError:
-        return valid_mappable_ipv4(unicode(address, errors='ignore'))
+        address_uni = unicode(address, errors='ignore')
+    except TypeError:
+        address_uni = address
+
+    if address_uni in NON_MAPPABLE:
+        return False
+
+    try:
+        parsed = ipaddress.ip_address(address_uni)
     except ValueError:
         log.debug('invalid IPv4 address', input=address)
         return False
