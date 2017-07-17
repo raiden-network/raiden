@@ -332,10 +332,12 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
         )
         fee = 0
 
-        for path, from_channel in from_routes:
+        for route in from_routes:
             # for each new path a new secret must be used
             secret = sha3(hex(random.getrandbits(256)))
             hashlock = sha3(secret)
+
+            from_channel = from_graph.get_channel_by_contract_address(route.channel_address)
 
             raiden.greenlet_task_dispatcher.register_task(self, hashlock)
             raiden.register_channel_for_hashlock(from_token, from_channel, hashlock)
@@ -365,7 +367,8 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
             # wait for the SecretRequest and MediatedTransfer
             to_mediated_transfer = self.send_and_wait_valid_state(
                 raiden,
-                path,
+                route.node_address,
+                to_nodeaddress,
                 from_mediated_transfer,
                 to_token,
                 to_amount,
@@ -443,7 +446,8 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
     def send_and_wait_valid_state(  # noqa
             self,
             raiden,
-            path,
+            next_hop,
+            target_address,
             from_token_transfer,
             to_token,
             to_amount):
@@ -462,9 +466,6 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
                 our partner.
         """
         # pylint: disable=too-many-arguments
-
-        next_hop = path[1]
-        taker_address = path[-1]  # taker_address and next_hop might be equal
 
         # a valid state must have a secret request from the maker and a valid
         # mediated transfer for the new token
@@ -505,7 +506,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
                 if response.lock.amount == to_amount:
                     mediated_transfer = response
 
-            elif isinstance(response, SecretRequest) and response.sender == taker_address:
+            elif isinstance(response, SecretRequest) and response.sender == target_address:
                 received_secretrequest = True
 
             elif isinstance(response, RefundTransfer) and response.sender == next_hop:
@@ -630,8 +631,11 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
             return
 
         first_transfer = None
-        for to_path, taker_paying_channel in available_routes:
-            taker_paying_hop = to_path[1]
+        for route in available_routes:
+            taker_paying_channel = to_graph.get_channel_by_contract_address(
+                route.channel_address,
+            )
+            taker_paying_hop = route.node_address
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(

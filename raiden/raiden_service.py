@@ -31,7 +31,6 @@ from raiden.transfer.architecture import StateManager
 from raiden.transfer.state_change import Block
 from raiden.transfer.state import (
     RoutesState,
-    CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
 )
 from raiden.transfer.mediated_transfer import (
@@ -69,7 +68,6 @@ from raiden.exceptions import InvalidAddress
 from raiden.network.channelgraph import (
     get_best_routes,
     channel_to_routestate,
-    route_to_routestate,
     ChannelGraph,
     ChannelDetails,
 )
@@ -903,7 +901,7 @@ class RaidenService(object):
     def start_mediated_transfer(self, token_address, amount, identifier, target):
         # pylint: disable=too-many-locals
         graph = self.channelgraphs[token_address]
-        routes = get_best_routes(
+        available_routes = get_best_routes(
             graph,
             self.protocol.nodeaddresses_networkstatuses,
             self.address,
@@ -911,12 +909,6 @@ class RaidenService(object):
             amount,
             lock_timeout=None,
         )
-
-        available_routes = [
-            route
-            for route in map(route_to_routestate, routes)
-            if route.state == CHANNEL_STATE_OPENED
-        ]
 
         self.protocol.start_health_check(target)
 
@@ -980,7 +972,8 @@ class RaidenService(object):
         target = message.target
         token = message.token
         graph = self.channelgraphs[token]
-        routes = get_best_routes(
+
+        available_routes = get_best_routes(
             graph,
             self.protocol.nodeaddresses_networkstatuses,
             self.address,
@@ -988,12 +981,6 @@ class RaidenService(object):
             amount,
             lock_timeout=None,
         )
-
-        available_routes = [
-            route
-            for route in map(route_to_routestate, routes)
-            if route.state == CHANNEL_STATE_OPENED
-        ]
 
         from_channel = graph.partneraddress_channel[message.sender]
         from_route = channel_to_routestate(from_channel, message.sender)

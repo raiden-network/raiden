@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from collections import namedtuple
+from heapq import heappush
 
 import networkx
 from ethereum import slogging
@@ -8,6 +9,7 @@ from ethereum import slogging
 from raiden.utils import isaddress, pex
 from raiden.transfer.state import (
     RouteState,
+    CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
 )
 from raiden.channel.netting_channel import (
@@ -31,7 +33,6 @@ ChannelDetails = namedtuple(
         'settle_timeout',
     )
 )
-Route = namedtuple('Route', ('path', 'channel'))
 
 
 def make_graph(edge_list):
@@ -64,14 +65,6 @@ def make_graph(edge_list):
     return graph
 
 
-def route_to_routestate(route):
-    path = route.path
-    next_hop = path[1]
-    channel = route.channel
-
-    return channel_to_routestate(channel, next_hop)
-
-
 def channel_to_routestate(channel, node_address):
     state = channel.state
     channel_address = channel.external_state.netting_channel.address
@@ -97,6 +90,22 @@ def channel_to_routestate(channel, node_address):
     return state
 
 
+def ordered_neighbors(nx_graph, our_address, target_address):
+    paths = list()
+    for neighbor in networkx.all_neighbors(nx_graph, our_address):
+        try:
+            length = networkx.shortest_path_length(
+                nx_graph,
+                neighbor,
+                target_address,
+            )
+            heappush(paths, (length, neighbor))
+        except networkx.NetworkXNoPath:
+            pass
+
+    return paths
+
+
 def get_best_routes(
         channel_graph,
         nodeaddresses_statuses,
@@ -108,10 +117,6 @@ def get_best_routes(
     """ Yield a two-tuple (path, channel) that can be used to mediate the
     transfer. The result is ordered from the best to worst path.
     """
-    available_paths = channel_graph.get_shortest_paths(
-        our_address,
-        target_address,
-    )
 
     # XXX: consider using multiple channels for a single transfer. Useful
     # for cases were the `amount` is larger than what is available
@@ -123,16 +128,22 @@ def get_best_routes(
 
     online_nodes = list()
     unknown_nodes = list()
-    for path in available_paths:
-        partner = path[1]
-        channel = channel_graph.partneraddress_channel[partner]
+
+    neighbors_heap = ordered_neighbors(
+        channel_graph.graph,
+        our_address,
+        target_address,
+    )
+
+    for _, partner_address in neighbors_heap:
+        channel = channel_graph.partneraddress_channel[partner_address]
 
         if not channel.can_transfer:
             if log.isEnabledFor(logging.INFO):
                 log.info(
                     'channel %s - %s is closed or has zero funding, ignoring',
-                    pex(path[0]),
-                    pex(path[1]),
+                    pex(our_address),
+                    pex(partner_address),
                 )
 
             continue
@@ -141,8 +152,8 @@ def get_best_routes(
             if log.isEnabledFor(logging.INFO):
                 log.info(
                     'channel %s - %s doesnt have enough funds [%s], ignoring',
-                    pex(path[0]),
-                    pex(path[1]),
+                    pex(our_address),
+                    pex(partner_address),
                     amount,
                 )
             continue
@@ -159,20 +170,24 @@ def get_best_routes(
                     lock_timeout=lock_timeout,
                     reveal_timeout=channel.reveal_timeout,
                     settle_timeout=channel.settle_timeout,
-                    nodeid=pex(path[0]),
-                    partner=pex(path[1]),
+                    nodeid=pex(our_address),
+                    partner=pex(partner_address),
                 )
 
             if not valid_timeout:
                 continue
 
-        network_state = nodeaddresses_statuses[channel.partner_state.address]
+        if channel.state != CHANNEL_STATE_OPENED:
+            continue
+
+        network_state = nodeaddresses_statuses[partner_address]
+        route_state = channel_to_routestate(channel, partner_address)
 
         if network_state == NODE_NETWORK_REACHABLE:
-            online_nodes.append(Route(path, channel))
+            online_nodes.append(route_state)
 
         elif network_state == NODE_NETWORK_UNKNOWN:
-            unknown_nodes.append(Route(path, channel))
+            unknown_nodes.append(route_state)
 
     return online_nodes + unknown_nodes
 
