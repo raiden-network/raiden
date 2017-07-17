@@ -70,7 +70,7 @@ class GreenletTasksDispatcher(object):
         """ Clear the task when it's finished. """
         self.hashlocks_greenlets[hashlock].remove(task)
 
-        if len(self.hashlocks_greenlets[hashlock]) == 0:
+        if not self.hashlocks_greenlets[hashlock]:
             del self.hashlocks_greenlets[hashlock]
 
     def dispatch_message(self, message, hashlock):
@@ -328,7 +328,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
             raiden.address,
             to_nodeaddress,
             from_amount,
-            lock_timeout=None,
+            None,
         )
         fee = 0
 
@@ -606,7 +606,6 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
         raiden.send_async(maker_address, secret_request)
 
         lock_expiration = maker_paying_transfer.lock.expiration - raiden.config['reveal_timeout']
-        lock_timeout = lock_expiration - raiden.get_block_number()
 
         # Note: taker may only try different routes if a RefundTransfer is
         # received, because the maker is the node controlling the secret
@@ -616,7 +615,7 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
             raiden.address,
             maker_address,
             maker_paying_transfer.lock.amount,
-            lock_timeout,
+            None,
         )
 
         if not available_routes:

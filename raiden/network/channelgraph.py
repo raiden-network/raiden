@@ -112,7 +112,7 @@ def get_best_routes(
         our_address,
         target_address,
         amount,
-        lock_timeout):
+        previous_address=None):
 
     """ Yield a two-tuple (path, channel) that can be used to mediate the
     transfer. The result is ordered from the best to worst path.
@@ -138,6 +138,10 @@ def get_best_routes(
     for _, partner_address in neighbors_heap:
         channel = channel_graph.partneraddress_channel[partner_address]
 
+        # don't send the message backwards
+        if partner_address == previous_address:
+            continue
+
         if not channel.can_transfer:
             if log.isEnabledFor(logging.INFO):
                 log.info(
@@ -157,25 +161,6 @@ def get_best_routes(
                     amount,
                 )
             continue
-
-        if lock_timeout:
-            # Our partner won't accept a lock timeout smaller than reveal
-            # timeout. Doing a best effort guess and using the local reveal
-            # timeout as an estimation of the remote reveal_timeout.
-            valid_timeout = channel.reveal_timeout <= lock_timeout
-
-            if not valid_timeout and log.isEnabledFor(logging.INFO):
-                log.info(
-                    'lock_expiration is too small, channel/path cannot be used',
-                    lock_timeout=lock_timeout,
-                    reveal_timeout=channel.reveal_timeout,
-                    settle_timeout=channel.settle_timeout,
-                    nodeid=pex(our_address),
-                    partner=pex(partner_address),
-                )
-
-            if not valid_timeout:
-                continue
 
         if channel.state != CHANNEL_STATE_OPENED:
             continue
