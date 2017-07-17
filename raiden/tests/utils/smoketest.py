@@ -39,7 +39,7 @@ GENESIS_PATH = Template('$RST_DATADIR/genesis.json').substitute(os.environ)
 # For customization, set the environment variable to fit your client like this:
 # RST_ETH_COMMAND="ethereum --rpc-port \$RST_RPC_PORT \
 #        --data-dir \$RST_DATADIR" raiden smoketest
-# FIXME: this does not work: the `init` phase is not customizable
+# FIXME: this does not work: the `init` phase is not customizable (gh issue #758)
 DEFAULT_ETH_COMMAND = """
 $RST_GETH_BINARY
     --nodiscover
@@ -61,7 +61,7 @@ if RST_GETH_BINARY is not None and 'RST_GETH_BINARY' not in os.environ:
     os.environ['RST_GETH_BINARY'] = RST_GETH_BINARY
 
 ports = iter(range(27854, 28000))
-# FIXME: get_free_port does not check for free ports
+# FIXME: get_free_port does not check for free ports (gh issue #759)
 get_free_port = lambda: str(next(ports))
 
 RST_RPC_PORT = get_free_port()
