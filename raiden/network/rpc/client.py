@@ -70,6 +70,24 @@ def check_transaction_threw(client, transaction_hash):
     return int(transaction['gas'], 0) == int(receipt['gasUsed'], 0)
 
 
+def retry_if_connnection_error(tries, reconnect_wait_secs, method, *args, **kwargs):
+    tries = 5
+    reconnect_wait_secs = 4
+    while tries != 0:
+        try:
+            result = method(*args, **kwargs)
+            break
+        except requests.exceptions.ConnectionError:
+            log.info(
+                'Timeout in eth client connection. Is client offline? Trying'
+                ' again in {} secs. {} tries remaining'.format(reconnect_wait_secs, tries),
+            )
+            gevent.sleep(reconnect_wait_secs)
+            tries -= 1
+
+    return result
+
+
 def patch_send_transaction(client, nonce_offset=0):
     """Check if the remote supports pyethapp's extended jsonrpc spec for local tx signing.
     If not, replace the `send_transaction` method with a more generic one.
@@ -136,10 +154,15 @@ def patch_send_transaction(client, nonce_offset=0):
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
         assert hasattr(client, 'privkey') and client.privkey
         tx.sign(client.privkey)
-        result = client.call(
+
+        result = retry_if_connnection_error(
+            5,
+            4,
+            client.call,
             'eth_sendRawTransaction',
             data_encoder(rlp.encode(tx)),
         )
+
         return result[2 if result.startswith('0x') else 0:]
 
     if patch_necessary:
@@ -166,7 +189,10 @@ def patch_send_message(client, pool_maxsize=50):
         if not isinstance(message, str):
             raise TypeError('str expected')
 
-        r = session.post(
+        r = retry_if_connnection_error(
+            5,
+            4,
+            session.post,
             client.transport.endpoint,
             data=message,
             **client.transport.request_kwargs
