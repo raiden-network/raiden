@@ -10,13 +10,12 @@ import { SharedService } from './services/shared.service';
 export class AppComponent implements OnInit {
     public title = 'Raiden';
     public raidenAddress;
-    constructor(private raidenService: RaidenService,
-                private sharedService: SharedService) { }
+    constructor(public raidenService: RaidenService,
+                public sharedService: SharedService) { }
 
     ngOnInit() {
         this.raidenService.initialiseRaidenAddress()
             .subscribe((address) => this.raidenAddress = address);
     }
-
 
 }

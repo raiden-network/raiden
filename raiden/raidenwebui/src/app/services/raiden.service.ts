@@ -16,7 +16,7 @@ export class RaidenService {
     public tokenContract: any;
     public web3: any;
     public raidenAddress: string;
-    private userTokens: {[id:string]: Usertoken|null} = {};
+    private userTokens: {[id: string]: Usertoken|null} = {};
 
     constructor(private http: Http,
                 private config: RaidenConfig,
@@ -56,7 +56,7 @@ export class RaidenService {
     public getTokenBalancesOf(raidenAddress: string): Observable<Usertoken[]> {
         return this.http.get(`${this.config.apiCall}/tokens`)
             .map((response) => {
-                const tokenArray: Array<{address:string}> = response.json();
+                const tokenArray: Array<{address: string}> = response.json();
                 return tokenArray
                     .map((tokeninfo) => this.getUsertoken(tokeninfo.address))
                     .filter((u) => u !== null);
@@ -66,15 +66,16 @@ export class RaidenService {
     public getTokenNameAddresMappings() {
         return this.http.get(`${this.config.apiCall}/tokens`)
         .map((response) => {
-            const tokenArray: Array<{address:string}> = response.json();
-            let tokens: Array<{label:string,value:string}> = [];
+            const tokenArray: Array<{address: string}> = response.json();
+            const tokens: Array<{label: string, value: string}> = [];
             for (const tokeninfo of tokenArray) {
-                let userToken = this.getUsertoken(tokeninfo.address, false);
-                if (!userToken)
+                const userToken = this.getUsertoken(tokeninfo.address, false);
+                if (!userToken) {
                     continue;
+                }
                 tokens.push({
                     'value': tokeninfo.address,
-                    'label': userToken.name+" ("+tokeninfo.address+")"
+                    'label': userToken.name + ' (' + tokeninfo.address + ')'
                 });
             }
             return tokens;
@@ -159,8 +160,9 @@ export class RaidenService {
             .map((response) => {
                 this.tokenContract = this.web3.eth.contract(tokenabi);
                 const userToken: Usertoken|null = this.getUsertoken(tokenAddress);
-                if (userToken === null)
-                    throw "No contract on address "+tokenAddress;
+                if (userToken === null) {
+                    throw new Error('No contract on address: ' + tokenAddress);
+                }
                 return <Usertoken>userToken;
             })
             .catch(this.handleError);
@@ -185,12 +187,11 @@ export class RaidenService {
                     name,
                     tokenContractInstance.balanceOf(this.raidenAddress).toNumber()
                 );
-            } catch(e) {
+            } catch (e) {
                 userToken = null;
             }
             this.userTokens[tokenAddress] = userToken;
-        }
-        else if (refresh && userToken !== null) {
+        } else if (refresh && userToken !== null) {
             userToken.balance = tokenContractInstance.balanceOf(this.raidenAddress).toNumber();
         }
         return userToken;
