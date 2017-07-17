@@ -907,7 +907,7 @@ class RaidenService(object):
             self.address,
             target,
             amount,
-            lock_timeout=None,
+            None,
         )
 
         self.protocol.start_health_check(target)
@@ -979,7 +979,7 @@ class RaidenService(object):
             self.address,
             target,
             amount,
-            lock_timeout=None,
+            message.sender,
         )
 
         from_channel = graph.partneraddress_channel[message.sender]
