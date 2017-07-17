@@ -53,7 +53,7 @@ def _token_addresses(
         participants,
         register):
     """ Deploy `number_of_tokens` ERC20 token instances with `token_amount` minted and
-    distributed among `blockchain_services`. Optionally the instances will be `register`ed with
+    distributed among `blockchain_services`. Optionally the instances will be registered with
     the raiden registry.
     Args:
         token_amount (int): number of units that will be created per token

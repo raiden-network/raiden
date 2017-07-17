@@ -114,8 +114,8 @@ def geth_bare_genesis(genesis_path, private_keys):
 
     Args:
         genesis_path (str): the path in which the genesis block is written.
-        private_keys list(str): iterable list of privatekeys which accounts will have a
-                    premined balance available.
+        private_keys list(str): iterable list of privatekeys whose corresponding accounts will
+                    have a premined balance available.
     """
     account_addresses = [
         privatekey_to_address(key)
