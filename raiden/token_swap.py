@@ -328,7 +328,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
             raiden.address,
             to_nodeaddress,
             from_amount,
-            None,
+            previous_address=None,
         )
         fee = 0
 
@@ -615,7 +615,7 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
             raiden.address,
             maker_address,
             maker_paying_transfer.lock.amount,
-            None,
+            previous_address=None,
         )
 
         if not available_routes:

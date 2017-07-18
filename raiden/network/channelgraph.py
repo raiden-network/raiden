@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 from collections import namedtuple
-from heapq import heappush
+from heapq import heappush, heappop
 
 import networkx
 from ethereum import slogging
@@ -135,7 +135,8 @@ def get_best_routes(
         target_address,
     )
 
-    for _, partner_address in neighbors_heap:
+    while neighbors_heap:
+        _, partner_address = heappop(neighbors_heap)
         channel = channel_graph.partneraddress_channel[partner_address]
 
         # don't send the message backwards
