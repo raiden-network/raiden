@@ -24,8 +24,7 @@ export class TokenNetworkComponent implements OnInit {
     public funds: FormControl = new FormControl();
 
     constructor(private raidenService: RaidenService,
-                private sharedService: SharedService)
-    { }
+                private sharedService: SharedService) { }
 
 
     ngOnInit() {
@@ -86,16 +85,17 @@ export class TokenNetworkComponent implements OnInit {
     }
 
     public registerToken() {
-        if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value))
+        if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value)) {
             this.raidenService.registerToken(this.tokenAddress.value)
                 .subscribe((userToken: Usertoken) => {
                     this.tokenBalances.push(userToken);
                     this.sharedService.msg({
                         severity: 'success',
                         summary: 'Token registered',
-                        detail: 'Your token was successfully registered: '+userToken.address,
+                        detail: 'Your token was successfully registered: ' + userToken.address,
                     });
                 })
+        }
         this.showRegisterDialog(false);
     }
 
