@@ -526,22 +526,6 @@ class Channel(object):
 
                 raise ValueError('Lock expires after the settlement period.')
 
-            # If the lock expires within the unsafe_period we cannot accept the
-            # transfer, since there is not enough time to properly settle
-            # on-chain.
-            end_unsafe_period = block_number + self.reveal_timeout
-            expires_unsafe = transfer.lock.expiration < end_unsafe_period
-
-            if expires_unsafe:
-                log.error(
-                    'Lock expires within the unsafe_period.',
-                    lock_expiration=transfer.lock.expiration,
-                    current_block=block_number,
-                    reveal_timeout=self.reveal_timeout,
-                )
-
-                raise ValueError('Lock expires within the unsafe_period.')
-
         # only check the balance if the locksroot matched
         if transfer.transferred_amount < from_state.transferred_amount:
             if log.isEnabledFor(logging.ERROR):

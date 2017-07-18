@@ -110,11 +110,20 @@ def make_mediated_transfer(
         token=ADDRESS,
         transferred_amount=0,
         amount=1,
+        expiration=1,
         locksroot='',
         recipient=ADDRESS,
         target=ADDRESS,
         initiator=ADDRESS,
         fee=0):
+
+    lock = make_lock(
+        amount=amount,
+        expiration=expiration,
+    )
+
+    if locksroot == '':
+        locksroot = sha3(lock.as_bytes)
 
     return MediatedTransfer(
         identifier,
@@ -123,7 +132,7 @@ def make_mediated_transfer(
         transferred_amount,
         recipient,
         locksroot,
-        make_lock(amount=amount),
+        lock,
         target,
         initiator,
         fee
