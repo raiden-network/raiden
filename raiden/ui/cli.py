@@ -14,6 +14,7 @@ import gevent.monkey
 from ethereum import slogging
 from pyethapp.jsonrpc import address_decoder, address_encoder
 from tinyrpc import BadRequestError
+from ethereum.utils import denoms
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -23,6 +24,8 @@ from raiden.network.sockfactory import socket_factory
 from raiden.settings import (
     INITIAL_PORT,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
+    GAS_PRICE,
+    GAS_LIMIT
 )
 from raiden.utils import split_endpoint
 from raiden.tests.utils.smoketest import (
@@ -320,9 +323,31 @@ def app(address,
         print(e.message)
         sys.exit(1)
 
+    discovery_gasprice = GAS_PRICE
+    discovery_startgas = GAS_LIMIT
+    discovery_tx_cost = discovery_gasprice * discovery_startgas
+
+    while True:
+        balance = blockchain_service.client.balance(address)
+        if discovery_tx_cost <= balance:
+            break
+        print(
+            'Account has insufficient funds for discovery registration.\n'
+            'Needed: {} ETH\n'
+            'Available: {} ETH.\n'
+            'Please deposit additional funds on this account.'
+            .format(discovery_tx_cost / float(denoms.ether), balance / float(denoms.ether))
+        )
+        if not click.confirm('Try again?'):
+            sys.exit(1)
+
     discovery = ContractDiscovery(
         blockchain_service.node_address,
-        blockchain_service.discovery(discovery_contract_address)
+        blockchain_service.discovery(
+            discovery_contract_address,
+            discovery_gasprice,
+            discovery_startgas
+        )
     )
 
     if datadir is None:

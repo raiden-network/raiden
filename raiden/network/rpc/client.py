@@ -310,13 +310,15 @@ class BlockChainService(object):
 
         return self.address_to_token[token_address]
 
-    def discovery(self, discovery_address):
+    def discovery(self, discovery_address, gasprice, startgas):
         """ Return a proxy to interact with the discovery. """
         if discovery_address not in self.address_to_discovery:
             self.address_to_discovery[discovery_address] = Discovery(
                 self.client,
                 discovery_address,
                 poll_timeout=self.poll_timeout,
+                gasprice=gasprice,
+                startgas=startgas
             )
 
         return self.address_to_discovery[discovery_address]
@@ -500,7 +502,11 @@ class Discovery(object):
         if node_address != self.client.sender:
             raise ValueError("node_address doesnt match this node's address")
 
-        transaction_hash = self.proxy.registerEndpoint.transact(endpoint)
+        transaction_hash = self.proxy.registerEndpoint.transact(
+            endpoint,
+            gasprice=self.gasprice,
+            startgas=self.startgas
+        )
 
         try:
             self.client.poll(
