@@ -168,6 +168,18 @@ export class RaidenService {
             .catch(this.handleError);
     }
 
+    public connectTokenNetwork(funds: number, tokenAddress: string): Observable<any> {
+        const data = {
+            'funds': funds
+        }
+        const headers = new Headers({ 'Content-Type': 'application/json' });
+        const options = new RequestOptions({ headers: headers });
+        return this.http.put(`${this.config.apiCall}/connection/${tokenAddress}`,
+            JSON.stringify(data), options).map((response) => {
+                return response;
+            }).catch(this.handleError);
+    }
+
     private getUsertoken(tokenAddress: string, refresh: boolean = true): Usertoken|null {
         const tokenContractInstance = this.tokenContract.at(tokenAddress);
         let userToken: Usertoken|null|undefined = this.userTokens[tokenAddress];

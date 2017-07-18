@@ -17,14 +17,14 @@ export class TokenNetworkComponent implements OnInit {
     public tokenBalances: Usertoken[];
     public selectedToken: Usertoken;
     @Input() channelsToken: Channel[];
-    public displayDialog: boolean = false;
+    public displayJoinDialog: boolean = false;
     public displayRegisterDialog: boolean = false;
     public channelOpened: Channel = new Channel();
     public tokenAddress: FormControl = new FormControl();
+    public funds: FormControl = new FormControl();
 
     constructor(private raidenService: RaidenService,
-                private sharedService: SharedService)
-    { }
+                private sharedService: SharedService) { }
 
 
     ngOnInit() {
@@ -35,7 +35,16 @@ export class TokenNetworkComponent implements OnInit {
         );
     }
 
-    public joinTokenNetwork() {
+    public showJoinDialogBox() {
+        console.log('Inside Join Token Network');
+        if (this.selectedToken == null) {
+            this.sharedService.msg({
+                severity: 'error',
+                summary: 'Token Not Selected',
+                detail: 'Please select a token network to Join'
+              });
+              return;
+        }
         if (this.selectedToken.balance === 0) {
             this.sharedService.msg({
                 severity: 'error',
@@ -44,17 +53,32 @@ export class TokenNetworkComponent implements OnInit {
             });
             return;
         }
-        for (const channel of this.channelsToken) {
-            if (this.selectedToken.address === channel.token_address) {
-                this.sharedService.msg({
-                    severity: 'warn',
-                    summary: 'Warining message',
-                    detail: 'You already participate in this token network'
-                });
-                return;
-            }
-        }
-        this.displayDialog = true;
+        this.displayJoinDialog = true;
+        this.funds.reset();
+    }
+
+    public joinTokenNetwork() {
+        this.raidenService.connectTokenNetwork(this.funds.value,
+            this.selectedToken.address).subscribe(
+                (response) => {
+                    if (response.status === 200) {
+                        this.sharedService.msg({
+                            severity: 'success',
+                            summary: 'Joined Token Network',
+                            detail: 'You have successfully Joined the Network' +
+                            ' of Token ' + this.selectedToken.address
+                        });
+                    } else if (response.status === 500) {
+                        this.sharedService.msg({
+                            severity: 'error',
+                            summary: 'Server Error',
+                            detail: 'Server has encountered Internal Error'
+                        })
+                    }
+                }
+          );
+          this.displayJoinDialog = false;
+          this.funds.reset();
     }
 
     public showRegisterDialog(show: boolean) {
@@ -63,16 +87,17 @@ export class TokenNetworkComponent implements OnInit {
     }
 
     public registerToken() {
-        if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value))
+        if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value)) {
             this.raidenService.registerToken(this.tokenAddress.value)
                 .subscribe((userToken: Usertoken) => {
                     this.tokenBalances.push(userToken);
                     this.sharedService.msg({
                         severity: 'success',
                         summary: 'Token registered',
-                        detail: 'Your token was successfully registered: '+userToken.address,
+                        detail: 'Your token was successfully registered: ' + userToken.address,
                     });
                 })
+        }
         this.showRegisterDialog(false);
     }
 

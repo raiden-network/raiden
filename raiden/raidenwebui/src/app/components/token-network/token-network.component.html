@@ -6,40 +6,30 @@
   <p-column field="balance" header="Balance" [style]="{width: '5em', 'text-align': 'center'}"></p-column>
   <p-footer>
     <div class="ui-helper-clearfix button-pane">
-      <button type="button" pButton icon="fa-plus" class="pull-left" (click)="joinTokenNetwork()" label="Join"></button>
+      <button type="button" pButton icon="fa-plus" class="pull-left" (click)="showJoinDialogBox()" label="Join Token Network"></button>
       <button type="button" pButton icon="fa-pencil" class="pull-left" (click)="showRegisterDialog(true)" label="Register New Token"></button>
     </div>
   </p-footer>
 </p-dataTable>
 
-<p-dialog header="Join Token Network" [(visible)]="displayDialog" [responsive]="true" showEffect="fade" [modal]="true" [resizable]="true" width="600">
+<p-dialog header="Join Token Network" [(visible)]="displayJoinDialog" [responsive]="true" showEffect="fade" [modal]="true" [resizable]="true" width="600">
   <div class="ui-grid ui-grid-responsive ui-fluid" *ngIf="selectedToken">
-    <div class="ui-grid-row">
-      <div class="ui-grid-col-4"><label for="partner">Partner</label></div>
-      <div class="ui-grid-col-8"><input pInputText type="text" id="partner" [(ngModel)]="channelOpened.channel_address" class="ui-inputtext ui-corner-all ui-state-default" placeholder="0x0000000000000000000000000000000000000000" required pattern="^0x[0-9a-fA-F]{40}$" minlength="42"
-          maxlength="42" /></div>
-    </div>
-    <div class="ui-grid-row">
-      <div class="ui-grid-col-4"><label for="token">Token</label></div>
-      <div class="ui-grid-col-8"><input pInputText type="text" id="token" [(ngModel)]="channelOpened.token_address" class="ui-inputtext ui-corner-all ui-state-default" placeholder="0x0000000000000000000000000000000000000000" required pattern="^0x[0-9a-fA-F]{40}$" minlength="42"
-          maxlength="42" /></div>
-    </div>
-    <div class="ui-grid-row">
-      <div class="ui-grid-col-4"><label for="balance">Balance</label></div>
-      <div class="ui-grid-col-8"><input pInputText type="number" id="balance" [(ngModel)]="channelOpened.balance" required class="ui-inputtext ui-corner-all ui-state-default" /></div>
-    </div>
-    <div class="ui-grid-row">
-      <div class="ui-grid-col-4"><label for="settle">Settle Timeout</label></div>
-      <div class="ui-grid-col-8">
-        <input pInputText type="number" id="settle" [(ngModel)]="channelOpened.settle_timeout" required class="ui-inputtext ui-corner-all ui-state-default" /></div>
-    </div>
+      <div class="ui-grid-row">
+          <div class="ui-grid-col-4">
+              <label for="funds">Enter Funds to be allocated</label>
+          </div>
+          <div class="ui-grid-col-8">
+              <input pInputText type="number" [formControl]="funds" class="ui-inputtext ui-corner-all ui-state-default"/>
+          </div>
+      </div>
   </div>
   <p-footer>
-    <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
-      <button type="button" pButton icon="fa-close" (click)="save()" label="Close"></button>
-      <button type="button" pButton icon="fa-check" (click)="delete()" label="Join"></button>
-    </div>
-  </p-footer>
+      <div class="ui-dialog-buttonpane ui-helper-clearfix">
+          <button type="button" pButton icon="fa-plus" label="Join"
+          (click)="joinTokenNetwork()">
+          </button>
+      </div>
+    </p-footer>
 </p-dialog>
 
 <p-dialog header="Register New Token" [(visible)]="displayRegisterDialog" [responsive]="true" showEffect="fade" [modal]="true" width="600">
