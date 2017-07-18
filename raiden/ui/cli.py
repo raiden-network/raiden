@@ -40,6 +40,19 @@ from raiden.tests.utils.smoketest import (
 
 gevent.monkey.patch_all()
 
+OPTION_DATADIR = click.option(
+    '--datadir',
+    help='Directory for storing raiden data.',
+    default=os.path.join(os.path.expanduser('~'), '.raiden'),
+    type=click.Path(
+        exists=False,
+        dir_okay=True,
+        file_okay=False,
+        writable=True,
+        resolve_path=True,
+        allow_dash=False,
+    ),
+)
 
 class AddressType(click.ParamType):
     name = 'address'
@@ -152,19 +165,7 @@ OPTIONS = [
         default="127.0.0.1:5001",
         type=str,
     ),
-    click.option(
-        '--datadir',
-        help='Directory for storing raiden data.',
-        default=None,
-        type=click.Path(
-            exists=False,
-            dir_okay=True,
-            file_okay=False,
-            writable=True,
-            resolve_path=True,
-            allow_dash=False,
-        ),
-    ),
+    OPTION_DATADIR,
     click.option(
         '--password-file',
         help='Text file containing password for provided account',
@@ -538,3 +539,21 @@ def smoketest(ctx, debug, **kwargs):
     else:
         print('[5/5] smoketest had errors, report was written to {}'.format(report_file))
         sys.exit(1)
+
+
+@run.command()
+@OPTION_DATADIR
+def removedb(datadir):
+    """
+    Delete local cache and database.
+    """
+    import shutil
+    prompt = 'Are you sure you want to delete all data from {}?'.format(datadir)
+    if click.confirm(prompt):
+        try:
+            shutil.rmtree(datadir)
+        except OSError:
+            pass
+        print('Local data deleted.')
+    else:
+        print('Abort.')
