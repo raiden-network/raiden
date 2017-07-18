@@ -6,12 +6,14 @@ import sys
 import tempfile
 from functools import wraps
 from traceback import TracebackException
-from typing import Callable, Dict, List, Pattern, Tuple
+from typing import Callable, Dict, FrozenSet, List, Pattern, Tuple
 
 import structlog
 
 DEFAULT_LOG_LEVEL = 'INFO'
 MAX_LOG_FILE_SIZE = 5 * 1024 * 1024
+
+_FIRST_PARTY_PACKAGES = frozenset(['raiden'])
 
 
 def _chain(first_func, *funcs) -> Callable:
@@ -131,6 +133,8 @@ def configure_logging(
         log_json: bool = False,
         log_file: str = None,
         disable_debug_logfile: bool = False,
+        debug_log_file_name: str = 'raiden-debug.log',
+        _first_party_packages: FrozenSet[str] =_FIRST_PARTY_PACKAGES,
 ):
     structlog.reset_defaults()
 
@@ -226,7 +230,7 @@ def configure_logging(
                 },
                 'debug-info': {
                     'class': 'logging.handlers.RotatingFileHandler',
-                    'filename': 'raiden-debug.log',
+                    'filename': debug_log_file_name,
                     'level': 'DEBUG',
                     'formatter': 'debug',
                     'maxBytes': MAX_LOG_FILE_SIZE,
@@ -254,7 +258,8 @@ def configure_logging(
     # set logging level of the root logger to DEBUG, to be able to intercept
     # all messages, which are then be filtered by the `RaidenFilter`
     structlog.get_logger('').setLevel(logger_level_config.get('', DEFAULT_LOG_LEVEL))
-    structlog.get_logger('raiden').setLevel('DEBUG')
+    for package in _first_party_packages:
+        structlog.get_logger(package).setLevel('DEBUG')
 
     # rollover RotatingFileHandler on startup, to split logs also per-session
     root = logging.getLogger()
