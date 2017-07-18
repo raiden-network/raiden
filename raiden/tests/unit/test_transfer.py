@@ -173,6 +173,52 @@ def test_transfer(raiden_network):
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [0])
+def test_transfer_channels(raiden_network, token_addresses):
+    """ When the node has no channels it should fail without raising exceptions. """
+    token_address = token_addresses[0]
+    app0, app1 = raiden_network
+
+    amount = 10
+    async_result = app0.raiden.transfer_async(
+        token_address,
+        amount,
+        app1.raiden.address,
+    )
+
+    assert async_result.wait() is False
+
+
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('number_of_nodes', [4])
+@pytest.mark.parametrize('channels_per_node', [1])
+def test_transfer_noroutes(raiden_network, token_addresses):
+    """ When there are no routes it should fail without raising exceptions. """
+    # Topology:
+    #   App0 <-> App1 App2 <-> App3
+    #
+    app0, _, app2, app3 = raiden_network
+
+    token_address = token_addresses[0]
+
+    amount = 10
+    async_result = app0.raiden.transfer_async(
+        token_address,
+        amount,
+        app2.raiden.address,
+    )
+    assert async_result.wait() is False
+
+    async_result = app0.raiden.transfer_async(
+        token_address,
+        amount,
+        app3.raiden.address,
+    )
+    assert async_result.wait() is False
+
+
+@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('number_of_nodes', [10])
 def test_mediated_transfer(raiden_network):
