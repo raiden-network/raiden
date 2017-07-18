@@ -12,6 +12,7 @@ from raiden.utils import (
     make_address,
     make_privkey_address,
 )
+from raiden.tests.utils.messages import make_mediated_transfer
 from raiden.tests.utils.transfer import assert_synched_channels, channel
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -711,4 +712,64 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     assert_synched_channels(
         channel0, balance0, [],
         channel1, balance1, [transfer1.lock],
+    )
+
+
+def test_channel_must_accept_expired_locks():
+    """ A node may go offline for an undetermined period of time, when it comes
+    back online it must accept the messages that are waiting, otherwise the
+    partner node won't make progress with its queue.
+
+    If a N node goes offline for a number B of blocks, and the partner does not
+    close the channel, when N comes back online some of the messages from its
+    partner may become expired, neverthless these messages are ordered and must
+    be accept for the partner to make progress with its queue.
+
+    Note: Accepting a message with an expired lock does *not* imply the token
+    transfer happen, and the receiver node must *not* forward the transfer,
+    only accept the message allowing the partner to progress with its message
+    queue.
+    """
+    balance1 = 70
+    balance2 = 110
+    reveal_timeout = 5
+    settle_timeout = 15
+    privkey1, address1 = make_privkey_address()
+    privkey2, address2 = make_privkey_address()
+    token_address = make_address()
+
+    netting_channel = NettingChannelMock()
+    our_state = ChannelEndState(
+        address1,
+        balance1,
+        netting_channel.opened(),
+    )
+    partner_state = ChannelEndState(
+        address2,
+        balance2,
+        netting_channel.opened(),
+    )
+    external_state = make_external_state()
+
+    test_channel = Channel(
+        our_state,
+        partner_state,
+        external_state,
+        token_address,
+        reveal_timeout,
+        settle_timeout,
+    )
+
+    block_number = 10
+    transfer = make_mediated_transfer(
+        nonce=test_channel.partner_state.nonce,
+        token=test_channel.token_address,
+        expiration=block_number + settle_timeout,
+        recipient=address1,
+    )
+    transfer.sign(privkey2, address2)
+
+    test_channel.register_transfer(
+        block_number + settle_timeout + 1,
+        transfer,
     )
