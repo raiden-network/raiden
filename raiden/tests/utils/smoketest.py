@@ -5,7 +5,7 @@ import json
 import subprocess
 import shlex
 import tempfile
-import distutils
+import distutils.spawn
 import pdb
 import traceback
 from string import Template
