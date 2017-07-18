@@ -40,6 +40,27 @@ from raiden.tests.utils.smoketest import (
 
 gevent.monkey.patch_all()
 
+
+class AddressType(click.ParamType):
+    name = 'address'
+
+    def convert(self, value, param, ctx):
+        try:
+            return address_decoder(value)
+        except BadRequestError:
+            self.fail('Please specify a valid hex-encoded address.')
+
+
+ADDRESS_TYPE = AddressType()
+
+OPTION_ADDRESS = click.option(
+    '--address',
+    help=('The ethereum address you would like raiden to use and for which '
+          'a keystore file exists in your local system.'),
+    default=None,
+    type=ADDRESS_TYPE,
+)
+
 OPTION_DATADIR = click.option(
     '--datadir',
     help='Directory for storing raiden data.',
@@ -54,26 +75,8 @@ OPTION_DATADIR = click.option(
     ),
 )
 
-class AddressType(click.ParamType):
-    name = 'address'
-
-    def convert(self, value, param, ctx):
-        try:
-            return address_decoder(value)
-        except BadRequestError:
-            self.fail('Please specify a valid hex-encoded address.')
-
-
-ADDRESS_TYPE = AddressType()
-
 OPTIONS = [
-    click.option(
-        '--address',
-        help=('The ethereum address you would like raiden to use and for which '
-              'a keystore file exists in your local system.'),
-        default=None,
-        type=ADDRESS_TYPE,
-    ),
+    OPTION_ADDRESS,
     click.option(
         '--keystore-path',
         help=('If you have a non-standard path for the ethereum keystore directory'
@@ -542,16 +545,21 @@ def smoketest(ctx, debug, **kwargs):
 
 
 @run.command()
+@OPTION_ADDRESS
 @OPTION_DATADIR
-def removedb(datadir):
+def removedb(address, datadir):
     """
-    Delete local cache and database.
+    Delete local cache and database of this address or all if none is specified.
     """
     import shutil
-    prompt = 'Are you sure you want to delete all data from {}?'.format(datadir)
+
+    address_hex = address_encoder(address)
+    user_db_dir = os.path.join(datadir, address_hex[:8]) if address_hex else datadir
+    prompt = 'Are you sure you want to delete all data from {}?'.format(user_db_dir)
+
     if click.confirm(prompt):
         try:
-            shutil.rmtree(datadir)
+            shutil.rmtree(user_db_dir)
         except OSError:
             pass
         print('Local data deleted.')
