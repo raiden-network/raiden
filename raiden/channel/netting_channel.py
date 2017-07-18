@@ -92,24 +92,6 @@ class ChannelExternalState(object):
         # proxy side; see also #394
         return self.netting_channel.settled() or 0
 
-    def callback_on_opened(self, callback):
-        if self._opened_block != 0:
-            callback(self._opened_block)
-
-        self.callbacks_opened.append(callback)
-
-    def callback_on_closed(self, callback):
-        if self._closed_block != 0:
-            callback(self._closed_block)
-
-        self.callbacks_closed.append(callback)
-
-    def callback_on_settled(self, callback):
-        if self._settled_block != 0:
-            callback(self._settled_block)
-
-        self.callbacks_settled.append(callback)
-
     def close(self, partner_transfer):
         return self.netting_channel.close(partner_transfer)
 
