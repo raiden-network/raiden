@@ -92,7 +92,15 @@ def channel_to_routestate(channel, node_address):
 
 def ordered_neighbors(nx_graph, our_address, target_address):
     paths = list()
-    for neighbor in networkx.all_neighbors(nx_graph, our_address):
+
+    try:
+        all_neighbors = networkx.all_neighbors(nx_graph, our_address)
+    except networkx.NetworkXError:
+        # If `our_address` is not in the graph, no channels opened with the
+        # address
+        return []
+
+    for neighbor in all_neighbors:
         try:
             length = networkx.shortest_path_length(
                 nx_graph,
@@ -276,7 +284,10 @@ class ChannelGraph(object):
 
     def has_path(self, source_address, target_address):
         """ True if there is a connecting path regardless of the number of hops. """
-        return networkx.has_path(self.graph, source_address, target_address)
+        try:
+            return networkx.has_path(self.graph, source_address, target_address)
+        except networkx.NetworkXError:
+            return False
 
     def has_channel(self, source_address, target_address):
         """ True if there is a channel connecting both addresses. """

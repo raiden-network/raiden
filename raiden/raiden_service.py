@@ -902,7 +902,9 @@ class RaidenService(object):
     def start_mediated_transfer(self, token_address, amount, identifier, target):
         # pylint: disable=too-many-locals
 
+        async_result = AsyncResult()
         graph = self.token_to_channelgraph[token_address]
+
         available_routes = get_best_routes(
             graph,
             self.protocol.nodeaddresses_networkstatuses,
@@ -911,6 +913,10 @@ class RaidenService(object):
             amount,
             None,
         )
+
+        if not available_routes:
+            async_result.set(False)
+            return async_result
 
         self.protocol.start_health_check(target)
 
@@ -958,7 +964,6 @@ class RaidenService(object):
 
         state_manager = StateManager(initiator.state_transition, None)
         self.state_machine_event_handler.log_and_dispatch(state_manager, init_initiator)
-        async_result = AsyncResult()
 
         # TODO: implement the network timeout raiden.config['msg_timeout'] and
         # cancel the current transfer if it hapens (issue #374)
