@@ -54,6 +54,7 @@ export class TokenNetworkComponent implements OnInit {
             return;
         }
         this.displayJoinDialog = true;
+        this.funds.reset();
     }
 
     public joinTokenNetwork() {
@@ -77,6 +78,7 @@ export class TokenNetworkComponent implements OnInit {
                 }
           );
           this.displayJoinDialog = false;
+          this.funds.reset();
     }
 
     public showRegisterDialog(show: boolean) {
