@@ -24,3 +24,5 @@
       - "{{ keystore_address }}"
       - "--password-file"
       - "/root/.raiden/password"
+      - "--logging"
+      - ":debug"
