@@ -9,6 +9,7 @@ from ethereum._solidity import compile_file
 from ethereum.utils import denoms
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import default_gasprice
+from raiden.tests.utils.blockchain import wait_until_block
 
 from raiden.network.rpc.client import (
     decode_topic, patch_send_transaction, patch_send_message
@@ -72,8 +73,14 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert manager0.channels_by_participant(peer0_address) == [netting_address_01]
     assert manager0.channels_by_participant(peer1_address) == [netting_address_01]
     assert manager0.channels_by_participant(peer2_address) == []
-
-    # create other chanel
+    # create a duplicated channel with same participants while previous channel is still open should throw an exception
+    with pytest.raises(Exception):
+        manager0.new_netting_channel(
+            peer0_address,
+            peer1_address,
+            settle_timeout,
+        )
+    # create other channel
     netting_address_02 = manager0.new_netting_channel(
         peer0_address,
         peer2_address,
@@ -132,6 +139,30 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail(None)['our_balance'] == 70
     assert netting_channel_02.detail(None)['partner_balance'] == 130
 
+    # open channel with same peer again after settling
+    netting_channel_01.close(peer1_address, 0, 0)
+    wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + settle_timeout + 1)
+    netting_channel_01.settle()
+    assert netting_channel_01.isopen() is False
+    assert netting_channel_01.closed() != 0
+
+    # open channel with same peer again
+    netting_address_01_reopened = manager0.new_netting_channel(
+        peer0_address,
+        peer1_address,
+        settle_timeout,
+    )
+    netting_channel_01_reopened = blockchain_service0.netting_channel(netting_address_01_reopened)
+
+    assert netting_channel_01_reopened.isopen() is False
+    assert netting_channel_01_reopened.partner(peer0_address) == peer1_address
+    assert netting_address_01_reopened in manager0.channels_by_participant(peer0_address)
+    assert netting_address_01 not in manager0.channels_by_participant(peer0_address)
+
+    app0.raiden.chain.token(token_address).approve(netting_address_01_reopened, 100)
+    netting_channel_01_reopened.deposit(peer0_address, 100)
+    assert netting_channel_01_reopened.isopen() is True
+
 
 @pytest.mark.skipif(
     'TRAVIS' in os.environ,
@@ -140,11 +171,11 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(
-        blockchain_type,
-        blockchain_backend,  # required to start the geth backend
-        blockchain_rpc_ports,
-        private_keys,
-        poll_timeout):
+    blockchain_type,
+    blockchain_backend,  # required to start the geth backend
+    blockchain_rpc_ports,
+    private_keys,
+    poll_timeout):
     # pylint: disable=too-many-locals
 
     # this test is for interaction with a blockchain using json-rpc, so it
