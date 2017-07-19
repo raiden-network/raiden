@@ -20,7 +20,7 @@ from pyethapp.rpc_client import topic_encoder, JSONRPCClient, block_tag_encoder
 import requests
 
 from raiden import messages
-from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
     GAS_LIMIT,
@@ -310,15 +310,13 @@ class BlockChainService(object):
 
         return self.address_to_token[token_address]
 
-    def discovery(self, discovery_address, gasprice, startgas):
+    def discovery(self, discovery_address):
         """ Return a proxy to interact with the discovery. """
         if discovery_address not in self.address_to_discovery:
             self.address_to_discovery[discovery_address] = Discovery(
                 self.client,
                 discovery_address,
-                poll_timeout=self.poll_timeout,
-                gasprice=gasprice,
-                startgas=startgas
+                poll_timeout=self.poll_timeout
             )
 
         return self.address_to_discovery[discovery_address]
@@ -505,7 +503,7 @@ class Discovery(object):
         transaction_hash = self.proxy.registerEndpoint.transact(
             endpoint,
             gasprice=self.gasprice,
-            startgas=self.startgas
+            startgas=DISCOVERY_REGISTRATION_GAS
         )
 
         try:
