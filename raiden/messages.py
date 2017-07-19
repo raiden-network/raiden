@@ -376,7 +376,7 @@ class Lock(MessageHashable):
         amount: Amount of the token being transferred.
         expiration: Highest block_number until which the transfer can be settled
         hashlock: Hashed secret `sha3(secret)` used to register the transfer,
-            the real `secret` is necessary to release the locked amount.
+        the real `secret` is necessary to release the locked amount.
     """
     # Lock extends MessageHashable but it is not a message, it is a
     # serializable structure that is reused in some messages
@@ -446,8 +446,8 @@ class LockedTransfer(SignedMessage):
     If the secret to hashlock becomes public, but Bob fails to sign Carol a netted balance,
     with an updated rootlock which reflects the deletion of the lock, then
     Carol can request settlement on chain by providing:
-        any signed [nonce, token, balance, recipient, locksroot, ...]
-        along a merkle proof from locksroot to the not yet netted formerly locked amount
+    any signed [nonce, token, balance, recipient, locksroot, ...]
+    along a merkle proof from locksroot to the not yet netted formerly locked amount
     """
     def __init__(self, identifier, nonce, token, transferred_amount, recipient, locksroot, lock):
         super(LockedTransfer, self).__init__()

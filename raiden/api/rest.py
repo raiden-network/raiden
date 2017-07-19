@@ -73,21 +73,21 @@ def jsonify_with_response(data, status_code):
 class APIServer(object):
     """
     Runs the API-server that routes the endpoint to the resources.
-    The API is wrapped in multiple layers, and the Server should be invoked this way:
+    The API is wrapped in multiple layers, and the Server should be invoked this way::
 
-    ```
-    # instance of the raiden-api
-    raiden_api = RaidenAPI(...)
 
-    # wrap the raiden-api with rest-logic and encoding
-    rest_api = RestAPI(raiden_api)
+        # instance of the raiden-api
+        raiden_api = RaidenAPI(...)
 
-    # create the server and link the api-endpoints with flask / flask-restful middleware
-    api_server = APIServer(rest_api)
+        # wrap the raiden-api with rest-logic and encoding
+        rest_api = RestAPI(raiden_api)
 
-    # run the server
-    api_server.run('127.0.0.1', 5001, debug=True)
-    ```
+        # create the server and link the api-endpoints with flask / flask-restful middleware
+        api_server = APIServer(rest_api)
+
+        # run the server
+        api_server.run('127.0.0.1', 5001, debug=True)
+
     """
 
     # flask TypeConverter

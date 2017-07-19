@@ -19,6 +19,7 @@ log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 class ConnectionManager(object):
     """The ConnectionManager provides a high level abstraction for connecting to a
     Token network.
+
     Note:
         It is initialized with 0 funds; a connection to the token network
         will be only established _after_ calling `connect(funds)`
@@ -238,6 +239,7 @@ class ConnectionManager(object):
 
     def find_new_partners(self, number):
         """Search the token network for potential channel partners.
+
         Args:
             number (int): number of partners to return
         """

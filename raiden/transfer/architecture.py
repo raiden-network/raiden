@@ -41,7 +41,7 @@ class State(object):
     - State objects may be nested.
     - State classes don't have logic by design.
     - Each iteration must operate on fresh copy of the state, treating the old
-      objects as immutable.
+          objects as immutable.
     - This class is used as a marker for states.
     """
     __slots__ = ()

@@ -20,7 +20,7 @@
 # - Add Raiden path to the path for sphinx to import
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.abspath('.')))
+sys.path.insert(0, os.path.dirname(os.path.abspath('../raiden/')))
 
 # -- General configuration ------------------------------------------------
 
@@ -36,6 +36,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
+    'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
 ]
 

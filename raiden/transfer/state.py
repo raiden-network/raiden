@@ -12,6 +12,9 @@ CHANNEL_STATE_INITIALIZING = 'initializing'
 class RouteState(State):
     """ Route state.
 
+    this describes a route state
+
+
     Args:
         state (string): The current state of the route (opened, closed or settled).
         node_address (address): The address of the next_hop.
@@ -23,6 +26,7 @@ class RouteState(State):
         reveal_timeout (int): The channel configured reveal_timeout.
         closed_block (Nullable[int]): None if the channel is open, otherwise
             the block number at which the channel was closed.
+
     """
     __slots__ = (
         'state',
