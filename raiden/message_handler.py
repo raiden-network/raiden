@@ -173,13 +173,13 @@ class RaidenMessageHandler(object):
         )
 
     def message_directtransfer(self, message):
-        if message.token not in self.raiden.channelgraphs:
+        if message.token not in self.raiden.token_to_channelgraph:
             raise UnknownTokenAddress('Unknown token address {}'.format(pex(message.token)))
 
         if message.token in self.blocked_tokens:
             raise TransferUnwanted()
 
-        graph = self.raiden.channelgraphs[message.token]
+        graph = self.raiden.token_to_channelgraph[message.token]
 
         if not graph.has_channel(self.raiden.address, message.sender):
             raise UnknownAddress(
@@ -239,7 +239,7 @@ class RaidenMessageHandler(object):
             self.message_tokenswap(message)
             return
 
-        graph = self.raiden.channelgraphs[message.token]
+        graph = self.raiden.token_to_channelgraph[message.token]
 
         if not graph.has_channel(self.raiden.address, message.sender):
             raise UnknownAddress(

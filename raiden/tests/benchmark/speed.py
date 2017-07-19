@@ -84,7 +84,7 @@ def setup_apps(amount, tokens, num_transfers, num_nodes, channels_per_node):
 
 def test_throughput(apps, tokens, num_transfers, amount):
     def start_transfers(curr_app, curr_token, num_transfers):
-        graph = curr_app.raiden.channelgraphs[curr_token]
+        graph = curr_app.raiden.token_to_channelgraph[curr_token]
 
         all_paths = graph.get_paths_of_length(
             source=curr_app.raiden.address,
@@ -127,7 +127,7 @@ def test_throughput(apps, tokens, num_transfers, amount):
 def test_latency(apps, tokens, num_transfers, amount):
     def start_transfers(idx, curr_token, num_transfers):
         curr_app = apps[idx]
-        graph = curr_app.raiden.channelgraphs[curr_token]
+        graph = curr_app.raiden.token_to_channelgraph[curr_token]
 
         all_paths = graph.get_paths_of_length(
             source=curr_app.raiden.address,

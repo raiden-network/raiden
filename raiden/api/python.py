@@ -165,7 +165,7 @@ class RaidenAPI(object):
             raise InvalidAddress('Expected binary address format for partner in channel open')
 
         channel_manager = self.raiden.chain.manager_by_token(token_address)
-        assert token_address in self.raiden.channelgraphs
+        assert token_address in self.raiden.token_to_channelgraph
 
         netcontract_address = channel_manager.new_netting_channel(
             self.raiden.address,
@@ -175,7 +175,7 @@ class RaidenAPI(object):
         while netcontract_address not in self.raiden.chain.address_to_nettingchannel:
             gevent.sleep(self.raiden.alarm.wait_time)
 
-        graph = self.raiden.channelgraphs[token_address]
+        graph = self.raiden.token_to_channelgraph[token_address]
         while partner_address not in graph.partneraddress_to_channel:
             gevent.sleep(self.raiden.alarm.wait_time)
         channel = graph.partneraddress_to_channel[partner_address]
@@ -191,7 +191,7 @@ class RaidenAPI(object):
         if not isaddress(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel deposit')
 
-        graph = self.raiden.channelgraphs[token_address]
+        graph = self.raiden.token_to_channelgraph[token_address]
         channel = graph.partneraddress_to_channel[partner_address]
         netcontract_address = channel.external_state.netting_channel.address
         assert len(netcontract_address)
@@ -272,7 +272,7 @@ class RaidenAPI(object):
                 'Address for taker is not in expected binary format in token swap'
             )
 
-        channelgraphs = self.raiden.channelgraphs
+        channelgraphs = self.raiden.token_to_channelgraph
 
         if taker_token not in channelgraphs:
             log.error('Unknown token {}'.format(pex(taker_token)))
@@ -345,7 +345,7 @@ class RaidenAPI(object):
                 'Address for taker is not in expected binary format in expect_token_swap'
             )
 
-        channelgraphs = self.raiden.channelgraphs
+        channelgraphs = self.raiden.token_to_channelgraph
 
         if taker_token not in channelgraphs:
             log.error('Unknown token {}'.format(pex(taker_token)))
@@ -400,7 +400,7 @@ class RaidenAPI(object):
             raise InvalidAddress('Expected binary address format for partner in get_channel_list')
 
         if token_address and partner_address:
-            graph = self.raiden.channelgraphs[token_address]
+            graph = self.raiden.token_to_channelgraph[token_address]
 
             # Let it raise the KeyError
             channel = graph.partneraddress_to_channel[partner_address]
@@ -408,14 +408,14 @@ class RaidenAPI(object):
             return [channel]
 
         elif token_address:
-            graph = self.raiden.channelgraphs[token_address]
+            graph = self.raiden.token_to_channelgraph[token_address]
             token_channels = graph.address_to_channel.values()
             return token_channels
 
         elif partner_address:
             partner_channels = [
                 graph.partneraddress_to_channel[partner_address]
-                for graph in self.raiden.channelgraphs.itervalues()
+                for graph in self.raiden.token_to_channelgraph.itervalues()
                 if partner_address in graph.partneraddress_to_channel
             ]
 
@@ -423,7 +423,7 @@ class RaidenAPI(object):
 
         else:
             all_channels = list()
-            for graph in self.raiden.channelgraphs.itervalues():
+            for graph in self.raiden.token_to_channelgraph.itervalues():
                 all_channels.extend(graph.address_to_channel.itervalues())
 
             return all_channels
@@ -439,7 +439,7 @@ class RaidenAPI(object):
 
     def get_tokens_list(self):
         """Returns a list of tokens the node knows about"""
-        tokens_list = list(self.raiden.channelgraphs.iterkeys())
+        tokens_list = list(self.raiden.token_to_channelgraph.iterkeys())
         return tokens_list
 
     def transfer_and_wait(
@@ -484,7 +484,7 @@ class RaidenAPI(object):
         if not isaddress(target):
             raise InvalidAddress('target address is not valid.')
 
-        graph = self.raiden.channelgraphs[token_address]
+        graph = self.raiden.token_to_channelgraph[token_address]
         if not graph.has_path(self.raiden.address, target):
             raise NoPathError('No path to address found')
 
@@ -511,7 +511,7 @@ class RaidenAPI(object):
         if not isaddress(partner_address):
             raise InvalidAddress('partner_address is not valid.')
 
-        graph = self.raiden.channelgraphs[token_address]
+        graph = self.raiden.token_to_channelgraph[token_address]
         channel = graph.partneraddress_to_channel[partner_address]
 
         first_transfer = None
@@ -540,7 +540,7 @@ class RaidenAPI(object):
         if not isaddress(partner_address):
             raise InvalidAddress('partner_address is not valid.')
 
-        graph = self.raiden.channelgraphs[token_address]
+        graph = self.raiden.token_to_channelgraph[token_address]
         channel = graph.partneraddress_to_channel[partner_address]
 
         if channel.can_transfer:
@@ -564,7 +564,7 @@ class RaidenAPI(object):
                 'Expected binary address format for token in get_token_network_events'
             )
 
-        graph = self.raiden.channelgraphs[token_address]
+        graph = self.raiden.token_to_channelgraph[token_address]
 
         return get_all_channel_manager_events(
             self.raiden.chain,

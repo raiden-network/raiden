@@ -52,8 +52,8 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
 
     token_address = app0.raiden.chain.default_registry.token_addresses()[0]
 
-    assert len(app0.raiden.channelgraphs[token_address].address_to_channel) == 0
-    assert len(app1.raiden.channelgraphs[token_address].address_to_channel) == 0
+    assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
+    assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
 
     token0 = app0.raiden.chain.token(token_address)
     graph0 = app0.raiden.chain.manager_by_token(token_address)
@@ -72,11 +72,11 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     gevent.sleep(events_poll_timeout)
 
     # channel is created but not opened and without funds
-    assert len(app0.raiden.channelgraphs[token_address].address_to_channel) == 1
-    assert len(app1.raiden.channelgraphs[token_address].address_to_channel) == 1
+    assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
+    assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.channelgraphs[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.channelgraphs[token_address].address_to_channel.values()[0]
+    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
 
     assert_synched_channels(
         channel0, 0, [],
@@ -89,11 +89,11 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     gevent.sleep(events_poll_timeout)
 
     # channel is open but single funded
-    assert len(app0.raiden.channelgraphs[token_address].address_to_channel) == 1
-    assert len(app1.raiden.channelgraphs[token_address].address_to_channel) == 1
+    assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
+    assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.channelgraphs[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.channelgraphs[token_address].address_to_channel.values()[0]
+    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
 
     assert_synched_channels(
         channel0, deposit, [],
@@ -106,11 +106,11 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     gevent.sleep(events_poll_timeout)
 
     # channel is open and funded by both participants
-    assert len(app0.raiden.channelgraphs[token_address].address_to_channel) == 1
-    assert len(app1.raiden.channelgraphs[token_address].address_to_channel) == 1
+    assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
+    assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.channelgraphs[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.channelgraphs[token_address].address_to_channel.values()[0]
+    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
 
     assert_synched_channels(
         channel0, deposit, [],
@@ -128,8 +128,8 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 
     token_address = app0.raiden.chain.default_registry.token_addresses()[0]
 
-    assert len(app0.raiden.channelgraphs[token_address].address_to_channel) == 0
-    assert len(app1.raiden.channelgraphs[token_address].address_to_channel) == 0
+    assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
+    assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
 
     token0 = app0.raiden.chain.token(token_address)
     manager0 = app0.raiden.chain.manager_by_token(token_address)
@@ -195,11 +195,11 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     gevent.sleep(events_poll_timeout * 2)
 
     # channel is created but not opened and without funds
-    assert len(app0.raiden.channelgraphs[token_address].address_to_channel) == 1
-    assert len(app1.raiden.channelgraphs[token_address].address_to_channel) == 1
+    assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
+    assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.channelgraphs[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.channelgraphs[token_address].address_to_channel.values()[0]
+    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
 
     assert_synched_channels(
         channel0, 0, [],

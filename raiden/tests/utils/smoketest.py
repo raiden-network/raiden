@@ -110,8 +110,8 @@ def run_smoketests(raiden_service, test_config, debug=False):
         discovery = chain.address_to_discovery.values()[0]
         assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
-        assert len(raiden_service.channelgraphs.values()) == 1
-        graph = raiden_service.channelgraphs.values()[0]
+        assert len(raiden_service.token_to_channelgraph.values()) == 1
+        graph = raiden_service.token_to_channelgraph.values()[0]
         channel = graph.partneraddress_to_channel[TEST_PARTNER_ADDRESS.decode('hex')]
         assert channel.can_transfer
         assert channel.contract_balance == channel.distributable == TEST_DEPOSIT_AMOUNT

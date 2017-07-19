@@ -271,7 +271,7 @@ class ConsoleTools(object):
         token = self._chain.token(token_address)
 
         # Obtain the token manager
-        graph = self._raiden.channelgraphs[token_address]
+        graph = self._raiden.token_to_channelgraph[token_address]
         assert graph
 
         # Get the channel
@@ -319,7 +319,7 @@ class ConsoleTools(object):
         token_address = safe_address_decode(token_address_hex)
         peer_address = safe_address_decode(peer_address_hex)
 
-        graph = self._raiden.channelgraphs[token_address]
+        graph = self._raiden.token_to_channelgraph[token_address]
         assert graph
 
         channel = graph.partneraddress_to_channel[peer_address]
