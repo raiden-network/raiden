@@ -40,18 +40,18 @@ def buffer_for(klass):
 
 
 def compute_slices(fields_spec):
-    names_slices = dict()
+    name_to_slice = dict()
     start = 0
 
     for field in fields_spec:
         end = start + field.size_bytes
 
         if not isinstance(field, Pad):  # do not create slices for paddings
-            names_slices[field.name] = slice(start, end)
+            name_to_slice[field.name] = slice(start, end)
 
         start = end
 
-    return names_slices
+    return name_to_slice
 
 
 def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity)
