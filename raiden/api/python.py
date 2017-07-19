@@ -306,8 +306,8 @@ class RaidenAPI(object):
             taker_token,
             taker_amount,
         )
-        self.raiden.swapkeys_greenlettasks[key] = task
-        self.raiden.swapkeys_tokenswaps[key] = token_swap
+        self.raiden.swapkey_to_greenlettask[key] = task
+        self.raiden.swapkey_to_tokenswap[key] = token_swap
 
         return async_result
 
@@ -372,7 +372,7 @@ class RaidenAPI(object):
             taker_address,
         )
 
-        self.raiden.swapkeys_tokenswaps[key] = token_swap
+        self.raiden.swapkey_to_tokenswap[key] = token_swap
 
     def get_channel_list(self, token_address=None, partner_address=None):
         """Returns a list of channels associated with the optionally given

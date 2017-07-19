@@ -171,9 +171,9 @@ class RaidenService(object):
         transport.protocol = protocol
 
         self.token_to_channelgraph = dict()
-        self.manager_token = dict()
-        self.swapkeys_tokenswaps = dict()
-        self.swapkeys_greenlettasks = dict()
+        self.manager_to_token = dict()
+        self.swapkey_to_tokenswap = dict()
+        self.swapkey_to_greenlettask = dict()
 
         self.identifier_to_statemanagers = defaultdict(list)
         self.identifier_to_results = defaultdict(list)
@@ -182,7 +182,7 @@ class RaidenService(object):
         # hashlock can be used in more than one token (for tokenswaps), a
         # channel should be removed from this list only when the lock is
         # released/withdrawn but not when the secret is registered.
-        self.tokens_hashlocks_channels = defaultdict(lambda: defaultdict(list))
+        self.token_to_hashlock_to_channels = defaultdict(lambda: defaultdict(list))
 
         self.chain = chain
         self.config = config
@@ -360,7 +360,7 @@ class RaidenService(object):
         revealsecret_message = RevealSecret(secret)
         self.sign(revealsecret_message)
 
-        for hash_channel in self.tokens_hashlocks_channels.itervalues():
+        for hash_channel in self.token_to_hashlock_to_channels.itervalues():
             for channel in hash_channel[hashlock]:
                 try:
                     channel.register_secret(secret)
@@ -382,7 +382,7 @@ class RaidenService(object):
                     log.error('programming error')
 
     def register_channel_for_hashlock(self, token_address, channel, hashlock):
-        channels_registered = self.tokens_hashlocks_channels[token_address][hashlock]
+        channels_registered = self.token_to_hashlock_to_channels[token_address][hashlock]
 
         if channel not in channels_registered:
             channels_registered.append(channel)
@@ -417,7 +417,7 @@ class RaidenService(object):
         #   proof can be made, if necessary
         # - reveal the secret to the `sender` node (otherwise we
         #   cannot withdraw the token)
-        channels_list = self.tokens_hashlocks_channels[token_address][hashlock]
+        channels_list = self.token_to_hashlock_to_channels[token_address][hashlock]
         channels_to_remove = list()
 
         # Dont use the partner_secret_message.token since it might not match
@@ -470,7 +470,7 @@ class RaidenService(object):
             channels_list.remove(channel)
 
         if not channels_list:
-            del self.tokens_hashlocks_channels[token_address][hashlock]
+            del self.token_to_hashlock_to_channels[token_address][hashlock]
 
     def get_channel_details(self, token_address, netting_channel):
         channel_details = netting_channel.detail(self.address)
@@ -630,7 +630,7 @@ class RaidenService(object):
                 block_number,
             )
 
-            self.manager_token[manager_address] = token_address
+            self.manager_to_token[manager_address] = token_address
             self.token_to_channelgraph[token_address] = graph
 
             self.tokens_to_connectionmanagers[token_address] = ConnectionManager(
@@ -669,7 +669,7 @@ class RaidenService(object):
             block_number,
         )
 
-        self.manager_token[manager_address] = token_address
+        self.manager_to_token[manager_address] = token_address
         self.token_to_channelgraph[token_address] = graph
 
         self.tokens_to_connectionmanagers[token_address] = ConnectionManager(

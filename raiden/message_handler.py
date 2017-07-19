@@ -235,7 +235,7 @@ class RaidenMessageHandler(object):
 
         # TODO: add a separate message for token swaps to simplify message
         # handling (issue #487)
-        if key in self.raiden.swapkeys_tokenswaps:
+        if key in self.raiden.swapkey_to_tokenswap:
             self.message_tokenswap(message)
             return
 
@@ -277,14 +277,14 @@ class RaidenMessageHandler(object):
 
         # If we are the maker the task is already running and waiting for the
         # taker's MediatedTransfer
-        task = self.raiden.swapkeys_greenlettasks.get(key)
+        task = self.raiden.swapkey_to_greenlettask.get(key)
         if task:
             task.response_queue.put(message)
 
         # If we are the taker we are receiving the maker transfer and should
         # start our new task
         else:
-            token_swap = self.raiden.swapkeys_tokenswaps[key]
+            token_swap = self.raiden.swapkey_to_tokenswap[key]
             task = TakerTokenSwapTask(
                 self.raiden,
                 token_swap,
@@ -292,4 +292,4 @@ class RaidenMessageHandler(object):
             )
             task.start()
 
-            self.raiden.swapkeys_greenlettasks[key] = task
+            self.raiden.swapkey_to_greenlettask[key] = task
