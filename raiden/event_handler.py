@@ -233,7 +233,7 @@ class StateMachineEventHandler(object):
         block_number = state_change.block_number
 
         graph = self.raiden.channelgraphs[token_address]
-        channel = graph.address_channel[channel_address]
+        channel = graph.address_to_channel[channel_address]
         channel_state = channel.get_state_for(participant_address)
 
         if channel_state.contract_balance != balance:
