@@ -34,6 +34,8 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
+    EventUnlockSuccess,
+    EventUnlockFailed,
 )
 from raiden.utils import sha3
 
@@ -180,9 +182,16 @@ class StateMachineEventHandler(object):
         elif isinstance(event, EventTransferSentFailed):
             for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(False)
-
         elif isinstance(event, UNEVENTEFUL_EVENTS):
             pass
+        elif isinstance(event, EventUnlockSuccess):
+            pass
+        elif isinstance(event, EventUnlockFailed):
+            log.error(
+                'UnlockFailed!',
+                initiator=event.initiator,
+                expiration=event.expiration
+            )
 
         elif isinstance(event, ContractSendChannelClose):
             graph = self.raiden.token_to_channelgraph[event.token]
