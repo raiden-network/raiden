@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
+import gevent
 import pytest
 
 from raiden.mtree import check_proof
+from raiden.messages import RevealSecret
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.messages import setup_messages_cb
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils.transfer import (
     assert_synched_channels,
     channel,
+    claim_lock,
     direct_transfer,
     get_received_transfer,
     get_sent_transfer,
     pending_mediated_transfer,
-    claim_lock,
 )
 from raiden.tests.utils.log import get_all_state_changes
 from raiden.transfer.mediated_transfer.state_change import (
@@ -21,6 +23,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveSettled,
     ReceiveSecretReveal,
 )
+from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.transfer.state_change import Block
 from raiden.utils import sha3, privatekey_to_address
 
@@ -260,6 +263,54 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
 
     assert token_contract.balance_of(address0) == balance0 + deposit0 - amount * 2
     assert token_contract.balance_of(address1) == balance1 + deposit1 + amount * 2
+
+
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [1])
+def test_close_channel_lack_of_balance_proof(
+        raiden_chain,
+        reveal_timeout,
+        settle_timeout,
+        token_addresses):
+
+    app0, app1 = raiden_chain
+    token_address = token_addresses[0]
+
+    channel01 = channel(app0, app1, token_address)
+
+    secret = sha3('test_close_channel_lack_of_balance_proof')
+    hashlock = sha3(secret)
+
+    fee = 0
+    amount = 100
+    identifier = 1
+    expiration = app0.raiden.get_block_number() + reveal_timeout * 2
+    transfer = channel01.create_mediatedtransfer(
+        app0.raiden.get_block_number(),
+        app0.raiden.address,
+        app1.raiden.address,
+        fee,
+        amount,
+        identifier,
+        expiration,
+        hashlock,
+    )
+    app0.raiden.sign(transfer)
+    async_result = app0.raiden.send_async(app1.raiden.address, transfer)
+    assert async_result.wait()
+
+    reveal_secret = RevealSecret(secret)
+    app0.raiden.sign(reveal_secret)
+    async_result = app0.raiden.send_async(app1.raiden.address, reveal_secret)
+    assert async_result.wait()
+
+    wait_until = app0.raiden.get_block_number() + settle_timeout + 2
+    wait_until_block(app0.raiden.chain, wait_until)
+
+    # required for tester blockchain: let the alarm task run
+    gevent.sleep(1)
+
+    assert channel01.state != CHANNEL_STATE_OPENED
 
 
 @pytest.mark.xfail(reason="test incomplete")

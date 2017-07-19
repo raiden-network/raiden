@@ -143,6 +143,7 @@ class TargetState(State):
         'secret_request',
         'reveal_secret',
         'balance_proof',
+        'waiting_close',
     )
 
     def __init__(

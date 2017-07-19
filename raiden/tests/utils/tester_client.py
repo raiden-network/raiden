@@ -650,9 +650,9 @@ class NettingChannelTesterMock(object):
         their_encoded = ''
         if their_transfer is not None:
             their_encoded = their_transfer.encode()
-        self.proxy.close(
-            their_encoded,
-        )
+
+        # this transaction may fail if there is a race to close the channel
+        self.proxy.close(their_encoded)
         self.tester_state.mine(number_of_blocks=1)
         log.info(
             'close called',

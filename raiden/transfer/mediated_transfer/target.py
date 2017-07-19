@@ -28,20 +28,25 @@ from raiden.transfer.mediated_transfer.mediator import (
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 
 
-def events_for_close(from_transfer, from_route, block_number):
+def events_for_close(state):
     """ Emits the event for closing the netting channel if from_transfer needs
     to be settled on-chain.
     """
+    from_transfer = state.from_transfer
+    from_route = state.from_route
+
     safe_to_wait = is_safe_to_wait(
         from_transfer,
         from_route.reveal_timeout,
-        block_number,
+        state.block_number,
     )
     secret_known = from_transfer.secret is not None
 
     if not safe_to_wait and secret_known:
+        state.state = 'waiting_close'
         channel_close = ContractSendChannelClose(
             from_route.channel_address,
+            from_transfer.token,
         )
         return [channel_close]
 
@@ -145,11 +150,12 @@ def handle_block(state, state_change):
         state_change.block_number,
     )
 
-    close_events = events_for_close(
-        state.from_transfer,
-        state.from_route,
-        state.block_number,
-    )
+    # only emit the close event once
+    if state.state != 'waiting_close':
+        close_events = events_for_close(state)
+    else:
+        close_events = list()
+
     iteration = TransitionResult(state, close_events)
 
     return iteration

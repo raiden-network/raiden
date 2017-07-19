@@ -538,7 +538,10 @@ def events_for_close(transfers_pair, block_number):
     for pair in reversed(pending_transfers_pairs):
         if is_channel_close_needed(pair, block_number):
             pair.payer_state = 'payer_waiting_close'
-            channel_close = ContractSendChannelClose(pair.payer_route.channel_address)
+            channel_close = ContractSendChannelClose(
+                pair.payer_route.channel_address,
+                pair.payer_transfer.token,
+            )
             events.append(channel_close)
 
     return events
