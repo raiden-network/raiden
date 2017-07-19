@@ -282,7 +282,7 @@ class RaidenService(object):
 
     def set_node_network_state(self, node_address, network_state):
         for graph in self.channelgraphs.itervalues():
-            channel = graph.partneraddress_channel.get(node_address)
+            channel = graph.partneraddress_to_channel.get(node_address)
 
             if channel:
                 channel.network_state = network_state
@@ -808,7 +808,7 @@ class RaidenService(object):
         if identifier is None:
             identifier = create_default_identifier()
 
-        direct_channel = graph.partneraddress_channel.get(target)
+        direct_channel = graph.partneraddress_to_channel.get(target)
         if direct_channel:
             async_result = self._direct_or_mediated_transfer(
                 token_address,
@@ -982,7 +982,7 @@ class RaidenService(object):
             message.sender,
         )
 
-        from_channel = graph.partneraddress_channel[message.sender]
+        from_channel = graph.partneraddress_to_channel[message.sender]
         from_route = channel_to_routestate(from_channel, message.sender)
 
         our_address = self.address
@@ -1006,7 +1006,7 @@ class RaidenService(object):
 
     def target_mediated_transfer(self, message):
         graph = self.channelgraphs[message.token]
-        from_channel = graph.partneraddress_channel[message.sender]
+        from_channel = graph.partneraddress_to_channel[message.sender]
         from_route = channel_to_routestate(from_channel, message.sender)
 
         from_transfer = lockedtransfer_from_message(message)

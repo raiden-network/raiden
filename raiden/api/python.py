@@ -176,9 +176,9 @@ class RaidenAPI(object):
             gevent.sleep(self.raiden.alarm.wait_time)
 
         graph = self.raiden.channelgraphs[token_address]
-        while partner_address not in graph.partneraddress_channel:
+        while partner_address not in graph.partneraddress_to_channel:
             gevent.sleep(self.raiden.alarm.wait_time)
-        channel = graph.partneraddress_channel[partner_address]
+        channel = graph.partneraddress_to_channel[partner_address]
         return channel
 
     def deposit(self, token_address, partner_address, amount):
@@ -192,7 +192,7 @@ class RaidenAPI(object):
             raise InvalidAddress('Expected binary address format for partner in channel deposit')
 
         graph = self.raiden.channelgraphs[token_address]
-        channel = graph.partneraddress_channel[partner_address]
+        channel = graph.partneraddress_to_channel[partner_address]
         netcontract_address = channel.external_state.netting_channel.address
         assert len(netcontract_address)
 
@@ -403,7 +403,7 @@ class RaidenAPI(object):
             graph = self.raiden.channelgraphs[token_address]
 
             # Let it raise the KeyError
-            channel = graph.partneraddress_channel[partner_address]
+            channel = graph.partneraddress_to_channel[partner_address]
 
             return [channel]
 
@@ -414,9 +414,9 @@ class RaidenAPI(object):
 
         elif partner_address:
             partner_channels = [
-                graph.partneraddress_channel[partner_address]
+                graph.partneraddress_to_channel[partner_address]
                 for graph in self.raiden.channelgraphs.itervalues()
-                if partner_address in graph.partneraddress_channel
+                if partner_address in graph.partneraddress_to_channel
             ]
 
             return partner_channels
@@ -512,7 +512,7 @@ class RaidenAPI(object):
             raise InvalidAddress('partner_address is not valid.')
 
         graph = self.raiden.channelgraphs[token_address]
-        channel = graph.partneraddress_channel[partner_address]
+        channel = graph.partneraddress_to_channel[partner_address]
 
         first_transfer = None
         if channel.received_transfers:
@@ -541,7 +541,7 @@ class RaidenAPI(object):
             raise InvalidAddress('partner_address is not valid.')
 
         graph = self.raiden.channelgraphs[token_address]
-        channel = graph.partneraddress_channel[partner_address]
+        channel = graph.partneraddress_to_channel[partner_address]
 
         if channel.can_transfer:
             raise InvalidState('channel is still open.')

@@ -52,8 +52,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     bob_graph = bob_app.raiden.channelgraphs.values()[0]
     assert alice_graph.token_address == bob_graph.token_address
 
-    alice_bob_channel = alice_graph.partneraddress_channel[bob_app.raiden.address]
-    bob_alice_channel = bob_graph.partneraddress_channel[alice_app.raiden.address]
+    alice_bob_channel = alice_graph.partneraddress_to_channel[bob_app.raiden.address]
+    bob_alice_channel = bob_graph.partneraddress_to_channel[alice_app.raiden.address]
 
     alice_deposit = alice_bob_channel.balance
     bob_deposit = bob_alice_channel.balance
@@ -70,7 +70,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     secret = 'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
-    assert bob_app.raiden.address in alice_graph.partneraddress_channel
+    assert bob_app.raiden.address in alice_graph.partneraddress_to_channel
 
     nettingaddress0 = alice_bob_channel.external_state.netting_channel.address
     nettingaddress1 = bob_alice_channel.external_state.netting_channel.address
@@ -353,8 +353,8 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     app0, app1 = raiden_network
-    channel0 = app0.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]
-    channel1 = app1.raiden.channelgraphs.values()[0].partneraddress_channel.values()[0]
+    channel0 = app0.raiden.channelgraphs.values()[0].partneraddress_to_channel.values()[0]
+    channel1 = app1.raiden.channelgraphs.values()[0].partneraddress_to_channel.values()[0]
     privatekey0 = app0.raiden.private_key
     privatekey1 = app1.raiden.private_key
     address0 = privatekey_to_address(privatekey0.secret)

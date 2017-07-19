@@ -89,7 +89,7 @@ class MediatedTransferTestHelper(object):
         )
 
     def get_channel(self, from_, to_):
-        return self.ams_by_address[from_][self.token_address].partneraddress_channel[to_]
+        return self.ams_by_address[from_][self.token_address].partneraddress_to_channel[to_]
 
     def get_paths_of_length(self, initiator_address, num_hops):
         """
@@ -134,14 +134,14 @@ def test_transfer(raiden_network):
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    channel0 = graph0.partneraddress_channel[app1.raiden.address]
-    channel1 = graph1.partneraddress_channel[app0.raiden.address]
+    channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
+    channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
     assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
+    assert app1.raiden.address in graph0.partneraddress_to_channel
 
     amount = 10
     target = app1.raiden.address
@@ -313,7 +313,7 @@ def test_healthcheck_with_normal_peer(raiden_network):
     graph1 = app1.raiden.channelgraphs.values()[0]
 
     assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
+    assert app1.raiden.address in graph0.partneraddress_to_channel
 
     amount = 10
     target = app1.raiden.address
@@ -454,14 +454,14 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    channel0 = graph0.partneraddress_channel[app1.raiden.address]
-    channel1 = graph1.partneraddress_channel[app0.raiden.address]
+    channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
+    channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
     assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
+    assert app1.raiden.address in graph0.partneraddress_to_channel
 
     amount = 10
     target = app1.raiden.address
@@ -603,14 +603,14 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    channel0 = graph0.partneraddress_channel[app1.raiden.address]
-    channel1 = graph1.partneraddress_channel[app0.raiden.address]
+    channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
+    channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
     assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
+    assert app1.raiden.address in graph0.partneraddress_to_channel
 
     amount = 10
     result = app0.raiden.transfer_async(
@@ -650,14 +650,14 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    channel0 = graph0.partneraddress_channel[app1.raiden.address]
-    channel1 = graph1.partneraddress_channel[app0.raiden.address]
+    channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
+    channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
     assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
+    assert app1.raiden.address in graph0.partneraddress_to_channel
 
     amount = 10
     result = app0.raiden.transfer_async(
@@ -698,14 +698,14 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    channel0 = graph0.partneraddress_channel[app1.raiden.address]
-    channel1 = graph1.partneraddress_channel[app0.raiden.address]
+    channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
+    channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
 
     assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
+    assert app1.raiden.address in graph0.partneraddress_to_channel
 
     amount = 10
     result = app0.raiden.transfer_async(

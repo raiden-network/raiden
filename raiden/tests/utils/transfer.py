@@ -12,7 +12,7 @@ from raiden.channel.netting_channel import Channel
 def channel(app0, app1, token):
     """ Nice to read shortcut to get the channel. """
     graph = app0.raiden.channelgraphs[token]
-    return graph.partneraddress_channel[app1.raiden.address]
+    return graph.partneraddress_to_channel[app1.raiden.address]
 
 
 def sleep(initiator_app, target_app, token, multiplier=1):
@@ -60,7 +60,7 @@ def transfer(initiator_app, target_app, token, amount, identifier):
 def direct_transfer(initiator_app, target_app, token, amount, identifier=None):
     """ Nice to read shortcut to make a DirectTransfer. """
     graph = initiator_app.raiden.channelgraphs[token]
-    has_channel = target_app.raiden.address in graph.partneraddress_channel
+    has_channel = target_app.raiden.address in graph.partneraddress_to_channel
     assert has_channel, 'there is not a direct channel'
 
     async_result = initiator_app.raiden.transfer_async(
@@ -80,7 +80,7 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
     # pylint: disable=too-many-arguments
 
     graph = initiator_app.raiden.channelgraphs[token]
-    has_channel = target_app.raiden.address in graph.partneraddress_channel
+    has_channel = target_app.raiden.address in graph.partneraddress_to_channel
 
     if has_channel:
         raise NotImplementedError(

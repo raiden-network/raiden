@@ -409,8 +409,8 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    channel0 = graph0.partneraddress_channel.values()[0]
-    channel1 = graph1.partneraddress_channel.values()[0]
+    channel0 = graph0.partneraddress_to_channel.values()[0]
+    channel1 = graph1.partneraddress_to_channel.values()[0]
 
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
@@ -516,8 +516,8 @@ def test_transfer(raiden_network, token_addresses):
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    app0_partners = graph0.partneraddress_channel.keys()
-    app1_partners = graph1.partneraddress_channel.keys()
+    app0_partners = graph0.partneraddress_to_channel.keys()
+    app1_partners = graph1.partneraddress_to_channel.keys()
 
     assert channel0.token_address == channel1.token_address
     assert app0_token == app1_token
@@ -575,8 +575,8 @@ def test_locked_transfer(raiden_network, settle_timeout):
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    channel0 = graph0.partneraddress_channel.values()[0]
-    channel1 = graph1.partneraddress_channel.values()[0]
+    channel0 = graph0.partneraddress_to_channel.values()[0]
+    channel1 = graph1.partneraddress_to_channel.values()[0]
 
     balance0 = channel0.balance
     balance1 = channel1.balance
@@ -642,8 +642,8 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     graph0 = app0.raiden.channelgraphs.values()[0]
     graph1 = app1.raiden.channelgraphs.values()[0]
 
-    channel0 = graph0.partneraddress_channel.values()[0]
-    channel1 = graph1.partneraddress_channel.values()[0]
+    channel0 = graph0.partneraddress_to_channel.values()[0]
+    channel1 = graph1.partneraddress_to_channel.values()[0]
 
     balance0 = channel0.balance
     balance1 = channel1.balance

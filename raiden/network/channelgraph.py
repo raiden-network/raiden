@@ -137,7 +137,7 @@ def get_best_routes(
 
     while neighbors_heap:
         _, partner_address = heappop(neighbors_heap)
-        channel = channel_graph.partneraddress_channel[partner_address]
+        channel = channel_graph.partneraddress_to_channel[partner_address]
 
         # don't send the message backwards
         if partner_address == previous_address:
@@ -197,7 +197,7 @@ class ChannelGraph(object):
         self.address_channel = dict()
         self.graph = graph
         self.our_address = our_address
-        self.partneraddress_channel = dict()
+        self.partneraddress_to_channel = dict()
         self.token_address = token_address
         self.channelmanager_address = channelmanager_address
 
@@ -211,7 +211,7 @@ class ChannelGraph(object):
                 # networkx.classes.graph.Graph has no __eq__
                 self.graph.__dict__ == other.graph.__dict__ and
                 self.our_address == other.our_address and
-                self.partneraddress_channel == other.partneraddress_channel and
+                self.partneraddress_to_channel == other.partneraddress_to_channel and
                 self.token_address == other.token_address and
                 self.channelmanager_address == other.channelmanager_address
             )
@@ -233,7 +233,7 @@ class ChannelGraph(object):
             details.settle_timeout,
         )
 
-        self.partneraddress_channel[partner_state.address] = channel
+        self.partneraddress_to_channel[partner_state.address] = channel
         self.address_channel[channel_address] = channel
 
     def get_channel_by_contract_address(self, netting_channel_address):
@@ -293,4 +293,4 @@ class ChannelGraph(object):
     def channel_can_transfer(self, partner_address):
         """ True if the channel with `partner_address` is open and has spendable funds. """
         # TODO: check if the partner's network is alive
-        return self.partneraddress_channel[partner_address].can_transfer
+        return self.partneraddress_to_channel[partner_address].can_transfer

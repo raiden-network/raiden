@@ -275,7 +275,7 @@ class ConsoleTools(object):
         assert graph
 
         # Get the channel
-        channel = graph.partneraddress_channel[peer_address]
+        channel = graph.partneraddress_to_channel[peer_address]
         assert channel
 
         # Collect data
@@ -322,7 +322,7 @@ class ConsoleTools(object):
         graph = self._raiden.channelgraphs[token_address]
         assert graph
 
-        channel = graph.partneraddress_channel[peer_address]
+        channel = graph.partneraddress_to_channel[peer_address]
         netcontract_address = channel.external_state.netting_channel.address
         assert netcontract_address
 
