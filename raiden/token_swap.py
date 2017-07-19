@@ -381,7 +381,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
 
             elif isinstance(to_mediated_transfer, MediatedTransfer):
                 to_hop = to_mediated_transfer.sender
-                to_channel = to_graph.partneraddress_channel[to_hop]
+                to_channel = to_graph.partneraddress_to_channel[to_hop]
 
                 to_channel.register_transfer(
                     raiden.get_block_number(),
@@ -410,7 +410,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
                     hashlock,
                 )
 
-                to_channel = to_graph.partneraddress_channel[to_mediated_transfer.sender]
+                to_channel = to_graph.partneraddress_to_channel[to_mediated_transfer.sender]
                 self._wait_for_unlock_or_close(
                     raiden,
                     to_graph,
@@ -580,7 +580,7 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
         taker_paying_token = maker_receiving_token
 
         from_graph = raiden.channelgraphs[taker_receiving_token]
-        from_channel = from_graph.partneraddress_channel[maker_payer_hop]
+        from_channel = from_graph.partneraddress_to_channel[maker_payer_hop]
 
         to_graph = raiden.channelgraphs[maker_receiving_token]
 

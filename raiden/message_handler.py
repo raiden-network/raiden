@@ -188,7 +188,7 @@ class RaidenMessageHandler(object):
                 )
             )
 
-        channel = graph.partneraddress_channel[message.sender]
+        channel = graph.partneraddress_to_channel[message.sender]
 
         if channel.state != CHANNEL_STATE_OPENED:
             raise TransferWhenClosed(
@@ -248,7 +248,7 @@ class RaidenMessageHandler(object):
                 )
             )
 
-        channel = graph.partneraddress_channel[message.sender]
+        channel = graph.partneraddress_to_channel[message.sender]
 
         if channel.state != CHANNEL_STATE_OPENED:
             raise TransferWhenClosed(

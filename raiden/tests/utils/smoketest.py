@@ -112,7 +112,7 @@ def run_smoketests(raiden_service, test_config, debug=False):
 
         assert len(raiden_service.channelgraphs.values()) == 1
         graph = raiden_service.channelgraphs.values()[0]
-        channel = graph.partneraddress_channel[TEST_PARTNER_ADDRESS.decode('hex')]
+        channel = graph.partneraddress_to_channel[TEST_PARTNER_ADDRESS.decode('hex')]
         assert channel.can_transfer
         assert channel.contract_balance == channel.distributable == TEST_DEPOSIT_AMOUNT
         assert channel.state == CHANNEL_STATE_OPENED

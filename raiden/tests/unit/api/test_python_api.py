@@ -78,7 +78,7 @@ def test_transfer_to_unknownchannel(raiden_network):
     graph1 = app1.raiden.channelgraphs.values()[0]
 
     assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_channel
+    assert app1.raiden.address in graph0.partneraddress_to_channel
 
     with pytest.raises(NoPathError):
         RaidenAPI(app0.raiden).transfer(
