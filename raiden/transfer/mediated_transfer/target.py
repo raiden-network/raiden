@@ -199,7 +199,7 @@ def clear_if_finalized(iteration):
     elif state.state == 'balance_proof':
         transfer_success = EventTransferReceivedSuccess(
             state.from_transfer.identifier,
-            state.from_transfer.total_amount,
+            state.from_transfer.amount,
             state.from_transfer.initiator,
         )
 
