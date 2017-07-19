@@ -409,7 +409,7 @@ class RaidenAPI(object):
 
         elif token_address:
             graph = self.raiden.channelgraphs[token_address]
-            token_channels = graph.address_channel.values()
+            token_channels = graph.address_to_channel.values()
             return token_channels
 
         elif partner_address:
@@ -424,7 +424,7 @@ class RaidenAPI(object):
         else:
             all_channels = list()
             for graph in self.raiden.channelgraphs.itervalues():
-                all_channels.extend(graph.address_channel.itervalues())
+                all_channels.extend(graph.address_to_channel.itervalues())
 
             return all_channels
 

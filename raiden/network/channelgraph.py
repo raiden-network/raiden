@@ -194,7 +194,7 @@ class ChannelGraph(object):
             raise ValueError('token_address must be a valid address')
 
         graph = make_graph(edge_list)
-        self.address_channel = dict()
+        self.address_to_channel = dict()
         self.graph = graph
         self.our_address = our_address
         self.partneraddress_to_channel = dict()
@@ -207,7 +207,7 @@ class ChannelGraph(object):
     def __eq__(self, other):
         if isinstance(other, ChannelGraph):
             return (
-                self.address_channel == other.address_channel and
+                self.address_to_channel == other.address_to_channel and
                 # networkx.classes.graph.Graph has no __eq__
                 self.graph.__dict__ == other.graph.__dict__ and
                 self.our_address == other.our_address and
@@ -234,7 +234,7 @@ class ChannelGraph(object):
         )
 
         self.partneraddress_to_channel[partner_state.address] = channel
-        self.address_channel[channel_address] = channel
+        self.address_to_channel[channel_address] = channel
 
     def get_channel_by_contract_address(self, netting_channel_address):
         """ Return the channel with `netting_channel_address`.
@@ -242,7 +242,7 @@ class ChannelGraph(object):
         Raises:
             KeyError: If there is no channel with netting_channel_address.
         """
-        return self.address_channel[netting_channel_address]
+        return self.address_to_channel[netting_channel_address]
 
     def get_shortest_paths(self, source, target):
         """Compute all shortest paths in the graph.

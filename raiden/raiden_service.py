@@ -105,7 +105,7 @@ def save_snapshot(serialization_file, raiden):
     all_channels = [
         ChannelSerialization(channel)
         for network in raiden.channelgraphs.values()
-        for channel in network.address_channel.values()
+        for channel in network.address_to_channel.values()
     ]
 
     all_queues = list()
@@ -273,7 +273,7 @@ class RaidenService(object):
         self.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
 
         for graph in self.channelgraphs.itervalues():
-            for channel in graph.address_channel.itervalues():
+            for channel in graph.address_to_channel.itervalues():
                 channel.state_transition(state_change)
 
         # To avoid races, only update the internal cache after all the state
@@ -301,7 +301,7 @@ class RaidenService(object):
 
     def find_channel_by_address(self, netting_channel_address_bin):
         for graph in self.channelgraphs.itervalues():
-            channel = graph.address_channel.get(netting_channel_address_bin)
+            channel = graph.address_to_channel.get(netting_channel_address_bin)
 
             if channel is not None:
                 return channel
@@ -560,7 +560,7 @@ class RaidenService(object):
 
         graph = self.channelgraphs[token_address]
         graph.add_channel(details)
-        channel = graph.address_channel.get(
+        channel = graph.address_to_channel.get(
             serialized_channel.channel_address,
         )
 
