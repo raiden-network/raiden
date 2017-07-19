@@ -75,7 +75,6 @@ def geth_to_cmd(node, datadir, verbosity):
         '--rpcaddr', '0.0.0.0',
         '--networkid', '627',
         '--verbosity', str(verbosity),
-        '--fakepow',
         '--datadir', datadir,
     ])
 
@@ -130,6 +129,15 @@ def geth_bare_genesis(genesis_path, private_keys):
     }
     genesis = GENESIS_STUB.copy()
     genesis['alloc'].update(alloc)
+
+    genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
+    genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
+        'raiden'.encode('hex'),
+        # Note: we can only have authorized addresses for nodes that actually run. Otherwise
+        # it will stall :(
+        # 'a81cb4af5501f5407337cb5c13850cf882a1ae27',  # FIXME: where do these addresses come from?
+        'f0ef4707cdcf650f349cf664f2013f583484a3fb',
+    )
 
     with open(genesis_path, 'w') as handler:
         json.dump(genesis, handler)
@@ -232,7 +240,6 @@ def geth_create_blockchain(
 
         # make the first node miner
         if pos == 0:
-            config['minerthreads'] = 1  # conservative
             config['unlock'] = 0
 
         config['nodekey'] = key
@@ -241,7 +248,6 @@ def geth_create_blockchain(
         config['address'] = privatekey_to_address(key)
         config['port'] = p2p_port
         config['rpcport'] = rpc_port
-        config['ethash.dagsondisk'] = '1'
         config['enode'] = 'enode://{pub}@127.0.0.1:{port}'.format(
             pub=config['pub'],
             port=config['port'],
@@ -274,7 +280,7 @@ def geth_create_blockchain(
 
         geth_init_datadir(nodedir, node_genesis_path)
 
-        if 'minerthreads' in config:
+        if 'unlock' in config:
             geth_create_account(nodedir, private_keys[i])
 
         commandline = geth_to_cmd(config, nodedir, verbosity)
@@ -296,6 +302,7 @@ def geth_create_blockchain(
             stderr = logfile
 
         if '--unlock' in cmd:
+            cmd.append('--mine')
             process = subprocess.Popen(
                 cmd,
                 universal_newlines=True,

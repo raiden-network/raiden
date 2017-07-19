@@ -240,6 +240,11 @@ def cached_genesis(request, blockchain_type):
     }
 
     genesis = GENESIS_STUB.copy()
+    genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
+    genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
+        'raiden'.encode('hex'),
+        account_addresses[0]
+    )
     genesis['alloc'] = alloc
     genesis['config']['defaultDiscoveryAddress'] = address_encoder(endpoint_discovery_address)
     genesis['config']['defaultRegistryAddress'] = address_encoder(registry_address)
