@@ -76,15 +76,19 @@ class EventTransferReceivedSuccess(Event):
         there is no correspoding `EventTransferReceivedFailed`.
     """
 
-    def __init__(self, identifier):
+    def __init__(self, identifier, amount, initiator):
         self.identifier = identifier
+        self.amount = amount
+        self.initiator = initiator
 
     def __eq__(self, other):
         if not isinstance(other, EventTransferReceivedSuccess):
             return False
 
         return (
-            self.identifier == other.identifier
+            self.identifier == other.identifier and
+            self.amount == other.amount and
+            self.initiator == other.initiator
         )
 
     def __ne__(self, other):
