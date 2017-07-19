@@ -40,8 +40,8 @@ class AddressType(click.ParamType):
     def convert(self, value, param, ctx):
         try:
             return address_decoder(value)
-        except BadRequestError as err:
-            self.fail('{}: {}'.format(value, err.message))
+        except BadRequestError:
+            self.fail('Please specify a valid hex-encoded address.')
 
 
 ADDRESS_TYPE = AddressType()
@@ -333,7 +333,7 @@ def app(address,
 
     if not os.path.exists(raiden_directory):
         os.makedirs(raiden_directory)
-    user_db_dir = os.path.join(raiden_directory, address_hex[:6])
+    user_db_dir = os.path.join(raiden_directory, address_hex[:8])
     if not os.path.exists(user_db_dir):
         os.makedirs(user_db_dir)
     database_path = os.path.join(user_db_dir, 'log.db')
