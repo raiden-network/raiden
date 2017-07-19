@@ -358,8 +358,8 @@ def test_python_channel():
 def test_setup(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    tokens0 = app0.raiden.channelgraphs.keys()
-    tokens1 = app1.raiden.channelgraphs.keys()
+    tokens0 = app0.raiden.token_to_channelgraph.keys()
+    tokens1 = app1.raiden.token_to_channelgraph.keys()
 
     assert len(tokens0) == 1
     assert len(tokens1) == 1
@@ -406,8 +406,8 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
 
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
+    graph0 = app0.raiden.token_to_channelgraph.values()[0]
+    graph1 = app1.raiden.token_to_channelgraph.values()[0]
 
     channel0 = graph0.partneraddress_to_channel.values()[0]
     channel1 = graph1.partneraddress_to_channel.values()[0]
@@ -510,11 +510,11 @@ def test_transfer(raiden_network, token_addresses):
     address0 = channel0.our_state.address
     address1 = channel1.our_state.address
 
-    app0_token = app0.raiden.channelgraphs.keys()[0]
-    app1_token = app1.raiden.channelgraphs.keys()[0]
+    app0_token = app0.raiden.token_to_channelgraph.keys()[0]
+    app1_token = app1.raiden.token_to_channelgraph.keys()[0]
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
+    graph0 = app0.raiden.token_to_channelgraph.values()[0]
+    graph1 = app1.raiden.token_to_channelgraph.values()[0]
 
     app0_partners = graph0.partneraddress_to_channel.keys()
     app1_partners = graph1.partneraddress_to_channel.keys()
@@ -572,8 +572,8 @@ def test_transfer(raiden_network, token_addresses):
 def test_locked_transfer(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
+    graph0 = app0.raiden.token_to_channelgraph.values()[0]
+    graph1 = app1.raiden.token_to_channelgraph.values()[0]
 
     channel0 = graph0.partneraddress_to_channel.values()[0]
     channel1 = graph1.partneraddress_to_channel.values()[0]
@@ -639,8 +639,8 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     """
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.channelgraphs.values()[0]
-    graph1 = app1.raiden.channelgraphs.values()[0]
+    graph0 = app0.raiden.token_to_channelgraph.values()[0]
+    graph1 = app1.raiden.token_to_channelgraph.values()[0]
 
     channel0 = graph0.partneraddress_to_channel.values()[0]
     channel1 = graph1.partneraddress_to_channel.values()[0]

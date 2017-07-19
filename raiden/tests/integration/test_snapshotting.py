@@ -39,7 +39,7 @@ def test_snapshotting(raiden_network, token_addresses):
         data = load_snapshot(app.raiden.serialization_file)
 
         for serialized_channel in data['channels']:
-            network = app.raiden.channelgraphs[serialized_channel.token_address]
+            network = app.raiden.token_to_channelgraph[serialized_channel.token_address]
             running_channel = network.address_to_channel[serialized_channel.channel_address]
             assert running_channel.serialize() == serialized_channel
 

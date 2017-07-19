@@ -104,7 +104,7 @@ def load_snapshot(serialization_file):
 def save_snapshot(serialization_file, raiden):
     all_channels = [
         ChannelSerialization(channel)
-        for network in raiden.channelgraphs.values()
+        for network in raiden.token_to_channelgraph.values()
         for channel in network.address_to_channel.values()
     ]
 
@@ -170,7 +170,7 @@ class RaidenService(object):
         )
         transport.protocol = protocol
 
-        self.channelgraphs = dict()
+        self.token_to_channelgraph = dict()
         self.manager_token = dict()
         self.swapkeys_tokenswaps = dict()
         self.swapkeys_greenlettasks = dict()
@@ -272,7 +272,7 @@ class RaidenService(object):
         state_change = Block(blocknumber)
         self.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
 
-        for graph in self.channelgraphs.itervalues():
+        for graph in self.token_to_channelgraph.itervalues():
             for channel in graph.address_to_channel.itervalues():
                 channel.state_transition(state_change)
 
@@ -281,7 +281,7 @@ class RaidenService(object):
         self._blocknumber = blocknumber
 
     def set_node_network_state(self, node_address, network_state):
-        for graph in self.channelgraphs.itervalues():
+        for graph in self.token_to_channelgraph.itervalues():
             channel = graph.partneraddress_to_channel.get(node_address)
 
             if channel:
@@ -300,7 +300,7 @@ class RaidenService(object):
             on_statechange(state_change)
 
     def find_channel_by_address(self, netting_channel_address_bin):
-        for graph in self.channelgraphs.itervalues():
+        for graph in self.token_to_channelgraph.itervalues():
             channel = graph.address_to_channel.get(netting_channel_address_bin)
 
             if channel is not None:
@@ -558,7 +558,7 @@ class RaidenService(object):
             channel_details['settle_timeout'],
         )
 
-        graph = self.channelgraphs[token_address]
+        graph = self.token_to_channelgraph[token_address]
         graph.add_channel(details)
         channel = graph.address_to_channel.get(
             serialized_channel.channel_address,
@@ -631,7 +631,7 @@ class RaidenService(object):
             )
 
             self.manager_token[manager_address] = token_address
-            self.channelgraphs[token_address] = graph
+            self.token_to_channelgraph[token_address] = graph
 
             self.tokens_to_connectionmanagers[token_address] = ConnectionManager(
                 self,
@@ -670,7 +670,7 @@ class RaidenService(object):
         )
 
         self.manager_token[manager_address] = token_address
-        self.channelgraphs[token_address] = graph
+        self.token_to_channelgraph[token_address] = graph
 
         self.tokens_to_connectionmanagers[token_address] = ConnectionManager(
             self,
@@ -683,7 +683,7 @@ class RaidenService(object):
         self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
 
         detail = self.get_channel_details(token_address, netting_channel)
-        graph = self.channelgraphs[token_address]
+        graph = self.token_to_channelgraph[token_address]
         graph.add_channel(detail)
 
     def connection_manager_for_token(self, token_address):
@@ -696,7 +696,7 @@ class RaidenService(object):
         return manager
 
     def leave_all_token_networks_async(self):
-        token_addresses = self.channelgraphs.keys()
+        token_addresses = self.token_to_channelgraph.keys()
         leave_results = []
         for token_address in token_addresses:
             try:
@@ -713,7 +713,7 @@ class RaidenService(object):
 
         connection_managers = [
             self.connection_manager_for_token(token_address) for
-            token_address in self.channelgraphs
+            token_address in self.token_to_channelgraph
         ]
 
         def blocks_to_wait():
@@ -803,7 +803,7 @@ class RaidenService(object):
             - Network speed, making the transfer sufficiently fast so it doesn't
               timeout.
         """
-        graph = self.channelgraphs[token_address]
+        graph = self.token_to_channelgraph[token_address]
 
         if identifier is None:
             identifier = create_default_identifier()
@@ -900,8 +900,13 @@ class RaidenService(object):
 
     def start_mediated_transfer(self, token_address, amount, identifier, target):
         # pylint: disable=too-many-locals
+<<<<<<< HEAD
         graph = self.channelgraphs[token_address]
         available_routes = get_best_routes(
+=======
+        graph = self.token_to_channelgraph[token_address]
+        routes = get_best_routes(
+>>>>>>> Rename raiden_service channelgraph dict
             graph,
             self.protocol.nodeaddresses_networkstatuses,
             self.address,
@@ -971,7 +976,7 @@ class RaidenService(object):
         amount = message.lock.amount
         target = message.target
         token = message.token
-        graph = self.channelgraphs[token]
+        graph = self.token_to_channelgraph[token]
 
         available_routes = get_best_routes(
             graph,
@@ -1005,7 +1010,7 @@ class RaidenService(object):
         self.identifier_to_statemanagers[identifier].append(state_manager)
 
     def target_mediated_transfer(self, message):
-        graph = self.channelgraphs[message.token]
+        graph = self.token_to_channelgraph[message.token]
         from_channel = graph.partneraddress_to_channel[message.sender]
         from_route = channel_to_routestate(from_channel, message.sender)
 

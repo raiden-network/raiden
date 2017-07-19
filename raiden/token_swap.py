@@ -319,8 +319,8 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
         to_amount = tokenswap.to_amount
         to_nodeaddress = tokenswap.to_nodeaddress
 
-        from_graph = raiden.channelgraphs[from_token]
-        to_graph = raiden.channelgraphs[to_token]
+        from_graph = raiden.token_to_channelgraph[from_token]
+        to_graph = raiden.token_to_channelgraph[to_token]
 
         from_routes = get_best_routes(
             from_graph,
@@ -579,10 +579,10 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
         taker_receiving_token = maker_paying_transfer.token
         taker_paying_token = maker_receiving_token
 
-        from_graph = raiden.channelgraphs[taker_receiving_token]
+        from_graph = raiden.token_to_channelgraph[taker_receiving_token]
         from_channel = from_graph.partneraddress_to_channel[maker_payer_hop]
 
-        to_graph = raiden.channelgraphs[maker_receiving_token]
+        to_graph = raiden.token_to_channelgraph[maker_receiving_token]
 
         # update the channel's distributable and merkle tree
         from_channel.register_transfer(

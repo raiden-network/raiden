@@ -88,7 +88,7 @@ class StateMachineEventHandler(object):
         if isinstance(event, SendMediatedTransfer):
             receiver = event.receiver
             fee = 0
-            graph = self.raiden.channelgraphs[event.token]
+            graph = self.raiden.token_to_channelgraph[event.token]
             channel = graph.partneraddress_to_channel[receiver]
 
             mediated_transfer = channel.create_mediatedtransfer(
@@ -138,7 +138,7 @@ class StateMachineEventHandler(object):
         elif isinstance(event, SendRefundTransfer):
             receiver = event.receiver
             fee = 0
-            graph = self.raiden.channelgraphs[event.token]
+            graph = self.raiden.token_to_channelgraph[event.token]
             channel = graph.partneraddress_to_channel[receiver]
 
             refund_transfer = channel.create_refundtransfer(
@@ -210,7 +210,7 @@ class StateMachineEventHandler(object):
         participant2 = state_change.participant2
 
         token_address = self.raiden.manager_token[manager_address]
-        graph = self.raiden.channelgraphs[token_address]
+        graph = self.raiden.token_to_channelgraph[token_address]
         graph.add_path(participant1, participant2)
 
         connection_manager = self.raiden.connection_manager_for_token(token_address)
@@ -232,7 +232,7 @@ class StateMachineEventHandler(object):
         balance = state_change.balance
         block_number = state_change.block_number
 
-        graph = self.raiden.channelgraphs[token_address]
+        graph = self.raiden.token_to_channelgraph[token_address]
         channel = graph.address_to_channel[channel_address]
         channel_state = channel.get_state_for(participant_address)
 
