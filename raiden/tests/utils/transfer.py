@@ -236,7 +236,9 @@ def assert_locked(channel0, outstanding_locks):
     # a locked transfer is registered in the _partner_ state
     hashroot = Merkletree(sha3(lock.as_bytes) for lock in outstanding_locks).merkleroot
 
-    assert len(channel0.our_state.balance_proof.hashlocks_to_pendinglocks) == len(outstanding_locks)
+    assert len(channel0.our_state.balance_proof.hashlocks_to_pendinglocks) == len(
+        outstanding_locks
+    )
     assert channel0.our_state.balance_proof.merkleroot_for_unclaimed() == hashroot
     assert channel0.our_state.locked() == sum(lock.amount for lock in outstanding_locks)
     assert channel0.outstanding == sum(lock.amount for lock in outstanding_locks)
