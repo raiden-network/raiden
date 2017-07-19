@@ -92,7 +92,7 @@ def make_transfer(
     return transfer
 
 
-def make_from(amount, target, from_expiration, initiator=HOP6):
+def make_from(amount, target, from_expiration, initiator=HOP6, secret=None):
     from_route = make_route(
         initiator,
         available_balance=amount,
@@ -104,6 +104,7 @@ def make_from(amount, target, from_expiration, initiator=HOP6):
         target,
         from_expiration,
         identifier=0,
+        secret=secret,
     )
 
     return from_route, from_transfer

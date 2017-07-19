@@ -23,6 +23,7 @@ from raiden.transfer.events import (
     EventTransferReceivedSuccess,
 )
 from raiden.transfer.mediated_transfer.events import (
+    ContractSendChannelClose,
     SendBalanceProof,
     SendMediatedTransfer,
     SendRefundTransfer,
@@ -169,6 +170,13 @@ class StateMachineEventHandler(object):
 
         elif isinstance(event, (EventTransferReceivedSuccess, EventUnlockSuccess)):
             pass
+
+        elif isinstance(event, ContractSendChannelClose):
+            graph = self.raiden.token_to_channelgraph[event.token]
+            channel = graph.address_to_channel[event.channel_address]
+
+            partner_transfer = channel.our_state.balance_proof.transfer
+            channel.external_state.close(partner_transfer)
 
         else:
             log.error('Unknown event {}'.format(type(event)))

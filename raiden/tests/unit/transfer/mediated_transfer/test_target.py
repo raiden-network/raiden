@@ -67,37 +67,35 @@ def test_events_for_close():
     amount = 3
     expire = 10
     initiator = factories.HOP1
+    our_address = factories.ADDR
     secret = factories.UNIT_SECRET
 
-    transfer = factories.make_transfer(
+    from_route, from_transfer = factories.make_from(
         amount,
-        initiator,
-        factories.ADDR,
+        our_address,
         expire,
+        initiator,
         secret=secret,
     )
-    route = factories.make_route(
-        initiator,
-        amount,
-    )
 
-    safe_block = expire - route.reveal_timeout - 1
-    events = target.events_for_close(
-        transfer,
-        route,
-        safe_block,
-    )
-    assert len(events) == 0
+    safe_to_wait = expire - from_route.reveal_timeout - 1
+    unsafe_to_wait = expire - from_route.reveal_timeout
 
-    unsafe_block = expire - route.reveal_timeout
-    events = target.events_for_close(
-        transfer,
-        route,
-        unsafe_block,
+    state = TargetState(
+        our_address,
+        from_route,
+        from_transfer,
+        block_number=safe_to_wait,
     )
+    events = target.events_for_close(state)
+    assert not events
+
+    state.block_number = unsafe_to_wait
+    events = target.events_for_close(state)
+    assert events
     assert isinstance(events[0], ContractSendChannelClose)
-    assert transfer.secret is not None
-    assert events[0].channel_address == route.channel_address
+    assert from_transfer.secret is not None
+    assert events[0].channel_address == from_route.channel_address
 
 
 def test_events_for_close_secret_unknown():
@@ -107,34 +105,28 @@ def test_events_for_close_secret_unknown():
     amount = 3
     expire = 10
     initiator = factories.HOP1
+    our_address = factories.ADDR
 
-    transfer = factories.make_transfer(
+    from_route, from_transfer = factories.make_from(
         amount,
-        initiator,
-        factories.ADDR,
+        our_address,
         expire,
-    )
-    route = factories.make_route(
         initiator,
-        amount,
     )
 
-    safe_block = expire - route.reveal_timeout - 1
-    events = target.events_for_close(
-        transfer,
-        route,
-        safe_block,
+    state = TargetState(
+        our_address,
+        from_route,
+        from_transfer,
+        block_number=expire,
     )
-    assert len(events) == 0
 
-    unsafe_block = expire - route.reveal_timeout
-    events = target.events_for_close(
-        transfer,
-        route,
-        unsafe_block,
-    )
-    assert len(events) == 0
-    assert transfer.secret is None
+    events = target.events_for_close(state)
+    assert not events
+
+    events = target.events_for_close(state)
+    assert not events
+    assert from_transfer.secret is None
 
 
 def test_events_for_withdraw():

@@ -150,8 +150,9 @@ class ContractSendChannelClose(Event):
     on-chain.
     """
 
-    def __init__(self, channel_address):
+    def __init__(self, channel_address, token):
         self.channel_address = channel_address
+        self.token = token
 
 
 class ContractSendWithdraw(Event):
