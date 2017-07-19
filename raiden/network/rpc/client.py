@@ -19,6 +19,7 @@ from pyethapp.jsonrpc import (
 from pyethapp.rpc_client import topic_encoder, JSONRPCClient, block_tag_encoder
 import requests
 
+from raiden.exceptions import DuplicatedChannelError
 from raiden import messages
 from raiden.exceptions import (
     UnknownAddress,
