@@ -25,3 +25,11 @@ html, body, .my-content {
 .ui-inputtext.ng-dirty.ng-valid {
     border-left: 5px solid #42A948;
 }
+
+.ui-datatable .ui-datatable-thead>tr>th,
+.ui-datatable .ui-datatable-tfoot>tr>td,
+.ui-datatable .ui-datatable-data>tr>td {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}

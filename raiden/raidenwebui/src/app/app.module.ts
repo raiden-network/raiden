@@ -1,10 +1,11 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { HttpModule } from '@angular/http';
+import { HttpModule, Http } from '@angular/http';
 import { DataTableModule, SharedModule, DataListModule, CarouselModule,
     ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule,
-    TabViewModule, DropdownModule, MessagesModule, MenuModule } from 'primeng/primeng';
+    TabViewModule, DropdownModule, MessagesModule, MenuModule,
+    TooltipModule } from 'primeng/primeng';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule, Routes } from '@angular/router';
 import { AppComponent } from './app.component';
@@ -20,55 +21,62 @@ import { environment } from '../environments/environment';
 import { HomeComponent } from './components/home/home.component';
 
 const appRoutes: Routes = [
-  { path: 'home', component: HomeComponent},
-  { path: '', redirectTo: '/home', pathMatch: 'full'},
-  { path: 'channels', component: ChannelTableComponent },
-  { path: 'balances', component: TokenNetworkComponent }
+    { path: 'home', component: HomeComponent },
+    { path: '', redirectTo: '/home', pathMatch: 'full' },
+    { path: 'channels', component: ChannelTableComponent },
+    { path: 'balances', component: TokenNetworkComponent }
 ];
-
-@NgModule({
-  declarations: [
-    AppComponent,
-    ChannelTableComponent,
-    EventListComponent,
-    TokenNetworkComponent,
-    HomeComponent
-  ],
-  imports: [
-    RouterModule.forRoot(appRoutes),
-    BrowserModule,
-    FormsModule,
-    ReactiveFormsModule,
-    HttpModule,
-    DataTableModule,
-    SharedModule,
-    DataListModule,
-    CarouselModule,
-    ButtonModule,
-    AccordionModule,
-    GrowlModule,
-    DialogModule,
-    SplitButtonModule,
-    TabViewModule,
-    DropdownModule,
-    MessagesModule,
-    MenuModule,
-    NoopAnimationsModule,
-  ],
-  providers: [ RaidenConfig,
-              {
-                  provide: APP_INITIALIZER,
-                  useFactory: ConfigLoader,
-                  deps: [RaidenConfig],
-                  multi: true
-              },
-              RaidenService,
-              SharedService],
-  bootstrap: [AppComponent]
-})
-export class AppModule { }
 
 export function ConfigLoader(raidenConfig: RaidenConfig) {
     // Note: this factory need to return a function (that return a promise)
     return () => raidenConfig.load(environment.configFile);
 }
+
+@NgModule({
+    declarations: [
+        AppComponent,
+        ChannelTableComponent,
+        EventListComponent,
+        TokenNetworkComponent,
+        HomeComponent,
+    ],
+    imports: [
+        RouterModule.forRoot(appRoutes),
+        BrowserModule,
+        FormsModule,
+        ReactiveFormsModule,
+        HttpModule,
+        DataTableModule,
+        SharedModule,
+        DataListModule,
+        CarouselModule,
+        ButtonModule,
+        AccordionModule,
+        GrowlModule,
+        DialogModule,
+        SplitButtonModule,
+        TabViewModule,
+        DropdownModule,
+        MessagesModule,
+        MenuModule,
+        TooltipModule,
+        NoopAnimationsModule,
+    ],
+    providers: [
+        RaidenConfig,
+        {
+            provide: APP_INITIALIZER,
+            useFactory: ConfigLoader,
+            deps: [RaidenConfig],
+            multi: true
+        },
+        SharedService,
+        {
+            provide: RaidenService,
+            useClass: RaidenService,
+            deps: [Http, RaidenConfig, SharedService],
+        }
+    ],
+    bootstrap: [AppComponent]
+})
+export class AppModule { }
