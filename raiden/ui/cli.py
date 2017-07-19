@@ -236,67 +236,8 @@ def app(address,
     config['protocol']['nat_keepalive_retries'] = retries
     config['protocol']['nat_keepalive_timeout'] = send_ping_time
 
-    accmgr = AccountManager(keystore_path)
-    if not accmgr.accounts:
-        raise RuntimeError('No Ethereum accounts found in the user\'s system')
-
     address_hex = address_encoder(address) if address else None
-
-    if not accmgr.address_in_keystore(address_hex):
-        addresses = list(accmgr.accounts.keys())
-        formatted_addresses = [
-            '[{:3d}] - 0x{}'.format(idx, addr)
-            for idx, addr in enumerate(addresses)
-        ]
-
-        should_prompt = True
-
-        print('The following accounts were found in your machine:')
-        print('')
-        print('\n'.join(formatted_addresses))
-        print('')
-
-        while should_prompt:
-            idx = click.prompt('Select one of them by index to continue', type=int)
-
-            if idx >= 0 and idx < len(addresses):
-                should_prompt = False
-            else:
-                print("\nError: Provided index '{}' is out of bounds\n".format(idx))
-
-        address_hex = addresses[idx]
-
-    password = None
-    if password_file:
-        password = password_file.read().splitlines()[0]
-    if password:
-        try:
-            privatekey_bin = accmgr.get_privkey(address_hex, password)
-        except ValueError as e:
-            # ValueError exception raised if the password is incorrect
-            print('Incorrect password for {} in file. Aborting ...'.format(address_hex))
-            sys.exit(1)
-    else:
-        unlock_tries = 3
-        while True:
-            try:
-                privatekey_bin = accmgr.get_privkey(address_hex)
-                break
-            except ValueError as e:
-                # ValueError exception raised if the password is incorrect
-                if unlock_tries == 0:
-                    print(
-                        'Exhausted passphrase unlock attempts for {}. Aborting ...'
-                        .format(address_hex)
-                    )
-                    sys.exit(1)
-
-                print(
-                    'Incorrect passphrase to unlock the private key. {} tries remaining. '
-                    'Please try again or kill the process to quit. '
-                    'Usually Ctrl-c.'.format(unlock_tries)
-                )
-                unlock_tries -= 1
+    address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
 
     privatekey_hex = privatekey_bin.encode('hex')
     config['privatekey_hex'] = privatekey_hex
@@ -338,7 +279,7 @@ def app(address,
     discovery_tx_cost = discovery_gasprice * discovery_startgas
 
     while True:
-        balance = blockchain_service.client.balance(address)
+        balance = blockchain_service.client.balance(address_hex)
         if discovery_tx_cost <= balance:
             break
         print(
@@ -375,6 +316,70 @@ def app(address,
     config['database_path'] = database_path
 
     return App(config, blockchain_service, discovery)
+
+
+def prompt_account(address_hex, keystore_path, password_file):
+    accmgr = AccountManager(keystore_path)
+    if not accmgr.accounts:
+        raise RuntimeError('No Ethereum accounts found in the user\'s system')
+
+    if not accmgr.address_in_keystore(address_hex):
+        addresses = list(accmgr.accounts.keys())
+        formatted_addresses = [
+            '[{:3d}] - 0x{}'.format(idx, addr)
+            for idx, addr in enumerate(addresses)
+        ]
+
+        should_prompt = True
+
+        print('The following accounts were found in your machine:')
+        print('')
+        print('\n'.join(formatted_addresses))
+        print('')
+
+        while should_prompt:
+            idx = click.prompt('Select one of them by index to continue', type=int)
+
+            if idx >= 0 and idx < len(addresses):
+                should_prompt = False
+            else:
+                print("\nError: Provided index '{}' is out of bounds\n".format(idx))
+
+        address_hex = addresses[idx]
+
+    password = None
+    if password_file:
+        password = password_file.read().splitlines()[0]
+    if password:
+        try:
+            privatekey_bin = accmgr.get_privkey(address_hex, password)
+        except ValueError:
+            # ValueError exception raised if the password is incorrect
+            print('Incorrect password for {} in file. Aborting ...'.format(address))
+            sys.exit(1)
+    else:
+        unlock_tries = 3
+        while True:
+            try:
+                privatekey_bin = accmgr.get_privkey(address_hex)
+                break
+            except ValueError:
+                # ValueError exception raised if the password is incorrect
+                if unlock_tries == 0:
+                    print(
+                        'Exhausted passphrase unlock attempts for {}. Aborting ...'
+                        .format(address_hex)
+                    )
+                    sys.exit(1)
+
+                print(
+                    'Incorrect passphrase to unlock the private key. {} tries remaining. '
+                    'Please try again or kill the process to quit. '
+                    'Usually Ctrl-c.'.format(unlock_tries)
+                )
+                unlock_tries -= 1
+
+    return address_hex, privatekey_bin
 
 
 @click.group(invoke_without_command=True)
