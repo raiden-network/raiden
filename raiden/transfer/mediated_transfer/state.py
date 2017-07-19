@@ -183,7 +183,7 @@ class LockedTransferState(State):
 
     Args:
         identifier (int): A unique identifer for the transfer.
-        amount (int): Amount of `token' being transferred.
+        amount (int): Amount of `token` being transferred.
         token (address): Token being transferred.
         target (address): Transfer target address.
         expiration (int): The absolute block number that the lock expires.

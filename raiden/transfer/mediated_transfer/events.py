@@ -47,13 +47,13 @@ class SendRevealSecret(Event):
     performed on the receiver:
 
         - For receivers in the payee role, it informs the node that the lock has
-        been released and the token can be withdrawn, either on-chain or
-        off-chain.
+            been released and the token can be withdrawn, either on-chain or
+            off-chain.
         - For receivers in the payer role, it tells the payer that the payee
-        knows the secret and wants to withdraw the lock off-chain, so the payer
-        may unlock the lock and send an up-to-date balance proof to the payee,
-        avoiding on-chain payments which would require the channel to be
-        closed.
+            knows the secret and wants to withdraw the lock off-chain, so the payer
+            may unlock the lock and send an up-to-date balance proof to the payee,
+            avoiding on-chain payments which would require the channel to be
+            closed.
 
     For any mediated transfer:
 

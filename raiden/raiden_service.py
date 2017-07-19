@@ -404,6 +404,7 @@ class RaidenService(object):
             - Register the secret for the locks received and reveal the secret
             to the senders
 
+
         Note:
             The channel needs to be registered with
             `raiden.register_channel_for_hashlock`.

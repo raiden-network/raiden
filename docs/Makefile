@@ -7,7 +7,7 @@ SPHINXBUILD      = sphinx-build
 SPHINXAPIDOC     = sphinx-apidoc
 PAPER            =
 BUILDDIR         = ./_build
-RAIDENMODULEPATH = ..
+RAIDENMODULEPATH = ../raiden/
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4

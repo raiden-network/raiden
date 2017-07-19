@@ -178,6 +178,7 @@ class ConsoleTools(object):
             gasprice (int): gasprice for the creation transaction.
             auto_register (boolean): if True(default), automatically register
                 the token with raiden.
+
         Returns:
             token_address_hex: the hex encoded address of the new token/token.
         """
@@ -202,8 +203,10 @@ class ConsoleTools(object):
 
     def register_token(self, token_address_hex):
         """Register a token with the raiden token manager.
+
         Args:
             token_address_hex (string): a hex encoded token address.
+
         Returns:
             channel_manager: the channel_manager contract_proxy.
         """
@@ -226,12 +229,14 @@ class ConsoleTools(object):
             settle_timeout=None,
             reveal_timeout=None):
         """Convenience method to open a channel.
+
         Args:
             token_address_hex (str): hex encoded address of the token for the channel.
             peer_address_hex (str): hex encoded address of the channel peer.
             amount (int): amount of initial funding of the channel.
             settle_timeout (int): amount of blocks for the settle time (if None use app defaults).
             reveal_timeout (int): amount of blocks for the reveal time (if None use app defaults).
+
         Return:
             netting_channel: the (newly opened) netting channel object.
         """
@@ -256,10 +261,12 @@ class ConsoleTools(object):
     def channel_stats_for(self, token_address_hex, peer_address_hex, pretty=False):
         """Collect information about sent and received transfers
         between yourself and your peer for the given token.
+
         Args:
             token_address_hex (string): hex encoded address of the token
             peer_address_hex (string): hex encoded address of the peer
             pretty (boolean): if True, print a json representation instead of returning a dict
+
         Returns:
             stats (dict): collected stats for the channel or None if pretty
 
@@ -310,9 +317,11 @@ class ConsoleTools(object):
 
     def show_events_for(self, token_address_hex, peer_address_hex):
         """Find all EVM-EventLogs for a channel.
+
         Args:
             token_address_hex (string): hex encoded address of the token
             peer_address_hex (string): hex encoded address of the peer
+
         Returns:
             events (list)
         """
@@ -331,9 +340,11 @@ class ConsoleTools(object):
 
     def wait_for_contract(self, contract_address_hex, timeout=None):
         """Wait until a contract is mined
+
         Args:
             contract_address_hex (string): hex encoded address of the contract
             timeout (int): time to wait for the contract to get mined
+
         Returns:
             True if the contract got mined, false otherwise
         """

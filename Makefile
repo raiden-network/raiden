@@ -50,15 +50,13 @@ coverage:
 	coverage run --source raiden setup.py test
 	coverage report -m
 	coverage html
-	open htmlcov/index.html
 
 docs:
 	rm -f docs/raiden.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ raiden
+#     sphinx-apidoc -o docs/ raiden
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
-	open docs/_build/html/index.html
 
 bundle:
 	# pass RAIDEN_VERSION=<git version tag> to build a specific version
