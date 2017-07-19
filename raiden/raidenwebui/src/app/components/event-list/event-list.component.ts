@@ -10,6 +10,7 @@ import { Event } from '../../models/event';
 export class EventListComponent implements OnInit {
 
     public events: Event[];
+
     constructor(private raidenService: RaidenService) { }
 
     ngOnInit() {
@@ -19,7 +20,7 @@ export class EventListComponent implements OnInit {
     public getRaidenEvents() {
         this.raidenService.getEvents().subscribe(
             (events) => {
-                this.events = <Event[]> events;
+                this.events = <Event[]>events;
             }
         );
     }

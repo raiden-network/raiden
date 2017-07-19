@@ -1,7 +1,11 @@
 <p-dataTable [value]="tokenBalances" [(selection)]="selectedToken" dataKey="address">
   <p-column selectionMode="single" [style]="{'width':'2.3em'}"></p-column>
   <p-column field="symbol" header="Symbol" [style]="{'width':'5em', 'text-align': 'center'}"></p-column>
-  <p-column field="address" header="Address"></p-column>
+  <p-column field="address" header="Address">
+    <ng-template let-col let-data="rowData" pTemplate="body">
+      <span [title]="data[col.field]">{{ data[col.field] }}</span>
+    </ng-template>
+  </p-column>
   <p-column field="name" header="Name"></p-column>
   <p-column field="balance" header="Balance" [style]="{width: '5em', 'text-align': 'center'}"></p-column>
   <p-footer>
@@ -14,22 +18,21 @@
 
 <p-dialog header="Join Token Network" [(visible)]="displayJoinDialog" [responsive]="true" showEffect="fade" [modal]="true" [resizable]="true" width="600">
   <div class="ui-grid ui-grid-responsive ui-fluid" *ngIf="selectedToken">
-      <div class="ui-grid-row">
-          <div class="ui-grid-col-4">
-              <label for="funds">Enter Funds to be allocated</label>
-          </div>
-          <div class="ui-grid-col-8">
-              <input pInputText type="number" [formControl]="funds" class="ui-inputtext ui-corner-all ui-state-default"/>
-          </div>
+    <div class="ui-grid-row">
+      <div class="ui-grid-col-4">
+        <label for="funds">Enter Funds to be allocated</label>
       </div>
+      <div class="ui-grid-col-8">
+        <input pInputText type="number" [formControl]="funds" class="ui-inputtext ui-corner-all ui-state-default" />
+      </div>
+    </div>
   </div>
   <p-footer>
-      <div class="ui-dialog-buttonpane ui-helper-clearfix">
-          <button type="button" pButton icon="fa-plus" label="Join"
-          (click)="joinTokenNetwork()">
+    <div class="ui-dialog-buttonpane ui-helper-clearfix">
+      <button type="button" pButton icon="fa-plus" label="Join" (click)="joinTokenNetwork()">
           </button>
-      </div>
-    </p-footer>
+    </div>
+  </p-footer>
 </p-dialog>
 
 <p-dialog header="Register New Token" [(visible)]="displayRegisterDialog" [responsive]="true" showEffect="fade" [modal]="true" width="600">
