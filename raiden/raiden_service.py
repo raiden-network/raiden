@@ -900,13 +900,9 @@ class RaidenService(object):
 
     def start_mediated_transfer(self, token_address, amount, identifier, target):
         # pylint: disable=too-many-locals
-<<<<<<< HEAD
-        graph = self.channelgraphs[token_address]
-        available_routes = get_best_routes(
-=======
+
         graph = self.token_to_channelgraph[token_address]
-        routes = get_best_routes(
->>>>>>> Rename raiden_service channelgraph dict
+        available_routes = get_best_routes(
             graph,
             self.protocol.nodeaddresses_networkstatuses,
             self.address,
