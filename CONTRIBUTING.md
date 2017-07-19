@@ -249,7 +249,13 @@ Lists of objects:
 
 Mappings/dicts:
 
-`<name>s_to_<name>s`, e.g. `tokenaddresses_to_taskmanagers`
+If it is a simple one to one mapping
+
+`<name>_to_<name>`, e.g. `tokenaddress_to_taskmanager`
+
+If the mapped to object is a list then add an `s`
+
+`<name>_to_<name>s`, e.g. `tokenaddress_to_taskmanagers = defaultdict(list())`
 
 #### Solidity
 
