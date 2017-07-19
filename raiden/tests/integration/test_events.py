@@ -325,7 +325,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_time
     proof = balance_proof.compute_proof_for_lock(secret, lock)
 
     # the secret hasn't been revealed yet (through messages)
-    assert len(balance_proof.hashlock_pendinglocks) == 1
+    assert len(balance_proof.hashlocks_to_pendinglocks) == 1
     proofs = list(balance_proof.get_known_unlocks())
     assert len(proofs) == 0
 

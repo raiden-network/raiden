@@ -37,15 +37,15 @@ class BalanceProof(object):
 
     def __init__(self):
         # locks that we are mediating but the secret is unknown
-        self.hashlock_pendinglocks = dict()
+        self.hashlocks_to_pendinglocks = dict()
 
         # locks for which we know the secret but our partner hasn't updated
         # their state yet
-        self.hashlock_unclaimedlocks = dict()
+        self.hashlocks_to_unclaimedlocks = dict()
 
         # locks for which we know the secret and the partner has updated their
         # state but we don't have an up-to-date transfer to use as a proof
-        self.hashlock_unlockedlocks = dict()
+        self.hashlocks_to_unlockedlocks = dict()
 
         # the latest known transfer with a correct locksroot that can be used
         # as a proof
@@ -53,15 +53,15 @@ class BalanceProof(object):
 
     def unclaimed_merkletree(self):
         alllocks = chain(
-            self.hashlock_pendinglocks.values(),
-            self.hashlock_unclaimedlocks.values()
+            self.hashlocks_to_pendinglocks.values(),
+            self.hashlocks_to_unclaimedlocks.values()
         )
         return [lock.lockhashed for lock in alllocks]
 
     def merkleroot_for_unclaimed(self):
         alllocks = chain(
-            self.hashlock_pendinglocks.values(),
-            self.hashlock_unclaimedlocks.values()
+            self.hashlocks_to_pendinglocks.values(),
+            self.hashlocks_to_unclaimedlocks.values()
         )
 
         tree = Merkletree(lock.lockhashed for lock in alllocks)
@@ -69,7 +69,7 @@ class BalanceProof(object):
 
     def is_pending(self, hashlock):
         """ True if a secret is not known for the given `hashlock`. """
-        return hashlock in self.hashlock_pendinglocks
+        return hashlock in self.hashlocks_to_pendinglocks
 
     def is_unclaimed(self, hashlock):
         """ True if a secret is known but we didnt claim it yet.
@@ -77,23 +77,23 @@ class BalanceProof(object):
         A lock is not claimed until the partner sends the secret back.
         """
         return (
-            hashlock in self.hashlock_pendinglocks or
-            hashlock in self.hashlock_unclaimedlocks
+            hashlock in self.hashlocks_to_pendinglocks or
+            hashlock in self.hashlocks_to_unclaimedlocks
         )
 
     def is_known(self, hashlock):
         """ True if a lock with the given hashlock was registered before. """
         return (
-            hashlock in self.hashlock_pendinglocks or
-            hashlock in self.hashlock_unclaimedlocks or
-            hashlock in self.hashlock_unlockedlocks
+            hashlock in self.hashlocks_to_pendinglocks or
+            hashlock in self.hashlocks_to_unclaimedlocks or
+            hashlock in self.hashlocks_to_unlockedlocks
         )
 
     def locked(self):
         alllocks = chain(
-            self.hashlock_pendinglocks.values(),
-            self.hashlock_unclaimedlocks.values(),
-            # self.hashlock_unlockedlocks.values()
+            self.hashlocks_to_pendinglocks.values(),
+            self.hashlocks_to_unclaimedlocks.values(),
+            # self.hashlocks_to_unlockedlocks.values()
         )
 
         return sum(
@@ -123,9 +123,9 @@ class BalanceProof(object):
                 )
             )
 
-        self.hashlock_pendinglocks[lock.hashlock] = PendingLock(lock, lockhashed)
+        self.hashlocks_to_pendinglocks[lock.hashlock] = PendingLock(lock, lockhashed)
         self.transfer = locked_transfer
-        self.hashlock_unlockedlocks = dict()
+        self.hashlocks_to_unlockedlocks = dict()
 
     def register_direct_transfer(self, direct_transfer):
         if not isinstance(direct_transfer, DirectTransfer):
@@ -137,21 +137,21 @@ class BalanceProof(object):
             raise InvalidLocksRoot(unclaimed_locksroot, direct_transfer.locksroot)
 
         self.transfer = direct_transfer
-        self.hashlock_unlockedlocks = dict()
+        self.hashlocks_to_unlockedlocks = dict()
 
     def get_lock_by_hashlock(self, hashlock):
         """ Return the corresponding lock for the given `hashlock`. """
-        pendinglock = self.hashlock_pendinglocks.get(hashlock)
+        pendinglock = self.hashlocks_to_pendinglocks.get(hashlock)
 
         if pendinglock:
             return pendinglock.lock
 
-        pendinglock = self.hashlock_unclaimedlocks.get(hashlock)
+        pendinglock = self.hashlocks_to_unclaimedlocks.get(hashlock)
 
         if pendinglock:
             return pendinglock.lock
 
-        unlockedlock = self.hashlock_unlockedlocks[hashlock]
+        unlockedlock = self.hashlocks_to_unlockedlocks[hashlock]
         return unlockedlock.lock
 
     def register_secret(self, secret, hashlock=None):
@@ -162,10 +162,10 @@ class BalanceProof(object):
             raise ValueError('secret does not correspond to any known lock.')
 
         if self.is_pending(hashlock):
-            pendinglock = self.hashlock_pendinglocks[hashlock]
-            del self.hashlock_pendinglocks[hashlock]
+            pendinglock = self.hashlocks_to_pendinglocks[hashlock]
+            del self.hashlocks_to_pendinglocks[hashlock]
 
-            self.hashlock_unclaimedlocks[hashlock] = UnlockPartialProof(
+            self.hashlocks_to_unclaimedlocks[hashlock] = UnlockPartialProof(
                 pendinglock.lock,
                 pendinglock.lockhashed,
                 secret,
@@ -181,10 +181,10 @@ class BalanceProof(object):
             hashlock = sha3(secret)
 
         if self.is_pending(hashlock):
-            pendinglock = self.hashlock_pendinglocks[hashlock]
-            del self.hashlock_pendinglocks[hashlock]
+            pendinglock = self.hashlocks_to_pendinglocks[hashlock]
+            del self.hashlocks_to_pendinglocks[hashlock]
 
-            self.hashlock_unlockedlocks[hashlock] = UnlockPartialProof(
+            self.hashlocks_to_unlockedlocks[hashlock] = UnlockPartialProof(
                 pendinglock.lock,
                 pendinglock.lockhashed,
                 secret,
@@ -193,10 +193,10 @@ class BalanceProof(object):
             return pendinglock.lock
 
         elif self.is_unclaimed(hashlock):
-            unclaimedlock = self.hashlock_unclaimedlocks[hashlock]
-            del self.hashlock_unclaimedlocks[hashlock]
+            unclaimedlock = self.hashlocks_to_unclaimedlocks[hashlock]
+            del self.hashlocks_to_unclaimedlocks[hashlock]
 
-            self.hashlock_unlockedlocks[hashlock] = unclaimedlock
+            self.hashlocks_to_unlockedlocks[hashlock] = unclaimedlock
 
             return unclaimedlock.lock
 
@@ -205,8 +205,8 @@ class BalanceProof(object):
     def get_known_unlocks(self):
         """ Generate unlocking proofs for the known secrets. """
         allpartialproof = chain(
-            self.hashlock_unclaimedlocks.itervalues(),
-            self.hashlock_unlockedlocks.itervalues(),
+            self.hashlocks_to_unclaimedlocks.itervalues(),
+            self.hashlocks_to_unlockedlocks.itervalues(),
         )
 
         tree = self.generate_merkle_tree()
@@ -239,18 +239,18 @@ class BalanceProof(object):
     # generate a Merkle tree for the known locks
     def generate_merkle_tree(self):
         alllocks = chain(
-            self.hashlock_pendinglocks.values(),
-            self.hashlock_unclaimedlocks.values(),
-            self.hashlock_unlockedlocks.values()
+            self.hashlocks_to_pendinglocks.values(),
+            self.hashlocks_to_unclaimedlocks.values(),
+            self.hashlocks_to_unlockedlocks.values()
         )
         return Merkletree(lock.lockhashed for lock in alllocks)
 
     def __eq__(self, other):
         if isinstance(other, BalanceProof):
             return (
-                self.hashlock_pendinglocks == other.hashlock_pendinglocks and
-                self.hashlock_unclaimedlocks == other.hashlock_unclaimedlocks and
-                self.hashlock_unlockedlocks == other.hashlock_unlockedlocks and
+                self.hashlocks_to_pendinglocks == other.hashlocks_to_pendinglocks and
+                self.hashlocks_to_unclaimedlocks == other.hashlocks_to_unclaimedlocks and
+                self.hashlocks_to_unlockedlocks == other.hashlocks_to_unlockedlocks and
                 self.transfer == other.transfer
             )
         return False
