@@ -115,14 +115,17 @@ def test_event_operators():
     assert a != c
     assert not a == c
 
-    a = EventTransferReceivedSuccess(2)
-    b = EventTransferReceivedSuccess(2)
-    c = EventTransferReceivedSuccess(3)
+    a = EventTransferReceivedSuccess(2, 5, sha3('initiator'))
+    b = EventTransferReceivedSuccess(2, 5, sha3('initiator'))
+    c = EventTransferReceivedSuccess(3, 5, sha3('initiator'))
+    d = EventTransferReceivedSuccess(3, 5, sha3('other initiator'))
 
     assert a == b
     assert not a != b
     assert a != c
     assert not a == c
+    assert c != d
+    assert not c == d
 
 
 def test_message_operators():

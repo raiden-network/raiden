@@ -213,6 +213,8 @@ class RaidenMessageHandler(object):
 
         receive_success = EventTransferReceivedSuccess(
             message.identifier,
+            amount,
+            message.sender,
         )
         self.raiden.transaction_log.log_events(
             state_change_id,
