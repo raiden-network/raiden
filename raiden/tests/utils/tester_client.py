@@ -393,7 +393,6 @@ class TokenTesterMock(object):
 
     def balance_of(self, address):
         result = self.proxy.balanceOf(address)
-        self.tester_state.mine(number_of_blocks=1)
         return result
 
     def transfer(self, address_to, amount):
@@ -420,7 +419,6 @@ class RegistryTesterMock(object):
 
     def manager_address_by_token(self, token_address):
         channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
-        self.tester_state.mine(number_of_blocks=1)
         return channel_manager_address_hex.decode('hex')
 
     def add_token(self, token_address):
@@ -434,7 +432,6 @@ class RegistryTesterMock(object):
             address.decode('hex')
             for address in self.registry_proxy.tokenAddresses()
         ]
-        self.tester_state.mine(number_of_blocks=1)
         return result
 
     def manager_addresses(self):
@@ -442,7 +439,6 @@ class RegistryTesterMock(object):
             address.decode('hex')
             for address in self.registry_proxy.channelManagerAddresses()
         ]
-        self.tester_state.mine(number_of_blocks=1)
         return result
 
     def tokenadded_filter(self, **kwargs):
@@ -473,7 +469,6 @@ class ChannelManagerTesterMock(object):
 
     def token_address(self):
         token_address_hex = self.proxy.tokenAddress()
-        self.tester_state.mine(number_of_blocks=1)
         token_address = address_decoder(token_address_hex)
         return token_address
 
@@ -512,7 +507,6 @@ class ChannelManagerTesterMock(object):
 
     def channels_addresses(self):
         channel_flat_encoded = self.proxy.getChannelsParticipants()
-        self.tester_state.mine(number_of_blocks=1)
 
         channel_flat = [
             channel.decode('hex')
@@ -528,7 +522,6 @@ class ChannelManagerTesterMock(object):
             address_decoder(address)
             for address in self.proxy.nettingContractsByAddress(peer_address)
         ]
-        self.tester_state.mine(number_of_blocks=1)
         return result
 
     def channelnew_filter(self):
@@ -564,12 +557,10 @@ class NettingChannelTesterMock(object):
 
     def token_address(self):
         result = address_decoder(self.proxy.tokenAddress())
-        self.tester_state.mine(number_of_blocks=1)
         return result
 
     def settle_timeout(self):
         result = self.proxy.settleTimeout()
-        self.tester_state.mine(number_of_blocks=1)
         return result
 
     def can_transfer(self):
@@ -628,10 +619,8 @@ class NettingChannelTesterMock(object):
         """ FIXME: 'our_address' is only needed for the pure python mock implementation """
         our_address = privatekey_to_address(self.private_key)
         data = self.proxy.addressAndBalance()
-        self.tester_state.mine(number_of_blocks=1)
 
         settle_timeout = self.proxy.settleTimeout()
-        self.tester_state.mine(number_of_blocks=1)
 
         if address_decoder(data[0]) == our_address:
             return {
