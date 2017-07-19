@@ -14,7 +14,7 @@ class Discovery(object):
     """ Mock mapping address: host, port """
 
     def __init__(self):
-        self.nodeid_hostport = dict()
+        self.nodeid_to_hostport = dict()
 
     def register(self, node_address, host, port):
         if not isaddress(node_address):
@@ -28,16 +28,16 @@ class Discovery(object):
         if not isinstance(port, (int, long)):
             raise ValueError('port must be a valid number')
 
-        self.nodeid_hostport[node_address] = (host, port)
+        self.nodeid_to_hostport[node_address] = (host, port)
 
     def get(self, node_address):
         try:
-            return self.nodeid_hostport[node_address]
+            return self.nodeid_to_hostport[node_address]
         except KeyError:
             raise InvalidAddress('Unknown address {}'.format(pex(node_address)))
 
     def nodeid_by_host_port(self, host_port):
-        for nodeid, value_hostport in self.nodeid_hostport.items():
+        for nodeid, value_hostport in self.nodeid_to_hostport.items():
             if value_hostport == host_port:
                 return nodeid
         return None
