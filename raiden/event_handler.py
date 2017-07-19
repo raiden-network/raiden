@@ -209,7 +209,7 @@ class StateMachineEventHandler(object):
         participant1 = state_change.participant1
         participant2 = state_change.participant2
 
-        token_address = self.raiden.manager_token[manager_address]
+        token_address = self.raiden.manager_to_token[manager_address]
         graph = self.raiden.token_to_channelgraph[token_address]
         graph.add_path(participant1, participant2)
 
