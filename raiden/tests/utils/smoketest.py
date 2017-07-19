@@ -102,12 +102,12 @@ def run_smoketests(raiden_service, test_config, debug=False):
             chain.default_registry.token_addresses() ==
             [test_config['contracts']['token_address'].decode('hex')]
         )
-        assert len(chain.address_discovery.keys()) == 1
+        assert len(chain.address_to_discovery.keys()) == 1
         assert (
-            chain.address_discovery.keys()[0] ==
+            chain.address_to_discovery.keys()[0] ==
             test_config['contracts']['discovery_address'].decode('hex')
         )
-        discovery = chain.address_discovery.values()[0]
+        discovery = chain.address_to_discovery.values()[0]
         assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
         assert len(raiden_service.channelgraphs.values()) == 1

@@ -234,12 +234,12 @@ class BlockChainService(object):
             poll_timeout=DEFAULT_POLL_TIMEOUT,
             **kwargs):
 
-        self.address_token = dict()
-        self.address_discovery = dict()
-        self.address_manager = dict()
-        self.address_contract = dict()
-        self.address_registry = dict()
-        self.token_manager = dict()
+        self.address_to_token = dict()
+        self.address_to_discovery = dict()
+        self.address_to_channelmanager = dict()
+        self.address_to_nettingchannel = dict()
+        self.address_to_registry = dict()
+        self.token_to_channelmanager = dict()
 
         jsonrpc_client = JSONRPCClient(
             privkey=privatekey_bin,
@@ -301,41 +301,41 @@ class BlockChainService(object):
 
     def token(self, token_address):
         """ Return a proxy to interact with a token. """
-        if token_address not in self.address_token:
-            self.address_token[token_address] = Token(
+        if token_address not in self.address_to_token:
+            self.address_to_token[token_address] = Token(
                 self.client,
                 token_address,
                 poll_timeout=self.poll_timeout,
             )
 
-        return self.address_token[token_address]
+        return self.address_to_token[token_address]
 
     def discovery(self, discovery_address):
         """ Return a proxy to interact with the discovery. """
-        if discovery_address not in self.address_discovery:
-            self.address_discovery[discovery_address] = Discovery(
+        if discovery_address not in self.address_to_discovery:
+            self.address_to_discovery[discovery_address] = Discovery(
                 self.client,
                 discovery_address,
                 poll_timeout=self.poll_timeout,
             )
 
-        return self.address_discovery[discovery_address]
+        return self.address_to_discovery[discovery_address]
 
     def netting_channel(self, netting_channel_address):
         """ Return a proxy to interact with a NettingChannelContract. """
-        if netting_channel_address not in self.address_contract:
+        if netting_channel_address not in self.address_to_nettingchannel:
             channel = NettingChannel(
                 self.client,
                 netting_channel_address,
                 poll_timeout=self.poll_timeout,
             )
-            self.address_contract[netting_channel_address] = channel
+            self.address_to_nettingchannel[netting_channel_address] = channel
 
-        return self.address_contract[netting_channel_address]
+        return self.address_to_nettingchannel[netting_channel_address]
 
     def manager(self, manager_address):
         """ Return a proxy to interact with a ChannelManagerContract. """
-        if manager_address not in self.address_manager:
+        if manager_address not in self.address_to_channelmanager:
             manager = ChannelManager(
                 self.client,
                 manager_address,
@@ -344,10 +344,10 @@ class BlockChainService(object):
 
             token_address = manager.token_address()
 
-            self.token_manager[token_address] = manager
-            self.address_manager[manager_address] = manager
+            self.token_to_channelmanager[token_address] = manager
+            self.address_to_channelmanager[manager_address] = manager
 
-        return self.address_manager[manager_address]
+        return self.address_to_channelmanager[manager_address]
 
     def manager_by_token(self, token_address):
         """ Find the channel manager for `token_address` and return a proxy to
@@ -356,7 +356,7 @@ class BlockChainService(object):
         If the token is not already registered it raises `JSONRPCClientReplyError`,
         since we try to instantiate a Channel manager with an empty address.
         """
-        if token_address not in self.token_manager:
+        if token_address not in self.token_to_channelmanager:
             token = self.token(token_address)  # check that the token exists
             manager_address = self.default_registry.manager_address_by_token(token.address)
             manager = ChannelManager(
@@ -365,20 +365,20 @@ class BlockChainService(object):
                 poll_timeout=self.poll_timeout,
             )
 
-            self.token_manager[token_address] = manager
-            self.address_manager[manager_address] = manager
+            self.token_to_channelmanager[token_address] = manager
+            self.address_to_channelmanager[manager_address] = manager
 
-        return self.token_manager[token_address]
+        return self.token_to_channelmanager[token_address]
 
     def registry(self, registry_address):
-        if registry_address not in self.address_registry:
-            self.address_registry[registry_address] = Registry(
+        if registry_address not in self.address_to_registry:
+            self.address_to_registry[registry_address] = Registry(
                 self.client,
                 registry_address,
                 poll_timeout=self.poll_timeout,
             )
 
-        return self.address_registry[registry_address]
+        return self.address_to_registry[registry_address]
 
     def uninstall_filter(self, filter_id_raw):
         self.client.call('eth_uninstallFilter', filter_id_raw)

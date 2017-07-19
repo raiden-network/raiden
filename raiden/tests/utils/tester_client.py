@@ -205,12 +205,12 @@ class BlockChainServiceTesterMock(object):
         self.node_address = privatekey_to_address(private_key)
         self.default_registry = default_registry
 
-        self.address_token = dict()
-        self.address_discovery = dict()
-        self.address_manager = dict()
-        self.address_contract = dict()
-        self.address_registry = dict()
-        self.token_manager = dict()
+        self.address_to_token = dict()
+        self.address_to_discovery = dict()
+        self.address_to_channelmanager = dict()
+        self.address_to_nettingchannel = dict()
+        self.address_to_registry = dict()
+        self.token_to_channelmanager = dict()
 
     def set_verbosity(self, level):
         pass
@@ -228,40 +228,40 @@ class BlockChainServiceTesterMock(object):
 
     def token(self, token_address):
         """ Return a proxy to interact with an token. """
-        if token_address not in self.address_token:
-            self.address_token[token_address] = TokenTesterMock(
+        if token_address not in self.address_to_token:
+            self.address_to_token[token_address] = TokenTesterMock(
                 self.tester_state,
                 self.private_key,
                 token_address,
             )
 
-        return self.address_token[token_address]
+        return self.address_to_token[token_address]
 
     def discovery(self, discovery_address):
-        if discovery_address not in self.address_discovery:
-            self.address_discovery[discovery_address] = DiscoveryTesterMock(
+        if discovery_address not in self.address_to_discovery:
+            self.address_to_discovery[discovery_address] = DiscoveryTesterMock(
                 self.tester_state,
                 self.private_key,
                 discovery_address,
             )
 
-        return self.address_discovery[discovery_address]
+        return self.address_to_discovery[discovery_address]
 
     def netting_channel(self, netting_channel_address):
         """ Return a proxy to interact with a NettingChannelContract. """
-        if netting_channel_address not in self.address_contract:
+        if netting_channel_address not in self.address_to_nettingchannel:
             channel = NettingChannelTesterMock(
                 self.tester_state,
                 self.private_key,
                 netting_channel_address,
             )
-            self.address_contract[netting_channel_address] = channel
+            self.address_to_nettingchannel[netting_channel_address] = channel
 
-        return self.address_contract[netting_channel_address]
+        return self.address_to_nettingchannel[netting_channel_address]
 
     def manager(self, manager_address):
         """ Return a proxy to interact with a ChannelManagerContract. """
-        if manager_address not in self.address_manager:
+        if manager_address not in self.address_to_channelmanager:
             manager = ChannelManagerTesterMock(
                 self.tester_state,
                 self.private_key,
@@ -270,10 +270,10 @@ class BlockChainServiceTesterMock(object):
 
             token_address = manager.token_address()
 
-            self.token_manager[token_address] = manager
-            self.address_manager[manager_address] = manager
+            self.token_to_channelmanager[token_address] = manager
+            self.address_to_channelmanager[manager_address] = manager
 
-        return self.address_manager[manager_address]
+        return self.address_to_channelmanager[manager_address]
 
     def manager_by_token(self, token_address):
         """ Find the channel manager for `token_address` and return a proxy to
@@ -282,7 +282,7 @@ class BlockChainServiceTesterMock(object):
         If the token is not already registered it raises `TransactionFailed` when
         we do `self.registry_proxy.channelManagerByToken(token_address)`
         """
-        if token_address not in self.token_manager:
+        if token_address not in self.token_to_channelmanager:
             manager_address = self.default_registry.manager_address_by_token(token_address)
             manager = ChannelManagerTesterMock(
                 self.tester_state,
@@ -290,20 +290,20 @@ class BlockChainServiceTesterMock(object):
                 manager_address,
             )
 
-            self.token_manager[token_address] = manager
-            self.address_manager[manager_address] = manager
+            self.token_to_channelmanager[token_address] = manager
+            self.address_to_channelmanager[manager_address] = manager
 
-        return self.token_manager[token_address]
+        return self.token_to_channelmanager[token_address]
 
     def registry(self, registry_address):
-        if registry_address not in self.address_registry:
-            self.address_registry[registry_address] = RegistryTesterMock(
+        if registry_address not in self.address_to_registry:
+            self.address_to_registry[registry_address] = RegistryTesterMock(
                 self.tester_state,
                 self.private_key,
                 registry_address,
             )
 
-        return self.address_registry[registry_address]
+        return self.address_to_registry[registry_address]
 
     def uninstall_filter(self, filter_id_raw):
         pass

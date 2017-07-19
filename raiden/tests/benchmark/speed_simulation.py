@@ -121,7 +121,7 @@ def setup_tps(
 
 
 def random_transfer(app, token, transfer_amount):
-    channelgraph = app.raiden.token_managers[token].channelgraph
+    channelgraph = app.raiden.token_to_channelmanagers[token].channelgraph
 
     nodes = channelgraph.graph.nodes()
     nodes.remove(app.raiden.address)

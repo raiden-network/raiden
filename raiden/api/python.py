@@ -172,7 +172,7 @@ class RaidenAPI(object):
             partner_address,
             settle_timeout,
         )
-        while netcontract_address not in self.raiden.chain.address_contract:
+        while netcontract_address not in self.raiden.chain.address_to_nettingchannel:
             gevent.sleep(self.raiden.alarm.wait_time)
 
         graph = self.raiden.channelgraphs[token_address]
