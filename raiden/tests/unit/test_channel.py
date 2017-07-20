@@ -317,7 +317,6 @@ def test_python_channel():
     expiration = block_number + settle_timeout - 5
     identifier = 1
     mediatedtransfer = test_channel.create_mediatedtransfer(
-        block_number,
         address1,
         address2,
         fee,
@@ -431,7 +430,6 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
         block_number = app0.raiden.chain.block_number()
         expiration = block_number + settle_timeout - 1
         mediated_transfer = channel0.create_mediatedtransfer(
-            block_number,
             transfer_initiator=app0.raiden.address,
             transfer_target=app1.raiden.address,
             fee=0,
@@ -592,7 +590,6 @@ def test_locked_transfer(raiden_network, settle_timeout):
     hashlock = sha3(secret)
 
     mediated_transfer = channel0.create_mediatedtransfer(
-        block_number,
         transfer_initiator=app0.raiden.address,
         transfer_target=app1.raiden.address,
         fee=0,
@@ -657,7 +654,6 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     hashlock = sha3(secret)
 
     transfer1 = channel0.create_mediatedtransfer(
-        block_number,
         transfer_initiator=app0.raiden.address,
         transfer_target=app1.raiden.address,
         fee=0,

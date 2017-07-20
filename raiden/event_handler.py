@@ -93,7 +93,6 @@ class StateMachineEventHandler(object):
             channel = graph.partneraddress_to_channel[receiver]
 
             mediated_transfer = channel.create_mediatedtransfer(
-                self.raiden.get_block_number(),
                 event.initiator,
                 event.target,
                 fee,
@@ -143,7 +142,6 @@ class StateMachineEventHandler(object):
             channel = graph.partneraddress_to_channel[receiver]
 
             refund_transfer = channel.create_refundtransfer(
-                self.raiden.get_block_number(),
                 event.initiator,
                 event.target,
                 fee,

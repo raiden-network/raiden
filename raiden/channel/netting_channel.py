@@ -633,27 +633,13 @@ class Channel(object):
             locksroot=current_locksroot,
         )
 
-    def create_lockedtransfer(self, block_number, amount, identifier, expiration, hashlock):
+    def create_lockedtransfer(self, amount, identifier, expiration, hashlock):
         """ Return a LockedTransfer message.
 
         This message needs to be signed and registered with the channel before sent.
         """
-        timeout = expiration - block_number
-
         if not self.can_transfer:
             raise ValueError('Transfer not possible, no funding or channel closed.')
-
-        # the expiration cannot be lower than the reveal timeout (otherwise we
-        # dont have enough time to listen for the ChannelSecretRevealed event)
-        if timeout <= self.reveal_timeout:
-            log.debug(
-                'Lock expiration is lower than reveal timeout.',
-                expiration=expiration,
-                block_number=block_number,
-                reveal_timeout=self.reveal_timeout,
-            )
-
-            raise ValueError('Invalid expiration.')
 
         from_ = self.our_state
         to_ = self.partner_state
@@ -685,7 +671,6 @@ class Channel(object):
 
     def create_mediatedtransfer(
             self,
-            block_number,
             transfer_initiator,
             transfer_target,
             fee,
@@ -708,7 +693,6 @@ class Channel(object):
         """
 
         locked_transfer = self.create_lockedtransfer(
-            block_number,
             amount,
             identifier,
             expiration,
@@ -724,7 +708,6 @@ class Channel(object):
 
     def create_refundtransfer(
             self,
-            block_number,
             transfer_initiator,
             transfer_target,
             fee,
@@ -734,7 +717,6 @@ class Channel(object):
             hashlock):
 
         locked_transfer = self.create_lockedtransfer(
-            block_number,
             amount,
             identifier,
             expiration,
