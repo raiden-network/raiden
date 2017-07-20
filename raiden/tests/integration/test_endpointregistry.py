@@ -3,6 +3,9 @@ import pytest
 
 from raiden.utils import make_address, get_contract_path, privatekey_to_address
 from raiden.network.discovery import ContractDiscovery
+from raiden.settings import GAS_PRICE
+from raiden.constants import DISCOVERY_REGISTRATION_GAS
+from pyethapp.jsonrpc import address_encoder, data_decoder
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
@@ -41,3 +44,43 @@ def test_endpointregistry(private_keys, blockchain_services):
 
     with pytest.raises(KeyError):
         contract_discovery.get(unregistered_address)
+
+
+@pytest.mark.parametrize('number_of_nodes', [3])
+def test_endpointregistry_gas(private_keys, blockchain_services):
+    chain = blockchain_services.blockchain_services[0]
+
+    endpointregistry_address = chain.deploy_contract(
+        'EndpointRegistry',
+        get_contract_path('EndpointRegistry.sol'),
+    )
+    registry_address_hex = address_encoder(endpointregistry_address)
+
+    def get_contract_calls(block, later_than=0):
+        return [tx for tx in block['transactions']
+                if tx['to'] == registry_address_hex and int(block['number'], 16) > later_than]
+
+    prev_block = 0
+    for i in range(len(private_keys)):
+        chain = blockchain_services.blockchain_services[i]
+        discovery_proxy = chain.discovery(endpointregistry_address)
+
+        my_address = privatekey_to_address(private_keys[i])
+        contract_discovery = ContractDiscovery(my_address, discovery_proxy)
+        contract_discovery.register(my_address, '127.0.0.1', 44444)
+
+        block = chain.client.find_block(lambda block: get_contract_calls(block, prev_block))
+        prev_block = int(block['number'], 16)
+
+        contract_calls = get_contract_calls(block)
+        assert len(contract_calls) == 1
+
+        contract_call = contract_calls[0]
+        tx_hash = data_decoder(contract_call['hash'])
+        tx = chain.client.eth_getTransactionByHash(tx_hash)
+        txr = chain.client.eth_getTransactionReceipt(tx_hash)
+
+        assert tx['from'] == address_encoder(my_address)
+        assert int(tx['gasPrice'], 16) == GAS_PRICE
+        assert int(tx['gas'], 16) == DISCOVERY_REGISTRATION_GAS
+        assert int(txr['gasUsed'], 16) <= DISCOVERY_REGISTRATION_GAS
