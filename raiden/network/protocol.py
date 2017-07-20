@@ -742,9 +742,6 @@ class RaidenProtocol(object):
                 if log.isEnabledFor(logging.WARN):
                     log.warn(str(e))
 
-            except:  # pylint: disable=bare-except
-                log.exception('unexpected exception raised.')
-
         # payload was not a valid message and decoding failed
         elif log.isEnabledFor(logging.ERROR):
             log.error(
