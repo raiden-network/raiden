@@ -18,6 +18,8 @@
       "tsconfig": "tsconfig.app.json",
       "testTsconfig": "tsconfig.spec.json",
       "prefix": "app",
+      "baseHref": "/ui/",
+      "deployUrl": "/ui/",
       "styles": [
         "../node_modules/font-awesome/css/font-awesome.min.css",
         "../node_modules/bootstrap/dist/css/bootstrap.min.css",
