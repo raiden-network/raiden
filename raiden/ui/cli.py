@@ -227,7 +227,7 @@ def app(address,
     if not accmgr.accounts:
         raise RuntimeError('No Ethereum accounts found in the user\'s system')
 
-    address_hex = address_encoder(address)
+    address_hex = address_encoder(address) if address else None
 
     if not accmgr.address_in_keystore(address_hex):
         addresses = list(accmgr.accounts.keys())
@@ -251,7 +251,7 @@ def app(address,
             else:
                 print("\nError: Provided index '{}' is out of bounds\n".format(idx))
 
-        address = addresses[idx]
+        address_hex = addresses[idx]
 
     password = None
     if password_file:
