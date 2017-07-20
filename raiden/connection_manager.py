@@ -5,7 +5,7 @@ from gevent.event import AsyncResult
 
 from ethereum import slogging
 
-from raiden.exceptions import DuplicatedChannel
+from raiden.exceptions import DuplicatedChannelError
 from raiden.api.python import RaidenAPI
 from raiden.utils import pex
 from raiden.transfer.state import (
@@ -230,14 +230,27 @@ class ConnectionManager(object):
                         partner
                     )
                 # this can fail because of a race condition, where the channel partner opens first
-                except DuplicatedChannel:
+                except DuplicatedChannelError:
                     log.error('partner opened channel first')
 
-                self.api.deposit(
-                    self.token_address,
-                    partner,
-                    self.initial_funding_per_partner
-                )
+                try:
+                    with gevent.timeout.Timeout(30):
+                        channelgraph = self.raiden.token_to_channelgraph[self.token_address]
+                        while partner not in channelgraph.partneraddress_channel:
+                            gevent.sleep(self.raiden.alarm.wait_time)
+
+                        self.api.deposit(
+                            self.token_address,
+                            partner,
+                            self.initial_funding_per_partner
+                        )
+                except gevent.timeout.Timeout:
+                    log.error(
+                        'Opening new channel failed; channel already opened, '
+                        'but partner not in channelgraph',
+                        partner=pex(partner),
+                        token_address=pex(self.token_address),
+                    )
 
     def find_new_partners(self, number):
         """Search the token network for potential channel partners.
