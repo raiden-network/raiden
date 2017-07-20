@@ -46,7 +46,7 @@ def test_endpointregistry(private_keys, blockchain_services):
         contract_discovery.get(unregistered_address)
 
 
-@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('number_of_nodes', [5])
 def test_endpointregistry_gas(private_keys, blockchain_services):
     chain = blockchain_services.blockchain_services[0]
 
@@ -54,33 +54,12 @@ def test_endpointregistry_gas(private_keys, blockchain_services):
         'EndpointRegistry',
         get_contract_path('EndpointRegistry.sol'),
     )
-    registry_address_hex = address_encoder(endpointregistry_address)
 
-    def get_contract_calls(block, later_than=0):
-        return [tx for tx in block['transactions']
-                if tx['to'] == registry_address_hex and int(block['number'], 16) > later_than]
-
-    prev_block = 0
     for i in range(len(private_keys)):
         chain = blockchain_services.blockchain_services[i]
         discovery_proxy = chain.discovery(endpointregistry_address)
 
         my_address = privatekey_to_address(private_keys[i])
         contract_discovery = ContractDiscovery(my_address, discovery_proxy)
-        contract_discovery.register(my_address, '127.0.0.1', 44444)
-
-        block = chain.client.find_block(lambda block: get_contract_calls(block, prev_block))
-        prev_block = int(block['number'], 16)
-
-        contract_calls = get_contract_calls(block)
-        assert len(contract_calls) == 1
-
-        contract_call = contract_calls[0]
-        tx_hash = data_decoder(contract_call['hash'])
-        tx = chain.client.eth_getTransactionByHash(tx_hash)
-        txr = chain.client.eth_getTransactionReceipt(tx_hash)
-
-        assert tx['from'] == address_encoder(my_address)
-        assert int(tx['gasPrice'], 16) == GAS_PRICE
-        assert int(tx['gas'], 16) == DISCOVERY_REGISTRATION_GAS
-        assert int(txr['gasUsed'], 16) <= DISCOVERY_REGISTRATION_GAS
+        contract_discovery.register(my_address, '127.0.0.{}'.format(i + 1), 44444)
+        chain.next_block()
