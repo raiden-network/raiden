@@ -51,6 +51,8 @@ def logging_level(request):
 
     For integration tests this also sets the geth verbosity.
     """
+    if request.config.option.log_format is not None:
+        slogging.PRINT_FORMAT = request.config.option.log_format
     if request.config.option.log_config is not None:
         slogging.configure(request.config.option.log_config)
 
