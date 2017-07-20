@@ -12,13 +12,13 @@ import { AppComponent } from './app.component';
 import { ChannelTableComponent } from './components/channel-table/channel-table.component';
 import { EventListComponent } from './components/event-list/event-list.component';
 import { TokenNetworkComponent } from './components/token-network/token-network.component';
+import { HomeComponent } from './components/home/home.component';
 
 import { APP_INITIALIZER } from '@angular/core';
-import { RaidenService } from './services/raiden.service';
-import { SharedService } from './services/shared.service';
 import { RaidenConfig } from './services/raiden.config';
+import { SharedService } from './services/shared.service';
+import { RaidenService } from './services/raiden.service';
 import { environment } from '../environments/environment';
-import { HomeComponent } from './components/home/home.component';
 
 const appRoutes: Routes = [
     { path: 'home', component: HomeComponent },
@@ -71,11 +71,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
             multi: true
         },
         SharedService,
-        {
-            provide: RaidenService,
-            useClass: RaidenService,
-            deps: [Http, RaidenConfig, SharedService],
-        }
+        RaidenService,
     ],
     bootstrap: [AppComponent]
 })
