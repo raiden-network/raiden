@@ -3,9 +3,6 @@ import pytest
 
 from raiden.utils import make_address, get_contract_path, privatekey_to_address
 from raiden.network.discovery import ContractDiscovery
-from raiden.settings import GAS_PRICE
-from raiden.constants import DISCOVERY_REGISTRATION_GAS
-from pyethapp.jsonrpc import address_encoder, data_decoder
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])
