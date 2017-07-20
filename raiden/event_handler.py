@@ -24,16 +24,31 @@ from raiden.transfer.events import (
 )
 from raiden.transfer.mediated_transfer.events import (
     ContractSendChannelClose,
+    ContractSendWithdraw,
+    EventUnlockFailed,
+    EventUnlockSuccess,
+    EventWithdrawFailed,
+    EventWithdrawSuccess,
     SendBalanceProof,
     SendMediatedTransfer,
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
-    EventUnlockSuccess,
 )
 from raiden.utils import sha3
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+UNEVENTEFUL_EVENTS = (
+    EventTransferReceivedSuccess,
+    EventUnlockFailed,
+    EventUnlockSuccess,
+    EventWithdrawFailed,
+    EventWithdrawSuccess,
+
+    # The withdraw is currently handled by the netting channel, once the close
+    # event is detected all locks will be withdrawn
+    ContractSendWithdraw,
+)
 
 
 class StateMachineEventHandler(object):
@@ -166,7 +181,7 @@ class StateMachineEventHandler(object):
             for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(False)
 
-        elif isinstance(event, (EventTransferReceivedSuccess, EventUnlockSuccess)):
+        elif isinstance(event, UNEVENTEFUL_EVENTS):
             pass
 
         elif isinstance(event, ContractSendChannelClose):
