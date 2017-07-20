@@ -177,7 +177,7 @@ def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
             try:
                 netting_channels.append(pyethapp_chain.netting_channel(channel_address))
             except ValueError:
-                log.exception('Invalid netting channel:')
+                log.debug('Invalid netting channel: %r', channel_address)
         manager_channels[channel_manager_address] = netting_channels
 
     proxies = PyethappProxies(
