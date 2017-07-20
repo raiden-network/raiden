@@ -3,6 +3,7 @@ import itertools
 from collections import namedtuple, defaultdict
 
 from pyethapp.jsonrpc import address_decoder
+from ethereum import slogging
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -37,6 +38,7 @@ PyethappProxies = namedtuple(
 
 # Pyethapp's `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
+log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
 def poll_event_listener(pyethapp_filter, translator):
@@ -169,10 +171,13 @@ def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
         channel_managers.append(channel_manager)
 
         participating_channels = channel_manager.channels_by_participant(node_address)
-        netting_channels = [
-            pyethapp_chain.netting_channel(channel_address)
-            for channel_address in participating_channels
-        ]
+        netting_channels = []
+        for channel_address in participating_channels:
+            # FIXME: implement proper cleanup of self-killed channel after close+settle
+            try:
+                netting_channels.append(pyethapp_chain.netting_channel(channel_address))
+            except ValueError:
+                log.exception('Invalid netting channel:')
         manager_channels[channel_manager_address] = netting_channels
 
     proxies = PyethappProxies(
