@@ -1,0 +1,13 @@
+{
+  "raiden":
+  {
+    "host": "localhost",
+    "port": 5001,
+    "version": 1
+  },
+  "web3":
+  {
+    "host": "localhost",
+    "port": 8545
+  }
+}

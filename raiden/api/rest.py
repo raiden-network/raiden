@@ -2,7 +2,7 @@
 
 import httplib
 import json
-from flask import Flask, make_response, url_for
+from flask import Flask, make_response, url_for, send_from_directory
 from flask.json import jsonify
 from flask_restful import Api, abort
 from flask_cors import CORS
@@ -113,6 +113,7 @@ class APIServer(object):
         self._add_default_resources()
         self._register_type_converters()
         self.flask_app.register_blueprint(self.blueprint)
+        self.flask_app.config['WEBUI_PATH'] = '../../ui/web/'
 
     def _add_default_resources(self):
         self.add_resource(AddressResource, '/address')
@@ -151,6 +152,10 @@ class APIServer(object):
             ConnectionsResource,
             '/connection/<hexaddress:token_address>'
         )
+        self.flask_app.add_url_rule('/', '', self._serve_webui, methods=['GET'])
+
+    def _serve_webui(self, file='index.html'):
+        return send_from_directory(self.flask_app.config['WEBUI_PATH'], file)
 
     def _register_type_converters(self, additional_mapping=None):
         # an additional mapping concats to class-mapping and will overwrite existing keys
