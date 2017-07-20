@@ -12,7 +12,8 @@ import gevent
 from gevent.wsgi import WSGIServer
 import gevent.monkey
 from ethereum import slogging
-from pyethapp.jsonrpc import address_decoder
+from pyethapp.jsonrpc import address_decoder, address_encoder
+from tinyrpc import BadRequestError
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -33,13 +34,25 @@ from raiden.tests.utils.smoketest import (
 gevent.monkey.patch_all()
 
 
+class AddressType(click.ParamType):
+    name = 'address'
+
+    def convert(self, value, param, ctx):
+        try:
+            return address_decoder(value)
+        except BadRequestError:
+            self.fail('Please specify a valid hex-encoded address.')
+
+
+ADDRESS_TYPE = AddressType()
+
 OPTIONS = [
     click.option(
         '--address',
         help=('The ethereum address you would like raiden to use and for which '
               'a keystore file exists in your local system.'),
         default=None,
-        type=str,
+        type=ADDRESS_TYPE,
     ),
     click.option(
         '--keystore-path',
@@ -59,13 +72,13 @@ OPTIONS = [
         '--registry-contract-address',
         help='hex encoded address of the registry contract.',
         default=ROPSTEN_REGISTRY_ADDRESS,  # testnet default
-        type=str,
+        type=ADDRESS_TYPE,
     ),
     click.option(
         '--discovery-contract-address',
         help='hex encoded address of the discovery contract.',
         default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
-        type=str,
+        type=ADDRESS_TYPE,
     ),
     click.option(
         '--listen-address',
@@ -214,7 +227,9 @@ def app(address,
     if not accmgr.accounts:
         raise RuntimeError('No Ethereum accounts found in the user\'s system')
 
-    if not accmgr.address_in_keystore(address):
+    address_hex = address_encoder(address)
+
+    if not accmgr.address_in_keystore(address_hex):
         addresses = list(accmgr.accounts.keys())
         formatted_addresses = [
             '[{:3d}] - 0x{}'.format(idx, addr)
@@ -243,22 +258,23 @@ def app(address,
         password = password_file.read().splitlines()[0]
     if password:
         try:
-            privatekey_bin = accmgr.get_privkey(address, password)
+            privatekey_bin = accmgr.get_privkey(address_hex, password)
         except ValueError as e:
             # ValueError exception raised if the password is incorrect
-            print('Incorrect password for {} in file. Aborting ...'.format(address))
+            print('Incorrect password for {} in file. Aborting ...'.format(address_hex))
             sys.exit(1)
     else:
         unlock_tries = 3
         while True:
             try:
-                privatekey_bin = accmgr.get_privkey(address)
+                privatekey_bin = accmgr.get_privkey(address_hex)
                 break
             except ValueError as e:
                 # ValueError exception raised if the password is incorrect
                 if unlock_tries == 0:
                     print(
-                        'Exhausted passphrase unlock attempts for {}. Aborting ...'.format(address)
+                        'Exhausted passphrase unlock attempts for {}. Aborting ...'
+                        .format(address_hex)
                     )
                     sys.exit(1)
 
@@ -287,10 +303,6 @@ def app(address,
         rpc_host = endpoint
     else:
         rpc_host, rpc_port = split_endpoint(endpoint)
-
-    # user may have provided registry and discovery contracts with leading 0x
-    registry_contract_address = address_decoder(registry_contract_address)
-    discovery_contract_address = address_decoder(discovery_contract_address)
 
     try:
         blockchain_service = BlockChainService(
@@ -321,7 +333,7 @@ def app(address,
 
     if not os.path.exists(raiden_directory):
         os.makedirs(raiden_directory)
-    user_db_dir = os.path.join(raiden_directory, address[:6])
+    user_db_dir = os.path.join(raiden_directory, address_hex[:8])
     if not os.path.exists(user_db_dir):
         os.makedirs(user_db_dir)
     database_path = os.path.join(user_db_dir, 'log.db')
