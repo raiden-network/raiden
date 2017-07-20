@@ -113,7 +113,8 @@ class APIServer(object):
         self._add_default_resources()
         self._register_type_converters()
         self.flask_app.register_blueprint(self.blueprint)
-        self.flask_app.config['WEBUI_PATH'] = '../../ui/web/dist/'
+        self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
+        self.flask_app.add_url_rule('/<path:file>', 'index', self._serve_webui, methods=['GET'])
 
     def _add_default_resources(self):
         self.add_resource(AddressResource, '/address')
@@ -152,7 +153,6 @@ class APIServer(object):
             ConnectionsResource,
             '/connection/<hexaddress:token_address>'
         )
-        self.flask_app.add_url_rule('/', '', self._serve_webui, methods=['GET'])
 
     def _serve_webui(self, file='index.html'):
         return send_from_directory(self.flask_app.config['WEBUI_PATH'], file)
