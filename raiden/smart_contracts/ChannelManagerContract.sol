@@ -10,15 +10,6 @@ contract ChannelManagerContract {
     using ChannelManagerLibrary for ChannelManagerLibrary.Data;
     ChannelManagerLibrary.Data data;
 
-    address[] all_channels;
-    mapping(address => address[]) node_channels;
-
-    // These two mappings keep track of the channel address position within the
-    // all_channels and node_channels arrays, the values are used to update the
-    // addresses once a new channel is opened.
-    mapping(address => mapping(address => uint)) node_index;
-    mapping(address => uint) all_channels_index;
-
     event ChannelNew(
         address netting_channel,
         address participant1,
@@ -38,7 +29,7 @@ contract ChannelManagerContract {
     /// @notice Get all channels
     /// @return All the open channels
     function getChannelsAddresses() constant returns (address[]) {
-        return all_channels;
+        return data.all_channels;
     }
 
     /// @notice Get all participants of all channels
@@ -49,11 +40,11 @@ contract ChannelManagerContract {
         address[] memory result;
         NettingChannelContract channel;
 
-        result = new address[](all_channels.length * 2);
+        result = new address[](data.all_channels.length * 2);
 
         pos = 0;
-        for (i = 0; i < all_channels.length; i++) {
-            channel = NettingChannelContract(all_channels[i]);
+        for (i = 0; i < data.all_channels.length; i++) {
+            channel = NettingChannelContract(data.all_channels[i]);
 
             var (address1, , address2, ) = channel.addressAndBalance();
 
@@ -70,7 +61,7 @@ contract ChannelManagerContract {
     /// @param node_address The address of the node
     /// @return The channel's addresses that node_address participates in.
     function nettingContractsByAddress(address node_address) constant returns (address[]) {
-        return node_channels[node_address];
+        return data.nodeaddress_to_channeladdresses[node_address];
     }
 
     /// @notice Get the address of the channel token
@@ -86,64 +77,19 @@ contract ChannelManagerContract {
         return data.getChannelWith(partner);
     }
 
-    /// @notice Create a new channel
-    /// @param partner The address you want to open a channel with
-    /// @param settle_timeout The desired settlement timeout period
-    /// @return The address of the newly created channel
+    /// @notice Create a new payment channel between two parties
+    /// @param partner The address of the partner
+    /// @param settle_timeout The settle timeout in blocks
+    /// @return The address of the newly created NettingChannelContract.
     function newChannel(address partner, uint settle_timeout) returns (address) {
-        address settled_channel = getChannelWith(partner);
-        address[] storage caller_channels = node_channels[msg.sender];
-        address[] storage partner_channels = node_channels[partner];
-
-        if (settled_channel != 0) {
-            // Check if the channel was settled. Once a channel is
-            // settled it kills itself, so address must not have code.
-            require(!contractExists(settled_channel));
+        address old_channel = getChannelWith(partner);
+        if (old_channel != 0) {
             ChannelDeleted(msg.sender, partner);
         }
 
         address new_channel = data.newChannel(partner, settle_timeout);
-
-        if (settled_channel != 0) {
-            // if an old channel existed, replace the channel address in-place
-            uint channels_idx = all_channels_index[settled_channel];
-            uint caller_idx = node_index[msg.sender][partner];
-            uint partner_idx = node_index[partner][msg.sender];
-
-            all_channels[channels_idx] = new_channel;
-            caller_channels[caller_idx] = new_channel;
-            partner_channels[partner_idx] = new_channel;
-
-        } else {
-            // first channel opening between the participants, create a new entry
-            all_channels.push(new_channel);
-            caller_channels.push(new_channel);
-            partner_channels.push(new_channel);
-
-            all_channels_index[new_channel] = all_channels.length - 1;
-            node_index[msg.sender][partner] = caller_channels.length - 1;
-            node_index[partner][msg.sender] = partner_channels.length - 1;
-        }
-
         ChannelNew(new_channel, msg.sender, partner, settle_timeout);
         return new_channel;
-    }
-
-    /// @notice Check if a contract exists
-    /// @param channel The address to check whether a contract is deployed or not
-    /// @return True if a contract exists, false otherwise
-    function contractExists(address channel) private constant returns (bool) {
-        uint size;
-
-        assembly {
-            size := extcodesize(channel)
-        }
-
-        if (size > 0) {
-            return true;
-        }
-
-        return false;
     }
 
     function () { revert(); }
