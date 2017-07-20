@@ -351,7 +351,7 @@ def prompt_account(address_hex, keystore_path, password_file):
             privatekey_bin = accmgr.get_privkey(address_hex, password)
         except ValueError:
             # ValueError exception raised if the password is incorrect
-            print('Incorrect password for {} in file. Aborting ...'.format(address))
+            print('Incorrect password for {} in file. Aborting ...'.format(address_hex))
             sys.exit(1)
     else:
         unlock_tries = 3
