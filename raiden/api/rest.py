@@ -113,7 +113,7 @@ class APIServer(object):
         self._add_default_resources()
         self._register_type_converters()
         self.flask_app.register_blueprint(self.blueprint)
-        self.flask_app.config['WEBUI_PATH'] = '../../ui/web/'
+        self.flask_app.config['WEBUI_PATH'] = '../../ui/web/dist/'
 
     def _add_default_resources(self):
         self.add_resource(AddressResource, '/address')
