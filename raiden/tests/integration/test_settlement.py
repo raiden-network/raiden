@@ -82,7 +82,6 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     identifier = 1
     fee = 0
     transfermessage = alice_bob_channel.create_mediatedtransfer(
-        alice_app.raiden.get_block_number(),
         alice_app.raiden.address,
         bob_app.raiden.address,
         fee,
@@ -286,7 +285,6 @@ def test_close_channel_lack_of_balance_proof(
     identifier = 1
     expiration = app0.raiden.get_block_number() + reveal_timeout * 2
     transfer = channel01.create_mediatedtransfer(
-        app0.raiden.get_block_number(),
         app0.raiden.address,
         app1.raiden.address,
         fee,

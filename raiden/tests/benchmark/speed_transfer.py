@@ -108,7 +108,6 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
     for i, amount in enumerate(amounts):
         hashlock = sha3(secrets[i])
         locked_transfer = channel0.create_lockedtransfer(
-            app0.raiden.get_block_number(),
             amount=amount,
             identifier=1,  # TODO: fill in identifier
             expiration=expiration,
