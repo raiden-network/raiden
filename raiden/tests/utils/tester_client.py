@@ -10,7 +10,7 @@ from pyethapp.jsonrpc import address_decoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
 from raiden import messages
-from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
 from raiden.utils import (
     get_contract_path,
     isaddress,
@@ -350,7 +350,10 @@ class DiscoveryTesterMock(object):
         if node_address != privatekey_to_address(self.private_key):
             raise ValueError('node_address doesnt match this node address')
 
+        prev_gas_limit = tester.gas_limit
+        tester.gas_limit = DISCOVERY_REGISTRATION_GAS
         self.proxy.registerEndpoint(endpoint)
+        tester.gas_limit = prev_gas_limit
         self.tester_state.mine(number_of_blocks=1)
 
     def endpoint_by_address(self, node_address_bin):
