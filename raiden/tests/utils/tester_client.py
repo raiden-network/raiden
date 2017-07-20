@@ -3,6 +3,7 @@ from collections import defaultdict
 from itertools import count
 
 from ethereum import tester, slogging, _solidity
+from ethereum.tester import TransactionFailed
 from ethereum.abi import ContractTranslator
 from ethereum.utils import decode_hex, encode_hex
 from ethereum._solidity import solidity_get_contract_key
@@ -10,7 +11,10 @@ from pyethapp.jsonrpc import address_decoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
 from raiden import messages
-from raiden.exceptions import UnknownAddress
+from raiden.exceptions import (
+    UnknownAddress,
+    DuplicatedChannelError,
+)
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
 from raiden.utils import (
     get_contract_path,
@@ -518,8 +522,9 @@ class ChannelManagerTesterMock(object):
 
         try:
             netting_channel_address_hex = self.proxy.newChannel(other, settle_timeout)
-        except tester.TransactionFailed:
-            raise Exception('Duplicated channel')
+
+        except TransactionFailed:
+            raise DuplicatedChannelError('Duplicated channel')
 
         self.tester_state.mine(number_of_blocks=1)
 
