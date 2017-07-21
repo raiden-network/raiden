@@ -716,17 +716,17 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 
 
 def test_channel_must_accept_expired_locks():
-    """ A node may go offline for an undetermined period of time, when it comes
-    back online it must accept the messages that are waiting, otherwise the
-    partner node won't make progress with its queue.
+    """ A node may go offline for an undetermined period of time, and when it
+    comes back online it must accept the messages that are waiting, otherwise
+    the partner node won't make progress with its queue.
 
     If a N node goes offline for a number B of blocks, and the partner does not
     close the channel, when N comes back online some of the messages from its
-    partner may become expired, neverthless these messages are ordered and must
-    be accept for the partner to make progress with its queue.
+    partner may become expired. Neverthless these messages are ordered and must
+    be accepted for the partner to make progress with its queue.
 
     Note: Accepting a message with an expired lock does *not* imply the token
-    transfer happen, and the receiver node must *not* forward the transfer,
+    transfer happened, and the receiver node must *not* forward the transfer,
     only accept the message allowing the partner to progress with its message
     queue.
     """
