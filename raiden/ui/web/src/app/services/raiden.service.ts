@@ -20,20 +20,12 @@ export class RaidenService {
         private sharedService: SharedService) {
         this.web3 = this.config.web3;
         this.tokenContract = this.web3.eth.contract(tokenabi);
-        this.initialiseRaidenAddress();
-        this.getRaidenAddress();
     }
 
-    public initialiseRaidenAddress(): Observable<any> {
+    public getRaidenAddress(): Observable<string> {
         return this.http.get(`${this.config.apiCall}/address`)
-            .map((response) => response.json().our_address)
+            .map((response) => this.raidenAddress = response.json().our_address)
             .catch((error) => this.handleError(error));
-    }
-
-    public getRaidenAddress() {
-        this.initialiseRaidenAddress().subscribe((address) => {
-            this.raidenAddress = address;
-        });
     }
 
     public getChannels(): Observable<any> {

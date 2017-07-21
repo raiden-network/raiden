@@ -14,7 +14,7 @@ export class AppComponent implements OnInit {
                 public sharedService: SharedService) { }
 
     ngOnInit() {
-        this.raidenService.initialiseRaidenAddress()
+        this.raidenService.getRaidenAddress()
             .subscribe((address) => this.raidenAddress = address);
     }
 
