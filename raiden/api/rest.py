@@ -8,6 +8,7 @@ from flask_restful import Api, abort
 from flask_cors import CORS
 from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
+from gevent.wsgi import WSGIServer
 
 from pyethapp.jsonrpc import address_encoder
 from raiden.exceptions import (
@@ -97,7 +98,7 @@ class APIServer(object):
         'hexaddress': HexAddressConverter
     }
 
-    def __init__(self, rest_api, cors_domain_list=None):
+    def __init__(self, rest_api, cors_domain_list=None, web_ui=False):
         self.rest_api = rest_api
         self.blueprint = create_blueprint()
         if self.rest_api.version == 1:
@@ -116,13 +117,14 @@ class APIServer(object):
         self.flask_app.register_blueprint(self.blueprint)
 
         self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
-        for route in ['/ui/<path:file>', '/ui', '/ui/', '/index.html', '/']:
-            self.flask_app.add_url_rule(
-                route,
-                route,
-                view_func=self._serve_webui,
-                methods=['GET'],
-            )
+        if web_ui:
+            for route in ['/ui/<path:file>', '/ui', '/ui/', '/index.html', '/']:
+                self.flask_app.add_url_rule(
+                    route,
+                    route,
+                    view_func=self._serve_webui,
+                    methods=['GET'],
+                )
 
     def _add_default_resources(self):
         self.add_resource(AddressResource, '/address')
@@ -189,6 +191,15 @@ class APIServer(object):
 
     def run(self, host='127.0.0.1', port=5001, **kwargs):
         self.flask_app.run(host=host, port=port, **kwargs)
+
+    def start(self, host='127.0.0.1', port=5001):
+        self.wsgiserver = WSGIServer((host, port), self.flask_app)
+        self.wsgiserver.start()
+
+    def stop(self, timeout=5):
+        if getattr(self, 'wsgiserver', None):
+            self.wsgiserver.stop(timeout)
+            self.wsgiserver = None
 
 
 class RestAPI(object):
