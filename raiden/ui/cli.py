@@ -9,7 +9,6 @@ import json
 import signal
 import click
 import gevent
-from gevent.wsgi import WSGIServer
 import gevent.monkey
 from ethereum import slogging
 from pyethapp.jsonrpc import address_decoder, address_encoder
@@ -126,7 +125,7 @@ OPTIONS = [
     click.option(
         '--console/--no-console',
         help=(
-            'Start with or without the command line interface. Defualt is to '
+            'Start with or without the command line interface. Default is to '
             'start with the CLI disabled'
         ),
         default=False,
@@ -164,6 +163,15 @@ OPTIONS = [
         default=None,
         type=click.File(lazy=True),
     ),
+    click.option(
+        '--web-ui/--no-web-ui',
+        help=(
+            'Start with or without the web interface. Requires --rpc. '
+            'It will be acessible at http://<api-address>. '
+            'Default is to start with the web UI enabled'
+        ),
+        default=True,
+    ),
 ]
 
 
@@ -193,6 +201,7 @@ def app(address,
         rpc,
         console,
         password_file,
+        web_ui,
         datadir):
 
     from raiden.app import App
@@ -207,6 +216,7 @@ def app(address,
     config['port'] = listen_port
     config['console'] = console
     config['rpc'] = rpc
+    config['web_ui'] = rpc and web_ui
     config['api_host'] = api_host
     config['api_port'] = api_port
 
@@ -369,19 +379,16 @@ def run(ctx, **kwargs):
                 else:
                     domain_list.append(str(kwargs['rpccorsdomain']))
 
-            http_server = None
             if ctx.params['rpc']:
                 raiden_api = RaidenAPI(app_.raiden)
                 rest_api = RestAPI(raiden_api)
-                api_server = APIServer(rest_api, cors_domain_list=domain_list)
-                (api_host, api_port) = split_endpoint(kwargs["api_address"])
-
-                http_server = WSGIServer(
-                    (api_host, api_port),
-                    api_server.flask_app,
-                    log=slogging.getLogger('flask')
+                api_server = APIServer(
+                    rest_api,
+                    cors_domain_list=domain_list,
+                    web_ui=ctx.params['web_ui'],
                 )
-                http_server.start()
+                (api_host, api_port) = split_endpoint(kwargs["api_address"])
+                api_server.start(api_host, api_port)
 
                 print(
                     "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
@@ -404,8 +411,10 @@ def run(ctx, **kwargs):
             gevent.signal(signal.SIGINT, event.set)
             event.wait()
 
-        if http_server:
-            http_server.stop(5)
+            try:
+                api_server.stop()
+            except NameError:
+                pass
         app_.stop(leave_channels=False)
 
 
