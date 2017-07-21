@@ -104,7 +104,8 @@ def ensure_dag_is_generated(request, blockchain_type, dagpath):
 
     if blockchain_type == 'geth' and missing_dag:
         dag_folder = os.path.dirname(dagpath)
-        os.makedirs(dag_folder)
+        if not os.path.exists(dag_folder):
+            os.makedirs(dag_folder)
 
         makedag = subprocess.Popen(['geth', 'makedag', '0', dag_folder])
         makedag.communicate()
