@@ -34,15 +34,12 @@ from raiden.transfer.mediated_transfer.events import (
     SendRefundTransfer,
     SendRevealSecret,
     SendSecretRequest,
-    EventUnlockSuccess,
-    EventUnlockFailed,
 )
 from raiden.utils import sha3
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTEFUL_EVENTS = (
     EventTransferReceivedSuccess,
-    EventUnlockFailed,
     EventUnlockSuccess,
     EventWithdrawFailed,
     EventWithdrawSuccess,
@@ -183,8 +180,6 @@ class StateMachineEventHandler(object):
             for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(False)
         elif isinstance(event, UNEVENTEFUL_EVENTS):
-            pass
-        elif isinstance(event, EventUnlockSuccess):
             pass
         elif isinstance(event, EventUnlockFailed):
             log.error(
