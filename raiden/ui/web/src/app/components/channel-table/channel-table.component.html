@@ -1,4 +1,4 @@
-<p-tabView class="ui-g-12">
+<p-tabView class="ui-g-12" [activeIndex]="tabIndex" [controlClose]="true" (onClose)="handleCloseTab($event)" (onChange)="handleChangeTab($event)">
   <p-tabPanel header="Channels">
     <div class="ui-g-12">
       <button type="text" (click)="onOpen()" pButton icon="fa-external-link-square" label="Open Channel"></button>
@@ -35,8 +35,9 @@
     </ng-template>
     <ng-template #msg>You have no Channels yet.</ng-template>
   </p-tabPanel>
-  <p-tabPanel header="Events">
-    <span>Events</span>
+
+  <p-tabPanel *ngFor="let eventsParam of watchEvents" [header]="eventsParam.channel ? 'Channel Events: '+eventsParam.channel : 'Network Events'" [closable]="!!eventsParam.channel" [leftIcon]="eventsParam.activity ? 'fa-bell' : ''">
+    <app-event-list [eventsParam]="eventsParam" (activity)="handleActivity(eventsParam)"></app-event-list>
   </p-tabPanel>
 </p-tabView>
 

@@ -19,6 +19,8 @@ import { RaidenConfig } from './services/raiden.config';
 import { SharedService } from './services/shared.service';
 import { RaidenService } from './services/raiden.service';
 import { environment } from '../environments/environment';
+import { KeysPipe } from './pipes/keys.pipe';
+import { SubsetPipe } from './pipes/subset.pipe';
 
 const appRoutes: Routes = [
     { path: 'home', component: HomeComponent },
@@ -39,6 +41,8 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         EventListComponent,
         TokenNetworkComponent,
         HomeComponent,
+        KeysPipe,
+        SubsetPipe,
     ],
     imports: [
         RouterModule.forRoot(appRoutes),
