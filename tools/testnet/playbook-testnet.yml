@@ -29,3 +29,11 @@
       display_groups:
         Eth: private_ips_eth_nodes
         Raiden: private_ips_raiden
+
+- hosts: name_raiden_testnet
+  gather_facts: no
+  tags:
+    - roles
+  tasks:
+    - debug:
+        msg: "{{ private_ip }}: {{ hostvars[inventory_hostname]['tags.Role'].lower() }}_{{ '{:02d}'.format(private_ip.rpartition('.')[2]|int) }}"
