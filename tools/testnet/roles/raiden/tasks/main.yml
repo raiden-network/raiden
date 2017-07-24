@@ -10,6 +10,7 @@
       - 5001:5001
     volumes:
       - "{{ raiden_root }}:/root/.raiden"
+      - "{{ keystore_root }}:/keystore"
     command:
       - "--eth-nodes"
       - "{{ ','.join(groups['private_ips_eth_nodes']) }}"
@@ -19,7 +20,7 @@
       - "--api-address"
       - "0.0.0.0:5001"
       - "--keystore-path"
-      - "/root/.raiden/keystore"
+      - "/keystore"
       - "--address"
       - "{{ keystore_address }}"
       - "--password-file"
