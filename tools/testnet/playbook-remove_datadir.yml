@@ -1,5 +1,7 @@
 - hosts: role_eth
   gather_facts: no
+  tags:
+    - eth
   tasks:
     - name: Stop container
       docker_container:
@@ -22,5 +24,28 @@
     - name: Start container
       docker_container:
         name: "testnet_{{ eth_node_type }}"
+        state: started
+      ignore_errors: yes
+
+- hosts: role_raiden
+  gather_facts: no
+  tags:
+    - raiden
+  tasks:
+    - name: Stop container
+      docker_container:
+        name: "testnet_raiden"
+        state: stopped
+      ignore_errors: yes
+
+    - name: Destroy raiden data dir
+      become: true
+      file:
+        name: "{{ raiden_root }}"
+        state: absent
+
+    - name: Start container
+      docker_container:
+        name: "testnet_raiden"
         state: started
       ignore_errors: yes
