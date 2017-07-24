@@ -130,6 +130,14 @@ def handle_secretreveal(state, state_change):
     return iteration
 
 
+def virtual_balanceproof(state):
+    """ This does a state transition to 'balance_proof' _without_ receiving a formal balance proof,
+    as described in https://github.com/raiden-network/raiden/issues/189.  """
+    iteration = TransitionResult(state, list())
+    state.state = 'balance_proof'
+    return iteration
+
+
 def handle_balanceproof(state, state_change):
     """ Handle a ReceiveBalanceProof state change. """
     iteration = TransitionResult(state, list())
@@ -238,5 +246,11 @@ def state_transition(state, state_change):
 
         elif isinstance(state_change, Block):
             iteration = handle_block(state, state_change)
+
+        # FIXME: We're adding a virtual transition to balance_proof
+        # until https://github.com/raiden-network/raiden/issues/189 is implemented.
+        # See `virtual_balanceproof(...)`
+        if state.state == 'reveal_secret':
+            iteration = virtual_balanceproof(state)
 
     return clear_if_finalized(iteration)

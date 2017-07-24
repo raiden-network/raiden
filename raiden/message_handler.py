@@ -90,6 +90,8 @@ class RaidenMessageHandler(object):
 
         state_change = ReceiveSecretReveal(secret, sender)
         self.raiden.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
+        # virtually add the ReceiveBalanceProof until we have
+        # https://github.com/raiden-network/raiden/issues/189
 
     def message_secretrequest(self, message):
         self.raiden.greenlet_task_dispatcher.dispatch_message(

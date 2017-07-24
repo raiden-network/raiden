@@ -10,6 +10,7 @@ from raiden.tests.utils.transfer import (
     channel,
     pending_mediated_transfer,
 )
+from raiden.tests.utils import get_channel_events_for_token
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.network import CHAIN
 from raiden.blockchain.abi import (
@@ -351,3 +352,46 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_time
         channel(app0, app1, token_address), deposit - amount, [],
         channel(app1, app2, token_address), deposit + amount, [],
     )
+
+
+# `RaidenAPI.get_channel_events` is not supported in tester
+@pytest.mark.parametrize('blockchain_type', ['geth'])
+@pytest.mark.parametrize('number_of_nodes', [4])
+@pytest.mark.parametrize('number_of_tokens', [1])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('reveal_timeout', [18])
+@pytest.mark.parametrize('settle_timeout', [64])
+def test_event_transfer_received_success(
+    token_addresses,
+    raiden_chain,
+):
+    app0, app1, app2, receiver_app = raiden_chain
+    token_address = token_addresses[0]
+    start_block = receiver_app.raiden.get_block_number()
+
+    expected = dict()
+
+    for num, app in enumerate([app0, app1, app2]):
+        amount = 1 + num
+        transfer_event = app.raiden.transfer_async(
+            token_address,
+            amount,
+            receiver_app.raiden.address,
+        )
+        transfer_event.wait()
+        expected[app.raiden.address] = amount
+
+    initiators = list()
+    received = list()
+    events = get_channel_events_for_token(receiver_app, token_address, start_block)
+    for event in events:
+        if event['_event_type'] == 'EventTransferReceivedSuccess':
+            received.append(event)
+            initiators.append(event['initiator'])
+
+    assert len(received) == 3
+    assert len(initiators) == 3
+    without_receiver_app = [app0.raiden.address, app1.raiden.address, app2.raiden.address]
+    assert set(without_receiver_app) == set(initiators)
+    for event in received:
+        assert expected[event['initiator']] == event['amount']
