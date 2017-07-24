@@ -233,23 +233,22 @@ class ConnectionManager(object):
                 except DuplicatedChannelError:
                     log.error('partner opened channel first')
 
-                try:
-                    with gevent.timeout.Timeout(30):
-                        channelgraph = self.raiden.token_to_channelgraph[self.token_address]
-                        while partner not in channelgraph.partneraddress_channel:
-                            gevent.sleep(self.raiden.alarm.wait_time)
+                channelgraph = self.raiden.token_to_channelgraph[self.token_address]
+                if partner not in channelgraph.partneraddress_to_channel:
+                    self.raiden.poll_blockchain_events()
 
-                        self.api.deposit(
-                            self.token_address,
-                            partner,
-                            self.initial_funding_per_partner
-                        )
-                except gevent.timeout.Timeout:
+                if partner not in channelgraph.partneraddress_to_channel:
                     log.error(
                         'Opening new channel failed; channel already opened, '
                         'but partner not in channelgraph',
                         partner=pex(partner),
                         token_address=pex(self.token_address),
+                    )
+                else:
+                    self.api.deposit(
+                        self.token_address,
+                        partner,
+                        self.initial_funding_per_partner
                     )
 
     def find_new_partners(self, number):
