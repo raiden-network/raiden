@@ -440,7 +440,7 @@ class RestAPI(object):
             except InvalidState:
                 result = make_response(
                     'Settlement period is not yet over',
-                    httplib.BAD_REQUEST,
+                    httplib.CONFLICT,
                 )
             else:
                 result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
