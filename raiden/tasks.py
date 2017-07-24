@@ -45,7 +45,7 @@ class AlarmTask(Task):
         """ Register a new callback.
 
         Note:
-            This callback will be executed in the AlarmTask context and for
+            The callback will be executed in the AlarmTask context and for
             this reason it should not block, otherwise we can miss block
             changes.
         """
