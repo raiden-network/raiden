@@ -14,6 +14,7 @@ from pyethapp.jsonrpc import address_encoder
 from raiden.exceptions import (
     InvalidAddress,
     InvalidAmount,
+    InvalidState,
     InvalidSettleTimeout,
     NoPathError,
 )
@@ -415,8 +416,8 @@ class RestAPI(object):
         if state == CHANNEL_STATE_CLOSED:
             if current_state != CHANNEL_STATE_OPENED:
                 return make_response(
+                    'Attempted to close an already closed channel',
                     httplib.CONFLICT,
-                    'Attempted to close an already closed channel'
                 )
             raiden_service_result = self.raiden_api.close(
                 channel.token_address,
@@ -431,11 +432,18 @@ class RestAPI(object):
                     'Attempted to settle a channel at its {} state'.format(current_state),
                     httplib.CONFLICT,
                 )
-            raiden_service_result = self.raiden_api.settle(
-                channel.token_address,
-                channel.partner_address
-            )
-            result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
+            try:
+                raiden_service_result = self.raiden_api.settle(
+                    channel.token_address,
+                    channel.partner_address
+                )
+            except InvalidState:
+                result = make_response(
+                    'Settlement period is not yet over',
+                    httplib.BAD_REQUEST,
+                )
+            else:
+                result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
             return jsonify(result.data)
 
         # should never happen, channel_state is validated in the schema
