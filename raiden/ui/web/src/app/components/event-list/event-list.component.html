@@ -1,39 +1,36 @@
-<p-dataList [value]="events" [paginator]="true" [rows]="5">
-  <p-header>
-    Events
-  </p-header>
-  <ng-template let-event pTemplate="item">
-    <div class="ui-grid ui-grid-responsive ui-fluid" style="font-size:12px;padding:10px;border-bottom:1px solid #D5D5D5;">
+<div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
+  <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
+  <input #gb type="text" pInputText size="50" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
+</div>
+<p-dataTable [value]="events$ | async" expandableRows="true" [paginator]="true" [rows]="20" [globalFilter]="gb">
+  <p-column expander="true" styleClass="col-icon" [style]="{'width': '2.5em'}"></p-column>
+  <p-column field="block_number" header="Block Number" [style]="{'width': '10%'}" [sortable]="true"></p-column>
+  <p-column field="timestamp" header="Time" [style]="{'width': '10%'}" [sortable]="true">
+    <ng-template let-col let-data="rowData" pTemplate="body">
+      <span [title]="data[col.field] | date:'medium'">{{ data[col.field] | date:'y-MM-dd HH:mm:ss' }}</span>
+    </ng-template>
+  </p-column>
+  <p-column field="event_type" header="Event Type" [style]="{'width': '15%'}" [sortable]="true"></p-column>
+  <p-column field="data" header="Data">
+    <ng-template let-col let-data="rowData" pTemplate="body">
+      <span>{{ data['data'] }}</span>
+    </ng-template>
+  </p-column>
+  <ng-template let-event pTemplate="rowexpansion">
+    <div class="ui-grid ui-grid-responsive ui-fluid" style="padding:10px;border-bottom:1px solid #D5D5D5;">
       <div class="ui-grid-row">
-        <div class="ui-grid-col-2" style="text-align:center">
-          <i class="fa fa-money"></i>
+        <div class="ui-grid-col-2" style="text-align:center;vertical-align:center;">
+          <i class="fa fa-money fa-2x"></i>
         </div>
         <div class="ui-grid-col-11">
           <div class="ui-grid ui-grid-responsive ui-fluid">
-            <div class="ui-grid-row">
-              <div class="ui-grid-col-2">Partner </div>
-              <div class="ui-grid-col-10">{{event.partner}}</div>
-            </div>
-            <div class="ui-grid-row">
-              <div class="ui-grid-col-2">Block </div>
-              <div class="ui-grid-col-10">{{event.block}}</div>
-            </div>
-            <div class="ui-grid-row">
-              <div class="ui-grid-col-2">Asset </div>
-              <div class="ui-grid-col-10">{{event.asset}}</div>
-            </div>
-            <div class="ui-grid-row">
-              <div class="ui-grid-col-2">Status </div>
-              <div class="ui-grid-col-10">{{event.status}}</div>
-            </div>
-            <div class="ui-grid-row">
-              <div class="ui-grid-col-2">Time </div>
-              <div class="ui-grid-col-10">{{event.timestamp | date: 'HH:mm:ss'}}</div>
+            <div *ngFor="let key of event | subset:null:'event_type,block_number,timestamp,data' | keys" class="ui-grid-row">
+              <div class="ui-grid-col-2"><strong>{{ key }}:</strong></div>
+              <div class="ui-grid-col-10">{{ event[key] }}</div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </ng-template>
-
-</p-dataList>
+</p-dataTable>

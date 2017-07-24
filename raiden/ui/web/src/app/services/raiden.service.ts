@@ -5,6 +5,7 @@ import { RaidenConfig } from './raiden.config';
 import { tokenabi } from './tokenabi';
 import { Usertoken } from '../models/usertoken';
 import { Channel } from '../models/channel';
+import { Event, EventsParam } from '../models/event';
 import { SharedService } from './shared.service';
 
 @Injectable()
@@ -31,12 +32,6 @@ export class RaidenService {
     public getChannels(): Observable<any> {
         return this.http.get(`${this.config.apiCall}/channels`)
             .map((response) => <Array<any>>response.json())
-            .catch((error) => this.handleError(error));
-    }
-
-    public getEvents(): Observable<any> {
-        return this.http.get(`${this.config.apiCall}/events`)
-            .map((response) => response.json())
             .catch((error) => this.handleError(error));
     }
 
@@ -167,6 +162,25 @@ export class RaidenService {
         return this.http.put(`${this.config.apiCall}/connection/${tokenAddress}`,
             JSON.stringify(data), options)
             .map((response) => response.json())
+            .catch((error) => this.handleError(error));
+    }
+
+    public getEvents(
+        eventsParam: EventsParam,
+        fromBlock?: number | undefined): Observable<Event[]> {
+        let path: string;
+        if (eventsParam.channel) {
+            path = `channels/${eventsParam.channel}`;
+        } else if (eventsParam.token) {
+            path = `tokens/${eventsParam.token}`;
+        } else {
+            path = 'network';
+        }
+        if (fromBlock) {
+            path += `?from_block=${fromBlock}`;
+        }
+        return this.http.get(`${this.config.apiCall}/events/${path}`)
+            .map((response) => <Event[]>response.json())
             .catch((error) => this.handleError(error));
     }
 

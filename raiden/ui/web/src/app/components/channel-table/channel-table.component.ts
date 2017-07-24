@@ -3,8 +3,11 @@ import { Router, ActivatedRoute, Params } from '@angular/router';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { Channel } from '../../models/channel';
+import { EventsParam } from '../../models/event';
 import { MenuItem, Message} from 'primeng/primeng';
+
 declare var blockies;
+
 @Component({
     selector: 'app-channel-table',
     templateUrl: './channel-table.component.html',
@@ -20,6 +23,9 @@ export class ChannelTableComponent implements OnInit {
     public action: string;
     public tempChannel: Channel = new Channel();
     public tokenAddressMapping: Array<{ value: string, label: string}>;
+    public watchEvents: EventsParam[] = [{}];
+    public tabIndex = 0;
+
     constructor(private route: ActivatedRoute,
                 private router: Router,
                 private raidenService: RaidenService,
@@ -193,6 +199,42 @@ export class ChannelTableComponent implements OnInit {
             {label: 'Deposit', icon: 'fa-money', command: () => this.onDeposit(channel)},
             {label: 'Close', icon: 'fa-close', command: () => this.onClose(channel)},
             {label: 'Settle', icon: 'fa-book', command: () => this.onSettle(channel)},
+            {label: 'Watch Events', icon: 'fa-clock-o', command: () => this.watchChannelEvents(channel)},
         ];
+    }
+
+    public watchChannelEvents(channel: Channel) {
+        let index = this.watchEvents
+            .map((event) => event.channel)
+            .indexOf(channel.channel_address);
+        if (index < 0) {
+            this.watchEvents = [...this.watchEvents, {channel: channel.channel_address}];
+            index = this.watchEvents.length - 1;
+        }
+        setTimeout(() => this.tabIndex = index + 1, 100);
+    }
+
+    public handleCloseTab($event) {
+        const newEvents = this.watchEvents.filter((e, i) =>
+            i === $event.index - 1 ? false : true);
+        $event.close();
+        setTimeout(() => this.watchEvents = newEvents, 0);
+    }
+
+    public handleChangeTab($event) {
+        if ($event.index >= 1) {
+            this.watchEvents[$event.index - 1].activity = false;
+        }
+        this.tabIndex = $event.index;
+    }
+
+    public handleActivity(eventsParam: EventsParam) {
+        const index = this.watchEvents
+            .indexOf(eventsParam);
+        if (index >= 0 && this.tabIndex - 1 === index) {
+            eventsParam.activity = false;
+        } else {
+            eventsParam.activity = true;
+        }
     }
 }
