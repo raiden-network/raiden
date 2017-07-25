@@ -497,7 +497,11 @@ class ChannelManagerTesterMock(object):
         else:
             other = peer1
 
-        netting_channel_address_hex = self.proxy.newChannel(other, settle_timeout)
+        try:
+            netting_channel_address_hex = self.proxy.newChannel(other, settle_timeout)
+        except tester.TransactionFailed:
+            raise Exception('Duplicated channel')
+
         self.tester_state.mine(number_of_blocks=1)
 
         channel = NettingChannelTesterMock(

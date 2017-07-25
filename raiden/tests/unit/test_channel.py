@@ -769,3 +769,58 @@ def test_channel_must_accept_expired_locks():
         block_number + settle_timeout + 1,
         transfer,
     )
+
+
+def test_channel_close_called_only_once():
+    class MockCheckCallsToClose():
+        def __init__(self):
+            self.address = 'mockcheckcallstoclosemockcheckcallstoclo'
+            self.close_calls = 0
+
+        def opened(self):
+            return 1
+
+        def closed(self):
+            return 0
+
+        def settled(self):
+            return 0
+
+        def close(self, transfer):
+            self.close_calls += 1
+
+    netting_channel = NettingChannelMock()
+    token_address = make_address()
+    privkey1, address1 = make_privkey_address()
+    address2 = make_address()
+
+    balance1 = 70
+    balance2 = 110
+
+    reveal_timeout = 5
+    settle_timeout = 15
+
+    our_state = ChannelEndState(address1, balance1, netting_channel.opened())
+    partner_state = ChannelEndState(address2, balance2, netting_channel.opened())
+
+    channel_for_hashlock = list()
+    netting_channel = MockCheckCallsToClose()
+
+    external_state = ChannelExternalState(
+        lambda *args: channel_for_hashlock.append(args),
+        netting_channel,
+    )
+
+    test_channel = Channel(
+        our_state,
+        partner_state,
+        external_state,
+        token_address,
+        reveal_timeout,
+        settle_timeout,
+    )
+
+    test_channel.external_state.close('')
+    test_channel.external_state.close('')
+
+    assert netting_channel.close_calls == 1

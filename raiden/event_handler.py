@@ -255,27 +255,22 @@ class StateMachineEventHandler(object):
         token_address = state_change.token_address
         participant_address = state_change.participant_address
         balance = state_change.balance
-        block_number = state_change.block_number
 
         graph = self.raiden.token_to_channelgraph[token_address]
         channel = graph.address_to_channel[channel_address]
-        channel_state = channel.get_state_for(participant_address)
 
-        if channel_state.contract_balance != balance:
-            channel_state.update_contract_balance(balance)
+        channel.state_transition(state_change)
 
-        connection_manager = self.raiden.connection_manager_for_token(
-            token_address
-        )
         if channel.contract_balance == 0:
+            connection_manager = self.raiden.connection_manager_for_token(
+                token_address
+            )
+
             gevent.spawn(
                 connection_manager.join_channel,
                 participant_address,
                 balance
             )
-
-        if channel.external_state.opened_block == 0:
-            channel.external_state.set_opened(block_number)
 
     def handle_closed(self, state_change):
         channel_address = state_change.channel_address
