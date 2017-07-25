@@ -82,6 +82,15 @@ class CompileWebUI(Command):
             )
         )
 
+        npm_version = subprocess.check_output([npm, '--version'])
+        # require npm 5.x.x or later
+        if not int(npm_version.split('.')[0]) >= 5:
+            self.announce(
+                'NPM 5.x or later required. Skipping webUI compilation',
+                level=distutils.log.WARN,
+            )
+            return
+
         command = [npm, 'install']
         self.announce('Running %r in %r' % (command, cwd), level=distutils.log.INFO)
         subprocess.check_call(command, cwd=cwd)
