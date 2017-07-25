@@ -25,6 +25,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_INITIALIZING,
 )
 from raiden.transfer.mediated_transfer.state_change import (
+    ContractReceiveBalance,
     ContractReceiveClosed,
     ContractReceiveSettled,
 )
@@ -45,6 +46,9 @@ class ChannelExternalState(object):
 
         self.close_event = Event()
         self.settle_event = Event()
+
+        self._called_close = False
+        self._called_settle = False
 
     @property
     def opened_block(self):
@@ -93,7 +97,9 @@ class ChannelExternalState(object):
         return self.netting_channel.settled() or 0
 
     def close(self, partner_transfer):
-        return self.netting_channel.close(partner_transfer)
+        if not self._called_close:
+            self._called_close = True
+            return self.netting_channel.close(partner_transfer)
 
     def update_transfer(self, partner_transfer):
         return self.netting_channel.update_transfer(partner_transfer)
@@ -102,7 +108,9 @@ class ChannelExternalState(object):
         return self.netting_channel.withdraw(unlock_proofs)
 
     def settle(self):
-        return self.netting_channel.settle()
+        if not self._called_settle:
+            self._called_settle = True
+            return self.netting_channel.settle()
 
 
 class Channel(object):
@@ -237,7 +245,7 @@ class Channel(object):
 
         return blocks_until_settlement
 
-    def channel_closed(self, block_number):  # pylint: disable=unused-argument
+    def handle_closed(self, block_number):  # pylint: disable=unused-argument
         balance_proof = self.our_state.balance_proof
         transfer = balance_proof.transfer
 
@@ -248,6 +256,9 @@ class Channel(object):
 
         unlock_proofs = balance_proof.get_known_unlocks()
         self.external_state.withdraw(unlock_proofs)
+
+    def handle_settled(self, block_number):  # pylint: disable=unused-argument
+        pass
 
     def get_state_for(self, node_address_bin):
         if self.our_state.address == node_address_bin:
@@ -740,11 +751,26 @@ class Channel(object):
         elif isinstance(state_change, ContractReceiveClosed):
             if state_change.channel_address == self.channel_address:
                 self.external_state.set_closed(state_change.block_number)
-                self.channel_closed(state_change.block_number)
+
+                self.handle_closed(state_change.block_number)
 
         elif isinstance(state_change, ContractReceiveSettled):
             if state_change.channel_address == self.channel_address:
                 self.external_state.set_settled(state_change.block_number)
+
+                self.handle_settled(state_change.block_number)
+
+        elif isinstance(state_change, ContractReceiveBalance):
+            participant_address = state_change.participant_address
+            balance = state_change.balance
+            channel_state = self.get_state_for(participant_address)
+            block_number = state_change.block_number
+
+            if channel_state.contract_balance != balance:
+                channel_state.update_contract_balance(balance)
+
+            if self.external_state.opened_block == 0:
+                self.external_state.set_opened(block_number)
 
     def serialize(self):
         return ChannelSerialization(self)
