@@ -100,16 +100,10 @@ class ConnectionManager(object):
                 )
 
         with self.lock:
-
+            # set our available funds
             self.funds = funds
-            funding = self.initial_funding_per_partner
-            # this could be a subsequent call, or some channels already open
-            new_partner_count = max(
-                0,
-                self.initial_channel_target - len(self.open_channels)
-            )
-            for partner in self.find_new_partners(new_partner_count):
-                self._open_and_deposit(partner, funding)
+            # try to fullfill our connection goal
+            self._add_new_partners()
 
     def leave_async(self):
         """ Async version of `leave()`
@@ -214,10 +208,20 @@ class ConnectionManager(object):
             if len(self.open_channels) >= self.initial_channel_target:
                 return
 
-            num_new_partners = self.initial_channel_target - len(self.open_channels)
+            # try to fullfill our connection goal
+            self._add_new_partners()
 
-            for partner in self.find_new_partners(num_new_partners):
-                self._open_and_deposit(partner, self.initial_funding_per_partner)
+    def _add_new_partners(self):
+        """ This opens channels with a number of new partners according to the
+        connection strategy parameter `self.initial_channel_target`.
+        Each new channel will receive `self.initial_funding_per_partner` funding. """
+        # this could be a subsequent call, or some channels already open
+        new_partner_count = max(
+            0,
+            self.initial_channel_target - len(self.open_channels)
+        )
+        for partner in self.find_new_partners(new_partner_count):
+            self._open_and_deposit(partner, self.initial_funding_per_partner)
 
     def _open_and_deposit(self, partner, funding_amount):
         """ Open a channel with `partner` and deposit `funding_amount` tokens.
