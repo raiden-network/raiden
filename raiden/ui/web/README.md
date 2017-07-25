@@ -1,13 +1,14 @@
 # Helper guide to install and test the Raiden UI
 
-* Once you come in the raidenwebui folder please run
+* Once you come in the `raiden/ui/web/` folder please run
+
 > **npm install**.
 
 This will install all the dependencies needed by Angular to run the project.
 
 * We make Cross domain requests to many servers including the Geth Server and Raiden API server we need to proxy our requests hence run the server in this way.
 
-> **ng serve --proxy-config proxy.config.json**
+> **ng serve --proxy-config proxy.config.json --base-href /ui/ --deploy-url /ui/ --delete-output-path false**
 
 You can read more about this [here](https://github.com/angular/angular-cli/blob/master/docs/documentation/stories/proxy.md)
 
@@ -15,9 +16,15 @@ You can read more about this [here](https://github.com/angular/angular-cli/blob/
 
 > **./node_modules/.bin/ng**
 
-* You can also run it with a simple
+* You can also run *serve* command with
 
 > **npm start**
+
+* You can build production-ready UI files with
+
+**npm run build:prod**
+
+It'll lay in the `dist` subfolder, and can be served directly by flask API.
 
 * Inside the folder src/assets/config we have a config.development.json. This file contains configuration details about host port etc for the raiden as well as geth because we query both the api servers simultaneously. We need to change this file so that it can pick up details according our local configuration.
 ```
