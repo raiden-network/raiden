@@ -15,7 +15,6 @@ class BuildPyCommand(build_py):
 
     def run(self):
         self.run_command('compile_contracts')
-        self.run_command('compile_webui')
         # ensure smoketest_config.json is generated
         from raiden.tests.utils.smoketest import load_or_create_smoketest_config
         load_or_create_smoketest_config()
