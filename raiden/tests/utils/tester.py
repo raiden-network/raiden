@@ -13,7 +13,7 @@ from raiden.blockchain.abi import (
     CONTRACT_REGISTRY,
 )
 from raiden.channel import Channel, ChannelEndState
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, get_contract_path
 
 
 class InvalidKey(str):
@@ -42,6 +42,80 @@ def approve_and_deposit(tester_token, nettingcontract, deposit, key):
         deposit,
         sender=key,
     )
+
+
+def deploy_standard_token(deploy_key, tester_state, token_amount):
+    standard_token_path = get_contract_path('StandardToken.sol')
+    human_token_path = get_contract_path('HumanStandardToken.sol')
+
+    standard_token_address = tester_state.contract(
+        None,
+        path=standard_token_path,
+        language='solidity',
+    )
+    tester_state.mine(number_of_blocks=1)
+
+    human_token_libraries = {
+        'StandardToken': standard_token_address.encode('hex'),
+    }
+    # using abi_contract because of the constructor_parameters
+    human_token_proxy = tester_state.abi_contract(
+        None,
+        path=human_token_path,
+        language='solidity',
+        libraries=human_token_libraries,
+        constructor_parameters=[token_amount, 'raiden', 0, 'rd'],
+        sender=deploy_key,
+    )
+    tester_state.mine(number_of_blocks=1)
+
+    human_token_address = human_token_proxy.address
+    return human_token_address
+
+
+def deploy_nettingchannel_library(deploy_key, tester_state):
+    netting_library_path = get_contract_path('NettingChannelLibrary.sol')
+    netting_channel_library_address = tester_state.contract(
+        None,
+        path=netting_library_path,
+        language='solidity',
+        contract_name='NettingChannelLibrary',
+        sender=deploy_key,
+    )
+    tester_state.mine(number_of_blocks=1)
+    return netting_channel_library_address
+
+
+def deploy_channelmanager_library(deploy_key, tester_state, tester_nettingchannel_library_address):
+    channelmanager_library_path = get_contract_path('ChannelManagerLibrary.sol')
+    manager_address = tester_state.contract(
+        None,
+        path=channelmanager_library_path,
+        language='solidity',
+        contract_name='ChannelManagerLibrary',
+        libraries={
+            'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex'),
+        },
+        sender=deploy_key,
+    )
+    tester_state.mine(number_of_blocks=1)
+    return manager_address
+
+
+def deploy_registry(deploy_key, tester_state, channel_manager_library_address):
+    registry_path = get_contract_path('Registry.sol')
+    registry_address = tester_state.contract(
+        None,
+        path=registry_path,
+        language='solidity',
+        contract_name='Registry',
+        libraries={
+            'ChannelManagerLibrary': channel_manager_library_address.encode('hex')
+        },
+        sender=deploy_key,
+    )
+    tester_state.mine(number_of_blocks=1)
+    return registry_address
 
 
 def create_tokenproxy(tester_state, tester_token_address, log_listener):
@@ -102,8 +176,7 @@ def channel_from_nettingcontract(
         our_key,
         netting_contract,
         external_state,
-        reveal_timeout,
-        block_number):
+        reveal_timeout):
     """ Create a `channel.Channel` for the `netting_contract`.
 
     Use this to make sure that both implementations (the smart contract and the
@@ -153,10 +226,46 @@ def channel_from_nettingcontract(
     return channel
 
 
-def new_channelmanager(our_key, tester_state, log_listener, tester_registry, tester_token):
+def new_registry(deploy_key, tester_state, channel_manager_library_address, log_listener):
+    registry_address = deploy_registry(
+        deploy_key,
+        tester_state,
+        channel_manager_library_address,
+    )
+
+    registry = create_registryproxy(
+        tester_state,
+        registry_address,
+        log_listener,
+    )
+    return registry
+
+
+def new_token(deploy_key, tester_state, token_amount, log_listener):
+    token_address = deploy_standard_token(
+        deploy_key,
+        tester_state,
+        token_amount,
+    )
+
+    token = create_tokenproxy(
+        tester_state,
+        token_address,
+        log_listener,
+    )
+    return token
+
+
+def new_channelmanager(
+        deploy_key,
+        tester_state,
+        log_listener,
+        tester_registry,
+        tester_token_address):
+
     channel_manager_address = tester_registry.addToken(
-        tester_token.address,
-        sender=our_key,
+        tester_token_address,
+        sender=deploy_key,
     )
     tester_state.mine(number_of_blocks=1)
 
@@ -168,8 +277,13 @@ def new_channelmanager(our_key, tester_state, log_listener, tester_registry, tes
     return channelmanager
 
 
-def new_nettingcontract(our_key, partner_key, tester_state, log_listener,
-                        channelmanager, settle_timeout):
+def new_nettingcontract(
+        our_key,
+        partner_key,
+        tester_state,
+        log_listener,
+        channelmanager,
+        settle_timeout):
 
     if settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
         raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
@@ -183,16 +297,10 @@ def new_nettingcontract(our_key, partner_key, tester_state, log_listener,
     )
     tester_state.mine(number_of_blocks=1)
 
-    nettingchannel_translator = tester.ContractTranslator(
-        CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL)
-    )
-
-    nettingchannel = tester.ABIContract(
+    nettingchannel = create_nettingchannel_proxy(
         tester_state,
-        nettingchannel_translator,
         netting_channel_address0_hex,
-        log_listener=log_listener,
-        default_key=INVALID_KEY,
+        log_listener,
     )
 
     return nettingchannel

@@ -7,14 +7,17 @@ from ethereum import tester
 from ethereum.utils import int_to_addr, zpad
 from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 
-
-from raiden.utils import privatekey_to_address, get_contract_path
+from raiden.utils import privatekey_to_address
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.tests.utils.tester import (
     approve_and_deposit,
     channel_from_nettingcontract,
     create_registryproxy,
     create_tokenproxy,
+    deploy_channelmanager_library,
+    deploy_nettingchannel_library,
+    deploy_registry,
+    deploy_standard_token,
     new_channelmanager,
     new_nettingcontract,
 )
@@ -92,77 +95,42 @@ def tester_state(deploy_key, private_keys, tester_blockgas_limit):
 
 @pytest.fixture
 def tester_token_address(private_keys, token_amount, tester_state, sender_index=0):
-    standard_token_path = get_contract_path('StandardToken.sol')
-    human_token_path = get_contract_path('HumanStandardToken.sol')
+    deploy_key = private_keys[sender_index]
 
-    standard_token_address = tester_state.contract(
-        None,
-        path=standard_token_path,
-        language='solidity',
+    return deploy_standard_token(
+        deploy_key,
+        tester_state,
+        token_amount,
     )
-    tester_state.mine(number_of_blocks=1)
-
-    human_token_libraries = {
-        'StandardToken': standard_token_address.encode('hex'),
-    }
-    # using abi_contract because of the constructor_parameters
-    human_token_proxy = tester_state.abi_contract(
-        None,
-        path=human_token_path,
-        language='solidity',
-        libraries=human_token_libraries,
-        constructor_parameters=[token_amount, 'raiden', 0, 'rd'],
-        sender=private_keys[sender_index],
-    )
-    tester_state.mine(number_of_blocks=1)
-
-    human_token_address = human_token_proxy.address
-    return human_token_address
 
 
 @pytest.fixture
-def tester_nettingchannel_library_address(tester_state):
-    netting_library_path = get_contract_path('NettingChannelLibrary.sol')
-    library_address = tester_state.contract(
-        None,
-        path=netting_library_path,
-        language='solidity',
-        contract_name='NettingChannelLibrary',
+def tester_nettingchannel_library_address(deploy_key, tester_state):
+    return deploy_nettingchannel_library(
+        deploy_key,
+        tester_state,
     )
-    tester_state.mine(number_of_blocks=1)
-    return library_address
 
 
 @pytest.fixture
-def tester_channelmanager_library_address(tester_state, tester_nettingchannel_library_address):
-    channelmanager_library_path = get_contract_path('ChannelManagerLibrary.sol')
-    manager_address = tester_state.contract(
-        None,
-        path=channelmanager_library_path,
-        language='solidity',
-        contract_name='ChannelManagerLibrary',
-        libraries={
-            'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex'),
-        }
+def tester_channelmanager_library_address(
+        deploy_key,
+        tester_state,
+        tester_nettingchannel_library_address):
+    return deploy_channelmanager_library(
+        deploy_key,
+        tester_state,
+        tester_nettingchannel_library_address,
     )
-    tester_state.mine(number_of_blocks=1)
-    return manager_address
 
 
 @pytest.fixture
-def tester_registry_address(tester_state, tester_channelmanager_library_address):
-    registry_path = get_contract_path('Registry.sol')
-    registry_address = tester_state.contract(
-        None,
-        path=registry_path,
-        language='solidity',
-        contract_name='Registry',
-        libraries={
-            'ChannelManagerLibrary': tester_channelmanager_library_address.encode('hex')
-        }
+def tester_registry_address(tester_state, deploy_key, tester_channelmanager_library_address):
+    return deploy_registry(
+        deploy_key,
+        tester_state,
+        tester_channelmanager_library_address,
     )
-    tester_state.mine(number_of_blocks=1)
-    return registry_address
 
 
 @pytest.fixture
@@ -184,7 +152,7 @@ def tester_token(token_amount, private_keys, tester_state, tester_token_address,
 
     privatekey0 = private_keys[0]
     for transfer_to in private_keys[1:]:
-        token.transfer(
+        token.transfer(  # pylint: disable=no-member
             privatekey_to_address(transfer_to),
             token_amount // len(private_keys),
             sender=privatekey0,
@@ -215,7 +183,7 @@ def tester_channelmanager(
         tester_state,
         tester_events.append,
         tester_registry,
-        tester_token,
+        tester_token.address,
     )
     return channel_manager
 
@@ -289,7 +257,6 @@ def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
             nettingcontract,
             first_externalstate,
             reveal_timeout,
-            tester_state.block.number,
         )
 
         second_externalstate = ChannelExternalStateTester(
@@ -302,7 +269,6 @@ def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
             nettingcontract,
             second_externalstate,
             reveal_timeout,
-            tester_state.block.number,
         )
 
         result.append(

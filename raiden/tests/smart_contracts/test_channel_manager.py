@@ -180,7 +180,7 @@ def test_channelmanager_start_with_zero_entries(
         tester_state,
         tester_events.append,
         tester_registry,
-        tester_token,
+        tester_token.address,
     )
 
     # pylint: disable=no-member
