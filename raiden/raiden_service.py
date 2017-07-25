@@ -293,7 +293,8 @@ class RaidenService(object):
     def get_block_number(self):
         return self._blocknumber
 
-    def poll_blockchain_events(self, current_block):
+    def poll_blockchain_events(self, current_block=None):
+        # pylint: disable=unused-argument
         on_statechange = self.state_machine_event_handler.on_blockchain_statechange
 
         for state_change in self.pyethapp_blockchain_events.poll_state_change():
