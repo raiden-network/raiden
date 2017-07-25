@@ -121,19 +121,19 @@ def test_refund_transfer_min_max(amount, identifier, nonce, transferred_amount):
     assert decode(refund_transfer.encode()) == refund_transfer
 
 
-@pytest.mark.parametrize('args', MEDIATED_TRANSFER_INVALID_VALUES)
-def test_mediated_transfer_out_of_bounds_values(args):
-    with pytest.raises(ValueError):
-        make_mediated_transfer(**args)
+def test_mediated_transfer_out_of_bounds_values():
+    for args in MEDIATED_TRANSFER_INVALID_VALUES:
+        with pytest.raises(ValueError):
+            make_mediated_transfer(**args)
 
 
-@pytest.mark.parametrize('args', REFUND_TRANSFER_INVALID_VALUES)
-def test_refund_transfer_out_of_bounds_values(args):
-    with pytest.raises(ValueError):
-        make_refund_transfer(**args)
+def test_refund_transfer_out_of_bounds_values():
+    for args in REFUND_TRANSFER_INVALID_VALUES:
+        with pytest.raises(ValueError):
+            make_refund_transfer(**args)
 
 
-@pytest.mark.parametrize('args', DIRECT_TRANSFER_INVALID_VALUES)
-def test_direct_transfer_out_of_bounds_values(args):
-    with pytest.raises(ValueError):
-        make_direct_transfer(**args)
+def test_direct_transfer_out_of_bounds_values():
+    for args in DIRECT_TRANSFER_INVALID_VALUES:
+        with pytest.raises(ValueError):
+            make_direct_transfer(**args)
