@@ -41,6 +41,38 @@ from raiden.tests.utils.smoketest import (
 gevent.monkey.patch_all()
 
 
+def toogle_cpu_profiler(raiden):
+    try:
+        from raiden.utils.profiling.cpu import CpuProfiler
+    except ImportError:
+        slogging.get_logger(__name__).exception('cannot start cpu profiler')
+        return
+
+    if hasattr(raiden, 'profiler') and isinstance(raiden.profiler, CpuProfiler):
+        raiden.profiler.stop()
+        raiden.profiler = None
+
+    elif not hasattr(raiden, 'profiler') and raiden.config['database_path'] != ':memory:':
+        raiden.profiler = CpuProfiler(raiden.config['database_path'])
+        raiden.profiler.start()
+
+
+def toggle_trace_profiler(raiden):
+    try:
+        from raiden.utils.profiling.trace import TraceProfiler
+    except ImportError:
+        slogging.get_logger(__name__).exception('cannot start tracer profiler')
+        return
+
+    if hasattr(raiden, 'profiler') and isinstance(raiden.profiler, TraceProfiler):
+        raiden.profiler.stop()
+        raiden.profiler = None
+
+    elif not hasattr(raiden, 'profiler') and raiden.config['database_path'] != ':memory:':
+        raiden.profiler = TraceProfiler(raiden.config['database_path'])
+        raiden.profiler.start()
+
+
 class AddressType(click.ParamType):
     name = 'address'
 
@@ -438,6 +470,10 @@ def run(ctx, **kwargs):
                 gevent.signal(signal.SIGQUIT, event.set)
                 gevent.signal(signal.SIGTERM, event.set)
                 gevent.signal(signal.SIGINT, event.set)
+
+                gevent.signal(signal.SIGUSR1, toogle_cpu_profiler)
+                gevent.signal(signal.SIGUSR2, toggle_trace_profiler)
+
                 event.wait()
 
                 try:
