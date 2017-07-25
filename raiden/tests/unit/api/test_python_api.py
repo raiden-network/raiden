@@ -68,6 +68,37 @@ def test_register_token(raiden_chain, token_addresses):
         api0.register_token(token_addresses[0])
 
 
+@pytest.mark.parametrize('channels_per_node', [0])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('register_tokens', [False])
+@pytest.mark.parametrize('number_of_tokens', [1])
+def test_second_manager_address_if_token_registered(raiden_chain, token_addresses):
+    """Test recreating the scenario described on issue:
+    https://github.com/raiden-network/raiden/issues/784"""
+    app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
+
+    api0 = RaidenAPI(app0.raiden)
+    api1 = RaidenAPI(app1.raiden)
+
+    # Recreate the race condition by making sure the non-registering app won't
+    # register at all by watching for the TokenAdded blockchain event.
+    app1.raiden.alarm.remove_callback(app1.raiden.poll_blockchain_events)
+
+    manager_0token = api0.register_token(token_addresses[0])
+    # The second node does not register but just confirms token is registered.
+    # This is the behaviour the api call implement in register_token().
+    manager_1token = api1.manager_address_if_token_registered(token_addresses[0])
+
+    assert manager_0token == manager_1token
+
+    # Now make sure the token lists are populated for both nodes
+    tokens0_list = api0.get_tokens_list()
+    tokens1_list = api1.get_tokens_list()
+    assert tokens0_list == tokens1_list
+    assert len(tokens1_list) == 1
+    assert token_addresses[0] == tokens1_list[0]
+
+
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
