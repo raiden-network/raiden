@@ -19,7 +19,7 @@ different API versions. All queries start with: ``/api/<version>/``
 JSON Object Encoding
 ********************
 
-The ojects that are sent to and received from the API are JSON-encoded. Following are the common objects used in the API.
+The objects that are sent to and received from the API are JSON-encoded. Following are the common objects used in the API.
 
 Channel Object
 ===============
@@ -115,14 +115,14 @@ Example Request
 
 Example Response
 ^^^^^^^^^^^^^^^^
-+------------------+---------------------------+
-| HTTP Code        | Condition                 |
-+==================+===========================+
-| 201 Created      | For succesful Registration|
-+------------------+---------------------------+
-| 409 Conflict     | If the token is already   |
-|                  | registered                |
-+------------------+---------------------------+
++------------------+----------------------------+
+| HTTP Code        | Condition                  |
++==================+============================+
+| 201 Created      | For successful Registration|
++------------------+----------------------------+
+| 409 Conflict     | If the token is already    |
+|                  | registered                 |
++------------------+----------------------------+
 
 And with a 201 response we also get::
 
@@ -194,7 +194,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For a succesful Query     |
+| 200 OK           | For a successful Query    |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
@@ -229,7 +229,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For a succesful Query     |
+| 200 OK           | For a successful Query    |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
@@ -270,7 +270,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For a succesful Query     |
+| 200 OK           | For a successful Query    |
 +------------------+---------------------------+
 | 302 Redirect     | If the user accesses the  |
 |                  | channel link endpoint     |
@@ -316,7 +316,7 @@ and the taker (in our case ``0x61c808d82a3ac53231750dadc13c777b59310bd9``) would
         "receiving_token": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"
     }
 
-Please note that the sending/reveiving amount and token is always from the perspective of each node. That is why you see the reverse values in the two different examples.
+Please note that the sending/receiving amount and token is always from the perspective of each node. That is why you see the reverse values in the two different examples.
 
 Example Response
 ^^^^^^^^^^^^^^^^
@@ -328,7 +328,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 201 Created      | For succesful Creation    |
+| 201 Created      | For successful Creation   |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
@@ -392,7 +392,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 201 Created      | For succesful Creation    |
+| 201 Created      | For successful Creation   |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
@@ -440,7 +440,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For succesful Closing     |
+| 200 OK           | For successful Closing    |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
@@ -484,7 +484,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For succesful Settlement  |
+| 200 OK           | For successful Settlement |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
@@ -529,7 +529,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For succesful Deposit     |
+| 200 OK           | For successful Deposit    |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
@@ -656,7 +656,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For a succesful Transfer  |
+| 200 OK           | For a successful Transfer |
 |                  | creation                  |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided json is in|
@@ -723,7 +723,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For succesful Query       |
+| 200 OK           | For successful Query      |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided query     |
 |                  | string is  malformed      |
@@ -769,7 +769,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For succesful Query       |
+| 200 OK           | For successful Query      |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided query     |
 |                  | string is  malformed      |
@@ -815,7 +815,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 200 OK           | For succesful Query       |
+| 200 OK           | For successful Query      |
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided query     |
 |                  | string is  malformed      |
