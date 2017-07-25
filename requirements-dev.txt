@@ -6,6 +6,7 @@ pytest-timeout>=1.2.0
 pytest-random>=0.02
 pytest-cov
 pytest-catchlog
+hypothesis
 grequests
 psutil
 detox
