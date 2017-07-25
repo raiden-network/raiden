@@ -71,10 +71,14 @@ class RaidenAPI(object):
     def manager_address_if_token_registered(self, token_address):
         """
         If the token is registered then, return the channel manager address.
+        Also make sure that the channel manager is registered with the node.
+
         Returns None otherwise.
         """
         try:
             manager = self.raiden.chain.manager_by_token(token_address)
+            if not self.raiden.channel_manager_is_registered(manager.address):
+                self.raiden.register_channel_manager(manager.address)
             return manager.address
         except (JSONRPCClientReplyError, TransactionFailed):
             return None
