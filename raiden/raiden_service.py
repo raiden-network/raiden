@@ -201,7 +201,7 @@ class RaidenService(object):
 
         # prime the block number cache and set the callbacks
         self._blocknumber = alarm.last_block_number
-        alarm.register_callback(lambda _: self.poll_blockchain_events())
+        alarm.register_callback(self.poll_blockchain_events)
         alarm.register_callback(self.set_block_number)
 
         self.transaction_log = StateChangeLog(
@@ -293,7 +293,7 @@ class RaidenService(object):
     def get_block_number(self):
         return self._blocknumber
 
-    def poll_blockchain_events(self):
+    def poll_blockchain_events(self, current_block):
         on_statechange = self.state_machine_event_handler.on_blockchain_statechange
 
         for state_change in self.pyethapp_blockchain_events.poll_state_change():

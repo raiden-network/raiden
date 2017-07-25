@@ -54,6 +54,13 @@ class AlarmTask(Task):
 
         self.callbacks.append(callback)
 
+    def remove_callback(self, callback):
+        """Remove callback from the list of callbacks if it exists"""
+        try:
+            self.callbacks.remove(callback)
+        except:
+            pass
+
     def _run(self):  # pylint: disable=method-hidden
         log.debug('starting block number', block_number=self.last_block_number)
 
