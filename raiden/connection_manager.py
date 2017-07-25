@@ -109,15 +109,7 @@ class ConnectionManager(object):
                 self.initial_channel_target - len(self.open_channels)
             )
             for partner in self.find_new_partners(new_partner_count):
-                self.api.open(
-                    self.token_address,
-                    partner,
-                )
-                self.api.deposit(
-                    self.token_address,
-                    partner,
-                    funding
-                )
+                self._open_and_deposit(partner, funding)
 
     def leave_async(self):
         """ Async version of `leave()`
@@ -221,35 +213,44 @@ class ConnectionManager(object):
                 return
             if len(self.open_channels) >= self.initial_channel_target:
                 return
-            for partner in self.find_new_partners(
-                self.initial_channel_target - len(self.open_channels)
-            ):
-                try:
-                    self.api.open(
-                        self.token_address,
-                        partner
-                    )
-                # this can fail because of a race condition, where the channel partner opens first
-                except DuplicatedChannelError:
-                    log.error('partner opened channel first')
 
-                channelgraph = self.raiden.token_to_channelgraph[self.token_address]
-                if partner not in channelgraph.partneraddress_to_channel:
-                    self.raiden.poll_blockchain_events()
+            num_new_partners = self.initial_channel_target - len(self.open_channels)
 
-                if partner not in channelgraph.partneraddress_to_channel:
-                    log.error(
-                        'Opening new channel failed; channel already opened, '
-                        'but partner not in channelgraph',
-                        partner=pex(partner),
-                        token_address=pex(self.token_address),
-                    )
-                else:
-                    self.api.deposit(
-                        self.token_address,
-                        partner,
-                        self.initial_funding_per_partner
-                    )
+            for partner in self.find_new_partners(num_new_partners):
+                self._open_and_deposit(partner, self.initial_funding_per_partner)
+
+    def _open_and_deposit(self, partner, funding_amount):
+        """ Open a channel with `partner` and deposit `funding_amount` tokens.
+
+        If the channel was already opened (a known race condition),
+        this skips the opening and only deposits.
+        """
+        try:
+            self.api.open(
+                self.token_address,
+                partner
+            )
+        # this can fail because of a race condition, where the channel partner opens first
+        except DuplicatedChannelError:
+            log.error('partner opened channel first')
+
+        channelgraph = self.raiden.token_to_channelgraph[self.token_address]
+        if partner not in channelgraph.partneraddress_to_channel:
+            self.raiden.poll_blockchain_events()
+
+        if partner not in channelgraph.partneraddress_to_channel:
+            log.error(
+                'Opening new channel failed; channel already opened, '
+                'but partner not in channelgraph',
+                partner=pex(partner),
+                token_address=pex(self.token_address),
+            )
+        else:
+            self.api.deposit(
+                self.token_address,
+                partner,
+                funding_amount,
+            )
 
     def find_new_partners(self, number):
         """Search the token network for potential channel partners.
