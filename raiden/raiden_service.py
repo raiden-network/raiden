@@ -640,6 +640,9 @@ class RaidenService(object):
                 graph
             )
 
+    def channel_manager_is_registered(self, manager_address):
+        return manager_address in self.manager_to_token
+
     def register_channel_manager(self, manager_address):
         manager = self.chain.manager(manager_address)
         netting_channels = [
