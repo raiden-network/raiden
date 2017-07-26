@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import gevent
 
 from gevent.event import Event
 from ethereum import slogging
@@ -771,6 +772,14 @@ class Channel(object):
 
             if self.external_state.opened_block == 0:
                 self.external_state.set_opened(block_number)
+
+    def wait_for_balance_update(self, old_balance, wait_time):
+        """Intended to be called inside a greenlet to wait for a change in
+        contract balance. This function has no timeout. Timeout should be given
+        in gevent.wait()"""
+        while self.contract_balance == old_balance:
+            gevent.sleep(wait_time)
+        return True
 
     def serialize(self):
         return ChannelSerialization(self)

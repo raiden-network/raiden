@@ -216,8 +216,14 @@ class RaidenAPI(object):
         old_balance = channel.contract_balance
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         netting_channel.deposit(amount)
-        # Also make sure to update the netting_channel.py contract balance
-        channel.our_state.update_contract_balance(old_balance + amount)
+        # Wait until the balance has been updated via a state transition triggered
+        # by processing the `ChannelNewBalance` event
+        wait_for = gevent.spawn(
+            channel.wait_for_balance_update,
+            old_balance,
+            self.raiden.alarm.wait_time
+        )
+        gevent.wait([wait_for], timeout=60)
 
         return channel
 
