@@ -111,11 +111,6 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
 
     api0 = RaidenAPI(app0.raiden)
 
-    # Make sure that the deposit event is not processed to assert that our
-    # test does not accidentally succeed due to the event having been processed
-    # and not due to the deposit() API call code path.
-    app0.raiden.alarm.remove_callback(app0.raiden.poll_blockchain_events)
-
     token_address = token_addresses[0]
     channel_0_1 = channel(app0, app1, token_address)
     old_balance = channel_0_1.contract_balance
