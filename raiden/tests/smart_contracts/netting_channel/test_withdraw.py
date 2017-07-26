@@ -51,14 +51,21 @@ def test_withdraw(
         tester_state.block.number,
         secret,
     )
-    mediated0_data = str(mediated0.packed().data)
 
     proof = channel1.our_state.balance_proof.compute_proof_for_lock(
         secret,
         mediated0.lock,
     )
 
-    nettingchannel.close(mediated0_data, sender=pkey1)
+    mediated0_hash = sha3(mediated0.packed().data[:-65])
+    nettingchannel.close(
+        mediated0.nonce,
+        mediated0.transferred_amount,
+        mediated0.locksroot,
+        mediated0_hash,
+        mediated0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=1)
 
@@ -131,8 +138,16 @@ def test_withdraw_at_settlement_block(
 
     sign_key0 = PrivateKey(pkey0)
     mediated0.sign(sign_key0, address0)
-    mediated0_data = str(mediated0.packed().data)
-    nettingchannel.close(mediated0_data, sender=pkey1)
+
+    mediated0_hash = sha3(mediated0.packed().data[:-65])
+    nettingchannel.close(
+        mediated0.nonce,
+        mediated0.transferred_amount,
+        mediated0.locksroot,
+        mediated0_hash,
+        mediated0.signature,
+        sender=pkey1,
+    )
 
     block_until_settlement_end = lock_expiration - tester_state.block.number
     tester_state.mine(number_of_blocks=block_until_settlement_end)
@@ -177,9 +192,16 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_state):
         tester_state.block.number,
         secret,
     )
-    mediated0_data = str(mediated0.packed().data)
 
-    nettingchannel.close(mediated0_data, sender=pkey0)
+    mediated0_hash = sha3(mediated0.packed().data[:-65])
+    nettingchannel.close(
+        mediated0.nonce,
+        mediated0.transferred_amount,
+        mediated0.locksroot,
+        mediated0_hash,
+        mediated0.signature,
+        sender=pkey0,
+    )
 
     # expire the lock
     tester_state.mine(number_of_blocks=lock_timeout + 1)
@@ -239,7 +261,6 @@ def test_withdraw_both_participants(
         tester_state.block.number,
         secret,
     )
-    mediated01_data = str(mediated01.packed().data)
 
     mediated10 = make_mediated_transfer(
         channel1,
@@ -251,12 +272,27 @@ def test_withdraw_both_participants(
         tester_state.block.number,
         secret,
     )
-    mediated10_data = str(mediated10.packed().data)
 
-    nettingchannel.close(mediated01_data, sender=pkey1)
+    mediated01_hash = sha3(mediated01.packed().data[:-65])
+    nettingchannel.close(
+        mediated01.nonce,
+        mediated01.transferred_amount,
+        mediated01.locksroot,
+        mediated01_hash,
+        mediated01.signature,
+        sender=pkey1,
+    )
     tester_state.mine(number_of_blocks=1)
 
-    nettingchannel.updateTransfer(mediated10_data, sender=pkey0)
+    mediated10_hash = sha3(mediated10.packed().data[:-65])
+    nettingchannel.updateTransfer(
+        mediated10.nonce,
+        mediated10.transferred_amount,
+        mediated10.locksroot,
+        mediated10_hash,
+        mediated10.signature,
+        sender=pkey0,
+    )
     tester_state.mine(number_of_blocks=1)
 
     proof01 = channel1.our_state.balance_proof.compute_proof_for_lock(
@@ -312,9 +348,16 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
         tester_state.block.number,
         secret,
     )
-    mediated0_data = str(mediated0.packed().data)
 
-    nettingchannel.close(mediated0_data, sender=pkey0)
+    mediated0_hash = sha3(mediated0.packed().data[:-65])
+    nettingchannel.close(
+        mediated0.nonce,
+        mediated0.transferred_amount,
+        mediated0.locksroot,
+        mediated0_hash,
+        mediated0.signature,
+        sender=pkey0,
+    )
 
     unlock_proofs = list(channel0.our_state.balance_proof.get_known_unlocks())
     proof = unlock_proofs[0]
@@ -343,7 +386,7 @@ def test_withdraw_fails_with_partial_merkle_proof(
         settle_timeout):
 
     """ withdraw must fail if informed proof is not complete. """
-    pkey0, pkey1, nettingchannel, _, _ = tester_channels[0]
+    pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
 
     current_block = tester_state.block.number
     expiration = current_block + settle_timeout - 1
@@ -361,6 +404,7 @@ def test_withdraw_fails_with_partial_merkle_proof(
     nonce = 1 + (opened_block * (2 ** 32))
     direct_transfer = make_direct_transfer(
         nonce=nonce,
+        channel=channel0.channel_address,
         locksroot=merkle_tree.merkleroot,
         recipient=privatekey_to_address(pkey1)
     )
@@ -369,8 +413,15 @@ def test_withdraw_fails_with_partial_merkle_proof(
     sign_key = PrivateKey(pkey0)
     direct_transfer.sign(sign_key, address)
 
-    direct_transfer_data = str(direct_transfer.packed().data)
-    nettingchannel.close(direct_transfer_data, sender=pkey1)
+    direct_transfer_hash = sha3(direct_transfer.packed().data[:-65])
+    nettingchannel.close(
+        direct_transfer.nonce,
+        direct_transfer.transferred_amount,
+        direct_transfer.locksroot,
+        direct_transfer_hash,
+        direct_transfer.signature,
+        sender=pkey1,
+    )
 
     for lock in locks:
         secret = HASHLOCKS_SECRESTS[lock.hashlock]
@@ -394,7 +445,7 @@ def test_withdraw_fails_with_partial_merkle_proof(
 @pytest.mark.parametrize('tree', HASHLOCK_FOR_MERKLETREE)
 def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, settle_timeout):
     """ withdraw must fail if the proof is tampered. """
-    pkey0, pkey1, nettingchannel, _, _ = tester_channels[0]
+    pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
 
     current_block = tester_state.block.number
     expiration = current_block + settle_timeout - 1
@@ -412,6 +463,7 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, set
     nonce = 1 + (opened_block * (2 ** 32))
     direct_transfer = make_direct_transfer(
         nonce=nonce,
+        channel=channel0.channel_address,
         locksroot=merkle_tree.merkleroot,
         recipient=privatekey_to_address(pkey1)
     )
@@ -420,8 +472,15 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, set
     sign_key = PrivateKey(pkey0)
     direct_transfer.sign(sign_key, address)
 
-    direct_transfer_data = str(direct_transfer.packed().data)
-    nettingchannel.close(direct_transfer_data, sender=pkey1)
+    direct_transfer_hash = sha3(direct_transfer.packed().data[:-65])
+    nettingchannel.close(
+        direct_transfer.nonce,
+        direct_transfer.transferred_amount,
+        direct_transfer.locksroot,
+        direct_transfer_hash,
+        direct_transfer.signature,
+        sender=pkey1,
+    )
 
     for lock in locks:
         secret = HASHLOCKS_SECRESTS[lock.hashlock]
@@ -456,7 +515,7 @@ def test_withdraw_tampered_lock_amount(
         settle_timeout):
 
     """ withdraw must fail if the lock amonut is tampered. """
-    pkey0, pkey1, nettingchannel, _, _ = tester_channels[0]
+    pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
 
     current_block = tester_state.block.number
     expiration = current_block + settle_timeout - 1
@@ -474,6 +533,7 @@ def test_withdraw_tampered_lock_amount(
     nonce = 1 + (opened_block * (2 ** 32))
     direct_transfer = make_direct_transfer(
         nonce=nonce,
+        channel=channel0.channel_address,
         locksroot=merkle_tree.merkleroot,
         token=tester_token.address,
         recipient=privatekey_to_address(pkey1)
@@ -483,8 +543,15 @@ def test_withdraw_tampered_lock_amount(
     sign_key = PrivateKey(pkey0)
     direct_transfer.sign(sign_key, address)
 
-    direct_transfer_data = str(direct_transfer.packed().data)
-    nettingchannel.close(direct_transfer_data, sender=pkey1)
+    direct_transfer_hash = sha3(direct_transfer.packed().data[:-65])
+    nettingchannel.close(
+        direct_transfer.nonce,
+        direct_transfer.transferred_amount,
+        direct_transfer.locksroot,
+        direct_transfer_hash,
+        direct_transfer.signature,
+        sender=pkey1,
+    )
 
     for lock in locks:
         secret = HASHLOCKS_SECRESTS[lock.hashlock]
@@ -538,7 +605,7 @@ def test_withdraw_lock_with_a_large_expiration(
         expiration=lock_expiration,
         hashlock=lock_hashlock,
     )
-    mediated = make_mediated_transfer(
+    mediated0 = make_mediated_transfer(
         channel0,
         channel1,
         address0,
@@ -549,9 +616,17 @@ def test_withdraw_lock_with_a_large_expiration(
         secret,
     )
 
-    nettingchannel.close('', sender=pkey0)
-    transfer_data = str(mediated.packed().data)
-    nettingchannel.updateTransfer(transfer_data, sender=pkey1)
+    nettingchannel.close(sender=pkey0)
+
+    mediated0_hash = sha3(mediated0.packed().data[:-65])
+    nettingchannel.updateTransfer(
+        mediated0.nonce,
+        mediated0.transferred_amount,
+        mediated0.locksroot,
+        mediated0_hash,
+        mediated0.signature,
+        sender=pkey1,
+    )
 
     unlock_proofs = list(channel1.our_state.balance_proof.get_known_unlocks())
     proof = unlock_proofs[0]

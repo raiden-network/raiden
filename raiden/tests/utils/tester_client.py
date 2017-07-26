@@ -17,6 +17,7 @@ from raiden.utils import (
     isaddress,
     pex,
     privatekey_to_address,
+    sha3,
 )
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -144,8 +145,22 @@ class ChannelExternalStateTester(object):
     def can_transfer(self):
         return self.netting_channel.can_transfer()
 
-    def update_transfer(self, first_transfer):
-        return self.netting_channel.update_transfer(first_transfer)
+    def update_transfer(self, partner_transfer):
+        nonce = partner_transfer.nonce
+        transferred_amount = partner_transfer.transferred_amount
+        locksroot = partner_transfer.locksroot
+        signature = partner_transfer.signature
+
+        packed = partner_transfer.packed()
+        message_hash = sha3(packed.data[:-65])
+
+        return self.netting_channel.update_transfer(
+            nonce,
+            transferred_amount,
+            locksroot,
+            message_hash,
+            signature,
+        )
 
     def withdraw(self, unlock_proofs):
         return self.netting_channel.withdraw(unlock_proofs)
@@ -658,31 +673,58 @@ class NettingChannelTesterMock(object):
             data[2],
         ))
 
-    def close(self, their_transfer):
-        their_encoded = ''
-        if their_transfer is not None:
-            their_encoded = their_transfer.encode()
-
+    def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         # this transaction may fail if there is a race to close the channel
-        self.proxy.close(their_encoded)
-        self.tester_state.mine(number_of_blocks=1)
+
         log.info(
-            'close called',
-            contract=pex(self.address),
-            their_transfer=their_transfer,
+            'closing channel',
+            contract=pex(self.proxy.address),
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locksroot=locksroot,
+            extra_hash=extra_hash,
+            signature=signature,
         )
 
-    def update_transfer(self, first_transfer):
-        if first_transfer is not None:
-            first_encoded = first_transfer.encode()
-            self.proxy.updateTransfer(first_encoded)
+        self.proxy.close(
+            nonce,
+            transferred_amount,
+            locksroot,
+            extra_hash,
+            signature,
+        )
+        self.tester_state.mine(number_of_blocks=1)
+
+        log.info(
+            'close sucessfull',
+            contract=pex(self.proxy.address),
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locksroot=locksroot,
+            extra_hash=extra_hash,
+            signature=signature,
+        )
+
+    def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
+        if signature:
+            self.proxy.updateTransfer(
+                nonce,
+                transferred_amount,
+                locksroot,
+                extra_hash,
+                signature,
+            )
             self.tester_state.mine(number_of_blocks=1)
 
-        log.info(
-            'update_transfer called',
-            contract=pex(self.address),
-            first_transfer=first_transfer
-        )
+            log.info(
+                'update_transfer called',
+                contract=pex(self.address),
+                nonce=nonce,
+                transferred_amount=transferred_amount,
+                locksroot=locksroot,
+                extra_hash=extra_hash,
+                signature=signature,
+            )
 
     def withdraw(self, unlock_proofs):
         # force a list to get the length (could be a generator)

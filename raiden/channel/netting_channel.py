@@ -100,10 +100,41 @@ class ChannelExternalState(object):
     def close(self, partner_transfer):
         if not self._called_close:
             self._called_close = True
-            return self.netting_channel.close(partner_transfer)
+
+            if partner_transfer:
+                nonce = partner_transfer.nonce
+                transferred_amount = partner_transfer.transferred_amount
+                locksroot = partner_transfer.locksroot
+                signature = partner_transfer.signature
+
+                packed = partner_transfer.packed()
+                message_hash = sha3(packed.data[:-65])
+
+                return self.netting_channel.close(
+                    nonce,
+                    transferred_amount,
+                    locksroot,
+                    message_hash,
+                    signature,
+                )
 
     def update_transfer(self, partner_transfer):
-        return self.netting_channel.update_transfer(partner_transfer)
+        if partner_transfer:
+            nonce = partner_transfer.nonce
+            transferred_amount = partner_transfer.transferred_amount
+            locksroot = partner_transfer.locksroot
+            signature = partner_transfer.signature
+
+            packed = partner_transfer.packed()
+            message_hash = sha3(packed.data[:-65])
+
+            return self.netting_channel.update_transfer(
+                nonce,
+                transferred_amount,
+                locksroot,
+                message_hash,
+                signature,
+            )
 
     def withdraw(self, unlock_proofs):
         return self.netting_channel.withdraw(unlock_proofs)

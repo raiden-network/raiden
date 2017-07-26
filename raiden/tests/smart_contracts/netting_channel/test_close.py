@@ -10,7 +10,7 @@ from raiden.tests.utils.messages import (
     make_direct_transfer,
 )
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, sha3
 
 
 def test_close_event(tester_state, tester_nettingcontracts, tester_events):
@@ -19,7 +19,7 @@ def test_close_event(tester_state, tester_nettingcontracts, tester_events):
     address = privatekey_to_address(pkey0)
 
     previous_events = list(tester_events)
-    nettingchannel.close('', sender=pkey0)
+    nettingchannel.close(sender=pkey0)
     assert len(previous_events) + 1 == len(tester_events)
 
     block_number = tester_state.block.number
@@ -37,7 +37,7 @@ def test_close_first_participant_can_close(tester_state, tester_nettingcontracts
     address0 = privatekey_to_address(pkey0)
 
     block_number = tester_state.block.number
-    nettingchannel.close('', sender=pkey0)
+    nettingchannel.close(sender=pkey0)
 
     assert nettingchannel.closed(sender=pkey0) == block_number
     assert nettingchannel.closingAddress(sender=pkey0) == encode_hex(address0)
@@ -49,7 +49,7 @@ def test_close_second_participant_can_close(tester_state, tester_nettingcontract
     address1 = privatekey_to_address(pkey1)
 
     closed_block_number = tester_state.block.number
-    nettingchannel.close('', sender=pkey1)
+    nettingchannel.close(sender=pkey1)
 
     assert nettingchannel.closed(sender=pkey1) == closed_block_number
     assert nettingchannel.closingAddress(sender=pkey1) == encode_hex(address1)
@@ -62,7 +62,7 @@ def test_close_only_participant_can_close(tester_nettingcontracts):
 
     nonparticipant_key = tester.k3
     with pytest.raises(TransactionFailed):
-        nettingchannel.close('', sender=nonparticipant_key)
+        nettingchannel.close(sender=nonparticipant_key)
 
 
 def test_close_first_argument_is_for_partner_transfer(tester_state, tester_channels):
@@ -77,10 +77,17 @@ def test_close_first_argument_is_for_partner_transfer(tester_state, tester_chann
         amount=90,
         pkey=pkey0,
     )
-    transfer0_data = str(transfer0.packed().data)
 
+    transfer0_hash = sha3(transfer0.packed().data[:-65])
     with pytest.raises(TransactionFailed):
-        nettingchannel.close(transfer0_data, sender=pkey0)
+        nettingchannel.close(
+            transfer0.nonce,
+            transfer0.transferred_amount,
+            transfer0.locksroot,
+            transfer0_hash,
+            transfer0.signature,
+            sender=pkey0,
+        )
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
@@ -104,10 +111,17 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
     nonparticipant_sign_key = PrivateKey(nonparticipant_key)
 
     transfer_nonparticipant.sign(nonparticipant_sign_key, nonparticipant_address)
-    transfer_nonparticipant_data = str(transfer_nonparticipant.packed().data)
 
+    transfer_nonparticipant_hash = sha3(transfer_nonparticipant.packed().data[:-65])
     with pytest.raises(TransactionFailed):
-        nettingchannel.close(transfer_nonparticipant_data, sender=pkey0)
+        nettingchannel.close(
+            transfer_nonparticipant.nonce,
+            transfer_nonparticipant.transferred_amount,
+            transfer_nonparticipant.locksroot,
+            transfer_nonparticipant_hash,
+            transfer_nonparticipant.signature,
+            sender=pkey0,
+        )
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
@@ -128,10 +142,17 @@ def test_close_wrong_recipient(tester_channels, private_keys):
     )
 
     transfer_wrong_recipient.sign(PrivateKey(pkey1), privatekey_to_address(pkey1))
-    transfer_wrong_recipient_data = str(transfer_wrong_recipient.packed().data)
 
+    transfer_wrong_recipient_hash = sha3(transfer_wrong_recipient.packed().data[:-65])
     with pytest.raises(TransactionFailed):
-        nettingchannel.close(transfer_wrong_recipient_data, sender=pkey0)
+        nettingchannel.close(
+            transfer_wrong_recipient.nonce,
+            transfer_wrong_recipient.transferred_amount,
+            transfer_wrong_recipient.locksroot,
+            transfer_wrong_recipient_hash,
+            transfer_wrong_recipient.signature,
+            sender=pkey0,
+        )
 
 
 def test_close_called_multiple_times(tester_state, tester_nettingcontracts):
@@ -140,13 +161,13 @@ def test_close_called_multiple_times(tester_state, tester_nettingcontracts):
     address0 = privatekey_to_address(pkey0)
 
     closed_block_number = tester_state.block.number
-    nettingchannel.close('', sender=pkey0)
+    nettingchannel.close(sender=pkey0)
 
     with pytest.raises(TransactionFailed):
-        nettingchannel.close('', sender=pkey0)
+        nettingchannel.close(sender=pkey0)
 
     with pytest.raises(TransactionFailed):
-        nettingchannel.close('', sender=pkey1)
+        nettingchannel.close(sender=pkey1)
 
     assert nettingchannel.closed(sender=pkey0) == closed_block_number
     assert nettingchannel.closingAddress(sender=pkey0) == encode_hex(address0)
@@ -186,10 +207,16 @@ def test_close_valid_tranfer_different_token(
     sign_key = PrivateKey(pkey0)
     direct_transfer_other_token.sign(sign_key, address)
 
-    direct_transfer_data = direct_transfer_other_token.encode()
-
+    direct_transfer_other_token_hash = sha3(direct_transfer_other_token.encode()[:-65])
     with pytest.raises(TransactionFailed):
-        nettingchannel.close(direct_transfer_data, sender=pkey1)
+        nettingchannel.close(
+            direct_transfer_other_token.nonce,
+            direct_transfer_other_token.transferred_amount,
+            direct_transfer_other_token.locksroot,
+            direct_transfer_other_token_hash,
+            direct_transfer_other_token.signature,
+            sender=pkey1,
+        )
 
 
 def test_close_tampered_identifier(tester_state, tester_channels):
@@ -208,10 +235,17 @@ def test_close_tampered_identifier(tester_state, tester_channels):
 
     tampered_transfer = DirectTransfer.decode(transfer0_data)
     tampered_transfer.identifier += 1
-    tampered_transfer_data = tampered_transfer.encode()
 
+    tampered_transfer_hash = sha3(tampered_transfer.encode()[:-65])
     with pytest.raises(TransactionFailed):
-        nettingchannel.close(tampered_transfer_data, sender=pkey1)
+        nettingchannel.close(
+            tampered_transfer.nonce,
+            tampered_transfer.transferred_amount,
+            tampered_transfer.locksroot,
+            tampered_transfer_hash,
+            tampered_transfer.signature,
+            sender=pkey1,
+        )
 
 
 def test_close_tampered_nonce(tester_state, tester_channels):
@@ -230,7 +264,14 @@ def test_close_tampered_nonce(tester_state, tester_channels):
 
     tampered_transfer = DirectTransfer.decode(transfer0_data)
     tampered_transfer.nonce += 1
-    tampered_transfer_data = tampered_transfer.encode()
 
+    tampered_transfer_hash = sha3(tampered_transfer.encode()[:-65])
     with pytest.raises(TransactionFailed):
-        nettingchannel.close(tampered_transfer_data, sender=pkey1)
+        nettingchannel.close(
+            tampered_transfer.nonce,
+            tampered_transfer.transferred_amount,
+            tampered_transfer.locksroot,
+            tampered_transfer_hash,
+            tampered_transfer.signature,
+            sender=pkey1,
+        )
