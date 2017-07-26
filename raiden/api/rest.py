@@ -17,6 +17,7 @@ from raiden.exceptions import (
     InvalidAmount,
     InvalidState,
     InvalidSettleTimeout,
+    InsufficientFunds,
     NoPathError,
     SamePeerAddress,
 )
@@ -267,12 +268,13 @@ class RestAPI(object):
                 )
             except EthNodeCommunicationError as e:
                 return make_response(str(e), httplib.REQUEST_TIMEOUT)
+            except InsufficientFunds as e:
+                return make_response(str(e), httplib.CONFLICT)
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
         return jsonify_with_response(data=result.data, status_code=httplib.CREATED)
 
     def deposit(self, token_address, partner_address, amount):
-
         try:
             raiden_service_result = self.raiden_api.deposit(
                 token_address,
@@ -281,6 +283,8 @@ class RestAPI(object):
             )
         except EthNodeCommunicationError as e:
             return make_response(str(e), httplib.REQUEST_TIMEOUT)
+        except InsufficientFunds as e:
+            return make_response(str(e), httplib.CONFLICT)
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
         return jsonify(result.data)
@@ -422,11 +426,14 @@ class RestAPI(object):
                     "Can't deposit on a closed channel",
                     httplib.CONFLICT,
                 )
-            raiden_service_result = self.raiden_api.deposit(
-                channel.token_address,
-                channel.partner_address,
-                balance
-            )
+            try:
+                raiden_service_result = self.raiden_api.deposit(
+                    channel.token_address,
+                    channel.partner_address,
+                    balance
+                )
+            except InsufficientFunds as e:
+                return make_response(str(e), httplib.CONFLICT)
             result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
             return jsonify(result.data)
 
