@@ -270,10 +270,10 @@ class ApiTestContext():
             )
 
     def token_swap(self, **kwargs):
-        self._check_tokenswap_input('from_token', 'sending_token', kwargs)
-        self._check_tokenswap_input('from_amount', 'sending_amount', kwargs)
-        self._check_tokenswap_input('to_token', 'receiving_token', kwargs)
-        self._check_tokenswap_input('to_amount', 'receiving_amount', kwargs)
+        self._check_tokenswap_input('maker_token', 'sending_token', kwargs)
+        self._check_tokenswap_input('maker_amount', 'sending_amount', kwargs)
+        self._check_tokenswap_input('taker_token', 'receiving_token', kwargs)
+        self._check_tokenswap_input('taker_amount', 'receiving_amount', kwargs)
 
     def expect_token_swap(self, **kwargs):
         self._check_tokenswap_input('identifier', 'identifier', kwargs)
