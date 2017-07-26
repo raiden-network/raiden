@@ -985,51 +985,93 @@ class NettingChannel(object):
     def settled(self):
         return self.proxy.settled.call()
 
-    def close(self, their_transfer):
-        if their_transfer:
-            their_encoded = their_transfer.encode()
-        else:
-            their_encoded = ''
-
+    def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         transaction_hash = estimate_and_transact(
             self,
             self.proxy.close,
-            their_encoded,
+            nonce,
+            transferred_amount,
+            locksroot,
+            extra_hash,
+            signature,
         )
+
         try:
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException as e:
-            raise e
-        except InvalidTransaction as e:
-            raise e
-        log.info(
-            'close called',
-            contract=pex(self.address),
-            their_transfer=their_transfer,
-        )
+            log.info(
+                'closing channel',
+                contract=pex(self.address),
+                nonce=nonce,
+                transferred_amount=transferred_amount,
+                locksroot=locksroot,
+                extra_hash=extra_hash,
+                signature=signature,
+            )
 
-    def update_transfer(self, their_transfer):
-        if their_transfer is not None:
-            their_transfer_encoded = their_transfer.encode()
+            self.client.poll(
+                transaction_hash.decode('hex'),
+                timeout=self.poll_timeout,
+            )
+        except (InvalidTransaction, JSONRPCPollTimeoutException):
+            log.critical(
+                'close failed',
+                contract=pex(self.address),
+                nonce=nonce,
+                transferred_amount=transferred_amount,
+                locksroot=locksroot,
+                extra_hash=extra_hash,
+                signature=signature,
+            )
+            raise
+        else:
+            log.info(
+                'close sucessfull',
+                contract=pex(self.address),
+                nonce=nonce,
+                transferred_amount=transferred_amount,
+                locksroot=locksroot,
+                extra_hash=extra_hash,
+                signature=signature,
+            )
 
+    def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
+        if signature:
             transaction_hash = estimate_and_transact(
                 self,
                 self.proxy.updateTransfer,
-                their_transfer_encoded,
+                nonce,
+                transferred_amount,
+                locksroot,
+                extra_hash,
+                signature,
             )
 
             try:
-                self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-            except JSONRPCPollTimeoutException as e:
-                raise e
-            except InvalidTransaction as e:
-                raise e
+                self.client.poll(
+                    transaction_hash.decode('hex'),
+                    timeout=self.poll_timeout,
+                )
+            except (InvalidTransaction, JSONRPCPollTimeoutException):
+                log.critical(
+                    'updateTransfer failed',
+                    contract=pex(self.address),
+                    nonce=nonce,
+                    transferred_amount=transferred_amount,
+                    locksroot=locksroot,
+                    extra_hash=extra_hash,
+                    signature=signature,
+                )
 
-            log.info(
-                'update_transfer called',
-                contract=pex(self.address),
-                their_transfer=their_transfer,
-            )
+                raise
+            else:
+                log.info(
+                    'updateTransfer sucessfull',
+                    contract=pex(self.address),
+                    nonce=nonce,
+                    transferred_amount=transferred_amount,
+                    locksroot=locksroot,
+                    extra_hash=extra_hash,
+                    signature=signature,
+                )
             # TODO: check if the ChannelSecretRevealed event was emitted and if
             # it wasn't raise an error
 

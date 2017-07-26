@@ -132,7 +132,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # a ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
-    bob_alice_channel.external_state.netting_channel.close(transfermessage)
+    bob_alice_channel.external_state.close(transfermessage)
     wait_until_block(alice_chain, alice_chain.block_number() + 1)
 
     assert alice_bob_channel.external_state.close_event.wait(timeout=15)
@@ -246,7 +246,7 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     last_transfer = get_sent_transfer(forward_channel, 1)
 
     # call close giving the secret for a transfer that has being revealed
-    back_channel.external_state.netting_channel.close(last_transfer)
+    back_channel.external_state.close(last_transfer)
 
     # check that the double unlock will fail
     with pytest.raises(Exception):

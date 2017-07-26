@@ -15,7 +15,7 @@ def test_settle_event(settle_timeout, tester_state, tester_events, tester_nettin
     """ The event ChannelSettled is emitted when the channel is settled. """
     pkey0, _, nettingchannel = tester_nettingcontracts[0]
 
-    nettingchannel.close('', sender=pkey0)
+    nettingchannel.close(sender=pkey0)
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
@@ -49,7 +49,7 @@ def test_settle_unused_channel(
     initial_balance0 = tester_token.balanceOf(address0, sender=pkey0)
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
-    nettingchannel.close('', sender=pkey0)
+    nettingchannel.close(sender=pkey0)
     tester_state.mine(number_of_blocks=settle_timeout + 1)
 
     nettingchannel.settle(sender=pkey0)
@@ -87,9 +87,16 @@ def test_settle_single_direct_transfer_for_closing_party(
         amount,
         pkey0,
     )
-    transfer0_data = str(transfer0.packed().data)
+    transfer0_hash = sha3(transfer0.packed().data[:-65])
 
-    nettingchannel.close(transfer0_data, sender=pkey1)
+    nettingchannel.close(
+        transfer0.nonce,
+        transfer0.transferred_amount,
+        transfer0.locksroot,
+        transfer0_hash,
+        transfer0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
@@ -127,10 +134,17 @@ def test_settle_single_direct_transfer_for_counterparty(
         amount,
         pkey0,
     )
-    transfer0_data = str(transfer0.packed().data)
+    transfer0_hash = sha3(transfer0.packed().data[:-65])
 
-    nettingchannel.close('', sender=pkey0)
-    nettingchannel.updateTransfer(transfer0_data, sender=pkey1)
+    nettingchannel.close(sender=pkey0)
+    nettingchannel.updateTransfer(
+        transfer0.nonce,
+        transfer0.transferred_amount,
+        transfer0.locksroot,
+        transfer0_hash,
+        transfer0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
@@ -166,7 +180,6 @@ def test_settle_two_direct_transfers(
         amount0,
         pkey0,
     )
-    transfer0_data = str(transfer0.packed().data)
 
     amount1 = 30
     block_number = tester_state.block.number
@@ -177,10 +190,26 @@ def test_settle_two_direct_transfers(
         amount1,
         pkey1,
     )
-    transfer1_data = str(transfer1.packed().data)
+    transfer1_hash = sha3(transfer1.packed().data[:-65])
 
-    nettingchannel.close(transfer1_data, sender=pkey0)
-    nettingchannel.updateTransfer(transfer0_data, sender=pkey1)
+    nettingchannel.close(
+        transfer1.nonce,
+        transfer1.transferred_amount,
+        transfer1.locksroot,
+        transfer1_hash,
+        transfer1.signature,
+        sender=pkey0,
+    )
+
+    transfer0_hash = sha3(transfer0.packed().data[:-65])
+    nettingchannel.updateTransfer(
+        transfer0.nonce,
+        transfer0.transferred_amount,
+        transfer0.locksroot,
+        transfer0_hash,
+        transfer0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
@@ -219,7 +248,7 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
     lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3('lock1'))
-    mediated = make_mediated_transfer(
+    mediated0 = make_mediated_transfer(
         channel0,
         channel1,
         address0,
@@ -229,10 +258,17 @@ def test_settle_with_locked_mediated_transfer_for_counterparty(
         tester_state.block.number,
     )
 
-    nettingchannel.close('', sender=pkey0)
+    nettingchannel.close(sender=pkey0)
 
-    transfer_data = str(mediated.packed().data)
-    nettingchannel.updateTransfer(transfer_data, sender=pkey1)
+    mediated0_hash = sha3(mediated0.packed().data[:-65])
+    nettingchannel.updateTransfer(
+        mediated0.nonce,
+        mediated0.transferred_amount,
+        mediated0.locksroot,
+        mediated0_hash,
+        mediated0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey1)
@@ -273,7 +309,7 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
     lock0 = Lock(amount=29, expiration=expiration0, hashlock=sha3('lock1'))
-    mediated = make_mediated_transfer(
+    mediated0 = make_mediated_transfer(
         channel0,
         channel1,
         address0,
@@ -283,8 +319,15 @@ def test_settle_with_locked_mediated_transfer_for_closing_party(
         tester_state.block.number,
     )
 
-    transfer_data = str(mediated.packed().data)
-    nettingchannel.close(transfer_data, sender=pkey1)
+    mediated0_hash = sha3(mediated0.packed().data[:-65])
+    nettingchannel.close(
+        mediated0.nonce,
+        mediated0.transferred_amount,
+        mediated0.locksroot,
+        mediated0_hash,
+        mediated0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey1)
@@ -333,7 +376,6 @@ def test_settle_two_locked_mediated_transfer_messages(
         pkey0,
         tester_state.block.number,
     )
-    mediated0_data = str(mediated0.packed().data)
 
     lock_expiration1 = tester_state.block.number + reveal_timeout + 5
     lock1 = Lock(amount=31, expiration=lock_expiration1, hashlock=sha3('lock2'))
@@ -346,10 +388,26 @@ def test_settle_two_locked_mediated_transfer_messages(
         pkey1,
         tester_state.block.number,
     )
-    mediated1_data = str(mediated1.packed().data)
 
-    nettingchannel.close(mediated0_data, sender=pkey1)
-    nettingchannel.updateTransfer(mediated1_data, sender=pkey0)
+    mediated0_hash = sha3(mediated0.packed().data[:-65])
+    nettingchannel.close(
+        mediated0.nonce,
+        mediated0.transferred_amount,
+        mediated0.locksroot,
+        mediated0_hash,
+        mediated0.signature,
+        sender=pkey1,
+    )
+
+    mediated1_hash = sha3(mediated1.packed().data[:-65])
+    nettingchannel.updateTransfer(
+        mediated1.nonce,
+        mediated1.transferred_amount,
+        mediated1.locksroot,
+        mediated1_hash,
+        mediated1.signature,
+        sender=pkey0,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
@@ -399,10 +457,18 @@ def test_two_direct_transfers(
         second_amount0,
         pkey0,
     )
-    second_direct0_data = str(second_direct0.packed().data)
 
-    nettingchannel.close('', sender=pkey0)
-    nettingchannel.updateTransfer(second_direct0_data, sender=pkey1)
+    nettingchannel.close(sender=pkey0)
+
+    second_direct0_hash = sha3(second_direct0.packed().data[:-65])
+    nettingchannel.updateTransfer(
+        second_direct0.nonce,
+        second_direct0.transferred_amount,
+        second_direct0.locksroot,
+        second_direct0_hash,
+        second_direct0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
@@ -456,10 +522,18 @@ def test_mediated_after_direct_transfer(
         pkey0,
         tester_state.block.number,
     )
-    second_mediated0_data = str(second_mediated0.packed().data)
 
-    nettingchannel.close('', sender=pkey0)
-    nettingchannel.updateTransfer(second_mediated0_data, sender=pkey1)
+    nettingchannel.close(sender=pkey0)
+
+    second_mediated0_hash = sha3(second_mediated0.packed().data[:-65])
+    nettingchannel.updateTransfer(
+        second_mediated0.nonce,
+        second_mediated0.transferred_amount,
+        second_mediated0.locksroot,
+        second_mediated0_hash,
+        second_mediated0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
@@ -497,7 +571,6 @@ def test_settlement_with_unauthorized_token_transfer(
         amount0,
         pkey0,
     )
-    transfer0_data = str(transfer0.packed().data)
 
     amount1 = 30
     block_number = tester_state.block.number
@@ -508,13 +581,29 @@ def test_settlement_with_unauthorized_token_transfer(
         amount1,
         pkey1,
     )
-    transfer1_data = str(transfer1.packed().data)
 
     extra_amount = 10
     assert tester_token.transfer(nettingchannel.address, extra_amount, sender=pkey0)
 
-    nettingchannel.close(transfer1_data, sender=pkey0)
-    nettingchannel.updateTransfer(transfer0_data, sender=pkey1)
+    transfer1_hash = sha3(transfer1.packed().data[:-65])
+    nettingchannel.close(
+        transfer1.nonce,
+        transfer1.transferred_amount,
+        transfer1.locksroot,
+        transfer1_hash,
+        transfer1.signature,
+        sender=pkey0,
+    )
+
+    transfer0_hash = sha3(transfer0.packed().data[:-65])
+    nettingchannel.updateTransfer(
+        transfer0.nonce,
+        transfer0.transferred_amount,
+        transfer0.locksroot,
+        transfer0_hash,
+        transfer0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)
@@ -554,7 +643,6 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_state, tester_
         amount0,
         pkey0,
     )
-    direct0_data = str(direct0.packed().data)
 
     amount1 = 30
     transferred_amount1 += amount1
@@ -566,10 +654,26 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_state, tester_
         amount1,
         pkey1,
     )
-    direct1_data = str(direct1.packed().data)
 
-    nettingchannel.close(direct1_data, sender=pkey0)
-    nettingchannel.updateTransfer(direct0_data, sender=pkey1)
+    direct1_hash = sha3(direct1.packed().data[:-65])
+    nettingchannel.close(
+        direct1.nonce,
+        direct1.transferred_amount,
+        direct1.locksroot,
+        direct1_hash,
+        direct1.signature,
+        sender=pkey0,
+    )
+
+    direct0_hash = sha3(direct0.packed().data[:-65])
+    nettingchannel.updateTransfer(
+        direct0.nonce,
+        direct0.transferred_amount,
+        direct0.locksroot,
+        direct0_hash,
+        direct0.signature,
+        sender=pkey1,
+    )
 
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey0)

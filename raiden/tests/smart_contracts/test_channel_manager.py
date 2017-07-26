@@ -11,7 +11,7 @@ from raiden.tests.utils.tester import (
 
 
 def netting_channel_settled(tester_state, nettingchannel, pkey, settle_timeout):
-    nettingchannel.close('', sender=pkey)
+    nettingchannel.close(sender=pkey)
     tester_state.mine(number_of_blocks=settle_timeout + 1)
     nettingchannel.settle(sender=pkey)
     tester_state.mine(1)

@@ -144,7 +144,14 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_02.detail(None)['partner_balance'] == 130
 
     # open channel with same peer again after settling
-    netting_channel_01.close(None)
+    netting_channel_01.close(
+        nonce=0,
+        transferred_amount=0,
+        locksroot='',
+        extra_hash='',
+        signature='',
+    )
+
     wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + settle_timeout + 1)
     netting_channel_01.settle()
     assert netting_channel_01.opened() is ''
