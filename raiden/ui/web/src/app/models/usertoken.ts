@@ -1,6 +1,6 @@
-export class Usertoken {
-    constructor(public address: string,
-                public symbol: string,
-                public name: string,
-                public balance: number) {}
-}
+export interface Usertoken {
+    address: string;
+    symbol: string;
+    name: string;
+    balance: number;
+};
