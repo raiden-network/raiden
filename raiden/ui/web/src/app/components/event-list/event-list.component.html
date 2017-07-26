@@ -2,7 +2,7 @@
   <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
   <input #gb type="text" pInputText size="50" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
 </div>
-<p-dataTable [value]="events$ | async" expandableRows="true" [paginator]="true" [rows]="20" [globalFilter]="gb">
+<p-dataTable [value]="events$ | async" expandableRows="true" [paginator]="true" [rows]="20" [globalFilter]="gb" resizableColumns="true">
   <p-column expander="true" styleClass="col-icon" [style]="{'width': '2.5em'}"></p-column>
   <p-column field="block_number" header="Block Number" [style]="{'width': '10%'}" [sortable]="true"></p-column>
   <p-column field="timestamp" header="Time" [style]="{'width': '10%'}" [sortable]="true">

@@ -1,5 +1,8 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { FormControl } from '@angular/forms';
+import { Observable } from 'rxjs/Observable';
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
+
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { Usertoken } from '../../models/usertoken';
@@ -14,12 +17,16 @@ import { Channel } from '../../models/channel';
 export class TokenNetworkComponent implements OnInit {
 
     @Input() raidenAddress: string;
-    public tokenBalances: Usertoken[];
-    public selectedToken: Usertoken;
     @Input() channelsToken: Channel[];
-    public displayJoinDialog: boolean = false;
-    public displayRegisterDialog: boolean = false;
-    public channelOpened: Channel = new Channel();
+
+    private tokensSubject: BehaviorSubject<void> = new BehaviorSubject(null);
+    public tokensBalances$: Observable<Usertoken[]>;
+    public selectedToken: Usertoken;
+    public refreshing = false;
+
+    public displayJoinDialog = false;
+    public displayRegisterDialog = false;
+    public channelOpened: Channel = {};
     public tokenAddress: FormControl = new FormControl();
     public funds: FormControl = new FormControl();
 
@@ -28,11 +35,10 @@ export class TokenNetworkComponent implements OnInit {
 
 
     ngOnInit() {
-        this.raidenService.getTokenBalancesOf(this.raidenAddress).subscribe(
-            (balances: Usertoken[]) => {
-                this.tokenBalances = balances;
-            }
-        );
+        this.tokensBalances$ = this.tokensSubject
+            .do(() => this.refreshing = true)
+            .switchMap(() => this.raidenService.getTokensBalances()
+                .finally(() => this.refreshing = false));
     }
 
     public showJoinDialogBox() {
@@ -90,7 +96,7 @@ export class TokenNetworkComponent implements OnInit {
         if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value)) {
             this.raidenService.registerToken(this.tokenAddress.value)
                 .subscribe((userToken: Usertoken) => {
-                    this.tokenBalances.push(userToken);
+                    this.refreshTokens();
                     this.sharedService.msg({
                         severity: 'success',
                         summary: 'Token registered',
@@ -99,6 +105,10 @@ export class TokenNetworkComponent implements OnInit {
                 })
         }
         this.showRegisterDialog(false);
+    }
+
+    public refreshTokens() {
+        this.tokensSubject.next(null);
     }
 
 }

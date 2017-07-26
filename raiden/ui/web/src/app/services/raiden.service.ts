@@ -29,24 +29,24 @@ export class RaidenService {
             .catch((error) => this.handleError(error));
     }
 
-    public getChannels(): Observable<any> {
+    public getChannels(): Observable<Channel[]> {
         return this.http.get(`${this.config.apiCall}/channels`)
-            .map((response) => <Array<any>>response.json())
+            .map((response) => <Channel[]>response.json())
             .catch((error) => this.handleError(error));
     }
 
-    public getTokenBalancesOf(raidenAddress: string): Observable<Usertoken[]> {
+    public getTokensBalances(refresh: boolean = true): Observable<Usertoken[]> {
         return this.http.get(`${this.config.apiCall}/tokens`)
             .map((response) => {
                 const tokenArray: Array<{ address: string }> = response.json();
                 return tokenArray
-                    .map((tokeninfo) => this.getUsertoken(tokeninfo.address))
+                    .map((tokeninfo) => this.getUsertoken(tokeninfo.address, refresh))
                     .filter((u) => u !== null);
             })
             .catch((error) => this.handleError(error));
     }
 
-    public getTokenNameAddresMappings() {
+    public getTokenNameAddressMappings() {
         return this.http.get(`${this.config.apiCall}/tokens`)
             .map((response) => {
                 const tokenArray: Array<{ address: string }> = response.json();
@@ -145,7 +145,7 @@ export class RaidenService {
             .map(() => {
                 this.tokenContract = this.web3.eth.contract(tokenabi);
                 const userToken: Usertoken | null = this.getUsertoken(tokenAddress);
-                if (userToken === null) {
+                if (!userToken) {
                     throw new Error('No contract on address: ' + tokenAddress);
                 }
                 return <Usertoken>userToken;
@@ -197,12 +197,12 @@ export class RaidenService {
                 name = tokenContractInstance.name();
             } catch (e) { }
             try {
-                userToken = new Usertoken(
-                    tokenAddress,
+                userToken = {
+                    address: tokenAddress,
                     symbol,
                     name,
-                    tokenContractInstance.balanceOf(this.raidenAddress).toNumber()
-                );
+                    balance: tokenContractInstance.balanceOf(this.raidenAddress).toNumber(),
+                };
             } catch (e) {
                 userToken = null;
             }
