@@ -72,18 +72,39 @@ contract NettingChannelContract {
     }
 
     /// @notice Close the channel. Can only be called by a participant in the channel.
-    /// @param theirs_encoded The last transfer recieved from our partner.
-    function close(bytes theirs_encoded) {
-        data.close(theirs_encoded);
+    function close(
+        uint64 nonce,
+        uint256 transferred_amount,
+        bytes32 locksroot,
+        bytes32 extra_hash,
+        bytes signature
+    ) {
+        data.close(
+            nonce,
+            transferred_amount,
+            locksroot,
+            extra_hash,
+            signature
+        );
         ChannelClosed(msg.sender, data.closed);
     }
 
     /// @notice Dispute the state after closing, called by the counterparty (the
     ///         participant who did not close the channel).
-    /// @param theirs_encoded The transfer the counterparty believes is the valid
-    ///                       state of the first participant.
-    function updateTransfer(bytes theirs_encoded) {
-        data.updateTransfer(theirs_encoded);
+    function updateTransfer(
+        uint64 nonce,
+        uint256 transferred_amount,
+        bytes32 locksroot,
+        bytes32 extra_hash,
+        bytes signature
+    ) {
+        data.updateTransfer(
+            nonce,
+            transferred_amount,
+            locksroot,
+            extra_hash,
+            signature
+        );
         TransferUpdated(msg.sender, block.number);
     }
 
