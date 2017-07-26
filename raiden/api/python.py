@@ -22,6 +22,7 @@ from raiden.transfer.events import (
     EventTransferReceivedSuccess,
 )
 from raiden.exceptions import (
+    EthNodeCommunicationError,
     NoPathError,
     InvalidAddress,
     InvalidAmount,
@@ -223,7 +224,17 @@ class RaidenAPI(object):
             old_balance,
             self.raiden.alarm.wait_time
         )
-        gevent.wait([wait_for], timeout=60)
+        wait_timeout_secs = 60
+        gevent.wait([wait_for], timeout=wait_timeout_secs)
+
+        # If balance is still the same then that means we did not get the event
+        # after `timeout` seconds.
+        if old_balance == channel.contract_balance:
+            raise EthNodeCommunicationError(
+                'After {} seconds the deposit event was not seen by the ethereum node.'.format(
+                    wait_timeout_secs
+                )
+            )
 
         return channel
 
