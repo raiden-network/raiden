@@ -10,12 +10,15 @@ from ethereum.utils import denoms
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import default_gasprice
 from raiden.tests.utils.blockchain import wait_until_block
+from ethereum.tester import TransactionFailed
 
 from raiden.network.rpc.client import (
-    decode_topic, patch_send_transaction, patch_send_message
+    decode_topic, patch_send_transaction, patch_send_message, check_transaction_threw
 )
 from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
+from raiden.exceptions import SamePeerAddress
+
 
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
 
@@ -297,3 +300,32 @@ def test_blockchain(
         },
     )
     assert len(log_list) == 2
+
+
+@pytest.mark.parametrize('number_of_nodes', [1])
+@pytest.mark.parametrize('channels_per_node', [0])
+def test_channel_with_self(raiden_network, settle_timeout, blockchain_type):
+    app0, = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
+
+    assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
+
+    graph0 = app0.raiden.chain.manager_by_token(token_address)
+
+    with pytest.raises(SamePeerAddress) as excinfo:
+        graph0.new_netting_channel(
+            app0.raiden.address,
+            app0.raiden.address,
+            settle_timeout,
+        )
+        assert 'Peer1 and peer2 must not be equal' in str(excinfo.value)
+
+    if blockchain_type == 'tester':
+        with pytest.raises(TransactionFailed):
+            graph0.proxy.newChannel(app0.raiden.address, settle_timeout)
+    else:
+        tx = graph0.proxy.newChannel(app0.raiden.address, settle_timeout)
+        # wait to make sure we get the receipt
+        wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + 5)
+        assert check_transaction_threw(app0.raiden.chain.client, tx) is True

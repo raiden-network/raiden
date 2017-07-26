@@ -58,6 +58,12 @@ class NoPathError(RaidenError):
     pass
 
 
+class SamePeerAddress(RaidenError):
+    """ Raised when a user tries to create a channel where the address of both
+    peers is the same.
+    """
+
+
 # TODO: Use more descriptive exceptions than this
 class InvalidState(RaidenError):
     """ Raised when the user requested action cannot be done due to the current
