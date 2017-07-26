@@ -11,7 +11,6 @@ from raiden.encoding.format import (
     namedbuffer,
     pad,
 )
-from raiden.encoding.signing import recover_publickey
 
 
 def to_bigendian(number):
@@ -214,51 +213,6 @@ CMDID_MESSAGE = {
     MEDIATEDTRANSFER: MediatedTransfer,
     REFUNDTRANSFER: RefundTransfer,
 }
-
-
-def wrap_and_validate(data):
-    ''' Try to decode data into a message and validate the signature, might
-    return None if the data is invalid.
-    '''
-    try:
-        first_byte = data[0]
-    except KeyError:
-        log.warn('data is empty')
-        return
-
-    try:
-        message_type = CMDID_MESSAGE[first_byte]
-    except KeyError:
-        log.error('unknown cmdid %s', first_byte)
-        return
-
-    try:
-        message = message_type(data)
-    except ValueError:
-        log.error('trying to decode invalid message')
-        return
-
-    assert message_type.fields_spec[-1].name == 'signature', 'signature is not the last field'
-    # this slice must be from the end of the buffer
-    message_data = message.data[:-signature.size_bytes]
-    message_signature = message.data[-signature.size_bytes:]
-
-    try:
-        publickey = recover_publickey(message_data, message_signature)
-    except ValueError:
-        # raised if the signature has the wrong length
-        log.error('invalid signature')
-        return
-    except TypeError as e:
-        # raised if the PublicKey instantiation failed
-        log.error('invalid key data: {}'.format(e.message))
-        return
-    except Exception as e:
-        # secp256k1 is using bare Exception classes: raised if the recovery failed
-        log.error('error while recovering pubkey: {}'.format(e.message))
-        return
-
-    return message, publickey
 
 
 def wrap(data):

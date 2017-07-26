@@ -98,6 +98,11 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
     names_slices = compute_slices(fields_spec)
     sorted_names = sorted(names_fields.keys())
 
+    @staticmethod
+    def get_bytes_from(buffer_, name):
+        slice_ = names_slices[name]
+        return buffer_[slice_]
+
     def __init__(self, data):
         if len(data) != size:
             raise ValueError('data buffer has the wrong size, expected {}'.format(size))
@@ -173,6 +178,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
         'fields_spec': fields_spec,
         'format': fields_format,
         'size': size,
+        'get_bytes_from': get_bytes_from,
     }
 
     return type(buffer_name, (), attributes)

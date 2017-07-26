@@ -4,6 +4,7 @@ from ethereum.utils import big_endian_to_int
 
 from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
+from raiden.encoding.signing import recover_publickey
 from raiden.utils import publickey_to_address, sha3, ishash, pex
 
 __all__ = (
@@ -127,14 +128,102 @@ class SignedMessage(Message):
 
     @classmethod
     def decode(cls, data):
-        result = messages.wrap_and_validate(data)
+        packed = messages.wrap(data)
 
-        if result is None:
+        if packed is None:
             return
 
-        packed, public_key = result
+        # signature must be at the end
+        message_type = type(packed)
+        signature = message_type.fields_spec[-1]
+        assert signature.name == 'signature', 'signature is not the last field'
+
+        data_that_was_signed = data[:-signature.size_bytes]
+        message_signature = data[-signature.size_bytes:]
+
+        try:
+            publickey = recover_publickey(data_that_was_signed, message_signature)
+        except ValueError:
+            # raised if the signature has the wrong length
+            log.error('invalid signature')
+            return
+        except TypeError as e:
+            # raised if the PublicKey instantiation failed
+            log.error('invalid key data: {}'.format(e.message))
+            return
+        except Exception as e:  # pylint: disable=broad-except
+            # secp256k1 is using bare Exception classes: raised if the recovery failed
+            log.error('error while recovering pubkey: {}'.format(e.message))
+            return
+
         message = cls.unpack(packed)  # pylint: disable=no-member
-        message.sender = publickey_to_address(public_key)
+        message.sender = publickey_to_address(publickey)
+        return message
+
+
+class EnvelopeMessage(SignedMessage):
+    def sign(self, private_key, node_address):
+        packed = self.packed()
+        klass = type(packed)
+
+        field = klass.fields_spec[-1]
+        assert field.name == 'signature', 'signature is not the last field'
+
+        data = packed.data
+        message_data = data[:-field.size_bytes]
+        message_hash = sha3(message_data)
+
+        nonce = klass.get_bytes_from(data, 'nonce')
+        transferred_amount = klass.get_bytes_from(data, 'transferred_amount')
+        locksroot = klass.get_bytes_from(data, 'locksroot')
+
+        sign_data = nonce + transferred_amount + locksroot + message_hash
+        signature = signing.sign(sign_data, private_key)
+
+        packed.signature = signature
+
+        self.sender = node_address
+        self.signature = signature
+
+    @classmethod
+    def decode(cls, data):
+        packed = messages.wrap(data)
+
+        if packed is None:
+            return
+
+        # signature must be at the end
+        message_type = type(packed)
+        signature = message_type.fields_spec[-1]
+        assert signature.name == 'signature', 'signature is not the last field'
+
+        message_data = data[:-signature.size_bytes]
+        message_signature = data[-signature.size_bytes:]
+        message_hash = sha3(message_data)
+
+        nonce = message_type.get_bytes_from(data, 'nonce')
+        transferred_amount = message_type.get_bytes_from(data, 'transferred_amount')
+        locksroot = message_type.get_bytes_from(data, 'locksroot')
+
+        data_that_was_signed = nonce + transferred_amount + locksroot + message_hash
+
+        try:
+            publickey = recover_publickey(data_that_was_signed, message_signature)
+        except ValueError:
+            # raised if the signature has the wrong length
+            log.error('invalid signature')
+            return
+        except TypeError as e:
+            # raised if the PublicKey instantiation failed
+            log.error('invalid key data: {}'.format(e.message))
+            return
+        except Exception as e:  # pylint: disable=broad-except
+            # secp256k1 is using bare Exception classes: raised if the recovery failed
+            log.error('error while recovering pubkey: {}'.format(e.message))
+            return
+
+        message = cls.unpack(packed)  # pylint: disable=no-member
+        message.sender = publickey_to_address(publickey)
         return message
 
 
@@ -301,7 +390,7 @@ class RevealSecret(SignedMessage):
         packed.signature = self.signature
 
 
-class DirectTransfer(SignedMessage):
+class DirectTransfer(EnvelopeMessage):
     """ A direct token exchange, used when both participants have a previously
     opened channel.
 
@@ -434,7 +523,7 @@ class Lock(MessageHashable):
         return not self.__eq__(other)
 
 
-class LockedTransfer(SignedMessage):
+class LockedTransfer(EnvelopeMessage):
     """ A transfer which signs that the partner can claim `locked_amount` if
     she knows the secret to `hashlock`.
 
