@@ -10,6 +10,7 @@ from pyethapp.jsonrpc import address_decoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
 from raiden import messages
+from raiden.exceptions import UnknownAddress
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
 from raiden.utils import (
     get_contract_path,
@@ -362,7 +363,7 @@ class DiscoveryTesterMock(object):
         endpoint = self.proxy.findEndpointByAddress(node_address_hex)
 
         if endpoint is '':
-            raise KeyError('Unknown address {}'.format(pex(node_address_bin)))
+            raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
 
