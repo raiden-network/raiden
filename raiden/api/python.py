@@ -213,8 +213,11 @@ class RaidenAPI(object):
         token.approve(netcontract_address, amount)
 
         # Obtain the netting channel and fund it by depositing the amount
+        old_balance = channel.contract_balance
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
         netting_channel.deposit(amount)
+        # Also make sure to update the netting_channel.py contract balance
+        channel.our_state.update_contract_balance(old_balance + amount)
 
         return channel
 
