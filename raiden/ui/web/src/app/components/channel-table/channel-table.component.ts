@@ -53,7 +53,7 @@ export class ChannelTableComponent implements OnInit {
                     if (oldchannel) {
                         Object.assign(oldchannel, newchannel);
                     } else {
-                        oldChannels.push(newchannel);
+                        oldChannels.push(Object.assign(newchannel, { menu: this.menuFor(newchannel) }));
                     }
                 }
                 return oldChannels.filter((oldchannel) =>
