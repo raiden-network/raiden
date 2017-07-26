@@ -99,6 +99,30 @@ def test_second_manager_address_if_token_registered(raiden_chain, token_addresse
     assert token_addresses[0] == tokens1_list[0]
 
 
+@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('number_of_tokens', [1])
+def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
+    """Test that the balance of a channel gets updated by the deposit() call
+    immediately and without having to wait for the `ContractReceiveBalance`
+    message since the API needs to return the channel with the deposit balance
+    updated"""
+    app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
+
+    api0 = RaidenAPI(app0.raiden)
+
+    # Make sure that the deposit event is not processed to assert that our
+    # test does not accidentally succeed due to the event having been processed
+    # and not due to the deposit() API call code path.
+    app0.raiden.alarm.remove_callback(app0.raiden.poll_blockchain_events)
+
+    token_address = token_addresses[0]
+    channel_0_1 = channel(app0, app1, token_address)
+    old_balance = channel_0_1.contract_balance
+    returned_channel = api0.deposit(token_address, app1.raiden.address, 10)
+    assert returned_channel.contract_balance == old_balance + 10
+
+
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
