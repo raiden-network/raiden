@@ -242,7 +242,6 @@ class RaidenMessageHandler(object):
             return
 
         graph = self.raiden.token_to_channelgraph[message.token]
-
         if not graph.has_channel(self.raiden.address, message.sender):
             raise UnknownAddress(
                 'Mediated transfer from node without an existing channel: {}'.format(

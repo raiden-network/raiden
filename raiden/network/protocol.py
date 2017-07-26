@@ -730,8 +730,8 @@ class RaidenProtocol(object):
                         message.sender,
                         ack,
                     )
-                except InvalidAddress:
-                    log.debug("Couldn't send the ACK")
+                except (InvalidAddress, UnknownAddress) as e:
+                    log.debug("Couldn't send the ACK", e=e)
 
             except (UnknownAddress, InvalidNonce, TransferWhenClosed, TransferUnwanted) as e:
                 log.DEV('maybe unwanted transfer', e=e)

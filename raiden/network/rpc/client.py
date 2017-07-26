@@ -20,6 +20,7 @@ from pyethapp.rpc_client import topic_encoder, JSONRPCClient, block_tag_encoder
 import requests
 
 from raiden import messages
+from raiden.exceptions import UnknownAddress
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -522,7 +523,7 @@ class Discovery(object):
         endpoint = self.proxy.findEndpointByAddress.call(node_address_hex)
 
         if endpoint == '':
-            raise KeyError('Unknown address {}'.format(pex(node_address_bin)))
+            raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
 
