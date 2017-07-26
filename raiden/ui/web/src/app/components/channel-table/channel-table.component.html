@@ -25,7 +25,7 @@
       <p-column field="reveal_timeout" header="RevealTimeout" [style]="{width: '100px', 'text-align': 'center'}"></p-column>
       <p-column [style]="{width: '100px', 'text-align': 'center'}">
         <ng-template let-channel="rowData" pTemplate="body">
-          <p-menu #menu popup="popup" [model]="menuFor(channel)" appendTo="body"></p-menu>
+          <p-menu #menu popup="popup" [model]="channel.menu" appendTo="body"></p-menu>
           <button pButton #menuButton type="button" icon="fa-ellipsis-v" class="ui-button-secondary" (click)="menu.toggle($event)"></button>
         </ng-template>
       </p-column>

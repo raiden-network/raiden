@@ -46,25 +46,6 @@ export class RaidenService {
             .catch((error) => this.handleError(error));
     }
 
-    public getTokenNameAddressMappings() {
-        return this.http.get(`${this.config.apiCall}/tokens`)
-            .map((response) => {
-                const tokenArray: Array<{ address: string }> = response.json();
-                const tokens: Array<{ label: string, value: string }> = [];
-                for (const tokeninfo of tokenArray) {
-                    const userToken = this.getUsertoken(tokeninfo.address, false);
-                    if (!userToken) {
-                        continue;
-                    }
-                    tokens.push({
-                        'value': tokeninfo.address,
-                        'label': userToken.name + ' (' + tokeninfo.address + ')'
-                    });
-                }
-                return tokens;
-            });
-    }
-
     public openChannel(
         partnerAddress: string,
         tokenAddress: string,
