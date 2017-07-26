@@ -28,6 +28,7 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_NEW,
     EVENT_TOKEN_ADDED,
 )
+from raiden.exceptions import SamePeerAddress
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 FILTER_ID_GENERATOR = count()
@@ -486,6 +487,9 @@ class ChannelManagerTesterMock(object):
 
         if not isaddress(peer2):
             raise ValueError('The peer2 must be a valid address')
+
+        if peer1 == peer2:
+            raise SamePeerAddress('peer1 and peer2 must not be equal')
 
         if settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
             raise ValueError('settle_timeout must be larger-or-equal to {}'.format(

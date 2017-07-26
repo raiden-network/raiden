@@ -43,6 +43,7 @@ from raiden.blockchain.abi import (
     EVENT_CHANNEL_NEW,
     EVENT_TOKEN_ADDED,
 )
+from raiden.exceptions import SamePeerAddress
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
@@ -751,6 +752,9 @@ class ChannelManager(object):
             raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
             ))
+
+        if peer1 == peer2:
+            raise SamePeerAddress('Peer1 and peer2 must not be equal')
 
         if privatekey_to_address(self.client.privkey) == peer1:
             other = peer2

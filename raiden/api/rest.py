@@ -18,6 +18,7 @@ from raiden.exceptions import (
     InvalidState,
     InvalidSettleTimeout,
     NoPathError,
+    SamePeerAddress,
 )
 from raiden.api.v1.encoding import (
     ChannelSchema,
@@ -244,7 +245,7 @@ class RestAPI(object):
                 partner_address,
                 settle_timeout
             )
-        except (InvalidAddress, InvalidSettleTimeout) as e:
+        except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress) as e:
             return make_response(str(e), httplib.CONFLICT)
 
         if balance:
