@@ -12,6 +12,7 @@ from gevent.wsgi import WSGIServer
 
 from pyethapp.jsonrpc import address_encoder
 from raiden.exceptions import (
+    EthNodeCommunicationError,
     InvalidAddress,
     InvalidAmount,
     InvalidState,
@@ -248,22 +249,28 @@ class RestAPI(object):
 
         if balance:
             # make initial deposit
-            raiden_service_result = self.raiden_api.deposit(
-                token_address,
-                partner_address,
-                balance
-            )
+            try:
+                raiden_service_result = self.raiden_api.deposit(
+                    token_address,
+                    partner_address,
+                    balance
+                )
+            except EthNodeCommunicationError as e:
+                return make_response(str(e), httplib.REQUEST_TIMEOUT)
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
         return jsonify_with_response(data=result.data, status_code=httplib.CREATED)
 
     def deposit(self, token_address, partner_address, amount):
 
-        raiden_service_result = self.raiden_api.deposit(
-            token_address,
-            partner_address,
-            amount
-        )
+        try:
+            raiden_service_result = self.raiden_api.deposit(
+                token_address,
+                partner_address,
+                amount
+            )
+        except EthNodeCommunicationError as e:
+            return make_response(str(e), httplib.REQUEST_TIMEOUT)
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
         return jsonify(result.data)

@@ -397,6 +397,10 @@ Possible Responses
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
 +------------------+---------------------------+
+| 408 Request      | If the deposit event was  |
+|     Timeout      | not read in time by the   |
+|                  | ethereum node             |
++------------------+---------------------------+
 | 409 Conflict     | If the input is invalid,  |
 |                  | such as too low settle    |
 |                  | timeout                   |
@@ -533,6 +537,10 @@ Possible Responses
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
++------------------+---------------------------+
+| 408 Request      | If the deposit event was  |
+|     Timeout      | not read in time by the   |
+|                  | ethereum node             |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+

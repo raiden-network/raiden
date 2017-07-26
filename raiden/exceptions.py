@@ -129,3 +129,9 @@ class UnknownTokenAddress(RaidenError):
 
 class STUNUnavailableException(RaidenError):
     pass
+
+
+class EthNodeCommunicationError(RaidenError):
+    """ Raised when something unexpected has happened during
+    communication with the underlying ethereum node"""
+    pass
