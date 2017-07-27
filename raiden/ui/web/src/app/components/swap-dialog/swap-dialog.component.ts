@@ -157,10 +157,10 @@ export class SwapDialogComponent implements OnInit, OnDestroy {
             role: 'taker',
             partner_address: dataarray[1],
             identifier: dataarray[2],
-            receiving_token: dataarray[3],
-            receiving_amount: +dataarray[4],
-            sending_token: dataarray[5],
-            sending_amount: +dataarray[6],
+            sending_token: dataarray[3],
+            sending_amount: +dataarray[4],
+            receiving_token: dataarray[5],
+            receiving_amount: +dataarray[6],
         }, { emitEvent: true });
         this.takerStringFC.reset();
     }
