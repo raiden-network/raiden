@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from coincurve import PrivateKey
 from hypothesis.strategies import (
     composite,
     binary,
@@ -8,7 +7,6 @@ from hypothesis.strategies import (
 
 from raiden.constants import UINT64_MAX, UINT256_MAX
 from raiden.messages import DirectTransfer
-from raiden.utils import privatekey_to_address
 
 
 privatekeys = binary(min_size=32, max_size=32)
@@ -27,16 +25,3 @@ def direct_transfer(draw, token, recipient, locksroot):
         draw(recipient),
         draw(locksroot),
     )
-
-
-@composite
-def signed_transfer(draw, transfer_strategy, privatekeys_strategy):
-    transfer = draw(transfer_strategy)
-    privatekey = draw(privatekeys_strategy)
-
-    transfer.sign(
-        PrivateKey(privatekey),
-        privatekey_to_address(privatekey),
-    )
-
-    return transfer
