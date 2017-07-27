@@ -68,6 +68,7 @@ recipient = make_field('recipient', 20, '20s')
 target = make_field('target', 20, '20s')
 initiator = make_field('initiator', 20, '20s')
 sender = make_field('sender', 20, '20s')
+channel = make_field('channel', 20, '20s')
 
 locksroot = make_field('locksroot', 32, '32s')
 hashlock = make_field('hashlock', 32, '32s')
@@ -139,12 +140,13 @@ RevealSecret = namedbuffer(
 DirectTransfer = namedbuffer(
     'direct_transfer',
     [
-        cmdid(DIRECTTRANSFER),  # [0:1]
-        pad(3),                 # [1:4]
-        nonce,                  # [4:12]
-        identifier,             # [12:20]
-        token,                  # [20:40]
-        recipient,              # [40:60]
+        cmdid(DIRECTTRANSFER),
+        pad(3),
+        nonce,
+        identifier,
+        token,
+        channel,
+        recipient,
         transferred_amount,
         optional_locksroot,
         signature,
@@ -154,42 +156,44 @@ DirectTransfer = namedbuffer(
 MediatedTransfer = namedbuffer(
     'mediated_transfer',
     [
-        cmdid(MEDIATEDTRANSFER),  # [0:1]
-        pad(3),                   # [1:4]
-        nonce,                    # [4:12]
-        identifier,               # [12:20]
-        expiration,               # [20:28]
-        token,                    # [28:48]
-        recipient,                # [48:68]
-        target,                   # [68:88]
-        initiator,                # [88:108]
-        locksroot,                # [108:140]
-        hashlock,                 # [140:172]
-        transferred_amount,       # [172:204]
-        amount,                   # [204:236]
-        fee,                      # [236:268]
-        signature,                # [268:333]
+        cmdid(MEDIATEDTRANSFER),
+        pad(3),
+        nonce,
+        identifier,
+        expiration,
+        token,
+        channel,
+        recipient,
+        target,
+        initiator,
+        locksroot,
+        hashlock,
+        transferred_amount,
+        amount,
+        fee,
+        signature,
     ]
 )
 
 RefundTransfer = namedbuffer(
     'refund_transfer',
     [
-        cmdid(REFUNDTRANSFER),  # [0:1]
-        pad(3),                 # [1:4]
-        nonce,                  # [4:12]
-        identifier,             # [12:20]
-        expiration,             # [20:28]
-        token,                  # [28:48]
-        recipient,              # [48:68]
-        target,                 # [68:88]
-        initiator,              # [88:108]
-        locksroot,              # [108:140]
-        hashlock,               # [140:172]
-        transferred_amount,     # [172:204]
-        amount,                 # [204:236]
-        fee,                    # [236:268]
-        signature,              # [268:333]
+        cmdid(REFUNDTRANSFER),
+        pad(3),
+        nonce,
+        identifier,
+        expiration,
+        token,
+        channel,
+        recipient,
+        target,
+        initiator,
+        locksroot,
+        hashlock,
+        transferred_amount,
+        amount,
+        fee,
+        signature,
     ]
 )
 

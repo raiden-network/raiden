@@ -22,7 +22,7 @@ class NettingChannelMock(object):
     # pylint: disable=no-self-use
 
     def __init__(self):
-        self.address = 'channeladdresschanneladdresschanneladdre'
+        self.address = 'channeladdresschanne'
 
     def opened(self):
         return 1
@@ -51,6 +51,7 @@ def test_end_state():
     token_address = make_address()
     privkey1, address1 = make_privkey_address()
     address2 = make_address()
+    channel_address = make_address()
 
     balance1 = 70
     balance2 = 110
@@ -91,9 +92,10 @@ def test_end_state():
     locksroot = state2.compute_merkleroot_with(lock)
 
     locked_transfer = LockedTransfer(
-        1,  # TODO: fill in identifier
+        1,
         nonce=state1.nonce,
         token=token_address,
+        channel=channel_address,
         transferred_amount=transferred_amount,
         recipient=state2.address,
         locksroot=locksroot,
@@ -685,6 +687,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
         1,  # TODO: fill in identifier
         nonce=channel0.our_state.nonce,
         token=channel0.token_address,
+        channel=channel0.channel_address,
         transferred_amount=channel1.balance + balance0 + amount,
         recipient=channel0.partner_state.address,
         locksroot=channel0.partner_state.balance_proof.merkleroot_for_unclaimed(),
@@ -786,7 +789,7 @@ def test_channel_close_called_only_once():
         def settled(self):
             return 0
 
-        def close(self, transfer):
+        def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
             self.close_calls += 1
 
     netting_channel = NettingChannelMock()

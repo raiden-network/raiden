@@ -10,7 +10,7 @@ from raiden.tests.utils.messages import (
     make_direct_transfer,
 )
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import privatekey_to_address, sha3, make_address
 
 
 def test_close_event(tester_state, tester_nettingcontracts, tester_events):
@@ -92,7 +92,7 @@ def test_close_first_argument_is_for_partner_transfer(tester_state, tester_chann
 
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_close_accepts_only_transfer_from_participants(tester_channels, private_keys):
-    """ Close must not accept a transfer from a non participant. """
+    """ Close must not accept a transfer signed by a non participant. """
     pkey0, _, nettingchannel, channel0, _ = tester_channels[0]
     nonparticipant_key = private_keys[2]
     opened_block = nettingchannel.opened(sender=pkey0)
@@ -102,6 +102,7 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
         identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
+        channel=channel0.channel_address,
         transferred_amount=10,
         recipient=channel0.our_address,
         locksroot='',
@@ -124,33 +125,34 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
         )
 
 
-@pytest.mark.parametrize('number_of_nodes', [3])
-def test_close_wrong_recipient(tester_channels, private_keys):
-    """ Close must not accept a transfer aimed at a non recipient. """
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_close_wrong_channel(tester_channels):
+    """ Close must not accept a transfer aimed at a different channel. """
     pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
     opened_block = nettingchannel.opened(sender=pkey0)
-    nonparticipant_address = privatekey_to_address(private_keys[2])
+    wrong_address = make_address()
 
     # make a transfer where the recipient is totally wrong
-    transfer_wrong_recipient = DirectTransfer(
+    transfer_wrong_channel = DirectTransfer(
         identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
+        channel=wrong_address,
         transferred_amount=10,
-        recipient=nonparticipant_address,
+        recipient=channel0.our_address,
         locksroot='',
     )
 
-    transfer_wrong_recipient.sign(PrivateKey(pkey1), privatekey_to_address(pkey1))
+    transfer_wrong_channel.sign(PrivateKey(pkey1), privatekey_to_address(pkey1))
 
-    transfer_wrong_recipient_hash = sha3(transfer_wrong_recipient.packed().data[:-65])
+    transfer_wrong_channel_hash = sha3(transfer_wrong_channel.packed().data[:-65])
     with pytest.raises(TransactionFailed):
         nettingchannel.close(
-            transfer_wrong_recipient.nonce,
-            transfer_wrong_recipient.transferred_amount,
-            transfer_wrong_recipient.locksroot,
-            transfer_wrong_recipient_hash,
-            transfer_wrong_recipient.signature,
+            transfer_wrong_channel.nonce,
+            transfer_wrong_channel.transferred_amount,
+            transfer_wrong_channel.locksroot,
+            transfer_wrong_channel_hash,
+            transfer_wrong_channel.signature,
             sender=pkey0,
         )
 

@@ -425,6 +425,7 @@ def test_receive_directtransfer_unknown(raiden_network):
         identifier=1,
         nonce=1,
         token=graph0.token_address,
+        channel=other_address,
         transferred_amount=10,
         recipient=app0.raiden.address,
         locksroot=HASH
@@ -447,6 +448,7 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
         identifier=1,
         nonce=1,
         token=graph0.token_address,
+        channel=other_address,
         transferred_amount=amount,
         recipient=app0.raiden.address,
         locksroot=locksroot,
@@ -473,6 +475,7 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
         identifier=1,
         nonce=1,
         token=graph0.token_address,
+        channel=other_address,
         transferred_amount=amount,
         recipient=app0.raiden.address,
         locksroot=HASH,
@@ -532,6 +535,7 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
         identifier=identifier,
         nonce=1,
         token=graph0.token_address,
+        channel=channel0.channel_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
         locksroot=HASH,
@@ -545,10 +549,14 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
 @pytest.mark.parametrize('channels_per_node', [2])
 def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     alice_app = raiden_network[0]
+    bob_app = raiden_network[1]
+
     messages = setup_messages_cb()
 
     graph = alice_app.raiden.token_to_channelgraph.values()[0]
     token_address = graph.token_address
+
+    channel0 = channel(alice_app, bob_app, token_address)
 
     mt_helper = MediatedTransferTestHelper(raiden_network, graph)
     initiator_address = alice_app.raiden.address
@@ -577,6 +585,7 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
         identifier=identifier,
         nonce=1,
         token=token_address,
+        channel=channel0.channel_address,
         transferred_amount=amount,
         recipient=bob_address,
         locksroot=locksroot,
@@ -595,9 +604,12 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
 @pytest.mark.parametrize('channels_per_node', [2])
 def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     alice_app = raiden_network[0]
+    bob_app = raiden_network[1]
 
     graph = alice_app.raiden.token_to_channelgraph.values()[0]
     token_address = graph.token_address
+
+    channel0 = channel(alice_app, bob_app, token_address)
 
     mt_helper = MediatedTransferTestHelper(raiden_network, graph)
     initiator_address = alice_app.raiden.address
@@ -623,6 +635,7 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
         identifier=identifier,
         nonce=1,
         token=token_address,
+        channel=channel0.channel_address,
         transferred_amount=amount,
         recipient=bob_address,
         locksroot=locksroot,
@@ -679,6 +692,7 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
         identifier=identifier,
         nonce=2,
         token=HASH[0:20],
+        channel=channel0.channel_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
         locksroot=HASH,
@@ -726,6 +740,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
         identifier=identifier,
         nonce=2,
         token=graph0.token_address,
+        channel=channel0.channel_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
         locksroot=HASH,
@@ -767,7 +782,7 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         channel1, balance1 + amount, []
     )
 
-    channel1.external_state.netting_channel.close(
+    channel1.external_state.close(
         channel1.received_transfers[-1],
     )
 
@@ -798,6 +813,7 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         identifier=1,
         nonce=1,
         token=graph0.token_address,
+        channel=channel0.channel_address,
         transferred_amount=10,
         recipient=app0.raiden.address,
         locksroot=HASH

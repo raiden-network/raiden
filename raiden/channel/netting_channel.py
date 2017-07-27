@@ -110,13 +110,20 @@ class ChannelExternalState(object):
                 packed = partner_transfer.packed()
                 message_hash = sha3(packed.data[:-65])
 
-                return self.netting_channel.close(
-                    nonce,
-                    transferred_amount,
-                    locksroot,
-                    message_hash,
-                    signature,
-                )
+            else:
+                nonce = 0
+                transferred_amount = 0
+                locksroot = ''
+                signature = ''
+                message_hash = ''
+
+            return self.netting_channel.close(
+                nonce,
+                transferred_amount,
+                locksroot,
+                message_hash,
+                signature,
+            )
 
     def update_transfer(self, partner_transfer):
         if partner_transfer:
@@ -671,6 +678,7 @@ class Channel(object):
             identifier=identifier,
             nonce=from_.nonce,
             token=self.token_address,
+            channel=self.channel_address,
             transferred_amount=transferred_amount,
             recipient=to_.address,
             locksroot=current_locksroot,
@@ -706,6 +714,7 @@ class Channel(object):
             identifier=identifier,
             nonce=from_.nonce,
             token=self.token_address,
+            channel=self.channel_address,
             transferred_amount=transferred_amount,
             recipient=to_.address,
             locksroot=updated_locksroot,

@@ -22,7 +22,7 @@ __all__ = (
 log = getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def assert_transfer_values(identifier, nonce, token, transferred_amount, recipient):
+def assert_transfer_values(identifier, nonce, token, channel, transferred_amount, recipient):
     if identifier < 0:
         raise ValueError('identifier cannot be negative')
 
@@ -34,6 +34,9 @@ def assert_transfer_values(identifier, nonce, token, transferred_amount, recipie
 
     if nonce >= 2 ** 64:
         raise ValueError('nonce is too large')
+
+    if len(channel) != 20:
+        raise ValueError('channel is an invalid address')
 
     if len(token) != 20:
         raise ValueError('token is an invalid address')
@@ -176,9 +179,10 @@ class EnvelopeMessage(SignedMessage):
         nonce = klass.get_bytes_from(data, 'nonce')
         transferred_amount = klass.get_bytes_from(data, 'transferred_amount')
         locksroot = klass.get_bytes_from(data, 'locksroot')
+        channel_address = klass.get_bytes_from(data, 'channel')
 
-        sign_data = nonce + transferred_amount + locksroot + message_hash
-        signature = signing.sign(sign_data, private_key)
+        data_to_sign = nonce + transferred_amount + locksroot + channel_address + message_hash
+        signature = signing.sign(data_to_sign, private_key)
 
         packed.signature = signature
 
@@ -204,8 +208,11 @@ class EnvelopeMessage(SignedMessage):
         nonce = message_type.get_bytes_from(data, 'nonce')
         transferred_amount = message_type.get_bytes_from(data, 'transferred_amount')
         locksroot = message_type.get_bytes_from(data, 'locksroot')
+        channel_address = message_type.get_bytes_from(data, 'channel')
 
-        data_that_was_signed = nonce + transferred_amount + locksroot + message_hash
+        data_that_was_signed = (
+            nonce + transferred_amount + locksroot + channel_address + message_hash
+        )
 
         try:
             publickey = recover_publickey(data_that_was_signed, message_signature)
@@ -417,11 +424,21 @@ class DirectTransfer(EnvelopeMessage):
 
     cmdid = messages.DIRECTTRANSFER
 
-    def __init__(self, identifier, nonce, token, transferred_amount, recipient, locksroot):
+    def __init__(
+            self,
+            identifier,
+            nonce,
+            token,
+            channel,
+            transferred_amount,
+            recipient,
+            locksroot):
+
         assert_transfer_values(
             identifier,
             nonce,
             token,
+            channel,
             transferred_amount,
             recipient,
         )
@@ -430,6 +447,7 @@ class DirectTransfer(EnvelopeMessage):
         self.identifier = identifier
         self.nonce = nonce
         self.token = token
+        self.channel = channel
         self.transferred_amount = transferred_amount  #: total amount of token sent to partner
         self.recipient = recipient  #: partner's address
         self.locksroot = locksroot  #: the merkle root that represent all pending locked transfers
@@ -440,6 +458,7 @@ class DirectTransfer(EnvelopeMessage):
             packed.identifier,
             packed.nonce,
             packed.token,
+            packed.channel,
             packed.transferred_amount,
             packed.recipient,
             packed.locksroot,
@@ -452,6 +471,7 @@ class DirectTransfer(EnvelopeMessage):
         packed.identifier = self.identifier
         packed.nonce = self.nonce
         packed.token = self.token
+        packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
@@ -538,13 +558,23 @@ class LockedTransfer(EnvelopeMessage):
     any signed [nonce, token, balance, recipient, locksroot, ...]
     along a merkle proof from locksroot to the not yet netted formerly locked amount
     """
-    def __init__(self, identifier, nonce, token, transferred_amount, recipient, locksroot, lock):
+    def __init__(
+            self,
+            identifier,
+            nonce,
+            token,
+            channel,
+            transferred_amount,
+            recipient,
+            locksroot,
+            lock):
         super(LockedTransfer, self).__init__()
 
         assert_transfer_values(
             identifier,
             nonce,
             token,
+            channel,
             transferred_amount,
             recipient,
         )
@@ -552,6 +582,7 @@ class LockedTransfer(EnvelopeMessage):
         self.identifier = identifier
         self.nonce = nonce
         self.token = token
+        self.channel = channel
         self.transferred_amount = transferred_amount
         self.recipient = recipient
         self.locksroot = locksroot
@@ -562,6 +593,7 @@ class LockedTransfer(EnvelopeMessage):
             self.identifier,
             self.nonce,
             self.token,
+            self.channel,
             self.transferred_amount,
             self.recipient,
             self.locksroot,
@@ -576,6 +608,7 @@ class LockedTransfer(EnvelopeMessage):
             self.identifier,
             self.nonce,
             self.token,
+            self.channel,
             self.transferred_amount,
             self.recipient,
             self.locksroot,
@@ -597,6 +630,7 @@ class LockedTransfer(EnvelopeMessage):
             packed.identifier,
             packed.nonce,
             packed.token,
+            packed.channel,
             packed.transferred_amount,
             packed.recipient,
             packed.locksroot,
@@ -609,6 +643,7 @@ class LockedTransfer(EnvelopeMessage):
         packed.identifier = self.identifier
         packed.nonce = self.nonce
         packed.token = self.token
+        packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
@@ -649,6 +684,7 @@ class MediatedTransfer(LockedTransfer):
             identifier,
             nonce,
             token,
+            channel,
             transferred_amount,
             recipient,
             locksroot,
@@ -670,6 +706,7 @@ class MediatedTransfer(LockedTransfer):
             identifier,
             nonce,
             token,
+            channel,
             transferred_amount,
             recipient,
             locksroot,
@@ -707,6 +744,7 @@ class MediatedTransfer(LockedTransfer):
             packed.identifier,
             packed.nonce,
             packed.token,
+            packed.channel,
             packed.transferred_amount,
             packed.recipient,
             packed.locksroot,
@@ -722,6 +760,7 @@ class MediatedTransfer(LockedTransfer):
         packed.identifier = self.identifier
         packed.nonce = self.nonce
         packed.token = self.token
+        packed.channel = self.channel
         packed.transferred_amount = self.transferred_amount
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
@@ -756,6 +795,7 @@ class RefundTransfer(MediatedTransfer):
             packed.identifier,
             packed.nonce,
             packed.token,
+            packed.channel,
             packed.transferred_amount,
             packed.recipient,
             packed.locksroot,
