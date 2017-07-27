@@ -186,3 +186,32 @@ def test_signature_split(tester_state, tester_nettingchannel_library_address):
     with pytest.raises(TransactionFailed):
         signature = signature[:-1] + chr(4)
         r, s, v = auxiliary.signatureSplit(signature)
+
+
+def test_recoverAddressFromSignature(tester_state, tester_nettingchannel_library_address):
+    auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
+    privkey, address = make_privkey_address()
+
+    msg = DirectTransfer(
+        identifier=1,
+        nonce=1,
+        token='x' * 20,
+        channel=auxiliary.address,
+        transferred_amount=10,
+        recipient='y' * 20,
+        locksroot=HASH
+    )
+    msg.sign(privkey, address)
+    data = msg.encode()
+    signature = data[-65:]
+    extra_hash = sha3(data[:-65])
+
+    computed_address = auxiliary.recoverAddressFromSignature(
+        msg.nonce,
+        msg.transferred_amount,
+        msg.locksroot,
+        extra_hash,
+        signature
+    )
+
+    assert computed_address.decode('hex') == msg.sender

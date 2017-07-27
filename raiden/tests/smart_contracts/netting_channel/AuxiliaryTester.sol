@@ -21,4 +21,20 @@ contract AuxiliaryTester {
     function signatureSplit(bytes signature) returns (bytes32 r, bytes32 s, uint8 v) {
         return NettingChannelLibrary.signatureSplit(signature);
     }
+
+    function recoverAddressFromSignature(
+        uint64 nonce,
+        uint256 transferred_amount,
+        bytes32 locksroot,
+        bytes32 extra_hash,
+        bytes signature
+    ) returns (address) {
+        return NettingChannelLibrary.recoverAddressFromSignature(
+            nonce,
+            transferred_amount,
+            locksroot,
+            extra_hash,
+            signature
+        );
+    }
 }
