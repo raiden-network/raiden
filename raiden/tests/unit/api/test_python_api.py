@@ -7,7 +7,10 @@ from raiden.tests.utils.transfer import (
     channel,
     direct_transfer,
 )
-from raiden.exceptions import NoPathError
+from raiden.exceptions import (
+    NoPathError,
+    InsufficientFunds,
+)
 from raiden.api.python import RaidenAPI
 
 # Use a large enough settle timeout to have valid transfer messages
@@ -226,3 +229,27 @@ def test_api_channel_events(raiden_chain):
         channel_0_1.channel_address, max_block + 1, max_block + 100
     )
     assert not results
+
+
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.xfail
+def test_insufficient_funds(raiden_network):
+    """Test transfer on a channel with insufficient funds. It is expected to
+    fail, as at the moment RaidenAPI is mocked and will always succeed."""
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    graph0 = app0.raiden.token_to_channelgraph.values()[0]
+    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+
+    assert graph0.token_address == graph1.token_address
+    assert app1.raiden.address in graph0.partneraddress_to_channel
+
+    with pytest.raises(InsufficientFunds):
+        RaidenAPI(app0.raiden).transfer(
+            graph0.token_address,
+            99999999999999999999,
+            target=app1.raiden.address,
+            timeout=10
+        )
