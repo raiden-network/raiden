@@ -9,19 +9,18 @@
     <ul id="menu-content" class="menu-content collapse out">
       <li>
         <a routerLink='/home' routerLinkActive="active">
-                    <i class="fa fa-dashboard fa-lg"></i>Home
-                </a>
+          <i class="fa fa-dashboard fa-lg"></i>Home
+        </a>
       </li>
       <li>
         <a routerLink='/channels' routerLinkActive="active">
-                  <i class="fa fa-user-plus fa-lg"></i>Channels
-                </a>
+          <i class="fa fa-user-plus fa-lg"></i>Channels
+        </a>
       </li>
-
       <li>
         <a routerLink='/balances' routerLinkActive="active">
-                  <i class="fa fa-money fa-lg"></i>Balances
-                </a>
+          <i class="fa fa-money fa-lg"></i>Balances
+        </a>
       </li>
     </ul>
   </div>
@@ -32,5 +31,5 @@
     <!-- Routed views go here -->
   </div>
 
-  <p-growl [(value)]="sharedService.messages"></p-growl>
+  <p-growl [(value)]="sharedService.messages" [life]="10000"></p-growl>
 </div>

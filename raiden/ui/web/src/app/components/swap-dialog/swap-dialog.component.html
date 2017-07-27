@@ -1,0 +1,75 @@
+<p-dialog header="Swap Tokens" [(visible)]="visible" [responsive]="true" showEffect="fade" [modal]="true" width="600">
+  <form class="ui-grid ui-grid-responsive ui-fluid" [formGroup]="form">
+    <div class="ui-grid-row">
+      <div class="ui-grid-col-4"><label for="role">Role</label></div>
+      <div class="ui-grid-col-8" id="role">
+        <p-radioButton name="role" formControlName="role" required value="maker" label="Maker"></p-radioButton>
+        <p-radioButton name="role" formControlName="role" required value="taker" label="Taker"></p-radioButton>
+      </div>
+    </div>
+    <div class="ui-grid-row top10">
+      <div class="ui-grid-col-4"><label for="partner_address">Partner Address</label></div>
+      <div class="ui-grid-col-8">
+        <input pInputText type="text" id="partner_address" formControlName="partner_address" class="ui-inputtext ui-corner-all ui-state-default" placeholder="0x0000000000000000000000000000000000000000" required pattern="^0x[0-9a-fA-F]{40}$" minlength="42" maxlength="42"
+        />
+      </div>
+    </div>
+    <div class="ui-grid-row top10">
+      <div class="ui-grid-col-4"><label for="identifier">Identifier</label></div>
+      <div class="ui-grid-col-8">
+        <input pInputText type="text" id="identifier" formControlName="identifier" class="ui-inputtext ui-corner-all ui-state-default" placeholder="Identifier" required pattern="^[^/]*$" minlength="4" maxlength="42" />
+      </div>
+    </div>
+    <div class="ui-grid-row top10">
+      <div class="ui-grid-col-4"><label for="sending_token">Sending Token</label></div>
+      <div class="ui-grid-col-8">
+        <p-dropdown [options]="tokenAddressMapping$ | async" id="sending_token" formControlName="sending_token" required placeholder="Select Sending Token" [style]="{'width':'100%'}" appendTo="body" autoWidth="false" [filter]="true"></p-dropdown>
+      </div>
+    </div>
+    <div class="ui-grid-row top10">
+      <div class="ui-grid-col-4"><label for="sending_amount">Sending Amount</label></div>
+      <div class="ui-grid-col-8">
+        <input pInputText type="number" id="sending_amount" formControlName="sending_amount" required class="ui-inputtext ui-corner-all ui-state-default" />
+      </div>
+    </div>
+    <div class="ui-grid-row top10">
+      <div class="ui-grid-col-4"><label for="receiving_token">Receiving Token</label></div>
+      <div class="ui-grid-col-8">
+        <p-dropdown [options]="tokenAddressMapping$ | async" id="receiving_token" formControlName="receiving_token" required placeholder="Select Receiving Token" [style]="{'width':'100%'}" appendTo="body" autoWidth="false" [filter]="true"></p-dropdown>
+      </div>
+    </div>
+    <div class="ui-grid-row top10">
+      <div class="ui-grid-col-4"><label for="receiving_amount">Receiving Amount</label></div>
+      <div class="ui-grid-col-8">
+        <input pInputText type="number" id="receiving_amount" formControlName="receiving_amount" required class="ui-inputtext ui-corner-all ui-state-default" />
+      </div>
+    </div>
+  </form>
+  <p-footer>
+    <div class="ui-grid ui-grid-responsive ui-fluid" *ngIf="formString$ | async; let formString">
+      <div class="ui-grid-row" style="text-align:left; margin:0 0.5em;">
+        <div class="ui-grid-col-4"><label for="taker_string">Taker String:</label></div>
+        <div class="ui-grid-col-8">
+          <div class="ui-inputgroup">
+            <input pInputText type="text" id="taker_string" [value]="formString" readonly class="ui-inputtext ui-corner-all ui-state-default" (focus)="$event.target.select()" (mouseup)="$event.preventDefault()" />
+            <button pButton type="button" icon="fa-clipboard" [ngClass]="copied ? 'ui-button-success' : 'ui-button-secondary'" ngxClipboard [cbContent]="formString" (cbOnSuccess)="copied = true" title="Copy to Clipboard"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ui-grid ui-grid-responsive ui-fluid" *ngIf="showTakerString$ | async">
+      <div class="ui-grid-row" style="text-align:left; margin:0 0.5em;">
+        <div class="ui-grid-col-4"><label for="taker_string">Taker String:</label></div>
+        <div class="ui-grid-col-8">
+          <div class="ui-inputgroup">
+            <input pInputText type="text" id="taker_string" [formControl]="takerStringFC" class="ui-inputtext ui-corner-all ui-state-default" placeholder="Paste here your Taker String to auto-fill form"/>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="ui-dialog-buttonpane ui-helper-clearfix">
+      <button type="button" pButton class="ui-button-success" icon="fa-retweet" (click)="accept()" label="Swap" [disabled]="form.invalid"></button>
+      <button type="button" pButton class="ui-button-danger" icon="fa-eraser" (click)="reset()" label="Reset" [disabled]="form.pristine && takerStringFC.pristine"></button>
+    </div>
+  </p-footer>
+</p-dialog>
