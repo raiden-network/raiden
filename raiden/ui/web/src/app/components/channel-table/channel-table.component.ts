@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { Router, ActivatedRoute, Params } from '@angular/router';
 import { Observable } from 'rxjs/Observable';
 
 import { RaidenService } from '../../services/raiden.service';
@@ -28,9 +27,7 @@ export class ChannelTableComponent implements OnInit {
     public watchEvents: EventsParam[] = [{}];
     public tabIndex = 0;
 
-    constructor(private route: ActivatedRoute,
-                private router: Router,
-                private raidenService: RaidenService,
+    constructor(private raidenService: RaidenService,
                 private sharedService: SharedService) { }
 
     ngOnInit() {

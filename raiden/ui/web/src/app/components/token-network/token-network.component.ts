@@ -26,6 +26,7 @@ export class TokenNetworkComponent implements OnInit {
 
     public displayJoinDialog = false;
     public displayRegisterDialog = false;
+    public displaySwapDialog = false;
     public channelOpened: Channel = {};
     public tokenAddress: FormControl = new FormControl();
     public funds: FormControl = new FormControl();
@@ -109,6 +110,10 @@ export class TokenNetworkComponent implements OnInit {
 
     public refreshTokens() {
         this.tokensSubject.next(null);
+    }
+
+    public showSwapDialog(show: boolean) {
+        this.displaySwapDialog = show;
     }
 
 }

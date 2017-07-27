@@ -17,6 +17,7 @@
     <div class="ui-helper-clearfix button-pane">
       <button type="button" pButton icon="fa-plus" class="pull-left" (click)="showJoinDialogBox()" label="Join Token Network"></button>
       <button type="button" pButton icon="fa-pencil" class="pull-left" (click)="showRegisterDialog(true)" label="Register New Token"></button>
+      <button type="button" pButton icon="fa-retweet" class="pull-left" (click)="showSwapDialog(true)" label="Swap Tokens"></button>
       <button type="button" pButton icon="fa-refresh" class="pull-left" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
     </div>
   </p-footer>
@@ -56,3 +57,5 @@
     </div>
   </p-footer>
 </p-dialog>
+
+<app-swap-dialog *ngIf="displaySwapDialog" [(visible)]="displaySwapDialog"></app-swap-dialog>

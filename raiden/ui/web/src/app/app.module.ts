@@ -1,20 +1,22 @@
 import { BrowserModule } from '@angular/platform-browser';
-import { NgModule } from '@angular/core';
+import { NgModule, APP_INITIALIZER } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { HttpModule, Http } from '@angular/http';
 import { DataTableModule, SharedModule, DataListModule, CarouselModule,
     ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule,
     TabViewModule, DropdownModule, MessagesModule, MenuModule,
-    TooltipModule } from 'primeng/primeng';
+    TooltipModule, RadioButtonModule } from 'primeng/primeng';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule, Routes } from '@angular/router';
+import { ClipboardModule } from 'ngx-clipboard';
+
 import { AppComponent } from './app.component';
 import { ChannelTableComponent } from './components/channel-table/channel-table.component';
 import { EventListComponent } from './components/event-list/event-list.component';
 import { TokenNetworkComponent } from './components/token-network/token-network.component';
 import { HomeComponent } from './components/home/home.component';
+import { SwapDialogComponent } from './components/swap-dialog/swap-dialog.component';
 
-import { APP_INITIALIZER } from '@angular/core';
 import { RaidenConfig } from './services/raiden.config';
 import { SharedService } from './services/shared.service';
 import { RaidenService } from './services/raiden.service';
@@ -41,6 +43,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         EventListComponent,
         TokenNetworkComponent,
         HomeComponent,
+        SwapDialogComponent,
         KeysPipe,
         SubsetPipe,
     ],
@@ -64,7 +67,9 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         MessagesModule,
         MenuModule,
         TooltipModule,
+        RadioButtonModule,
         NoopAnimationsModule,
+        ClipboardModule,
     ],
     providers: [
         RaidenConfig,

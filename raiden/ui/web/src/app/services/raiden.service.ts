@@ -6,6 +6,7 @@ import { tokenabi } from './tokenabi';
 import { Usertoken } from '../models/usertoken';
 import { Channel } from '../models/channel';
 import { Event, EventsParam } from '../models/event';
+import { SwapToken } from '../models/swaptoken';
 import { SharedService } from './shared.service';
 
 @Injectable()
@@ -163,6 +164,28 @@ export class RaidenService {
         return this.http.get(`${this.config.apiCall}/events/${path}`)
             .map((response) => <Event[]>response.json())
             .catch((error) => this.handleError(error));
+    }
+
+    public swapTokens(swap: SwapToken): Observable<boolean> {
+        const data = {
+            role: swap.role,
+            sending_token: swap.sending_token,
+            sending_amount: swap.sending_amount,
+            receiving_token: swap.receiving_token,
+            receiving_amount: swap.receiving_amount,
+        };
+        const headers = new Headers({ 'Content-Type': 'application/json' });
+        const options = new RequestOptions({ headers: headers });
+        return this.http.put(`${this.config.apiCall}/token_swaps/${swap.partner_address}/${swap.identifier}`,
+            JSON.stringify(data), options)
+            .switchMap((response) => response.ok
+                ? Observable.of(true)
+                : Observable.throw(response.toString()))
+            .catch((error) => this.handleError(error));
+    }
+
+    public sha3(data: string): string {
+        return this.web3.sha3(data, { encoding: 'hex' });
     }
 
     private getUsertoken(tokenAddress: string, refresh: boolean = true): Usertoken |null {
