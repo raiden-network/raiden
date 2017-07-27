@@ -250,7 +250,7 @@ def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
         first_externalstate = ChannelExternalStateTester(
             tester_state,
             first_key,
-            nettingcontract.address,
+            nettingcontract.address.decode('hex'),
         )
         first_channel = channel_from_nettingcontract(
             first_key,
@@ -262,7 +262,7 @@ def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
         second_externalstate = ChannelExternalStateTester(
             tester_state,
             second_key,
-            nettingcontract.address,
+            nettingcontract.address.decode('hex'),
         )
         second_channel = channel_from_nettingcontract(
             second_key,

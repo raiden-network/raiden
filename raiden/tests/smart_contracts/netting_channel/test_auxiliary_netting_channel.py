@@ -163,6 +163,7 @@ def test_signature_split(tester_state, tester_nettingchannel_library_address):
         identifier=1,
         nonce=1,
         token='x' * 20,
+        channel=auxiliary.address,
         transferred_amount=10,
         recipient='y' * 20,
         locksroot=HASH

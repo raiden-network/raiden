@@ -4,7 +4,7 @@ from ethereum.tester import TransactionFailed
 from coincurve import PrivateKey
 
 from raiden.messages import DirectTransfer
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import privatekey_to_address, sha3, make_address
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
 
 
@@ -160,6 +160,7 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
         identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
+        channel=channel0.channel_address,
         transferred_amount=10,
         recipient=channel1.our_address,
         locksroot='',
@@ -185,19 +186,20 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
 
 
 @pytest.mark.parametrize('number_of_nodes', [3])
-def test_update_must_fail_with_a_wrong_recipient(tester_channels, private_keys):
-    """ updateTransfer must not accept a transfer from a non participant. """
-    pkey0, pkey1, nettingchannel, channel0, _ = tester_channels[0]
+def test_update_must_fail_with_a_channel_address(tester_channels, private_keys):
+    """ updateTransfer must not accept a transfer signed with the wrong channel address. """
+    pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
     opened_block = nettingchannel.opened(sender=pkey0)
-    nonparticipant_address = privatekey_to_address(private_keys[2])
+    wrong_channel = make_address()
 
     # make a transfer where pkey1 is the target
     transfer_wrong_recipient = DirectTransfer(
         identifier=1,
         nonce=1 + (opened_block * (2 ** 32)),
         token=channel0.token_address,
+        channel=wrong_channel,
         transferred_amount=10,
-        recipient=nonparticipant_address,
+        recipient=channel1.our_address,
         locksroot='',
     )
 

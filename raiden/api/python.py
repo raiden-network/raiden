@@ -542,10 +542,7 @@ class RaidenAPI(object):
         if channel.received_transfers:
             first_transfer = channel.received_transfers[-1]
 
-        netting_channel = channel.external_state.netting_channel
-        netting_channel.close(
-            first_transfer,
-        )
+        channel.external_state.close(first_transfer)
 
         return channel
 
