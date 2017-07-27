@@ -542,6 +542,9 @@ Possible Responses
 |     Timeout      | not read in time by the   |
 |                  | ethereum node             |
 +------------------+---------------------------+
+| 402 Payment      | Insufficient balance to   |
+|     required     | do a deposit              |
++------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
@@ -673,8 +676,8 @@ Possible Responses
 | 408 Timeout      | If a timeout happened     |
 |                  | during the transfer       |
 +------------------+---------------------------+
-| 409 Conflict     | If the transfer can't     |
-|                  | start due to insufficient |
+| 402 Payment      | If the transfer can't     |
+|     required     | start due to insufficient |
 |                  | balance                   |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|

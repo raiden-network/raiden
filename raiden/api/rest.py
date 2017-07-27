@@ -269,7 +269,7 @@ class RestAPI(object):
             except EthNodeCommunicationError as e:
                 return make_response(str(e), httplib.REQUEST_TIMEOUT)
             except InsufficientFunds as e:
-                return make_response(str(e), httplib.CONFLICT)
+                return make_response(str(e), httplib.PAYMENT_REQUIRED)
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
         return jsonify_with_response(data=result.data, status_code=httplib.CREATED)
@@ -284,7 +284,7 @@ class RestAPI(object):
         except EthNodeCommunicationError as e:
             return make_response(str(e), httplib.REQUEST_TIMEOUT)
         except InsufficientFunds as e:
-            return make_response(str(e), httplib.CONFLICT)
+            return make_response(str(e), httplib.PAYMENT_REQUIRED)
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
         return jsonify(result.data)
@@ -384,7 +384,7 @@ class RestAPI(object):
             identifier = create_default_identifier()
 
         try:
-            self.raiden_api.transfer(
+            transfer_result = self.raiden_api.transfer(
                 token_address=token_address,
                 target=target_address,
                 amount=amount,
@@ -392,6 +392,13 @@ class RestAPI(object):
             )
         except (InvalidAmount, InvalidAddress, NoPathError) as e:
             return make_response(str(e), httplib.CONFLICT)
+        except (InsufficientFunds) as e:
+            return make_response(str(e), httplib.PAYMENT_REQUIRED)
+
+        if transfer_result is False:
+            return make_response("Payment couldn't be completed "
+                                 "(insufficient funds or no route to target).",
+                                 httplib.CONFLICT)
 
         transfer = {
             'initiator_address': self.raiden_api.raiden.address,
@@ -433,7 +440,7 @@ class RestAPI(object):
                     balance
                 )
             except InsufficientFunds as e:
-                return make_response(str(e), httplib.CONFLICT)
+                return make_response(str(e), httplib.PAYMENT_REQUIRED)
             result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
             return jsonify(result.data)
 
