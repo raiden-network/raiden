@@ -240,11 +240,16 @@ class StateMachineEventHandler(object):
 
         connection_manager = self.raiden.connection_manager_for_token(token_address)
 
-        if participant1 == self.raiden.address or participant2 == self.raiden.address:
+        is_participant = self.raiden.address in (participant1, participant2)
+        is_bootstrap = connection_manager.BOOTSTRAP_ADDR in (participant1, participant2)
+        other = participant2 if (participant1 == self.raiden.address) else participant1
+        if is_participant:
             self.raiden.register_netting_channel(
                 token_address,
                 channel_address,
             )
+            if not is_bootstrap:
+                self.raiden.start_health_check_for(other)
         elif connection_manager.wants_more_channels:
             gevent.spawn(connection_manager.retry_connect)
         else:
