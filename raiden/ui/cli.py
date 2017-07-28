@@ -5,6 +5,8 @@ import sys
 import os
 import tempfile
 import json
+import socket
+import errno
 
 import signal
 import click
@@ -392,56 +394,63 @@ def run(ctx, **kwargs):
         # - Ask for confirmation to quit if there are any locked transfers that did
         # not timeout.
         (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
-        with socket_factory(listen_host, listen_port) as mapped_socket:
-            kwargs['mapped_socket'] = mapped_socket
+        try:
+            with socket_factory(listen_host, listen_port) as mapped_socket:
+                kwargs['mapped_socket'] = mapped_socket
 
-            app_ = ctx.invoke(app, **kwargs)
+                app_ = ctx.invoke(app, **kwargs)
 
-            domain_list = []
-            if kwargs['rpccorsdomain']:
-                if ',' in kwargs['rpccorsdomain']:
-                    for domain in kwargs['rpccorsdomain'].split(','):
-                        domain_list.append(str(domain))
-                else:
-                    domain_list.append(str(kwargs['rpccorsdomain']))
+                domain_list = []
+                if kwargs['rpccorsdomain']:
+                    if ',' in kwargs['rpccorsdomain']:
+                        for domain in kwargs['rpccorsdomain'].split(','):
+                            domain_list.append(str(domain))
+                    else:
+                        domain_list.append(str(kwargs['rpccorsdomain']))
 
-            if ctx.params['rpc']:
-                raiden_api = RaidenAPI(app_.raiden)
-                rest_api = RestAPI(raiden_api)
-                api_server = APIServer(
-                    rest_api,
-                    cors_domain_list=domain_list,
-                    web_ui=ctx.params['web_ui'],
-                    eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
-                )
-                (api_host, api_port) = split_endpoint(kwargs["api_address"])
-                api_server.start(api_host, api_port)
-
-                print(
-                    "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
-                    "See the Raiden documentation for all available endpoints at\n"
-                    "https://github.com/raiden-network/raiden/blob/master"
-                    "/docs/Rest-Api.rst".format(
-                        api_host,
-                        api_port,
+                if ctx.params['rpc']:
+                    raiden_api = RaidenAPI(app_.raiden)
+                    rest_api = RestAPI(raiden_api)
+                    api_server = APIServer(
+                        rest_api,
+                        cors_domain_list=domain_list,
+                        web_ui=ctx.params['web_ui'],
                     )
-                )
+                    (api_host, api_port) = split_endpoint(kwargs["api_address"])
+                    api_server.start(api_host, api_port)
 
-            if ctx.params['console']:
-                console = Console(app_)
-                console.start()
+                    print(
+                        "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
+                        "See the Raiden documentation for all available endpoints at\n"
+                        "https://github.com/raiden-network/raiden/blob/master"
+                        "/docs/Rest-Api.rst".format(
+                            api_host,
+                            api_port,
+                        )
+                    )
 
-            # wait for interrupt
-            event = gevent.event.Event()
-            gevent.signal(signal.SIGQUIT, event.set)
-            gevent.signal(signal.SIGTERM, event.set)
-            gevent.signal(signal.SIGINT, event.set)
-            event.wait()
+                if ctx.params['console']:
+                    console = Console(app_)
+                    console.start()
 
-            try:
-                api_server.stop()
-            except NameError:
-                pass
+                # wait for interrupt
+                event = gevent.event.Event()
+                gevent.signal(signal.SIGQUIT, event.set)
+                gevent.signal(signal.SIGTERM, event.set)
+                gevent.signal(signal.SIGINT, event.set)
+                event.wait()
+
+                try:
+                    api_server.stop()
+                except NameError:
+                    pass
+        except socket.error as v:
+            if v.args[0] == errno.EADDRINUSE:
+                print("ERROR: Address %s:%s is in use. "
+                      "Use --listen-address <host:port> to specify port to listen on." %
+                      (listen_host, listen_port))
+                sys.exit(1)
+            raise
         app_.stop(leave_channels=False)
 
 
