@@ -10,6 +10,7 @@ from raiden.messages import (
     DirectTransfer,
     Lock,
     LockedTransfer,
+    Secret,
 )
 from raiden.utils import sha3, pex, lpex
 from raiden.exceptions import (
@@ -781,6 +782,23 @@ class Channel(object):
             fee,
         )
         return refund_transfer
+
+    def create_secret(self, identifier, secret):
+        from_ = self.our_state
+        to_ = self.partner_state
+
+        self.release_lock(secret)
+        locksroot_with_pending_lock_removed = to_.balance_proof.merkleroot_for_unclaimed()
+
+        secret = Secret(
+            identifier,
+            from_.nonce,
+            self.channel_address,
+            from_.transferred_amount,
+            locksroot_with_pending_lock_removed,
+            secret,
+        )
+        return secret
 
     def state_transition(self, state_change):
         if isinstance(state_change, Block):

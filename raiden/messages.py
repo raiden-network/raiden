@@ -22,13 +22,7 @@ __all__ = (
 log = getLogger(__name__)  # pylint: disable=invalid-name
 
 
-def assert_transfer_values(identifier, nonce, token, channel, transferred_amount, recipient):
-    if identifier < 0:
-        raise ValueError('identifier cannot be negative')
-
-    if identifier >= 2 ** 64:
-        raise ValueError('identifier is too large')
-
+def assert_envelope_values(nonce, channel, transferred_amount, locksroot):
     if nonce <= 0:
         raise ValueError('nonce cannot be zero or negative')
 
@@ -38,17 +32,14 @@ def assert_transfer_values(identifier, nonce, token, channel, transferred_amount
     if len(channel) != 20:
         raise ValueError('channel is an invalid address')
 
-    if len(token) != 20:
-        raise ValueError('token is an invalid address')
-
     if transferred_amount < 0:
         raise ValueError('transferred_amount cannot be negative')
 
     if transferred_amount >= 2 ** 256:
         raise ValueError('transferred_amount is too large')
 
-    if len(recipient) != 20:
-        raise ValueError('recipient is an invalid address')
+    if len(locksroot) not in (0, 32):
+        raise ValueError('locksroot must be empty or have length 32')
 
 
 def decode(data):
@@ -315,7 +306,7 @@ class SecretRequest(SignedMessage):
         packed.signature = self.signature
 
 
-class Secret(SignedMessage):
+class Secret(EnvelopeMessage):
     """ Message used to do state changes on a partner Raiden Channel.
 
     Locksroot changes need to be synchronized among both participants, the
@@ -324,20 +315,52 @@ class Secret(SignedMessage):
     """
     cmdid = messages.SECRET
 
-    def __init__(self, identifier, secret, token):
+    def __init__(
+            self,
+            identifier,
+            nonce,
+            channel,
+            transferred_amount,
+            locksroot,
+            secret):
         super(Secret, self).__init__()
+
+        assert_envelope_values(
+            nonce,
+            channel,
+            transferred_amount,
+            locksroot,
+        )
+
+        if identifier < 0:
+            raise ValueError('identifier cannot be negative')
+
+        if identifier >= 2 ** 64:
+            raise ValueError('identifier is too large')
+
+        if len(secret) != 32:
+            raise ValueError('secret must have 32 bytes')
+
         self.identifier = identifier
         self.secret = secret
-        self.token = token
+        self.nonce = nonce
+        self.channel = channel
+        self.transferred_amount = transferred_amount
+        self.locksroot = locksroot
         self._hashlock = None
 
     def __repr__(self):
-        return '<{} [sender:{} hashlock:{} token:{} hash:{}]>'.format(
+        return (
+            '<{} [sender:{} hashlock:{} nonce:{} channel:{}'
+            ' transferred_amount:{} locksroot:{}]>'
+        ).format(
             self.__class__.__name__,
             pex(self.sender),
             pex(self.hashlock),
-            pex(self.token),
-            pex(self.hash),
+            self.nonce,
+            pex(self.channel),
+            self.transferred_amount,
+            pex(self.locksroot),
         )
 
     @property
@@ -348,14 +371,24 @@ class Secret(SignedMessage):
 
     @staticmethod
     def unpack(packed):
-        secret = Secret(packed.identifier, packed.secret, packed.token)
+        secret = Secret(
+            packed.identifier,
+            packed.nonce,
+            packed.channel,
+            packed.transferred_amount,
+            packed.locksroot,
+            packed.secret,
+        )
         secret.signature = packed.signature
         return secret
 
     def pack(self, packed):
         packed.identifier = self.identifier
+        packed.nonce = self.nonce
+        packed.channel = self.channel
+        packed.transferred_amount = self.transferred_amount
+        packed.locksroot = self.locksroot
         packed.secret = self.secret
-        packed.token = self.token
         packed.signature = self.signature
 
 
@@ -434,14 +467,24 @@ class DirectTransfer(EnvelopeMessage):
             recipient,
             locksroot):
 
-        assert_transfer_values(
-            identifier,
+        assert_envelope_values(
             nonce,
-            token,
             channel,
             transferred_amount,
-            recipient,
+            locksroot,
         )
+
+        if identifier < 0:
+            raise ValueError('identifier cannot be negative')
+
+        if identifier >= 2 ** 64:
+            raise ValueError('identifier is too large')
+
+        if len(token) != 20:
+            raise ValueError('token is an invalid address')
+
+        if len(recipient) != 20:
+            raise ValueError('recipient is an invalid address')
 
         super(DirectTransfer, self).__init__()
         self.identifier = identifier
@@ -570,14 +613,24 @@ class LockedTransfer(EnvelopeMessage):
             lock):
         super(LockedTransfer, self).__init__()
 
-        assert_transfer_values(
-            identifier,
+        assert_envelope_values(
             nonce,
-            token,
             channel,
             transferred_amount,
-            recipient,
+            locksroot,
         )
+
+        if identifier < 0:
+            raise ValueError('identifier cannot be negative')
+
+        if identifier >= 2 ** 64:
+            raise ValueError('identifier is too large')
+
+        if len(token) != 20:
+            raise ValueError('token is an invalid address')
+
+        if len(recipient) != 20:
+            raise ValueError('recipient is an invalid address')
 
         self.identifier = identifier
         self.nonce = nonce
