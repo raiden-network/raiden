@@ -277,10 +277,10 @@ class ApiTestContext():
 
     def expect_token_swap(self, **kwargs):
         self._check_tokenswap_input('identifier', 'identifier', kwargs)
-        self._check_tokenswap_input('from_token', 'sending_token', kwargs)
-        self._check_tokenswap_input('from_amount', 'sending_amount', kwargs)
-        self._check_tokenswap_input('to_token', 'receiving_token', kwargs)
-        self._check_tokenswap_input('to_amount', 'receiving_amount', kwargs)
+        self._check_tokenswap_input('maker_token', 'receiving_token', kwargs)
+        self._check_tokenswap_input('maker_amount', 'receiving_amount', kwargs)
+        self._check_tokenswap_input('taker_token', 'sending_token', kwargs)
+        self._check_tokenswap_input('taker_amount', 'sending_amount', kwargs)
 
     def transfer(self, token_address, amount, target, identifier):
         # Do nothing. These tests only test the api endpoints, so nothing to do here

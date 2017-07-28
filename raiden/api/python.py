@@ -348,7 +348,7 @@ class RaidenAPI(object):
 
         If a MediatedMessage is received for the `maker_asset` with
         `maker_amount` then proceed to send a MediatedTransfer to
-        `maker_address` for `taker_asset` with `taker_amout`.
+        `maker_address` for `taker_asset` with `taker_amount`.
         """
 
         if not isaddress(maker_token):

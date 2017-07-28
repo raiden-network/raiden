@@ -492,11 +492,12 @@ class RestAPI(object):
         elif role == 'taker':
             self.raiden_api.expect_token_swap(
                 identifier=identifier,
-                from_token=sending_token,
-                from_amount=sending_amount,
-                to_token=receiving_token,
-                to_amount=receiving_amount,
-                target_address=target_address,
+                maker_token=receiving_token,
+                maker_amount=receiving_amount,
+                maker_address=target_address,
+                taker_token=sending_token,
+                taker_amount=sending_amount,
+                taker_address=self.raiden_api.address
             )
         else:
             # should never happen, role is validated in the schema
