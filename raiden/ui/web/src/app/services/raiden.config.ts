@@ -4,33 +4,26 @@ declare var Web3;
 
 @Injectable()
 export class RaidenConfig {
-    public config: object;
-    public apiCall: string;
+    public config: { raiden: string, web3: string };
+    public api: string;
     public web3: any;
-    constructor(private http: Http) {}
+
+    constructor(private http: Http) { }
 
     load(url: string) {
         return new Promise((resolve) => {
-            this.http.get(url).map(res => res.json())
-            .subscribe(config => {
-                this.config = config;
-                const raidenConf = this.config['raiden'];
-                this.apiCall = ['http://', raidenConf['host'], ':', raidenConf['port'],
-                                '/api/', raidenConf['version']].join('');
-                const web3Conf = this.config['web3'];
-                if (typeof this.web3 !== 'undefined') {
-                    this.web3 = new Web3(this.web3.currentProvider);
-                } else {
-                // set the provider you want from Web3.providers
-                    const web3Url = 'http://' + web3Conf['host'] + ':' + web3Conf['port'];
-                    this.web3 = new Web3(new Web3.providers.HttpProvider(web3Url));
-                }
-                resolve();
-            });
+            this.http.get(url)
+                .map((response) => response.json())
+                .subscribe((config: { raiden: string, web3: string }) => {
+                    this.config = config;
+                    this.api = config.raiden;
+                    if (this.web3) {
+                        this.web3 = new Web3(this.web3.currentProvider);
+                    } else {
+                        this.web3 = new Web3(new Web3.providers.HttpProvider(config.web3));
+                    }
+                    resolve();
+                });
         });
-    }
-
-    public getWeb3() {
-        return this.web3;
     }
 }

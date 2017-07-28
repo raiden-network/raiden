@@ -1,13 +1,4 @@
 {
-  "raiden":
-  {
-    "host": "localhost",
-    "port": 5001,
-    "version": 1
-  },
-  "web3":
-  {
-    "host": "localhost",
-    "port": 8545
-  }
+  "raiden": "/api/1",
+  "web3": "http://localhost:8545"
 }

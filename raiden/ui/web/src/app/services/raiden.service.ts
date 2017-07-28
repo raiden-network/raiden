@@ -13,31 +13,29 @@ import { SharedService } from './shared.service';
 export class RaidenService {
 
     public tokenContract: any;
-    public web3: any;
     public raidenAddress: string;
     private userTokens: { [id: string]: Usertoken |null} = {};
 
     constructor(private http: Http,
         private config: RaidenConfig,
         private sharedService: SharedService) {
-        this.web3 = this.config.web3;
-        this.tokenContract = this.web3.eth.contract(tokenabi);
+        this.tokenContract = this.config.web3.eth.contract(tokenabi);
     }
 
     public getRaidenAddress(): Observable<string> {
-        return this.http.get(`${this.config.apiCall}/address`)
+        return this.http.get(`${this.config.api}/address`)
             .map((response) => this.raidenAddress = response.json().our_address)
             .catch((error) => this.handleError(error));
     }
 
     public getChannels(): Observable<Channel[]> {
-        return this.http.get(`${this.config.apiCall}/channels`)
+        return this.http.get(`${this.config.api}/channels`)
             .map((response) => <Channel[]>response.json())
             .catch((error) => this.handleError(error));
     }
 
     public getTokensBalances(refresh: boolean = true): Observable<Usertoken[]> {
-        return this.http.get(`${this.config.apiCall}/tokens`)
+        return this.http.get(`${this.config.api}/tokens`)
             .map((response) => {
                 const tokenArray: Array<{ address: string }> = response.json();
                 return tokenArray
@@ -61,7 +59,7 @@ export class RaidenService {
         };
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
-        return this.http.put(`${this.config.apiCall}/channels`,
+        return this.http.put(`${this.config.api}/channels`,
             JSON.stringify(data), options)
             .map((response) => response.json())
             .catch((error) => this.handleError(error));
@@ -79,8 +77,8 @@ export class RaidenService {
         };
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
-        console.log(`${this.config.apiCall}/transfers/${tokenAddress}/${partnerAddress}`);
-        return this.http.post(`${this.config.apiCall}/transfers/${tokenAddress}/${partnerAddress}`,
+        console.log(`${this.config.api}/transfers/${tokenAddress}/${partnerAddress}`);
+        return this.http.post(`${this.config.api}/transfers/${tokenAddress}/${partnerAddress}`,
             JSON.stringify(data), options)
             .map((response) => response.json())
             .catch((error) => this.handleError(error));
@@ -92,7 +90,7 @@ export class RaidenService {
         };
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
-        return this.http.patch(`${this.config.apiCall}/channels/${channelAddress}`,
+        return this.http.patch(`${this.config.api}/channels/${channelAddress}`,
             JSON.stringify(data), options)
             .map((response) => response.json())
             .catch((error) => this.handleError(error));
@@ -104,7 +102,7 @@ export class RaidenService {
         };
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
-        return this.http.patch(`${this.config.apiCall}/channels/${channelAddress}`,
+        return this.http.patch(`${this.config.api}/channels/${channelAddress}`,
             JSON.stringify(data), options)
             .map((response) => response.json())
             .catch((error) => this.handleError(error));
@@ -116,16 +114,16 @@ export class RaidenService {
         };
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
-        return this.http.patch(`${this.config.apiCall}/channels/${channelAddress}`,
+        return this.http.patch(`${this.config.api}/channels/${channelAddress}`,
             JSON.stringify(data), options)
             .map((response) => response.json())
             .catch((error) => this.handleError(error));
     }
 
     public registerToken(tokenAddress: string): Observable<Usertoken> {
-        return this.http.put(`${this.config.apiCall}/tokens/${tokenAddress}`, '{}')
+        return this.http.put(`${this.config.api}/tokens/${tokenAddress}`, '{}')
             .map(() => {
-                this.tokenContract = this.web3.eth.contract(tokenabi);
+                this.tokenContract = this.config.web3.eth.contract(tokenabi);
                 const userToken: Usertoken | null = this.getUsertoken(tokenAddress);
                 if (!userToken) {
                     throw new Error('No contract on address: ' + tokenAddress);
@@ -141,7 +139,7 @@ export class RaidenService {
         }
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
-        return this.http.put(`${this.config.apiCall}/connection/${tokenAddress}`,
+        return this.http.put(`${this.config.api}/connection/${tokenAddress}`,
             JSON.stringify(data), options)
             .map((response) => response.json())
             .catch((error) => this.handleError(error));
@@ -161,7 +159,7 @@ export class RaidenService {
         if (fromBlock) {
             path += `?from_block=${fromBlock}`;
         }
-        return this.http.get(`${this.config.apiCall}/events/${path}`)
+        return this.http.get(`${this.config.api}/events/${path}`)
             .map((response) => <Event[]>response.json())
             .catch((error) => this.handleError(error));
     }
@@ -176,7 +174,7 @@ export class RaidenService {
         };
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
-        return this.http.put(`${this.config.apiCall}/token_swaps/${swap.partner_address}/${swap.identifier}`,
+        return this.http.put(`${this.config.api}/token_swaps/${swap.partner_address}/${swap.identifier}`,
             JSON.stringify(data), options)
             .switchMap((response) => response.ok
                 ? Observable.of(true)
@@ -185,7 +183,7 @@ export class RaidenService {
     }
 
     public sha3(data: string): string {
-        return this.web3.sha3(data, { encoding: 'hex' });
+        return this.config.web3.sha3(data, { encoding: 'hex' });
     }
 
     private getUsertoken(tokenAddress: string, refresh: boolean = true): Usertoken |null {

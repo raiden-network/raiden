@@ -412,6 +412,7 @@ def run(ctx, **kwargs):
                     rest_api,
                     cors_domain_list=domain_list,
                     web_ui=ctx.params['web_ui'],
+                    eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
                 )
                 (api_host, api_port) = split_endpoint(kwargs["api_address"])
                 api_server.start(api_host, api_port)
