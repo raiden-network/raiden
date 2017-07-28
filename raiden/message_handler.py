@@ -123,13 +123,14 @@ class RaidenMessageHandler(object):
 
             secret = message.secret
             identifier = message.identifier
-            token = message.token
             secret = message.secret
             hashlock = sha3(secret)
 
+            channel = self.raiden.find_channel_by_address(message.channel)
+
             self.raiden.handle_secret(
                 identifier,
-                token,
+                channel.token_address,
                 secret,
                 message,
                 hashlock,

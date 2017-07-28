@@ -484,7 +484,14 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
     )
     sign_and_send(refund_transfer, other_key, other_address, app0)
 
-    secret = Secret(1, HASH, graph0.token_address)
+    secret = Secret(
+        identifier=1,
+        nonce=1,
+        channel=HASH,
+        transferred_amount=amount,
+        locksroot=HASH,
+        secret=HASH,
+    )
     sign_and_send(secret, other_key, other_address, app0)
 
     secret_request = SecretRequest(1, HASH, 1)

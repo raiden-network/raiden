@@ -61,12 +61,18 @@ def test_secret_request(iterations=ITERATIONS):
 
 def test_secret(iterations=ITERATIONS):
     identifier = 1
+    nonce = 1
+    channel = HASH
+    transferred_amount = 1
     secret = HASH
-    amount = 1
+    locksroot = ''
     msg = Secret(
         identifier,
+        nonce,
+        channel,
+        transferred_amount,
+        locksroot,
         secret,
-        amount,
     )
     msg.sign(PRIVKEY, ADDRESS)
     run_timeit('Secret', msg, iterations=iterations)

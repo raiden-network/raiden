@@ -74,7 +74,6 @@ from raiden.network.channelgraph import (
 )
 from raiden.messages import (
     RevealSecret,
-    Secret,
     SignedMessage,
 )
 from raiden.network.protocol import (
@@ -432,25 +431,16 @@ class RaidenService(object):
         channels_list = self.token_to_hashlock_to_channels[token_address][hashlock]
         channels_to_remove = list()
 
-        # Dont use the partner_secret_message.token since it might not match
-        # the current token manager
-        our_secret_message = Secret(
-            identifier,
-            secret,
-            token_address,
-        )
-        self.sign(our_secret_message)
-
         revealsecret_message = RevealSecret(secret)
         self.sign(revealsecret_message)
 
         for channel in channels_list:
-            # unlock a sent lock
             if channel.partner_state.balance_proof.is_unclaimed(hashlock):
-                channel.release_lock(secret)
+                secret = channel.create_secret(identifier, secret)  # unlock a sent lock
+                self.sign(secret)
                 self.send_async(
                     channel.partner_state.address,
-                    our_secret_message,
+                    secret,
                 )
                 channels_to_remove.append(channel)
 
@@ -460,7 +450,7 @@ class RaidenService(object):
                     matching_sender = (
                         partner_secret_message.sender == channel.partner_state.address
                     )
-                    matching_token = partner_secret_message.token == channel.token_address
+                    matching_token = partner_secret_message.channel == channel.channel_address
 
                     if matching_sender and matching_token:
                         channel.withdraw_lock(secret)
