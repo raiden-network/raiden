@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import logging
 from collections import namedtuple
-from heapq import heappush, heappop
 
 import networkx
 from ethereum import slogging
+
+from functools import total_ordering
 
 from raiden.utils import isaddress, pex
 from raiden.transfer.state import (
@@ -12,12 +13,13 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
 )
+from raiden.network.protocol import (
+    NODE_NETWORK_REACHABLE,
+    NODE_NETWORK_UNREACHABLE,
+    NODE_NETWORK_UNKNOWN
+)
 from raiden.channel.netting_channel import (
     Channel,
-)
-from raiden.network.protocol import (
-    NODE_NETWORK_UNKNOWN,
-    NODE_NETWORK_REACHABLE,
 )
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -90,7 +92,42 @@ def channel_to_routestate(channel, node_address):
     return state
 
 
+#  To sort multiple-keyed list we use redefined __lt__ method,
+# which is then used by sorted()
+@total_ordering
+class RouteOrderedItem:
+    def __init__(self, distance_to_target, node_state, route_state):
+        assert isinstance(route_state, RouteState)
+        self.distance_to_target = distance_to_target  # key1
+        self.node_state = node_state                  # key2
+        self.route_state = route_state                # value
+
+    def __lt__(self, other):
+        if not isinstance(other, RouteOrderedItem):
+            return False
+        state_order = [
+            NODE_NETWORK_REACHABLE,
+            NODE_NETWORK_UNKNOWN,
+            NODE_NETWORK_UNREACHABLE]
+        assert self.node_state in state_order
+        assert other.node_state in state_order
+        if self.distance_to_target == other.distance_to_target:
+            return (state_order.index(self.node_state) <
+                    state_order.index(other.node_state))
+        return self.distance_to_target < other.distance_to_target
+
+    def __eq__(self, other):
+        if not isinstance(other, RouteOrderedItem):
+            return False
+        return ((self.distance_to_target == other.distance_to_target) and
+                (self.node_state == other.node_state))
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 def ordered_neighbors(nx_graph, our_address, target_address):
+    """Return neighbors that can reach the target"""
     paths = list()
 
     try:
@@ -107,7 +144,7 @@ def ordered_neighbors(nx_graph, our_address, target_address):
                 neighbor,
                 target_address,
             )
-            heappush(paths, (length, neighbor))
+            paths.append((length, neighbor))
         except networkx.NetworkXNoPath:
             pass
 
@@ -134,20 +171,12 @@ def get_best_routes(
     # distributable amount, but to sort them based on available balance and
     # let the task use as many as required to finish the transfer.
 
-    online_nodes = list()
-    unknown_nodes = list()
+    routable_neighbors = list()
+    neighbors = ordered_neighbors(channel_graph.graph, our_address, target_address)
 
-    neighbors_heap = ordered_neighbors(
-        channel_graph.graph,
-        our_address,
-        target_address,
-    )
-
-    while neighbors_heap:
-        _, partner_address = heappop(neighbors_heap)
-        channel = channel_graph.partneraddress_to_channel[partner_address]
-
+    for hops, partner_address in neighbors:
         # don't send the message backwards
+        channel = channel_graph.partneraddress_to_channel[partner_address]
         if partner_address == previous_address:
             continue
 
@@ -174,16 +203,19 @@ def get_best_routes(
         if channel.state != CHANNEL_STATE_OPENED:
             continue
 
-        network_state = nodeaddresses_statuses[partner_address]
         route_state = channel_to_routestate(channel, partner_address)
+        routable_neighbors.append(
+            RouteOrderedItem(
+                hops,
+                nodeaddresses_statuses[partner_address],
+                route_state))
 
-        if network_state == NODE_NETWORK_REACHABLE:
-            online_nodes.append(route_state)
-
-        elif network_state == NODE_NETWORK_UNKNOWN:
-            unknown_nodes.append(route_state)
-
-    return online_nodes + unknown_nodes
+    # order of items is defined by RouteOrderedItem.__lt__()
+    #  We return list sorted by shortest_path, node_status, so preferentially
+    # the shortest path is tried, and only if two paths of a same size exist,
+    # we use the path that is in an 'reachable' state
+    return [item.route_state for item in sorted(routable_neighbors)
+            if item.route_state is not NODE_NETWORK_UNREACHABLE]
 
 
 class ChannelGraph(object):

@@ -15,8 +15,14 @@ from raiden.transfer.events import (
     EventTransferSentFailed,
     EventTransferReceivedSuccess,
 )
+from raiden.network.protocol import (
+    NODE_NETWORK_REACHABLE,
+    NODE_NETWORK_UNREACHABLE,
+    NODE_NETWORK_UNKNOWN
+)
 from raiden.transfer.mediated_transfer.state import LockedTransferState
 from raiden.messages import Ack
+from raiden.network.channelgraph import RouteOrderedItem
 
 
 ADDRESS = sha3('foo')[:20]
@@ -137,3 +143,25 @@ def test_message_operators():
     assert not a != b
     assert a != c
     assert not a == c
+
+
+def test_route_ordered_item_operators():
+    a_route = RouteState('opened', ADDRESS, ADDRESS2, 5, 5, 5, 5)
+
+    item1 = RouteOrderedItem(0, NODE_NETWORK_REACHABLE, a_route)
+    item2 = RouteOrderedItem(0, NODE_NETWORK_REACHABLE, a_route)
+    item3 = RouteOrderedItem(1, NODE_NETWORK_REACHABLE, a_route)
+    item4 = RouteOrderedItem(1, NODE_NETWORK_UNKNOWN, a_route)
+    item5 = RouteOrderedItem(1, NODE_NETWORK_UNREACHABLE, a_route)
+
+    assert item1 == item2
+    assert not item1 != item2
+    assert item1 != item3
+    assert not item1 == item3
+
+    assert item1 < item3
+    assert item3 > item1
+
+    assert item3 < item4
+    assert item1 < item4
+    assert item4 < item5
