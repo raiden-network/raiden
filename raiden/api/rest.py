@@ -100,14 +100,15 @@ class APIServer(object):
     _type_converter_mapping = {
         'hexaddress': HexAddressConverter
     }
+    _api_prefix = '/api/1'
 
-    def __init__(self, rest_api, cors_domain_list=None, web_ui=False):
+    def __init__(self, rest_api, cors_domain_list=None, web_ui=False, eth_rpc_endpoint=None):
         self.rest_api = rest_api
         self.blueprint = create_blueprint()
         if self.rest_api.version == 1:
             self.flask_api_context = Api(
                 self.blueprint,
-                prefix="/api/1",
+                prefix=self._api_prefix,
             )
         else:
             raise ValueError('Invalid api version: {}'.format(self.rest_api.version))
@@ -120,6 +121,10 @@ class APIServer(object):
         self.flask_app.register_blueprint(self.blueprint)
 
         self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
+        if eth_rpc_endpoint:
+            if not eth_rpc_endpoint.startswith('http'):
+                eth_rpc_endpoint = 'http://' + eth_rpc_endpoint
+            self.flask_app.config['WEB3_ENDPOINT'] = eth_rpc_endpoint
         if web_ui:
             for route in ['/ui/<path:file>', '/ui', '/ui/', '/index.html', '/']:
                 self.flask_app.add_url_rule(
@@ -170,7 +175,11 @@ class APIServer(object):
     def _serve_webui(self, file='index.html'):
         try:
             assert file
-            response = send_from_directory(self.flask_app.config['WEBUI_PATH'], file)
+            web3 = self.flask_app.config.get('WEB3_ENDPOINT')
+            if web3 and 'config.' in file and file.endswith('.json'):
+                response = jsonify({'raiden': self._api_prefix, 'web3': web3})
+            else:
+                response = send_from_directory(self.flask_app.config['WEBUI_PATH'], file)
         except (NotFound, AssertionError):
             response = send_from_directory(self.flask_app.config['WEBUI_PATH'], 'index.html')
         return response
