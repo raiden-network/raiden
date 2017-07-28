@@ -22,7 +22,11 @@ from raiden.tests.property.smart_contracts.strategies import (
     direct_transfer,
 )
 from raiden.tests.fixtures.tester import tester_state
-from raiden.utils import privatekey_to_address, sha3
+from raiden.utils import (
+    make_address,
+    privatekey_to_address,
+    sha3,
+)
 
 DEPOSIT = 'deposit'
 CLOSE = 'close'
@@ -118,9 +122,15 @@ class NettingChannelStateMachine(GenericStateMachine):
             address_and_balance[2].decode('hex'),
         }
 
+        self.channel_addresses = [
+            self.netting_channel.address.decode('hex'),
+            make_address(),  # used to test invalid transfers
+        ]
+
     def steps(self):
         transfer = direct_transfer(  # pylint: disable=no-value-for-parameter
             sampled_from(self.token_addresses),
+            sampled_from(self.channel_addresses),
             sampled_from(self.addresses),
             just(''),
         )
@@ -231,14 +241,16 @@ class NettingChannelStateMachine(GenericStateMachine):
         sender_address = privatekey_to_address(sender_pkey)
         transfer_data = transfer.encode()
 
-        opened_block = self.netting_channel.opened(sender=sender_pkey)  # pylint: disable=no-member
-        nonce_start = opened_block * (2 ** 32)
-        nonce_end = (opened_block + 1) * (2 ** 32)
+        transfer_hash = sha3(transfer_data[:-65])
 
         if not self.is_participant(transfer.sender):
             try:
                 self.netting_channel.close(  # pylint: disable=no-member
-                    transfer_data,
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
@@ -249,7 +261,11 @@ class NettingChannelStateMachine(GenericStateMachine):
         elif transfer.sender == sender_address:
             try:
                 self.netting_channel.close(  # pylint: disable=no-member
-                    transfer_data,
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
@@ -260,7 +276,11 @@ class NettingChannelStateMachine(GenericStateMachine):
         elif self.netting_channel.closed(sender=sender_pkey) != 0:  # pylint: disable=no-member
             try:
                 self.netting_channel.close(  # pylint: disable=no-member
-                    transfer_data,
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
@@ -271,7 +291,11 @@ class NettingChannelStateMachine(GenericStateMachine):
         elif not self.is_participant(sender_address):
             try:
                 self.netting_channel.close(  # pylint: disable=no-member
-                    transfer_data,
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
@@ -279,22 +303,32 @@ class NettingChannelStateMachine(GenericStateMachine):
             else:
                 raise ValueError('close called by a non participant didnt fail')
 
-        elif not nonce_start <= transfer.nonce < nonce_end:
+        elif transfer.channel != self.netting_channel.address.decode('hex'):
             try:
                 self.netting_channel.close(  # pylint: disable=no-member
-                    transfer_data,
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
                 pass
             else:
-                raise ValueError('message with invalid nonce didnt fail')
+                raise ValueError('close called with a transfer for a different channe didnt fail')
 
         else:
             self.netting_channel.close(  # pylint: disable=no-member
-                transfer_data,
+                transfer.nonce,
+                transfer.transferred_amount,
+                transfer.locksroot,
+                transfer_hash,
+                transfer.signature,
                 sender=sender_pkey,
             )
+
+            self.closing_address = sender_address
 
     def contract_update_transfer(self, transfer, signing_pkey, sender_pkey):
         transfer.sign(
@@ -303,18 +337,18 @@ class NettingChannelStateMachine(GenericStateMachine):
         )
 
         sender_address = privatekey_to_address(sender_pkey)
-        transfer_data = transfer.encode()
-
-        opened_block = self.netting_channel.opened(sender=sender_pkey)  # pylint: disable=no-member
-        nonce_start = opened_block * (2 ** 32)
-        nonce_end = (opened_block + 1) * (2 ** 32)
 
         transfer_data = transfer.encode()
+        transfer_hash = sha3(transfer_data[:-65])
 
         if not self.is_participant(transfer.sender):
             try:
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
-                    transfer_data,
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
@@ -327,7 +361,11 @@ class NettingChannelStateMachine(GenericStateMachine):
         elif transfer.sender == sender_address:
             try:
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
-                    transfer_data,
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
@@ -338,7 +376,11 @@ class NettingChannelStateMachine(GenericStateMachine):
         elif self.update_transfer_called:
             try:
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
-                    transfer_data,
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
@@ -349,7 +391,11 @@ class NettingChannelStateMachine(GenericStateMachine):
         elif not self.is_participant(sender_address):
             try:
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
-                    transfer_data,
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
@@ -357,20 +403,60 @@ class NettingChannelStateMachine(GenericStateMachine):
             else:
                 raise ValueError('updateTransfer called by a non participant didnt fail')
 
-        elif not nonce_start <= transfer.nonce < nonce_end:
+        elif transfer.channel != self.netting_channel.address.decode('hex'):
             try:
-                self.netting_channel.close(  # pylint: disable=no-member
-                    transfer_data,
+                self.netting_channel.updateTransfer(  # pylint: disable=no-member
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
                     sender=sender_pkey,
                 )
             except TransactionFailed:
                 pass
             else:
-                raise ValueError('message with invalid nonce didnt fail')
+                raise ValueError(
+                    'updateTransfer called with a transfer for a different channel didnt fail'
+                )
+
+        elif self.netting_channel.closed(sender=sender_pkey) == 0:  # pylint: disable=no-member
+            try:
+                self.netting_channel.updateTransfer(  # pylint: disable=no-member
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
+                    sender=sender_pkey,
+                )
+            except TransactionFailed:
+                pass
+            else:
+                raise ValueError('updateTransfer called on an open channel and didnt fail')
+
+        elif sender_address == self.closing_address:
+            try:
+                self.netting_channel.updateTransfer(  # pylint: disable=no-member
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
+                    sender=sender_pkey,
+                )
+            except TransactionFailed:
+                pass
+            else:
+                raise ValueError('updateTransfer called by the closer and it didnt fail')
 
         else:
             self.netting_channel.updateTransfer(  # pylint: disable=no-member
-                transfer_data,
+                transfer.nonce,
+                transfer.transferred_amount,
+                transfer.locksroot,
+                transfer_hash,
+                transfer.signature,
                 sender=sender_pkey,
             )
             self.update_transfer_called = True
