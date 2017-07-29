@@ -187,8 +187,8 @@ def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_blo
     if isinstance(to_block, int):
         to_block = hex(to_block)
     json_data = {
-        'fromBlock': from_block if from_block is not None else 'latest',
-        'toBlock': to_block if to_block is not None else 'latest',
+        'fromBlock': from_block if from_block else 'earliest',
+        'toBlock': to_block if to_block else 'latest',
         'address': address_encoder(normalize_address(contract_address)),
     }
 
@@ -439,11 +439,17 @@ class Filter(object):
                 decode_topic(topic)
                 for topic in log_event['topics']
             ]
+            block_number = log_event.get('blockNumber')
+            if not block_number:
+                block_number = 0
+            else:
+                block_number = int(block_number, 0)
 
             result.append({
                 'topics': topics,
                 'data': data,
                 'address': address,
+                'block_number': block_number,
             })
 
         return result

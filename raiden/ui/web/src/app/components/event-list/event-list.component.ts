@@ -43,6 +43,7 @@ export class EventListComponent implements OnInit {
                 // this scan/reducer agregates new events (since next_block) with old ones,
                 // updating next_block if needed. If no next_block previously,
                 // it means it fetched all events, so use only newEvents
+                newEvents.reverse(); // most recent first
                 const events = next_block ? [...newEvents, ...oldEvents] :
                     newEvents.length > 0 ? newEvents : oldEvents;
                 const max_block = Math.max(

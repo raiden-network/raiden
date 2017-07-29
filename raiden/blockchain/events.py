@@ -92,10 +92,13 @@ def get_contract_events(
         if filter_ is not None:
             filter_.uninstall()
 
-    return [
-        translator.decode_event(event['topics'], event['data'])
-        for event in events
-    ]
+    result = []
+    for event in events:
+        decoded_event = translator.decode_event(event['topics'], event['data'])
+        if event.get('block_number'):
+            decoded_event['block_number'] = event['block_number']
+        result.append(decoded_event)
+    return result
 
 
 # These helpers have a better descriptive name and provide the translator for
@@ -144,7 +147,7 @@ def get_all_netting_channel_events(
         pyethapp_chain,
         netting_channel_address,
         events=ALL_EVENTS,
-        from_block=0,
+        from_block='earliest',
         to_block='latest'):
     """ Helper to get all events of a NettingChannelContract at
     `netting_channel_address`.
