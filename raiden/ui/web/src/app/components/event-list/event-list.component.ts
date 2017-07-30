@@ -54,6 +54,12 @@ export class EventListComponent implements OnInit {
                 if (max_block > 0) {
                     next_block = max_block + 1;
                 }
+                for (const event of events) {
+                    if (event.block_number > 0 && !event.timestamp) {
+                        this.raidenService.blocknumberToDate(event.block_number)
+                            .subscribe((date) => event.timestamp = date);
+                    }
+                }
                 return events;
             }, []);
     }
