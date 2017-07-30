@@ -147,6 +147,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
         '_event_type': 'TokenAdded',
         'channel_manager_address': address_encoder(manager0.address),
         'token_address': address_encoder(token_address),
+        'block_number': 'ignore',
     })
 
     events = get_all_registry_events(
@@ -179,6 +180,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
         'netting_channel': address_encoder(netcontract_address),
         'participant1': address_encoder(app0.raiden.address),
         'participant2': address_encoder(app1.raiden.address),
+        'block_number': 'ignore',
     })
 
     events = get_all_channel_manager_events(
