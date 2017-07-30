@@ -1,7 +1,7 @@
 export interface Event {
     event_type: string;
     block_number: number;
-    timestamp?: number;
+    timestamp?: Date;
     token_address?: string;
     channel_manager_address?: string;
     settle_timeout?: number;

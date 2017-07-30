@@ -186,6 +186,13 @@ export class RaidenService {
         return this.config.web3.sha3(data, { encoding: 'hex' });
     }
 
+    public blocknumberToDate(block: number): Observable<Date> {
+        return Observable.bindNodeCallback(<(a: number) => any>
+                this.config.web3.eth.getBlock)(block)
+            .map((blk) => new Date(blk['timestamp'] * 1000))
+            .first();
+    }
+
     private getUsertoken(tokenAddress: string, refresh: boolean = true): Usertoken |null {
         const tokenContractInstance = this.tokenContract.at(tokenAddress);
         let userToken: Usertoken |null| undefined = this.userTokens[tokenAddress];
