@@ -305,3 +305,10 @@ class ChannelGraph(object):
         """ True if the channel with `partner_address` is open and has spendable funds. """
         # TODO: check if the partner's network is alive
         return self.partneraddress_to_channel[partner_address].can_transfer
+
+    def get_neighbours(self):
+        """ Get all neihbours adjacent to self.our_address. """
+        try:
+            return networkx.all_neighbors(self.graph, self.our_address)
+        except networkx.NetworkXError:
+            return []

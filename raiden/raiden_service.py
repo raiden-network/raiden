@@ -640,6 +640,11 @@ class RaidenService(object):
                 token_address,
                 graph
             )
+            self.start_neighbours_healthcheck(graph)
+
+    def start_neighbours_healthcheck(self, graph):
+        for neighbour in graph.get_neighbours():
+            self.start_health_check_for(neighbour)
 
     def channel_manager_is_registered(self, manager_address):
         return manager_address in self.manager_to_token

@@ -68,8 +68,14 @@ def test_ping_unreachable(raiden_network):
 
     assert async_result.wait(2) is None, "The message was dropped, it can't be acknowledged"
 
-    for message in messages:
-        assert decode(message) == ping_message
+    # Raiden node will start pinging as soon as a new channel
+    #  is established. We need to test if
+    #  a) there is our original message in the queue
+    #  b) there are only Ping message types in
+    messages_decoded = [decode(m) for m in messages]
+    assert ping_message in messages_decoded
+    for message in messages_decoded:
+        assert isinstance(message, Ping)
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
