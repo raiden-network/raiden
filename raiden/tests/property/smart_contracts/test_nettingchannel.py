@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from coincurve import PrivateKey
 from ethereum.tester import TransactionFailed
+from ethereum.processblock import BlockGasLimitReached
+from hypothesis import assume
 from hypothesis.stateful import GenericStateMachine
 from hypothesis.strategies import (
     integers,
@@ -116,6 +118,7 @@ class NettingChannelStateMachine(GenericStateMachine):
             sender=self.private_keys[0],
         )
 
+        self.closing_address = None
         self.update_transfer_called = False
         self.participant_addresses = {
             address_and_balance[0].decode('hex'),
@@ -157,7 +160,7 @@ class NettingChannelStateMachine(GenericStateMachine):
 
         mine_op = tuples(
             just(MINE),
-            integers(min_value=1, max_value=100),
+            integers(min_value=1, max_value=self.settle_timeout * 100),
         )
 
         return one_of(
@@ -171,13 +174,22 @@ class NettingChannelStateMachine(GenericStateMachine):
         op = step[0]
 
         if op == DEPOSIT:
-            self.contract_deposit(step[1], step[2])
+            try:
+                self.contract_deposit(step[1], step[2])
+            except BlockGasLimitReached:
+                assume(False)
 
         elif op == CLOSE:
-            self.contract_close(step[1], step[2], step[3])
+            try:
+                self.contract_close(step[1], step[2], step[3])
+            except BlockGasLimitReached:
+                assume(False)
 
         elif op == UPDATE_TRANSFER:
-            self.contract_update_transfer(step[1], step[2], step[3])
+            try:
+                self.contract_update_transfer(step[1], step[2], step[3])
+            except BlockGasLimitReached:
+                assume(False)
 
         elif op == MINE:
             self.tester_state.mine(number_of_blocks=step[1])
@@ -341,6 +353,12 @@ class NettingChannelStateMachine(GenericStateMachine):
         transfer_data = transfer.encode()
         transfer_hash = sha3(transfer_data[:-65])
 
+        close_block = self.netting_channel.closed(sender=sender_pkey)  # pylint: disable=no-member
+        settlement_end = close_block + self.settle_timeout
+
+        is_closed = close_block != 0
+        is_settlement_period_over = is_closed and settlement_end < self.tester_state.block.number
+
         if not self.is_participant(transfer.sender):
             try:
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
@@ -420,7 +438,7 @@ class NettingChannelStateMachine(GenericStateMachine):
                     'updateTransfer called with a transfer for a different channel didnt fail'
                 )
 
-        elif self.netting_channel.closed(sender=sender_pkey) == 0:  # pylint: disable=no-member
+        elif not is_closed:
             try:
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
                     transfer.nonce,
@@ -434,6 +452,23 @@ class NettingChannelStateMachine(GenericStateMachine):
                 pass
             else:
                 raise ValueError('updateTransfer called on an open channel and didnt fail')
+
+        elif is_settlement_period_over:
+            try:
+                self.netting_channel.updateTransfer(  # pylint: disable=no-member
+                    transfer.nonce,
+                    transfer.transferred_amount,
+                    transfer.locksroot,
+                    transfer_hash,
+                    transfer.signature,
+                    sender=sender_pkey,
+                )
+            except TransactionFailed:
+                pass
+            else:
+                raise ValueError(
+                    'updateTransfer called after end of the settlement period and didnt fail'
+                )
 
         elif sender_address == self.closing_address:
             try:
