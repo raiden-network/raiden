@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import contextlib
+
 from coincurve import PrivateKey
 from ethereum.tester import TransactionFailed
 from ethereum.processblock import BlockGasLimitReached
@@ -34,6 +36,16 @@ DEPOSIT = 'deposit'
 CLOSE = 'close'
 UPDATE_TRANSFER = 'updateTransfer'
 MINE = 'mine'
+
+
+@contextlib.contextmanager
+def transaction_must_fail(error_message):
+    try:
+        yield
+    except TransactionFailed:
+        pass
+    else:
+        raise ValueError(error_message)
 
 
 class NettingChannelStateMachine(GenericStateMachine):
@@ -206,37 +218,25 @@ class NettingChannelStateMachine(GenericStateMachine):
         )
 
         if not self.is_participant(sender_address):
-            try:
+            with transaction_must_fail('deposit from non-participant didnt fail'):
                 self.netting_channel.deposit(  # pylint: disable=no-member
                     deposit_amount,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('deposit from non-participant didnt fail')
 
         elif self.netting_channel.closed(sender=sender_pkey) != 0:  # pylint: disable=no-member
-            try:
+            with transaction_must_fail('deposit with closed channel didnt fail'):
                 self.netting_channel.deposit(  # pylint: disable=no-member
                     deposit_amount,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('deposit with closed channel didnt fail')
 
         elif token_balance < deposit_amount:
-            try:
+            with transaction_must_fail('having insufficient funds for a deposit didnt fail'):
                 self.netting_channel.deposit(  # pylint: disable=no-member
                     deposit_amount,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('having insufficient funds for a deposit didnt fail')
 
         else:
             self.netting_channel.deposit(  # pylint: disable=no-member
@@ -256,7 +256,8 @@ class NettingChannelStateMachine(GenericStateMachine):
         transfer_hash = sha3(transfer_data[:-65])
 
         if not self.is_participant(transfer.sender):
-            try:
+            msg = 'close with transfer data from a non participant didnt fail'
+            with transaction_must_fail(msg):
                 self.netting_channel.close(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -265,13 +266,9 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('close with transfer data from a non participant didnt fail')
 
         elif transfer.sender == sender_address:
-            try:
+            with transaction_must_fail('close with self signed transfer didnt fail'):
                 self.netting_channel.close(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -280,13 +277,9 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('close with self signed transfer didnt fail')
 
         elif self.netting_channel.closed(sender=sender_pkey) != 0:  # pylint: disable=no-member
-            try:
+            with transaction_must_fail('close called twice didnt fail'):
                 self.netting_channel.close(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -295,13 +288,9 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('close called twice didnt fail')
 
         elif not self.is_participant(sender_address):
-            try:
+            with transaction_must_fail('close called by a non participant didnt fail'):
                 self.netting_channel.close(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -310,13 +299,10 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('close called by a non participant didnt fail')
 
         elif transfer.channel != self.netting_channel.address.decode('hex'):
-            try:
+            msg = 'close called with a transfer for a different channe didnt fail'
+            with transaction_must_fail(msg):
                 self.netting_channel.close(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -325,10 +311,6 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('close called with a transfer for a different channe didnt fail')
 
         else:
             self.netting_channel.close(  # pylint: disable=no-member
@@ -360,7 +342,8 @@ class NettingChannelStateMachine(GenericStateMachine):
         is_settlement_period_over = is_closed and settlement_end < self.tester_state.block.number
 
         if not self.is_participant(transfer.sender):
-            try:
+            msg = 'updateTransfer with transfer data from a non participant didnt fail'
+            with transaction_must_fail(msg):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -368,16 +351,10 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer_hash,
                     transfer.signature,
                     sender=sender_pkey,
-                )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError(
-                    'updateTransfer with transfer data from a non participant didnt fail'
                 )
 
         elif transfer.sender == sender_address:
-            try:
+            with transaction_must_fail('updateTransfer with self signed transfer didnt fail'):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -386,13 +363,9 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('updateTransfer with self signed transfer didnt fail')
 
         elif self.update_transfer_called:
-            try:
+            with transaction_must_fail('updateTransfer called twice didnt fail'):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -401,13 +374,9 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('updateTransfer called twice didnt fail')
 
         elif not self.is_participant(sender_address):
-            try:
+            with transaction_must_fail('updateTransfer called by a non participant didnt fail'):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -416,13 +385,10 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('updateTransfer called by a non participant didnt fail')
 
         elif transfer.channel != self.netting_channel.address.decode('hex'):
-            try:
+            msg = 'updateTransfer called with a transfer for a different channel didnt fail'
+            with transaction_must_fail(msg):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -430,16 +396,10 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer_hash,
                     transfer.signature,
                     sender=sender_pkey,
-                )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError(
-                    'updateTransfer called with a transfer for a different channel didnt fail'
                 )
 
         elif not is_closed:
-            try:
+            with transaction_must_fail('updateTransfer called on an open channel and didnt fail'):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -448,13 +408,10 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('updateTransfer called on an open channel and didnt fail')
 
         elif is_settlement_period_over:
-            try:
+            msg = 'updateTransfer called after end of the settlement period and didnt fail'
+            with transaction_must_fail(msg):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -462,16 +419,10 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer_hash,
                     transfer.signature,
                     sender=sender_pkey,
-                )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError(
-                    'updateTransfer called after end of the settlement period and didnt fail'
                 )
 
         elif sender_address == self.closing_address:
-            try:
+            with transaction_must_fail('updateTransfer called by the closer and it didnt fail'):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member
                     transfer.nonce,
                     transfer.transferred_amount,
@@ -480,10 +431,6 @@ class NettingChannelStateMachine(GenericStateMachine):
                     transfer.signature,
                     sender=sender_pkey,
                 )
-            except TransactionFailed:
-                pass
-            else:
-                raise ValueError('updateTransfer called by the closer and it didnt fail')
 
         else:
             self.netting_channel.updateTransfer(  # pylint: disable=no-member
