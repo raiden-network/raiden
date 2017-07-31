@@ -170,15 +170,21 @@ class NettingChannelStateMachine(GenericStateMachine):
             sampled_from(self.private_keys),
         )
 
-        mine_op = tuples(
-            just(MINE),
-            integers(min_value=1, max_value=self.settle_timeout * 100),
-        )
-
-        return one_of(
+        transaction_ops = one_of(
             deposit_op,
             close_op,
             update_transfer_op,
+        )
+
+        mine_op = tuples(
+            just(MINE),
+            integers(min_value=1, max_value=self.settle_timeout * 10),
+        )
+
+        # increases likely hood of the mine op, while permitting transactions
+        # to run in the same block
+        return one_of(
+            transaction_ops,
             mine_op,
         )
 
