@@ -555,13 +555,31 @@ def removedb(ctx):
     address = ctx.obj['address']
     address_hex = address_encoder(address) if address else None
     user_db_dir = os.path.join(datadir, address_hex[:8]) if address_hex else datadir
-    prompt = 'Are you sure you want to delete all data from {}?'.format(user_db_dir)
+
+    if not os.path.exists(user_db_dir):
+        print('Directory does not exist: {}'.format(user_db_dir))
+        print('Nothing to delete.')
+        return
+
+    # Sanity check if the specified directory is a Raiden datadir.
+    sane = True
+    if not address_hex:
+        ls = os.listdir(user_db_dir)
+
+        sane = all(
+            f[:2] == '0x' and
+            len(f) == 8 and
+            os.path.isdir(os.path.join(user_db_dir, f))
+            for f in ls
+        )
+
+    if not sane:
+        print("WARNING: The specified directory does not appear to be a Raiden data directory.")
+
+    prompt = 'Are you sure you want to delete {}?'.format(user_db_dir)
 
     if click.confirm(prompt):
-        try:
-            shutil.rmtree(user_db_dir)
-        except OSError:
-            pass
+        shutil.rmtree(user_db_dir)
         print('Local data deleted.')
     else:
         print('Abort.')
