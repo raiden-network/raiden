@@ -187,7 +187,7 @@ def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_blo
     if isinstance(to_block, int):
         to_block = hex(to_block)
     json_data = {
-        'fromBlock': from_block or 'earliest',
+        'fromBlock': from_block or hex(0),
         'toBlock': to_block or 'latest',
         'address': address_encoder(normalize_address(contract_address)),
     }
