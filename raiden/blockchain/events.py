@@ -147,7 +147,7 @@ def get_all_netting_channel_events(
         pyethapp_chain,
         netting_channel_address,
         events=ALL_EVENTS,
-        from_block='earliest',
+        from_block=0,
         to_block='latest'):
     """ Helper to get all events of a NettingChannelContract at
     `netting_channel_address`.
