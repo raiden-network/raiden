@@ -22,6 +22,7 @@ from raiden.blockchain.abi import contract_checksum
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.tests.fixtures import tester_state
+from raiden.network.utils import get_free_port
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
@@ -60,12 +61,6 @@ RST_GETH_BINARY = distutils.spawn.find_executable('geth')
 if RST_GETH_BINARY is not None and 'RST_GETH_BINARY' not in os.environ:
     os.environ['RST_GETH_BINARY'] = RST_GETH_BINARY
 
-ports = iter(range(27854, 28000))
-# FIXME: get_free_port does not check for free ports (gh issue #759)
-get_free_port = lambda: str(next(ports))
-
-RST_RPC_PORT = get_free_port()
-os.environ['RST_RPC_PORT'] = RST_RPC_PORT
 
 TEST_ACCOUNT = {
     "version": 3,
@@ -289,6 +284,8 @@ def init_with_genesis(smoketest_genesis):
 
 
 def start_ethereum(smoketest_genesis):
+    RST_RPC_PORT = get_free_port('127.0.0.1', 27854).next()
+    os.environ['RST_RPC_PORT'] = str(RST_RPC_PORT)
     cmd = os.environ.get('RST_ETH_COMMAND', DEFAULT_ETH_COMMAND)
     args = shlex.split(
         Template(cmd).substitute(os.environ)
