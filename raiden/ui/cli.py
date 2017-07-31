@@ -53,30 +53,14 @@ class AddressType(click.ParamType):
 
 ADDRESS_TYPE = AddressType()
 
-OPTION_ADDRESS = click.option(
-    '--address',
-    help=('The ethereum address you would like raiden to use and for which '
-          'a keystore file exists in your local system.'),
-    default=None,
-    type=ADDRESS_TYPE,
-)
-
-OPTION_DATADIR = click.option(
-    '--datadir',
-    help='Directory for storing raiden data.',
-    default=os.path.join(os.path.expanduser('~'), '.raiden'),
-    type=click.Path(
-        exists=False,
-        dir_okay=True,
-        file_okay=False,
-        writable=True,
-        resolve_path=True,
-        allow_dash=False,
-    ),
-)
-
 OPTIONS = [
-    OPTION_ADDRESS,
+    click.option(
+        '--address',
+        help=('The ethereum address you would like raiden to use and for which '
+              'a keystore file exists in your local system.'),
+        default=None,
+        type=ADDRESS_TYPE,
+    ),
     click.option(
         '--keystore-path',
         help=('If you have a non-standard path for the ethereum keystore directory'
@@ -168,7 +152,19 @@ OPTIONS = [
         default="127.0.0.1:5001",
         type=str,
     ),
-    OPTION_DATADIR,
+    click.option(
+        '--datadir',
+        help='Directory for storing raiden data.',
+        default=os.path.join(os.path.expanduser('~'), '.raiden'),
+        type=click.Path(
+            exists=False,
+            dir_okay=True,
+            file_okay=False,
+            writable=True,
+            resolve_path=True,
+            allow_dash=False,
+        ),
+    ),
     click.option(
         '--password-file',
         help='Text file containing password for provided account',
@@ -456,6 +452,9 @@ def run(ctx, **kwargs):
                 sys.exit(1)
             raise
         app_.stop(leave_channels=False)
+    else:
+        # Pass parsed args on to subcommands.
+        ctx.obj = kwargs
 
 
 @run.command()
@@ -545,15 +544,16 @@ def smoketest(ctx, debug, **kwargs):
 
 
 @run.command()
-@OPTION_ADDRESS
-@OPTION_DATADIR
-def removedb(address, datadir):
+@click.pass_context
+def removedb(ctx):
     """
     Delete local cache and database of this address or all if none is specified.
     """
     import shutil
 
-    address_hex = address_encoder(address)
+    datadir = ctx.obj['datadir']
+    address = ctx.obj['address']
+    address_hex = address_encoder(address) if address else None
     user_db_dir = os.path.join(datadir, address_hex[:8]) if address_hex else datadir
     prompt = 'Are you sure you want to delete all data from {}?'.format(user_db_dir)
 
