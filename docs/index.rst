@@ -14,11 +14,12 @@ This is the documentation of the  `Raiden Network <http://raiden.network/>`_. Yo
 Contents
 ==============
 
-* :doc:`overview_and_guide`
-* :doc:`api`
+* :doc:`overviewandguide`
+* :doc:`restapi`
 * :doc:`Raiden Codebase <_build/generated/raiden>`
 * :doc:`specification`
-* :doc:`Get-Started-with-API-Walkthrough <_build/html/Get-Started-With-API-Walkthough.html>`
+* :doc:`apiwalkthrough`
+* :doc:`whatisdevpreview`
 * :ref:`genindex`
 * :ref:`modindex`
 
