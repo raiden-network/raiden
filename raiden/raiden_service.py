@@ -210,8 +210,6 @@ class RaidenService(object):
             )
         )
 
-        alarm.start()
-
         registry_event = gevent.spawn(
             discovery.register,
             self.address,
@@ -230,6 +228,7 @@ class RaidenService(object):
         self.tokens_to_connectionmanagers = dict()
 
         self.serialization_file = None
+        alarm.start()
         if config['database_path'] != ':memory:':
             snapshot_dir = os.path.join(
                 path.dirname(self.config['database_path']),
