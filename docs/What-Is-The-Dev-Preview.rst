@@ -42,4 +42,10 @@ What it is not::
 - It is not safe to use in the main net and we do not recommend that anyone deploy the contracts to the Ethereum main net.
 - It is not yet properly security audited and should, hence, not be used to transfer anything of actual value.
 - It is not capable of recovering the state of a Raiden node if Raiden did not shut down correctly.
-- It does currently not support a very efficient network topology. Currenly all nodes need to have a complete view of the network to find paths for mediated transfers.
+- It does currently not support a very efficient network topology. Currently all nodes need to have a complete view of the network to find paths for mediated transfers.
+
+
+Other restrictions::
+--------------------
+Currently all nodes participating in a transfer need to be online in order for a transfer to be carried out. This means that users must run a full Raiden node to receive transfers too. The Developer Preview does not offer a Raiden light client, it is however a goal to `implement a light client <https://github.com/raiden-network/raiden/issues/114>`_ in the future.
+
