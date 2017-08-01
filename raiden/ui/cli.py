@@ -426,7 +426,11 @@ def run(ctx, **kwargs):
         from raiden.api.python import RaidenAPI
         from raiden.ui.console import Console
 
-        slogging.configure(kwargs['logging'], log_json=kwargs['log_json'], log_file=kwargs['logfile'])
+        slogging.configure(
+            kwargs['logging'],
+            log_json=kwargs['log_json'],
+            log_file=kwargs['logfile']
+        )
 
         # TODO:
         # - Ask for confirmation to quit if there are any locked transfers that did
