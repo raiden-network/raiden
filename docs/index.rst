@@ -18,6 +18,7 @@ Contents
 * :doc:`api`
 * :doc:`Raiden Codebase <_build/generated/raiden>`
 * :doc:`specification`
+* :doc:`Get-Started-with-API-Walkthrough <_build/html/Get-Started-With-API-Walkthough.html>`
 * :ref:`genindex`
 * :ref:`modindex`
 
