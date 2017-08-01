@@ -450,6 +450,9 @@ class RaidenProtocol(object):
         cache_wrapper = cachetools.cached(cache=cache)
         self.get_host_port = cache_wrapper(discovery.get)
 
+    def start(self):
+        self.transport.start()
+
     def stop_and_wait(self):
         self.event_stop.set()
 
@@ -706,6 +709,8 @@ class RaidenProtocol(object):
         elif message is not None:
             # all messages require an Ack, to send it back an address is required
             assert isinstance(message, SignedMessage)
+            assert (hasattr(self.raiden, 'on_message') and
+                    callable(getattr(self.raiden, 'on_message')))
 
             if log.isEnabledFor(logging.INFO):
                 log.info(
