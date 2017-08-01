@@ -345,11 +345,8 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
             raiden.greenlet_task_dispatcher.register_task(self, hashlock)
             raiden.register_channel_for_hashlock(from_token, from_channel, hashlock)
 
-            lock_expiration = (
-                raiden.get_block_number() +
-                from_channel.settle_timeout -
-                raiden.config['reveal_timeout']
-            )
+            block_number = raiden.get_block_number()
+            lock_expiration = block_number + from_channel.settle_timeout
 
             from_mediated_transfer = from_channel.create_mediatedtransfer(
                 raiden.address,
@@ -362,7 +359,8 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
             )
             raiden.sign(from_mediated_transfer)
             from_channel.register_transfer(
-                raiden.get_block_number(),
+                # must be the same block number used to compute lock_expiration
+                block_number,
                 from_mediated_transfer,
             )
 
