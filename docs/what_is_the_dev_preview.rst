@@ -34,6 +34,7 @@ What it is::
 - It provides a REST API with endpoints for all functionality.
 - It supports token networks for all ERC20 tokens.
 - It supports restartability of Raiden nodes.
+- It supports ERC20 token swaps.
 
 
 What it is not::
