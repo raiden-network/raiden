@@ -27,7 +27,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.state_change import ReceiveTransferDirect
-from raiden.utils import pex, sha3
+from raiden.utils import pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -114,28 +114,6 @@ class RaidenMessageHandler(object):
             message,
             message.hashlock,
         )
-
-        try:
-            # register the secret with all channels interested in it (this
-            # must not withdraw or unlock otherwise the state changes could
-            # flow in the wrong order in the path)
-            self.raiden.register_secret(message.secret)
-
-            secret = message.secret
-            identifier = message.identifier
-            token = message.token
-            secret = message.secret
-            hashlock = sha3(secret)
-
-            self.raiden.handle_secret(
-                identifier,
-                token,
-                secret,
-                message,
-                hashlock,
-            )
-        except:  # pylint: disable=bare-except
-            log.exception('Unhandled exception')
 
         state_change = ReceiveSecretReveal(
             message.secret,
