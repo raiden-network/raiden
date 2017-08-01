@@ -55,6 +55,45 @@ def assert_path_mediated_transfer(*transfers):
         assert first.lock.expiration > second.lock.expiration, 'lock expiration is not decreasing'
 
 
+def check_nested_attrs(item, data):
+    for name, value in data.iteritems():
+        item_value = getattr(item, name)
+
+        if isinstance(value, dict):
+            if not check_nested_attrs(item_value, value):
+                return False
+
+        elif item_value != value:
+            return False
+
+    return True
+
+
+def must_contain_entry(item_list, type_, data):
+    """ A node might have duplicated state changes or code changes may change
+    order / quantity of the events.
+
+    The number of state changes is undeterministic since it depends on the
+    number of retries from the protocol layer.
+
+    This is completely undeterministic since the protocol retries depends on
+    timeouts and the cooperative scheduling of the running greenlets.
+    Additionally the order / quantity of greenlet switchs will change as the
+    code evolves.
+
+    This utility checks the list of state changes for an entry of the correct
+    type with the expected data, ignoring *new* fields, repeated entries, and
+    unexpected entries.
+    """
+    # item_list may be composed of state changes or events
+    for item in item_list:
+        if isinstance(item, type_):
+            if check_nested_attrs(item, data):
+                return True
+
+    return False
+
+
 @pytest.mark.parametrize('privatekey_seed', ['fullnetwork:{}'])
 @pytest.mark.parametrize('channels_per_node', [2])
 @pytest.mark.parametrize('number_of_nodes', [4])
@@ -176,167 +215,148 @@ def test_fullnetwork(
     assert taken_route in app0_state_changes[1].routes.available_routes
     assert not_taken_route not in app0_state_changes[1].routes.available_routes
 
-    # app0 will also receive a secret request from the target
-    assert isinstance(app0_state_changes[2], ReceiveSecretRequest)
-    assert app0_state_changes[2].amount == amount
-    assert app0_state_changes[2].sender == app2.raiden.address
-    hashlock = app0_state_changes[2].hashlock
+    secret = None
+    for event in app0_events:
+        if isinstance(event, SendRevealSecret):
+            secret = event.secret
 
-    # app0 will also receive a secret reveal from the immediate neighbour
-    assert isinstance(app0_state_changes[3], ReceiveSecretReveal)
-    assert app0_state_changes[3].sender == app3.raiden.address
-    secret = app0_state_changes[3].secret
-    assert sha3(secret) == hashlock
+    assert secret is not None
+    hashlock = sha3(secret)
 
-    assert len(app0_events) == 6
+    assert must_contain_entry(app0_state_changes, ReceiveSecretRequest, {
+        'amount': amount,
+        'sender': app2.raiden.address,
+        'hashlock': hashlock,
+    })
 
-    # Direct transfer
-    assert isinstance(app0_events[0], EventTransferSentSuccess)
+    assert must_contain_entry(app0_state_changes, ReceiveSecretReveal, {
+        'sender': app3.raiden.address,
+        'secret': secret,
+    })
 
-    # not checking the expiration and identifier
-    assert isinstance(app0_events[1], SendMediatedTransfer)
-    assert app0_events[1].token == token_address
-    assert app0_events[1].amount == amount
-    assert app0_events[1].hashlock == hashlock
-    assert app0_events[1].initiator == app0.raiden.address
-    assert app0_events[1].target == app2.raiden.address
-    assert app0_events[1].receiver == app3.raiden.address
+    assert must_contain_entry(app0_events, EventTransferSentSuccess, {})
 
-    #  not checking the identifier
-    assert isinstance(app0_events[2], SendRevealSecret)
-    assert app0_events[2].secret == secret
-    assert app0_events[2].token == token_address
-    assert app0_events[2].receiver == app2.raiden.address
-    assert app0_events[2].sender == app0.raiden.address
+    assert must_contain_entry(app0_events, SendMediatedTransfer, {
+        'token': token_address,
+        'amount': amount,
+        'hashlock': hashlock,
+        'initiator': app0.raiden.address,
+        'target': app2.raiden.address,
+        'receiver': app3.raiden.address,
+    })
 
-    # not checking the identifier
-    assert isinstance(app0_events[3], SendBalanceProof)
-    assert app0_events[3].token == token_address
-    assert app0_events[3].channel_address == channel_0_3.channel_address
-    assert app0_events[3].receiver == app3.raiden.address
-    assert app0_events[3].secret == secret
+    assert must_contain_entry(app0_events, SendRevealSecret, {
+        'secret': secret,
+        'token': token_address,
+        'receiver': app2.raiden.address,
+        'sender': app0.raiden.address,
+    })
 
-    assert isinstance(app0_events[4], EventTransferSentSuccess)
+    assert must_contain_entry(app0_events, SendBalanceProof, {
+        'token': token_address,
+        'channel_address': channel_0_3.channel_address,
+        'receiver': app3.raiden.address,
+        'secret': secret,
+    })
 
-    # EventUnlockSuccess, not checking the identifier
-    assert isinstance(app0_events[5], EventUnlockSuccess)
-    assert app0_events[5].hashlock == hashlock
+    assert must_contain_entry(app0_events, EventTransferSentSuccess, {})
+    assert must_contain_entry(app0_events, EventUnlockSuccess, {
+        'hashlock': hashlock,
+    })
 
-    # app3 is the mediator
-    assert isinstance(app3_state_changes[0], ActionInitMediator)
-    assert app3_state_changes[0].our_address == app3.raiden.address
-    # We should have only 1 available route from mediator to target
-    from_route = RouteState(
-        state='opened',
-        node_address=app0.raiden.address,
-        channel_address=channel_0_3.channel_address,
-        available_balance=deposit,
-        settle_timeout=settle_timeout,
-        reveal_timeout=reveal_timeout,
-        closed_block=None,
-    )
-    to_route = RouteState(
-        state='opened',
-        node_address=app2.raiden.address,
-        channel_address=channel_3_2.channel_address,
-        available_balance=deposit,
-        settle_timeout=settle_timeout,
-        reveal_timeout=reveal_timeout,
-        closed_block=None,
-    )
+    assert must_contain_entry(app3_state_changes, ActionInitMediator, {
+        'our_address': app3.raiden.address,
+        'from_route': {
+            'state': 'opened',
+            'node_address': app0.raiden.address,
+            'channel_address': channel_0_3.channel_address,
+            'available_balance': deposit,
+            'settle_timeout': settle_timeout,
+            'reveal_timeout': reveal_timeout,
+            'closed_block': None,
+        },
+        'from_transfer': {
+            'amount': amount,
+            'hashlock': hashlock,
+            'token': token_address,
+            'initiator': app0.raiden.address,
+            'target': app2.raiden.address,
+        }
+    })
 
-    assert app3_state_changes[0].from_route == from_route
-    assert len(app3_state_changes[0].routes.available_routes) == 1
-    assert len(app3_state_changes[0].routes.ignored_routes) == 0
-    assert len(app3_state_changes[0].routes.refunded_routes) == 0
-    assert len(app3_state_changes[0].routes.canceled_routes) == 0
-    assert app3_state_changes[0].routes.available_routes[0] == to_route
-    # check the from_transfer is correct
-    assert app3_state_changes[0].from_transfer.amount == amount
-    assert app3_state_changes[0].from_transfer.hashlock == hashlock
-    assert app3_state_changes[0].from_transfer.token == token_address
-    assert app3_state_changes[0].from_transfer.initiator == app0.raiden.address
-    assert app3_state_changes[0].from_transfer.target == app2.raiden.address
+    assert must_contain_entry(app3_state_changes, ReceiveSecretReveal, {
+        'sender': app2.raiden.address,
+        'secret': secret,
+    })
 
-    # The mediator should have also received a SecretReveal from the target
-    assert isinstance(app3_state_changes[1], ReceiveSecretReveal)
-    assert app3_state_changes[1].sender == app2.raiden.address
-    assert app3_state_changes[1].secret == secret
+    assert must_contain_entry(app3_state_changes, ReceiveSecretReveal, {
+        'sender': app2.raiden.address,
+        'secret': secret,
+    })
 
-    # If the mediator received any more it is from the initiator
-    # TODO: Figure out why we may get two times the secret reveal from the initiator
-    for state_change in app3_state_changes[2:]:
-        assert isinstance(state_change, ReceiveSecretReveal)
-        assert state_change.sender == app0.raiden.address
-        assert state_change.secret == secret
+    assert must_contain_entry(app3_events, SendMediatedTransfer, {
+        'token': token_address,
+        'amount': amount,
+        'hashlock': hashlock,
+        'initiator': app0.raiden.address,
+        'target': app2.raiden.address,
+        'receiver': app2.raiden.address,
+    })
 
-    # check app3 state events
-    assert len(app3_events) == 4
-    assert isinstance(app3_events[0], SendMediatedTransfer)
-    assert app3_events[0].token == token_address
-    assert app3_events[0].amount == amount
-    assert app3_events[0].hashlock == hashlock
-    assert app3_events[0].initiator == app0.raiden.address
-    assert app3_events[0].target == app2.raiden.address
-    assert app3_events[0].receiver == app2.raiden.address
+    assert must_contain_entry(app3_events, SendRevealSecret, {
+        'secret': secret,
+        'token': token_address,
+        'receiver': app0.raiden.address,
+        'sender': app3.raiden.address,
+    })
 
-    assert isinstance(app3_events[1], SendRevealSecret)
-    assert app3_events[1].secret == secret
-    assert app3_events[1].token == token_address
-    assert app3_events[1].receiver == app0.raiden.address
-    assert app3_events[1].sender == app3.raiden.address
+    assert must_contain_entry(app3_events, SendBalanceProof, {
+        'token': token_address,
+        'channel_address': channel_3_2.channel_address,
+        'receiver': app2.raiden.address,
+        'secret': secret,
+    })
+    assert must_contain_entry(app3_events, EventUnlockSuccess, {})
 
-    assert isinstance(app3_events[2], SendBalanceProof)
-    assert app3_events[2].token == token_address
-    assert app3_events[2].channel_address == channel_3_2.channel_address
-    assert app3_events[2].receiver == app2.raiden.address
-    assert app3_events[2].secret == secret
+    assert must_contain_entry(app2_state_changes, ActionInitTarget, {
+        'our_address': app2.raiden.address,
+        'from_route': {
+            'state': 'opened',
+            'node_address': app3.raiden.address,
+            'channel_address': channel_3_2.channel_address,
+            'available_balance': deposit,
+            'settle_timeout': settle_timeout,
+            'reveal_timeout': reveal_timeout,
+            'closed_block': None
+        },
+        'from_transfer': {
+            'amount': amount,
+            'hashlock': hashlock,
+            'token': token_address,
+            'initiator': app0.raiden.address,
+            'target': app2.raiden.address,
+        }
+    })
 
-    assert isinstance(app3_events[3], EventUnlockSuccess)
+    assert must_contain_entry(app2_state_changes, ReceiveSecretReveal, {
+        'sender': app0.raiden.address,
+        'secret': secret,
+    })
 
-    # app2 is the target of the mediated transfer
-    assert len(app2_state_changes) == 4  # We get 2 secret reveals from the mediator. WHY?
-    assert isinstance(app2_state_changes[0], ActionInitTarget)
-    assert app2_state_changes[0].our_address == app2.raiden.address
-    # check the route the transfer came from
-    from_route = RouteState(
-        state='opened',
-        node_address=app3.raiden.address,
-        channel_address=channel_3_2.channel_address,
-        available_balance=deposit,
-        settle_timeout=settle_timeout,
-        reveal_timeout=reveal_timeout,
-        closed_block=None,
-    )
-    assert app2_state_changes[0].from_route == from_route
-    # check the from_transfer is correct
-    assert app2_state_changes[0].from_transfer.amount == amount
-    assert app2_state_changes[0].from_transfer.hashlock == hashlock
-    assert app2_state_changes[0].from_transfer.token == token_address
-    assert app2_state_changes[0].from_transfer.initiator == app0.raiden.address
-    assert app2_state_changes[0].from_transfer.target == app2.raiden.address
+    assert must_contain_entry(app2_state_changes, ReceiveSecretReveal, {
+        'sender': app3.raiden.address,
+        'secret': secret,
+    })
 
-    # We also get secret reveals from the initiator and the mediator.
-    assert isinstance(app2_state_changes[1], ReceiveSecretReveal)
-    assert app2_state_changes[1].sender == app0.raiden.address
-    assert app2_state_changes[1].secret == secret
+    assert must_contain_entry(app2_events, SendSecretRequest, {
+        'amount': amount,
+        'hashlock': hashlock,
+        'receiver': app0.raiden.address,
+    })
 
-    # TODO: Figure out why we get two times the Secret Reveal from the mediator
-    assert isinstance(app2_state_changes[2], ReceiveSecretReveal)
-    assert app2_state_changes[2].sender == app3.raiden.address
-    assert app2_state_changes[2].secret == secret
-    assert isinstance(app2_state_changes[3], ReceiveSecretReveal)
-    assert app2_state_changes[3].sender == app3.raiden.address
-    assert app2_state_changes[3].secret == secret
-
-    # check app2 state events
-    assert len(app2_events) == 2
-    assert isinstance(app2_events[0], SendSecretRequest)
-    assert app2_events[0].amount == amount
-    assert app2_events[0].hashlock == hashlock
-    assert app2_events[0].receiver == app0.raiden.address
-    assert isinstance(app2_events[1], SendRevealSecret)
-    assert app2_events[1].token == token_address
-    assert app2_events[1].secret == secret
-    assert app2_events[1].receiver == app3.raiden.address
-    assert app2_events[1].sender == app2.raiden.address
+    assert must_contain_entry(app2_events, SendRevealSecret, {
+        'token': token_address,
+        'secret': secret,
+        'receiver': app3.raiden.address,
+        'sender': app2.raiden.address,
+    })
