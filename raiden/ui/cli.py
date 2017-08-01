@@ -145,6 +145,11 @@ OPTIONS = [
         type=str,
     ),
     click.option(
+        '--log-json',
+        help="Output log lines in JSON format",
+        is_flag=True
+    ),
+    click.option(
         '--max-unresponsive-time',
         help=(
             'Max time in seconds for which an address can send no packets and '
@@ -235,6 +240,7 @@ def app(address,
         mapped_socket,
         logging,
         logfile,
+        log_json,
         max_unresponsive_time,
         send_ping_time,
         api_address,
@@ -420,7 +426,7 @@ def run(ctx, **kwargs):
         from raiden.api.python import RaidenAPI
         from raiden.ui.console import Console
 
-        slogging.configure(kwargs['logging'], log_file=kwargs['logfile'])
+        slogging.configure(kwargs['logging'], log_json=kwargs['log_json'], log_file=kwargs['logfile'])
 
         # TODO:
         # - Ask for confirmation to quit if there are any locked transfers that did
