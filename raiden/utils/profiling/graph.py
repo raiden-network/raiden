@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-'''
+"""
 Module to plot profile data.
 
 For memory time-line with memory usage and number of blocks through time you
@@ -24,7 +24,7 @@ exception of the objcount that is more coarse), so these plots can be combined
 using ImageMagick:
 
     convert -append memory_timeline.png latency_scatter.png memory_objcount.png collage.png
-'''
+"""
 from __future__ import absolute_import
 
 # Improvements:
@@ -45,7 +45,7 @@ MEMORY = 1
 
 
 def ts_to_dt(string_ts):
-    '''converts a string timestamp to a datatime object'''
+    """converts a string timestamp to a datatime object"""
     return datetime.fromtimestamp(int(float(string_ts)))
 
 
@@ -104,13 +104,6 @@ def memory_objcount(output, data_list, topn=10):
                 highcount = max(count, sample_highcount.get(klass, 0))
                 sample_highcount[klass] = highcount
 
-        # get topn of the _last_ sample and show only these
-        # last_epoch = [
-        #     (objcount[klass][-1], klass)
-        #     for klass in objcount
-        # ]
-        # topn_list = sorted(last_epoch, reverse=True)[:topn]
-
         # get the topn classes with the highest object count, the idea to show
         # spikes
         topn_classes = sorted(
@@ -160,12 +153,12 @@ def memory_objcount(output, data_list, topn=10):
 
 
 def memory_timeline(output, data_list):
-    '''Plots all the data in data_list into a single axes, pinning the y-axis
+    """Plots all the data in data_list into a single axis, pinning the y-axis
     minimum at zero.
 
     This plot was created to compare multiple executions of the application,
-    removing skew in both axis.
-    '''
+    removing skew in both axes.
+    """
     import matplotlib.pyplot as plt
 
     data_list = sorted(data_list, key=lambda list_: list_[0][TIMESTAMP])
@@ -199,9 +192,9 @@ def memory_timeline(output, data_list):
 
 
 def memory_subplot(output, data_list):
-    '''Plots all data in separated axes, a simple way to look at distinct
+    """Plots all data in separated axes, a simple way to look at distinct
     executions, keep in mind that the time-axis will be skewed, since each plot
-    has a differente running time but the same plotting area.'''
+    has a differente running time but the same plotting area."""
     import matplotlib.pyplot as plt
     from matplotlib import dates
 
@@ -283,7 +276,7 @@ def latency_scatter(output, data_list, interval):
 
 def objcount_data(filepath):
     # the file dosn't contain just one pickled object, but a sequence of
-    # pickled dictionaries (look the sample_objects for details)
+    # pickled dictionaries (look at the sample_objects for details)
     #
     # note: this only works with objects that keep track of the reading
     # position
@@ -307,14 +300,14 @@ def objcount_data(filepath):
 
 def memory_data(filepath):
     def convert_line(line):
-        '''returns a tuple (timestamp, memory_usage)'''
+        """returns a tuple (timestamp, memory_usage)"""
         return (
             ts_to_dt(line[TIMESTAMP]),
             float(line[MEMORY]),
         )
 
     with open(filepath) as handler:
-        # the format of the file is three columns:
+        # the format of the file has two columns:
         # timestamp memory_mb
         data = [
             line.split()

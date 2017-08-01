@@ -54,7 +54,7 @@ def sample_memory(timestamp, pid, stream):
 
 
 def sample_objects(timestamp, stream):
-    # instead of keeping the count_per_type in memory stream the data to a file
+    # instead of keeping the count_per_type in memory, stream the data to a file
     # to save memory
     count_per_type = objgraph.typestats()
 
