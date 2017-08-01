@@ -1,1 +1,1 @@
-{{ hostvars[inventory_hostname]['tags.Role'].lower() }}_{{ '{:02d}'.format(private_ip.rpartition('.')[2]|int) }}
+{{ hostname }}

@@ -1,6 +1,9 @@
+- set_fact:
+    hostname: "{{ hostvars[inventory_hostname]['tags.Role'].lower() }}_{{ '{:02d}'.format(private_ip.rpartition('.')[2]|int) }}"
+
 - name: Hostname
   hostname:
-    name: "{{ hostvars[inventory_hostname]['tags.Role'].lower() }}_{{ '{:02d}'.format(private_ip.rpartition('.')[2]|int) }}"
+    name: "{{ hostname }}"
 
 - name: Hostname file
   become: yes
