@@ -81,7 +81,7 @@ def api_raiden_service(
     raiden_service = RaidenService(
         blockchain,
         blockchain.private_key,
-        transport_class,
+        transport_class(config['host'], config['port']),
         Discovery(),
         config
     )

@@ -77,7 +77,6 @@ class UDPTransport(object):
             self.server = DatagramServer(socket, handle=self.receive)
         else:
             self.server = DatagramServer((host, port), handle=self.receive)
-        self.server.start()
         self.host = self.server.server_host
         self.port = self.server.server_port
         self.throttle_policy = throttle_policy
@@ -108,6 +107,10 @@ class UDPTransport(object):
 
     def stop(self):
         self.server.stop()
+
+    def start(self):
+        assert not self.server.started
+        self.server.start()
 
 
 class DummyNetwork(object):
@@ -173,6 +176,9 @@ class DummyTransport(object):
         self.protocol.receive(data)
 
     def stop(self):
+        pass
+
+    def start(self):
         pass
 
 
