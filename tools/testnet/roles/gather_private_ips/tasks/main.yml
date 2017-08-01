@@ -1,7 +1,0 @@
-- name: Gather private_ips
-  add_host:
-    hostname: "{{ hostvars[item]['private_ip'] }}"
-    groups: "{{ target_group_name }}"
-  with_items: "{{ ansible_play_hosts }}"
-  run_once: yes
-  changed_when: no
