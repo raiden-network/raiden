@@ -170,7 +170,8 @@ class SignedMessage(Message):
 
 
 class EnvelopeMessage(SignedMessage):
-    def sign(self, private_key, node_address):
+    @property
+    def message_hash(self):
         packed = self.packed()
         klass = type(packed)
 
@@ -181,10 +182,21 @@ class EnvelopeMessage(SignedMessage):
         message_data = data[:-field.size_bytes]
         message_hash = sha3(message_data)
 
+        return message_hash
+
+    def sign(self, private_key, node_address):
+        packed = self.packed()
+        klass = type(packed)
+
+        field = klass.fields_spec[-1]
+        assert field.name == 'signature', 'signature is not the last field'
+
+        data = packed.data
         nonce = klass.get_bytes_from(data, 'nonce')
         transferred_amount = klass.get_bytes_from(data, 'transferred_amount')
         locksroot = klass.get_bytes_from(data, 'locksroot')
         channel_address = klass.get_bytes_from(data, 'channel')
+        message_hash = self.message_hash
 
         data_to_sign = nonce + transferred_amount + locksroot + channel_address + message_hash
         signature = signing.sign(data_to_sign, private_key)

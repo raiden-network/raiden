@@ -414,10 +414,18 @@ def test_state_transition():
     second_block_iteration = target.state_transition(init_transition.new_state, second_new_block)
     assert second_block_iteration.new_state.block_number == block_number + 2
 
+    nonce = 11
+    transferred_amount = 13
+    locksroot = ''
+    message_hash = ''
     balance_proof = ReceiveBalanceProof(
         from_transfer.identifier,
-        from_route.channel_address,
         from_route.node_address,
+        nonce,
+        transferred_amount,
+        locksroot,
+        from_route.channel_address,
+        message_hash,
     )
     proof_iteration = target.state_transition(init_transition.new_state, balance_proof)
     assert proof_iteration.new_state is None
