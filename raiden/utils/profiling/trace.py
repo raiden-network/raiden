@@ -42,10 +42,6 @@ try:
             timestamp = time.time()
             sample_data = (timestamp, snapshot)
 
-            # statistics_groupby = snapshot.statistics('lineno')
-            # sample = list(map(_serialize_statistics, statistics_groupby))
-            # data_pickled = pickle.dumps((timestamp, sample))
-
             # *Must* use the HIGHEST_PROTOCOL, otherwise the serialization will
             # use GBs of memory
             pickle.dump(sample_data, self.trace_stream, protocol=pickle.HIGHEST_PROTOCOL)
