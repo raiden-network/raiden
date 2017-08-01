@@ -126,10 +126,23 @@ class ReceiveTransferRefund(StateChange):
 
 class ReceiveBalanceProof(StateChange):
     """ A balance proof `identifier` was received. """
-    def __init__(self, identifier, channel_address, node_address):
+    def __init__(
+            self,
+            identifier,
+            node_address,
+            nonce,
+            transferred_amount,
+            locksroot,
+            channel_address,
+            message_hash):
+
         self.identifier = identifier
-        self.channel_address = channel_address
         self.node_address = node_address
+        self.nonce = nonce
+        self.transferred_amount = transferred_amount
+        self.locksroot = locksroot
+        self.channel_address = channel_address
+        self.message_hash = message_hash
 
 
 class ContractReceiveWithdraw(StateChange):

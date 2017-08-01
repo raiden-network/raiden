@@ -3,6 +3,7 @@ import logging
 
 from ethereum import slogging
 
+from raiden.messages import EnvelopeMessage
 from raiden.encoding import messages
 from raiden.exceptions import (
     UnknownAddress,
@@ -22,6 +23,7 @@ from raiden.transfer.mediated_transfer.state import (
     LockedTransferState,
 )
 from raiden.transfer.mediated_transfer.state_change import (
+    ReceiveBalanceProof,
     ReceiveSecretRequest,
     ReceiveSecretReveal,
     ReceiveTransferRefund,
@@ -78,6 +80,25 @@ class RaidenMessageHandler(object):
         else:
             raise Exception("Unhandled message cmdid '{}'.".format(cmdid))
 
+    def balance_proof(self, proof):
+        if not isinstance(proof, EnvelopeMessage):
+            raise ValueError('proof must be an EnvelopeMessage')
+
+        balance_proof = ReceiveBalanceProof(
+            proof.identifier,
+            proof.sender,
+            proof.nonce,
+            proof.transferred_amount,
+            proof.locksroot,
+            proof.channel,
+            proof.message_hash,
+        )
+
+        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
+            balance_proof.identifier,
+            balance_proof,
+        )
+
     def message_revealsecret(self, message):
         secret = message.secret
         sender = message.sender
@@ -110,6 +131,8 @@ class RaidenMessageHandler(object):
         )
 
     def message_secret(self, message):
+        self.balance_proof(message)
+
         self.raiden.greenlet_task_dispatcher.dispatch_message(
             message,
             message.hashlock,
@@ -149,6 +172,8 @@ class RaidenMessageHandler(object):
         )
 
     def message_refundtransfer(self, message):
+        self.balance_proof(message)
+
         self.raiden.greenlet_task_dispatcher.dispatch_message(
             message,
             message.lock.hashlock,
@@ -174,6 +199,8 @@ class RaidenMessageHandler(object):
         )
 
     def message_directtransfer(self, message):
+        self.balance_proof(message)
+
         if message.token not in self.raiden.token_to_channelgraph:
             raise UnknownTokenAddress('Unknown token address {}'.format(pex(message.token)))
 
@@ -224,6 +251,8 @@ class RaidenMessageHandler(object):
         )
 
     def message_mediatedtransfer(self, message):
+        self.balance_proof(message)
+
         # TODO: Reject mediated transfer that the hashlock/identifier is known,
         # this is a downstream bug and the transfer is going in cycles (issue #490)
 
