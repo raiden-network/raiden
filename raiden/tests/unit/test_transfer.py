@@ -30,7 +30,17 @@ from raiden.tests.utils.transfer import (
     transfer,
 )
 from raiden.tests.utils.network import CHAIN
-from raiden.utils import pex, sha3, privatekey_to_address
+from raiden.tests.unit.transfer.mediated_transfer.factories import (
+    UNIT_SECRET,
+    UNIT_HASHLOCK,
+)
+from raiden.utils import (
+    pex,
+    sha3,
+    privatekey_to_address,
+    make_privkey_address,
+    make_address,
+)
 from raiden.raiden_service import create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.network.protocol import (
@@ -39,7 +49,6 @@ from raiden.network.protocol import (
 )
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
-HASH = sha3('muchcodingsuchwow_______________')
 HASH2 = sha3('terribleweathermuchstayinside___')
 
 
@@ -419,8 +428,7 @@ def test_receive_directtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
     graph0 = app0.raiden.token_to_channelgraph.values()[0]
 
-    other_key = PrivateKey(HASH)
-    other_address = privatekey_to_address(HASH)
+    other_key, other_address = make_privkey_address()
     direct_transfer_message = DirectTransfer(
         identifier=1,
         nonce=1,
@@ -428,7 +436,7 @@ def test_receive_directtransfer_unknown(raiden_network):
         channel=other_address,
         transferred_amount=10,
         recipient=app0.raiden.address,
-        locksroot=HASH
+        locksroot=UNIT_HASHLOCK,
     )
     sign_and_send(direct_transfer_message, other_key, other_address, app0)
 
@@ -440,10 +448,8 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
     app0 = raiden_network[0]  # pylint: disable=unbalanced-tuple-unpacking
     graph0 = app0.raiden.token_to_channelgraph.values()[0]
 
-    other_key = PrivateKey(HASH)
-    other_address = privatekey_to_address(HASH)
+    other_key, other_address = make_privkey_address()
     amount = 10
-    locksroot = HASH
     mediated_transfer = MediatedTransfer(
         identifier=1,
         nonce=1,
@@ -451,9 +457,9 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
         channel=other_address,
         transferred_amount=amount,
         recipient=app0.raiden.address,
-        locksroot=locksroot,
-        lock=Lock(amount, 1, locksroot),
-        target=privatekey_to_address(HASH2),
+        locksroot=UNIT_HASHLOCK,
+        lock=Lock(amount, 1, UNIT_HASHLOCK),
+        target=make_address(),
         initiator=other_address,
         fee=0
     )
@@ -478,26 +484,26 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
         channel=other_address,
         transferred_amount=amount,
         recipient=app0.raiden.address,
-        locksroot=HASH,
+        locksroot=UNIT_HASHLOCK,
         amount=amount,
-        hashlock=HASH,
+        hashlock=UNIT_HASHLOCK,
     )
     sign_and_send(refund_transfer, other_key, other_address, app0)
 
     secret = Secret(
         identifier=1,
         nonce=1,
-        channel=HASH,
+        channel=make_address(),
         transferred_amount=amount,
-        locksroot=HASH,
-        secret=HASH,
+        locksroot=UNIT_HASHLOCK,
+        secret=UNIT_SECRET,
     )
     sign_and_send(secret, other_key, other_address, app0)
 
-    secret_request = SecretRequest(1, HASH, 1)
+    secret_request = SecretRequest(1, UNIT_HASHLOCK, 1)
     sign_and_send(secret_request, other_key, other_address, app0)
 
-    reveal_secret = RevealSecret(HASH)
+    reveal_secret = RevealSecret(UNIT_SECRET)
     sign_and_send(reveal_secret, other_key, other_address, app0)
 
 
@@ -545,7 +551,7 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
         channel=channel0.channel_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
-        locksroot=HASH,
+        locksroot=UNIT_HASHLOCK,
     )
     app0_key = PrivateKey(private_keys[0])
     sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
@@ -585,8 +591,7 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
 
     # and now send one more mediated transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
-    locksroot = HASH
-    lock = Lock(amount, 1, locksroot)
+    lock = Lock(amount, 1, UNIT_HASHLOCK)
     identifier = create_default_identifier()
     mediated_transfer = MediatedTransfer(
         identifier=identifier,
@@ -595,7 +600,7 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
         channel=channel0.channel_address,
         transferred_amount=amount,
         recipient=bob_address,
-        locksroot=locksroot,
+        locksroot=UNIT_HASHLOCK,
         lock=lock,
         target=charlie_address,
         initiator=initiator_address,
@@ -635,8 +640,7 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
 
     # and now send one more mediated transfer with the same nonce, simulating
     # an out-of-order/resent message that arrives late
-    locksroot = HASH
-    lock = Lock(amount, 1, locksroot)
+    lock = Lock(amount, 1, UNIT_HASHLOCK)
     identifier = create_default_identifier()
     mediated_transfer = MediatedTransfer(
         identifier=identifier,
@@ -645,7 +649,7 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
         channel=channel0.channel_address,
         transferred_amount=amount,
         recipient=bob_address,
-        locksroot=locksroot,
+        locksroot=UNIT_HASHLOCK,
         lock=lock,
         target=charlie_address,
         initiator=initiator_address,
@@ -698,11 +702,11 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=2,
-        token=HASH[0:20],
+        token=make_address(),
         channel=channel0.channel_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
-        locksroot=HASH,
+        locksroot=UNIT_HASHLOCK,
     )
     app0_key = PrivateKey(private_keys[0])
     sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
@@ -750,7 +754,7 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
         channel=channel0.channel_address,
         transferred_amount=10,
         recipient=app1.raiden.address,
-        locksroot=HASH,
+        locksroot=UNIT_HASHLOCK,
     )
     app0_key = PrivateKey(private_keys[0])
     sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
@@ -823,7 +827,7 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         channel=channel0.channel_address,
         transferred_amount=10,
         recipient=app0.raiden.address,
-        locksroot=HASH
+        locksroot=UNIT_HASHLOCK,
     )
     sign_and_send(
         direct_transfer_message,
