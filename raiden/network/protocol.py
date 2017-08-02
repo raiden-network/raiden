@@ -387,10 +387,12 @@ class NotifyingQueue(Event):
 
     def copy(self):
         """ Copies the current queue items. """
-        return [
-            self.peek(i)
-            for i in range(self._queue.qsize())
-        ]
+        copy = self._queue.copy()
+
+        result = list()
+        while not copy.empty():
+            result.append(copy.get_nowait())
+        return result
 
 
 class RaidenProtocol(object):
