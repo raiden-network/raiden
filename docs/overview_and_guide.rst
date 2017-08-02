@@ -1,24 +1,20 @@
 Raiden System Overview and User Guide
-===============================================
-
-
+=====================================
 .. toctree::
-   :maxdepth: 2
-
-
+  :maxdepth: 3
 
 Introduction
-=============
+************
 Raiden is a payment channel implementation which provides scalable, low latency, and cheap token transfers for Ethereum.
 
 
 Getting Started
-==================
+***************
 
 In order to install Raiden at the moment you need to clone it from Github and compile it from source
 
 Dependencies
----------------
+************
 
 * You need to make sure that your system has `solc`, the ethereum solidity compiler installed. Refer to `its documentation <http://solidity.readthedocs.io/en/latest/installing-solidity.html>`_ for the installation steps.
 * You will need to have an ethereum client installed in your system.
@@ -29,7 +25,7 @@ Dependencies
 
 
 Installation
--------------
+************
 
 Clone the repository::
 
@@ -41,18 +37,18 @@ Navigate to the directory::
 
     cd raiden
 
-It's advised to create a `virtualenv <http://docs.python-guide.org/en/latest/dev/virtualenvs/>`_ for raiden and install all python dependencies there.
+It's advised to create a `virtualenv <http://docs.python-guide.org/en/latest/dev/virtualenvs/>`_ for Raiden and install all python dependencies there.
 
 After you have done that you can proceed to install the dependencies::
 
     pip install --upgrade -r requirements.txt
     python setup.py develop
 
-You will also need an ethereum client that is connected to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
+You will also need an Ethereum client that is connected to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
 
 
 Firing it up
-------------
+*************
 
 Using geth
 ~~~~~~~~~~
@@ -65,7 +61,7 @@ And then when in the console add a few peers by using ``admin.addPeer()`` and th
 
 Unless you already have an account you can also create one in the console by invoking ``personal.newAccount()``.
 
-Then launch raiden with the default testnet keystore path::
+Then launch Raiden with the default testnet keystore path::
 
        raiden --keystore-path  ~/.ethereum/testnet/keystore
 
@@ -80,9 +76,8 @@ After syncing the chain, create an account on the Ropsten testnet by navigating 
 
      http://127.0.0.1:8180
 
-After account creation, launch raiden with the path of your keystore supplied and the RPC endpoint of the parity client (defaults show)::
+After account creation, launch Raiden with the path of your keystore supplied and the RPC endpoint of the parity client (defaults show)::
 
      raiden --keystore-path "~/.local/share/io.parity.ethereum/keys/test" --eth-rpc-endpoint "127.0.0.1:8545"
 
-Select the ethereum account when prompted, and type in the account's password.
- 
+Select the Ethereum account when prompted, and type in the account's password.
