@@ -42,6 +42,20 @@ def assert_envelope_values(nonce, channel, transferred_amount, locksroot):
         raise ValueError('locksroot must be empty or have length 32')
 
 
+def assert_transfer_values(identifier, token, recipient):
+    if identifier < 0:
+        raise ValueError('identifier cannot be negative')
+
+    if identifier >= 2 ** 64:
+        raise ValueError('identifier is too large')
+
+    if len(token) != 20:
+        raise ValueError('token is an invalid address')
+
+    if len(recipient) != 20:
+        raise ValueError('recipient is an invalid address')
+
+
 def decode(data):
     klass = CMDID_TO_CLASS[data[0]]
     return klass.decode(data)
@@ -473,18 +487,7 @@ class DirectTransfer(EnvelopeMessage):
             transferred_amount,
             locksroot,
         )
-
-        if identifier < 0:
-            raise ValueError('identifier cannot be negative')
-
-        if identifier >= 2 ** 64:
-            raise ValueError('identifier is too large')
-
-        if len(token) != 20:
-            raise ValueError('token is an invalid address')
-
-        if len(recipient) != 20:
-            raise ValueError('recipient is an invalid address')
+        assert_transfer_values(identifier, token, recipient)
 
         super(DirectTransfer, self).__init__()
         self.identifier = identifier
@@ -620,17 +623,7 @@ class LockedTransfer(EnvelopeMessage):
             locksroot,
         )
 
-        if identifier < 0:
-            raise ValueError('identifier cannot be negative')
-
-        if identifier >= 2 ** 64:
-            raise ValueError('identifier is too large')
-
-        if len(token) != 20:
-            raise ValueError('token is an invalid address')
-
-        if len(recipient) != 20:
-            raise ValueError('recipient is an invalid address')
+        assert_transfer_values(identifier, token, recipient)
 
         self.identifier = identifier
         self.nonce = nonce
