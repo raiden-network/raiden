@@ -1,34 +1,29 @@
 Getting started with the Raiden API
 ###################################
 
-
-Contents:
-
 .. toctree::
-   :maxdepth: 2
-
-
+  :maxdepth: 3
 
 Introduction
-*************
-Raiden has a Restful API with URL endpoints corresponding to actions that the user can perform with his channels. The endpoints accept and return JSON encoded objects. The api url path always contains the api version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version.
+=============
+Raiden has a Restful API with URL endpoints corresponding to actions that the user can perform with its channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version.
 
 In this guide we will walk through the steps necessary in order to participate in a Raiden Token Network. We will provide some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels.
 
-Before you get started with below guides, please see :doc:`Overview and Guide <Overview-And-Guide>`, to make sure that you are connected to Raiden.
+Before you get started with below guides, please see :doc:`Overview and Guide <overview_and_guide>`, to make sure that you are connected to Raiden.
 
-Furthermore, to see all available endpoints, please see :doc:`REST API Endpoints <Rest-Api>`.
+Furthermore, to see all available endpoints, please see :doc:`REST API Endpoints <rest_api>`.
 
 
 Scenarios
-*********
-Below you'll find a series of different scenarios showing different ways that the Raiden API can be used and interacted with.
+=========
+Below is a series of different scenarios showing different ways that the Raiden API can be used and interacted with.
 
-A good way to check that you started Raiden correctly before proceeding is to check that your Raiden address is the same address as the Ethereum address that you chose, when starting the Raiden node::
+A good way to check that we started Raiden correctly before proceeding is to check that our Raiden address is the same address as the Ethereum address that we chose, when starting the Raiden node::
 
     GET /api/1/address
 
-If this returns your address, you know that your Raiden node has the API up and running.
+If this returns our address, we know that our Raiden node is up and running correctly.
 
 .. _bootstrapping-a-token-network:
 
@@ -41,11 +36,11 @@ The user wants to register the token, which will create a `Channel Manager <http
 
 Checking if a token is already registered
 -----------------------------------------
-One way of checking if a token is already registered is to get the list of all registered tokens and check if the address of the token you want to interact with exists in the list::
+One way of checking if a token is already registered is to get the list of all registered tokens and check if the address of the token we want to interact with exists in the list::
 
     GET /api/1/tokens
 
-If the address of the token you want to interact with exists in the list, see the :ref:`next scenario <joining-existing-token-network>`.
+If the address of the token we want to interact with exists in the list, see the :ref:`next scenario <joining-existing-token-network>`.
 If it does not exist in the list, we need to :ref:`register the token <adding-a-token>`.
 
 
@@ -131,11 +126,11 @@ It is possible for both parties to query the state of the specific payment chann
 
     GET /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
 
-This will give you a result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
+This will give us a result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
 
 We have now registered a new token resulting in a new token network. We have opened a channel between two Raiden nodes, and both nodes have deposited to the channel. From here on we can start :ref:`transferring tokens <transferring-tokens>` between the two nodes.
 
-The above is not how a user would normally join an already existing token network. It is the manual way to show how you it works under the hood.
+The above is not how a user would normally join an already existing token network. It is the manual way to show how it works under the hood.
 
 We will take a closer look at how to join already bootstrapped token networks in :ref:`the next scenario <joining-existing-token-network>`. 
 
@@ -158,17 +153,17 @@ Let's assume that a user holds 2000 of some awesome ERC20 token (AET). The user 
 
 Connect
 -------
-Connecting to an already existing token network is quite simple and all you need, is as mentioned above, the address of the token network you want to join and how much of the corresponding token you are willing to use for depositing in channels::
+Connecting to an already existing token network is quite simple and all we need, is as mentioned above, the address of the token network we want to join and how much of the corresponding token we are willing to use for depositing in channels::
 
     PUT /api/v1/connection/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
 
-With a payload representing the amount of tokens that you want to join the network with::
+With a payload representing the amount of tokens that we want to join the network with::
 
     {
         "funds": 2000
     }
 
-This will automatically connect you to and open channels with three random peers in the token network. Furthermore it will leave 40% of the tokens you join the network with as initially unassigned. This will allow new nodes joining the network to open bi-directionally funded payment channels with our node in the same way that we just opened channels with random nodes already in the network. The default values of opening three channels and leaving 40% of the tokens for new nodes to connect with, can be changed by adding ``"initial_channel_target": our_value`` and ``"joinable_funds_target": our_decimal_number`` to the payload.
+This will automatically connect us to and open channels with three random peers in the token network. Furthermore it will leave 40% of the tokens we join the network with as initially unassigned. This will allow new nodes joining the network to open bi-directionally funded payment channels with our node in the same way that we just opened channels with random nodes already in the network. The default values of opening three channels and leaving 40% of the tokens for new nodes to connect with, can be changed by adding ``"initial_channel_target": our_value`` and ``"joinable_funds_target": our_decimal_number`` to the payload.
 
 We are now connected to the token network for the AET token, and we should have a path to all other nodes that have joined this token network, so that we can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
 
@@ -181,7 +176,7 @@ If we at some point want to leave the token network the ``leave`` endpoint is av
 
     DELETE /api/v1/connection/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
 
-This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For more information on the nature of settlement see :doc:`TODO ADD DOCUMENT ON RAIDEN PAYMENT CHANNEL NATURE <link-to-doc.rst>`.
+This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. As an example there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
 
 
 .. _transferring-tokens:

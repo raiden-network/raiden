@@ -1,26 +1,18 @@
-Raiden network Documentation
+Raiden Network Documentation
 ==================================
 
 
-.. toctree::
-   :maxdepth: 2
-
-
-This is the documentation of the  `Raiden Network <http://raiden.network/>`_. You can  find the sourcecode in  `our Github Repository <https://github.com/raiden-network/raiden>`_.
-
-
-
+This is the documentation of the  `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
 
 Contents
 ==============
 
-* :doc:`overview_and_guide`
-* :doc:`rest_api`
-* :doc:`Raiden Codebase <_build/generated/raiden>`
-* :doc:`specification`
-* :doc:`api_walkthrough`
-* :doc:`what_is_the_dev_preview`
-* :ref:`genindex`
-* :ref:`modindex`
+.. toctree::
+  :maxdepth: 2
+
+  overview_and_guide
+  rest_api
+  api_walkthrough
+  what_is_the_dev_preview
 
 
