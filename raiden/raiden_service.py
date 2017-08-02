@@ -114,9 +114,7 @@ def save_snapshot(serialization_file, raiden):
         queue_data = {
             'receiver_address': key[0],
             'token_address': key[1],
-            'messages': [
-                queue_item for queue_item in queue.copy()
-            ]
+            'messages': queue.copy(),
         }
         all_queues.append(queue_data)
 
