@@ -214,7 +214,10 @@ class BaseMediatedTransferTask(Task):
                     secret = response.secret
                     hashlock = sha3(secret)
 
-                    if response.identifier == identifier and response.token == token:
+                    is_valid_identifier = response.identifier == identifier
+                    is_valid_channel = response.channel == channel.channel_address
+
+                    if is_valid_identifier and is_valid_channel:
                         raiden.handle_secret(
                             identifier,
                             graph.token_address,

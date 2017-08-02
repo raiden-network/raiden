@@ -15,7 +15,7 @@ UNIT_SETTLE_TIMEOUT = 50
 UNIT_REVEAL_TIMEOUT = 5
 UNIT_TRANSFER_AMOUNT = 10
 
-UNIT_SECRET = 'secretsecretsecretsecretsecretsecretsecr'
+UNIT_SECRET = 'secretsecretsecretsecretsecretse'
 UNIT_HASHLOCK = sha3(UNIT_SECRET)
 
 UNIT_TOKEN_ADDRESS = 'tokentokentokentokentokentokentokentoken'
