@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import filelock
+import sys
+
 from ethereum.utils import decode_hex
 
 from raiden.raiden_service import RaidenService
@@ -15,7 +18,10 @@ from raiden.settings import (
     INITIAL_PORT,
 )
 from raiden.network.transport import UDPTransport, TokenBucket
-from raiden.utils import pex
+from raiden.utils import (
+    pex,
+    privatekey_to_address
+)
 
 
 class App(object):  # pylint: disable=too-few-public-methods
@@ -62,13 +68,19 @@ class App(object):  # pylint: disable=too-few-public-methods
             config['protocol']['throttle_capacity'],
             config['protocol']['throttle_fill_rate']
         )
-        self.raiden = RaidenService(
-            chain,
-            decode_hex(config['privatekey_hex']),
-            transport,
-            discovery,
-            config,
-        )
+        try:
+            self.raiden = RaidenService(
+                chain,
+                decode_hex(config['privatekey_hex']),
+                transport,
+                discovery,
+                config,
+            )
+        except filelock.Timeout:
+            pubkey = privatekey_to_address(decode_hex(self.config['privatekey_hex']))
+            print ("FATAL: Another Raiden instance already running for account 0x%s" %
+                   str(pubkey).encode('hex'))
+            sys.exit(1)
         self.start_console = self.config['console']
 
         # raiden.ui.console:Console assumes that a services

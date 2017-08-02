@@ -5,6 +5,7 @@ from os import path
 import itertools
 import cPickle as pickle
 import random
+import filelock
 from collections import defaultdict
 
 import gevent
@@ -155,6 +156,15 @@ class RaidenService(object):
             raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
             ))
+
+        # create lock file only if SQLite backend is file, to prevent two instances
+        #  from accesing a single db
+        if config['database_path'] != ':memory:':
+            self.db_lock = filelock.FileLock(path.dirname(config['database_path']) + "/.lock")
+            self.db_lock.acquire(timeout=0)
+            assert self.db_lock.is_locked
+        else:
+            self.db_lock = None
 
         private_key = PrivateKey(private_key_bin)
         pubkey = private_key.public_key.format(compressed=False)
@@ -801,6 +811,9 @@ class RaidenService(object):
         # save the state after all tasks are done
         if self.serialization_file:
             save_snapshot(self.serialization_file, self)
+
+        if self.db_lock is not None:
+            self.db_lock.release()
 
     def transfer_async(self, token_address, amount, target, identifier=None):
         """ Transfer `amount` between this node and `target`.

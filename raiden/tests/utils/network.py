@@ -2,6 +2,7 @@
 """ Utilities to set-up a Raiden network. """
 from __future__ import print_function, division
 
+
 from ethereum import slogging
 
 from raiden.app import App
