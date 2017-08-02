@@ -73,12 +73,12 @@ def must_contain_entry(item_list, type_, data):
     """ A node might have duplicated state changes or code changes may change
     order / quantity of the events.
 
-    The number of state changes is undeterministic since it depends on the
+    The number of state changes is non-deterministic since it depends on the
     number of retries from the protocol layer.
 
-    This is completely undeterministic since the protocol retries depends on
+    This is completely non-deterministic since the protocol retries depend on
     timeouts and the cooperative scheduling of the running greenlets.
-    Additionally the order / quantity of greenlet switchs will change as the
+    Additionally the order / quantity of greenlet switches will change as the
     code evolves.
 
     This utility checks the list of state changes for an entry of the correct
