@@ -1,7 +1,7 @@
-Raiden System Overview and User Guide
-=====================================
+System Requirements and Installation Guide
+==================================================
 .. toctree::
-  :maxdepth: 3
+  :maxdepth: 2
 
 Introduction
 ************
@@ -81,3 +81,6 @@ After account creation, launch Raiden with the path of your keystore supplied an
      raiden --keystore-path "~/.local/share/io.parity.ethereum/keys/test" --eth-rpc-endpoint "127.0.0.1:8545"
 
 Select the Ethereum account when prompted, and type in the account's password.
+
+
+See the :doc:`API walkthrough <api_walkthrough>` for further intstructions on how to interact with Raiden.
