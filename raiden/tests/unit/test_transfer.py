@@ -30,9 +30,10 @@ from raiden.tests.utils.transfer import (
     transfer,
 )
 from raiden.tests.utils.network import CHAIN
-from raiden.tests.unit.transfer.mediated_transfer.factories import (
+from raiden.tests.utils.factories import (
     UNIT_SECRET,
     UNIT_HASHLOCK,
+    make_address,
 )
 from raiden.utils import (
     pex,
@@ -46,7 +47,6 @@ from raiden.network.protocol import (
     NODE_NETWORK_UNREACHABLE,
     NODE_NETWORK_UNKNOWN,
 )
-from raiden.tests.utils.factories import make_address
 
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long

@@ -31,7 +31,7 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
-from . import factories
+from raiden.tests.utils import factories
 
 
 def make_init_statechange(
