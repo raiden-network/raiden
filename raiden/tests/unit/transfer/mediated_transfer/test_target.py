@@ -18,7 +18,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendSecretRequest,
 )
 from raiden.transfer.state import CHANNEL_STATE_CLOSED
-from . import factories
+from raiden.tests.utils import factories
 
 
 def make_init_state_change(our_address, amount, block_number, initiator, expire=None):

@@ -2,12 +2,11 @@ import os
 import sqlite3
 import pytest
 
-import transfer.mediated_transfer.factories as factories
-
+from raiden.tests.utils import factories
 from raiden.tests.utils.log import get_all_state_events
+from raiden.transfer.events import EventTransferSentFailed
 from raiden.transfer.log import StateChangeLog, StateChangeLogSQLiteBackend
 from raiden.transfer.mediated_transfer.state_change import ContractReceiveWithdraw
-from raiden.transfer.events import EventTransferSentFailed
 from raiden.transfer.state_change import Block, ActionRouteChange
 from raiden.transfer.state import RouteState
 

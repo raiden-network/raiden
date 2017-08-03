@@ -33,7 +33,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendMediatedTransfer,
     SendRevealSecret,
 )
-from . import factories
+from raiden.tests.utils import factories
 
 
 class SequenceGenerator(object):
