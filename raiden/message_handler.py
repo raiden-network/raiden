@@ -131,6 +131,7 @@ class RaidenMessageHandler(object):
         )
 
     def message_secret(self, message):
+        self.balance_proof(message)
         hashlock = message.hashlock
         identifier = message.identifier
         secret = message.secret
