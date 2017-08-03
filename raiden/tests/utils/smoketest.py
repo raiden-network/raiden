@@ -8,6 +8,8 @@ import tempfile
 import distutils.spawn
 import pdb
 import traceback
+import grequests
+import httplib
 from string import Template
 
 from ethereum._solidity import get_solidity
@@ -23,6 +25,7 @@ from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.tests.fixtures import tester_state
 from raiden.network.utils import get_free_port
+from raiden.connection_manager import ConnectionManager
 
 # the smoketest will assert that a different endpoint got successfully registered
 TEST_ENDPOINT = '9.9.9.9:9999'
@@ -84,6 +87,23 @@ TEST_ACCOUNT_PASSWORD = 'password'
 TEST_PRIVKEY = 'add4d310ba042468791dd7bf7f6eae85acc4dd143ffa810ef1809a6a11f2bc44'
 
 
+def run_restapi_smoketests(raiden_service, test_config):
+    """Test if REST api works. """
+    url = (
+        'http://localhost:{port}/api/1/channels'
+    ).format(port=5001)
+    request = grequests.get(url)
+    response = request.send().response
+
+    assert response.status_code == httplib.OK
+
+    response_json = response.json()
+    assert (response_json[0]['partner_address'] ==
+            "0x" + str(ConnectionManager.BOOTSTRAP_ADDR).encode('hex'))
+    assert response_json[0]['state'] == 'opened'
+    assert response_json[0]['balance'] > 0
+
+
 def run_smoketests(raiden_service, test_config, debug=False):
     """ Test that the assembled raiden_service correctly reflects the configuration from the
     smoketest_genesis. """
@@ -111,6 +131,7 @@ def run_smoketests(raiden_service, test_config, debug=False):
         assert channel.can_transfer
         assert channel.contract_balance == channel.distributable == TEST_DEPOSIT_AMOUNT
         assert channel.state == CHANNEL_STATE_OPENED
+        run_restapi_smoketests(raiden_service, test_config)
     except Exception:
         error = traceback.format_exc()
         if debug:
