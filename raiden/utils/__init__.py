@@ -5,11 +5,11 @@ import sys
 import string
 
 from coincurve import PrivateKey
-from Crypto.Hash import keccak as keccaklib
-from ethereum.utils import sha3
 from ethereum.utils import remove_0x_head
+from sha3 import keccak_256
 
 import raiden
+
 
 LETTERS = string.printable
 
@@ -24,12 +24,16 @@ def safe_address_decode(address):
     return address
 
 
-def keccak_256(data):
-    return keccaklib.new(digest_bits=256, data=data)
+def sha3(data):
+    """
+    Raises:
+        RuntimeError: If Keccak lib initialization failed, or if the function
+        failed to compute the hash.
 
-
-def keccak(seed):
-    return keccak_256(seed).digest()
+        TypeError: This function does not accept unicode objects, they must be
+        encoded prior to usage.
+    """
+    return keccak_256(data).digest()
 
 
 def ishash(data):

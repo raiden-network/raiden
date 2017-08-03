@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 # -*- coding: utf-8 -*-
-from raiden.utils import keccak
+from raiden.utils import sha3
 from raiden.exceptions import HashLengthNot32
 
 
@@ -11,8 +11,8 @@ def hash_pair(first, second):
     if first is None:
         return second
     if first > second:
-        return keccak(second + first)
-    return keccak(first + second)
+        return sha3(second + first)
+    return sha3(first + second)
 
 
 def iterate_pairwise(elements):
