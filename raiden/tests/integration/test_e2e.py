@@ -10,15 +10,16 @@ from raiden.tests.utils.transfer import (
 )
 from raiden.tests.utils.log import get_all_state_changes, get_all_state_events
 from raiden.transfer.state_change import (
-    Block,
     RouteState,
+    ReceiveTransferDirect,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ActionInitInitiator,
     ActionInitMediator,
     ActionInitTarget,
     ReceiveSecretRequest,
-    ReceiveSecretReveal
+    ReceiveSecretReveal,
+    ReceiveBalanceProof,
 )
 from raiden.transfer.events import (
     EventTransferSentSuccess,
@@ -139,59 +140,38 @@ def test_fullnetwork(
         get_sent_transfer(channel_3_2, 0),
     )
 
-    # Now let's query the WAL to see if the state changes were logged as expected
     app0_state_changes = [
-        change[1] for change in get_all_state_changes(app0.raiden.transaction_log)
-        if not isinstance(change[1], Block)
-    ]
-    app0_events = [
-        event.event_object for event in get_all_state_events(app0.raiden.transaction_log)
-    ]
-    app1_state_changes = [
-        change[1] for change in get_all_state_changes(app1.raiden.transaction_log)
-        if not isinstance(change[1], Block)
-    ]
-    app1_events = [
-        event.event_object for event in get_all_state_events(app1.raiden.transaction_log)
-    ]
-    app2_state_changes = [
-        change[1] for change in get_all_state_changes(app2.raiden.transaction_log)
-        if not isinstance(change[1], Block)
-    ]
-    app2_events = [
-        event.event_object for event in get_all_state_events(app2.raiden.transaction_log)
-    ]
-    app3_state_changes = [
-        change[1] for change in get_all_state_changes(app3.raiden.transaction_log)
-        if not isinstance(change[1], Block)
-    ]
-    app3_events = [
-        event.event_object for event in get_all_state_events(app3.raiden.transaction_log)
+        change[1]
+        for change in get_all_state_changes(app0.raiden.transaction_log)
     ]
 
-    # app1 received one direct transfers
-    assert len(app1_state_changes) == 1
-    assert len(app1_events) == 1
+    app0_events = [
+        event.event_object
+        for event in get_all_state_events(app0.raiden.transaction_log)
+    ]
+
+    secret = None
+    for event in app0_events:
+        if isinstance(event, SendRevealSecret):
+            secret = event.secret
+
+    assert secret is not None
+    hashlock = sha3(secret)
 
     # app0 initiates the direct transfer and mediated_transfer
-    assert len(app0_state_changes) == 4
-    assert isinstance(app0_state_changes[1], ActionInitInitiator)
-    assert app0_state_changes[1].our_address == app0.raiden.address
-    assert app0_state_changes[1].transfer.amount == amount
-    assert app0_state_changes[1].transfer.token == token_address
-    assert app0_state_changes[1].transfer.initiator == app0.raiden.address
-    assert app0_state_changes[1].transfer.target == app2.raiden.address
-    # The ActionInitInitiator state change does not have the following fields populated.
-    # They get populated via an event during the processing of the state change inside
-    # this function: mediated_transfer.mediated_transfer.initiator.try_new_route()
-    assert app0_state_changes[1].transfer.expiration is None
-    assert app0_state_changes[1].transfer.hashlock is None
-    assert app0_state_changes[1].transfer.secret is None
-    # We should have one available route
-    assert len(app0_state_changes[1].routes.available_routes) == 1
-    assert len(app0_state_changes[1].routes.ignored_routes) == 0
-    assert len(app0_state_changes[1].routes.refunded_routes) == 0
-    assert len(app0_state_changes[1].routes.canceled_routes) == 0
+    assert must_contain_entry(app0_state_changes, ActionInitInitiator, {
+        'our_address': app0.raiden.address,
+        'transfer': {
+            'amount': amount,
+            'token': token_address,
+            'initiator': app0.raiden.address,
+            'target': app2.raiden.address,
+            'expiration': None,
+            'hashlock': None,
+            'secret': None,
+        }
+    })
+
     # Of these 2 the state machine will in the future choose the one with the most
     # available balance
     not_taken_route = RouteState(
@@ -203,6 +183,7 @@ def test_fullnetwork(
         reveal_timeout=reveal_timeout,
         closed_block=None,
     )
+
     taken_route = RouteState(
         state='opened',
         node_address=app3.raiden.address,
@@ -212,16 +193,72 @@ def test_fullnetwork(
         reveal_timeout=reveal_timeout,
         closed_block=None,
     )
-    assert taken_route in app0_state_changes[1].routes.available_routes
-    assert not_taken_route not in app0_state_changes[1].routes.available_routes
 
-    secret = None
-    for event in app0_events:
-        if isinstance(event, SendRevealSecret):
-            secret = event.secret
+    for state_change in app0_state_changes:
+        if isinstance(state_change, ActionInitMediator):
+            assert taken_route in state_change.routes.available_routes
+            assert not_taken_route not in state_change.routes.available_routes
 
-    assert secret is not None
-    hashlock = sha3(secret)
+    # app1 received one direct transfers
+    app1_state_changes = [
+        change[1]
+        for change in get_all_state_changes(app1.raiden.transaction_log)
+    ]
+    assert must_contain_entry(app1_state_changes, ReceiveBalanceProof, {})
+    assert must_contain_entry(app1_state_changes, ReceiveTransferDirect, {})
+
+    app2_state_changes = [
+        change[1]
+        for change in get_all_state_changes(app2.raiden.transaction_log)
+    ]
+
+    assert must_contain_entry(app2_state_changes, ActionInitTarget, {
+        'our_address': app2.raiden.address,
+        'from_route': {
+            'state': 'opened',
+            'node_address': app3.raiden.address,
+            'channel_address': channel_3_2.channel_address,
+            'available_balance': deposit,
+            'settle_timeout': settle_timeout,
+            'reveal_timeout': reveal_timeout,
+            'closed_block': None
+        },
+        'from_transfer': {
+            'amount': amount,
+            'hashlock': hashlock,
+            'token': token_address,
+            'initiator': app0.raiden.address,
+            'target': app2.raiden.address,
+        }
+    })
+
+    assert must_contain_entry(app2_state_changes, ReceiveSecretReveal, {
+        'sender': app0.raiden.address,
+        'secret': secret,
+    })
+
+    assert must_contain_entry(app2_state_changes, ReceiveSecretReveal, {
+        'sender': app3.raiden.address,
+        'secret': secret,
+    })
+
+    app2_events = [
+        event.event_object
+        for event in get_all_state_events(app2.raiden.transaction_log)
+    ]
+
+    assert must_contain_entry(app2_events, SendSecretRequest, {
+        'amount': amount,
+        'hashlock': hashlock,
+        'receiver': app0.raiden.address,
+    })
+
+    assert must_contain_entry(app2_events, SendRevealSecret, {
+        'token': token_address,
+        'secret': secret,
+        'receiver': app3.raiden.address,
+        'sender': app2.raiden.address,
+    })
 
     assert must_contain_entry(app0_state_changes, ReceiveSecretRequest, {
         'amount': amount,
@@ -264,6 +301,11 @@ def test_fullnetwork(
         'hashlock': hashlock,
     })
 
+    app3_state_changes = [
+        change[1]
+        for change in get_all_state_changes(app3.raiden.transaction_log)
+    ]
+
     assert must_contain_entry(app3_state_changes, ActionInitMediator, {
         'our_address': app3.raiden.address,
         'from_route': {
@@ -294,6 +336,11 @@ def test_fullnetwork(
         'secret': secret,
     })
 
+    app3_events = [
+        event.event_object
+        for event in get_all_state_events(app3.raiden.transaction_log)
+    ]
+
     assert must_contain_entry(app3_events, SendMediatedTransfer, {
         'token': token_address,
         'amount': amount,
@@ -317,46 +364,3 @@ def test_fullnetwork(
         'secret': secret,
     })
     assert must_contain_entry(app3_events, EventUnlockSuccess, {})
-
-    assert must_contain_entry(app2_state_changes, ActionInitTarget, {
-        'our_address': app2.raiden.address,
-        'from_route': {
-            'state': 'opened',
-            'node_address': app3.raiden.address,
-            'channel_address': channel_3_2.channel_address,
-            'available_balance': deposit,
-            'settle_timeout': settle_timeout,
-            'reveal_timeout': reveal_timeout,
-            'closed_block': None
-        },
-        'from_transfer': {
-            'amount': amount,
-            'hashlock': hashlock,
-            'token': token_address,
-            'initiator': app0.raiden.address,
-            'target': app2.raiden.address,
-        }
-    })
-
-    assert must_contain_entry(app2_state_changes, ReceiveSecretReveal, {
-        'sender': app0.raiden.address,
-        'secret': secret,
-    })
-
-    assert must_contain_entry(app2_state_changes, ReceiveSecretReveal, {
-        'sender': app3.raiden.address,
-        'secret': secret,
-    })
-
-    assert must_contain_entry(app2_events, SendSecretRequest, {
-        'amount': amount,
-        'hashlock': hashlock,
-        'receiver': app0.raiden.address,
-    })
-
-    assert must_contain_entry(app2_events, SendRevealSecret, {
-        'token': token_address,
-        'secret': secret,
-        'receiver': app3.raiden.address,
-        'sender': app2.raiden.address,
-    })
