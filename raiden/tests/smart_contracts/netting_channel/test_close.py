@@ -10,7 +10,8 @@ from raiden.tests.utils.messages import (
     make_direct_transfer,
 )
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
-from raiden.utils import privatekey_to_address, sha3, make_address
+from raiden.utils import privatekey_to_address, sha3
+from raiden.tests.utils.factories import make_address
 
 
 def test_close_event(tester_state, tester_nettingcontracts, tester_events):

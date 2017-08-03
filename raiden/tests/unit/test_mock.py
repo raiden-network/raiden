@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import pytest
 
-from raiden.utils import make_address
-from raiden.network.discovery import Discovery
 from raiden.exceptions import InvalidAddress
+from raiden.network.discovery import Discovery
+from raiden.tests.utils.factories import make_address
 
 
 def test_mock_registry_api_compliance():

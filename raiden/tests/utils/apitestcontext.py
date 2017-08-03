@@ -3,7 +3,6 @@ import json
 
 from pyethapp.jsonrpc import address_decoder
 
-from raiden.utils import make_address
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.api.objects import ChannelList
 from raiden.api.v1.encoding import (
@@ -18,6 +17,7 @@ from raiden.transfer.state import (
 from raiden.utils import pex, isaddress
 from raiden.exceptions import InvalidAddress, InvalidSettleTimeout
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+from raiden.tests.utils.factories import make_address
 
 
 class NettingChannelMock(object):

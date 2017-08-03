@@ -2,8 +2,9 @@
 import pytest
 
 from raiden.exceptions import UnknownAddress
-from raiden.utils import make_address, get_contract_path, privatekey_to_address
 from raiden.network.discovery import ContractDiscovery
+from raiden.tests.utils.factories import make_address
+from raiden.utils import get_contract_path, privatekey_to_address
 
 
 @pytest.mark.parametrize('number_of_nodes', [1])

@@ -27,10 +27,10 @@ from raiden.tests.property.smart_contracts.strategies import (
 )
 from raiden.tests.fixtures.tester import tester_state
 from raiden.utils import (
-    make_address,
     privatekey_to_address,
     sha3,
 )
+from raiden.tests.utils.factories import make_address
 
 DEPOSIT = 'deposit'
 CLOSE = 'close'

@@ -39,7 +39,6 @@ from raiden.utils import (
     sha3,
     privatekey_to_address,
     make_privkey_address,
-    make_address,
 )
 from raiden.raiden_service import create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block
@@ -47,6 +46,8 @@ from raiden.network.protocol import (
     NODE_NETWORK_UNREACHABLE,
     NODE_NETWORK_UNKNOWN,
 )
+from raiden.tests.utils.factories import make_address
+
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
 HASH2 = sha3('terribleweathermuchstayinside___')

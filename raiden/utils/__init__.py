@@ -18,7 +18,6 @@ __all__ = (
     'keccak',
     'ishash',
     'isaddress',
-    'make_address',
     'make_privkey_address',
     'publickey_to_address',
     'privatekey_to_address',
@@ -57,10 +56,6 @@ def ishash(data):
 
 def isaddress(data):
     return isinstance(data, (bytes, bytearray)) and len(data) == 20
-
-
-def make_address():
-    return bytes(''.join(random.choice(LETTERS) for _ in range(20)))
 
 
 def make_privkey_address():
