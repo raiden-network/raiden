@@ -26,6 +26,7 @@ from raiden.constants import (
 )
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.sockfactory import socket_factory
+from raiden.network.utils import get_free_port
 from raiden.settings import (
     INITIAL_PORT,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
@@ -423,8 +424,8 @@ def prompt_account(address_hex, keystore_path, password_file):
 @click.pass_context
 def run(ctx, **kwargs):
     if ctx.invoked_subcommand is None:
-        from raiden.api.python import RaidenAPI
         from raiden.ui.console import Console
+        from raiden.api.python import RaidenAPI
 
         slogging.configure(
             kwargs['logging'],
@@ -513,6 +514,8 @@ def run(ctx, **kwargs):
 def smoketest(ctx, debug, **kwargs):
     """ Test, that the raiden installation is sane.
     """
+    from raiden.api.python import RaidenAPI
+
     report_file = tempfile.mktemp(suffix=".log")
     open(report_file, 'w+')
 
@@ -560,9 +563,16 @@ def smoketest(ctx, debug, **kwargs):
     args['mapped_socket'] = None
     args['password_file'] = click.File()(password_file)
     args['datadir'] = args['keystore_path']
+    args['api_address'] = 'localhost:' + str(get_free_port('127.0.0.1', 5001).next())
 
     # invoke the raiden app
     app_ = ctx.invoke(app, **args)
+
+    raiden_api = RaidenAPI(app_.raiden)
+    rest_api = RestAPI(raiden_api)
+    api_server = APIServer(rest_api)
+    (api_host, api_port) = split_endpoint(args["api_address"])
+    api_server.start(api_host, api_port)
 
     success = False
     try:
