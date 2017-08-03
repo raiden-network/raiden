@@ -363,31 +363,26 @@ class RaidenService(object):
         This must search through all channels registered for a given hashlock
         and ignoring the tokens. Useful for refund transfer, split transfer,
         and token swaps.
+
+        Raises:
+            TypeError: If secret is unicode data.
         """
+        if isinstance(secret, unicode):
+            raise TypeError('secret must be binary')
+
         hashlock = sha3(secret)
         revealsecret_message = RevealSecret(secret)
         self.sign(revealsecret_message)
 
         for hash_channel in self.token_to_hashlock_to_channels.itervalues():
             for channel in hash_channel[hashlock]:
-                try:
-                    channel.register_secret(secret)
+                channel.register_secret(secret)
 
-                    # This will potentially be executed multiple times and could suffer
-                    # from amplification, the protocol will ignore messages that were
-                    # already registered and send it only until a first Ack is
-                    # received.
-                    self.send_async(
-                        channel.partner_state.address,
-                        revealsecret_message,
-                    )
-                except:  # pylint: disable=bare-except
-                    # Only channels that care about the given secret can be
-                    # registered and channels that have claimed the lock must
-                    # be removed, so an exception should not happen at this
-                    # point, nevertheless handle it because we dont want an
-                    # error in a channel to mess the state from others.
-                    log.error('programming error')
+                # The protocol ignores duplicated messages.
+                self.send_async(
+                    channel.partner_state.address,
+                    revealsecret_message,
+                )
 
     def register_channel_for_hashlock(self, token_address, channel, hashlock):
         channels_registered = self.token_to_hashlock_to_channels[token_address][hashlock]

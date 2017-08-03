@@ -29,7 +29,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ReceiveTransferRefund,
 )
 from raiden.transfer.state_change import ReceiveTransferDirect
-from raiden.utils import pex, sha3
+from raiden.utils import pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -131,26 +131,18 @@ class RaidenMessageHandler(object):
         )
 
     def message_secret(self, message):
-        self.balance_proof(message)
+        hashlock = message.hashlock
+        identifier = message.identifier
+        secret = message.secret
 
-        self.raiden.greenlet_task_dispatcher.dispatch_message(
-            message,
-            message.hashlock,
-        )
+        self.raiden.register_secret(secret)
 
+        channel = None
         try:
-            # register the secret with all channels interested in it (this
-            # must not withdraw or unlock otherwise the state changes could
-            # flow in the wrong order in the path)
-            self.raiden.register_secret(message.secret)
-
-            secret = message.secret
-            identifier = message.identifier
-            secret = message.secret
-            hashlock = sha3(secret)
-
             channel = self.raiden.find_channel_by_address(message.channel)
-
+        except ValueError:
+            log.info('Message for unknown channel: {}'.format(pex(message.channel)))
+        else:
             self.raiden.handle_secret(
                 identifier,
                 channel.token_address,
@@ -158,16 +150,16 @@ class RaidenMessageHandler(object):
                 message,
                 hashlock,
             )
-        except:  # pylint: disable=bare-except
-            log.exception('Unhandled exception')
+
+        self.raiden.greenlet_task_dispatcher.dispatch_message(message, hashlock)
 
         state_change = ReceiveSecretReveal(
-            message.secret,
+            secret,
             message.sender,
         )
 
         self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
-            message.identifier,
+            identifier,
             state_change,
         )
 
