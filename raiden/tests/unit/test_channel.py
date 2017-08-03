@@ -9,11 +9,11 @@ from raiden.channel import Channel, ChannelEndState, ChannelExternalState
 from raiden.messages import DirectTransfer, Lock, LockedTransfer
 from raiden.utils import (
     sha3,
-    make_address,
     make_privkey_address,
 )
 from raiden.tests.utils.messages import make_mediated_transfer
 from raiden.tests.utils.transfer import assert_synched_channels, channel
+from raiden.tests.utils.factories import make_address
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
