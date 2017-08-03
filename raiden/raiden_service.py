@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
 import os
+import sys
 from os import path
 import itertools
 import cPickle as pickle
@@ -13,6 +14,7 @@ from gevent.event import AsyncResult
 from coincurve import PrivateKey
 from ethereum import slogging
 from ethereum.utils import encode_hex
+from raiden.network.rpc.client import JSONRPCPollTimeoutException
 
 from raiden.constants import (
     UINT64_MAX,
@@ -134,6 +136,20 @@ def save_snapshot(serialization_file, raiden):
         )
 
 
+def endpoint_registry_exception_handler(greenlet):
+    try:
+        greenlet.get()
+    except (JSONRPCPollTimeoutException, Exception) as e:
+        if (e.args[0] == "timeout when polling for transaction" or
+           isinstance(e, JSONRPCPollTimeoutException)):
+                log.fatal("Endpoint registry failed: %s. "
+                          "Ethereum RPC API might be unreachable.",
+                          repr(e))
+        else:
+            log.fatal("Endpoint registry failed: %s. ", repr(e))
+        sys.exit(1)
+
+
 class RandomSecretGenerator(object):  # pylint: disable=too-few-public-methods
     def __next__(self):  # pylint: disable=no-self-use
         return os.urandom(32)
@@ -223,6 +239,7 @@ class RaidenService(object):
             config['external_ip'],
             config['external_port'],
         )
+        registry_event.link_exception(endpoint_registry_exception_handler)
 
         self.alarm = alarm
         self.message_handler = message_handler
