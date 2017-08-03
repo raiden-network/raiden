@@ -642,7 +642,8 @@ class RaidenService(object):
 
     def start_neighbours_healthcheck(self, graph):
         for neighbour in graph.get_neighbours():
-            self.start_health_check_for(neighbour)
+            if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
+                self.start_health_check_for(neighbour)
 
     def channel_manager_is_registered(self, manager_address):
         return manager_address in self.manager_to_token
