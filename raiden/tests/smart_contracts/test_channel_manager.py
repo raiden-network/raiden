@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 import pytest
 from ethereum.tester import TransactionFailed
-from ethereum.utils import encode_hex, sha3
+from ethereum.utils import encode_hex
 
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, sha3
 from raiden.tests.utils.tester import (
     new_channelmanager,
     new_nettingcontract,

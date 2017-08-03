@@ -4,7 +4,6 @@ import os
 
 import pytest
 from raiden.network.utils import get_free_port
-from ethereum.utils import sha3
 from pyethapp.jsonrpc import address_encoder
 
 from raiden.utils import privatekey_to_address
@@ -15,6 +14,7 @@ from raiden.settings import (
     DEFAULT_PROTOCOL_THROTTLE_FILL_RATE,
 )
 from raiden.network.transport import UDPTransport
+from raiden.utils import sha3
 
 # we need to use fixture for the default values otherwise
 # pytest.mark.parametrize won't work (pytest 2.9.2)

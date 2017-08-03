@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 from pyethapp.rpc_client import JSONRPCClient
 from pyethapp.jsonrpc import default_gasprice
-from ethereum.utils import sha3
 from ethereum._solidity import compile_file
-from raiden.utils import get_contract_path
+
+from raiden.utils import get_contract_path, sha3
 from raiden.network.rpc.client import patch_send_transaction, patch_send_message
 
 

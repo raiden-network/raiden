@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from ethereum.utils import sha3, encode_hex, denoms
+from ethereum.utils import encode_hex, denoms
 
-from raiden.utils import privatekey_to_address
+from raiden.utils import privatekey_to_address, sha3
 from raiden.tests.utils.blockchain import GENESIS_STUB
 
 CLUSTER_NAME = 'raiden'

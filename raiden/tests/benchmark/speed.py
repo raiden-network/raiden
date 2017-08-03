@@ -5,7 +5,6 @@ import time
 
 import gevent
 from ethereum import slogging
-from ethereum.utils import sha3
 
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.tests.utils.tester_client import (
@@ -25,6 +24,7 @@ from raiden.tests.benchmark.utils import (
     print_slow_function,
     print_slow_path,
 )
+from raiden.utils import sha3
 
 log = slogging.getLogger('test.speed')  # pylint: disable=invalid-name
 
