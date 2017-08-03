@@ -7,7 +7,7 @@ from raiden.messages import (
     Ack,
     Ping,
 )
-from raiden.utils import make_privkey_address, sha3
+from raiden.utils import sha3
 from raiden.tests.utils.messages import (
     make_direct_transfer,
     make_lock,
@@ -17,6 +17,7 @@ from raiden.tests.utils.messages import (
     REFUND_TRANSFER_INVALID_VALUES,
     DIRECT_TRANSFER_INVALID_VALUES,
 )
+from raiden.tests.utils.factories import make_privkey_address
 
 PRIVKEY, ADDRESS = make_privkey_address()
 

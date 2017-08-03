@@ -34,12 +34,12 @@ from raiden.tests.utils.factories import (
     UNIT_SECRET,
     UNIT_HASHLOCK,
     make_address,
+    make_privkey_address,
 )
 from raiden.utils import (
     pex,
     sha3,
     privatekey_to_address,
-    make_privkey_address,
 )
 from raiden.raiden_service import create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block

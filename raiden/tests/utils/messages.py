@@ -6,8 +6,9 @@ import string
 
 from raiden.messages import decode
 from raiden.network.transport import DummyTransport
-from raiden.utils import pex, make_privkey_address, sha3
+from raiden.utils import pex, sha3
 from raiden.tests.utils.tests import fixture_all_combinations
+from raiden.tests.utils.factories import make_privkey_address
 from raiden.messages import (
     DirectTransfer,
     Lock,
