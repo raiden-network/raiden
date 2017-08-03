@@ -7,7 +7,6 @@ from collections import namedtuple, defaultdict
 import gevent
 from gevent.queue import Empty
 from ethereum import slogging
-from ethereum.utils import sha3
 
 from raiden.network.channelgraph import (
     get_best_routes,
@@ -23,7 +22,7 @@ from raiden.messages import (
 from raiden.settings import (
     DEFAULT_EVENTS_POLL_TIMEOUT,
 )
-from raiden.utils import lpex, pex
+from raiden.utils import lpex, pex, sha3
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 TIMEOUT = object()
