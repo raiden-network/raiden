@@ -3,14 +3,15 @@
 import random
 import string
 
-from raiden.utils import sha3
+from coincurve import PrivateKey
+
+from raiden.utils import sha3, publickey_to_address
 from raiden.transfer.state import (
     RouteState,
 )
 from raiden.transfer.mediated_transfer.state import (
     LockedTransferState,
 )
-
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 
 # prefixing with UNIT_ to differ from the default globals
@@ -39,6 +40,14 @@ HOP3_TIMEOUT = HOP2_TIMEOUT - UNIT_REVEAL_TIMEOUT
 
 def make_address():
     return bytes(''.join(random.choice(string.printable) for _ in range(20)))
+
+
+def make_privkey_address():
+    private_key_bin = sha3(''.join(random.choice(string.printable) for _ in range(20)))
+    privkey = PrivateKey(private_key_bin)
+    pubkey = privkey.public_key.format(compressed=False)
+    address = publickey_to_address(pubkey)
+    return privkey, address
 
 
 def make_route(

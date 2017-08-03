@@ -3,7 +3,6 @@ import os
 import re
 import sys
 import string
-import random
 
 from coincurve import PrivateKey
 from Crypto.Hash import keccak as keccaklib
@@ -11,23 +10,6 @@ from ethereum.utils import sha3
 from ethereum.utils import remove_0x_head
 
 import raiden
-
-__all__ = (
-    'sha3',
-    'keccak_256',
-    'keccak',
-    'ishash',
-    'isaddress',
-    'make_privkey_address',
-    'publickey_to_address',
-    'privatekey_to_address',
-    'pex',
-    'lpex',
-    'get_contract_path',
-    'safe_lstrip_hex',
-    'camel_to_snake_case',
-    'fix_tester_storage'
-)
 
 LETTERS = string.printable
 
@@ -58,14 +40,6 @@ def isaddress(data):
     return isinstance(data, (bytes, bytearray)) and len(data) == 20
 
 
-def make_privkey_address():
-    private_key_bin = sha3(''.join(random.choice(LETTERS) for _ in range(20)))
-    privkey = PrivateKey(private_key_bin)
-    pubkey = privkey.public_key.format(compressed=False)
-    address = publickey_to_address(pubkey)
-    return privkey, address
-
-
 def pex(data):
     return str(data).encode('hex')[:8]
 
@@ -80,7 +54,7 @@ def activate_ultratb():
 
 
 def host_port_to_endpoint(host, port):
-    return "{}:{}".format(host, port)
+    return '{}:{}'.format(host, port)
 
 
 def split_endpoint(endpoint):
@@ -124,11 +98,11 @@ def get_encoded_transfers(their_transfer, our_transfer):
     """Check for input sanity and return the encoded version of the transfers"""
     if not their_transfer and our_transfer:
         raise ValueError(
-            "There is no reason to provide our_transfer when their_transfer"
-            " is not provided"
+            'There is no reason to provide our_transfer when their_transfer'
+            ' is not provided'
         )
-    their_encoded = their_transfer.encode() if their_transfer else ""
-    our_encoded = our_transfer.encode() if our_transfer else ""
+    their_encoded = their_transfer.encode() if their_transfer else ''
+    our_encoded = our_transfer.encode() if our_transfer else ''
     return their_encoded, our_encoded
 
 
@@ -138,7 +112,7 @@ def camel_to_snake_case(name):
 
 
 def snake_to_camel_case(snake_string):
-    return snake_string.title().replace("_", "")
+    return snake_string.title().replace('_', '')
 
 
 def channel_to_api_dict(channel):
@@ -147,12 +121,12 @@ def channel_to_api_dict(channel):
     the marshmallow AddressField in encoding.py.
     """
     return {
-        "channel_address": channel.channel_address,
-        "token_address": channel.token_address,
-        "partner_address": channel.partner_address,
-        "settle_timeout": channel.settle_timeout,
-        "balance": channel.distributable,
-        "state": channel.state
+        'channel_address': channel.channel_address,
+        'token_address': channel.token_address,
+        'partner_address': channel.partner_address,
+        'settle_timeout': channel.settle_timeout,
+        'balance': channel.distributable,
+        'state': channel.state
     }
 
 

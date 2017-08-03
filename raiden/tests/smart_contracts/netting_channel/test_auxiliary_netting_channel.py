@@ -11,7 +11,7 @@ from raiden.constants import INT64_MIN, INT64_MAX, UINT64_MIN, UINT64_MAX
 from raiden.utils import get_project_root, sha3
 from raiden.mtree import Merkletree
 from raiden.tests.utils.tests import get_relative_contract
-from raiden.utils import make_privkey_address
+from raiden.tests.utils.factories import make_privkey_address
 from raiden.messages import DirectTransfer
 
 # The computeMerkleRoot function only computes the proof regardless of what the
