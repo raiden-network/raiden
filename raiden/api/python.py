@@ -219,17 +219,11 @@ class RaidenAPI(object):
         netting_channel.deposit(amount)
         # Wait until the balance has been updated via a state transition triggered
         # by processing the `ChannelNewBalance` event
-        wait_for = gevent.spawn(
-            channel.wait_for_balance_update,
-            old_balance,
-            self.raiden.alarm.wait_time
-        )
         wait_timeout_secs = 60
-        gevent.wait([wait_for], timeout=wait_timeout_secs)
-
-        # If balance is still the same then that means we did not get the event
-        # after `timeout` seconds.
-        if old_balance == channel.contract_balance:
+        if not channel.wait_for_balance_update(
+                old_balance,
+                wait_timeout_secs,
+                self.raiden.alarm.wait_time):
             raise EthNodeCommunicationError(
                 'After {} seconds the deposit event was not seen by the ethereum node.'.format(
                     wait_timeout_secs
