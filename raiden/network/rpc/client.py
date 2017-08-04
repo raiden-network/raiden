@@ -20,7 +20,12 @@ from pyethapp.rpc_client import topic_encoder, JSONRPCClient, block_tag_encoder
 import requests
 
 from raiden import messages
-from raiden.exceptions import UnknownAddress
+from raiden.exceptions import (
+    UnknownAddress,
+    AddressWithoutCode,
+    NoTokenManager,
+    DuplicatedChannelError
+)
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
@@ -361,6 +366,9 @@ class BlockChainService(object):
         if token_address not in self.token_to_channelmanager:
             token = self.token(token_address)  # check that the token exists
             manager_address = self.default_registry.manager_address_by_token(token.address)
+            if manager_address == '':
+                raise NoTokenManager('Manager for token 0x{} does not exist'.format(
+                                     (str(token_address).encode('hex'))))
             manager = ChannelManager(
                 self.client,
                 address_decoder(manager_address),
@@ -488,7 +496,7 @@ class Discovery(object):
         )
 
         if result == '0x':
-            raise ValueError('Discovery address {} does not contain code'.format(
+            raise AddressWithoutCode('Discovery address {} does not contain code'.format(
                 address_encoder(discovery_address),
             ))
 
@@ -558,7 +566,7 @@ class Token(object):
         )
 
         if result == '0x':
-            raise ValueError('Token address {} does not contain code'.format(
+            raise AddressWithoutCode('Token address {} does not contain code'.format(
                 address_encoder(token_address),
             ))
 
@@ -628,7 +636,7 @@ class Registry(object):
         )
 
         if result == '0x':
-            raise ValueError('Registry address {} does not contain code'.format(
+            raise AddressWithoutCode('Registry address {} does not contain code'.format(
                 address_encoder(registry_address),
             ))
 
@@ -728,7 +736,7 @@ class ChannelManager(object):
         )
 
         if result == '0x':
-            raise ValueError('Channel manager address {} does not contain code'.format(
+            raise AddressWithoutCode('Channel manager address {} does not contain code'.format(
                 address_encoder(manager_address),
             ))
 
@@ -783,7 +791,7 @@ class ChannelManager(object):
             raise e
 
         if check_transaction_threw(self.client, transaction_hash):
-            raise Exception('Duplicated channel')
+            raise DuplicatedChannelError('Duplicated channel')
 
         netting_channel_results_encoded = self.proxy.getChannelWith.call(
             other,
@@ -874,7 +882,7 @@ class NettingChannel(object):
         )
 
         if result == '0x':
-            raise ValueError('Netting channel address {} does not contain code'.format(
+            raise AddressWithoutCode('Netting channel address {} does not contain code'.format(
                 address_encoder(channel_address),
             ))
 

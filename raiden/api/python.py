@@ -29,6 +29,7 @@ from raiden.exceptions import (
     InvalidSettleTimeout,
     InvalidState,
     InsufficientFunds,
+    NoTokenManager,
 )
 from raiden.utils import (
     isaddress,
@@ -81,7 +82,7 @@ class RaidenAPI(object):
             if not self.raiden.channel_manager_is_registered(manager.address):
                 self.raiden.register_channel_manager(manager.address)
             return manager.address
-        except (JSONRPCClientReplyError, TransactionFailed):
+        except (JSONRPCClientReplyError, TransactionFailed, NoTokenManager):
             return None
 
     def register_token(self, token_address):

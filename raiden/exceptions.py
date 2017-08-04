@@ -141,3 +141,16 @@ class EthNodeCommunicationError(RaidenError):
     """ Raised when something unexpected has happened during
     communication with the underlying ethereum node"""
     pass
+
+
+class AddressWithoutCode(RaidenError):
+    """Raised on attempt to execute contract on address without a code."""
+    pass
+
+
+class NoTokenManager(RaidenError):
+    """Manager for a given token does not exist."""
+
+
+class DuplicatedChannelError(RaidenError):
+    """Raised if someone tries to create a channel that already exists."""

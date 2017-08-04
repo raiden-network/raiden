@@ -20,6 +20,9 @@ from raiden.exceptions import (
     InsufficientFunds,
     NoPathError,
     SamePeerAddress,
+    NoTokenManager,
+    AddressWithoutCode,
+    DuplicatedChannelError
 )
 from raiden.api.v1.encoding import (
     ChannelSchema,
@@ -255,7 +258,8 @@ class RestAPI(object):
                 partner_address,
                 settle_timeout
             )
-        except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress) as e:
+        except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
+                AddressWithoutCode, NoTokenManager, DuplicatedChannelError) as e:
             return make_response(str(e), httplib.CONFLICT)
 
         if balance:
