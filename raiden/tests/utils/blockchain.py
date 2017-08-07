@@ -118,7 +118,7 @@ def geth_bare_genesis(genesis_path, private_keys):
     """
     account_addresses = [
         privatekey_to_address(key)
-        for key in set(private_keys)
+        for key in sorted(set(private_keys))
     ]
 
     alloc = {
@@ -188,7 +188,7 @@ def geth_wait_and_check(privatekeys, rpc_ports):
     if jsonrpc_running is False:
         raise ValueError('geth didnt start the jsonrpc interface')
 
-    for key in set(privatekeys):
+    for key in sorted(set(privatekeys)):
         address = address_encoder(privatekey_to_address(key))
         jsonrpc_client = JSONRPCClient(
             host='0.0.0.0',
