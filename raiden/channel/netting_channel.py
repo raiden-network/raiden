@@ -441,7 +441,7 @@ class Channel(object):
     def register_transfer(self, block_number, transfer):
         """ Register a signed transfer, updating the channel's state accordingly. """
 
-        if transfer.recipient == self.partner_state.address:
+        if transfer.sender == self.our_state.address:
             self.register_transfer_from_to(
                 block_number,
                 transfer,
@@ -451,7 +451,7 @@ class Channel(object):
 
             self.sent_transfers.append(transfer)
 
-        elif transfer.recipient == self.our_state.address:
+        elif transfer.sender == self.partner_state.address:
             self.register_transfer_from_to(
                 block_number,
                 transfer,
@@ -492,11 +492,8 @@ class Channel(object):
             InvalidNonce: If the expected nonce does not match.
             ValueError: If there is an address mismatch (token or node address).
         """
-        if transfer.token != self.token_address:
-            raise ValueError('Token address mismatch')
-
-        if transfer.recipient != to_state.address:
-            raise ValueError('Unknown recipient')
+        if transfer.channel != self.channel_address:
+            raise ValueError('Channel address mismatch')
 
         if transfer.sender != from_state.address:
             raise ValueError('Unsigned transfer')
@@ -621,6 +618,9 @@ class Channel(object):
 
         if isinstance(transfer, DirectTransfer):
             to_state.register_direct_transfer(transfer)
+
+        elif isinstance(transfer, Secret):
+            to_state.register_secretmessage(transfer)
 
         from_state.transferred_amount = transfer.transferred_amount
         from_state.nonce += 1
