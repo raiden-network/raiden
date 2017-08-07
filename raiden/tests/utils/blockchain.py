@@ -64,9 +64,6 @@ def geth_to_cmd(node, datadir, verbosity):
             value = node[config]
             cmd.extend(['--{}'.format(config), str(value)])
 
-    if 'minerthreads' in node:
-        cmd.extend(['--mine', '--etherbase', '0'])
-
     # dont use the '--dev' flag
     cmd.extend([
         '--nodiscover',
@@ -133,10 +130,7 @@ def geth_bare_genesis(genesis_path, private_keys):
     genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
     genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
         'raiden'.encode('hex'),
-        # Note: we can only have authorized addresses for nodes that actually run. Otherwise
-        # it will stall :(
-        # 'a81cb4af5501f5407337cb5c13850cf882a1ae27',  # FIXME: where do these addresses come from?
-        'f0ef4707cdcf650f349cf664f2013f583484a3fb',
+        address_encoder(account_addresses[0])[2:],
     )
 
     with open(genesis_path, 'w') as handler:
@@ -238,6 +232,7 @@ def geth_create_blockchain(
     for pos, (key, p2p_port, rpc_port) in enumerate(key_p2p_rpc):
         config = dict()
 
+        address = privatekey_to_address(key)
         # make the first node miner
         if pos == 0:
             config['unlock'] = 0
@@ -245,7 +240,7 @@ def geth_create_blockchain(
         config['nodekey'] = key
         config['nodekeyhex'] = encode_hex(key)
         config['pub'] = encode_hex(privtopub(key))
-        config['address'] = privatekey_to_address(key)
+        config['address'] = address
         config['port'] = p2p_port
         config['rpcport'] = rpc_port
         config['enode'] = 'enode://{pub}@127.0.0.1:{port}'.format(
@@ -259,6 +254,7 @@ def geth_create_blockchain(
 
     all_keys = list(private_keys)
     all_keys.append(deploy_key)  # needs to be at the end because of the minerthreads keys
+    all_keys = sorted(set(all_keys))
 
     cmds = []
     for i, config in enumerate(nodes_configuration):
@@ -281,7 +277,7 @@ def geth_create_blockchain(
         geth_init_datadir(nodedir, node_genesis_path)
 
         if 'unlock' in config:
-            geth_create_account(nodedir, private_keys[i])
+            geth_create_account(nodedir, all_keys[i])
 
         commandline = geth_to_cmd(config, nodedir, verbosity)
         cmds.append(commandline)
