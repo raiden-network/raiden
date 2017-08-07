@@ -228,7 +228,7 @@ def cached_genesis(request, blockchain_type):
 
     account_addresses = [
         privatekey_to_address(key)
-        for key in set(private_keys)
+        for key in sorted(set(private_keys))
     ]
 
     for address in account_addresses:
