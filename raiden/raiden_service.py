@@ -569,10 +569,8 @@ class RaidenService(object):
         # all_hashlocks = itertools.chain(
         #     serialized_channel.our_balance_proof.hashlocks_to_pendinglocks.keys(),
         #     serialized_channel.our_balance_proof.hashlocks_to_unclaimedlocks.keys(),
-        #     serialized_channel.our_balance_proof.hashlocks_to_unlockedlocks.keys(),
         #     serialized_channel.partner_balance_proof.hashlocks_to_pendinglocks.keys(),
         #     serialized_channel.partner_balance_proof.hashlocks_to_unclaimedlocks.keys(),
-        #     serialized_channel.partner_balance_proof.hashlocks_to_unlockedlocks.keys(),
         # )
         # for hashlock in all_hashlocks:
         #     register_channel_for_hashlock(channel, hashlock)
