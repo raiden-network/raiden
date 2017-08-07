@@ -68,9 +68,10 @@ from raiden.channel.netting_channel import (
 from raiden.exceptions import InvalidAddress
 from raiden.network.channelgraph import (
     get_best_routes,
-    channel_to_routestate,
-    ChannelGraph,
     ChannelDetails,
+    ChannelGraph,
+    ChannelGraphConfig,
+    channel_to_routestate,
 )
 from raiden.messages import (
     RevealSecret,
@@ -603,8 +604,6 @@ class RaidenService(object):
         # some events might be applied twice.
         self.pyethapp_blockchain_events.add_proxies_listeners(proxies)
 
-        block_number = self.get_block_number()
-
         for manager in proxies.channel_managers:
             token_address = manager.token_address()
             manager_address = manager.address
@@ -616,13 +615,19 @@ class RaidenService(object):
                 channels_detail.append(detail)
 
             edge_list = manager.channels_addresses()
-            graph = ChannelGraph(
+
+            graph_config = ChannelGraphConfig(
                 self.address,
                 manager_address,
                 token_address,
+                self.config['settle_timeout_min'],
+                self.config['settle_timeout_max'],
+            )
+
+            graph = ChannelGraph(
+                graph_config,
                 edge_list,
                 channels_detail,
-                block_number,
             )
 
             self.manager_to_token[manager_address] = token_address
@@ -663,14 +668,18 @@ class RaidenService(object):
             for channel in netting_channels
         ]
 
-        block_number = self.get_block_number()
-        graph = ChannelGraph(
+        graph_config = ChannelGraphConfig(
             self.address,
             manager_address,
             token_address,
+            self.config['settle_timeout_min'],
+            self.config['settle_timeout_max'],
+        )
+
+        graph = ChannelGraph(
+            graph_config,
             edge_list,
             channels_detail,
-            block_number,
         )
 
         self.manager_to_token[manager_address] = token_address

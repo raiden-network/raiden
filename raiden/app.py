@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
-import filelock
 import sys
 
+import filelock
 from ethereum.utils import decode_hex
 
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
+    DEFAULT_MAXIMUM_SETTLE_TIMEOUT,
+    DEFAULT_MINIMUM_SETTLE_TIMEOUT,
     DEFAULT_NAT_INVITATION_TIMEOUT,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     DEFAULT_NAT_KEEPALIVE_TIMEOUT,
     DEFAULT_PROTOCOL_RETRIES_BEFORE_BACKOFF,
+    DEFAULT_PROTOCOL_RETRY_INTERVAL,
     DEFAULT_PROTOCOL_THROTTLE_CAPACITY,
     DEFAULT_PROTOCOL_THROTTLE_FILL_RATE,
-    DEFAULT_PROTOCOL_RETRY_INTERVAL,
     DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_SETTLE_TIMEOUT,
     INITIAL_PORT,
@@ -33,6 +35,8 @@ class App(object):  # pylint: disable=too-few-public-methods
         'privatekey_hex': '',
         'reveal_timeout': DEFAULT_REVEAL_TIMEOUT,
         'settle_timeout': DEFAULT_SETTLE_TIMEOUT,
+        'settle_timeout_min': DEFAULT_MINIMUM_SETTLE_TIMEOUT,
+        'settle_timeout_max': DEFAULT_MAXIMUM_SETTLE_TIMEOUT,
         'database_path': '',
         'msg_timeout': 100.0,
         'protocol': {
