@@ -243,7 +243,7 @@ def cached_genesis(request, blockchain_type):
     genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
     genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
         'raiden'.encode('hex'),
-        account_addresses[0]
+        address_encoder(account_addresses[0])[2:]
     )
     genesis['alloc'] = alloc
     genesis['config']['defaultDiscoveryAddress'] = address_encoder(endpoint_discovery_address)
