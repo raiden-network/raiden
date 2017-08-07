@@ -559,39 +559,31 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
-@pytest.mark.parametrize('number_of_nodes', [5])
-@pytest.mark.parametrize('channels_per_node', [2])
+@pytest.mark.parametrize('number_of_nodes', [3])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     alice_app = raiden_network[0]
     bob_app = raiden_network[1]
-
-    messages = setup_messages_cb()
+    charly_app = raiden_network[2]
 
     graph = alice_app.raiden.token_to_channelgraph.values()[0]
     token_address = graph.token_address
 
-    channel0 = channel(alice_app, bob_app, token_address)
+    channel0 = channel(
+        alice_app,
+        bob_app,
+        token_address,
+    )
 
-    mt_helper = MediatedTransferTestHelper(raiden_network, graph)
-    initiator_address = alice_app.raiden.address
-    path = mt_helper.get_paths_of_length(initiator_address, 2)
-
-    # make sure we have no messages before the transfer
-    assert not messages
-
-    alice_address, bob_address, charlie_address = path
     amount = 10
     result = alice_app.raiden.transfer_async(
         token_address,
         amount,
-        charlie_address,
+        charly_app.raiden.address,
     )
 
     assert result.wait(timeout=10)
-    gevent.sleep(1.)
 
-    # and now send one more mediated transfer with the same nonce, simulating
-    # an out-of-order/resent message that arrives late
     lock = Lock(amount, 1, UNIT_HASHLOCK)
     identifier = create_default_identifier()
     mediated_transfer = MediatedTransfer(
@@ -600,16 +592,22 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
         token=token_address,
         channel=channel0.channel_address,
         transferred_amount=amount,
-        recipient=bob_address,
+        recipient=bob_app.raiden.address,
         locksroot=UNIT_HASHLOCK,
         lock=lock,
-        target=charlie_address,
-        initiator=initiator_address,
+        target=charly_app.raiden.address,
+        initiator=alice_app.raiden.address,
         fee=0
     )
     alice_key = PrivateKey(private_keys[0])
-    bob_app = mt_helper.get_app_from_address(bob_address)
-    sign_and_send(mediated_transfer, alice_key, alice_address, bob_app)
+
+    # send the invalid mediated transfer from alice to bob with the same nonce
+    sign_and_send(
+        mediated_transfer,
+        alice_key,
+        alice_app.raiden.address,
+        bob_app,
+    )
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -830,8 +828,10 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
         recipient=app0.raiden.address,
         locksroot=UNIT_HASHLOCK,
     )
+
     sign_and_send(
         direct_transfer_message,
         app1.raiden.private_key,
-        app1.raiden.address, app1
+        app1.raiden.address,
+        app1,
     )
