@@ -96,6 +96,10 @@ class ChannelEndState(object):
         balance_proof = direct_transfer.to_balanceproof()
         self.balance_proof.register_balanceproof(balance_proof)
 
+    def register_secretmessage(self, secret):
+        balance_proof = secret.to_balanceproof()
+        self.balance_proof.register_balanceproof(balance_proof)
+
     def register_secret(self, secret):
         """ Register a secret so that it can be used in a balance proof.
 

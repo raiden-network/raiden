@@ -129,6 +129,7 @@ class RaidenMessageHandler(object):
 
     def message_secret(self, message):
         self.balance_proof(message)
+
         hashlock = message.hashlock
         identifier = message.identifier
         secret = message.secret
@@ -141,6 +142,11 @@ class RaidenMessageHandler(object):
         except ValueError:
             log.info('Message for unknown channel: {}'.format(pex(message.channel)))
         else:
+            channel.register_transfer(
+                self.raiden.get_block_number(),
+                message,
+            )
+
             self.raiden.handle_secret(
                 identifier,
                 channel.token_address,
@@ -163,6 +169,21 @@ class RaidenMessageHandler(object):
 
     def message_refundtransfer(self, message):
         self.balance_proof(message)
+
+        graph = self.raiden.token_to_channelgraph[message.token]
+
+        if not graph.has_channel(self.raiden.address, message.sender):
+            raise UnknownAddress(
+                'Direct transfer from node without an existing channel: {}'.format(
+                    pex(message.sender),
+                )
+            )
+
+        channel = graph.partneraddress_to_channel[message.sender]
+        channel.register_transfer(
+            self.raiden.get_block_number(),
+            message,
+        )
 
         self.raiden.greenlet_task_dispatcher.dispatch_message(
             message,

@@ -760,6 +760,7 @@ def test_channel_must_accept_expired_locks():
     transfer = make_mediated_transfer(
         nonce=test_channel.partner_state.nonce,
         token=test_channel.token_address,
+        channel=test_channel.channel_address,
         expiration=block_number + settle_timeout,
         recipient=address1,
     )
