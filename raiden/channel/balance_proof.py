@@ -5,10 +5,7 @@ from itertools import chain
 
 from ethereum import slogging
 
-from raiden.messages import (
-    DirectTransfer,
-    LockedTransfer,
-)
+from raiden.transfer.state import BalanceProof as BalanceProofState
 from raiden.mtree import Merkletree
 from raiden.utils import sha3, pex
 from raiden.exceptions import (
@@ -47,9 +44,8 @@ class BalanceProof(object):
         # state but we don't have an up-to-date transfer to use as a proof
         self.hashlocks_to_unlockedlocks = dict()
 
-        # the latest known transfer with a correct locksroot that can be used
-        # as a proof
-        self.transfer = None
+        # the latest known balance proof that can be used on-chain
+        self.balance_proof = None
 
     def unclaimed_merkletree(self):
         alllocks = chain(
@@ -101,12 +97,11 @@ class BalanceProof(object):
             for lock in alllocks
         )
 
-    def register_locked_transfer(self, locked_transfer):
-        if not isinstance(locked_transfer, LockedTransfer):
-            raise ValueError('transfer must be a LockedTransfer')
-
-        lock = locked_transfer.lock
+    def register_balanceproof_with_lock(self, balance_proof, lock):
         lockhashed = sha3(lock.as_bytes)
+
+        if not isinstance(balance_proof, BalanceProofState):
+            raise ValueError('balance_proof must be a BalanceProof instance')
 
         if self.is_known(lock.hashlock):
             raise ValueError('hashlock is already registered')
@@ -115,28 +110,23 @@ class BalanceProof(object):
         leafs.append(lockhashed)
         new_locksroot = Merkletree(leafs).merkleroot
 
-        if locked_transfer.locksroot != new_locksroot:
-            raise ValueError(
-                'locksroot mismatch expected:{} got:{}'.format(
-                    pex(new_locksroot),
-                    pex(locked_transfer.locksroot),
-                )
-            )
+        if balance_proof.locksroot != new_locksroot:
+            raise InvalidLocksRoot(new_locksroot, balance_proof.locksroot)
 
         self.hashlocks_to_pendinglocks[lock.hashlock] = PendingLock(lock, lockhashed)
-        self.transfer = locked_transfer
+        self.balance_proof = balance_proof
         self.hashlocks_to_unlockedlocks = dict()
 
-    def register_direct_transfer(self, direct_transfer):
-        if not isinstance(direct_transfer, DirectTransfer):
-            raise ValueError('transfer must be a DirectTransfer')
+    def register_balanceproof(self, balance_proof):
+        if not isinstance(balance_proof, BalanceProofState):
+            raise ValueError('balance_proof must be a BalanceProof instance')
 
         unclaimed_locksroot = self.merkleroot_for_unclaimed()
 
-        if direct_transfer.locksroot != unclaimed_locksroot:
-            raise InvalidLocksRoot(unclaimed_locksroot, direct_transfer.locksroot)
+        if balance_proof.locksroot != unclaimed_locksroot:
+            raise InvalidLocksRoot(unclaimed_locksroot, balance_proof.locksroot)
 
-        self.transfer = direct_transfer
+        self.balance_proof = balance_proof
         self.hashlocks_to_unlockedlocks = dict()
 
     def get_lock_by_hashlock(self, hashlock):
@@ -251,7 +241,7 @@ class BalanceProof(object):
                 self.hashlocks_to_pendinglocks == other.hashlocks_to_pendinglocks and
                 self.hashlocks_to_unclaimedlocks == other.hashlocks_to_unclaimedlocks and
                 self.hashlocks_to_unlockedlocks == other.hashlocks_to_unlockedlocks and
-                self.transfer == other.transfer
+                self.balance_proof == other.balance_proof
             )
         return False
 

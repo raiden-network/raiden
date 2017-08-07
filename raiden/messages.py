@@ -6,6 +6,7 @@ from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
 from raiden.encoding.signing import recover_publickey
 from raiden.utils import publickey_to_address, sha3, ishash, pex
+from raiden.transfer.state import BalanceProof
 
 __all__ = (
     'Ack',
@@ -170,6 +171,13 @@ class SignedMessage(Message):
 
 
 class EnvelopeMessage(SignedMessage):
+    def __init__(self):
+        super(EnvelopeMessage, self).__init__()
+        self.nonce = 0
+        self.transferred_amount = 0
+        self.locksroot = b''
+        self.channel = b''
+
     @property
     def message_hash(self):
         packed = self.packed()
@@ -249,6 +257,16 @@ class EnvelopeMessage(SignedMessage):
         message = cls.unpack(packed)  # pylint: disable=no-member
         message.sender = publickey_to_address(publickey)
         return message
+
+    def to_balanceproof(self):
+        return BalanceProof(
+            self.nonce,
+            self.transferred_amount,
+            self.locksroot,
+            self.channel,
+            self.message_hash,
+            self.signature,
+        )
 
 
 class Ack(Message):

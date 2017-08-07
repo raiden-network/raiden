@@ -192,8 +192,8 @@ class StateMachineEventHandler(object):
             graph = self.raiden.token_to_channelgraph[event.token]
             channel = graph.address_to_channel[event.channel_address]
 
-            partner_transfer = channel.our_state.balance_proof.transfer
-            channel.external_state.close(partner_transfer)
+            balance_proof = channel.our_state.balance_proof.balance_proof
+            channel.external_state.close(balance_proof)
 
         else:
             log.error('Unknown event {}'.format(type(event)))

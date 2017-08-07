@@ -80,18 +80,15 @@ class RaidenMessageHandler(object):
         else:
             raise Exception("Unhandled message cmdid '{}'.".format(cmdid))
 
-    def balance_proof(self, proof):
-        if not isinstance(proof, EnvelopeMessage):
+    def balance_proof(self, message_proof):
+        if not isinstance(message_proof, EnvelopeMessage):
             raise ValueError('proof must be an EnvelopeMessage')
 
+        balance_proof = message_proof.to_balanceproof()
         balance_proof = ReceiveBalanceProof(
-            proof.identifier,
-            proof.sender,
-            proof.nonce,
-            proof.transferred_amount,
-            proof.locksroot,
-            proof.channel,
-            proof.message_hash,
+            message_proof.identifier,
+            message_proof.sender,
+            balance_proof,
         )
 
         self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(

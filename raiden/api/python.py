@@ -533,11 +533,8 @@ class RaidenAPI(object):
         graph = self.raiden.token_to_channelgraph[token_address]
         channel = graph.partneraddress_to_channel[partner_address]
 
-        first_transfer = None
-        if channel.received_transfers:
-            first_transfer = channel.received_transfers[-1]
-
-        channel.external_state.close(first_transfer)
+        balance_proof = channel.our_state.balance_proof.balance_proof
+        channel.external_state.close(balance_proof)
 
         return channel
 

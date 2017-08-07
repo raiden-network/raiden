@@ -13,7 +13,6 @@ from raiden.tests.utils.transfer import (
     claim_lock,
     direct_transfer,
     get_received_transfer,
-    get_sent_transfer,
     pending_mediated_transfer,
 )
 from raiden.tests.utils.log import get_all_state_changes
@@ -132,7 +131,8 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     # a ChannelClose event will be generated, this will be polled by both apps
     # and each must start a task for calling settle
-    bob_alice_channel.external_state.close(transfermessage)
+    balance_proof = transfermessage.to_balanceproof()
+    bob_alice_channel.external_state.close(balance_proof)
     wait_until_block(alice_chain, alice_chain.block_number() + 1)
 
     assert alice_bob_channel.external_state.close_event.wait(timeout=15)
@@ -243,10 +243,9 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     # a new transfer to update the hashlock
     direct_transfer(app0, app1, token, amount)
 
-    last_transfer = get_sent_transfer(forward_channel, 1)
-
     # call close giving the secret for a transfer that has being revealed
-    back_channel.external_state.close(last_transfer)
+    balance_proof = forward_channel.our_state.balance_proof.balance_proof
+    back_channel.external_state.close(balance_proof)
 
     # check that the double unlock will fail
     with pytest.raises(Exception):
@@ -354,7 +353,8 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout
     unlock_proof = attack_channel.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
     # start the settle counter
-    attack_channel.netting_channel.close(attack_transfer)
+    attack_balance_proof = attack_transfer.to_balanceproof()
+    attack_channel.netting_channel.close(attack_balance_proof)
 
     # wait until the last block to reveal the secret, hopefully we are not
     # missing a block during the test
@@ -463,11 +463,9 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
         alice_second_transfer,
     )
 
-    bob_last_transaction = bob_first_transfer
-
     # Alice can only provide one of Bob's transfer, so she is incetivized to
     # use the one with the largest transferred_amount.
-    channel0.external_state.close(bob_last_transaction)
+    channel0.external_state.close(channel0.our_state.balance_proof.balance_proof)
     chain0 = app0.raiden.chain
     wait_until_block(chain0, chain0.block_number() + 1)
 

@@ -99,18 +99,16 @@ class ChannelExternalState(object):
         # proxy side; see also #394
         return self.netting_channel.settled() or 0
 
-    def close(self, partner_transfer):
+    def close(self, balance_proof):
         if not self._called_close:
             self._called_close = True
 
-            if partner_transfer:
-                nonce = partner_transfer.nonce
-                transferred_amount = partner_transfer.transferred_amount
-                locksroot = partner_transfer.locksroot
-                signature = partner_transfer.signature
-
-                packed = partner_transfer.packed()
-                message_hash = sha3(packed.data[:-65])
+            if balance_proof:
+                nonce = balance_proof.nonce
+                transferred_amount = balance_proof.transferred_amount
+                locksroot = balance_proof.locksroot
+                signature = balance_proof.signature
+                message_hash = balance_proof.message_hash
 
             else:
                 nonce = 0
@@ -127,22 +125,14 @@ class ChannelExternalState(object):
                 signature,
             )
 
-    def update_transfer(self, partner_transfer):
-        if partner_transfer:
-            nonce = partner_transfer.nonce
-            transferred_amount = partner_transfer.transferred_amount
-            locksroot = partner_transfer.locksroot
-            signature = partner_transfer.signature
-
-            packed = partner_transfer.packed()
-            message_hash = sha3(packed.data[:-65])
-
+    def update_transfer(self, balance_proof):
+        if balance_proof:
             return self.netting_channel.update_transfer(
-                nonce,
-                transferred_amount,
-                locksroot,
-                message_hash,
-                signature,
+                balance_proof.nonce,
+                balance_proof.transferred_amount,
+                balance_proof.locksroot,
+                balance_proof.message_hash,
+                balance_proof.signature,
             )
 
     def withdraw(self, unlock_proofs):
@@ -287,13 +277,12 @@ class Channel(object):
         return blocks_until_settlement
 
     def handle_closed(self, block_number):  # pylint: disable=unused-argument
-        balance_proof = self.our_state.balance_proof
-        transfer = balance_proof.transfer
+        balance_proof = self.our_state.balance_proof.balance_proof
 
         # the channel was closed, update our half of the state if we need to
         closing_address = self.external_state.netting_channel.closing_address()
         if closing_address != self.our_state.address:
-            self.external_state.update_transfer(transfer)
+            self.external_state.update_transfer(balance_proof)
 
         unlock_proofs = balance_proof.get_known_unlocks()
         self.external_state.withdraw(unlock_proofs)

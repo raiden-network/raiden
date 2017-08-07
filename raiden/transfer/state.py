@@ -145,3 +145,37 @@ class RoutesState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class BalanceProof(State):
+    def __init__(
+            self,
+            nonce,
+            transferred_amount,
+            locksroot,
+            channel_address,
+            message_hash,
+            signature):
+
+        self.nonce = nonce
+        self.transferred_amount = transferred_amount
+        self.locksroot = locksroot
+        self.channel_address = channel_address
+        self.message_hash = message_hash
+        self.signature = signature
+
+    def __eq__(self, other):
+        if isinstance(other, BalanceProof):
+            return (
+                self.nonce == other.nonce and
+                self.transferred_amount == other.transferred_amount and
+                self.locksroot == other.locksroot and
+                self.channel_address == other.channel_address and
+                self.message_hash == other.message_hash and
+                self.signature == other.signature
+            )
+
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

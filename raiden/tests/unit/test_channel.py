@@ -820,7 +820,7 @@ def test_channel_close_called_only_once():
         settle_timeout,
     )
 
-    test_channel.external_state.close('')
-    test_channel.external_state.close('')
+    test_channel.external_state.close(None)
+    test_channel.external_state.close(None)
 
     assert netting_channel.close_calls == 1

@@ -238,7 +238,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert event_dicts_are_equal(all_netting_channel_events[-1], new_balance_event)
     assert event_dicts_are_equal(events[0], new_balance_event)
 
-    channel0.external_state.close('')
+    channel0.external_state.close(None)
 
     all_netting_channel_events = get_all_netting_channel_events(
         app0.raiden.chain,
@@ -331,7 +331,7 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_time
     proofs = list(balance_proof.get_known_unlocks())
     assert len(proofs) == 0
 
-    netting_channel.close(balance_proof.transfer)
+    netting_channel.close(balance_proof.balance_proof)
 
     # reveal it through the blockchain (this needs to emit the SecretRevealed event)
     netting_channel.withdraw(
