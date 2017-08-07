@@ -226,9 +226,12 @@ def cached_genesis(request, blockchain_type):
 
         genesis_alloc[account_address] = account_alloc
 
+    all_keys = list(private_keys)
+    all_keys.append(deploy_key)  # needs to be at the end because of the minerthreads keys
+    all_keys = sorted(set(all_keys))
     account_addresses = [
         privatekey_to_address(key)
-        for key in sorted(set(private_keys))
+        for key in all_keys
     ]
 
     for address in account_addresses:

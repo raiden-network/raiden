@@ -253,7 +253,7 @@ def geth_create_blockchain(
         config['bootnodes'] = ','.join(node['enode'] for node in nodes_configuration)
 
     all_keys = list(private_keys)
-    all_keys.append(deploy_key)  # needs to be at the end because of the minerthreads keys
+    all_keys.append(deploy_key)
     all_keys = sorted(set(all_keys))
 
     cmds = []
