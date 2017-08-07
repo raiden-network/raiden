@@ -795,7 +795,7 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
     )
 
     channel1.external_state.close(
-        channel1.received_transfers[-1],
+        channel1.our_state.balance_proof.balance_proof,
     )
 
     wait_until_block(

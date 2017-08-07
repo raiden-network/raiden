@@ -4,6 +4,7 @@ import pytest
 
 from raiden.transfer.architecture import TransitionResult
 from raiden.transfer.state_change import Block
+from raiden.transfer.state import BalanceProof
 from raiden.transfer.mediated_transfer import target
 from raiden.transfer.mediated_transfer.state import TargetState
 from raiden.transfer.mediated_transfer.state_change import (
@@ -418,16 +419,26 @@ def test_state_transition():
     transferred_amount = 13
     locksroot = ''
     message_hash = ''
-    balance_proof = ReceiveBalanceProof(
-        from_transfer.identifier,
-        from_route.node_address,
+    signature = None
+
+    balance_proof = BalanceProof(
         nonce,
         transferred_amount,
         locksroot,
         from_route.channel_address,
         message_hash,
+        signature,
     )
-    proof_iteration = target.state_transition(init_transition.new_state, balance_proof)
+
+    balance_proof_state_change = ReceiveBalanceProof(
+        from_transfer.identifier,
+        from_route.node_address,
+        balance_proof,
+    )
+    proof_iteration = target.state_transition(
+        init_transition.new_state,
+        balance_proof_state_change,
+    )
     assert proof_iteration.new_state is None
 
 

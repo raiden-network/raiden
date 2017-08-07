@@ -88,10 +88,13 @@ class ChannelEndState(object):
         Args:
             transfer (LockedTransfer): The transfer to be added.
         """
-        self.balance_proof.register_locked_transfer(locked_transfer)
+        balance_proof = locked_transfer.to_balanceproof()
+        lock = locked_transfer.lock
+        self.balance_proof.register_balanceproof_with_lock(balance_proof, lock)
 
     def register_direct_transfer(self, direct_transfer):
-        self.balance_proof.register_direct_transfer(direct_transfer)
+        balance_proof = direct_transfer.to_balanceproof()
+        self.balance_proof.register_balanceproof(balance_proof)
 
     def register_secret(self, secret):
         """ Register a secret so that it can be used in a balance proof.

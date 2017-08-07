@@ -108,7 +108,7 @@ def test_newchannel_fails_until_channel_is_settled(
             sender=pkey0,
         )
 
-    nettingchannel.close('', sender=pkey0)
+    nettingchannel.close(sender=pkey0)
 
     # the old channel is closed but not settled yet
     with pytest.raises(TransactionFailed):
