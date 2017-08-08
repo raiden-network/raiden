@@ -2,9 +2,7 @@
 from __future__ import division
 
 import json
-import os
 from os import path
-import subprocess
 from collections import namedtuple
 
 import pytest
