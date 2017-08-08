@@ -8,9 +8,8 @@ import subprocess
 import sys
 import termios
 import time
-
 import gevent
-import psutil
+
 from devp2p.crypto import privtopub
 from ethereum import slogging
 from ethereum.utils import denoms, encode_hex
@@ -26,7 +25,6 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 DEFAULT_BALANCE = denoms.ether * 10000000
 DEFAULT_BALANCE_BIN = str(denoms.ether * 10000000)
 DEFAULT_PASSPHRASE = 'notsosecret'  # Geth's account passphrase
-DAGSIZE = 1073739912
 
 
 def wait_until_block(chain, block):
@@ -213,18 +211,6 @@ def geth_create_blockchain(
         genesis_path=None,
         logdirectory=None):
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments
-
-    # the smallest DAG, the one for the first epoch should be a bit over 1GB,
-    # since the DAG is used during proof of work and the file is mmaped from
-    # disk, there must be more than 1GB of memory freely available to avoid
-    # memory paging, otherwise the proof-of-work will be extremely slow
-    # increasing the flakiness of the tests.
-    memory = psutil.virtual_memory()
-    if memory.available < DAGSIZE * 1.5:
-        raise RuntimeError(
-            'To properly run the tests with a geth miner '
-            'at least 1.5 GB of available memory is required.'
-        )
 
     nodes_configuration = []
     key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports)
