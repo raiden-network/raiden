@@ -238,9 +238,9 @@ def geth_create_blockchain(
     for config in nodes_configuration:
         config['bootnodes'] = ','.join(node['enode'] for node in nodes_configuration)
 
-    all_keys = list(private_keys)
-    all_keys.append(deploy_key)
-    all_keys = sorted(set(all_keys))
+    all_keys = set(private_keys)
+    all_keys.add(deploy_key)
+    all_keys = sorted(all_keys)
 
     cmds = []
     for i, config in enumerate(nodes_configuration):
