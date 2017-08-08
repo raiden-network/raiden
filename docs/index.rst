@@ -2,7 +2,7 @@ Raiden Network Documentation
 *****************************
 
 
-This is the documentation of the  `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
+This is the documentation of the `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
 
 Contents
 ************

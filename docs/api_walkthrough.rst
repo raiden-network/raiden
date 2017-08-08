@@ -6,11 +6,11 @@ Getting started with the Raiden API
 
 Introduction
 =============
-Raiden has a Restful API with URL endpoints corresponding to actions that the user can perform with its channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version.
+Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version.
 
-In this guide we will walk through the steps necessary in order to participate in a Raiden Token Network. We will provide some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels.
+The steps necessary in order to participate in a Raiden Token Network, will be walked through in this guide. Some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels, will be provided.
 
-Before you get started with below guides, please see :doc:`Overview and Guide <overview_and_guide>`, to make sure that you are connected to Raiden.
+Before getting started with below guides, please see :doc:`Overview and Guide <overview_and_guide>`, to make sure that connection to Raiden is established.
 
 Furthermore, to see all available endpoints, please see :doc:`REST API Endpoints <rest_api>`.
 
@@ -19,36 +19,36 @@ Scenarios
 =========
 Below is a series of different scenarios showing different ways that the Raiden API can be used and interacted with.
 
-A good way to check that we started Raiden correctly before proceeding is to check that our Raiden address is the same address as the Ethereum address that we chose, when starting the Raiden node::
+A good way to check that Raiden was started correctly before proceeding is to check that the Raiden address is the same address as the Ethereum address chosen, when starting the Raiden node::
 
     GET /api/1/address
 
-If this returns our address, we know that our Raiden node is up and running correctly.
+If this returns the same address, we know that the Raiden node is up and running correctly.
 
 .. _bootstrapping-a-token-network:
 
 Bootstrapping a token network
 =============================
-In this scenario we assume that a user holds some ERC20 tokens of a type that has not yet been registered in the Raiden smart contracts. Let's assume that the address of the token is ``0x9aBa529db3FF2D8409A1da4C9eB148879b046700``.
+In this scenario it is assumed that a user holds some ERC20 tokens of a type that has not yet been registered in the Raiden smart contracts. Assume that the address of the token is ``0x9aBa529db3FF2D8409A1da4C9eB148879b046700``.
 
 The user wants to register the token, which will create a `Channel Manager <https://github.com/raiden-network/raiden/blob/a64c03c5faff01c9bd6aab9bd357ba44c113129e/raiden/smart_contracts/ChannelManagerContract.sol>`_. For each registered token there is a channel manager. Channel managers are responsible of opening new payment channels between two parties.
 
 
 Checking if a token is already registered
 -----------------------------------------
-One way of checking if a token is already registered is to get the list of all registered tokens and check if the address of the token we want to interact with exists in the list::
+One way of checking if a token is already registered is to get the list of all registered tokens and check if the address of the token wanted for interaction exists in the list::
 
     GET /api/1/tokens
 
-If the address of the token we want to interact with exists in the list, see the :ref:`next scenario <joining-existing-token-network>`.
-If it does not exist in the list, we need to :ref:`register the token <adding-a-token>`.
+If the address of the token exists in the list, see the :ref:`next scenario <joining-existing-token-network>`.
+If it does not exist in the list, it is desired to :ref:`register the token <adding-a-token>`.
 
 
 .. _adding-a-token:
 
 Registering a token
 -------------------
-In order to register a token all we need is its address. When a new token is registered a Channel Manager contract is deployed, which makes it quite an expensive thing to do in terms of gas usage ``TODO insert estimated gas price``.
+In order to register a token only its address is needed. When a new token is registered a Channel Manager contract is deployed, which makes it quite an expensive thing to do in terms of gas usage ``TODO insert estimated gas price``.
 
 To register a token simply use the endpoint listed below::
 
@@ -58,14 +58,14 @@ If successful this call will return the address of the freshly created Channel M
 
     {"channel_manager_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"}
 
-The token is now registered. However, since we're the ones registering the token, there will be nobody else to connect to right away. This means that we need to bootstrap the network for this specific token. If we know of some other Raiden node that holds some of the tokens we just added or we simply want to transfer some tokens to another Raiden node in a one way channel, we can do this quite easily by simply opening a channel with this node. The way we open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
+The token is now registered. However, since the token was just registered, there will be no other Raiden nodes connected to the token network and hence no nodes to connect to. This means that the network for this specific token needs to be bootstrapped. If the address, is known, of some other Raiden node that holds some of the tokens just created or it's simply desired to transfer some tokens to another Raiden node in a one-way-channel, it can be done quite easily by simply opening a channel with this node. The way to open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
 
 
 .. _opening-a-channel:
 
 Opening a channel
 -----------------
-To open a channel with another Raiden node we need four things: the address of the token, the address of the partner node, the amount of tokens we want to deposit, and the settlement timeout period. With these things ready we can open a channel::
+To open a channel with another Raiden node four things are needed: the address of the token, the address of the partner node, the amount of tokens desired for deposit, and the settlement timeout period. With these things ready a channel can be opened::
 
     PUT /api/1/channels
 
@@ -78,9 +78,7 @@ With the payload::
         "settle_timeout": 600
     }
 
-* TODO adjust settle_timeout ?
-
-At this point we don't worry too much about the `"balance"` field, since we can always :ref:`deposit more tokens <depositing-to-a-channel>` to a channel if need be.
+At this point the specific value of the ``balance`` field isn't too important, since it's always possible to :ref:`deposit more tokens <depositing-to-a-channel>` to a channel if need be.
 
 Successfully opening a channel will return the following information::
 
@@ -93,26 +91,28 @@ Successfully opening a channel will return the following information::
         "settle_timeout": 600
     }
 
-Here it's interesting to notice that a `"channel_address"` has been generated. This means that a `Netting Channel contract <https://github.com/raiden-network/raiden/blob/a64c03c5faff01c9bd6aab9bd357ba44c113129e/raiden/smart_contracts/NettingChannelContract.sol>`_ has been deployed to the blockchain. Furthermore it also represents the address of the payment channel between two parties for a specific token.
+Here it's interesting to notice that a ``channel_address`` has been generated. This means that a `Netting Channel contract <https://github.com/raiden-network/raiden/blob/a64c03c5faff01c9bd6aab9bd357ba44c113129e/raiden/smart_contracts/NettingChannelContract.sol>`_ has been deployed to the blockchain. Furthermore it also represents the address of the payment channel between two parties for a specific token.
 
 
 .. _depositing-to-a-channel:
 
 Depositing to a channel
 -----------------------
-A payment channel is now open between our own address and ``0x61c808d82a3ac53231750dadc13c777b59310bd9``. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be the time to notify our counterparty that we have opened a channel with them, so that they can also deposit to the channel. All the counterparty needs in order to do this is the address of the payment channel and a call like the following::
+A payment channel is now open between the user's node and a counterparty with the address ``0x61c808d82a3ac53231750dadc13c777b59310bd9``. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is the address of the payment channel::
 
     PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
 
 with the payload::
 
-    {"balance": 7331}
+    {
+        "balance": 7331
+    }
 
-If we want to see when the counterparty deposited token, we can then query the channel for the corresponding event::
+To see if and when the counterparty deposited tokens, the channel can be queried for the corresponding events::
 
     GET /api/1/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337
 
-This will return a list of events that has happened in the specific payment channel. The relevant event we are looking for in this case will be::
+This will return a list of events that has happened in the specific payment channel. The relevant event in this case is::
 
     {
         "event_type": "ChannelNewBalance",
@@ -121,101 +121,98 @@ This will return a list of events that has happened in the specific payment chan
         "block_number": 54388
     }
 
-If we see the above event we know that our partner has deposited to the channel.
+From above event it can be deducted that the counterparty deposited to the channel.
 It is possible for both parties to query the state of the specific payment channel by calling::
 
     GET /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
 
-This will give us a result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
+This will give us result similar to those in :ref:`Opening a Channel <opening-a-channel>` that represents the current state of the payment channel.
 
-We have now registered a new token resulting in a new token network. We have opened a channel between two Raiden nodes, and both nodes have deposited to the channel. From here on we can start :ref:`transferring tokens <transferring-tokens>` between the two nodes.
+A new token resulting in a new token network has now been registered. A channel between two Raiden nodes has been opened, and both nodes have deposited to the channel. From here on the two nodes can start :ref:`transferring tokens <transferring-tokens>` between each other.
 
-The above is not how a user would normally join an already existing token network. It is the manual way to show how it works under the hood.
+The above is not how a user would normally join an already existing token network. It is only included here to show how it works under the hood.
 
-We will take a closer look at how to join already bootstrapped token networks in :ref:`the next scenario <joining-existing-token-network>`. 
-
-``TODO``
-* bootstrapping
+In :ref:`the next scenario <joining-existing-token-network>` it will be explained how to join already bootstrapped token networks.
 
 
 .. _joining-existing-token-network:
 
 Joining an already existing token network
 =========================================
-In :ref:`Above scenario <bootstrapping-a-token-network>` we saw how to bootstrap a token network for an unregistered token. In this section we will take a look at the most common way of joining a token network. In most cases users don't want to create a new token network, but they want to join an already existing token network for an ERC20 token that they already hold.
+In :ref:`above scenario <bootstrapping-a-token-network>` it was shown how to bootstrap a token network for an unregistered token. In this section the most common way of joining a token network will be explained. In most cases users don't want to create a new token network, but they want to join an already existing token network for an ERC20 token that they already hold.
 
 The main focus of this section will be the usage of the ``connect`` and the ``leave`` endpoints. The ``connect`` endpoint allows users to automatically connect to a token network and open channels with other nodes. Furthermore the ``leave`` endpoint allows users to leave a token network by automatically closing and settling all of their open channels.
 
-Let's assume that a user holds 2000 of some awesome ERC20 token (AET). The user knows that a Raiden based token network already exists for this token.
+It's assumed that a user holds 2000 of some awesome ERC20 token (AET). The user knows that a Raiden based token network already exists for this token.
 
 
 .. _connect:
 
 Connect
 -------
-Connecting to an already existing token network is quite simple and all we need, is as mentioned above, the address of the token network we want to join and how much of the corresponding token we are willing to use for depositing in channels::
+Connecting to an already existing token network is quite simple. All that is needed, is as mentioned above, the address of the token network to join and the amount of the corresponding token that the user is willing to deposit in channels::
 
     PUT /api/v1/connection/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
 
-With a payload representing the amount of tokens that we want to join the network with::
+With the payload::
 
     {
         "funds": 2000
     }
 
-This will automatically connect us to and open channels with three random peers in the token network. Furthermore it will leave 40% of the tokens we join the network with as initially unassigned. This will allow new nodes joining the network to open bi-directionally funded payment channels with our node in the same way that we just opened channels with random nodes already in the network. The default values of opening three channels and leaving 40% of the tokens for new nodes to connect with, can be changed by adding ``"initial_channel_target": our_value`` and ``"joinable_funds_target": our_decimal_number`` to the payload.
+This will automatically connect to and open channels with three random peers in the token network, with 20% of the funds deposited in each channel. Furthermore it will leave 40% of the funds initially unassigned. This will allow new nodes joining the network to open bi-directionally funded payment channels with this node in the same way that it just opened channels with random nodes already in the network. The default values of opening three channels and leaving 40% of the tokens for new nodes to connect with, can be changed by adding ``"initial_channel_target": our_value`` and ``"joinable_funds_target": our_decimal_number`` to the payload.
 
-We are now connected to the token network for the AET token, and we should have a path to all other nodes that have joined this token network, so that we can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
+The user node is now connected to the token network for the AET token, and should have a path to all other nodes that have joined this token network, so that it can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
 
 
 .. _leave:
 
 Leave
 -----
-If we at some point want to leave the token network the ``leave`` endpoint is available. This endpoint will take care of closing and settling all open channels in the token network::
+If at some point it is desired to leave the token network, the ``leave`` endpoint is available. This endpoint will take care of closing and settling all open channels for a specific in the token network::
 
     DELETE /api/v1/connection/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
 
-This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. As an example there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
+This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For instance there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
 
 
 .. _transferring-tokens:
 
 Transferring tokens
 ===================
-So far we know how to bootstrap a token network, how to join an already existing token network, and how to leave a token network. However, we still need to take a look at what Raiden is really all about - transferring tokens from one node to another in off-chain payment channels. Let's assume that we are connected to the token network of the AET token mentioned above. In this case we are connected to five peers, since we used the standard ``connect()`` parameters. 
+So far it has been shown how to bootstrap a token network, how to join an already existing token network, and how to leave a token network. However, it still remains to take a look at what Raiden is really all about - transferring tokens from one node to another in off-chain payment channels. It's assumed that a node is connected to the token network of the AET token mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
 
 
 .. _transfer:
 
 Transfer
 --------
-Transferring tokens to another node is quite easy. We know the address of the token we want to transfer ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All we then need to know is the address of the node we want to transfer to. Let's say the address of the node we want to transfer to is ``0x61c808d82a3ac53231750dadc13c777b59310bd9``::
+Transferring tokens to another node is quite easy. The address of the token desired for transfer is known ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All that then remains is the address of the target node. Assume the address of the transfer node is ``0x61c808d82a3ac53231750dadc13c777b59310bd9``::
 
     POST /api/1/transfers/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61c808d82a3ac53231750dadc13c777b59310bd9
 
-We also need to know the amount that we want to transfer. We add this as the payload::
+The amount of the transfer is specified in the payload::
 
     {
-        "amount": 42,
+        "amount": 42
     }
 
-An ``"identifier": some_integer`` can also be added to the payload, but it's optional. The identifier's purpose is solely for the benefit of the apps built on top of Raiden in order to provide a way to tag transfers.
+An ``"identifier": some_integer`` can also be added to the payload, but it's optional. The purpose of the identifier is solely for the benefit of the Dapps built on top of Raiden in order to provide a way to tag transfers.
 
 If there is a path in the network with enough capacity and the address sending the transfer holds enough tokens to transfer the amount in the payload, the transfer will go through. The receiving node should then be able to see incoming transfers by querying all its open channels. This is done by doing the following for all addresses of open channels::
 
     GET /api/1/events/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224?from_block=1337
 
-Which will return a list of events. All we then need to do is to filter for incoming transfers.
+Which will return a list of events. All that then needs to be done is to filter for incoming transfers.
 
-Please note that one of the most powerful features of Raiden is that we can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that we are directly connected to.
+Please note that one of the most powerful features of Raiden is that users can send transfers to anyone connected to the network as long as there is a path to them with enough capacity, and not just to the nodes that a user is directly connected to. This is called ``mediated transfers``.
 
 
 .. _close:
 
 Close
 -----
-If at any point in time we should want to close a specific channel we can do so with the ``close`` endpoint::
+If at any point in time it is desired to close a specific channel it can be done with the ``close`` endpoint::
 
     PATCH /api/1/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224
 
@@ -236,13 +233,13 @@ When successful this will give a response with a channel object where the state 
         "settle_timeout": 600
     }
 
-Notice how the ``state`` is set to ``"closed"`` compared to the channel objects we've seen earlier where it was ``"open"``.
+Notice how the ``state`` is now set to ``"closed"`` compared to the previous channel objects where it was ``"open"``.
 
 .. _settle:
 
 Settle
 ------
-Once ``"close"`` has been called then start the settle timeout period, where the counterparty of the channel can provide the last received message from our node. When this timeout settlement timeout period is over, we can finally settle the channel by doing::
+Once ``close`` has been called, the settle timeout period starts. During this period the counterparty of the node who closed the channel can provide its last received message. When the settlement timeout period is over, the channel can finally be settled by doing::
 
     PATCH /api/1/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224
 
@@ -263,7 +260,7 @@ this will trigger the ``settle()`` function in the `NettingChannelContract <http
         "settle_timeout": 600
     }
 
-Here it's interesting to notice that the balance of the channel is now ``0`` and that the state is set to ``"settled"``. This means that the net balance that we are owed from our counterparty has now been transferred to us on the blockchain and that the life cycle of the payment channel has ended.
+Here it's interesting to notice that the balance of the channel is now ``0`` and that the state is set to ``"settled"``. This means that the netted balances that the two parties participating in the channel owe each other has now been transferred on the blockchain and that the life cycle of the payment channel has ended.
 
 
 .. _token_swaps:
@@ -274,7 +271,7 @@ Something that has not yet been mentioned in this guide is the functionality of 
 
     PUT /api/1/token_swaps/0x61c808d82a3ac53231750dadc13c777b59310bd9/1337
 
-Where the first part after ``token_swaps`` is the address of Bob and the second part is an identifier for the token swap. Furthermore we need the following payload::
+Where the first part after ``token_swaps`` is the address of Bob and the second part is an identifier for the token swap. Furthermore the following payload is needed::
 
     {
         "role": "maker",
@@ -284,14 +281,14 @@ Where the first part after ``token_swaps`` is the address of Bob and the second 
         "receiving_token": "0x2a65aca4d5fc5b5c859090a6c34d164135398226"
     }
 
-There are some interesting parameters to note here. The ``role`` defines whether the address sending the message is the ``maker`` or the ``taker``. The maker call must be carried out before the taker call can be carried out. The ``sending_amount`` and the ``sending_token`` represents the token for which the maker wants to send some amount in return for a ``receiving_token`` and a ``receiving_amount``. So in this specific case Alice is making an offer of 42 of ``tokenA`` with the address ``0xea674fdde714fd979de3edf0f56aa9716b898ec8`` for 76 of ``tokenB`` with the address ``0x2a65aca4d5fc5b5c859090a6c34d164135398226``.
+There are some interesting parameters to note here. The ``role`` defines whether the address sending the message is the ``maker`` or the ``taker``. The maker call must be carried out before the taker call can be carried out. The ``sending_amount`` and the ``sending_token`` represent the token for which the maker wants to send some amount in return for a ``receiving_token`` and a ``receiving_amount``. So in this specific case Alice is making an offer of 42 of ``tokenA`` with the address ``0xea674fdde714fd979de3edf0f56aa9716b898ec8`` for 76 of ``tokenB`` with the address ``0x2a65aca4d5fc5b5c859090a6c34d164135398226``.
 
-Now all we need is for someone to take the offer. It could be that Alice and Bob has decided on the swap in private and thus Alice simply tells Bob the ``identifier``. Or it could be that the offer is taken by Bob who sees the offer on some decentralized exchange powered by Raiden.
+Now all that is needed is for someone to take the offer. It could be that Alice and Bob have decided on the swap in private and thus Alice simply tells Bob the ``identifier``. Or it could be that the offer is taken by Bob who sees the offer on some decentralized exchange powered by Raiden.
 Bob can take the offer by using the same endpoint as above, but with some changes::
 
     PUT /api/1/token_swaps/0xbbc5ee8be95683983df67260b0ab033c237bde60/1337
 
-Here the address is the address of Alice and note that the identifier is the same as in the request that Alice used to initialise the swap. As with the request above, we also need to add a payload::
+Here the address is the address of Alice and note that the identifier is the same as in the request that Alice used to initialise the swap. As with the request above, a payload is needed::
 
     {
         "role": "taker",
@@ -302,9 +299,9 @@ Here the address is the address of Alice and note that the identifier is the sam
     }
 
 
-Note that the ``role`` is changed from ``maker`` to ``taker``. Furthermore the sending and receiving parameters has been reversed. This is because the swap is now seen from Bob's perspective.
+Note that the ``role`` is changed from ``maker`` to ``taker``. Furthermore the sending and receiving parameters have been reversed. This is because the swap is now seen from Bob's perspective.
 
-If we now check the balance of the tokens involved for Alice and Bob we should see that they have been updated.
+If the balances of the tokens involved for Alice and Bob are now checked they should reflect that they have been updated.
 
 
 
