@@ -6,7 +6,12 @@ import pytest
 from ethereum import slogging
 
 from raiden.channel import Channel, ChannelEndState, ChannelExternalState
-from raiden.messages import DirectTransfer, Lock, LockedTransfer
+from raiden.messages import (
+    EMPTY_MERKLE_ROOT,
+    DirectTransfer,
+    Lock,
+    LockedTransfer,
+)
 from raiden.utils import sha3
 from raiden.tests.utils.messages import make_mediated_transfer
 from raiden.tests.utils.transfer import assert_synched_channels, channel
@@ -75,8 +80,8 @@ def test_end_state():
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is False
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
-    assert state2.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
+    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
 
     lock = Lock(
         lock_amount,
@@ -125,7 +130,7 @@ def test_end_state():
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is True
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
     with pytest.raises(ValueError):
@@ -147,7 +152,7 @@ def test_end_state():
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is True
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
     # registering the secret should not change the locked amount
@@ -167,7 +172,7 @@ def test_end_state():
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is False
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
     state2.release_lock(state1, lock_secret)
@@ -186,8 +191,8 @@ def test_end_state():
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is False
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == ''
-    assert state2.balance_proof.merkleroot_for_unclaimed() == ''
+    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
+    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
 
 
 def test_invalid_timeouts():

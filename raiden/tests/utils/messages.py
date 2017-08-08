@@ -10,6 +10,7 @@ from raiden.utils import pex, sha3
 from raiden.tests.utils.tests import fixture_all_combinations
 from raiden.tests.utils.factories import make_privkey_address
 from raiden.messages import (
+    EMPTY_MERKLE_ROOT,
     DirectTransfer,
     Lock,
     MediatedTransfer,
@@ -85,7 +86,7 @@ def make_refund_transfer(
         channel=ADDRESS,
         transferred_amount=0,
         amount=1,
-        locksroot='',
+        locksroot=EMPTY_MERKLE_ROOT,
         recipient=ADDRESS,
         target=ADDRESS,
         initiator=ADDRESS,
@@ -115,7 +116,7 @@ def make_mediated_transfer(
         transferred_amount=0,
         amount=1,
         expiration=1,
-        locksroot='',
+        locksroot=EMPTY_MERKLE_ROOT,
         recipient=ADDRESS,
         target=ADDRESS,
         initiator=ADDRESS,
@@ -126,7 +127,7 @@ def make_mediated_transfer(
         expiration=expiration,
     )
 
-    if locksroot == '':
+    if locksroot == EMPTY_MERKLE_ROOT:
         locksroot = sha3(lock.as_bytes)
 
     return MediatedTransfer(
@@ -151,7 +152,7 @@ def make_direct_transfer(
         channel=ADDRESS,
         transferred_amount=0,
         recipient=ADDRESS,
-        locksroot=''):
+        locksroot=EMPTY_MERKLE_ROOT):
 
     return DirectTransfer(
         identifier,

@@ -233,7 +233,8 @@ def assert_mirror(channel0, channel1):
 def assert_locked(channel0, outstanding_locks):
     """ Assert the locks create from `channel`. """
     # a locked transfer is registered in the _partner_ state
-    hashroot = Merkletree(sha3(lock.as_bytes) for lock in outstanding_locks).merkleroot
+    leafs = [sha3(lock.as_bytes) for lock in outstanding_locks]
+    hashroot = Merkletree(leafs).merkleroot
 
     assert len(channel0.our_state.balance_proof.hashlocks_to_pendinglocks) == len(
         outstanding_locks

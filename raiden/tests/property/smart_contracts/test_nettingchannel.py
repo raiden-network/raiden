@@ -14,6 +14,9 @@ from hypothesis.strategies import (
     tuples,
 )
 
+from raiden.messages import (
+    EMPTY_MERKLE_ROOT,
+)
 from raiden.tests.utils.tester import (
     deploy_channelmanager_library,
     deploy_nettingchannel_library,
@@ -147,7 +150,7 @@ class NettingChannelStateMachine(GenericStateMachine):
             sampled_from(self.token_addresses),
             sampled_from(self.channel_addresses),
             sampled_from(self.addresses),
-            just(''),
+            just(EMPTY_MERKLE_ROOT),
         )
 
         deposit_op = tuples(

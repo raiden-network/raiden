@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import pytest
 
+from raiden.messages import EMPTY_MERKLE_ROOT
 from raiden.exceptions import HashLengthNot32
 from raiden.mtree import Merkletree, check_proof
 from raiden.utils import sha3
 
 
 def test_empty():
-    assert Merkletree([]).merkleroot == ''
+    assert Merkletree([]).merkleroot == EMPTY_MERKLE_ROOT
 
 
 def test_non_hash():
@@ -15,7 +16,7 @@ def test_non_hash():
         Merkletree(['not32bytes', 'neither'])
 
     with pytest.raises(HashLengthNot32):
-        assert Merkletree(['']).merkleroot == ''
+        Merkletree(['']).merkleroot
 
 
 def test_single():

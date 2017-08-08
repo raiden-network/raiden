@@ -78,7 +78,6 @@ transferred_amount = make_field('transferred_amount', 32, '32s', integer(0, UINT
 amount = make_field('amount', 32, '32s', integer(0, UINT256_MAX))
 fee = make_field('fee', 32, '32s', integer(0, UINT256_MAX))
 
-optional_locksroot = make_field('locksroot', 32, '32s', optional_bytes())
 optional_secret = make_field('secret', 32, '32s', optional_bytes())
 
 signature = make_field('signature', 65, '65s')
@@ -151,7 +150,7 @@ DirectTransfer = namedbuffer(
         channel,
         recipient,
         transferred_amount,
-        optional_locksroot,
+        locksroot,
         signature,
     ]
 )

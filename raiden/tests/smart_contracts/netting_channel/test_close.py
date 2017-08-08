@@ -5,7 +5,10 @@ from ethereum.tester import TransactionFailed
 from ethereum.utils import encode_hex
 from coincurve import PrivateKey
 
-from raiden.messages import DirectTransfer
+from raiden.messages import (
+    EMPTY_MERKLE_ROOT,
+    DirectTransfer,
+)
 from raiden.tests.utils.messages import (
     make_direct_transfer,
 )
@@ -106,7 +109,7 @@ def test_close_accepts_only_transfer_from_participants(tester_channels, private_
         channel=channel0.channel_address,
         transferred_amount=10,
         recipient=channel0.our_address,
-        locksroot='',
+        locksroot=EMPTY_MERKLE_ROOT,
     )
 
     nonparticipant_address = privatekey_to_address(nonparticipant_key)
@@ -141,7 +144,7 @@ def test_close_wrong_channel(tester_channels):
         channel=wrong_address,
         transferred_amount=10,
         recipient=channel0.our_address,
-        locksroot='',
+        locksroot=EMPTY_MERKLE_ROOT,
     )
 
     transfer_wrong_channel.sign(PrivateKey(pkey1), privatekey_to_address(pkey1))

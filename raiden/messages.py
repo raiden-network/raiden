@@ -40,8 +40,8 @@ def assert_envelope_values(nonce, channel, transferred_amount, locksroot):
     if transferred_amount >= 2 ** 256:
         raise ValueError('transferred_amount is too large')
 
-    if len(locksroot) not in (0, 32):
-        raise ValueError('locksroot must be empty or have length 32')
+    if len(locksroot) != 32:
+        raise ValueError('locksroot must have length 32')
 
 
 def assert_transfer_values(identifier, token, recipient):
