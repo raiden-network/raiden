@@ -21,6 +21,7 @@ __all__ = (
 )
 
 log = getLogger(__name__)  # pylint: disable=invalid-name
+EMPTY_MERKLE_ROOT = b'\x00' * 32
 
 
 def assert_envelope_values(nonce, channel, transferred_amount, locksroot):
@@ -175,7 +176,7 @@ class EnvelopeMessage(SignedMessage):
         super(EnvelopeMessage, self).__init__()
         self.nonce = 0
         self.transferred_amount = 0
-        self.locksroot = b''
+        self.locksroot = EMPTY_MERKLE_ROOT
         self.channel = b''
 
     @property
