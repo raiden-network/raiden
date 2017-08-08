@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-import logging
 from collections import namedtuple
 from itertools import chain
 
 from ethereum import slogging
 
 from raiden.transfer.state import BalanceProof as BalanceProofState
+from raiden.messages import EMPTY_MERKLE_ROOT
 from raiden.mtree import Merkletree
-from raiden.utils import sha3, pex
+from raiden.utils import sha3
 from raiden.exceptions import (
     InvalidLocksRoot,
 )
@@ -44,16 +44,23 @@ class BalanceProof(object):
         self.balance_proof = None
 
     def unclaimed_merkletree(self):
-        alllocks = chain(
-            self.hashlocks_to_pendinglocks.values(),
-            self.hashlocks_to_unclaimedlocks.values()
-        )
-        return [lock.lockhashed for lock in alllocks]
+        all_locks = self.hashlocks_to_pendinglocks.values()
+        all_locks.extend(self.hashlocks_to_unclaimedlocks.values())
+
+        # The tree is built from the hash(lock.as_bytes) and not the
+        # hash.lockhash, this is required to validate the other fields from the
+        # lock, e.g. amount and expiration.
+        return [
+            lock.lockhashed for lock in all_locks
+        ]
+
+    def generate_merkle_tree(self):
+        all_lockhashes = self.unclaimed_merkletree()
+        return Merkletree(all_lockhashes)
 
     def merkleroot_for_unclaimed(self):
-        leafs = self.unclaimed_merkletree()
-        tree = Merkletree(leafs)
-        return tree.merkleroot
+        tree = self.generate_merkle_tree()
+        return tree.merkleroot or EMPTY_MERKLE_ROOT
 
     def is_pending(self, hashlock):
         """ True if a secret is not known for the given `hashlock`. """
@@ -69,12 +76,7 @@ class BalanceProof(object):
             hashlock in self.hashlocks_to_unclaimedlocks
         )
 
-    def is_known(self, hashlock):
-        """ True if a lock with the given hashlock was registered before. """
-        return (
-            hashlock in self.hashlocks_to_pendinglocks or
-            hashlock in self.hashlocks_to_unclaimedlocks
-        )
+    is_known = is_unclaimed
 
     def locked(self):
         alllocks = chain(
@@ -142,11 +144,6 @@ class BalanceProof(object):
                 pendinglock.lockhashed,
                 secret,
             )
-        elif log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'SECRET REGISTERED MORE THAN ONCE hashlock:%s',
-                pex(hashlock),
-            )
 
     def release_lock_by_secret(self, secret, hashlock=None):
         if hashlock is None:
@@ -193,14 +190,6 @@ class BalanceProof(object):
             lock_encoded,
             secret,
         )
-
-    # generate a Merkle tree for the known locks
-    def generate_merkle_tree(self):
-        alllocks = chain(
-            self.hashlocks_to_pendinglocks.values(),
-            self.hashlocks_to_unclaimedlocks.values(),
-        )
-        return Merkletree(lock.lockhashed for lock in alllocks)
 
     def __eq__(self, other):
         if isinstance(other, BalanceProof):
