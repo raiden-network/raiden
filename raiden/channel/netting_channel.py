@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 import logging
-import gevent
 import time
 
+import gevent
 from gevent.event import Event
 from ethereum import slogging
 from ethereum.utils import encode_hex
 
 from raiden.messages import (
+    EMPTY_MERKLE_ROOT,
     DirectTransfer,
     Lock,
     LockedTransfer,
     Secret,
 )
+from raiden.mtree import Merkletree
 from raiden.utils import sha3, pex, lpex
 from raiden.exceptions import (
     InsufficientBalance,
@@ -587,6 +589,19 @@ class Channel(object):
             if amount + transfer.lock.amount > distributable:
                 raise InsufficientBalance(transfer)
 
+        if isinstance(transfer, Secret):
+            hashlock = sha3(transfer.secret)
+            lock = to_state.balance_proof.get_lock_by_hashlock(hashlock)
+            transferred_amount = from_state.transferred_amount + lock.amount
+
+            if transfer.transferred_amount != transferred_amount:
+                raise ValueError(
+                    'invalid transferred_amount, expected: {} got: {}'.format(
+                        transferred_amount,
+                        transfer.transferred_amount,
+                    )
+                )
+
         # all checks need to be done before the internal state of the channel
         # is changed, otherwise if a check fails and the state was changed the
         # channel will be left trashed
@@ -620,7 +635,7 @@ class Channel(object):
             to_state.register_direct_transfer(transfer)
 
         elif isinstance(transfer, Secret):
-            to_state.register_secretmessage(transfer)
+            to_state.register_secretmessage(from_state, transfer)
 
         from_state.transferred_amount = transfer.transferred_amount
         from_state.nonce += 1
@@ -774,17 +789,24 @@ class Channel(object):
         return refund_transfer
 
     def create_secret(self, identifier, secret):
+        hashlock = sha3(secret)
+
         from_ = self.our_state
         to_ = self.partner_state
 
-        self.release_lock(secret)
-        locksroot_with_pending_lock_removed = to_.balance_proof.merkleroot_for_unclaimed()
+        lock = to_.balance_proof.get_lock_by_hashlock(hashlock)
+        lockhashed = sha3(lock.as_bytes)
+        leafs = to_.balance_proof.unclaimed_merkletree()
+        leafs.remove(lockhashed)
+
+        locksroot_with_pending_lock_removed = Merkletree(leafs).merkleroot or EMPTY_MERKLE_ROOT
+        transferred_amount = from_.transferred_amount + lock.amount
 
         secret = Secret(
             identifier,
             from_.nonce,
             self.channel_address,
-            from_.transferred_amount,
+            transferred_amount,
             locksroot_with_pending_lock_removed,
             secret,
         )
