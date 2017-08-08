@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
-# -*- coding: utf-8 -*-
+
 from raiden.utils import sha3
 from raiden.exceptions import HashLengthNot32
+from raiden.messages import EMPTY_MERKLE_ROOT
 
 
 def hash_pair(first, second):
@@ -74,7 +75,7 @@ class Merkletree(object):
     @property
     def merkleroot(self):
         """ Return the root element of the merkle tree. """
-        return self._layers[-1][0]
+        return self._layers[-1][0] or EMPTY_MERKLE_ROOT
 
     def make_proof(self, element):
         """ The proof contains all elements between `element` and `root`.

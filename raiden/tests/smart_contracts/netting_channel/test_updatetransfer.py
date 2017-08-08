@@ -3,7 +3,10 @@ import pytest
 from ethereum.tester import TransactionFailed
 from coincurve import PrivateKey
 
-from raiden.messages import DirectTransfer
+from raiden.messages import (
+    EMPTY_MERKLE_ROOT,
+    DirectTransfer,
+)
 from raiden.utils import privatekey_to_address, sha3
 from raiden.tests.utils.transfer import make_direct_transfer_from_channel
 from raiden.tests.utils.factories import make_address
@@ -164,7 +167,7 @@ def test_update_must_fail_with_a_nonparticipant_transfer(tester_channels, privat
         channel=channel0.channel_address,
         transferred_amount=10,
         recipient=channel1.our_address,
-        locksroot='',
+        locksroot=EMPTY_MERKLE_ROOT,
     )
 
     nonparticipant_address = privatekey_to_address(nonparticipant_key)
@@ -201,7 +204,7 @@ def test_update_must_fail_with_a_channel_address(tester_channels, private_keys):
         channel=wrong_channel,
         transferred_amount=10,
         recipient=channel1.our_address,
-        locksroot='',
+        locksroot=EMPTY_MERKLE_ROOT,
     )
 
     our_address = privatekey_to_address(pkey0)
