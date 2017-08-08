@@ -429,8 +429,14 @@ class RaidenService(object):
 
         for channel in channels_list:
             if channel.partner_state.balance_proof.is_unclaimed(hashlock):
-                secret = channel.create_secret(identifier, secret)  # unlock a sent lock
+                secret = channel.create_secret(identifier, secret)
                 self.sign(secret)
+
+                channel.register_transfer(
+                    self.get_block_number(),
+                    secret,
+                )
+
                 self.send_async(
                     channel.partner_state.address,
                     secret,
@@ -561,19 +567,6 @@ class RaidenService(object):
 
         channel.our_state.balance_proof = serialized_channel.our_balance_proof
         channel.partner_state.balance_proof = serialized_channel.partner_balance_proof
-
-        # `register_channel_for_hashlock` is deprecated, currently only the
-        # swap tasks are using it and these tasks are /not/ restartable, there
-        # is no point in re-registering the hashlocks.
-        #
-        # all_hashlocks = itertools.chain(
-        #     serialized_channel.our_balance_proof.hashlocks_to_pendinglocks.keys(),
-        #     serialized_channel.our_balance_proof.hashlocks_to_unclaimedlocks.keys(),
-        #     serialized_channel.partner_balance_proof.hashlocks_to_pendinglocks.keys(),
-        #     serialized_channel.partner_balance_proof.hashlocks_to_unclaimedlocks.keys(),
-        # )
-        # for hashlock in all_hashlocks:
-        #     register_channel_for_hashlock(channel, hashlock)
 
     def restore_queue(self, serialized_queue):
         receiver_address = serialized_queue['receiver_address']
