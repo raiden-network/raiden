@@ -279,6 +279,51 @@ def test_mediated_transfer(raiden_network):
     assert initial_balance_cb + amount == channel_cb.balance
 
 
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('channels_per_node', [1])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_direct_transfer_exceeding_distributable(raiden_network, token_addresses, deposit):
+    alice_app, bob_app = raiden_network
+    token_address = token_addresses[0]
+
+    result = alice_app.raiden.transfer_async(
+        token_address,
+        deposit * 2,
+        bob_app.raiden.address,
+    )
+
+    assert not result.wait(timeout=10)
+
+
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('number_of_nodes', [3])
+def test_mediated_transfer_with_all_the_balance(raiden_network, token_addresses, deposit):
+    alice_app, bob_app, charlie_app = raiden_network
+    token_address = token_addresses[0]
+
+    result = alice_app.raiden.transfer_async(
+        token_address,
+        deposit,
+        charlie_app.raiden.address,
+    )
+
+    channel_ab = channel(alice_app, bob_app, token_address)
+    assert channel_ab.locked == deposit
+    assert channel_ab.outstanding == 0
+    assert channel_ab.distributable == 0
+
+    assert result.wait(timeout=10)
+    gevent.sleep(.1)  # wait for chalie to sync
+
+    result = charlie_app.raiden.transfer_async(
+        token_address,
+        deposit * 2,
+        alice_app.raiden.address,
+    )
+    assert result.wait(timeout=10)
+
+
 @pytest.mark.xfail(reason='MediatedTransfer doesnt yet update balances on Refund')
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])

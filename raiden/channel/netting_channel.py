@@ -582,18 +582,22 @@ class Channel(object):
         amount = transfer.transferred_amount - from_state.transferred_amount
         distributable = from_state.distributable(to_state)
 
-        if amount > distributable:
-            raise InsufficientBalance(transfer)
+        if isinstance(transfer, DirectTransfer):
+            if amount > distributable:
+                raise InsufficientBalance(transfer)
 
-        if isinstance(transfer, LockedTransfer):
+        elif isinstance(transfer, LockedTransfer):
             if amount + transfer.lock.amount > distributable:
                 raise InsufficientBalance(transfer)
 
-        if isinstance(transfer, Secret):
+        elif isinstance(transfer, Secret):
             hashlock = sha3(transfer.secret)
             lock = to_state.balance_proof.get_lock_by_hashlock(hashlock)
             transferred_amount = from_state.transferred_amount + lock.amount
 
+            # transfer.transferred_amount could be larger than the previous
+            # transferred_amount + lock.amount, that scenario is a bug of the
+            # payer
             if transfer.transferred_amount != transferred_amount:
                 raise ValueError(
                     'invalid transferred_amount, expected: {} got: {}'.format(
