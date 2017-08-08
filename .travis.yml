@@ -45,7 +45,6 @@ install:
 before_script:
   - flake8 raiden/ tools/
   - raiden smoketest
-  - ./.travis/make_dag.sh
 
 script:
   - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE

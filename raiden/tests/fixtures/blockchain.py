@@ -41,7 +41,6 @@ BlockchainServices = namedtuple(
     ('deploy_service', 'blockchain_services'),
 )
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
-EPOCH0_DAGSIZE = 1073739912
 
 # pylint: disable=redefined-outer-name,too-many-arguments,unused-argument,too-many-locals
 
@@ -88,28 +87,6 @@ def _token_addresses(
             )
 
     return result
-
-
-@pytest.fixture()
-def dagpath():
-    return os.path.expanduser('~/.ethash/full-R23-0000000000000000')
-
-
-@pytest.fixture(autouse=True)
-def ensure_dag_is_generated(request, blockchain_type, dagpath):
-    missing_dag = (
-        not os.path.exists(dagpath) or
-        os.path.getsize(dagpath) != EPOCH0_DAGSIZE
-    )
-
-    if blockchain_type == 'geth' and missing_dag:
-        dag_folder = os.path.dirname(dagpath)
-        if not os.path.exists(dag_folder):
-            os.makedirs(dag_folder)
-
-        makedag = subprocess.Popen(['geth', 'makedag', '0', dag_folder])
-        makedag.communicate()
-        assert makedag.returncode == 0, 'DAG generation failed'
 
 
 @pytest.fixture
