@@ -239,8 +239,7 @@ class BlockChainServiceTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
         return self.tester_state.block.number
 
-    def estimate_blocktime(*args):
-        """dummy"""
+    def estimate_blocktime(self, *args):  # pylint: disable=no-self-use
         return 1
 
     def token(self, token_address):
@@ -700,13 +699,23 @@ class NettingChannelTesterMock(object):
             contract=pex(self.proxy.address),
             nonce=nonce,
             transferred_amount=transferred_amount,
-            locksroot=locksroot,
-            extra_hash=extra_hash,
-            signature=signature,
+            locksroot=pex(locksroot),
+            extra_hash=pex(extra_hash),
+            signature=pex(signature),
         )
 
     def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         if signature:
+            log.info(
+                'update_transfer called',
+                contract=pex(self.proxy.address),
+                nonce=nonce,
+                transferred_amount=transferred_amount,
+                locksroot=locksroot,
+                extra_hash=extra_hash,
+                signature=signature,
+            )
+
             self.proxy.updateTransfer(
                 nonce,
                 transferred_amount,
@@ -717,7 +726,7 @@ class NettingChannelTesterMock(object):
             self.tester_state.mine(number_of_blocks=1)
 
             log.info(
-                'update_transfer called',
+                'update_transfer sucessfull',
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
