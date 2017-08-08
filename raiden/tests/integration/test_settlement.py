@@ -220,7 +220,7 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     balance0 = token_contract.balance_of(address0)
     balance1 = token_contract.balance_of(address1)
 
-    # mediated transfer
+    # A pending mediated transfer
     identifier = 1
     expiration = app0.raiden.chain.block_number() + settle_timeout - reveal_timeout
     secret = pending_mediated_transfer(
@@ -232,31 +232,26 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     )
     hashlock = sha3(secret)
 
-    # get a proof for the pending transfer
+    # Get the proof to unlock the pending lock
     secret_transfer = get_received_transfer(back_channel, 0)
     lock = back_channel.our_state.balance_proof.get_lock_by_hashlock(hashlock)
     unlock_proof = back_channel.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
-    # reveal the secret
+    # Update the hashlock
     claim_lock(raiden_network, token, secret)
-
-    # a new transfer to update the hashlock
     direct_transfer(app0, app1, token, amount)
 
-    # call close giving the secret for a transfer that has being revealed
-    balance_proof = forward_channel.our_state.balance_proof.balance_proof
+    # The direct transfer locksroot must remove the unlocked lock and update
+    # the transferred amount, the withdraw must fail.
+    balance_proof = back_channel.our_state.balance_proof.balance_proof
     back_channel.external_state.close(balance_proof)
-
-    # check that the double unlock will fail
     with pytest.raises(Exception):
         back_channel.external_state.netting_channel.withdraw(
             [(unlock_proof, secret_transfer.lock.as_bytes, secret)],
         )
 
-    # forward the block number to allow settle
     settle_expiration = app2.raiden.chain.block_number() + settle_timeout
     wait_until_block(app2.raiden.chain, settle_expiration)
-
     back_channel.external_state.netting_channel.settle()
 
     assert token_contract.balance_of(address0) == balance0 + deposit0 - amount * 2

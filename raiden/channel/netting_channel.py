@@ -279,12 +279,12 @@ class Channel(object):
         return blocks_until_settlement
 
     def handle_closed(self, block_number):  # pylint: disable=unused-argument
-        balance_proof = self.our_state.balance_proof.balance_proof
+        balance_proof = self.our_state.balance_proof
 
         # the channel was closed, update our half of the state if we need to
         closing_address = self.external_state.netting_channel.closing_address()
         if closing_address != self.our_state.address:
-            self.external_state.update_transfer(balance_proof)
+            self.external_state.update_transfer(balance_proof.balance_proof)
 
         unlock_proofs = balance_proof.get_known_unlocks()
         self.external_state.withdraw(unlock_proofs)
