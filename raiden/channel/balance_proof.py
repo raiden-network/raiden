@@ -33,10 +33,10 @@ class BalanceProof(object):
     """ Saves the state required to settle a netting contract. """
 
     def __init__(self):
-        # Mediating locks which the secret is unknown
+        # Mediating locks for which the secret is unknown
         self.hashlocks_to_pendinglocks = dict()
 
-        # Mediating locks which the secret is known but there is no balance
+        # Mediating locks for which the secret is known but there is no balance
         # proof unlocking it
         self.hashlocks_to_unclaimedlocks = dict()
 
