@@ -5,7 +5,7 @@
   tasks:
     - name: Stop container
       docker_container:
-        name: "testnet_{{ item }}"
+        name: "{{ item }}"
         state: stopped
       ignore_errors: yes
       with_items:
@@ -23,7 +23,7 @@
 
     - name: Start container
       docker_container:
-        name: "testnet_{{ eth_node_type }}"
+        name: "{{ eth_node_type }}"
         state: started
       ignore_errors: yes
 
@@ -34,7 +34,7 @@
   tasks:
     - name: Stop container
       docker_container:
-        name: "testnet_raiden"
+        name: "raiden"
         state: stopped
       ignore_errors: yes
 
@@ -46,6 +46,6 @@
 
     - name: Start container
       docker_container:
-        name: "testnet_raiden"
+        name: "raiden"
         state: started
       ignore_errors: yes
