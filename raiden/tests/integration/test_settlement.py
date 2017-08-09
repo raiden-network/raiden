@@ -458,7 +458,7 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
         alice_second_transfer,
     )
 
-    # Alice can only provide one of Bob's transfer, so she is incetivized to
+    # Alice can only provide one of Bob's transfer, so she is incentivized to
     # use the one with the largest transferred_amount.
     channel0.external_state.close(channel0.our_state.balance_proof.balance_proof)
     chain0 = app0.raiden.chain
