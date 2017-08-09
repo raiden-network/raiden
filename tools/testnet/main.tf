@@ -72,12 +72,28 @@ resource "aws_security_group" "default" {
         cidr_blocks = ["0.0.0.0/0"]
     }
 
-    // Allow Eth tcpp in
+    // Allow Eth tcp in
     ingress {
         from_port = 30303
         to_port = 30303
         protocol = "tcp"
         cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    // Allow infrastructure http in
+    ingress {
+        from_port = 80
+        protocol = "tcp"
+        to_port = 80
+        cidr_blocks = ["${cidrsubnet(var.cidr_block, 8, 3)}"]
+    }
+
+    // Allow infrastructure https in
+    ingress {
+        from_port = 443
+        protocol = "tcp"
+        to_port = 443
+        cidr_blocks = ["${cidrsubnet(var.cidr_block, 8, 3)}"]
     }
 
     // Allow inter-network in
@@ -94,6 +110,43 @@ resource "aws_security_group" "default" {
         to_port = 0
         protocol = "-1"
         cidr_blocks = ["0.0.0.0/0"]
+    }
+}
+
+resource "aws_instance" "node_infrastructure" {
+    ami = "${data.aws_ami.ubuntu1604.id}"
+    instance_type = "${lookup(var.instance_role_config, "type_infrastructure")}"
+    key_name = "${var.keypair_name}"
+    vpc_security_group_ids = ["${aws_security_group.default.id}"]
+    subnet_id = "${aws_subnet.default.id}"
+    count = "${var.count_infrastructure}"
+    private_ip = "${cidrhost(var.cidr_block, count.index + lookup(var.instance_role_config, "ip_offset_infrastructure"))}"
+
+    ebs_block_device {
+        device_name = "/dev/xvdb"
+        delete_on_termination = false
+        volume_size = "${lookup(var.instance_role_config, "volume_size_infrastructure")}"
+        volume_type = "gp2"
+    }
+
+    tags {
+        Name = "${var.project_name}"
+        Role = "infrastructure"
+    }
+
+    lifecycle {
+        # Don't recreate on newer available ami - use `terraform taint` to force recreation
+        ignore_changes = ["ami"]
+    }
+
+    connection {
+        user = "ubuntu"
+        private_key = "${file("keys/id_raiden_testnet")}"
+    }
+
+    // Ensure python2 and pip are available for ansible
+    provisioner "remote-exec" {
+        inline = ["sudo apt-get -qq update && sudo apt-get install -qqy python-minimal python-pip"]
     }
 }
 
@@ -163,4 +216,3 @@ resource "aws_instance" "node_raiden" {
         inline = ["sudo apt-get -qq update && sudo apt-get install -qqy python-minimal python-pip"]
     }
 }
-

@@ -15,8 +15,8 @@ RUN \
 
 RUN \
     git clone -b testnet_transfers https://github.com/ulope/raiden.git /app && \
-    pip install -r /app/requirements.txt -e /app
-
+    pip install -r /app/requirements.txt -e /app && \
+    pip install python-logstash
 
 WORKDIR /app
 
@@ -24,7 +24,8 @@ RUN \
     python setup.py compile_contracts && \
     python setup.py compile_webui
 
-ADD run.py /usr/local/bin
+ADD run_raiden.py /usr/local/bin
+ADD raiden /usr/local/bin
 
 
-ENTRYPOINT ["/usr/local/bin/run.py"]
+ENTRYPOINT ["/usr/local/bin/run_raiden.py"]
