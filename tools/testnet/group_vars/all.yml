@@ -15,3 +15,5 @@ docker_repo_mkkeystore: "{{ aws_account }}.dkr.ecr.us-east-1.amazonaws.com/brain
 docker_repo_raiden:     "{{ aws_account }}.dkr.ecr.us-east-1.amazonaws.com/brainbot/raiden"
 
 raiden_root: /etc/raiden
+
+echo_node_token_address: "0x0f114A1E9Db192502E7856309cc899952b3db1ED"
