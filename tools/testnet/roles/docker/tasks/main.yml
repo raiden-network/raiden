@@ -96,3 +96,5 @@
   command: "{{ ecr_repo_login.stdout }}"
   when: login_valid|failed
 
+- name: Prune old images
+  command: docker image prune --all --force
