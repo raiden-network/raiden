@@ -115,17 +115,17 @@ resource "aws_security_group" "default" {
 
 resource "aws_instance" "node_infrastructure" {
     ami = "${data.aws_ami.ubuntu1604.id}"
-    instance_type = "${lookup(var.instance_role_config, "type_infrastructure")}"
+    instance_type = "${var.instance_type["infrastructure"]}"
     key_name = "${var.keypair_name}"
     vpc_security_group_ids = ["${aws_security_group.default.id}"]
     subnet_id = "${aws_subnet.default.id}"
     count = "${var.count_infrastructure}"
-    private_ip = "${cidrhost(var.cidr_block, count.index + lookup(var.instance_role_config, "ip_offset_infrastructure"))}"
+    private_ip = "${cidrhost(var.cidr_block, count.index + var.ip_offset["infrastructure"])}"
 
     ebs_block_device {
         device_name = "/dev/xvdb"
         delete_on_termination = false
-        volume_size = "${lookup(var.instance_role_config, "volume_size_infrastructure")}"
+        volume_size = "${var.volume_size["infrastructure"]}"
         volume_type = "gp2"
     }
 
@@ -152,17 +152,17 @@ resource "aws_instance" "node_infrastructure" {
 
 resource "aws_instance" "node_eth" {
     ami = "${data.aws_ami.ubuntu1604.id}"
-    instance_type = "${lookup(var.instance_role_config, "type_eth")}"
+    instance_type = "${var.instance_type["eth"]}"
     key_name = "${var.keypair_name}"
     vpc_security_group_ids = ["${aws_security_group.default.id}"]
     subnet_id = "${aws_subnet.default.id}"
     count = "${var.count_eth}"
-    private_ip = "${cidrhost(var.cidr_block, count.index + lookup(var.instance_role_config, "ip_offset_eth"))}"
+    private_ip = "${cidrhost(var.cidr_block, count.index + var.ip_offset["eth"])}"
 
     ebs_block_device {
         device_name = "/dev/sdb"
         delete_on_termination = true
-        volume_size = "${lookup(var.instance_role_config, "volume_size_eth")}"
+        volume_size = "${var.volume_size["eth"]}"
         volume_type = "gp2"
     }
 
@@ -189,16 +189,47 @@ resource "aws_instance" "node_eth" {
 
 resource "aws_instance" "node_raiden" {
     ami = "${data.aws_ami.ubuntu1604.id}"
-    instance_type = "${lookup(var.instance_role_config, "type_raiden")}"
+    instance_type = "${var.instance_type["raiden"]}"
     key_name = "${var.keypair_name}"
     vpc_security_group_ids = ["${aws_security_group.default.id}"]
     subnet_id = "${aws_subnet.default.id}"
     count = "${var.count_raiden}"
-    private_ip = "${cidrhost(var.cidr_block, count.index + lookup(var.instance_role_config, "ip_offset_raiden"))}"
+    private_ip = "${cidrhost(var.cidr_block, count.index + var.ip_offset["raiden"])}"
 
     tags {
         Name = "${var.project_name}"
         Role = "raiden"
+    }
+
+    lifecycle {
+        # Don't recreate on newer available ami - use `terraform taint` to force recreation
+        ignore_changes = ["ami"]
+    }
+
+    connection {
+        user = "ubuntu"
+        private_key = "${file("keys/id_raiden_testnet")}"
+    }
+
+    // Ensure python2 and pip are available for ansible
+    provisioner "remote-exec" {
+        inline = ["sudo apt-get -qq update && sudo apt-get install -qqy python-minimal python-pip"]
+    }
+}
+
+resource "aws_instance" "node_raiden_echo" {
+    ami = "${data.aws_ami.ubuntu1604.id}"
+    instance_type = "${var.instance_type["raiden_echo"]}"
+    key_name = "${var.keypair_name}"
+    vpc_security_group_ids = ["${aws_security_group.default.id}"]
+    subnet_id = "${aws_subnet.default.id}"
+    count = "${var.count_raiden_echo}"
+    private_ip = "${cidrhost(var.cidr_block, count.index + var.ip_offset["raiden_echo"])}"
+
+    tags {
+        Name = "${var.project_name}"
+        Role = "raiden"
+        Echo = "true"
     }
 
     lifecycle {

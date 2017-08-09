@@ -7,10 +7,9 @@
     mode: 0700
 
 - name: Keystore password file
-  become: yes
   template:
     src: templates/password.j2
-    dest: "{{ raiden_root }}/password"
+    dest: "{{ keystore_root }}/password"
     owner: "{{ ansible_user }}"
     mode: 0400
     force: yes
