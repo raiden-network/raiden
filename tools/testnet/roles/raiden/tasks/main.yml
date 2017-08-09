@@ -1,6 +1,6 @@
 - name: Raiden docker container
   docker_container:
-    name: testnet_raiden
+    name: raiden
     state: started
     restart_policy: always
     pull: yes

@@ -11,7 +11,7 @@
 
 - name: Eth node (parity) docker container
   docker_container:
-    name: testnet_parity
+    name: parity
     state: "{{ 'started' if eth_node_type == 'parity' else 'absent' }}"
     restart_policy: always
     pull: yes
@@ -35,7 +35,7 @@
 
 - name: Eth node (geth) docker container
   docker_container:
-    name: testnet_geth
+    name: geth
     state: "{{ 'started' if eth_node_type == 'geth' else 'absent' }}"
     restart_policy: always
     pull: yes
