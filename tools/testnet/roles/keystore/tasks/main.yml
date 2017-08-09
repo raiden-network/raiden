@@ -1,5 +1,5 @@
 - name: Create keystore path
-  become: true
+  become: yes
   file:
     name: "{{ keystore_root }}"
     state: directory
@@ -7,6 +7,7 @@
     mode: 0700
 
 - name: Keystore password file
+  become: yes
   template:
     src: templates/password.j2
     dest: "{{ raiden_root }}/password"
