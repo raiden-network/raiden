@@ -5,15 +5,20 @@
     restart_policy: always
     pull: yes
     image: "{{ docker_repo_raiden }}"
+    etc_hosts:
+      logstash: "{{ hostvars[groups['role_infrastructure'][0]]['private_ip'] }}"
+    hostname: "{{ hostname }}"
     ports:
       - 40001:40001/udp
       - 5001:5001
     volumes:
       - "{{ raiden_root }}:/root/.raiden"
       - "{{ keystore_root }}:/keystore"
+    env:
+      RAIDEN_LOGSTASH_HOST: logstash
     command:
       - "--eth-nodes"
-      - "{{ ','.join(groups['private_ips_eth_nodes']) }}"
+      - "{% for item in groups['role_eth'] %}{{ hostvars[item]['private_ip'] }}{{ '' if loop.last else ',' }}{% endfor %}"
       - "--seed"
       - "{{ private_ip }}"
       - "--"
@@ -27,3 +32,4 @@
       - "/root/.raiden/password"
       - "--logging"
       - ":debug"
+      - "--log-json"
