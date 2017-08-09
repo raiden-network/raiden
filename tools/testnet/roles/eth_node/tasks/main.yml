@@ -1,21 +1,7 @@
-- name: Create storage fs
-  become: yes
-  filesystem:
-    dev: /dev/xvdb
-    fstype: ext4
-
-- name: Mount storage fs
-  become: yes
-  mount:
-    fstype: ext4
-    path: "{{ eth_data_dir_base }}"
-    src: /dev/xvdb
-    state: mounted
-
 - name: Create eth node data dir
   become: true
   file:
-    name: "{{ eth_data_dir_base }}/{{ item }}"
+    name: "{{ data_volume_dir }}/{{ item }}"
     state: directory
     owner: "{{ ansible_user }}"
     mode: 0770
@@ -35,7 +21,7 @@
       - "30303:30303"
       - "30303:30303/udp"
     volumes:
-      - "{{ eth_data_dir_base }}/parity:/root/.local/share/io.parity.ethereum"
+      - "{{ data_volume_dir }}/parity:/root/.local/share/io.parity.ethereum"
     command:
       - "--chain"
       - "ropsten"
@@ -59,4 +45,4 @@
       - "30303:30303"
       - "30303:30303/udp"
     volumes:
-      - "{{ eth_data_dir_base }}/geth:/root/.ethereum"
+      - "{{ data_volume_dir }}/geth:/root/.ethereum"

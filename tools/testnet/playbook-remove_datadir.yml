@@ -15,7 +15,7 @@
     - name: Destroy eth data dir
       become: true
       file:
-        name: "{{ eth_data_dir_base }}/{{ item }}"
+        name: "{{ data_volume_dir }}/{{ item }}"
         state: absent
       with_items:
         - geth
