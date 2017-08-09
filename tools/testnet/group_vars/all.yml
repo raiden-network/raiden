@@ -3,7 +3,7 @@ aws_account: 147258760518
 
 # either "geth" or "parity"
 eth_node_type: parity
-eth_data_dir_base: "/data"
+data_volume_dir: "/data"
 
 docker_channel: edge
 docker_version: "17.05.0-ce"
