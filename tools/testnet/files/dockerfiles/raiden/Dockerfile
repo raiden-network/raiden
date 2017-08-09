@@ -14,7 +14,7 @@ RUN \
     chmod +x /usr/bin/solc
 
 RUN \
-    git clone -b testnet_transfers https://github.com/ulope/raiden.git /app && \
+    git clone -b testnet_supermerge https://github.com/ulope/raiden.git /app && \
     pip install -r /app/requirements.txt -e /app && \
     pip install python-logstash
 
@@ -26,6 +26,7 @@ RUN \
 
 ADD run_raiden.py /usr/local/bin
 ADD raiden /usr/local/bin
+ADD raiden_echo_node /usr/local/bin
 
 
 ENTRYPOINT ["/usr/local/bin/run_raiden.py"]

@@ -4,10 +4,12 @@ import sys
 
 import logstash
 from ethereum import slogging
-from pkg_resources import load_entry_point
+
+from raiden.utils import echo_node
+
 
 """
-Modified entrypoint script to inject logstash handler.
+Echo node entrypoint script that injects the logstash handler.
 """
 
 
@@ -23,5 +25,5 @@ if __name__ == "__main__":
         )
 
     sys.exit(
-        load_entry_point('raiden', 'console_scripts', 'raiden')()
+        echo_node.runner()
     )

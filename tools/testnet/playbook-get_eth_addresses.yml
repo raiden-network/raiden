@@ -1,15 +1,8 @@
 - hosts: role_raiden
   gather_facts: no
+  roles:
+    - keystore
   tasks:
-    - set_fact:
-        keystore_filename: "{{ keystore_root }}/UTC--{{ keystore_file_date }}--{{ private_ip }}"
-
-    - command: "cat {{ keystore_filename }}"
-      register: keystore_content
-
-    - set_fact:
-        keystore_content: "{{ keystore_content.stdout|from_json }}"
-
     - template:
         src: files/templates/eth_addresses.j2
         dest: /tmp/testnet_eth_addresses

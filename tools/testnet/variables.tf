@@ -27,18 +27,34 @@ variable "count_raiden" {
     default = 15
 }
 
-variable "instance_role_config" {
+variable "count_raiden_echo" {
+    default = 1
+}
+
+variable "ip_offset" {
     type = "map"
     default = {
-        "type_infrastructure" = "t2.small",
-        "ip_offset_infrastructure" = 769,
-        "volume_size_infrastructure" = 10,
+        "infrastructure" = 257,
+        "eth" = 513,
+        "raiden_echo" = 769,
+        "raiden" = 1025
+    }
+}
 
-        "type_eth" = "t2.small",
-        "ip_offset_eth" = 513
-        "volume_size_eth" = 30,
+variable "instance_type" {
+    type = "map"
+    default = {
+        "infrastructure" = "t2.small",
+        "eth" = "t2.small",
+        "raiden_echo" = "t2.nano",
+        "raiden" = "t2.nano"
+    }
+}
 
-        "type_raiden" = "t2.nano",
-        "ip_offset_raiden" = 257,
+variable "volume_size" {
+    type = "map"
+    default = {
+        "infrastructure" = 10,
+        "eth" = 30,
     }
 }
