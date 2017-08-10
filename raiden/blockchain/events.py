@@ -22,6 +22,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveSettled,
     ContractReceiveWithdraw,
 )
+from raiden.exceptions import AddressWithoutCode
 
 PyethappEventListener = namedtuple(
     'EventListener',
@@ -179,7 +180,7 @@ def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
             # FIXME: implement proper cleanup of self-killed channel after close+settle
             try:
                 netting_channels.append(pyethapp_chain.netting_channel(channel_address))
-            except ValueError:
+            except AddressWithoutCode:
                 log.debug('Invalid netting channel: %r', channel_address)
         manager_channels[channel_manager_address] = netting_channels
 
