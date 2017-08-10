@@ -146,7 +146,7 @@ The main focus of this section will be the usage of the ``connect`` and the ``le
 It's assumed that a user holds 2000 of some awesome ERC20 token (AET). The user knows that a Raiden based token network already exists for this token.
 
 
-.. _connect:
+.. _connect_to_network:
 
 Connect
 -------
@@ -165,7 +165,7 @@ This will automatically connect to and open channels with three random peers in 
 The user node is now connected to the token network for the AET token, and should have a path to all other nodes that have joined this token network, so that it can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
 
 
-.. _leave:
+.. _leave_network:
 
 Leave
 -----

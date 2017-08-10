@@ -46,3 +46,5 @@ Other restrictions
 Currently all nodes participating in a transfer need to be online in order for a transfer to be carried out. This means that users must run a full Raiden node to receive transfers too. The Developer Preview does not offer a Raiden light client, it is however a goal to `implement a light client <https://github.com/raiden-network/raiden/issues/114>`_ in the future.
 
 The transportation layer used in the Developer Preview is not very sophisticated and thus it is storing the IP addresses of all nodes participating in the `Endpoint Registry <https://github.com/raiden-network/raiden/blob/master/raiden/smart_contracts/EndpointRegistry.sol>`_ smart contract. In the future it is planned to use something like Whisper for the transportation layer.
+
+TODO: we're not handling the usage of private keys very well. 
