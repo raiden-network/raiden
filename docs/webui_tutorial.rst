@@ -1,6 +1,9 @@
 Web Application Tutorial
 ############################
 
+.. toctree::
+  :maxdepth: 2
+
 In order to quickly give people an overview and idea of what the Raiden Developer Preview is capable of, a simple web application has been created. This application utilizes the :doc:`Raiden REST API endpoints <rest_api>` to allow the user to interact with tokens networks, transfer tokens, see the current status of open channels along with closing and settling channels to name some of the functionalities. For a more specific guide of the API itself see the :doc:`API Walkthrough <api_walkthrough>`.
 
 The main focus of the web application is to display functionality and not to look pretty. Should you however want to make it pretty, don't hesitate to create a `pull request <https://github.com/raiden-network/raiden/pulls>`_.
@@ -58,11 +61,11 @@ Like with the ``Channels`` view there is also a ``Tokens`` view. This view provi
 
 The first thing to notice in this view is the list of tokens for which a token network exists. All tokens that have been registered in Raiden will show up in this list. If the user knows the name or the address of a token, it's very easy to search for it using the "search" bar. If the token the user searches for does not show up, it most likely means that it is not yet registered. Registering can however be done by pressing the ``Register New Token`` button and provide the token address. For each token in the list of tokens some information is provided. This information includes the three letter ``Symbol`` of the token, the ``Address`` of the token, the ``Name`` of the token and the user's ``Balance`` of a specific token. It's easy to sort the tokens, so that only tokens that a user actually holds, show up in the beginning of the list. This is done by simply pressing the name of the value desired for sorting.
 
-To the left of the ``Symbol`` for each token there is a circle that can be clicked to select a specific token. When this is done it's possible to click the ``Join Token Network`` button. This will allow the user to automatically join a token network with some funds. See :ref:`connect <connect_to_network>` for more details on how this works.
+To the left of the ``Symbol`` for each token there is a circle that can be clicked to select a specific token. When this is done it's possible to click the ``Join Token Network`` button. This will allow the user to automatically join a token network with some funds. See :ref:`connect <connect-to-network>` for more details on how this works.
 
-In this view it is also possible to ``Swap Tokens``. This is done by pressing the ``Swap Tokens`` button and then filling in the form. For more information on what a token swap is, please see `token swaps <token_swaps>`.
+In this view it is also possible to ``Swap Tokens``. This is done by pressing the ``Swap Tokens`` button and then filling in the form. For more information on what a token swap is, please see :ref:`token swaps <token-swaps>`.
 
-Should it at some point in time be desired to entirely leave a token network. The ``Leave Token Network`` button allows you to do so. This will automatically close and settle all open channels within a specified token network. For more information on how this works, please see `leave <leave_network>`.
+Should it at some point in time be desired to entirely leave a token network. The ``Leave Token Network`` button allows you to do so. This will automatically close and settle all open channels within a specified token network. For more information on how this works, please see :ref:`leave <leave-network>`.
 
 
 .. image:: images/raiden_webui_tokens_view_screenshot.png
