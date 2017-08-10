@@ -210,7 +210,14 @@ class ChannelGraph(object):
         self.channelmanager_address = channelmanager_address
 
         for details in channels_details:
-            self.add_channel(details)
+            try:
+                self.add_channel(details)
+            except ValueError as e:
+                log.warn(
+                    "Error at registering opened channel contract. Perhaps contract is invalid?",
+                    error=str(e),
+                    channel_address=pex(details.channel_address)
+                )
 
     def __eq__(self, other):
         if isinstance(other, ChannelGraph):
