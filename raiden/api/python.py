@@ -159,10 +159,10 @@ class RaidenAPI(object):
         if settle_timeout is None:
             settle_timeout = self.raiden.config['settle_timeout']
 
-        if settle_timeout < self.raiden.config['settle_timeout']:
-            raise InvalidSettleTimeout('Configured minimum `settle_timeout` is {} blocks.'.format(
-                self.raiden.config['settle_timeout']
-            ))
+        if settle_timeout <= reveal_timeout:
+            raise InvalidSettleTimeout(
+                'reveal_timeout can not be larger-or-equal to settle_timeout'
+            )
 
         if not isaddress(token_address):
             raise InvalidAddress('Expected binary address format for token in channel open')
