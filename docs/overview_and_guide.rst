@@ -23,6 +23,7 @@ Dependencies
 * You will also need to obtain the `system dependencies for pyethapp <https://github.com/ethereum/pyethapp/#installation-on-ubuntudebian>`_.
 
 
+.. _installation:
 
 Installation
 ************
@@ -46,6 +47,7 @@ After you have done that you can proceed to install the dependencies::
 
 You will also need an Ethereum client that is connected to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
 
+.. _running_raiden:
 
 Firing it up
 *************

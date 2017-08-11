@@ -11,23 +11,19 @@ The main focus of the web application is to display functionality and not to loo
 
 Running the web application
 ---------------------------
-There are a few simple steps that needs to be carried out in order to run the Raiden web application. Firstly, a Raiden node needs to be setup. See :doc:`overview_and_guide` for instructions on this.
+There are a few simple steps that needs to be carried out in order to run the Raiden web application. Firstly, Raiden needs to be installed. See :doc:`install instructions <installation>` for this.
 
 The only dependency needed to run the web application is `node.js <https://docs.npmjs.com/getting-started/installing-node>`_.
 
-Once a Raiden node is up and running and node.js has been installed, it is quite easy to start the web application::
+Once a Raiden and node.js has been installed, it is quite easy to install and start the web application. From the root of the Raiden directory do::
 
-    cd raiden/ui/web
+    python setup.py compile_webui
 
-Followed by::
+This could be run automatically as part of installing Raiden, but to keep the run time of tests down, it's not.
 
-    npm install
+With the web application installed, we can :doc:`fire up Raiden <running_raiden>`. Raiden can be started without the web application by providing the ``--no-web-ui`` flag.
 
-And then to run the application simply do::
-
-    npm start
-
-Now all that is left to do is to navigate to `localhost:4200 <localhost:4200>`_ and interaction with Raiden through a web application can begin.
+Now all that is left to do is to navigate to `localhost:5001 <localhost:5001>`_ and interaction with Raiden through a web application can begin.
 
 
 The landing page
