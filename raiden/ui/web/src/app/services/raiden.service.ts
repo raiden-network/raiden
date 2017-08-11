@@ -15,11 +15,16 @@ export class RaidenService {
     public tokenContract: any;
     public raidenAddress: string;
     private userTokens: { [id: string]: Usertoken |null} = {};
+    private _identifier: number = Math.floor(Math.random() * 900 + 100);
 
     constructor(private http: Http,
         private config: RaidenConfig,
         private sharedService: SharedService) {
         this.tokenContract = this.config.web3.eth.contract(tokenabi);
+    }
+
+    get identifier(): number {
+        return this._identifier++;
     }
 
     public getRaidenAddress(): Observable<string> {
@@ -69,18 +74,16 @@ export class RaidenService {
     public initiateTransfer(
         tokenAddress: string,
         partnerAddress: string,
-        amount: number,
-        identifier: number): Observable<any> {
+        amount: number): Observable<any> {
         const data = {
             'amount': amount,
-            'identifier': identifier
+            'identifier': this.identifier
         };
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
         console.log(`${this.config.api}/transfers/${tokenAddress}/${partnerAddress}`);
         return this.http.post(`${this.config.api}/transfers/${tokenAddress}/${partnerAddress}`,
             JSON.stringify(data), options)
-            .map((response) => response.json())
             .catch((error) => this.handleError(error));
     }
 
@@ -226,7 +229,12 @@ export class RaidenService {
         // In a real world app, you might use a remote logging infrastructure
         let errMsg: string;
         if (error instanceof Response) {
-            const body = error.json() || '';
+            let body;
+            try {
+                body = error.json() || '';
+            } catch (e) {
+                body = error.text();
+            }
             const err = body || JSON.stringify(body);
             errMsg = `${error.status} - ${error.statusText || ''} ${err}`;
         } else {

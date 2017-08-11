@@ -16,6 +16,7 @@ import { EventListComponent } from './components/event-list/event-list.component
 import { TokenNetworkComponent } from './components/token-network/token-network.component';
 import { HomeComponent } from './components/home/home.component';
 import { SwapDialogComponent } from './components/swap-dialog/swap-dialog.component';
+import { TransferDialogComponent } from './components/transfer-dialog/transfer-dialog.component';
 
 import { RaidenConfig } from './services/raiden.config';
 import { SharedService } from './services/shared.service';
@@ -46,6 +47,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         SwapDialogComponent,
         KeysPipe,
         SubsetPipe,
+        TransferDialogComponent,
     ],
     imports: [
         RouterModule.forRoot(appRoutes),

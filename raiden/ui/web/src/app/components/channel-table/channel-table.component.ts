@@ -104,11 +104,11 @@ export class ChannelTableComponent implements OnInit {
                 this.raidenService.initiateTransfer(
                     this.tempChannel.token_address,
                     this.tempChannel.partner_address,
-                    this.amount,
-                    Math.floor(Math.random() * 101)).subscribe(
-                    (response) => {
-                        this.showMessage(response);
-                    }
+                    this.amount)
+                    .subscribe(
+                        (response) => {
+                            this.showMessage(response);
+                        }
                     );
                 break;
             case 'deposit':
