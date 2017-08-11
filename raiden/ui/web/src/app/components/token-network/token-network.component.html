@@ -17,8 +17,9 @@
     <div class="ui-helper-clearfix button-pane">
       <button type="button" pButton icon="fa-plus" class="pull-left" (click)="showJoinDialogBox()" label="Join Token Network"></button>
       <button type="button" pButton icon="fa-pencil" class="pull-left" (click)="showRegisterDialog(true)" label="Register New Token"></button>
-      <button type="button" pButton icon="fa-retweet" class="pull-left" (click)="showSwapDialog(true)" label="Swap Tokens"></button>
-      <button type="button" pButton icon="fa-refresh" class="pull-left" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
+      <button type="button" pButton icon="fa-retweet" class="pull-left" (click)="showSwapDialog()" label="Swap Tokens"></button>
+      <button type="button" pButton icon="fa-refresh" class="pull-left ui-button-info" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
+      <button type="button" pButton icon="fa-money" class="pull-left ui-button-success" (click)="showTransferDialog()" label="Transfer"></button>
     </div>
   </p-footer>
 </p-dataTable>
@@ -59,3 +60,5 @@
 </p-dialog>
 
 <app-swap-dialog *ngIf="displaySwapDialog" [(visible)]="displaySwapDialog"></app-swap-dialog>
+
+<app-transfer-dialog *ngIf="displayTransferDialog" [(visible)]="displayTransferDialog" [token_address]="selectedToken?.address"></app-transfer-dialog>

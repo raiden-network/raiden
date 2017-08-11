@@ -35,8 +35,11 @@ export class EventListComponent implements OnInit {
                 ))
             )
             .do((newEvents) => {
-                if (newEvents.length > 0) {
+                if (newEvents.length > 0 && next_block !== undefined) {
                     this.activity.emit();
+                }
+                if (next_block === undefined) {
+                    next_block = 0;
                 }
             })
             .scan((oldEvents, newEvents) => {
