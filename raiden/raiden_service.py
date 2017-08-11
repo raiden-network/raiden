@@ -67,7 +67,7 @@ from raiden.channel import (
 from raiden.channel.netting_channel import (
     ChannelSerialization,
 )
-from raiden.exceptions import InvalidAddress
+from raiden.exceptions import InvalidAddress, AddressWithoutCode
 from raiden.network.channelgraph import (
     get_best_routes,
     channel_to_routestate,
@@ -282,7 +282,14 @@ class RaidenService(object):
 
         if data:
             for channel in data['channels']:
-                self.restore_channel(channel)
+                try:
+                    self.restore_channel(channel)
+                except AddressWithoutCode as e:
+                    log.warn(
+                        'Channel without code while restoring. Must have been '
+                        'already settled while we were offline.',
+                        error=str(e)
+                    )
 
             for restored_queue in data['queues']:
                 self.restore_queue(restored_queue)
@@ -537,8 +544,8 @@ class RaidenService(object):
             serialized_channel.channel_address,
         )
 
-        # restoring balances from the BC since the serialized value could be
-        # falling behind.
+        # restoring balances from the blockchain since the serialized
+        # value could be falling behind.
         channel_details = netting_channel.detail(self.address)
 
         # our_address is checked by detail
