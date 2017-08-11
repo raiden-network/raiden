@@ -68,19 +68,21 @@ def api_raiden_service(
         raiden_udp_ports,
         tmpdir):
 
-    blockchain = blockchain_services[0]
+    deploy_registry = blockchain_services.deploy_registry
+    deploy_service = blockchain_services.deploy_service
     config = copy.deepcopy(App.DEFAULT_CONFIG)
 
     config['port'] = raiden_udp_ports[0]
     config['host'] = '127.0.0.1'
     config['external_ip'] = '127.0.0.1'
     config['external_port'] = raiden_udp_ports[0]
-    config['privatekey_hex'] = blockchain.private_key.encode('hex')
+    config['privatekey_hex'] = deploy_service.private_key.encode('hex')
     config['reveal_timeout'] = reveal_timeout
     config['database_path'] = os.path.join(tmpdir.strpath, 'database.db')
     raiden_service = RaidenService(
-        blockchain,
-        blockchain.private_key,
+        deploy_service,
+        deploy_registry,
+        deploy_service.private_key,
         transport_class(config['host'], config['port']),
         Discovery(),
         config

@@ -95,7 +95,6 @@ def run(privatekey,
 
     blockchain_service = BlockChainService(
         privatekey_bin,
-        decode_hex(registry_contract_address),
         rpc_client,
     )
 
@@ -104,7 +103,16 @@ def run(privatekey,
         decode_hex(discovery_contract_address)
     )
 
-    app = App(config, blockchain_service, discovery)
+    registry = blockchain_service.registry(
+        registry_contract_address
+    )
+
+    app = App(
+        config,
+        blockchain_service,
+        registry,
+        discovery,
+    )
 
     app.discovery.register(
         app.raiden.address,
@@ -112,7 +120,7 @@ def run(privatekey,
         listen_port,
     )
 
-    app.raiden.register_registry(app.raiden.chain.default_registry.address)
+    app.raiden.register_registry(app.raiden.default_registry.address)
 
     if scenario:
         script = json.load(scenario)

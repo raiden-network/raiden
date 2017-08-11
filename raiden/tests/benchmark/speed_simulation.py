@@ -190,7 +190,11 @@ def tps_run(
         print('We are not registered in the configuration file')
         sys.exit(1)
 
-    app = App(config, blockchain_service, discovery)
+    app = App(
+        config,
+        blockchain_service,
+        discovery,
+    )
 
     for _ in range(parallel):
         gevent.spawn(random_transfer, app, token_address, transfer_amount)

@@ -15,6 +15,7 @@ from pyethapp.jsonrpc import (
     address_decoder,
     data_decoder,
     data_encoder,
+    quantity_decoder,
     default_gasprice,
 )
 from pyethapp.rpc_client import topic_encoder, block_tag_encoder
@@ -83,6 +84,19 @@ def check_transaction_threw(client, transaction_hash):
         return None
 
     return receipt
+
+
+def check_address_has_code(client, address):
+    result = client.call(
+        'eth_getCode',
+        address_encoder(address),
+        'latest',
+    )
+
+    if result == '0x':
+        raise AddressWithoutCode('Address {} does not contain code'.format(
+            address_encoder(address),
+        ))
 
 
 def patch_send_transaction(client, nonce_offset=0):
@@ -292,28 +306,34 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(
-            self,
-            privatekey_bin,
-            registry_address,
-            jsonrpc_client,
-            poll_timeout=DEFAULT_POLL_TIMEOUT):
-
+    def __init__(self, privatekey_bin, jsonrpc_client, poll_timeout=DEFAULT_POLL_TIMEOUT):
         self.address_to_token = dict()
         self.address_to_discovery = dict()
-        self.address_to_channelmanager = dict()
         self.address_to_nettingchannel = dict()
         self.address_to_registry = dict()
-        self.token_to_channelmanager = dict()
 
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
         self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
-        self.default_registry = self.registry(registry_address)
 
     def block_number(self):
         return self.client.blocknumber()
+
+    def is_synced(self):
+        result = self.client.call('eth_syncing')
+
+        # the node is synchronized
+        if result is False:
+            return True
+
+        current_block = quantity_decoder(result['currentBlock'])
+        highest_block = quantity_decoder(result['highestBlock'])
+
+        if highest_block - current_block > 2:
+            return False
+
+        return True
 
     def estimate_blocktime(self, oldest=256):
         """Calculate a blocktime estimate based on some past blocks.
@@ -394,55 +414,6 @@ class BlockChainService(object):
 
         return self.address_to_nettingchannel[netting_channel_address]
 
-    def manager(self, manager_address):
-        """ Return a proxy to interact with a ChannelManagerContract. """
-        if not isaddress(manager_address):
-            raise ValueError('manager_address must be a valid address')
-
-        if manager_address not in self.address_to_channelmanager:
-            manager = ChannelManager(
-                self.client,
-                manager_address,
-                poll_timeout=self.poll_timeout,
-            )
-
-            token_address = manager.token_address()
-
-            self.token_to_channelmanager[token_address] = manager
-            self.address_to_channelmanager[manager_address] = manager
-
-        return self.address_to_channelmanager[manager_address]
-
-    def manager_by_token(self, token_address):
-        """ Find the channel manager for `token_address` and return a proxy to
-        interact with it.
-
-        If the token is not already registered it raises `JSONRPCClientReplyError`,
-        since we try to instantiate a Channel manager with an empty address.
-        """
-        if not isaddress(token_address):
-            raise ValueError('token_address must be a valid address')
-
-        if token_address not in self.token_to_channelmanager:
-            token = self.token(token_address)  # check that the token exists
-            manager_address = self.default_registry.manager_address_by_token(token.address)
-
-            if manager_address == '':
-                raise NoTokenManager(
-                    'Manager for token 0x{} does not exist'.format(token_address.encode('hex'))
-                )
-
-            manager = ChannelManager(
-                self.client,
-                address_decoder(manager_address),
-                poll_timeout=self.poll_timeout,
-            )
-
-            self.token_to_channelmanager[token_address] = manager
-            self.address_to_channelmanager[manager_address] = manager
-
-        return self.token_to_channelmanager[token_address]
-
     def registry(self, registry_address):
         if not isaddress(registry_address):
             raise ValueError('registry_address must be a valid address')
@@ -479,15 +450,19 @@ class BlockChainService(object):
         )
         return proxy.address
 
-    def deploy_and_register_token(self, contract_name, contract_path, constructor_parameters=None):
-        assert self.default_registry
+    def deploy_and_register_token(
+            self,
+            registry,
+            contract_name,
+            contract_path,
+            constructor_parameters=None):
 
         token_address = self.deploy_contract(
             contract_name,
             contract_path,
             constructor_parameters,
         )
-        self.default_registry.add_token(token_address)  # pylint: disable=no-member
+        registry.add_token(token_address)  # pylint: disable=no-member
 
         return token_address
 
@@ -706,16 +681,7 @@ class Registry(object):
         if not isaddress(registry_address):
             raise ValueError('registry_address must be a valid address')
 
-        result = jsonrpc_client.call(
-            'eth_getCode',
-            address_encoder(registry_address),
-            'latest',
-        )
-
-        if result == '0x':
-            raise AddressWithoutCode('Registry address {} does not contain code'.format(
-                address_encoder(registry_address),
-            ))
+        check_address_has_code(jsonrpc_client, registry_address)
 
         proxy = jsonrpc_client.new_abi_contract(
             CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
@@ -729,9 +695,23 @@ class Registry(object):
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
+        self.address_to_channelmanager = dict()
+        self.token_to_channelmanager = dict()
+
     def manager_address_by_token(self, token_address):
-        """ Return the channel manager address for the given token. """
-        return self.proxy.channelManagerByToken.call(token_address)
+        """ Return the channel manager address for the given token or None if
+        there is no correspoding address.
+        """
+        address = self.proxy.channelManagerByToken.call(
+            token_address,
+            startgas=self.startgas,
+        )
+
+        if address == '':
+            check_address_has_code(self.client, self.address)
+            return None
+
+        return address_decoder(address)
 
     def add_token(self, token_address):
         if not isaddress(token_address):
@@ -748,26 +728,21 @@ class Registry(object):
         if receipt_or_none:
             raise TransactionThrew('AddToken', receipt_or_none)
 
-        channel_manager_address_encoded = self.proxy.channelManagerByToken.call(
-            token_address,
-            startgas=self.startgas,
-        )
+        manager_address = self.manager_address_by_token(token_address)
 
-        if not channel_manager_address_encoded:
-            log.error('add_token failed', token_address=pex(token_address))
-            raise RuntimeError('add_token failed')
-
-        channel_manager_address_bin = address_decoder(channel_manager_address_encoded)
+        if manager_address is None:
+            log.error('Transaction failed and check_transaction_threw didnt detect it')
+            raise RuntimeError('channelManagerByToken failed')
 
         if log.isEnabledFor(logging.INFO):
             log.info(
                 'add_token called',
                 token_address=pex(token_address),
                 registry_address=pex(self.address),
-                channel_manager_address=pex(channel_manager_address_bin),
+                manager_address=pex(manager_address),
             )
 
-        return channel_manager_address_bin
+        return manager_address
 
     def token_addresses(self):
         return [
@@ -797,6 +772,55 @@ class Registry(object):
             self.client,
             filter_id_raw,
         )
+
+    def manager(self, manager_address):
+        """ Return a proxy to interact with a ChannelManagerContract. """
+        if not isaddress(manager_address):
+            raise ValueError('manager_address must be a valid address')
+
+        if manager_address not in self.address_to_channelmanager:
+            manager = ChannelManager(
+                self.client,
+                manager_address,
+                poll_timeout=self.poll_timeout,
+            )
+
+            token_address = manager.token_address()
+
+            self.token_to_channelmanager[token_address] = manager
+            self.address_to_channelmanager[manager_address] = manager
+
+        return self.address_to_channelmanager[manager_address]
+
+    def manager_by_token(self, token_address):
+        """ Find the channel manager for `token_address` and return a proxy to
+        interact with it.
+
+        If the token is not already registered it raises `JSONRPCClientReplyError`,
+        since we try to instantiate a Channel manager with an empty address.
+        """
+        if not isaddress(token_address):
+            raise ValueError('token_address must be a valid address')
+
+        if token_address not in self.token_to_channelmanager:
+            check_address_has_code(self.client, token_address)  # check that the token exists
+            manager_address = self.manager_address_by_token(token_address)
+
+            if manager_address is None:
+                raise NoTokenManager(
+                    'Manager for token 0x{} does not exist'.format(token_address.encode('hex'))
+                )
+
+            manager = ChannelManager(
+                self.client,
+                manager_address,
+                poll_timeout=self.poll_timeout,
+            )
+
+            self.token_to_channelmanager[token_address] = manager
+            self.address_to_channelmanager[manager_address] = manager
+
+        return self.token_to_channelmanager[token_address]
 
 
 class ChannelManager(object):
@@ -1285,11 +1309,11 @@ class NettingChannel(object):
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             lock = messages.Lock.from_bytes(locked_encoded)
             if receipt_or_none:
+                lock = messages.Lock.from_bytes(locked_encoded)
                 log.critical(
                     'withdraw failed',
                     contract=pex(self.address),
                     lock=lock,
-                    secret=encode_hex(secret)
                 )
                 self._check_exists()
                 failed = True
@@ -1299,7 +1323,6 @@ class NettingChannel(object):
                     'withdraw sucessfull',
                     contract=pex(self.address),
                     lock=lock,
-                    secret=encode_hex(secret),
                 )
 
         if failed:

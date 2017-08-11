@@ -41,9 +41,11 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     peer2_address = app2.raiden.address
 
     blockchain_service0 = app0.raiden.chain
+    registry = app0.raiden.default_registry
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     token_address = blockchain_service0.deploy_and_register_token(
+        registry,
         contract_name='HumanStandardToken',
         contract_path=humantoken_path,
         constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
@@ -56,7 +58,7 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
             token_amount // len(raiden_network),
         )
 
-    manager0 = blockchain_service0.manager_by_token(token_address)
+    manager0 = registry.manager_by_token(token_address)
 
     # sanity
     assert manager0.channels_addresses() == []
@@ -196,7 +198,7 @@ def test_channelmanager_graph_building(
     total_pairs = 0
     pairs = itertools.combinations(raiden_network, 2)
     for app0, app1 in pairs:
-        manager = app0.raiden.chain.manager_by_token(token_address)
+        manager = app0.raiden.default_registry.manager_by_token(token_address)
         manager.new_netting_channel(
             app0.raiden.address,
             app1.raiden.address,
@@ -346,11 +348,11 @@ def test_blockchain(
 def test_channel_with_self(raiden_network, settle_timeout, blockchain_type):
     app0, = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
+    token_address = app0.raiden.default_registry.token_addresses()[0]
 
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
 
-    graph0 = app0.raiden.chain.manager_by_token(token_address)
+    graph0 = app0.raiden.default_registry.manager_by_token(token_address)
 
     with pytest.raises(SamePeerAddress) as excinfo:
         graph0.new_netting_channel(

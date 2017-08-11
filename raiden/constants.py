@@ -21,3 +21,22 @@ NETTINGCHANNEL_SETTLE_TIMEOUT_MIN = 6
 
 # TODO: add this as an attribute of the transport class
 UDP_MAX_MESSAGE_SIZE = 1200
+
+MAINNET = 'mainnet'
+MORDEN = 'morden'
+ROPSTEN = 'ropsten'
+RINKEBY = 'rinkeby'
+KOVAN = 'kovan'
+
+ID_TO_NETWORKNAME = {
+    1: MAINNET,
+    2: MORDEN,
+    3: ROPSTEN,
+    4: RINKEBY,
+    42: KOVAN,
+}
+
+NETWORKNAME_TO_ID = {
+    name: id
+    for id, name in ID_TO_NETWORKNAME.iteritems()
+}

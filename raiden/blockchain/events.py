@@ -164,7 +164,7 @@ def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
     manager_channels = defaultdict(list)
 
     for channel_manager_address in registry.manager_addresses():
-        channel_manager = pyethapp_chain.manager(channel_manager_address)
+        channel_manager = registry.manager(channel_manager_address)
         channel_managers.append(channel_manager)
 
         participating_channels = channel_manager.channels_by_participant(node_address)

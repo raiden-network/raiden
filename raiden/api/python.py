@@ -55,7 +55,7 @@ class RaidenAPI(object):
     @property
     def tokens(self):
         """ Return a list of the tokens registered with the default registry. """
-        return self.raiden.chain.default_registry.token_addresses()
+        return self.raiden.default_registry.token_addresses()
 
     def get_channel(self, channel_address):
         if not isaddress(channel_address):
@@ -79,7 +79,7 @@ class RaidenAPI(object):
             raise InvalidAddress('token_address must be a valid address in binary')
 
         try:
-            manager = self.raiden.chain.manager_by_token(token_address)
+            manager = self.raiden.default_registry.manager_by_token(token_address)
             if not self.raiden.channel_manager_is_registered(manager.address):
                 self.raiden.register_channel_manager(manager.address)
             return manager.address
@@ -95,9 +95,9 @@ class RaidenAPI(object):
             raise InvalidAddress('token_address must be a valid address in binary')
 
         try:
-            self.raiden.chain.manager_by_token(token_address)
+            self.raiden.default_registry.manager_by_token(token_address)
         except NoTokenManager:
-            channel_manager_address = self.raiden.chain.default_registry.add_token(token_address)
+            channel_manager_address = self.raiden.default_registry.add_token(token_address)
             self.raiden.register_channel_manager(channel_manager_address)
             return channel_manager_address
 
@@ -129,7 +129,7 @@ class RaidenAPI(object):
             connection_manager = self.raiden.connection_manager_for_token(token_address)
         except InvalidAddress:
             # token is not yet registered
-            self.raiden.chain.default_registry.add_token(token_address)
+            self.raiden.default_registry.add_token(token_address)
 
             # wait for registration
             while token_address not in self.raiden.tokens_to_connectionmanagers:
@@ -194,7 +194,7 @@ class RaidenAPI(object):
         if not isaddress(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel open')
 
-        channel_manager = self.raiden.chain.manager_by_token(token_address)
+        channel_manager = self.raiden.default_registry.manager_by_token(token_address)
         assert token_address in self.raiden.token_to_channelgraph
 
         netcontract_address = channel_manager.new_netting_channel(
@@ -649,7 +649,7 @@ class RaidenAPI(object):
         )
 
     def get_network_events(self, from_block, to_block):
-        registry_address = self.raiden.chain.default_registry.address
+        registry_address = self.raiden.default_registry.address
 
         return get_all_registry_events(
             self.raiden.chain,

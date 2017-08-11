@@ -212,10 +212,10 @@ class ConsoleTools(object):
         """
         # Add the ERC20 token to the raiden registry
         token_address = safe_address_decode(token_address_hex)
-        self._chain.default_registry.add_token(token_address)
+        self._raiden.default_registry.add_token(token_address)
 
         # Obtain the channel manager for the token
-        channel_manager = self._chain.manager_by_token(token_address)
+        channel_manager = self._raiden.default_registry.manager_by_token(token_address)
 
         # Register the channel manager with the raiden registry
         self._raiden.register_channel_manager(channel_manager.address)

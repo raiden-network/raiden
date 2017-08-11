@@ -86,7 +86,7 @@ def test_receive_direct_before_deposit(raiden_network):
     any back channel balance.  """
     app0, app1, _ = raiden_network
 
-    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
+    token_address = app0.raiden.default_registry.token_addresses()[0]
     channel_0_1 = channel(app0, app1, token_address)
     back_channel = channel(app1, app0, token_address)
 

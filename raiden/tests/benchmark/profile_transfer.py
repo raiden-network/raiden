@@ -213,7 +213,6 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
         blockchain = BlockChainServiceTesterMock(
             privkey,
             tester,
-            registry_address,
         )
         blockchain_services.append(blockchain)
 
@@ -227,6 +226,7 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
     apps = create_apps(
         blockchain_services,
         endpoint_discovery_services,
+        registry_address,
         tokens,
         channels_per_node,
         deposit,

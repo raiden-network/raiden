@@ -217,24 +217,23 @@ class FilterTesterMock(object):
 
 
 class BlockChainServiceTesterMock(object):
-    def __init__(self, private_key, tester_state, registry_address):
+    def __init__(self, private_key, tester_state):
         self.tester_state = tester_state
-        default_registry = RegistryTesterMock(tester_state, private_key, registry_address)
 
         self.address = privatekey_to_address(private_key)
         self.private_key = private_key
         self.node_address = privatekey_to_address(private_key)
-        self.default_registry = default_registry
 
         self.address_to_token = dict()
         self.address_to_discovery = dict()
-        self.address_to_channelmanager = dict()
         self.address_to_nettingchannel = dict()
         self.address_to_registry = dict()
-        self.token_to_channelmanager = dict()
 
     def block_number(self):
         return self.tester_state.block.number
+
+    def is_synced(self):
+        return True
 
     def next_block(self):
         self.tester_state.mine(number_of_blocks=1)
@@ -276,42 +275,6 @@ class BlockChainServiceTesterMock(object):
 
         return self.address_to_nettingchannel[netting_channel_address]
 
-    def manager(self, manager_address):
-        """ Return a proxy to interact with a ChannelManagerContract. """
-        if manager_address not in self.address_to_channelmanager:
-            manager = ChannelManagerTesterMock(
-                self.tester_state,
-                self.private_key,
-                manager_address,
-            )
-
-            token_address = manager.token_address()
-
-            self.token_to_channelmanager[token_address] = manager
-            self.address_to_channelmanager[manager_address] = manager
-
-        return self.address_to_channelmanager[manager_address]
-
-    def manager_by_token(self, token_address):
-        """ Find the channel manager for `token_address` and return a proxy to
-        interact with it.
-
-        If the token is not already registered it raises `TransactionFailed` when
-        we do `self.registry_proxy.channelManagerByToken(token_address)`
-        """
-        if token_address not in self.token_to_channelmanager:
-            manager_address = self.default_registry.manager_address_by_token(token_address)
-            manager = ChannelManagerTesterMock(
-                self.tester_state,
-                self.private_key,
-                manager_address,
-            )
-
-            self.token_to_channelmanager[token_address] = manager
-            self.address_to_channelmanager[manager_address] = manager
-
-        return self.token_to_channelmanager[token_address]
-
     def registry(self, registry_address):
         if registry_address not in self.address_to_registry:
             self.address_to_registry[registry_address] = RegistryTesterMock(
@@ -334,15 +297,18 @@ class BlockChainServiceTesterMock(object):
             constructor_parameters,
         )
 
-    def deploy_and_register_token(self, contract_name, contract_path, constructor_parameters=None):
-        assert self.default_registry
-
+    def deploy_and_register_token(
+            self,
+            registry,
+            contract_name,
+            contract_path,
+            constructor_parameters=None):
         token_address = self.deploy_contract(
             contract_name,
             contract_path,
             constructor_parameters,
         )
-        self.default_registry.add_token(token_address)  # pylint: disable=no-member
+        registry.add_token(token_address)  # pylint: disable=no-member
 
         return token_address
 
@@ -440,6 +406,9 @@ class RegistryTesterMock(object):
         )
         self.tokenadded_filters = list()
 
+        self.address_to_channelmanager = dict()
+        self.token_to_channelmanager = dict()
+
     def manager_address_by_token(self, token_address):
         channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
         return channel_manager_address_hex.decode('hex')
@@ -475,6 +444,42 @@ class RegistryTesterMock(object):
         )
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
+
+    def manager(self, manager_address):
+        """ Return a proxy to interact with a ChannelManagerContract. """
+        if manager_address not in self.address_to_channelmanager:
+            manager = ChannelManagerTesterMock(
+                self.tester_state,
+                self.private_key,
+                manager_address,
+            )
+
+            token_address = manager.token_address()
+
+            self.token_to_channelmanager[token_address] = manager
+            self.address_to_channelmanager[manager_address] = manager
+
+        return self.address_to_channelmanager[manager_address]
+
+    def manager_by_token(self, token_address):
+        """ Find the channel manager for `token_address` and return a proxy to
+        interact with it.
+
+        If the token is not already registered it raises `TransactionFailed` when
+        we do `self.registry_proxy.channelManagerByToken(token_address)`
+        """
+        if token_address not in self.token_to_channelmanager:
+            manager_address = self.manager_address_by_token(token_address)
+            manager = ChannelManagerTesterMock(
+                self.tester_state,
+                self.private_key,
+                manager_address,
+            )
+
+            self.token_to_channelmanager[token_address] = manager
+            self.address_to_channelmanager[manager_address] = manager
+
+        return self.token_to_channelmanager[token_address]
 
 
 class ChannelManagerTesterMock(object):

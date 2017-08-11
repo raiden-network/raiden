@@ -170,9 +170,7 @@ class RaidenService(object):
     """ A Raiden node. """
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
-    def __init__(self, chain, private_key_bin, transport, discovery, config):
-        # pylint: disable=too-many-statements
-
+    def __init__(self, chain, default_registry, private_key_bin, transport, discovery, config):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
@@ -197,6 +195,7 @@ class RaidenService(object):
         self.token_to_hashlock_to_channels = defaultdict(lambda: defaultdict(list))
 
         self.chain = chain
+        self.default_registry = default_registry
         self.config = config
         self.privkey = private_key_bin
         self.address = privatekey_to_address(private_key_bin)
@@ -275,7 +274,7 @@ class RaidenService(object):
         # Registry registration must start *after* the alarm task, this avoid
         # corner cases were the registry is queried in block A, a new block B
         # is mined, and the alarm starts polling at block C.
-        self.register_registry(self.chain.default_registry.address)
+        self.register_registry(self.default_registry.address)
 
         # Restore from snapshot must come after registering the registry as we
         # need to know the registered tokens to populate `token_to_channelgraph`
@@ -725,7 +724,7 @@ class RaidenService(object):
         return manager_address in self.manager_to_token
 
     def register_channel_manager(self, manager_address):
-        manager = self.chain.manager(manager_address)
+        manager = self.default_registry.manager(manager_address)
         netting_channels = [
             self.chain.netting_channel(channel_address)
             for channel_address in manager.channels_by_participant(self.address)

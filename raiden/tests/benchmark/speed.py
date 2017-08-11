@@ -60,7 +60,6 @@ def setup_apps(amount, tokens, num_transfers, num_nodes, channels_per_node):
         blockchain = BlockChainServiceTesterMock(
             privkey,
             tester,
-            registry_address,
         )
         blockchain_services.append(blockchain)
 
