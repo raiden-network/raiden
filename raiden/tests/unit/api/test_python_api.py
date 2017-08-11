@@ -199,7 +199,7 @@ def test_token_swap(raiden_network, deposit, settle_timeout):
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_api_channel_events(raiden_chain):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
-    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
+    token_address = app0.raiden.default_registry.token_addresses()[0]
     channel_0_1 = channel(app0, app1, token_address)
 
     amount = 30

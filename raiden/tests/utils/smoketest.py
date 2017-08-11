@@ -109,11 +109,11 @@ def run_smoketests(raiden_service, test_config, debug=False):
     try:
         chain = raiden_service.chain
         assert (
-            chain.default_registry.address ==
+            raiden_service.default_registry.address ==
             test_config['contracts']['registry_address'].decode('hex')
         )
         assert (
-            chain.default_registry.token_addresses() ==
+            raiden_service.default_registry.token_addresses() ==
             [test_config['contracts']['token_address'].decode('hex')]
         )
         assert len(chain.address_to_discovery.keys()) == 1
@@ -210,9 +210,12 @@ def deploy_and_open_channel_alloc(deployment_key):
     client = BlockChainServiceTesterMock(
         deployment_key_bin,
         state,
-        registry_address,
     )
+
+    registry = client.registry(registry_address)
+
     token_address = client.deploy_and_register_token(
+        registry,
         'HumanStandardToken',
         get_contract_path('HumanStandardToken.sol'),
         constructor_parameters=(
@@ -223,7 +226,7 @@ def deploy_and_open_channel_alloc(deployment_key):
         )
     )
 
-    manager = client.manager_by_token(token_address)
+    manager = registry.manager_by_token(token_address)
 
     assert manager.private_key == deployment_key_bin
     our_address = TEST_ACCOUNT['address']

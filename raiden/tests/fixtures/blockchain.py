@@ -37,7 +37,11 @@ from raiden.tests.utils.network import (
 
 BlockchainServices = namedtuple(
     'BlockchainServices',
-    ('deploy_service', 'blockchain_services'),
+    (
+        'deploy_registry',
+        'deploy_service',
+        'blockchain_services',
+    )
 )
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -48,6 +52,7 @@ def _token_addresses(
         token_amount,
         number_of_tokens,
         deploy_service,
+        registry,
         participants,
         register):
     """ Deploy `number_of_tokens` ERC20 token instances with `token_amount` minted and
@@ -64,6 +69,7 @@ def _token_addresses(
     for _ in range(number_of_tokens):
         if register:
             token_address = deploy_service.deploy_and_register_token(
+                registry,
                 contract_name='HumanStandardToken',
                 contract_path=get_contract_path('HumanStandardToken.sol'),
                 constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
@@ -107,11 +113,13 @@ def cached_genesis(request, blockchain_type):
     # this will create the tester _and_ deploy the Registry
     deploy_key = request.getfixturevalue('deploy_key')
     private_keys = request.getfixturevalue('private_keys')
-    deploy_service, blockchain_services = _tester_services(
+    registry, deploy_service, blockchain_services = _tester_services(
         deploy_key,
         private_keys,
         request.getfixturevalue('tester_blockgas_limit'),
     )
+
+    registry_address = registry.address
 
     # create_network only registers the tokens,
     # the contracts must be deployed previously
@@ -121,6 +129,7 @@ def cached_genesis(request, blockchain_type):
         request.getfixturevalue('token_amount'),
         request.getfixturevalue('number_of_tokens'),
         deploy_service,
+        registry,
         participants,
         register
     )
@@ -141,6 +150,7 @@ def cached_genesis(request, blockchain_type):
     raiden_apps = create_apps(
         blockchain_services,
         endpoint_discovery_services,
+        registry_address,
         request.getfixturevalue('raiden_udp_ports'),
         DummyTransport,  # Do not use a UDP server to avoid port reuse in MacOSX
         request.getfixturevalue('reveal_timeout'),
@@ -181,7 +191,6 @@ def cached_genesis(request, blockchain_type):
     # save the state from the last block into a genesis dict
     tester = blockchain_services[0].tester_state
     tester.mine()
-    registry_address = blockchain_services[0].default_registry.address
 
     genesis_alloc = dict()
     for account_address in tester.block.state.to_dict():
@@ -275,6 +284,7 @@ def token_addresses(
             token_amount,
             number_of_tokens,
             blockchain_services.deploy_service,
+            blockchain_services.deploy_registry,
             participants,
             register_tokens
         )
@@ -474,11 +484,8 @@ def _jsonrpc_services(
     # method so even if the client is patched twice, it should work fine
     patch_send_transaction(deploy_client)
 
-    deploy_blockchain = BlockChainService(
-        deploy_key,
-        registry_address,
-        deploy_client,
-    )
+    deploy_blockchain = BlockChainService(deploy_key, deploy_client)
+    deploy_registry = deploy_blockchain.registry(registry_address)
 
     host = '0.0.0.0'
     blockchain_services = list()
@@ -494,12 +501,15 @@ def _jsonrpc_services(
 
         blockchain = BlockChainService(
             privkey,
-            registry_address,
             rpc_client,
         )
         blockchain_services.append(blockchain)
 
-    return BlockchainServices(deploy_blockchain, blockchain_services)
+    return BlockchainServices(
+        deploy_registry,
+        deploy_blockchain,
+        blockchain_services,
+    )
 
 
 def _tester_services(deploy_key, private_keys, tester_blockgas_limit):
@@ -521,16 +531,20 @@ def _tester_services(deploy_key, private_keys, tester_blockgas_limit):
     deploy_blockchain = BlockChainServiceTesterMock(
         deploy_key,
         tester,
-        tester_registry_address,
     )
+
+    deploy_registry = deploy_blockchain.registry(tester_registry_address)
 
     blockchain_services = list()
     for privkey in private_keys:
         blockchain = BlockChainServiceTesterMock(
             privkey,
             tester,
-            tester_registry_address,
         )
         blockchain_services.append(blockchain)
 
-    return BlockchainServices(deploy_blockchain, blockchain_services)
+    return BlockchainServices(
+        deploy_registry,
+        deploy_blockchain,
+        blockchain_services,
+    )

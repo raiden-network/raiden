@@ -76,7 +76,6 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
         blockchain = BlockChainServiceTesterMock(
             privkey,
             tester,
-            registry_address,
         )
         blockchain_services.append(blockchain)
 

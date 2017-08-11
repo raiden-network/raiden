@@ -48,7 +48,7 @@ class App(object):  # pylint: disable=too-few-public-methods
         'console': False,
     }
 
-    def __init__(self, config, chain, discovery, transport_class=UDPTransport):
+    def __init__(self, config, chain, default_registry, discovery, transport_class=UDPTransport):
         self.config = config
         self.discovery = discovery
 
@@ -71,6 +71,7 @@ class App(object):  # pylint: disable=too-few-public-methods
         try:
             self.raiden = RaidenService(
                 chain,
+                default_registry,
                 decode_hex(config['privatekey_hex']),
                 transport,
                 discovery,

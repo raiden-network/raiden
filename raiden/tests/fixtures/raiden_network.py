@@ -60,6 +60,7 @@ def raiden_chain(
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
+        blockchain_services.deploy_registry.address,
         raiden_udp_ports,
         transport_class,
         reveal_timeout,
@@ -84,7 +85,7 @@ def raiden_chain(
         )
 
     for app in raiden_apps:
-        app.raiden.register_registry(app.raiden.chain.default_registry.address)
+        app.raiden.register_registry(app.raiden.default_registry.address)
 
     _raiden_cleanup(request, raiden_apps)
 
@@ -116,6 +117,7 @@ def raiden_network(
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
+        blockchain_services.deploy_registry.address,
         raiden_udp_ports,
         transport_class,
         reveal_timeout,

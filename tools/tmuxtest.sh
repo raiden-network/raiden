@@ -176,9 +176,9 @@ raiden3='${ADDRESS3}'
 token1='${TOKEN1}'
 token2='${TOKEN2}'
 token3='${TOKEN3}'
-am1=raiden.get_manager_by_token_address('${TOKEN1}'.decode('hex'))
-am2=raiden.get_manager_by_token_address('${TOKEN2}'.decode('hex'))
-# am3=raiden.get_manager_by_token_address('${TOKEN3}'.decode('hex'))"
+am1=raiden.default_registry.get_manager_by_token_address('${TOKEN1}'.decode('hex'))
+am2=raiden.default_registry.get_manager_by_token_address('${TOKEN2}'.decode('hex'))
+# am3=raiden.default_registry.get_manager_by_token_address('${TOKEN3}'.decode('hex'))"
 
 [ "$SETUP_TMUX" -eq 1 ] && {
     info "creating the tmux windows/panels"

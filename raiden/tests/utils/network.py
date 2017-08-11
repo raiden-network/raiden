@@ -36,7 +36,7 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
     for first, second in app_pairs:
         assert token_address
 
-        manager = first.raiden.chain.manager_by_token(token_address)
+        manager = first.raiden.default_registry.manager_by_token(token_address)
 
         netcontract_address = manager.new_netting_channel(
             first.raiden.address,
@@ -218,6 +218,7 @@ def create_sequential_channels(
 def create_apps(
         blockchain_services,
         endpoint_discovery_services,
+        registry_address,
         raiden_udp_ports,
         transport_class,
         reveal_timeout,
@@ -291,9 +292,12 @@ def create_apps(
         copy = App.DEFAULT_CONFIG.copy()
         copy.update(config)
 
+        registry = blockchain.registry(registry_address)
+
         app = App(
             copy,
             blockchain,
+            registry,
             discovery,
             transport_class,
         )

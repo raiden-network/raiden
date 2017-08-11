@@ -50,13 +50,13 @@ def event_dicts_are_equal(dict1, dict2):
 def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_timeout):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
-    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
+    token_address = app0.raiden.default_registry.token_addresses()[0]
 
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
 
     token0 = app0.raiden.chain.token(token_address)
-    graph0 = app0.raiden.chain.manager_by_token(token_address)
+    graph0 = app0.raiden.default_registry.manager_by_token(token_address)
 
     token1 = app1.raiden.chain.token(token_address)
 
@@ -126,17 +126,17 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
 def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout):
     app0, app1 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
-    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
+    token_address = app0.raiden.default_registry.token_addresses()[0]
 
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
 
     token0 = app0.raiden.chain.token(token_address)
-    manager0 = app0.raiden.chain.manager_by_token(token_address)
+    manager0 = app0.raiden.default_registry.manager_by_token(token_address)
 
     events = get_all_registry_events(
         app0.raiden.chain,
-        app0.raiden.chain.default_registry.address,
+        app0.raiden.default_registry.address,
         events=ALL_EVENTS,
         from_block=0,
         to_block='latest',
@@ -152,7 +152,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 
     events = get_all_registry_events(
         app0.raiden.chain,
-        app0.raiden.chain.default_registry.address,
+        app0.raiden.default_registry.address,
         events=ALL_EVENTS,
         from_block=999999998,
         to_block=999999999,
@@ -302,7 +302,7 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
 def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_timeout):
     app0, app1, app2 = raiden_chain
 
-    token_address = app0.raiden.chain.default_registry.token_addresses()[0]
+    token_address = app0.raiden.default_registry.token_addresses()[0]
     amount = 10
 
     channel21 = channel(app2, app1, token_address)

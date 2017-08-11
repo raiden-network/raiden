@@ -7,24 +7,28 @@ import tempfile
 import json
 import socket
 import errno
-
 import signal
+from itertools import count
+
 import click
 import gevent
 import gevent.monkey
+import requests
+from requests.exceptions import RequestException
 from ethereum import slogging
 from ethereum.utils import denoms
 from ipaddress import IPv4Address, AddressValueError
-from pyethapp.jsonrpc import address_decoder, address_encoder
+from pyethapp.jsonrpc import address_decoder, address_encoder, quantity_decoder
 from pyethapp.rpc_client import JSONRPCClient
 from tinyrpc import BadRequestError
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
 from raiden.constants import (
-    ROPSTEN_REGISTRY_ADDRESS,
+    DISCOVERY_REGISTRATION_GAS,
+    ID_TO_NETWORKNAME,
     ROPSTEN_DISCOVERY_ADDRESS,
-    DISCOVERY_REGISTRATION_GAS
+    ROPSTEN_REGISTRY_ADDRESS,
 )
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.sockfactory import SocketFactory
@@ -34,9 +38,11 @@ from raiden.network.rpc.client import (
     patch_send_transaction,
 )
 from raiden.settings import (
-    INITIAL_PORT,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
-    GAS_PRICE
+    ETHERSCAN_API,
+    GAS_PRICE,
+    INITIAL_PORT,
+    ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
 from raiden.utils import split_endpoint, get_system_spec
 from raiden.tests.utils.smoketest import (
@@ -46,6 +52,10 @@ from raiden.tests.utils.smoketest import (
 )
 
 gevent.monkey.patch_all()
+
+# ansi escape code for moving the cursor and clearing the line
+CURSOR_STARTLINE = b'\x1b[1000D'
+CLEARLINE = b'\x1b[2K'
 
 
 def toogle_cpu_profiler(raiden):
@@ -78,6 +88,54 @@ def toggle_trace_profiler(raiden):
     elif not hasattr(raiden, 'profiler') and raiden.config['database_path'] != ':memory:':
         raiden.profiler = TraceProfiler(raiden.config['database_path'])
         raiden.profiler.start()
+
+
+def wait_for_sync(blockchain_service, url, tolerance, sleep):
+    try:
+        oracle_block = quantity_decoder(requests.get(url).json()['result'])
+        local_block = blockchain_service.client.blocknumber()
+
+        if local_block >= oracle_block - tolerance:
+            return
+
+        print('Waiting for the ethereum node to synchronize. [Use ^C to exit]')
+        print('{}/~{}'.format(local_block, oracle_block), end='')
+
+        for i in count():
+            sys.stdout.flush()
+            gevent.sleep(sleep)
+            local_block = blockchain_service.client.blocknumber()
+
+            # update the oracle block number sparsely to not spam the server
+            if local_block >= oracle_block or i % 50 == 0:
+                oracle_block = quantity_decoder(requests.get(url).json()['result'])
+
+                if local_block >= oracle_block - tolerance:
+                    return
+
+            print(CLEARLINE + CURSOR_STARTLINE, end='')
+            print('{}/~{}'.format(local_block, oracle_block), end='')
+
+    except (RequestException, ValueError):
+        print('Cannot use {}. Request failed'.format(url))
+        print('Falling back to eth_sync api.')
+
+        if blockchain_service.is_synced():
+            return
+
+        print('Waiting for the ethereum node to synchronize [Use ^C to exit].')
+
+        for i in count():
+            if i % 3 == 0:
+                print(CLEARLINE + CURSOR_STARTLINE , end='')
+
+            print('.', end='')
+            sys.stdout.flush()
+
+            gevent.sleep(sleep)
+
+            if blockchain_service.is_synced():
+                return
 
 
 class AddressType(click.ParamType):
@@ -208,6 +266,13 @@ OPTIONS = [
         default=True,
     ),
     click.option(
+        '--sync-check/--no-sync-check',
+        help=(
+            'Enable/Disable usage of an oracle to check if the ethereum node is synchronized'
+        ),
+        default=True,
+    ),
+    click.option(
         '--api-address',
         help='"host:port" for the RPC server to listen on.',
         default="127.0.0.1:5001",
@@ -279,7 +344,7 @@ def app(address,
         registry_contract_address,
         discovery_contract_address,
         listen_address,
-        rpccorsdomain,  # pylint: disable=unused-argument
+        rpccorsdomain,
         mapped_socket,
         logging,
         logfile,
@@ -288,6 +353,7 @@ def app(address,
         send_ping_time,
         api_address,
         rpc,
+        sync_check,
         console,
         password_file,
         web_ui,
@@ -295,10 +361,11 @@ def app(address,
         eth_client_communication,
         nat):
 
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
+
     from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
 
-    # config_file = args.config_file
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)
 
@@ -360,7 +427,6 @@ def app(address,
     try:
         blockchain_service = BlockChainService(
             privatekey_bin,
-            registry_contract_address,
             rpc_client,
         )
     except ValueError as e:
@@ -371,6 +437,30 @@ def app(address,
         # ropsten with a geth node connected to morden)
         print(e.message)
         sys.exit(1)
+
+    if sync_check:
+        try:
+            net_id = int(blockchain_service.client.call('net_version'))
+        except:  # pylint: disable=bare-except
+            print(
+                "Couldn't determine the network the ethereum node is connected to.\n"
+                "Because of this there is not way to determine the latest\n"
+                "block with an oracle, and the events from the ethereum\n"
+                "node cannot be trusted. Giving up.\n"
+            )
+            sys.exit(1)
+
+        network = ID_TO_NETWORKNAME[net_id]
+        url = ETHERSCAN_API.format(
+            network=network,
+            action='eth_blockNumber',
+        )
+        wait_for_sync(
+            blockchain_service,
+            url=url,
+            tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
+            sleep=3,
+        )
 
     discovery_tx_cost = GAS_PRICE * DISCOVERY_REGISTRATION_GAS
     while True:
@@ -386,6 +476,10 @@ def app(address,
         )
         if not click.confirm('Try again?'):
             sys.exit(1)
+
+    registry = blockchain_service.registry(
+        registry_contract_address,
+    )
 
     discovery = ContractDiscovery(
         blockchain_service.node_address,
@@ -406,7 +500,12 @@ def app(address,
     database_path = os.path.join(user_db_dir, 'log.db')
     config['database_path'] = database_path
 
-    return App(config, blockchain_service, discovery)
+    return App(
+        config,
+        blockchain_service,
+        registry,
+        discovery,
+    )
 
 
 def prompt_account(address_hex, keystore_path, password_file):
@@ -477,6 +576,8 @@ def prompt_account(address_hex, keystore_path, password_file):
 @options
 @click.pass_context
 def run(ctx, **kwargs):
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+
     if ctx.invoked_subcommand is None:
         print('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']))
         from raiden.ui.console import Console
