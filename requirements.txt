@@ -7,7 +7,7 @@ tinyrpc[gevent,httpclient,jsonext,websocket,wsgi]>=0.6,<1.0
 pysha3
 ipython<5.0.0
 rlp>=0.4.3,<0.6.0
-coincurve==4.5.1
+coincurve==6.0.0
 pycryptodome>=3.4.3
 miniupnpc
 networkx>=2.0.0
