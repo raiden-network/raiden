@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { Http, Headers, RequestOptions, Response } from '@angular/http';
 import { Observable } from 'rxjs/Observable';
 import { RaidenConfig } from './raiden.config';
@@ -8,6 +8,8 @@ import { Channel } from '../models/channel';
 import { Event, EventsParam } from '../models/event';
 import { SwapToken } from '../models/swaptoken';
 import { SharedService } from './shared.service';
+
+type CallbackFunc = (error: Error, result: any) => void;
 
 @Injectable()
 export class RaidenService {
@@ -19,8 +21,13 @@ export class RaidenService {
 
     constructor(private http: Http,
         private config: RaidenConfig,
-        private sharedService: SharedService) {
+        private sharedService: SharedService,
+        private zone: NgZone) {
         this.tokenContract = this.config.web3.eth.contract(tokenabi);
+    }
+
+    private zoneEncap(cb: CallbackFunc): CallbackFunc {
+        return (err, res) => this.zone.run(() => cb(err, res));
     }
 
     get identifier(): number {
@@ -41,12 +48,26 @@ export class RaidenService {
 
     public getTokensBalances(refresh: boolean = true): Observable<Usertoken[]> {
         return this.http.get(`${this.config.api}/tokens`)
-            .map((response) => {
+            .combineLatest(this.getChannels())
+            .map(([response, channels]): Observable<Usertoken>[] => {
                 const tokenArray: Array<{ address: string }> = response.json();
                 return tokenArray
-                    .map((tokeninfo) => this.getUsertoken(tokeninfo.address, refresh))
-                    .filter((u) => u !== null);
+                    .map((token) => this.getUsertoken(
+                        token.address,
+                        refresh)
+                        .map((userToken) => {
+                            if (userToken) {
+                                return Object.assign(userToken,
+                                    { channelCnt: channels.filter((channel) =>
+                                        channel.token_address === token.address).length });
+                            }
+                            return userToken;
+                        })
+                    );
             })
+            .switchMap((obsArray) => Observable.zip(...obsArray)
+                .first())
+            .map((tokenArray) => tokenArray.filter((token) => !!token))
             .catch((error) => this.handleError(error));
     }
 
@@ -125,14 +146,14 @@ export class RaidenService {
 
     public registerToken(tokenAddress: string): Observable<Usertoken> {
         return this.http.put(`${this.config.api}/tokens/${tokenAddress}`, '{}')
-            .map(() => {
-                this.tokenContract = this.config.web3.eth.contract(tokenabi);
-                const userToken: Usertoken | null = this.getUsertoken(tokenAddress);
-                if (!userToken) {
-                    throw new Error('No contract on address: ' + tokenAddress);
-                }
-                return <Usertoken>userToken;
-            })
+            .switchMap(() => this.getUsertoken(tokenAddress)
+                .map((userToken) => {
+                    if (userToken === null) {
+                        throw new Error(`No contract on address: ${tokenAddress}`);
+                    }
+                    return userToken;
+                })
+            )
             .catch((error) => this.handleError(error));
     }
 
@@ -145,6 +166,11 @@ export class RaidenService {
         return this.http.put(`${this.config.api}/connection/${tokenAddress}`,
             JSON.stringify(data), options)
             .map((response) => response.json())
+            .catch((error) => this.handleError(error));
+    }
+
+    public leaveTokenNetwork(tokenAddress: string): Observable<any> {
+        return this.http.delete(`${this.config.api}/connection/${tokenAddress}`)
             .catch((error) => this.handleError(error));
     }
 
@@ -191,62 +217,86 @@ export class RaidenService {
 
     public blocknumberToDate(block: number): Observable<Date> {
         return Observable.bindNodeCallback(<(a: number) => any>
-                this.config.web3.eth.getBlock)(block)
+            this.config.web3.eth.getBlock)(block)
             .map((blk) => new Date(blk['timestamp'] * 1000))
             .first();
     }
 
-    private getUsertoken(tokenAddress: string, refresh: boolean = true): Usertoken |null {
-        const tokenContractInstance = this.tokenContract.at(tokenAddress);
-        let userToken: Usertoken |null| undefined = this.userTokens[tokenAddress];
-        if (userToken === undefined) {
-            let name: string = null;
-            let symbol: string = null;
-            try {
-                symbol = tokenContractInstance.symbol();
-            } catch (e) { }
-            try {
-                name = tokenContractInstance.name();
-            } catch (e) { }
-            try {
-                userToken = {
-                    address: tokenAddress,
-                    symbol,
-                    name,
-                    balance: tokenContractInstance.balanceOf(this.raidenAddress).toNumber(),
-                };
-            } catch (e) {
-                userToken = null;
+    private getUsertoken(
+        tokenAddress: string,
+        refresh: boolean = true): Observable<Usertoken |null> {
+            const tokenContractInstance = this.tokenContract.at(tokenAddress);
+            const userToken: Usertoken |null | undefined = this.userTokens[tokenAddress];
+            if (userToken === undefined) {
+                return Observable.bindNodeCallback((cb: CallbackFunc) =>
+                    tokenContractInstance.symbol(this.zoneEncap(cb)))()
+                    .catch((error) => Observable.of(null))
+                    .combineLatest(
+                    Observable.bindNodeCallback((cb: CallbackFunc) =>
+                        tokenContractInstance.name(this.zoneEncap(cb)))()
+                        .catch((error) => Observable.of(null)),
+                    Observable.bindNodeCallback((addr: string, cb: CallbackFunc) =>
+                        tokenContractInstance.balanceOf(
+                            addr,
+                            this.zoneEncap(cb)
+                        ))(this.raidenAddress)
+                        .map((balance) => balance.toNumber())
+                        .catch((error) => Observable.of(null))
+                    )
+                    .map(([symbol, name, balance]): Usertoken => {
+                        if (balance === null) {
+                            return null;
+                        }
+                        return {
+                            address: tokenAddress,
+                            symbol,
+                            name,
+                            balance
+                        };
+                    })
+                    .do((token) => this.userTokens[tokenAddress] = token);
+            } else if (refresh && userToken !== null) {
+                return Observable.bindNodeCallback((addr: string, cb: CallbackFunc) =>
+                    tokenContractInstance.balanceOf(
+                        addr,
+                        this.zoneEncap(cb)
+                    ))(this.raidenAddress)
+                    .map((balance) => balance.toNumber())
+                    .catch((error) => Observable.of(null))
+                    .map((balance) => {
+                        if (balance === null) {
+                            return null;
+                        }
+                        userToken.balance = balance;
+                        return userToken;
+                    });
+            } else {
+                return Observable.of(userToken);
             }
-            this.userTokens[tokenAddress] = userToken;
-        } else if (refresh && userToken !== null) {
-            userToken.balance = tokenContractInstance.balanceOf(this.raidenAddress).toNumber();
         }
-        return userToken;
-    }
 
     private handleError(error: Response | any) {
-        // In a real world app, you might use a remote logging infrastructure
-        let errMsg: string;
-        if (error instanceof Response) {
-            let body;
-            try {
-                body = error.json() || '';
-            } catch (e) {
-                body = error.text();
-            }
-            const err = body || JSON.stringify(body);
-            errMsg = `${error.status} - ${error.statusText || ''} ${err}`;
-        } else {
-            errMsg = error.message ? error.message : error.toString();
+    // In a real world app, you might use a remote logging infrastructure
+    let errMsg: string;
+    if (error instanceof Response) {
+        let body;
+        try {
+            body = error.json() || '';
+        } catch (e) {
+            body = error.text();
         }
-        console.error(errMsg);
-        this.sharedService.msg({
-            severity: 'error',
-            summary: 'Raiden Error',
-            detail: JSON.stringify(errMsg),
-        });
-        return Observable.throw(errMsg);
+        const err = body || JSON.stringify(body);
+        errMsg = `${error.status} - ${error.statusText || ''} ${err}`;
+    } else {
+        errMsg = error.message ? error.message : error.toString();
     }
+    console.error(errMsg);
+    this.sharedService.msg({
+        severity: 'error',
+        summary: 'Raiden Error',
+        detail: JSON.stringify(errMsg),
+    });
+    return Observable.throw(errMsg);
+}
 
 }

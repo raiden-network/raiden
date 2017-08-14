@@ -7,7 +7,6 @@ import { Channel } from '../../models/channel';
 import { EventsParam } from '../../models/event';
 import { MenuItem, Message, SelectItem } from 'primeng/primeng';
 
-declare var blockies;
 const INTERVAL = 5000;
 
 @Component({
@@ -24,7 +23,7 @@ export class ChannelTableComponent implements OnInit {
     public action: string;
     public tempChannel: Channel = {};
     public tokenAddressMapping$: Observable<SelectItem[]>;
-    public watchEvents: EventsParam[] = [{}];
+    public watchEvents: EventsParam[] = [];
     public tabIndex = 0;
 
     constructor(private raidenService: RaidenService,
@@ -56,12 +55,6 @@ export class ChannelTableComponent implements OnInit {
                 return oldChannels.filter((oldchannel) =>
                     newChannels.find((c) => c.channel_address === oldchannel.channel_address));
             }, []);
-    }
-
-    public generateBlockies(icon: any, address: string) {
-        console.log(address);
-        icon.style.backgroundImage = 'url(' + blockies.create({ seed: address, size: 8, scale: 16 })
-            .toDataURL() + ')';
     }
 
     public onTransfer(channel: Channel) {
