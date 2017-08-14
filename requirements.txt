@@ -8,7 +8,7 @@ git+https://github.com/konradkonrad/pystun@develop#egg=pystun
 # temporary until new version of pyethereum is released, that supports interfaces
 git+https://github.com/LefterisJP/pyethereum@take_solidity_interface_into_account#egg=ethereum
 ipython<5.0.0
-rlp>=0.4.3
+rlp>=0.4.3,<0.6.0
 coincurve==4.5.1
 pycryptodome>=3.4.3
 miniupnpc
