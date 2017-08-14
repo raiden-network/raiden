@@ -2,12 +2,13 @@ import { Component, OnInit, Input } from '@angular/core';
 import { FormControl } from '@angular/forms';
 import { Observable } from 'rxjs/Observable';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
+import { MenuItem } from 'primeng/primeng';
 
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { Usertoken } from '../../models/usertoken';
-import { Message } from 'primeng/primeng';
-import { Channel } from '../../models/channel';
+import { Message, ConfirmationService } from 'primeng/primeng';
+import { EventsParam } from '../../models/event';
 
 @Component({
     selector: 'app-token-network',
@@ -17,108 +18,133 @@ import { Channel } from '../../models/channel';
 export class TokenNetworkComponent implements OnInit {
 
     @Input() raidenAddress: string;
-    @Input() channelsToken: Channel[];
 
     private tokensSubject: BehaviorSubject<void> = new BehaviorSubject(null);
     public tokensBalances$: Observable<Usertoken[]>;
     public selectedToken: Usertoken;
     public refreshing = false;
+    public watchEvents: EventsParam[] = [{}];
+    public tabIndex = 0;
 
     public displayJoinDialog = false;
     public displayRegisterDialog = false;
     public displaySwapDialog = false;
     public displayTransferDialog = false;
-    public channelOpened: Channel = {};
-    public tokenAddress: FormControl = new FormControl();
-    public funds: FormControl = new FormControl();
 
     constructor(private raidenService: RaidenService,
-                private sharedService: SharedService) { }
-
+        private sharedService: SharedService,
+        private confirmationService: ConfirmationService) { }
 
     ngOnInit() {
         this.tokensBalances$ = this.tokensSubject
             .do(() => this.refreshing = true)
             .switchMap(() => this.raidenService.getTokensBalances()
-                .finally(() => this.refreshing = false));
+                .finally(() => this.refreshing = false))
+            .map((userTokens) => userTokens.map(
+                (userToken) => Object.assign(userToken, { menu: this.menuFor(userToken) })
+            ));
     }
 
-    public showJoinDialogBox() {
-        console.log('Inside Join Token Network');
-        if (this.selectedToken == null) {
-            this.sharedService.msg({
-                severity: 'error',
-                summary: 'Token Not Selected',
-                detail: 'Please select a token network to Join'
-              });
-              return;
-        }
-        if (this.selectedToken.balance === 0) {
-            this.sharedService.msg({
-                severity: 'error',
-                summary: 'Insufficient Balance',
-                detail: 'Your Balance in this token network is zero.'
-            });
-            return;
-        }
-        this.displayJoinDialog = true;
-        this.funds.reset();
+    private menuFor(userToken: Usertoken): MenuItem[] {
+        return [
+            userToken.channelCnt > 0 ?
+                {
+                    label: 'Leave Network',
+                    icon: 'fa-sign-out',
+                    command: () => this.showLeaveDialog(userToken),
+                } :
+                {
+                    label: 'Join Network',
+                    icon: 'fa-sign-in',
+                    command: () => this.showJoinDialog(userToken),
+                },
+            {
+                label: 'Transfer',
+                icon: 'fa-money',
+                disabled: !(userToken.channelCnt > 0),
+                command: () => this.showTransferDialog(userToken),
+            },
+            {
+                label: 'Watch Events',
+                icon: 'fa-clock-o',
+                command: () => this.watchTokenEvents(userToken)
+            },
+        ];
     }
 
-    public joinTokenNetwork() {
-        this.raidenService.connectTokenNetwork(this.funds.value,
-            this.selectedToken.address).subscribe(
-                (response) => {
-                    if (response.status === 200) {
-                        this.sharedService.msg({
-                            severity: 'success',
-                            summary: 'Joined Token Network',
-                            detail: 'You have successfully Joined the Network' +
-                            ' of Token ' + this.selectedToken.address
-                        });
-                    } else if (response.status === 500) {
-                        this.sharedService.msg({
-                            severity: 'error',
-                            summary: 'Server Error',
-                            detail: 'Server has encountered Internal Error'
-                        })
-                    }
-                }
-          );
-          this.displayJoinDialog = false;
-          this.funds.reset();
-    }
-
-    public showRegisterDialog(show: boolean) {
-        this.tokenAddress.reset();
+    public showRegisterDialog(show: boolean = true) {
         this.displayRegisterDialog = show;
-    }
-
-    public registerToken() {
-        if (this.tokenAddress.value && /^0x[0-9a-f]{40}$/i.test(this.tokenAddress.value)) {
-            this.raidenService.registerToken(this.tokenAddress.value)
-                .subscribe((userToken: Usertoken) => {
-                    this.refreshTokens();
-                    this.sharedService.msg({
-                        severity: 'success',
-                        summary: 'Token registered',
-                        detail: 'Your token was successfully registered: ' + userToken.address,
-                    });
-                })
-        }
-        this.showRegisterDialog(false);
-    }
-
-    public refreshTokens() {
-        this.tokensSubject.next(null);
     }
 
     public showSwapDialog(show: boolean = true) {
         this.displaySwapDialog = show;
     }
 
-    public showTransferDialog(show: boolean = true) {
+    public refreshTokens() {
+        this.tokensSubject.next(null);
+    }
+
+    public showJoinDialog(userToken: Usertoken, show: boolean = true) {
+        this.selectedToken = userToken;
+        this.displayJoinDialog = show;
+    }
+
+    public showTransferDialog(userToken: Usertoken, show: boolean = true) {
+        this.selectedToken = userToken;
         this.displayTransferDialog = show;
     }
 
+    public showLeaveDialog(userToken: Usertoken) {
+        this.confirmationService.confirm({
+            header: 'Leave Token Network',
+            message: `Are you sure that you want to close and settle all channels for token
+            <p><strong>${userToken.name} <${userToken.address}></strong>?</p>`,
+            accept: () =>
+                this.raidenService.leaveTokenNetwork(userToken.address)
+                    .subscribe((response) => {
+                        this.sharedService.msg({
+                            severity: 'success',
+                            summary: 'Left Token Network',
+                            detail: `Successfuly closed and settled all channels
+                                in ${userToken.name} <${userToken.address}> token`,
+                        });
+                        this.refreshTokens();
+                    })
+        });
+    }
+
+    public watchTokenEvents(token: Usertoken) {
+        let index = this.watchEvents
+            .map((event) => event.token)
+            .indexOf(token.address);
+        if (index < 0) {
+            this.watchEvents = [...this.watchEvents, { token: token.address }];
+            index = this.watchEvents.length - 1;
+        }
+        setTimeout(() => this.tabIndex = index + 1, 100);
+    }
+
+    public handleCloseTab($event) {
+        const newEvents = this.watchEvents.filter((e, i) =>
+            i === $event.index - 1 ? false : true);
+        $event.close();
+        setTimeout(() => this.watchEvents = newEvents, 0);
+    }
+
+    public handleChangeTab($event) {
+        if ($event.index >= 1) {
+            this.watchEvents[$event.index - 1].activity = false;
+        }
+        this.tabIndex = $event.index;
+    }
+
+    public handleActivity(eventsParam: EventsParam) {
+        const index = this.watchEvents
+            .indexOf(eventsParam);
+        if (index >= 0 && this.tabIndex - 1 === index) {
+            eventsParam.activity = false;
+        } else {
+            eventsParam.activity = true;
+        }
+    }
 }

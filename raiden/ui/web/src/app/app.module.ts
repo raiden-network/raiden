@@ -5,7 +5,8 @@ import { HttpModule, Http } from '@angular/http';
 import { DataTableModule, SharedModule, DataListModule, CarouselModule,
     ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule,
     TabViewModule, DropdownModule, MessagesModule, MenuModule,
-    TooltipModule, RadioButtonModule } from 'primeng/primeng';
+    TooltipModule, RadioButtonModule,  ConfirmDialogModule,
+    ConfirmationService } from 'primeng/primeng';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule, Routes } from '@angular/router';
 import { ClipboardModule } from 'ngx-clipboard';
@@ -17,6 +18,8 @@ import { TokenNetworkComponent } from './components/token-network/token-network.
 import { HomeComponent } from './components/home/home.component';
 import { SwapDialogComponent } from './components/swap-dialog/swap-dialog.component';
 import { TransferDialogComponent } from './components/transfer-dialog/transfer-dialog.component';
+import { JoinDialogComponent } from './components/join-dialog/join-dialog.component';
+import { RegisterDialogComponent } from './components/register-dialog/register-dialog.component';
 
 import { RaidenConfig } from './services/raiden.config';
 import { SharedService } from './services/shared.service';
@@ -26,10 +29,10 @@ import { KeysPipe } from './pipes/keys.pipe';
 import { SubsetPipe } from './pipes/subset.pipe';
 
 const appRoutes: Routes = [
-    { path: 'home', component: HomeComponent },
     { path: '', redirectTo: '/home', pathMatch: 'full' },
+    { path: 'home', component: HomeComponent },
+    { path: 'tokens', component: TokenNetworkComponent },
     { path: 'channels', component: ChannelTableComponent },
-    { path: 'balances', component: TokenNetworkComponent }
 ];
 
 export function ConfigLoader(raidenConfig: RaidenConfig) {
@@ -48,6 +51,8 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         KeysPipe,
         SubsetPipe,
         TransferDialogComponent,
+        JoinDialogComponent,
+        RegisterDialogComponent,
     ],
     imports: [
         RouterModule.forRoot(appRoutes),
@@ -70,6 +75,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         MenuModule,
         TooltipModule,
         RadioButtonModule,
+        ConfirmDialogModule,
         NoopAnimationsModule,
         ClipboardModule,
     ],
@@ -83,6 +89,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         },
         SharedService,
         RaidenService,
+        ConfirmationService,
     ],
     bootstrap: [AppComponent]
 })

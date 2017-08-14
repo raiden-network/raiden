@@ -1,64 +1,41 @@
-<div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
-  <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
-  <input #gb type="text" pInputText size="50" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
-</div>
-<p-dataTable *ngIf="(tokensBalances$ | async) || []; let tokens" [value]="tokens" [(selection)]="selectedToken" dataKey="address" [paginator]="true" [rows]="10" [globalFilter]="gb" resizableColumns="true">
-  <p-header><strong>Tokens [{{ tokens.length }}]</strong></p-header>
-  <p-column selectionMode="single" [style]="{'width':'2.3em'}"></p-column>
-  <p-column field="symbol" header="Symbol" [style]="{'width':'7em', 'text-align': 'center'}" [sortable]="true"></p-column>
-  <p-column field="address" header="Address" [sortable]="true">
-    <ng-template let-col let-data="rowData" pTemplate="body">
-      <span [title]="data[col.field]">{{ data[col.field] }}</span>
-    </ng-template>
-  </p-column>
-  <p-column field="name" header="Name" [sortable]="true"></p-column>
-  <p-column field="balance" header="Balance" [style]="{width: '10em', 'text-align': 'center'}" [sortable]="true"></p-column>
-  <p-footer>
-    <div class="ui-helper-clearfix button-pane">
-      <button type="button" pButton icon="fa-plus" class="pull-left" (click)="showJoinDialogBox()" label="Join Token Network"></button>
-      <button type="button" pButton icon="fa-pencil" class="pull-left" (click)="showRegisterDialog(true)" label="Register New Token"></button>
-      <button type="button" pButton icon="fa-retweet" class="pull-left" (click)="showSwapDialog()" label="Swap Tokens"></button>
-      <button type="button" pButton icon="fa-refresh" class="pull-left ui-button-info" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
-      <button type="button" pButton icon="fa-money" class="pull-left ui-button-success" (click)="showTransferDialog()" label="Transfer"></button>
+<p-tabView class="ui-g-12" [activeIndex]="tabIndex" [controlClose]="true" (onClose)="handleCloseTab($event)" (onChange)="handleChangeTab($event)">
+  <p-tabPanel header="Tokens">
+    <div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
+      <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
+      <input #gb type="text" pInputText size="50" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
     </div>
-  </p-footer>
-</p-dataTable>
+    <p-dataTable *ngIf="(tokensBalances$ | async) || []; let tokens" [value]="tokens" dataKey="address" [paginator]="true" [rows]="20" [globalFilter]="gb" resizableColumns="true">
+      <p-header><strong>Tokens [{{ tokens.length }}]</strong></p-header>
+      <p-column field="symbol" header="Symbol" [style]="{'width':'7em', 'text-align': 'center'}" [sortable]="true"></p-column>
+      <p-column field="address" header="Address" [sortable]="true">
+        <ng-template let-col let-data="rowData" pTemplate="body">
+          <span [title]="data[col.field]">{{ data[col.field] }}</span>
+        </ng-template>
+      </p-column>
+      <p-column field="name" header="Name" [sortable]="true"></p-column>
+      <p-column field="balance" header="Balance" [style]="{width: '10em', 'text-align': 'center'}" [sortable]="true"></p-column>
+      <p-column header="Actions" [style]="{width: '6em', 'text-align': 'center'}">
+        <ng-template let-token="rowData" pTemplate="body">
+          <p-menu #menu popup="popup" [model]="token.menu" appendTo="body"></p-menu>
+          <button pButton #menuButton type="button" icon="fa-ellipsis-v" class="ui-button-secondary" (click)="menu.toggle($event)"></button>
+        </ng-template>
+      </p-column>
+      <p-footer>
+        <div class="ui-helper-clearfix button-pane">
+          <button type="button" pButton icon="fa-plus-circle" class="pull-left" (click)="showRegisterDialog()" label="Register New Token"></button>
+          <button type="button" pButton icon="fa-retweet" class="pull-left" (click)="showSwapDialog()" label="Swap Tokens"></button>
+          <button type="button" pButton icon="fa-refresh" class="pull-left" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
+        </div>
+      </p-footer>
+    </p-dataTable>
+  </p-tabPanel>
 
-<p-dialog header="Join Token Network" [(visible)]="displayJoinDialog" [responsive]="true" showEffect="fade" [modal]="true" [resizable]="true" width="600">
-  <div class="ui-grid ui-grid-responsive ui-fluid" *ngIf="selectedToken">
-    <div class="ui-grid-row">
-      <div class="ui-grid-col-4">
-        <label for="funds">Enter Funds to be allocated</label>
-      </div>
-      <div class="ui-grid-col-8">
-        <input pInputText type="number" [formControl]="funds" class="ui-inputtext ui-corner-all ui-state-default" />
-      </div>
-    </div>
-  </div>
-  <p-footer>
-    <div class="ui-dialog-buttonpane ui-helper-clearfix">
-      <button type="button" pButton icon="fa-plus" label="Join" (click)="joinTokenNetwork()">
-          </button>
-    </div>
-  </p-footer>
-</p-dialog>
+  <p-tabPanel *ngFor="let eventsParam of watchEvents" [header]="eventsParam.token ? 'Token Events: '+eventsParam.token : 'Network Events'" [closable]="!!eventsParam.token" [leftIcon]="eventsParam.activity ? 'fa-bell' : ''">
+    <app-event-list [eventsParam]="eventsParam" (activity)="handleActivity(eventsParam)"></app-event-list>
+  </p-tabPanel>
+</p-tabView>
 
-<p-dialog header="Register New Token" [(visible)]="displayRegisterDialog" [responsive]="true" showEffect="fade" [modal]="true" width="600">
-  <div class="ui-grid ui-grid-responsive ui-fluid">
-    <div class="ui-grid-row">
-      <div class="ui-grid-col-4"><label for="amount">Enter token address</label></div>
-      <div class="ui-grid-col-8">
-        <input pInputText type="text" [formControl]="tokenAddress" class="ui-inputtext ui-corner-all ui-state-default" placeholder="0x0000000000000000000000000000000000000000" required pattern="^0x[0-9a-fA-F]{40}$" minlength="42" maxlength="42" /></div>
-    </div>
-  </div>
-  <p-footer>
-    <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
-      <button type="button" pButton icon="fa-close" (click)="showRegisterDialog(false)" label="Close"></button>
-      <button type="button" pButton icon="fa-pencil" (click)="registerToken()" label="Register"></button>
-    </div>
-  </p-footer>
-</p-dialog>
-
+<app-register-dialog *ngIf="displayRegisterDialog" [(visible)]="displayRegisterDialog" (tokensChange)="refreshTokens()"></app-register-dialog>
 <app-swap-dialog *ngIf="displaySwapDialog" [(visible)]="displaySwapDialog"></app-swap-dialog>
-
-<app-transfer-dialog *ngIf="displayTransferDialog" [(visible)]="displayTransferDialog" [token_address]="selectedToken?.address"></app-transfer-dialog>
+<app-join-dialog *ngIf="displayJoinDialog" [(visible)]="displayJoinDialog" [tokenAddress]="selectedToken?.address"></app-join-dialog>
+<app-transfer-dialog *ngIf="displayTransferDialog" [(visible)]="displayTransferDialog" [tokenAddress]="selectedToken?.address"></app-transfer-dialog>

@@ -4,10 +4,10 @@
   font-size: 12px;
   font-weight: 200;
   background-color: #333;
-  position: fixed;
-  top: auto;
+  position: absolute;
+  top: 52px;
+  bottom: 0;
   width: 10%;
-  height: 100%;
   color: #e1ffff;
 }
 .nav-side-menu .brand {
@@ -17,7 +17,8 @@
   text-align: center;
   font-size: 14px;
 }
-.nav-side-menu .toggle-btn {
+.nav-side-menu .toggle-btn,
+.topnav .toggle-btn {
   display: none;
 }
 .nav-side-menu ul,
@@ -113,8 +114,14 @@
     position: relative;
     width: 100%;
     margin-bottom: 10px;
+    height: auto;
+    top: 0;
   }
-  .nav-side-menu .toggle-btn {
+  .nav-side-menu.collapsed {
+      display: none;
+  }
+  .nav-side-menu .toggle-btn,
+  .topnav .toggle-btn {
     display: block;
     cursor: pointer;
     position: absolute;
@@ -171,6 +178,24 @@ body {
 .topnav a:hover {
     background-color: #ddd;
     color: black;
+}
+
+.topnav strong {
+    float: left;
+    display: block;
+    color: #f2f2f2;
+    text-align: center;
+    padding: 14px 16px;
+    text-decoration: none;
+    font-size: 17px;
+}
+
+.topnav img {
+    -webkit-filter: invert(1);
+    filter: invert(1);
+    max-height: 50px;
+    padding: 8px 0px 8px 8px;
+    float: left;
 }
 
 /* Hide the link that should open and close the topnav on small screens */

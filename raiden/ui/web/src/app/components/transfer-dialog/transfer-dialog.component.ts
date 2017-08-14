@@ -19,7 +19,7 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
 
     private _visible = false;
     @Output() visibleChange: EventEmitter<boolean> = new EventEmitter<boolean>();
-    @Input() token_address: string;
+    @Input() tokenAddress: string;
 
     public form: FormGroup;
     public tokenAddressMapping$: Observable<SelectItem[]>;
@@ -33,7 +33,7 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
             target_address: [null, (control) =>
                 control.value === this.raidenService.raidenAddress ?
                 { ownAddress: true } : undefined],
-            token_address: this.token_address,
+            token_address: this.tokenAddress,
             amount: [null, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
         });
 
@@ -67,21 +67,21 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
     public accept() {
         const value = this.form.value;
         this.raidenService.initiateTransfer(
-            value["token_address"],
-            value["target_address"],
-            value["amount"])
+            value['token_address'],
+            value['target_address'],
+            value['amount'])
             .subscribe((res) => {
                 if (res.ok) {
                     this.sharedService.msg({
                         severity: 'success',
-                        summary: "Transfer successful",
+                        summary: 'Transfer successful',
                         detail: `${value.amount} of {value.token_address} tokens
                             where transfered to ${value.target_address}`,
                     });
                 } else {
                     this.sharedService.msg({
                         severity: 'error',
-                        summary: "Transfer error",
+                        summary: 'Transfer error',
                         detail: `An error ocurred. See the logs for details.`,
                     });
                 }

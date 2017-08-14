@@ -1,0 +1,18 @@
+<p-dialog header="Join Token Network" [(visible)]="visible" [responsive]="true" showEffect="fade" [modal]="true" [resizable]="true">
+  <div class="ui-grid ui-grid-responsive ui-fluid">
+    <div class="ui-grid-row">
+      <div class="ui-grid-col-4">
+        <label for="funds">Enter Funds to be allocated</label>
+      </div>
+      <div class="ui-grid-col-8">
+        <input pInputText type="number" [formControl]="funds" class="ui-inputtext ui-corner-all ui-state-default" min="0" />
+      </div>
+    </div>
+  </div>
+  <p-footer>
+    <div class="ui-dialog-buttonpane ui-helper-clearfix">
+      <button type="button" pButton icon="fa-plus" label="Join" (click)="joinTokenNetwork()" [disabled]="funds.pristine || funds.invalid">
+      </button>
+    </div>
+  </p-footer>
+</p-dialog>

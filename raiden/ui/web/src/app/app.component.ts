@@ -10,6 +10,8 @@ import { SharedService } from './services/shared.service';
 export class AppComponent implements OnInit {
     public title = 'Raiden';
     public raidenAddress;
+    public menuCollapsed = false;
+
     constructor(public raidenService: RaidenService,
                 public sharedService: SharedService) { }
 

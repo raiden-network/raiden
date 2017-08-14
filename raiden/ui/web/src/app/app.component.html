@@ -1,25 +1,25 @@
 <div class="topnav" id="myTopnav">
-  <a>Raiden</a>
-  <a>{{raidenAddress}}</a>
-  <a>Participate Now</a>
+  <img src="assets/favicon.png">
+  <a target="_blank" href="http://raiden.network/">Raiden</a>
+  <strong>{{raidenAddress}}</strong>
+  <i class="fa fa-bars fa-2x toggle-btn" (click)="menuCollapsed=!menuCollapsed"></i>
 </div>
-<div class="nav-side-menu">
-  <i class="fa fa-bars fa-2x toggle-btn" data-toggle="collapse" data-target="#menu-content"></i>
+<div class="nav-side-menu" [class.collapsed]="menuCollapsed">
   <div class="menu-list">
-    <ul id="menu-content" class="menu-content collapse out">
-      <li>
-        <a routerLink='/home' routerLinkActive="active">
+    <ul id="menu-content" class="menu-content out" [class.collapse]="menuCollapsed">
+      <li routerLinkActive="active">
+        <a routerLink='/home'>
           <i class="fa fa-dashboard fa-lg"></i>Home
         </a>
       </li>
-      <li>
-        <a routerLink='/channels' routerLinkActive="active">
-          <i class="fa fa-user-plus fa-lg"></i>Channels
+      <li routerLinkActive="active">
+        <a routerLink='/tokens'>
+          <i class="fa fa-money fa-lg"></i>Tokens
         </a>
       </li>
-      <li>
-        <a routerLink='/balances' routerLinkActive="active">
-          <i class="fa fa-money fa-lg"></i>Balances
+      <li routerLinkActive="active">
+        <a routerLink='/channels'>
+          <i class="fa fa-user-plus fa-lg"></i>Channels
         </a>
       </li>
     </ul>
@@ -32,4 +32,5 @@
   </div>
 
   <p-growl [(value)]="sharedService.messages" [life]="10000"></p-growl>
+  <p-confirmDialog header="Confirmation" icon="fa fa-question-circle" width="500"></p-confirmDialog>
 </div>

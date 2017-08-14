@@ -17,11 +17,7 @@ export class RaidenConfig {
                 .subscribe((config: { raiden: string, web3: string }) => {
                     this.config = config;
                     this.api = config.raiden;
-                    if (this.web3) {
-                        this.web3 = new Web3(this.web3.currentProvider);
-                    } else {
-                        this.web3 = new Web3(new Web3.providers.HttpProvider(config.web3));
-                    }
+                    this.web3 = new Web3(new Web3.providers.HttpProvider(config.web3));
                     resolve();
                 });
         });
