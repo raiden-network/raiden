@@ -33,3 +33,7 @@ html, body, .my-content {
     overflow: hidden;
     white-space: nowrap;
 }
+
+.ui-tabview .ui-tabview-panel {
+    border-width: 1px;
+}

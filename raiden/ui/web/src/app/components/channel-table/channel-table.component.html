@@ -1,41 +1,36 @@
-<p-tabView class="ui-g-12" [activeIndex]="tabIndex" [controlClose]="true" (onClose)="handleCloseTab($event)" (onChange)="handleChangeTab($event)">
-  <p-tabPanel header="Channels">
+<p-tabView *ngIf="(channels$ | async) || []; let channels" [activeIndex]="tabIndex" [controlClose]="true" (onClose)="handleCloseTab($event)" (onChange)="handleChangeTab($event)">
+  <p-tabPanel header="Channels [{{ channels.length }}]" [headerStyle]="{'font-weight': 'bold'}">
     <div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
       <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
-      <input #gb type="text" pInputText size="50" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
+      <input #gb type="text" pInputText size="25" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
+      <button pButton type="button" (click)="onOpen()" icon="fa-external-link-square" label="Open Channel"></button>
     </div>
-    <p-dataTable *ngIf="(channels$ | async) || []; let channels" [value]="channels" [globalFilter]="gb" resizableColumns="true">
-      <p-header><strong>Channels [{{ channels.length }}]</strong></p-header>
-      <p-column field="channel_address" header="Channel">
+    <p-dataTable [value]="channels" [paginator]="true" [rows]="10" [resizableColumns]="true" [globalFilter]="gb">
+      <p-column field="channel_address" header="Channel" [sortable]="true">
         <ng-template let-col let-data="rowData" pTemplate="body">
           <span [title]="data[col.field]">{{ data[col.field] }}</span>
         </ng-template>
       </p-column>
-      <p-column field="partner_address" header="Partner">
+      <p-column field="partner_address" header="Partner" [sortable]="true">
         <ng-template let-col let-data="rowData" pTemplate="body">
           <span [title]="data[col.field]">{{ data[col.field] }}</span>
         </ng-template>
       </p-column>
-      <p-column field="token_address" header="Token">
+      <p-column field="token_address" header="Token" [sortable]="true">
         <ng-template let-col let-data="rowData" pTemplate="body">
           <span [title]="data[col.field]">{{ data[col.field] }}</span>
         </ng-template>
       </p-column>
-      <p-column field="balance" header="Balance" [style]="{width: '70px', 'text-align': 'center'}"></p-column>
-      <p-column field="state" header="State" [style]="{width: '70px', 'text-align': 'center'}"></p-column>
-      <p-column field="settle_timeout" header="SettleTimeout" [style]="{width: '100px', 'text-align': 'center'}"></p-column>
-      <p-column field="reveal_timeout" header="RevealTimeout" [style]="{width: '100px', 'text-align': 'center'}"></p-column>
+      <p-column field="balance" header="Balance" [style]="{width: '7em', 'text-align': 'center'}" [sortable]="true"></p-column>
+      <p-column field="state" header="State" [style]="{width: '6em', 'text-align': 'center'}" [sortable]="true"></p-column>
+      <p-column field="settle_timeout" header="SettleTimeout" [style]="{width: '100px', 'text-align': 'center'}" [sortable]="true"></p-column>
+      <p-column field="reveal_timeout" header="RevealTimeout" [style]="{width: '100px', 'text-align': 'center'}" [sortable]="true"></p-column>
       <p-column header="Actions" [style]="{width: '6em', 'text-align': 'center'}">
         <ng-template let-channel="rowData" pTemplate="body">
           <p-menu #menu popup="popup" [model]="channel.menu" appendTo="body"></p-menu>
           <button pButton #menuButton type="button" icon="fa-ellipsis-v" class="ui-button-secondary" (click)="menu.toggle($event)"></button>
         </ng-template>
       </p-column>
-      <p-footer>
-        <div class="ui-helper-clearfix button-pane">
-          <button pButton type="button" class="pull-left" (click)="onOpen()" icon="fa-external-link-square" label="Open Channel"></button>
-        </div>
-      </p-footer>
     </p-dataTable>
   </p-tabPanel>
 
@@ -72,7 +67,7 @@
     <div class="ui-grid-row top10">
       <div class="ui-grid-col-4"><label for="token">Token</label></div>
       <div class="ui-grid-col-8">
-        <p-dropdown [options]="tokenAddressMapping$ | async" [(ngModel)]="tempChannel.token_address" id="token" placeholder="Select a Token" [style]="{'width':'100%'}" appendTo="body" autoWidth="false" [filter]="true"></p-dropdown>
+        <p-dropdown [options]="tokenAddressMapping$ | async" [(ngModel)]="tempChannel.token_address" id="token" placeholder="Select a Token" [style]="{'width':'100%'}" appendTo="body" [autoWidth]="false" [filter]="true"></p-dropdown>
       </div>
     </div>
     <div class="ui-grid-row top10">

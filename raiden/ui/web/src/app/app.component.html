@@ -7,18 +7,18 @@
 <div class="nav-side-menu" [class.collapsed]="menuCollapsed">
   <div class="menu-list">
     <ul id="menu-content" class="menu-content out" [class.collapse]="menuCollapsed">
-      <li routerLinkActive="active">
-        <a routerLink='/home'>
+      <li routerLink='/home' routerLinkActive="active">
+        <a>
           <i class="fa fa-dashboard fa-lg"></i>Home
         </a>
       </li>
-      <li routerLinkActive="active">
-        <a routerLink='/tokens'>
+      <li routerLink='/tokens' routerLinkActive="active">
+        <a>
           <i class="fa fa-money fa-lg"></i>Tokens
         </a>
       </li>
-      <li routerLinkActive="active">
-        <a routerLink='/channels'>
+      <li routerLink='/channels' routerLinkActive="active">
+        <a>
           <i class="fa fa-user-plus fa-lg"></i>Channels
         </a>
       </li>
@@ -28,8 +28,8 @@
 <div class="ui-g" id="main">
   <div class="ui-g-12">
     <router-outlet></router-outlet>
-    <!-- Routed views go here -->
   </div>
+  <!-- Routed views go here -->
 
   <p-growl [(value)]="sharedService.messages" [life]="10000"></p-growl>
   <p-confirmDialog header="Confirmation" icon="fa fa-question-circle" width="500"></p-confirmDialog>
