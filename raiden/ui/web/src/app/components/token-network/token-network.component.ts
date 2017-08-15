@@ -22,7 +22,7 @@ export class TokenNetworkComponent implements OnInit {
     private tokensSubject: BehaviorSubject<void> = new BehaviorSubject(null);
     public tokensBalances$: Observable<Usertoken[]>;
     public selectedToken: Usertoken;
-    public refreshing = false;
+    public refreshing = true;
     public watchEvents: EventsParam[] = [{}];
     public tabIndex = 0;
 
@@ -60,7 +60,7 @@ export class TokenNetworkComponent implements OnInit {
                 },
             {
                 label: 'Transfer',
-                icon: 'fa-money',
+                icon: 'fa-exchange',
                 disabled: !(userToken.channelCnt > 0),
                 command: () => this.showTransferDialog(userToken),
             },

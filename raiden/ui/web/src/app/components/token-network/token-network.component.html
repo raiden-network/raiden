@@ -1,11 +1,13 @@
-<p-tabView class="ui-g-12" [activeIndex]="tabIndex" [controlClose]="true" (onClose)="handleCloseTab($event)" (onChange)="handleChangeTab($event)">
-  <p-tabPanel header="Tokens">
+<p-tabView *ngIf="(tokensBalances$ | async) || []; let tokens" [activeIndex]="tabIndex" [controlClose]="true" (onClose)="handleCloseTab($event)" (onChange)="handleChangeTab($event)">
+  <p-tabPanel header="Tokens [{{ tokens.length }}]" [headerStyle]="{'font-weight': 'bold'}">
     <div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
       <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
-      <input #gb type="text" pInputText size="50" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
+      <input #gb type="text" pInputText size="25" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
+      <button type="button" pButton icon="fa-plus-circle" (click)="showRegisterDialog()" label="Register New Token"></button>
+      <button type="button" pButton icon="fa-retweet" (click)="showSwapDialog()" label="Swap Tokens"></button>
+      <button type="button" pButton icon="fa-refresh" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
     </div>
-    <p-dataTable *ngIf="(tokensBalances$ | async) || []; let tokens" [value]="tokens" dataKey="address" [paginator]="true" [rows]="20" [globalFilter]="gb" resizableColumns="true">
-      <p-header><strong>Tokens [{{ tokens.length }}]</strong></p-header>
+    <p-dataTable [value]="tokens" dataKey="address" [paginator]="true" [rows]="10" [resizableColumns]="true" [globalFilter]="gb">
       <p-column field="symbol" header="Symbol" [style]="{'width':'7em', 'text-align': 'center'}" [sortable]="true"></p-column>
       <p-column field="address" header="Address" [sortable]="true">
         <ng-template let-col let-data="rowData" pTemplate="body">
@@ -17,16 +19,9 @@
       <p-column header="Actions" [style]="{width: '6em', 'text-align': 'center'}">
         <ng-template let-token="rowData" pTemplate="body">
           <p-menu #menu popup="popup" [model]="token.menu" appendTo="body"></p-menu>
-          <button pButton #menuButton type="button" icon="fa-ellipsis-v" class="ui-button-secondary" (click)="menu.toggle($event)"></button>
+          <button pButton #menuButton type="button" icon="fa-ellipsis-v" [ngClass]="token.channelCnt > 0 ? 'ui-button-primary' : 'ui-button-secondary'" (click)="menu.toggle($event)"></button>
         </ng-template>
       </p-column>
-      <p-footer>
-        <div class="ui-helper-clearfix button-pane">
-          <button type="button" pButton icon="fa-plus-circle" class="pull-left" (click)="showRegisterDialog()" label="Register New Token"></button>
-          <button type="button" pButton icon="fa-retweet" class="pull-left" (click)="showSwapDialog()" label="Swap Tokens"></button>
-          <button type="button" pButton icon="fa-refresh" class="pull-left" [disabled]="refreshing" (click)="refreshTokens()" [label]="refreshing ? 'Refreshing' : 'Refresh Tokens'"></button>
-        </div>
-      </p-footer>
     </p-dataTable>
   </p-tabPanel>
 

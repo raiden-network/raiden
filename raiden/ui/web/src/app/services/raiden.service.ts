@@ -216,9 +216,9 @@ export class RaidenService {
     }
 
     public blocknumberToDate(block: number): Observable<Date> {
-        return Observable.bindNodeCallback(<(a: number) => any>
-            this.config.web3.eth.getBlock)(block)
-            .map((blk) => new Date(blk['timestamp'] * 1000))
+        return Observable.bindNodeCallback((b: number, cb: CallbackFunc) =>
+            this.config.web3.eth.getBlock(b, this.zoneEncap(cb)))(block)
+            .map((blk) => new Date(blk.timestamp * 1000))
             .first();
     }
 
