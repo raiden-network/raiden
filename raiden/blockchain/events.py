@@ -181,7 +181,10 @@ def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
             try:
                 netting_channels.append(pyethapp_chain.netting_channel(channel_address))
             except AddressWithoutCode:
-                log.debug('Invalid netting channel: %r', channel_address)
+                log.debug(
+                    'Settled channel found when starting raiden. Safely ignored',
+                    channel_address=pex(channel_address)
+                )
         manager_channels[channel_manager_address] = netting_channels
 
     proxies = PyethappProxies(
