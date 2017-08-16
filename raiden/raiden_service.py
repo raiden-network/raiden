@@ -199,6 +199,7 @@ class RaidenService(object):
         transport.protocol = protocol
 
         self.token_to_channelgraph = dict()
+        self.tokens_to_connectionmanagers = dict()
         self.manager_to_token = dict()
         self.swapkey_to_tokenswap = dict()
         self.swapkey_to_greenlettask = dict()
@@ -220,17 +221,18 @@ class RaidenService(object):
         self.address = privatekey_to_address(private_key_bin)
         self.protocol = protocol
 
-        message_handler = RaidenMessageHandler(self)
-        state_machine_event_handler = StateMachineEventHandler(self)
-        pyethapp_blockchain_events = PyethappBlockchainEvents()
-        greenlet_task_dispatcher = GreenletTasksDispatcher()
+        self.message_handler = RaidenMessageHandler(self)
+        self.state_machine_event_handler = StateMachineEventHandler(self)
+        self.pyethapp_blockchain_events = PyethappBlockchainEvents()
+        self.greenlet_task_dispatcher = GreenletTasksDispatcher()
+        self.alarm = AlarmTask(chain)
 
-        alarm = AlarmTask(chain)
+        self.on_message = self.message_handler.on_message
 
         # prime the block number cache and set the callbacks
-        self._blocknumber = alarm.last_block_number
-        alarm.register_callback(self.poll_blockchain_events)
-        alarm.register_callback(self.set_block_number)
+        self._blocknumber = self.alarm.last_block_number
+        self.alarm.register_callback(self.poll_blockchain_events)
+        self.alarm.register_callback(self.set_block_number)
 
         self.transaction_log = StateChangeLog(
             storage_instance=StateChangeLogSQLiteBackend(
@@ -238,6 +240,7 @@ class RaidenService(object):
             )
         )
 
+        self.register_registry(self.chain.default_registry.address)
         registry_event = gevent.spawn(
             discovery.register,
             self.address,
@@ -246,19 +249,7 @@ class RaidenService(object):
         )
         registry_event.link_exception(endpoint_registry_exception_handler)
 
-        self.alarm = alarm
-        self.message_handler = message_handler
-        self.state_machine_event_handler = state_machine_event_handler
-        self.pyethapp_blockchain_events = pyethapp_blockchain_events
-        self.greenlet_task_dispatcher = greenlet_task_dispatcher
-
-        self.on_message = message_handler.on_message
-
-        self.tokens_to_connectionmanagers = dict()
-
         self.serialization_file = None
-        self.protocol.start()
-        alarm.start()
         if config['database_path'] != ':memory:':
             snapshot_dir = os.path.join(
                 path.dirname(self.config['database_path']),
@@ -274,10 +265,23 @@ class RaidenService(object):
                 'data.pickle',
             )
 
-            self.register_registry(self.chain.default_registry.address)
             self.restore_from_snapshots()
 
-            registry_event.join()
+        registry_event.join()
+        self.alarm.start()
+
+        # start the protocol, the node has fully started
+        self.protocol.start()
+
+        # health check needs the protocol layer, so it must be started
+        # afterwards
+        self.start_neighbours_healthcheck()
+
+    def start_neighbours_healthcheck(self):
+        for graph in self.token_to_channelgraph.values():
+            for neighbour in graph.get_neighbours():
+                if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
+                    self.start_health_check_for(neighbour)
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -667,12 +671,6 @@ class RaidenService(object):
                 token_address,
                 graph
             )
-            self.start_neighbours_healthcheck(graph)
-
-    def start_neighbours_healthcheck(self, graph):
-        for neighbour in graph.get_neighbours():
-            if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
-                self.start_health_check_for(neighbour)
 
     def channel_manager_is_registered(self, manager_address):
         return manager_address in self.manager_to_token
