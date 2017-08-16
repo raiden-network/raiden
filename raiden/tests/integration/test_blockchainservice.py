@@ -177,9 +177,10 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 
 @pytest.mark.parametrize('number_of_nodes', [10])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_channelmanager_graph_building(raiden_network,
-                                       token_addresses,
-                                       settle_timeout):
+def test_channelmanager_graph_building(
+        raiden_network,
+        token_addresses,
+        settle_timeout):
 
     token_address = token_addresses[0]
 

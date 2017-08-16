@@ -226,9 +226,11 @@ def test_channelmanager(private_keys, settle_timeout, tester_channelmanager):
 
 
 @pytest.mark.parametrize('number_of_nodes', [10])
-def test_channelmanager_with_a_large_number_of_channels(private_keys,
-                                                        settle_timeout,
-                                                        tester_channelmanager):
+def test_channelmanager_with_a_large_number_of_channels(
+        private_keys,
+        settle_timeout,
+        tester_channelmanager):
+
     pairs = itertools.combinations(private_keys, 2)
 
     participant_pairs = []
