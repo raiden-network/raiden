@@ -51,9 +51,9 @@ export class SwapDialogComponent implements OnInit, OnDestroy {
             identifier: null,
             role: 'maker',
             sending_token: null,
-            sending_amount: null,
+            sending_amount: [null, (control) => control.value > 0 ? undefined : {invalidAmount: true}],
             receiving_token: null,
-            receiving_amount: null,
+            receiving_amount: [null, (control) => control.value > 0 ? undefined : {invalidAmount: true}],
         });
 
         this.formString$ = this.form.valueChanges

@@ -5,7 +5,7 @@ import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { Channel } from '../../models/channel';
 import { EventsParam } from '../../models/event';
-import { MenuItem, Message, SelectItem } from 'primeng/primeng';
+import { MenuItem } from 'primeng/primeng';
 
 const INTERVAL = 5000;
 
@@ -19,25 +19,16 @@ export class ChannelTableComponent implements OnInit {
     public channels$: Observable<Channel[]>;
     public amount: number;
     public displayDialog: boolean;
-    public displayChannelDialog: boolean;
+    public displayOpenChannelDialog: boolean;
     public action: string;
-    public tempChannel: Channel = {};
-    public tokenAddressMapping$: Observable<SelectItem[]>;
+    public tempChannel: Channel;
     public watchEvents: EventsParam[] = [];
     public tabIndex = 0;
 
     constructor(private raidenService: RaidenService,
-                private sharedService: SharedService) { }
+        private sharedService: SharedService) { }
 
     ngOnInit() {
-        this.tokenAddressMapping$ = this.raidenService.getTokensBalances(false)
-            .map((userTokens) => userTokens.map((userToken) =>
-                ({
-                    value: userToken.address,
-                    label: userToken.name + ' (' + userToken.address + ')',
-                }))
-            );
-
         this.channels$ = Observable.timer(0, INTERVAL)
             .switchMap(() => this.raidenService.getChannels())
             .scan((oldChannels, newChannels) => {
@@ -82,15 +73,12 @@ export class ChannelTableComponent implements OnInit {
         this.manageChannel();
     }
 
-    public onOpen() {
-        this.action = 'open';
-        this.tempChannel = {};
-        this.displayChannelDialog = true;
+    public showOpenChannelDialog(show: boolean = true) {
+        this.displayOpenChannelDialog = show;
     }
 
     public manageChannel() {
         this.displayDialog = false;
-        this.displayChannelDialog = false;
         switch (this.action) {
             case 'transfer':
                 console.log('Inside Manage Channel TRansfer');
@@ -99,9 +87,9 @@ export class ChannelTableComponent implements OnInit {
                     this.tempChannel.partner_address,
                     this.amount)
                     .subscribe(
-                        (response) => {
-                            this.showMessage(response);
-                        }
+                    (response) => {
+                        this.showMessage(response);
+                    }
                     );
                 break;
             case 'deposit':
@@ -123,35 +111,13 @@ export class ChannelTableComponent implements OnInit {
                         this.showMessage(response);
                     });
                 break;
-            case 'open':
-                console.log('inside open');
-                this.raidenService.openChannel(
-                    this.tempChannel.partner_address,
-                    this.tempChannel.token_address,
-                    this.tempChannel.balance,
-                    this.tempChannel.settle_timeout)
-                    .subscribe((response) => {
-                        console.log('logging the response');
-                        console.log(response);
-                        this.showMessage(response);
-                    });
-                break;
+            default: // this should never happen
+                console.error('Invalid channel action');
         }
     }
 
     public showMessage(response: any) {
         switch (this.action) {
-            case 'open':
-                if ('channel_address' in response) {
-                    this.sharedService.msg({
-                        severity: 'info', summary: this.action,
-                        detail: `Channel with address ${response.channel_address} has been
-                    created with partner ${response.partner_address}`
-                    });
-                } else {
-
-                }
-                break;
             case 'transfer':
                 if ('target_address' in response && 'identifier' in response) {
                     this.sharedService.msg({
@@ -206,6 +172,8 @@ export class ChannelTableComponent implements OnInit {
                     });
                 }
                 break;
+            default: // this should never happen
+                console.error('Invalid showMessage action');
         }
 
     }

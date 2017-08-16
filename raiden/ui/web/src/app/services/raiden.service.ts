@@ -86,7 +86,8 @@ export class RaidenService {
         const headers = new Headers({ 'Content-Type': 'application/json' });
         const options = new RequestOptions({ headers: headers });
         return this.http.put(`${this.config.api}/channels`,
-            JSON.stringify(data), options)
+            JSON.stringify(data),
+            options)
             .map((response) => response.json())
             .catch((error) => this.handleError(error));
 
