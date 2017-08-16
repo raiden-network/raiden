@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import itertools
+
 import pytest
 from ethereum.tester import TransactionFailed
 from ethereum.utils import encode_hex
@@ -189,8 +191,6 @@ def test_channelmanager_start_with_zero_entries(
 
 
 def test_channelmanager(private_keys, settle_timeout, tester_channelmanager):
-    # pylint: disable=too-many-locals,too-many-statements
-
     pkey0 = private_keys[0]
     address0 = privatekey_to_address(private_keys[0])
     address1 = privatekey_to_address(private_keys[1])
@@ -223,6 +223,35 @@ def test_channelmanager(private_keys, settle_timeout, tester_channelmanager):
     assert len(addr0_channels) == 2
     assert len(addr1_channels) == 1
     assert not nonaddr_channels
+
+
+@pytest.mark.parametrize('number_of_nodes', [10])
+def test_channelmanager_with_a_large_number_of_channels(private_keys,
+                                                        settle_timeout,
+                                                        tester_channelmanager):
+    pairs = itertools.combinations(private_keys, 2)
+
+    participant_pairs = []
+    for pkey0, pkey1 in pairs:
+        address0 = privatekey_to_address(pkey0)
+        address1 = privatekey_to_address(pkey1)
+
+        channel_address_hex = tester_channelmanager.newChannel(
+            address1,
+            settle_timeout,
+            sender=pkey0,
+        )
+
+        assert tester_channelmanager.getChannelWith(address1, sender=pkey0) == channel_address_hex
+        assert tester_channelmanager.getChannelWith(address0, sender=pkey1) == channel_address_hex
+
+        # this is brittle, relying on an implicit ordering of addresses
+        participant_pairs.extend((
+            address0.encode('hex'),
+            address1.encode('hex'),
+        ))
+
+        assert participant_pairs == tester_channelmanager.getChannelsParticipants(sender=pkey0)
 
 
 def test_reopen_channel(
