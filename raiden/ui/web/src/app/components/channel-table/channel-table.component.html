@@ -3,7 +3,7 @@
     <div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
       <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
       <input #gb type="text" pInputText size="25" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
-      <button pButton type="button" (click)="onOpen()" icon="fa-external-link-square" label="Open Channel"></button>
+      <button pButton type="button" (click)="showOpenChannelDialog()" icon="fa-external-link-square" label="Open Channel"></button>
     </div>
     <p-dataTable [value]="channels" [paginator]="true" [rows]="10" [resizableColumns]="true" [globalFilter]="gb">
       <p-column field="channel_address" header="Channel" [sortable]="true">
@@ -55,37 +55,4 @@
   </p-footer>
 </p-dialog>
 
-<p-dialog header="Open Channel" [(visible)]="displayChannelDialog" [responsive]="true" showEffect="fade" [modal]="true" width="600">
-  <div class="ui-grid ui-grid-responsive ui-fluid">
-    <div class="ui-grid-row">
-      <div class="ui-grid-col-4"><label for="partner">Partner Address</label></div>
-      <div class="ui-grid-col-8">
-        <input pInputText type="text" id="partner" [(ngModel)]="tempChannel.partner_address" class="ui-inputtext ui-corner-all ui-state-default" placeholder="0x0000000000000000000000000000000000000000" required pattern="^0x[0-9a-fA-F]{40}$" minlength="42" maxlength="42"
-        />
-      </div>
-    </div>
-    <div class="ui-grid-row top10">
-      <div class="ui-grid-col-4"><label for="token">Token</label></div>
-      <div class="ui-grid-col-8">
-        <p-dropdown [options]="tokenAddressMapping$ | async" [(ngModel)]="tempChannel.token_address" id="token" placeholder="Select a Token" [style]="{'width':'100%'}" appendTo="body" [autoWidth]="false" [filter]="true"></p-dropdown>
-      </div>
-    </div>
-    <div class="ui-grid-row top10">
-      <div class="ui-grid-col-4"><label for="balance">Balance</label></div>
-      <div class="ui-grid-col-8">
-        <input pInputText type="number" id="balance" [(ngModel)]="tempChannel.balance" required class="ui-inputtext ui-corner-all ui-state-default" />
-      </div>
-    </div>
-    <div class="ui-grid-row top10">
-      <div class="ui-grid-col-4"><label for="settle">Settle Timeout</label></div>
-      <div class="ui-grid-col-8">
-        <input pInputText type="number" id="settle" [(ngModel)]="tempChannel.settle_timeout" required class="ui-inputtext ui-corner-all ui-state-default" />
-      </div>
-    </div>
-  </div>
-  <p-footer>
-    <div class="ui-dialog-buttonpane ui-helper-clearfix">
-      <button type="button" pButton icon="" (click)="manageChannel()" label="Open"></button>
-    </div>
-  </p-footer>
-</p-dialog>
+<app-open-dialog *ngIf="displayOpenChannelDialog" [(visible)]="displayOpenChannelDialog"></app-open-dialog>

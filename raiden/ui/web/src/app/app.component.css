@@ -1,5 +1,6 @@
 .nav-side-menu {
-  overflow: auto;
+  overflow: hidden;
+  white-space: nowrap;
   font-family: verdana;
   font-size: 12px;
   font-weight: 200;

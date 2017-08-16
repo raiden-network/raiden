@@ -11,6 +11,7 @@ import { NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { RouterModule, Routes } from '@angular/router';
 import { ClipboardModule } from 'ngx-clipboard';
 
+import { environment } from '../environments/environment';
 import { AppComponent } from './app.component';
 import { ChannelTableComponent } from './components/channel-table/channel-table.component';
 import { EventListComponent } from './components/event-list/event-list.component';
@@ -20,11 +21,11 @@ import { SwapDialogComponent } from './components/swap-dialog/swap-dialog.compon
 import { TransferDialogComponent } from './components/transfer-dialog/transfer-dialog.component';
 import { JoinDialogComponent } from './components/join-dialog/join-dialog.component';
 import { RegisterDialogComponent } from './components/register-dialog/register-dialog.component';
+import { OpenDialogComponent } from './components/open-dialog/open-dialog.component';
 
 import { RaidenConfig } from './services/raiden.config';
 import { SharedService } from './services/shared.service';
 import { RaidenService } from './services/raiden.service';
-import { environment } from '../environments/environment';
 import { KeysPipe } from './pipes/keys.pipe';
 import { SubsetPipe } from './pipes/subset.pipe';
 
@@ -53,6 +54,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         TransferDialogComponent,
         JoinDialogComponent,
         RegisterDialogComponent,
+        OpenDialogComponent,
     ],
     imports: [
         RouterModule.forRoot(appRoutes),
