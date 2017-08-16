@@ -2,6 +2,7 @@
 from __future__ import division
 
 import os
+import itertools
 
 import pytest
 from ethereum import _solidity
@@ -172,6 +173,27 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     app0.raiden.chain.token(token_address).approve(netting_address_01_reopened, 100)
     netting_channel_01_reopened.deposit(100)
     assert netting_channel_01_reopened.opened() != 0
+
+
+@pytest.mark.parametrize('number_of_nodes', [10])
+@pytest.mark.parametrize('channels_per_node', [0])
+def test_channelmanager_graph_building(raiden_network,
+                                       token_addresses,
+                                       settle_timeout):
+
+    token_address = token_addresses[0]
+
+    total_pairs = 0
+    pairs = itertools.combinations(raiden_network, 2)
+    for app0, app1 in pairs:
+        manager = app0.raiden.chain.manager_by_token(token_address)
+        manager.new_netting_channel(
+            app0.raiden.address,
+            app1.raiden.address,
+            settle_timeout,
+        )
+        total_pairs += 1
+        assert total_pairs == len(manager.channels_addresses())
 
 
 @pytest.mark.skipif(
