@@ -423,17 +423,22 @@ class RaidenProtocol(object):
         self.transport.start()
 
     def stop_and_wait(self):
+        # Stop handling incoming packets, but doen't close the socket. The
+        # socket can only be safely closed after all outgoing tasks are stopped
+        self.transport.stop_accepting()
+
+        # Stop processesing the outgoing queues
         self.event_stop.set()
-
-        for waitack in self.senthashes_to_states.itervalues():
-            waitack.async_result.set(False)
-
         gevent.wait(self.greenlets)
 
-        # The transport must be stopped after the protocol. The protocol can be
-        # running multiple threads of execution and it expects the protocol to
-        # be available.
+        # All outgoing tasks are stopped, now it's safe to close the socket, at
+        # this point there might be some incoming message being processed,
+        # keeping is not useful for these.
         self.transport.stop()
+
+        # Set all the pending results to False
+        for waitack in self.senthashes_to_states.itervalues():
+            waitack.async_result.set(False)
 
     def get_health_events(self, receiver_address):
         """ Starts a healthcheck taks for `receiver_address` and returns a
@@ -511,15 +516,6 @@ class RaidenProtocol(object):
 
         return queue
 
-    def _send_ack(self, host_port, messagedata):
-        # ACK must not go into the queue, otherwise nodes will deadlock waiting
-        # for the confirmation
-        self.transport.send(
-            self.raiden,
-            host_port,
-            messagedata,
-        )
-
     def send_async(self, receiver_address, message):
         if not isaddress(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
@@ -568,26 +564,38 @@ class RaidenProtocol(object):
         async_result = self.send_async(receiver_address, message)
         return async_result.wait(timeout=timeout)
 
-    def send_ack(self, receiver_address, message):
+    def maybe_send_ack(self, receiver_address, ack_message):
+        """ Send ack_message to receiver_address if the transport is running. """
         if not isaddress(receiver_address):
             raise ValueError('Invalid address {}'.format(pex(receiver_address)))
 
-        if not isinstance(message, Ack):
-            raise ValueError('Use send_Ack only for Ack messages or Erorrs')
+        if not isinstance(ack_message, Ack):
+            raise ValueError('Use maybe_send_ack only for Ack messages')
 
         if log.isEnabledFor(logging.INFO):
             log.info(
                 'SENDING ACK %s > %s %s',
                 pex(self.raiden.address),
                 pex(receiver_address),
-                message,
+                ack_message,
             )
 
-        messagedata = message.encode()
+        messagedata = ack_message.encode()
         host_port = self.get_host_port(receiver_address)
-        self.receivedhashes_to_acks[message.echo] = (host_port, messagedata)
+        self.receivedhashes_to_acks[ack_message.echo] = (host_port, messagedata)
 
-        self._send_ack(*self.receivedhashes_to_acks[message.echo])
+        self._maybe_send_ack(*self.receivedhashes_to_acks[ack_message.echo])
+
+    def _maybe_send_ack(self, host_port, messagedata):
+        """ ACK must not go into the queue, otherwise nodes will deadlock
+        waiting for the confirmation.
+        """
+        if self.transport.server.started:
+            self.transport.send(
+                self.raiden,
+                host_port,
+                messagedata,
+            )
 
     def get_ping(self, nonce):
         """ Returns a signed Ping message.
@@ -636,13 +644,11 @@ class RaidenProtocol(object):
             log.error('receive packet larger than maximum size', length=len(data))
             return
 
+        # Repeat the ACK if the message has been handled before
         echohash = sha3(data + self.raiden.address)
-
-        # check if we handled this message already, if so repeat Ack
         if echohash in self.receivedhashes_to_acks:
-            return self._send_ack(*self.receivedhashes_to_acks[echohash])
+            return self._maybe_send_ack(*self.receivedhashes_to_acks[echohash])
 
-        # We ignore the sending endpoint as this can not be known w/ UDP
         message = decode(data)
 
         if isinstance(message, Ack):
@@ -656,14 +662,6 @@ class RaidenProtocol(object):
                         pex(message.echo)
                     )
 
-            elif waitack.async_result.ready():
-                if log.isEnabledFor(logging.INFO):
-                    log.info(
-                        'DUPLICATED ACK RECEIVED node:%s receiver:%s echohash:%s',
-                        pex(self.raiden.address),
-                        pex(waitack.receiver_address),
-                        pex(message.echo),
-                    )
             else:
                 if log.isEnabledFor(logging.INFO):
                     log.info(
@@ -675,12 +673,7 @@ class RaidenProtocol(object):
 
                 waitack.async_result.set(True)
 
-        elif message is not None:
-            # all messages require an Ack, to send it back an address is required
-            assert isinstance(message, SignedMessage)
-            assert (hasattr(self.raiden, 'on_message') and
-                    callable(getattr(self.raiden, 'on_message')))
-
+        elif isinstance(message, SignedMessage):
             if log.isEnabledFor(logging.INFO):
                 log.info(
                     'MESSAGE RECEIVED node:%s echohash:%s %s',
@@ -690,7 +683,6 @@ class RaidenProtocol(object):
                 )
 
             try:
-                # this might exit with an exception
                 self.raiden.on_message(message, echohash)
 
                 # only send the Ack if the message was handled without exceptions
@@ -700,7 +692,7 @@ class RaidenProtocol(object):
                 )
 
                 try:
-                    self.send_ack(
+                    self.maybe_send_ack(
                         message.sender,
                         ack,
                     )
@@ -716,9 +708,8 @@ class RaidenProtocol(object):
                 if log.isEnabledFor(logging.WARN):
                     log.warn(str(e))
 
-        # payload was not a valid message and decoding failed
         elif log.isEnabledFor(logging.ERROR):
             log.error(
-                'could not decode message %s',
-                pex(data),
+                'Invalid message %s',
+                data.encode('hex'),
             )

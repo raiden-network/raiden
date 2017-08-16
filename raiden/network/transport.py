@@ -108,6 +108,9 @@ class UDPTransport(object):
     def stop(self):
         self.server.stop()
 
+    def stop_accepting(self):
+        self.server.stop_accepting()
+
     def start(self):
         assert not self.server.started
         self.server.start()
@@ -176,6 +179,9 @@ class DummyTransport(object):
         self.protocol.receive(data)
 
     def stop(self):
+        pass
+
+    def stop_accepting(self):
         pass
 
     def start(self):
