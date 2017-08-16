@@ -247,6 +247,7 @@ class ChannelGraph(object):
             details.reveal_timeout,
             details.settle_timeout,
         )
+        self.add_path(details.our_state.address, partner_state.address)
 
         self.partneraddress_to_channel[partner_state.address] = channel
         self.address_to_channel[channel_address] = channel
