@@ -395,12 +395,11 @@ class RestAPI(object):
             identifier = create_default_identifier()
 
         try:
-            transfer_result = self.raiden_api.transfer_and_wait(
+            transfer_result = self.raiden_api.transfer(
                 token_address=token_address,
                 target=target_address,
                 amount=amount,
-                identifier=identifier,
-                timeout=60
+                identifier=identifier
             )
         except (InvalidAmount, InvalidAddress, NoPathError) as e:
             return make_response(str(e), httplib.CONFLICT)

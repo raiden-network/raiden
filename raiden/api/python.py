@@ -486,7 +486,7 @@ class RaidenAPI(object):
             amount,
             target,
             identifier=None,
-            timeout=None):
+            timeout=60):
         """ Do a transfer with `target` with the given `amount` of `token_address`. """
         # pylint: disable=too-many-arguments
 
