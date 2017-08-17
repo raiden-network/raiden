@@ -255,10 +255,12 @@ def test_api_open_and_deposit_channel(
     first_partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = 1650
+    reveal_timeout = 30
     channel_data_obj = {
         'partner_address': first_partner_address,
         'token_address': token_address,
-        'settle_timeout': settle_timeout
+        'settle_timeout': settle_timeout,
+        'reveal_timeout': reveal_timeout,
     }
     request = grequests.put(
         api_url_for(api_backend, 'channelsresource'),
@@ -356,10 +358,12 @@ def test_api_open_close_and_settle_channel(
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = 1650
+    reveal_timeout = 30
     channel_data_obj = {
         'partner_address': partner_address,
         'token_address': token_address,
-        'settle_timeout': settle_timeout
+        'settle_timeout': settle_timeout,
+        'reveal_timeout': reveal_timeout,
     }
     request = grequests.put(
         api_url_for(api_backend, 'channelsresource'),
@@ -431,10 +435,12 @@ def test_api_open_channel_invalid_input(
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = NETTINGCHANNEL_SETTLE_TIMEOUT_MIN - 1
+    reveal_timeout = 30
     channel_data_obj = {
         'partner_address': partner_address,
         'token_address': token_address,
-        'settle_timeout': settle_timeout
+        'settle_timeout': settle_timeout,
+        'reveal_timeout': reveal_timeout,
     }
     request = grequests.put(
         api_url_for(api_backend, 'channelsresource'),
