@@ -6,9 +6,11 @@ from ethereum.tester import TransactionFailed
 from ethereum.utils import encode_hex
 
 from raiden.utils import privatekey_to_address, sha3
+from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.tester import (
     new_channelmanager,
     new_nettingcontract,
+    create_nettingchannel_proxy,
 )
 
 
@@ -226,14 +228,22 @@ def test_channelmanager(private_keys, settle_timeout, tester_channelmanager):
 
 
 @pytest.mark.parametrize('number_of_nodes', [10])
-def test_channelmanager_with_a_large_number_of_channels(
+def test_for_issue_892(
         private_keys,
         settle_timeout,
-        tester_channelmanager):
+        tester_channelmanager,
+        tester_state,
+        tester_events):
+    """
+    This is a regression test for issue #892 (https://github.com/raiden-network/raiden/issues/892)
+    where the `getChannelsParticipants()` call was returning an empty list if one channel from
+    the channel manager has been settled
+    """
 
     pairs = itertools.combinations(private_keys, 2)
 
     participant_pairs = []
+    first_pair = True
     for pkey0, pkey1 in pairs:
         address0 = privatekey_to_address(pkey0)
         address1 = privatekey_to_address(pkey1)
@@ -247,11 +257,23 @@ def test_channelmanager_with_a_large_number_of_channels(
         assert tester_channelmanager.getChannelWith(address1, sender=pkey0) == channel_address_hex
         assert tester_channelmanager.getChannelWith(address0, sender=pkey1) == channel_address_hex
 
-        # this is brittle, relying on an implicit ordering of addresses
-        participant_pairs.extend((
-            address0.encode('hex'),
-            address1.encode('hex'),
-        ))
+        if first_pair:
+            first_pair = False
+            nettingchannel = create_nettingchannel_proxy(
+                tester_state,
+                channel_address_hex,
+                tester_events.append,
+            )
+            nettingchannel.close(sender=pkey0)
+            tester_state.mine(number_of_blocks=settle_timeout + 2)
+            nettingchannel.settle(sender=pkey1)
+
+        else:
+            # this is brittle, relying on an implicit ordering of addresses
+            participant_pairs.extend((
+                address0.encode('hex'),
+                address1.encode('hex'),
+            ))
 
         assert participant_pairs == tester_channelmanager.getChannelsParticipants(sender=pkey0)
 
