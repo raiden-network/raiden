@@ -6,7 +6,6 @@ from ethereum.tester import TransactionFailed
 from ethereum.utils import encode_hex
 
 from raiden.utils import privatekey_to_address, sha3
-from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.tester import (
     new_channelmanager,
     new_nettingcontract,
