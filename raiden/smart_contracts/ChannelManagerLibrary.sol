@@ -89,6 +89,9 @@ library ChannelManagerLibrary {
         }
     }
 
+    /// TODO: Find a way to remove this function duplication from Utils.sol here
+    ///       At the moment libraries can't inherit so we need to add this here
+    ///       explicitly.
     /// @notice Check if a contract exists
     /// @param channel The address to check whether a contract is deployed or not
     /// @return True if a contract exists, false otherwise

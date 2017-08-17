@@ -1,12 +1,13 @@
 pragma solidity ^0.4.11;
 
 import "./Token.sol";
+import "./Utils.sol";
 import "./ChannelManagerLibrary.sol";
 
 // for each token a manager will be deployed, to reduce gas usage for manager
 // deployment the logic is moved into a library and this contract will work
 // only as a proxy/state container.
-contract ChannelManagerContract {
+contract ChannelManagerContract is Utils {
     using ChannelManagerLibrary for ChannelManagerLibrary.Data;
     ChannelManagerLibrary.Data data;
 
@@ -40,10 +41,19 @@ contract ChannelManagerContract {
         address[] memory result;
         NettingChannelContract channel;
 
-        result = new address[](data.all_channels.length * 2);
+        uint open_channels_num = 0;
+        for (i = 0; i < data.all_channels.length; i++) {
+            if (contractExists(data.all_channels[i])) {
+                open_channels_num += 1;
+            }
+        }
+        result = new address[](open_channels_num * 2);
 
         pos = 0;
         for (i = 0; i < data.all_channels.length; i++) {
+            if (!contractExists(data.all_channels[i])) {
+                continue;
+            }
             channel = NettingChannelContract(data.all_channels[i]);
 
             var (address1, , address2, ) = channel.addressAndBalance();
