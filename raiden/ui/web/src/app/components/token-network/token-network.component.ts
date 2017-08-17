@@ -47,17 +47,17 @@ export class TokenNetworkComponent implements OnInit {
 
     private menuFor(userToken: Usertoken): MenuItem[] {
         return [
-            userToken.channelCnt > 0 ?
-                {
-                    label: 'Leave Network',
-                    icon: 'fa-sign-out',
-                    command: () => this.showLeaveDialog(userToken),
-                } :
-                {
-                    label: 'Join Network',
-                    icon: 'fa-sign-in',
-                    command: () => this.showJoinDialog(userToken),
-                },
+            {
+                label: 'Join Network',
+                icon: 'fa-sign-in',
+                command: () => this.showJoinDialog(userToken),
+            },
+            {
+                label: 'Leave Network',
+                icon: 'fa-sign-out',
+                disabled: !(userToken.channelCnt > 0),
+                command: () => this.showLeaveDialog(userToken),
+            },
             {
                 label: 'Transfer',
                 icon: 'fa-exchange',
