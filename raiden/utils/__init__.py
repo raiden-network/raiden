@@ -133,6 +133,7 @@ def channel_to_api_dict(channel):
         'token_address': channel.token_address,
         'partner_address': channel.partner_address,
         'settle_timeout': channel.settle_timeout,
+        'reveal_timeout': channel.reveal_timeout,
         'balance': channel.distributable,
         'state': channel.state
     }
