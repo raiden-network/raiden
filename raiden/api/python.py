@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
 from ethereum.tester import TransactionFailed
@@ -34,6 +33,7 @@ from raiden.exceptions import (
 from raiden.utils import (
     isaddress,
     pex,
+    wait_until,
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -127,8 +127,12 @@ class RaidenAPI(object):
             self.raiden.chain.default_registry.add_token(token_address)
 
             # wait for registration
-            while token_address not in self.raiden.tokens_to_connectionmanagers:
-                gevent.sleep(self.raiden.alarm.wait_time)
+            wait_timeout_secs = 60
+            assert wait_until(
+                lambda: token_address in self.raiden.tokens_to_connectionmanagers,
+                wait_timeout_secs,
+                self.raiden.alarm.wait_time
+            ), "Timeout in token_address wait"
             connection_manager = self.raiden.connection_manager_for_token(token_address)
 
         connection_manager.connect(
@@ -178,12 +182,27 @@ class RaidenAPI(object):
             partner_address,
             settle_timeout,
         )
-        while netcontract_address not in self.raiden.chain.address_to_nettingchannel:
-            gevent.sleep(self.raiden.alarm.wait_time)
+        wait_timeout_secs = 60
+        if not wait_until(
+                lambda: netcontract_address in self.raiden.chain.address_to_nettingchannel,
+                wait_timeout_secs,
+                self.raiden.alarm.wait_time):
+            raise EthNodeCommunicationError(
+                'After {} seconds, the netting channel was not seen.'.format(
+                    wait_timeout_secs
+                )
+            )
 
         graph = self.raiden.token_to_channelgraph[token_address]
-        while partner_address not in graph.partneraddress_to_channel:
-            gevent.sleep(self.raiden.alarm.wait_time)
+        if not wait_until(
+                lambda: partner_address in graph.partneraddress_to_channel,
+                wait_timeout_secs,
+                self.raiden.alarm.wait_time):
+            raise EthNodeCommunicationError(
+                'After {} seconds, the channel was not seen opened.'.format(
+                    wait_timeout_secs
+                )
+            )
         channel = graph.partneraddress_to_channel[partner_address]
         return channel
 
@@ -221,8 +240,8 @@ class RaidenAPI(object):
         # Wait until the balance has been updated via a state transition triggered
         # by processing the `ChannelNewBalance` event
         wait_timeout_secs = 60
-        if not channel.wait_for_balance_update(
-                old_balance,
+        if not wait_until(
+                lambda: channel.contract_balance != old_balance,
                 wait_timeout_secs,
                 self.raiden.alarm.wait_time):
             raise EthNodeCommunicationError(
@@ -477,7 +496,7 @@ class RaidenAPI(object):
             target,
             identifier,
         )
-        return async_result.wait(timeout=timeout)
+        return async_result.get(timeout=timeout)
 
     # expose a synchronous interface to the user
     token_swap = token_swap_and_wait
