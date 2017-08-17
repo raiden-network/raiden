@@ -375,7 +375,8 @@ Example Response
         "token_address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
         "balance": 35000000,
         "state": "open",
-        "settle_timeout": 100
+        "settle_timeout": 100,
+        "reveal_timeout": 30
     }
 
 Possible Responses

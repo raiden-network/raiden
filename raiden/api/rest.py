@@ -270,12 +270,19 @@ class RestAPI(object):
             status_code=httplib.CREATED
         )
 
-    def open(self, partner_address, token_address, settle_timeout, balance=None):
+    def open(
+            self,
+            partner_address,
+            token_address,
+            settle_timeout=None,
+            reveal_timeout=None,
+            balance=None):
         try:
             raiden_service_result = self.raiden_api.open(
                 token_address,
                 partner_address,
-                settle_timeout
+                settle_timeout,
+                reveal_timeout,
             )
         except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
                 AddressWithoutCode, NoTokenManager, DuplicatedChannelError) as e:
