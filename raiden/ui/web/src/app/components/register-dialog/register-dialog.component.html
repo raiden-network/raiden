@@ -8,8 +8,7 @@
   </div>
   <p-footer>
     <div class="ui-dialog-buttonpane ui-widget-content ui-helper-clearfix">
-      <button type="button" pButton icon="fa-close" (click)="visible=false" label="Close"></button>
-      <button type="button" pButton icon="fa-pencil" (click)="registerToken()" label="Register" [disabled]="tokenAddress.pristine || tokenAddress.invalid"></button>
+      <button type="button" pButton icon="fa-pencil" (click)="registerToken()" label="Register" [disabled]="tokenAddress.invalid"></button>
     </div>
   </p-footer>
 </p-dialog>
