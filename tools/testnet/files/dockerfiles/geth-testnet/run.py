@@ -10,6 +10,8 @@ import click
 from datetime import datetime, timedelta
 
 import signal
+
+import requests
 from web3 import Web3, IPCProvider
 from web3.utils.compat.compat_stdlib import Timeout
 
@@ -23,7 +25,7 @@ log = getLogger(__name__)
 Helper script to start geth.
 
 Due to the ropsten revival there are a lot of nodes that aren't on the "correct" chain.
-To ensure nodes sync to the "right" chain a rather involved process is necessary: 
+To ensure nodes sync to the "right" chain a rather involved process is necessary:
 https://github.com/ethereum/ropsten/blob/master/README.md#troubleshooting
 
 This scripts automates this process:
@@ -94,8 +96,10 @@ BOOTNODES = [
     "7a6da3543fa821185c706cbd9b9be651494ec97f56a@51.15.67.119:56890",
 ]
 
+ETHERSCAN_API_BLOCKNO = "https://ropsten.etherscan.io/api?module=proxy&action=eth_blockNumber"
+
 GETH_PATH = "/usr/local/bin/geth"
-GETH_CMD_RUN = [GETH_PATH, "--testnet", "--fast"]
+GETH_CMD_RUN = [GETH_PATH, "--testnet", "--fast", "--rpc", "--rpcaddr", "0.0.0.0"]
 GETH_CMD_RUN_INITIAL = [*GETH_CMD_RUN, "--nodiscover"]
 
 # Max delay before syncing must have started
@@ -104,6 +108,13 @@ SYNC_START_DELAY = 120
 # Percentage when we consider sync to be done
 # XXX: FIXME: This is a hack to keep the node in "boot mode" (i.e. --nodiscover)
 SYNC_FINISHED_PCT = 110
+
+
+def get_current_block_no():
+    try:
+        return int(requests.get(ETHERSCAN_API_BLOCKNO).json()['result'], 0)
+    except (ValueError, KeyError):
+        return 0
 
 
 @click.command()
@@ -137,6 +148,7 @@ def main(bootnode):
 
         try:
             sync_state = web3.eth.syncing
+            block_number = web3.eth.blockNumber
             err_cnt = 0
         except Timeout:
             err_cnt += 1
@@ -148,6 +160,10 @@ def main(bootnode):
             continue
 
         if sync_state is False:
+            if abs(block_number - get_current_block_no()) < 5:
+                log.info("Node is already synced")
+                synced = True
+                break
             if time.monotonic() - start > SYNC_START_DELAY:
                 log.fatal("Node hasn't started syncing after {}s".format(SYNC_START_DELAY))
                 geth_proc.terminate()
