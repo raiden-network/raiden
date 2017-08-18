@@ -423,17 +423,17 @@ class RaidenProtocol(object):
         self.transport.start()
 
     def stop_and_wait(self):
-        # Stop handling incoming packets, but doen't close the socket. The
+        # Stop handling incoming packets, but don't close the socket. The
         # socket can only be safely closed after all outgoing tasks are stopped
         self.transport.stop_accepting()
 
-        # Stop processesing the outgoing queues
+        # Stop processing the outgoing queues
         self.event_stop.set()
         gevent.wait(self.greenlets)
 
-        # All outgoing tasks are stopped, now it's safe to close the socket, at
+        # All outgoing tasks are stopped. Now it's safe to close the socket. At
         # this point there might be some incoming message being processed,
-        # keeping is not useful for these.
+        # keeping the socket open is not useful for these.
         self.transport.stop()
 
         # Set all the pending results to False
