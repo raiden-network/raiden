@@ -33,7 +33,7 @@
       - "--password-file"
       - "/keystore/password"
       - "--logging"
-      - ":debug"
+      - ":trace"
       - "--log-json"
       - "{{ '--token-address' if hostvars[inventory_hostname].get('tags.Echo') == 'true' else '' }}"
       - "{{ echo_node_token_address if hostvars[inventory_hostname].get('tags.Echo') == 'true' else '' }}"
