@@ -37,7 +37,7 @@ resource "aws_subnet" "default" {
 }
 
 resource "aws_security_group" "default" {
-    name = "${var.project_name}"
+    name = "${var.project_name}_default"
     vpc_id = "${aws_vpc.default.id}"
 
     // Allow SSH in
@@ -56,6 +56,21 @@ resource "aws_security_group" "default" {
         cidr_blocks = ["0.0.0.0/0"]
     }
 
+    // Allow inter-network in
+    ingress {
+        from_port = 0
+        protocol = "-1"
+        to_port = 0
+        cidr_blocks = ["${var.cidr_block}"]
+    }
+
+    // Allow all out
+    egress {
+        from_port = 0
+        to_port = 0
+        protocol = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
     // Allow Raiden P2P in
     ingress {
         from_port = 40001
@@ -63,7 +78,6 @@ resource "aws_security_group" "default" {
         protocol = "udp"
         cidr_blocks = ["0.0.0.0/0"]
     }
-
     // Allow Eth udp in
     ingress {
         from_port = 30303
@@ -85,7 +99,8 @@ resource "aws_security_group" "default" {
         from_port = 80
         protocol = "tcp"
         to_port = 80
-        cidr_blocks = ["${cidrsubnet(var.cidr_block, 8, 3)}"]
+        cidr_blocks = [
+            "0.0.0.0/0"]
     }
 
     // Allow infrastructure https in
@@ -93,7 +108,38 @@ resource "aws_security_group" "default" {
         from_port = 443
         protocol = "tcp"
         to_port = 443
-        cidr_blocks = ["${cidrsubnet(var.cidr_block, 8, 3)}"]
+        cidr_blocks = [
+            "0.0.0.0/0"]
+    }
+
+    // Allow infrastructure[0] OpenVPN in
+    ingress {
+        from_port = 1194
+        protocol = "udp"
+        to_port = 1194
+        cidr_blocks = [
+            "0.0.0.0/0"]
+    }
+}
+
+resource "aws_security_group" "common" {
+    name = "${var.project_name}_common"
+    vpc_id = "${aws_vpc.default.id}"
+
+    // Allow SSH in
+    ingress {
+        from_port = 22
+        to_port = 22
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    // Allow Debug port in
+    ingress {
+        from_port = 5555
+        to_port = 5555
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
     }
 
     // Allow inter-network in
@@ -113,11 +159,77 @@ resource "aws_security_group" "default" {
     }
 }
 
+resource "aws_security_group" "raiden" {
+    name = "${var.project_name}_raiden"
+    vpc_id = "${aws_vpc.default.id}"
+
+    // Allow Raiden P2P in
+    ingress {
+        from_port = 40001
+        to_port = 40001
+        protocol = "udp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+}
+
+resource "aws_security_group" "eth" {
+    name = "${var.project_name}_eth"
+    vpc_id = "${aws_vpc.default.id}"
+
+    // Allow Eth udp in
+    ingress {
+        from_port = 30303
+        to_port = 30303
+        protocol = "udp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    // Allow Eth tcp in
+    ingress {
+        from_port = 30303
+        to_port = 30303
+        protocol = "tcp"
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+}
+
+resource "aws_security_group" "infrastructure" {
+    name = "${var.project_name}_infrastructure"
+    vpc_id = "${aws_vpc.default.id}"
+
+    // Allow infrastructure http in
+    ingress {
+        from_port = 80
+        protocol = "tcp"
+        to_port = 80
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    // Allow infrastructure https in
+    ingress {
+        from_port = 443
+        protocol = "tcp"
+        to_port = 443
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+
+    // Allow infrastructure[0] OpenVPN in
+    ingress {
+        from_port = 1194
+        protocol = "udp"
+        to_port = 1194
+        cidr_blocks = ["0.0.0.0/0"]
+    }
+}
+
 resource "aws_instance" "node_infrastructure" {
     ami = "${data.aws_ami.ubuntu1604.id}"
     instance_type = "${var.instance_type["infrastructure"]}"
     key_name = "${var.keypair_name}"
-    vpc_security_group_ids = ["${aws_security_group.default.id}"]
+    vpc_security_group_ids = [
+        "${aws_security_group.common.id}",
+        "${aws_security_group.infrastructure.id}"
+    ]
     subnet_id = "${aws_subnet.default.id}"
     count = "${var.count_infrastructure}"
     private_ip = "${cidrhost(var.cidr_block, count.index + var.ip_offset["infrastructure"])}"
@@ -154,7 +266,10 @@ resource "aws_instance" "node_eth" {
     ami = "${data.aws_ami.ubuntu1604.id}"
     instance_type = "${var.instance_type["eth"]}"
     key_name = "${var.keypair_name}"
-    vpc_security_group_ids = ["${aws_security_group.default.id}"]
+    vpc_security_group_ids = [
+        "${aws_security_group.common.id}",
+        "${aws_security_group.eth.id}"
+    ]
     subnet_id = "${aws_subnet.default.id}"
     count = "${var.count_eth}"
     private_ip = "${cidrhost(var.cidr_block, count.index + var.ip_offset["eth"])}"
@@ -191,7 +306,10 @@ resource "aws_instance" "node_raiden" {
     ami = "${data.aws_ami.ubuntu1604.id}"
     instance_type = "${var.instance_type["raiden"]}"
     key_name = "${var.keypair_name}"
-    vpc_security_group_ids = ["${aws_security_group.default.id}"]
+    vpc_security_group_ids = [
+        "${aws_security_group.common.id}",
+        "${aws_security_group.raiden.id}"
+    ]
     subnet_id = "${aws_subnet.default.id}"
     count = "${var.count_raiden}"
     private_ip = "${cidrhost(var.cidr_block, count.index + var.ip_offset["raiden"])}"
@@ -221,7 +339,10 @@ resource "aws_instance" "node_raiden_echo" {
     ami = "${data.aws_ami.ubuntu1604.id}"
     instance_type = "${var.instance_type["raiden_echo"]}"
     key_name = "${var.keypair_name}"
-    vpc_security_group_ids = ["${aws_security_group.default.id}"]
+    vpc_security_group_ids = [
+        "${aws_security_group.common.id}",
+        "${aws_security_group.raiden.id}"
+    ]
     subnet_id = "${aws_subnet.default.id}"
     count = "${var.count_raiden_echo}"
     private_ip = "${cidrhost(var.cidr_block, count.index + var.ip_offset["raiden_echo"])}"
