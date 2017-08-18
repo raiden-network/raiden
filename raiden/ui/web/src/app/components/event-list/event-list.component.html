@@ -1,5 +1,5 @@
 <div class="ui-widget-header" style="padding:4px 10px;border-bottom: 0 none">
-  <i class="fa fa-search" style="margin:4px 4px 0 0"></i>
+  <i class="fa fa-fw" [ngClass]="loading ? 'fa-spinner fa-pulse' : 'fa-search'" style="margin:4px 4px 0 0"></i>
   <input #gb type="text" pInputText size="25" placeholder="Filter" class="ui-inputtext ui-corner-all ui-state-default">
 </div>
 <p-dataTable [value]="events$ | async" expandableRows="true" paginator="true" [rows]="10" resizableColumns="true" [globalFilter]="gb">
