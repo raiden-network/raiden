@@ -206,6 +206,54 @@ def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_blo
     return jsonrpc_client.call('eth_newFilter', json_data)
 
 
+def get_filter_events(jsonrpc_client, contract_address, topics, from_block=None, to_block=None):
+    """ Custom new filter implementation to handle bad encoding from geth rpc. """
+    if isinstance(from_block, int):
+        from_block = hex(from_block)
+    if isinstance(to_block, int):
+        to_block = hex(to_block)
+    json_data = {
+        'fromBlock': from_block or hex(0),
+        'toBlock': to_block or 'latest',
+        'address': address_encoder(normalize_address(contract_address)),
+    }
+
+    if topics is not None:
+        json_data['topics'] = [
+            topic_encoder(topic)
+            for topic in topics
+        ]
+
+    filter_changes = jsonrpc_client.call('eth_getLogs', json_data)
+
+    # geth could return None
+    if filter_changes is None:
+        return []
+
+    result = []
+    for log_event in filter_changes:
+        address = address_decoder(log_event['address'])
+        data = data_decoder(log_event['data'])
+        topics = [
+            decode_topic(topic)
+            for topic in log_event['topics']
+        ]
+        block_number = log_event.get('blockNumber')
+        if not block_number:
+            block_number = 0
+        else:
+            block_number = int(block_number, 0)
+
+        result.append({
+            'topics': topics,
+            'data': data,
+            'address': address,
+            'block_number': block_number,
+        })
+
+    return result
+
+
 def decode_topic(topic):
     return int(topic[2:], 16)
 
