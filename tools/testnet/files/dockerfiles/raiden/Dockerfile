@@ -15,14 +15,20 @@ RUN \
 
 RUN \
     git clone -b testnet_supermerge https://github.com/ulope/raiden.git /app && \
+    pip --version && \
     pip install -r /app/requirements.txt -e /app && \
-    pip install python-logstash
+    pip install python-logstash && \
+    rm -rf /root/.cache/pip
 
 WORKDIR /app
 
 RUN \
     python setup.py compile_contracts && \
-    python setup.py compile_webui
+    python setup.py compile_webui && \
+    rm -rf /root/.npm/_cacache
+
+RUN \
+    git pull
 
 ADD run_raiden.py /usr/local/bin
 ADD raiden /usr/local/bin
