@@ -1,5 +1,5 @@
 import { Injectable, NgZone } from '@angular/core';
-import { Http, Headers, RequestOptions, Response } from '@angular/http';
+import { Http, Headers, RequestOptions, Response, URLSearchParams } from '@angular/http';
 import { Observable } from 'rxjs/Observable';
 import { RaidenConfig } from './raiden.config';
 import { tokenabi } from './tokenabi';
@@ -36,6 +36,11 @@ export class RaidenService {
 
     get blockNumber(): number {
         return this.config.web3.eth.blockNumber;
+    }
+
+    getBlockNumber(): Observable<number> {
+        return Observable.bindNodeCallback((cb: CallbackFunc) =>
+            this.config.web3.eth.getBlockNumber(this.zoneEncap(cb)))();
     }
 
     public getRaidenAddress(): Observable<string> {
@@ -181,7 +186,8 @@ export class RaidenService {
 
     public getEvents(
         eventsParam: EventsParam,
-        fromBlock?: number): Observable<Event[]> {
+        fromBlock?: number,
+        toBlock?: number): Observable<Event[]> {
         let path: string;
         if (eventsParam.channel) {
             path = `channels/${eventsParam.channel}`;
@@ -190,10 +196,14 @@ export class RaidenService {
         } else {
             path = 'network';
         }
+        const params = new URLSearchParams();
         if (fromBlock) {
-            path += `?from_block=${fromBlock}`;
+            params.set('from_block', '' + fromBlock);
         }
-        return this.http.get(`${this.config.api}/events/${path}`)
+        if (toBlock) {
+            params.set('to_block', '' + toBlock);
+        }
+        return this.http.get(`${this.config.api}/events/${path}`, {search: params})
             .map((response) => <Event[]>response.json())
             .catch((error) => this.handleError(error));
     }
