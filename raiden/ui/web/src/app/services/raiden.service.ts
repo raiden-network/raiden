@@ -34,6 +34,10 @@ export class RaidenService {
         return this._identifier++;
     }
 
+    get blockNumber(): number {
+        return this.config.web3.eth.blockNumber;
+    }
+
     public getRaidenAddress(): Observable<string> {
         return this.http.get(`${this.config.api}/address`)
             .map((response) => this.raidenAddress = response.json().our_address)
@@ -177,7 +181,7 @@ export class RaidenService {
 
     public getEvents(
         eventsParam: EventsParam,
-        fromBlock?: number | undefined): Observable<Event[]> {
+        fromBlock?: number): Observable<Event[]> {
         let path: string;
         if (eventsParam.channel) {
             path = `channels/${eventsParam.channel}`;

@@ -1,10 +1,12 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
-import { RaidenService } from '../../services/raiden.service';
 import { Observable } from 'rxjs/Observable';
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
+import { RaidenService } from '../../services/raiden.service';
 import { Event, EventsParam } from '../../models/event';
 
 const INTERVAL = 5000;
+const BLOCK_START = 1422953; // block where the registry contract was deployed
 
 @Component({
     selector: 'app-event-list',
@@ -17,14 +19,21 @@ export class EventListComponent implements OnInit {
     @Output() activity: EventEmitter<void> = new EventEmitter<void>();
 
     public events$: Observable<Event[]>;
+    public loading = true;
 
     constructor(private raidenService: RaidenService) { }
 
     ngOnInit() {
-        let next_block: number | undefined;
+        let from: number = BLOCK_START;
+        let first = true;
         const data_excl = ['event_type', 'block_number', 'timestamp'];
-        this.events$ = Observable.timer(0, INTERVAL)
-            .switchMap(() => this.raidenService.getEvents(this.eventsParam, next_block))
+        const firerSub: BehaviorSubject<void> = new BehaviorSubject(null);
+        this.events$ = firerSub
+            .do(() => this.loading = true)
+            .switchMap(() => this.raidenService.getEvents(
+                    this.eventsParam,
+                    from)
+                .finally(() => this.loading = false))
             .map((events) => events.map((event) =>
                 <Event>Object.assign(event,
                     {
@@ -35,28 +44,19 @@ export class EventListComponent implements OnInit {
                 ))
             )
             .do((newEvents) => {
-                if (newEvents.length > 0 && next_block !== undefined) {
+                if (newEvents.length > 0 && !first) {
                     this.activity.emit();
                 }
-                if (next_block === undefined) {
-                    next_block = 0;
-                }
+                first = false;
+                from = this.raidenService.blockNumber + 1;
             })
             .scan((oldEvents, newEvents) => {
                 // this scan/reducer agregates new events (since next_block) with old ones,
                 // updating next_block if needed. If no next_block previously,
                 // it means it fetched all events, so use only newEvents
                 newEvents.reverse(); // most recent first
-                const events = next_block ? [...newEvents, ...oldEvents] :
+                const events = !first ? [...newEvents, ...oldEvents] :
                     newEvents.length > 0 ? newEvents : oldEvents;
-                const max_block = Math.max(
-                    ...newEvents
-                        .map((event) => event.block_number)
-                        .filter((block_number) => !isNaN(block_number))
-                );
-                if (max_block > 0) {
-                    next_block = max_block + 1;
-                }
                 for (const event of events) {
                     if (event.block_number > 0 && !event.timestamp) {
                         this.raidenService.blocknumberToDate(event.block_number)
@@ -64,6 +64,7 @@ export class EventListComponent implements OnInit {
                     }
                 }
                 return events;
-            }, []);
+            }, [])
+            .do(() => setTimeout(() => firerSub.next(null), INTERVAL));
     }
 }
