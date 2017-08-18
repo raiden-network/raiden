@@ -2,7 +2,7 @@ ansible_user: ubuntu
 aws_account: 147258760518
 
 # either "geth" or "parity"
-eth_node_type: parity
+eth_node_type: geth
 data_volume_dir: "/data"
 
 docker_channel: edge
