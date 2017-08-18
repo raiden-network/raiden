@@ -12,7 +12,7 @@ from raiden.blockchain.abi import (
     CONTRACT_REGISTRY,
 )
 from raiden.utils import pex
-from raiden.network.rpc.client import new_filter, Filter
+from raiden.network.rpc.client import get_filter_events
 
 from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveTokenAdded,
@@ -77,21 +77,13 @@ def get_contract_events(
     # one using `eth_getLogs`. It will require changes in all testing frameworks
     # to be implemented though.
 
-    filter_ = None
-    pyethapp_client = pyethapp_chain.client
-    try:
-        filter_id_raw = new_filter(
-            pyethapp_client,
-            contract_address,
-            topics=topics,
-            from_block=from_block,
-            to_block=to_block
-        )
-        filter_ = Filter(pyethapp_client, filter_id_raw)
-        events = filter_.getall()
-    finally:
-        if filter_ is not None:
-            filter_.uninstall()
+    events = get_filter_events(
+        pyethapp_chain.client,
+        contract_address,
+        topics=topics,
+        from_block=from_block,
+        to_block=to_block
+    )
 
     result = []
     for event in events:
