@@ -24,7 +24,7 @@ variable "count_eth" {
 }
 
 variable "count_raiden" {
-    default = 15
+    default = 100
 }
 
 variable "count_raiden_echo" {
