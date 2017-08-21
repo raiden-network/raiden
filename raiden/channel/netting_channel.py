@@ -894,7 +894,7 @@ class ChannelSerialization(object):
                 self.our_balance_proof == other.our_balance_proof and
                 self.partner_balance_proof == other.partner_balance_proof and
                 self.our_transferred_amount == other.our_transferred_amount and
-                self.partrner_transferred_amount == other.partner_transferred_amount
+                self.partner_transferred_amount == other.partner_transferred_amount
             )
         return False
 
