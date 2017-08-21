@@ -35,7 +35,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendRevealSecret,
     SendSecretRequest,
 )
-from raiden.utils import sha3
+from raiden.utils import sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 UNEVENTEFUL_EVENTS = (
@@ -184,8 +184,8 @@ class StateMachineEventHandler(object):
         elif isinstance(event, EventUnlockFailed):
             log.error(
                 'UnlockFailed!',
-                initiator=event.initiator,
-                expiration=event.expiration
+                hashlock=pex(event.hashlock),
+                reason=event.reason
             )
 
         elif isinstance(event, ContractSendChannelClose):
