@@ -81,6 +81,7 @@ from raiden.messages import (
 from raiden.network.protocol import (
     RaidenProtocol,
 )
+from raiden.constants import ROPSTEN_REGISTRY_ADDRESS
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
@@ -125,6 +126,7 @@ def save_snapshot(serialization_file, raiden):
         'receivedhashes_to_acks': raiden.protocol.receivedhashes_to_acks,
         'nodeaddresses_to_nonces': raiden.protocol.nodeaddresses_to_nonces,
         'transfers': raiden.identifier_to_statemanagers,
+        'registry_address': ROPSTEN_REGISTRY_ADDRESS,
     }
 
     with open(serialization_file, 'wb') as handler:
@@ -279,8 +281,13 @@ class RaidenService(object):
 
     def restore_from_snapshots(self):
         data = load_snapshot(self.serialization_file)
+        data_exists_and_is_recent = (
+            data is not None and
+            'registry_address' in data and
+            data['registry_address'] == ROPSTEN_REGISTRY_ADDRESS
+        )
 
-        if data:
+        if data_exists_and_is_recent:
             for channel in data['channels']:
                 try:
                     self.restore_channel(channel)
