@@ -288,15 +288,27 @@ class RaidenService(object):
         )
 
         if data_exists_and_is_recent:
+            first_channel = True
             for channel in data['channels']:
                 try:
                     self.restore_channel(channel)
+                    first_channel = False
                 except AddressWithoutCode as e:
                     log.warn(
                         'Channel without code while restoring. Must have been '
                         'already settled while we were offline.',
                         error=str(e)
                     )
+                except AttributeError as e:
+                    if first_channel:
+                        log.warn(
+                            'AttributeError during channel restoring. If code has changed'
+                            ' then this is fine. If not then please report a bug.',
+                            error=str(e)
+                        )
+                        break
+                    else:
+                        raise
 
             for restored_queue in data['queues']:
                 self.restore_queue(restored_queue)
