@@ -115,6 +115,7 @@ export class RaidenService {
         console.log(`${this.config.api}/transfers/${tokenAddress}/${partnerAddress}`);
         return this.http.post(`${this.config.api}/transfers/${tokenAddress}/${partnerAddress}`,
             JSON.stringify(data), options)
+            .map((res) => res.json())
             .catch((error) => this.handleError(error));
     }
 

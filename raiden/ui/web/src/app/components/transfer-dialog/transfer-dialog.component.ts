@@ -70,8 +70,8 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
             value['token_address'],
             value['target_address'],
             value['amount'])
-            .subscribe((res) => {
-                if (res.ok) {
+            .subscribe((response) => {
+                if ('target_address' in response && 'identifier' in response) {
                     this.sharedService.msg({
                         severity: 'success',
                         summary: 'Transfer successful',
@@ -82,7 +82,7 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
                     this.sharedService.msg({
                         severity: 'error',
                         summary: 'Transfer error',
-                        detail: `An error ocurred. See the logs for details.`,
+                        detail: JSON.stringify(response),
                     });
                 }
             });
