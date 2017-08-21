@@ -880,6 +880,9 @@ class ChannelSerialization(object):
         self.our_balance_proof = channel_instance.our_state.balance_proof
         self.partner_balance_proof = channel_instance.partner_state.balance_proof
 
+        self.our_transferred_amount = channel_instance.our_state.transferred_amount
+        self.partner_transferred_amount = channel_instance.partner_state.transferred_amount
+
     def __eq__(self, other):
         if isinstance(other, ChannelSerialization):
             return (
@@ -889,7 +892,9 @@ class ChannelSerialization(object):
                 self.our_address == other.our_address and
                 self.reveal_timeout == other.reveal_timeout and
                 self.our_balance_proof == other.our_balance_proof and
-                self.partner_balance_proof == other.partner_balance_proof
+                self.partner_balance_proof == other.partner_balance_proof and
+                self.our_transferred_amount == other.our_transferred_amount and
+                self.partrner_transferred_amount == other.partner_transferred_amount
             )
         return False
 
