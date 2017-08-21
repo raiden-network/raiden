@@ -563,11 +563,14 @@ class RaidenService(object):
             channel_details['our_address'],
             channel_details['our_balance'],
             opened_block,
+            serialized_channel.our_transferred_amount
         )
+
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
             opened_block,
+            serialized_channel.partner_transferred_amount
         )
 
         def register_channel_for_hashlock(channel, hashlock):

@@ -11,7 +11,12 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 class ChannelEndState(object):
     """ Tracks the state of one of the participants in a channel. """
 
-    def __init__(self, participant_address, participant_balance, opened_block):
+    def __init__(
+            self,
+            participant_address,
+            participant_balance,
+            opened_block,
+            transferred_amount=0):
         # since ethereum only uses integral values we cannot use float/Decimal
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
@@ -23,7 +28,7 @@ class ChannelEndState(object):
         self.address = participant_address
 
         # amount of token transferred and unlocked
-        self.transferred_amount = 0
+        self.transferred_amount = transferred_amount
 
         # Sequential nonce, current value has not been used, 0 must not be used
         # since in the netting contract it represents null.
