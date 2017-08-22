@@ -27,9 +27,6 @@ RUN \
     python setup.py compile_webui && \
     rm -rf /root/.npm/_cacache
 
-RUN \
-    git pull
-
 ADD run_raiden.py /usr/local/bin
 ADD raiden /usr/local/bin
 ADD raiden_echo_node /usr/local/bin
