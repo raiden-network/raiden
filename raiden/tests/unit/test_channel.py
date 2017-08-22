@@ -11,13 +11,18 @@ from raiden.channel import (
     ChannelEndState,
     ChannelExternalState,
 )
+from raiden.exceptions import (
+    InsufficientBalance,
+)
 from raiden.messages import (
     EMPTY_MERKLE_ROOT,
     DirectTransfer,
     Lock,
     LockedTransfer,
     Secret,
+    MediatedTransfer,
 )
+from raiden.mtree import Merkletree
 from raiden.utils import sha3
 from raiden.tests.utils.messages import make_mediated_transfer
 from raiden.tests.utils.transfer import assert_synched_channels, channel
@@ -119,7 +124,7 @@ def test_end_state():
     )
     mediated_transfer.sign(privkey1, address1)
 
-    state2.register_locked_transfer(mediated_transfer)
+    state1.register_locked_transfer(mediated_transfer)
 
     assert state1.contract_balance == balance1
     assert state2.contract_balance == balance2
@@ -129,17 +134,17 @@ def test_end_state():
     assert state1.distributable(state2) == balance1 - lock_amount
     assert state2.distributable(state1) == balance2
 
-    assert state1.locked() == 0
-    assert state2.locked() == lock_amount
+    assert state1.locked() == lock_amount
+    assert state2.locked() == 0
 
-    assert state1.balance_proof.is_pending(lock_hashlock) is False
-    assert state2.balance_proof.is_pending(lock_hashlock) is True
+    assert state1.balance_proof.is_pending(lock_hashlock) is True
+    assert state2.balance_proof.is_pending(lock_hashlock) is False
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
-    assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
+    assert state1.balance_proof.merkleroot_for_unclaimed() == lock_hash
+    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
 
-    assert state1.nonce is None
-    assert state2.nonce is 1
+    assert state1.nonce is 1
+    assert state2.nonce is None
 
     with pytest.raises(ValueError):
         state1.update_contract_balance(balance1 - 10)
@@ -154,20 +159,20 @@ def test_end_state():
     assert state1.distributable(state2) == balance1 - lock_amount + 10
     assert state2.distributable(state1) == balance2
 
-    assert state1.locked() == 0
-    assert state2.locked() == lock_amount
+    assert state1.locked() == lock_amount
+    assert state2.locked() == 0
 
-    assert state1.balance_proof.is_pending(lock_hashlock) is False
-    assert state2.balance_proof.is_pending(lock_hashlock) is True
+    assert state1.balance_proof.is_pending(lock_hashlock) is True
+    assert state2.balance_proof.is_pending(lock_hashlock) is False
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
-    assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
+    assert state1.balance_proof.merkleroot_for_unclaimed() == lock_hash
+    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
 
-    assert state1.nonce is None
-    assert state2.nonce is 1
+    assert state1.nonce is 1
+    assert state2.nonce is None
 
     # registering the secret should not change the locked amount
-    state2.register_secret(lock_secret)
+    state1.register_secret(lock_secret)
 
     assert state1.contract_balance == balance1 + 10
     assert state2.contract_balance == balance2
@@ -177,17 +182,17 @@ def test_end_state():
     assert state1.distributable(state2) == balance1 - lock_amount + 10
     assert state2.distributable(state1) == balance2
 
-    assert state1.locked() == 0
-    assert state2.locked() == lock_amount
+    assert state1.locked() == lock_amount
+    assert state2.locked() == 0
 
     assert state1.balance_proof.is_pending(lock_hashlock) is False
     assert state2.balance_proof.is_pending(lock_hashlock) is False
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
-    assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
+    assert state1.balance_proof.merkleroot_for_unclaimed() == lock_hash
+    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
 
-    assert state1.nonce is None
-    assert state2.nonce is 1
+    assert state1.nonce is 1
+    assert state2.nonce is None
 
     secret_message = Secret(
         identifier=1,
@@ -198,7 +203,7 @@ def test_end_state():
         secret=lock_secret,
     )
     secret_message.sign(privkey1, address1)
-    state2.register_secretmessage(state1, secret_message)
+    state1.register_secretmessage(secret_message)
 
     assert state1.contract_balance == balance1 + 10
     assert state2.contract_balance == balance2
@@ -217,8 +222,159 @@ def test_end_state():
     assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
 
-    assert state1.nonce is None
-    assert state2.nonce is 2
+    assert state1.nonce is 2
+    assert state2.nonce is None
+
+
+def test_sender_cannot_overspent():
+    token_address = make_address()
+    privkey1, address1 = make_privkey_address()
+    address2 = make_address()
+
+    balance1 = 70
+    balance2 = 110
+
+    reveal_timeout = 5
+    settle_timeout = 15
+    block_number = 10
+
+    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
+    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
+    external_state = make_external_state()
+
+    test_channel = Channel(
+        our_state,
+        partner_state,
+        external_state,
+        token_address,
+        reveal_timeout,
+        settle_timeout,
+    )
+
+    amount = balance1
+    expiration = block_number + settle_timeout
+    sent_mediated_transfer0 = test_channel.create_mediatedtransfer(
+        address1,
+        address2,
+        fee=0,
+        amount=amount,
+        identifier=1,
+        expiration=expiration,
+        hashlock=sha3('test_locked_amount_cannot_be_spent'),
+    )
+    sent_mediated_transfer0.sign(privkey1, address1)
+
+    test_channel.register_transfer(
+        block_number,
+        sent_mediated_transfer0,
+    )
+
+    lock2 = Lock(
+        amount=amount,
+        expiration=expiration,
+        hashlock=sha3('test_locked_amount_cannot_be_spent2'),
+    )
+    locksroot2 = Merkletree([
+        sha3(sent_mediated_transfer0.lock.as_bytes),
+        sha3(lock2.as_bytes),
+    ]).merkleroot
+
+    sent_mediated_transfer1 = MediatedTransfer(
+        identifier=2,
+        nonce=sent_mediated_transfer0.nonce + 1,
+        token=token_address,
+        channel=test_channel.channel_address,
+        transferred_amount=0,
+        recipient=address2,
+        locksroot=locksroot2,
+        lock=lock2,
+        target=address2,
+        initiator=address1,
+        fee=0,
+    )
+    sent_mediated_transfer1.sign(privkey1, address1)
+
+    # address1 balance is all locked
+    with pytest.raises(InsufficientBalance):
+        test_channel.register_transfer(
+            block_number,
+            sent_mediated_transfer1,
+        )
+
+
+def test_receiver_cannot_spend_locked_amount():
+    token_address = make_address()
+    privkey1, address1 = make_privkey_address()
+    privkey2, address2 = make_privkey_address()
+
+    balance1 = 33
+    balance2 = 11
+
+    reveal_timeout = 7
+    settle_timeout = 21
+    block_number = 7
+
+    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
+    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
+    external_state = make_external_state()
+
+    test_channel = Channel(
+        our_state,
+        partner_state,
+        external_state,
+        token_address,
+        reveal_timeout,
+        settle_timeout,
+    )
+
+    amount1 = balance2
+    expiration = block_number + settle_timeout
+    receive_mediated_transfer0 = test_channel.create_mediatedtransfer(
+        address1,
+        address2,
+        fee=0,
+        amount=amount1,
+        identifier=1,
+        expiration=expiration,
+        hashlock=sha3('test_locked_amount_cannot_be_spent'),
+    )
+    receive_mediated_transfer0.sign(privkey2, address2)
+
+    test_channel.register_transfer(
+        block_number,
+        receive_mediated_transfer0,
+    )
+
+    # trying to send one unit of the locked token
+    amount2 = balance1 + 1
+    lock2 = Lock(
+        amount=amount2,
+        expiration=expiration,
+        hashlock=sha3('test_locked_amount_cannot_be_spent2'),
+    )
+    locksroot2 = Merkletree([sha3(lock2.as_bytes)]).merkleroot
+
+    send_mediated_transfer0 = MediatedTransfer(
+        identifier=1,
+        nonce=1,
+        token=token_address,
+        channel=test_channel.channel_address,
+        transferred_amount=0,
+        recipient=address2,
+        locksroot=locksroot2,
+        lock=lock2,
+        target=address2,
+        initiator=address1,
+        fee=0,
+    )
+    send_mediated_transfer0.sign(privkey1, address1)
+
+    # address1 balance is all locked
+    with pytest.raises(InsufficientBalance):
+        test_channel.register_transfer(
+            block_number,
+            send_mediated_transfer0,
+        )
 
 
 def test_invalid_timeouts():
@@ -298,7 +454,7 @@ def test_python_channel():
 
     assert test_channel.contract_balance == our_state.contract_balance
     assert test_channel.balance == our_state.balance(partner_state)
-    assert test_channel.transferred_amount == our_state.transferred_amount(partner_state)
+    assert test_channel.transferred_amount == our_state.transferred_amount
     assert test_channel.distributable == our_state.distributable(partner_state)
     assert test_channel.outstanding == our_state.locked()
     assert test_channel.outstanding == 0
@@ -368,8 +524,8 @@ def test_python_channel():
     assert test_channel.distributable == balance1 - amount1 - amount2
     assert test_channel.outstanding == 0
     assert test_channel.locked == amount2
-    assert test_channel.our_state.locked() == 0
-    assert test_channel.partner_state.locked() == amount2
+    assert test_channel.our_state.locked() == amount2
+    assert test_channel.partner_state.locked() == 0
     assert test_channel.get_next_nonce() == 3
 
     secret_message = test_channel.create_secret(identifier, secret)

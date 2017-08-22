@@ -52,7 +52,8 @@ def test_withdraw(
         secret,
     )
 
-    proof = channel1.our_state.balance_proof.compute_proof_for_lock(
+    # withdraw the pending transfer sent to us by our partner
+    proof = channel1.partner_state.balance_proof.compute_proof_for_lock(
         secret,
         mediated0.lock,
     )
@@ -207,7 +208,7 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_state):
     # expire the lock
     tester_state.mine(number_of_blocks=lock_timeout + 1)
 
-    unlock_proofs = list(channel0.our_state.balance_proof.get_known_unlocks())
+    unlock_proofs = list(channel0.partner_state.balance_proof.get_known_unlocks())
     proof = unlock_proofs[0]
 
     with pytest.raises(TransactionFailed):
@@ -296,7 +297,7 @@ def test_withdraw_both_participants(
     )
     tester_state.mine(number_of_blocks=1)
 
-    proof01 = channel1.our_state.balance_proof.compute_proof_for_lock(
+    proof01 = channel1.partner_state.balance_proof.compute_proof_for_lock(
         secret,
         mediated01.lock,
     )
@@ -307,7 +308,7 @@ def test_withdraw_both_participants(
         sender=pkey1,
     )
 
-    proof10 = channel0.our_state.balance_proof.compute_proof_for_lock(
+    proof10 = channel0.partner_state.balance_proof.compute_proof_for_lock(
         secret,
         mediated10.lock,
     )
@@ -360,7 +361,7 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
         sender=pkey0,
     )
 
-    unlock_proofs = list(channel0.our_state.balance_proof.get_known_unlocks())
+    unlock_proofs = list(channel0.partner_state.balance_proof.get_known_unlocks())
     proof = unlock_proofs[0]
 
     nettingchannel.withdraw(
@@ -629,7 +630,7 @@ def test_withdraw_lock_with_a_large_expiration(
         sender=pkey1,
     )
 
-    unlock_proofs = list(channel1.our_state.balance_proof.get_known_unlocks())
+    unlock_proofs = list(channel1.partner_state.balance_proof.get_known_unlocks())
     proof = unlock_proofs[0]
 
     nettingchannel.withdraw(
