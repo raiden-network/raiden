@@ -3,6 +3,8 @@ import os
 import re
 import sys
 import string
+import gevent
+import time
 
 from coincurve import PrivateKey
 from ethereum.utils import remove_0x_head
@@ -129,6 +131,7 @@ def channel_to_api_dict(channel):
         'token_address': channel.token_address,
         'partner_address': channel.partner_address,
         'settle_timeout': channel.settle_timeout,
+        'reveal_timeout': channel.reveal_timeout,
         'balance': channel.distributable,
         'state': channel.state
     }
@@ -150,3 +153,22 @@ def fix_tester_storage(storage):
         new_val = '0x%064x' % int(val, 16)
         new_storage[new_key] = new_val
     return new_storage
+
+
+def wait_until(func, wait_for=None, sleep_for=1):
+    """Preemptively (gevent) test for a function and wait for it to return a
+    truth value and returns it, or None if a timeout is given and the function
+    didn't return inside time timeout
+    Args:
+        func (callable): a function to be evaluated, use lambda if parameters are required
+        wait_for (float, integer, None): the maximum time to wait, or None for infinite loop
+        sleep_form (float, integer): how much to gevent.sleep between calls
+    Returns:
+        func(): result of func, if truth value, or None"""
+    start = time.time()
+    res = func()
+    while (True if wait_for is None else (time.time() - start < wait_for))\
+            and not res:
+        gevent.sleep(sleep_for)
+        res = func()
+    return res or None

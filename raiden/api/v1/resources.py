@@ -20,15 +20,12 @@ def create_blueprint():
 
 
 class BaseResource(Resource):
-    def __init__(self, **kwargs):
-        super(BaseResource, self).__init__()
-        self.rest_api = kwargs['rest_api_object']
+    def __init__(self, rest_api_object, **kwargs):
+        super(BaseResource, self).__init__(**kwargs)
+        self.rest_api = rest_api_object
 
 
 class AddressResource(BaseResource):
-
-    def __init__(self, **kwargs):
-        super(AddressResource, self).__init__(**kwargs)
 
     def get(self):
         return self.rest_api.get_our_address()
@@ -39,9 +36,6 @@ class ChannelsResource(BaseResource):
     put_schema = ChannelRequestSchema(
         exclude=('channel_address', 'state'),
     )
-
-    def __init__(self, **kwargs):
-        super(ChannelsResource, self).__init__(**kwargs)
 
     def get(self):
         """
@@ -57,11 +51,8 @@ class ChannelsResource(BaseResource):
 class ChannelsResourceByChannelAddress(BaseResource):
 
     patch_schema = ChannelRequestSchema(
-        exclude=('token_address', 'partner_address', 'settle_timeout', 'channel_address'),
+        only=('balance', 'state'),
     )
-
-    def __init__(self, **kwargs):
-        super(ChannelsResourceByChannelAddress, self).__init__(**kwargs)
 
     @use_kwargs(patch_schema, locations=('json',))
     def patch(self, **kwargs):
@@ -73,9 +64,6 @@ class ChannelsResourceByChannelAddress(BaseResource):
 
 class TokensResource(BaseResource):
 
-    def __init__(self, **kwargs):
-        super(TokensResource, self).__init__(**kwargs)
-
     def get(self):
         """
         this translates to 'get all token addresses we have channels open for'
@@ -85,9 +73,6 @@ class TokensResource(BaseResource):
 
 class PartnersResourceByTokenAddress(BaseResource):
 
-    def __init__(self, **kwargs):
-        super(PartnersResourceByTokenAddress, self).__init__(**kwargs)
-
     def get(self, **kwargs):
         return self.rest_api.get_partners_by_token(**kwargs)
 
@@ -96,27 +81,24 @@ class NetworkEventsResource(BaseResource):
 
     get_schema = EventRequestSchema()
 
-    def __init__(self, **kwargs):
-        super(NetworkEventsResource, self).__init__(**kwargs)
-
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, **kwargs):
-        return self.rest_api.get_network_events(kwargs['from_block'], kwargs['to_block'])
+    def get(self, from_block, to_block):
+        return self.rest_api.get_network_events(
+            from_block=from_block,
+            to_block=to_block,
+        )
 
 
 class TokenEventsResource(BaseResource):
 
     get_schema = EventRequestSchema()
 
-    def __init__(self, **kwargs):
-        super(TokenEventsResource, self).__init__(**kwargs)
-
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, **kwargs):
+    def get(self, token_address, from_block, to_block):
         return self.rest_api.get_token_network_events(
-            kwargs['token_address'],
-            kwargs['from_block'],
-            kwargs['to_block']
+            token_address=token_address,
+            from_block=from_block,
+            to_block=to_block,
         )
 
 
@@ -124,21 +106,16 @@ class ChannelEventsResource(BaseResource):
 
     get_schema = EventRequestSchema()
 
-    def __init__(self, **kwargs):
-        super(ChannelEventsResource, self).__init__(**kwargs)
-
     @use_kwargs(get_schema, locations=('query',))
-    def get(self, **kwargs):
+    def get(self, channel_address, from_block, to_block):
         return self.rest_api.get_channel_events(
-            kwargs['channel_address'],
-            kwargs['from_block'],
-            kwargs['to_block']
+            channel_address=channel_address,
+            from_block=from_block,
+            to_block=to_block,
         )
 
 
 class RegisterTokenResource(BaseResource):
-    def __init__(self, **kwargs):
-        super(RegisterTokenResource, self).__init__(**kwargs)
 
     def put(self, token_address):
         return self.rest_api.register_token(token_address)
@@ -147,9 +124,6 @@ class RegisterTokenResource(BaseResource):
 class TokenSwapsResource(BaseResource):
 
     put_schema = TokenSwapsSchema()
-
-    def __init__(self, **kwargs):
-        super(TokenSwapsResource, self).__init__(**kwargs)
 
     @use_kwargs(put_schema)
     def put(
@@ -175,11 +149,8 @@ class TokenSwapsResource(BaseResource):
 class TransferToTargetResource(BaseResource):
 
     post_schema = TransferSchema(
-        exclude=('initiator_address', 'target_address', 'token_address')
+        only=('amount', 'identifier'),
     )
-
-    def __init__(self, **kwargs):
-        super(TransferToTargetResource, self).__init__(**kwargs)
 
     @use_kwargs(post_schema, locations=('json',))
     def post(self, token_address, target_address, amount, identifier):
@@ -194,9 +165,6 @@ class TransferToTargetResource(BaseResource):
 class ConnectionsResource(BaseResource):
 
     put_schema = ConnectionsConnectSchema()
-
-    def __init__(self, **kwargs):
-        super(ConnectionsResource, self).__init__(**kwargs)
 
     @use_kwargs(put_schema)
     def put(self, token_address, funds, initial_channel_target, joinable_funds_target):

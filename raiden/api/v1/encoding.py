@@ -29,6 +29,7 @@ from raiden.api.objects import (
 )
 from raiden.settings import (
     DEFAULT_SETTLE_TIMEOUT,
+    DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_JOINABLE_FUNDS_TARGET,
     DEFAULT_INITIAL_CHANNEL_TARGET,
 )
@@ -202,6 +203,7 @@ class ChannelRequestSchema(BaseSchema):
     token_address = AddressField(required=True)
     partner_address = AddressField(required=True)
     settle_timeout = fields.Integer(missing=DEFAULT_SETTLE_TIMEOUT)
+    reveal_timeout = fields.Integer(missing=DEFAULT_REVEAL_TIMEOUT)
     balance = fields.Integer(default=None, missing=None)
     state = fields.String(
         default=None,
