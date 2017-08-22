@@ -61,6 +61,7 @@ from raiden.transfer.log import (
     StateChangeLogSQLiteBackend,
 )
 from raiden.channel import (
+    BalanceProof,
     ChannelEndState,
     ChannelExternalState,
 )
@@ -521,12 +522,12 @@ class RaidenService(object):
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
-            netting_channel.opened(),
+            BalanceProof(None),
         )
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
-            netting_channel.opened(),
+            BalanceProof(None),
         )
 
         def register_channel_for_hashlock(channel, hashlock):
@@ -570,20 +571,16 @@ class RaidenService(object):
         # our_address is checked by detail
         assert channel_details['partner_address'] == serialized_channel.partner_address
 
-        opened_block = netting_channel.opened()
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
-            opened_block,
-            serialized_channel.our_transferred_amount,
+            BalanceProof(serialized_channel.our_balance_proof),
         )
-        our_state.nonce = serialized_channel.our_nonce
 
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
-            opened_block,
-            serialized_channel.partner_transferred_amount
+            BalanceProof(serialized_channel.partner_balance_proof),
         )
 
         def register_channel_for_hashlock(channel, hashlock):

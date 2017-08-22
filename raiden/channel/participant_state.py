@@ -3,7 +3,6 @@ from ethereum import slogging
 
 from raiden.mtree import Merkletree
 from raiden.utils import sha3
-from raiden.channel.balance_proof import BalanceProof
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -11,36 +10,33 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 class ChannelEndState(object):
     """ Tracks the state of one of the participants in a channel. """
 
-    def __init__(
-            self,
-            participant_address,
-            participant_balance,
-            opened_block,
-            transferred_amount=0):
+    def __init__(self,
+                 participant_address,
+                 participant_balance,
+                 balance_proof):
+
         # since ethereum only uses integral values we cannot use float/Decimal
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
 
-        if not opened_block > 0:
-            raise ValueError('opened_block must be non-zero and positive (not %s)' % opened_block)
-
         self.contract_balance = participant_balance
         self.address = participant_address
-
-        # amount of token transferred and unlocked
-        self.transferred_amount = transferred_amount
-
-        # Sequential nonce, current value has not been used, 0 must not be used
-        # since in the netting contract it represents null.
-        #
-        # The nonce value must be inside the netting channel allowed range
-        # that is defined in terms of the opened block
-        self.nonce = 1 * (opened_block * (2 ** 32))
 
         # contains the last known message with a valid signature and
         # transferred_amount, the secrets revealed since that transfer, and the
         # pending locks
-        self.balance_proof = BalanceProof()
+        self.balance_proof = balance_proof
+
+    def transferred_amount(self, other):
+        if other.balance_proof.balance_proof:
+            return other.balance_proof.balance_proof.transferred_amount
+        return 0
+
+    @property
+    def nonce(self):
+        if self.balance_proof.balance_proof:
+            return self.balance_proof.balance_proof.nonce
+        return None
 
     def locked(self):
         """ Return how much token is locked waiting for a secret. """
@@ -56,7 +52,11 @@ class ChannelEndState(object):
 
     def balance(self, other):
         """ Return the current available balance of the participant. """
-        return self.contract_balance - self.transferred_amount + other.transferred_amount
+        return (
+            self.contract_balance -
+            self.transferred_amount(other) +
+            other.transferred_amount(self)
+        )
 
     def distributable(self, other):
         """ Return the available amount of the token that can be transferred in
@@ -102,12 +102,14 @@ class ChannelEndState(object):
         self.balance_proof.register_balanceproof(balance_proof)
 
     def register_secretmessage(self, partner, message_secret):
-        lock = self.balance_proof.release_lock_by_secret(message_secret.secret)
-        amount = lock.amount
-        partner.transferred_amount += amount
-
         balance_proof = message_secret.to_balanceproof()
-        self.balance_proof.register_balanceproof(balance_proof)
+        hashlock = sha3(message_secret.secret)
+        lock = self.balance_proof.get_lock_by_hashlock(hashlock)
+
+        self.balance_proof.register_balanceproof_without_lock(
+            balance_proof,
+            lock,
+        )
 
     def register_secret(self, secret):
         """ Register a secret so that it can be used in a balance proof.

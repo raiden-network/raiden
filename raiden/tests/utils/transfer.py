@@ -7,6 +7,7 @@ from coincurve import PrivateKey
 from raiden.mtree import Merkletree
 from raiden.utils import sha3, privatekey_to_address
 from raiden.channel.netting_channel import Channel
+from raiden.messages import DirectTransfer
 
 
 def channel(app0, app1, token):
@@ -209,7 +210,10 @@ def assert_mirror(channel0, channel1):
     assert unclaimed0 == unclaimed1
 
     assert channel0.our_state.locked() == channel1.partner_state.locked()
-    assert channel0.our_state.transferred_amount == channel1.partner_state.transferred_amount
+    channel0_partner_transferred_amount = channel1.partner_state.transferred_amount(
+        channel1.our_state
+    )
+    assert channel0.transferred_amount == channel0_partner_transferred_amount
 
     balance0 = channel0.our_state.balance(channel0.partner_state)
     balance1 = channel1.partner_state.balance(channel1.our_state)
@@ -223,7 +227,11 @@ def assert_mirror(channel0, channel1):
     assert unclaimed1 == unclaimed0
 
     assert channel1.our_state.locked() == channel0.partner_state.locked()
-    assert channel1.our_state.transferred_amount == channel0.partner_state.transferred_amount
+
+    channel0_partner_transferred_amount = channel0.partner_state.transferred_amount(
+        channel0.our_state
+    )
+    assert channel1.transferred_amount == channel0_partner_transferred_amount
 
     balance1 = channel1.our_state.balance(channel1.partner_state)
     balance0 = channel0.partner_state.balance(channel0.our_state)
@@ -271,17 +279,31 @@ def assert_balance(channel0, balance, outstanding, distributable):
 
 def increase_transferred_amount(from_channel, to_channel, amount):
     """ Helper to increase the transferred_amount of the channels without the
-    need of creating/signing/register transfers.
+    need of creating transfers.
     """
-    from_channel.our_state.transferred_amount += amount
-    to_channel.partner_state.transferred_amount += amount
+    identifier = 1
+    nonce = from_channel.get_nonce() + 1
+    direct_transfer_message = DirectTransfer(
+        identifier=identifier,
+        nonce=nonce,
+        token=from_channel.token_address,
+        channel=from_channel.channel_address,
+        transferred_amount=from_channel.transferred_amount + amount,
+        recipient=from_channel.partner_state.address,
+        locksroot=from_channel.partner_state.balance_proof.merkleroot_for_unclaimed(),
+    )
+
+    # skipping the netting channel register_transfer because the message is not
+    # signed
+    from_channel.partner_state.register_direct_transfer(direct_transfer_message)
+    to_channel.our_state.register_direct_transfer(direct_transfer_message)
 
 
 def make_direct_transfer_from_channel(block_number, channel, partner_channel, amount, pkey):
     """ Helper to create and register a direct transfer from `channel` to
     `partner_channel`.
     """
-    identifier = channel.our_state.nonce
+    identifier = channel.get_nonce() + 1
 
     direct_transfer = channel.create_directtransfer(
         amount,
@@ -319,7 +341,7 @@ def make_mediated_transfer(
     """ Helper to create and register a mediated transfer from `channel` to
     `partner_channel`.
     """
-    identifier = channel.our_state.nonce
+    identifier = channel.get_nonce() + 1
     fee = 0
 
     mediated_transfer = channel.create_mediatedtransfer(  # pylint: disable=redefined-outer-name

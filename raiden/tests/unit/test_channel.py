@@ -5,7 +5,12 @@ from __future__ import division
 import pytest
 from ethereum import slogging
 
-from raiden.channel import Channel, ChannelEndState, ChannelExternalState
+from raiden.channel import (
+    BalanceProof,
+    Channel,
+    ChannelEndState,
+    ChannelExternalState,
+)
 from raiden.messages import (
     EMPTY_MERKLE_ROOT,
     DirectTransfer,
@@ -50,7 +55,6 @@ def make_external_state():
 
 
 def test_end_state():
-    netting_channel = NettingChannelMock()
     token_address = make_address()
     privkey1, address1 = make_privkey_address()
     address2 = make_address()
@@ -64,8 +68,8 @@ def test_end_state():
     lock_expiration = 10
     lock_hashlock = sha3(lock_secret)
 
-    state1 = ChannelEndState(address1, balance1, netting_channel.opened())
-    state2 = ChannelEndState(address2, balance2, netting_channel.opened())
+    state1 = ChannelEndState(address1, balance1, BalanceProof(None))
+    state2 = ChannelEndState(address2, balance2, BalanceProof(None))
 
     assert state1.contract_balance == balance1
     assert state2.contract_balance == balance2
@@ -96,7 +100,7 @@ def test_end_state():
 
     locked_transfer = LockedTransfer(
         1,
-        nonce=state1.nonce,
+        nonce=1,
         token=token_address,
         channel=channel_address,
         transferred_amount=transferred_amount,
@@ -180,7 +184,7 @@ def test_end_state():
         identifier=1,
         nonce=1,
         channel=channel_address,
-        transferred_amount=transferred_amount,
+        transferred_amount=transferred_amount + lock_amount,
         locksroot=EMPTY_MERKLE_ROOT,
         secret=lock_secret,
     )
@@ -206,7 +210,6 @@ def test_end_state():
 
 
 def test_invalid_timeouts():
-    netting_channel = NettingChannelMock()
     token_address = make_address()
     reveal_timeout = 5
     settle_timeout = 15
@@ -216,8 +219,8 @@ def test_invalid_timeouts():
     balance1 = 10
     balance2 = 10
 
-    our_state = ChannelEndState(address1, balance1, netting_channel.opened())
-    partner_state = ChannelEndState(address2, balance2, netting_channel.opened())
+    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
+    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
     external_state = make_external_state()
 
     # do not allow a reveal timeout larger than the settle timeout
@@ -257,7 +260,6 @@ def test_invalid_timeouts():
 
 
 def test_python_channel():
-    netting_channel = NettingChannelMock()
     token_address = make_address()
     privkey1, address1 = make_privkey_address()
     address2 = make_address()
@@ -269,8 +271,8 @@ def test_python_channel():
     settle_timeout = 15
     block_number = 10
 
-    our_state = ChannelEndState(address1, balance1, netting_channel.opened())
-    partner_state = ChannelEndState(address2, balance2, netting_channel.opened())
+    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
+    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
     external_state = make_external_state()
 
     test_channel = Channel(
@@ -284,7 +286,7 @@ def test_python_channel():
 
     assert test_channel.contract_balance == our_state.contract_balance
     assert test_channel.balance == our_state.balance(partner_state)
-    assert test_channel.transferred_amount == our_state.transferred_amount
+    assert test_channel.transferred_amount == our_state.transferred_amount(partner_state)
     assert test_channel.distributable == our_state.distributable(partner_state)
     assert test_channel.outstanding == our_state.locked()
     assert test_channel.outstanding == 0
@@ -717,7 +719,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
     # handcrafted transfer because channel.create_transfer won't create it
     transfer2 = DirectTransfer(
         1,  # TODO: fill in identifier
-        nonce=channel0.our_state.nonce,
+        nonce=channel0.get_nonce(),
         token=channel0.token_address,
         channel=channel0.channel_address,
         transferred_amount=channel1.balance + balance0 + amount,
@@ -769,16 +771,15 @@ def test_channel_must_accept_expired_locks():
     privkey2, address2 = make_privkey_address()
     token_address = make_address()
 
-    netting_channel = NettingChannelMock()
     our_state = ChannelEndState(
         address1,
         balance1,
-        netting_channel.opened(),
+        BalanceProof(None),
     )
     partner_state = ChannelEndState(
         address2,
         balance2,
-        netting_channel.opened(),
+        BalanceProof(None),
     )
     external_state = make_external_state()
 
@@ -793,7 +794,7 @@ def test_channel_must_accept_expired_locks():
 
     block_number = 10
     transfer = make_mediated_transfer(
-        nonce=test_channel.partner_state.nonce,
+        nonce=test_channel.get_nonce(),
         token=test_channel.token_address,
         channel=test_channel.channel_address,
         expiration=block_number + settle_timeout,
@@ -836,8 +837,8 @@ def test_channel_close_called_only_once():
     reveal_timeout = 5
     settle_timeout = 15
 
-    our_state = ChannelEndState(address1, balance1, netting_channel.opened())
-    partner_state = ChannelEndState(address2, balance2, netting_channel.opened())
+    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
+    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
 
     channel_for_hashlock = list()
     netting_channel = MockCheckCallsToClose()

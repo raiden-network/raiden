@@ -13,6 +13,7 @@ from raiden.blockchain.abi import (
     CONTRACT_REGISTRY,
 )
 from raiden.channel import Channel, ChannelEndState
+from raiden.channel import BalanceProof
 from raiden.utils import privatekey_to_address, get_contract_path
 
 
@@ -206,12 +207,12 @@ def channel_from_nettingcontract(
     our_state = ChannelEndState(
         our_address,
         our_balance,
-        external_state.opened_block,
+        BalanceProof(None),
     )
     partner_state = ChannelEndState(
         partner_address,
         partner_balance,
-        external_state.opened_block,
+        BalanceProof(None),
     )
 
     channel = Channel(
