@@ -585,7 +585,7 @@ def events_for_withdraw(transfers_pair):
 def secret_learned(state, secret, payee_address, new_payee_state):
     """ Set the state of the `payee_address` transfer, check the secret is
     being revealed backwards, and if necessary send out RevealSecret,
-    BalanceProof, and Withdraws.
+    SendBalanceProof, and Withdraws.
     """
     assert new_payee_state in STATE_SECRET_KNOWN
 
@@ -763,7 +763,7 @@ def handle_secretreveal(state, state_change):
 
     The Secret must propagate backwards through the chain of mediators, this
     function will record the learned secret, check if the secret is propagating
-    backwards (for the known paths), and send the BalanceProof/RevealSecret if
+    backwards (for the known paths), and send the SendBalanceProof/RevealSecret if
     necessary.
     """
     secret = state_change.secret
