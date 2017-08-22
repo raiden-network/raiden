@@ -515,7 +515,8 @@ class RaidenService(object):
 
         messages_to_send = []
         for channel in channels_list:
-            if channel.partner_state.balance_proof.is_unclaimed(hashlock):
+            # unlock a pending lock
+            if channel.our_state.balance_proof.is_unclaimed(hashlock):
                 secret = channel.create_secret(identifier, secret)
                 self.sign(secret)
 
@@ -532,7 +533,7 @@ class RaidenService(object):
                 channels_to_remove.append(channel)
 
             # withdraw a pending lock
-            if channel.our_state.balance_proof.is_unclaimed(hashlock):
+            if channel.partner_state.balance_proof.is_unclaimed(hashlock):
                 if partner_secret_message:
                     is_balance_proof = (
                         partner_secret_message.sender == channel.partner_state.address and

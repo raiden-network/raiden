@@ -195,8 +195,12 @@ def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1,
     assert_balance(channel0, balance0, locked_amount0, channel0.balance - locked_amount1)
     assert_balance(channel1, balance1, locked_amount1, channel1.balance - locked_amount0)
 
-    assert_locked(channel0, outstanding_locks0)
-    assert_locked(channel1, outstanding_locks1)
+    # a participant outstanding is the other pending locks.
+    pending_locks0 = outstanding_locks1
+    pending_locks1 = outstanding_locks0
+
+    assert_locked(channel0, pending_locks0)
+    assert_locked(channel1, pending_locks1)
 
     assert_mirror(channel0, channel1)
 
@@ -210,10 +214,7 @@ def assert_mirror(channel0, channel1):
     assert unclaimed0 == unclaimed1
 
     assert channel0.our_state.locked() == channel1.partner_state.locked()
-    channel0_partner_transferred_amount = channel1.partner_state.transferred_amount(
-        channel1.our_state
-    )
-    assert channel0.transferred_amount == channel0_partner_transferred_amount
+    assert channel0.transferred_amount == channel1.partner_state.transferred_amount
 
     balance0 = channel0.our_state.balance(channel0.partner_state)
     balance1 = channel1.partner_state.balance(channel1.our_state)
@@ -227,11 +228,7 @@ def assert_mirror(channel0, channel1):
     assert unclaimed1 == unclaimed0
 
     assert channel1.our_state.locked() == channel0.partner_state.locked()
-
-    channel0_partner_transferred_amount = channel0.partner_state.transferred_amount(
-        channel0.our_state
-    )
-    assert channel1.transferred_amount == channel0_partner_transferred_amount
+    assert channel1.transferred_amount == channel0.partner_state.transferred_amount
 
     balance1 = channel1.our_state.balance(channel1.partner_state)
     balance0 = channel0.partner_state.balance(channel0.our_state)
@@ -241,20 +238,20 @@ def assert_mirror(channel0, channel1):
     assert channel1.distributable == channel0.partner_state.distributable(channel0.our_state)
 
 
-def assert_locked(channel0, outstanding_locks):
+def assert_locked(channel0, pending_locks):
     """ Assert the locks create from `channel`. """
     # a locked transfer is registered in the _partner_ state
-    leafs = [sha3(lock.as_bytes) for lock in outstanding_locks]
+    leafs = [sha3(lock.as_bytes) for lock in pending_locks]
     hashroot = Merkletree(leafs).merkleroot
 
     assert len(channel0.our_state.balance_proof.hashlocks_to_pendinglocks) == len(
-        outstanding_locks
+        pending_locks
     )
     assert channel0.our_state.balance_proof.merkleroot_for_unclaimed() == hashroot
-    assert channel0.our_state.locked() == sum(lock.amount for lock in outstanding_locks)
-    assert channel0.outstanding == sum(lock.amount for lock in outstanding_locks)
+    assert channel0.our_state.locked() == sum(lock.amount for lock in pending_locks)
+    assert channel0.locked == sum(lock.amount for lock in pending_locks)
 
-    for lock in outstanding_locks:
+    for lock in pending_locks:
         assert lock.hashlock in channel0.our_state.balance_proof.hashlocks_to_pendinglocks
 
 
@@ -264,9 +261,9 @@ def assert_balance(channel0, balance, outstanding, distributable):
     assert channel0.distributable == distributable
     assert channel0.outstanding == outstanding
 
-    # the amount of token locked in our end of the channel is equal to how much
+    # the amount of token locked in the partner end of the channel is equal to how much
     # we have outstading
-    assert channel0.our_state.locked() == outstanding
+    assert channel0.partner_state.locked() == outstanding
 
     assert channel0.balance == channel0.our_state.balance(channel0.partner_state)
     assert channel0.distributable == channel0.our_state.distributable(channel0.partner_state)
@@ -278,9 +275,11 @@ def assert_balance(channel0, balance, outstanding, distributable):
 
 
 def increase_transferred_amount(from_channel, to_channel, amount):
-    """ Helper to increase the transferred_amount of the channels without the
-    need of creating transfers.
-    """
+    # increasing the transferred amount by a value larger than distributable
+    # would put one end of the channel in a negative balance, which is
+    # forbindden
+    assert from_channel.distributable >= amount, 'operation would end up in a incosistent state'
+
     identifier = 1
     nonce = from_channel.get_next_nonce()
     direct_transfer_message = DirectTransfer(
@@ -295,8 +294,8 @@ def increase_transferred_amount(from_channel, to_channel, amount):
 
     # skipping the netting channel register_transfer because the message is not
     # signed
-    from_channel.partner_state.register_direct_transfer(direct_transfer_message)
-    to_channel.our_state.register_direct_transfer(direct_transfer_message)
+    from_channel.our_state.register_direct_transfer(direct_transfer_message)
+    to_channel.partner_state.register_direct_transfer(direct_transfer_message)
 
 
 def make_direct_transfer_from_channel(block_number, channel, partner_channel, amount, pkey):

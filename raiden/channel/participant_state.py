@@ -18,15 +18,12 @@ class ChannelEndState(object):
 
         self.contract_balance = participant_balance
         self.address = participant_address
-
-        # contains the last known message with a valid signature and
-        # transferred_amount, the secrets revealed since that transfer, and the
-        # pending locks
         self.balance_proof = balance_proof
 
-    def transferred_amount(self, other):
-        if other.balance_proof.balance_proof:
-            return other.balance_proof.balance_proof.transferred_amount
+    @property
+    def transferred_amount(self):
+        if self.balance_proof.balance_proof:
+            return self.balance_proof.balance_proof.transferred_amount
         return 0
 
     @property
@@ -49,17 +46,13 @@ class ChannelEndState(object):
 
     def balance(self, other):
         """ Return the current available balance of the participant. """
-        return (
-            self.contract_balance -
-            self.transferred_amount(other) +
-            other.transferred_amount(self)
-        )
+        return self.contract_balance - self.transferred_amount + other.transferred_amount
 
     def distributable(self, other):
         """ Return the available amount of the token that can be transferred in
         the channel.
         """
-        return self.balance(other) - other.locked()
+        return self.balance(other) - self.locked()
 
     def compute_merkleroot_with(self, include):
         """ Compute the resulting merkle root if the lock `include` is added in
@@ -98,7 +91,7 @@ class ChannelEndState(object):
         balance_proof = direct_transfer.to_balanceproof()
         self.balance_proof.register_balanceproof(balance_proof)
 
-    def register_secretmessage(self, partner, message_secret):
+    def register_secretmessage(self, message_secret):
         balance_proof = message_secret.to_balanceproof()
         hashlock = sha3(message_secret.secret)
         lock = self.balance_proof.get_lock_by_hashlock(hashlock)

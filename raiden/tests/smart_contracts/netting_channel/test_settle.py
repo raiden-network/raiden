@@ -625,11 +625,13 @@ def test_netting(deposit, settle_timeout, tester_channels, tester_state, tester_
     initial_balance0 = tester_token.balanceOf(address0, sender=pkey0)
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey1)
 
-    transferred_amount0 = deposit * 3 + 30
-    increase_transferred_amount(channel0, channel1, transferred_amount0)
+    # increase the transferred amount by three times the deposits
+    for _ in range(3):
+        increase_transferred_amount(channel0, channel1, deposit)
+        increase_transferred_amount(channel1, channel0, deposit)
 
-    transferred_amount1 = deposit * 3 + 70
-    increase_transferred_amount(channel1, channel0, transferred_amount1)
+    transferred_amount0 = deposit * 3
+    transferred_amount1 = deposit * 3
 
     amount0 = 10
     transferred_amount0 += amount0

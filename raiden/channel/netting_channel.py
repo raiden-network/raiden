@@ -236,7 +236,7 @@ class Channel(object):
     @property
     def transferred_amount(self):
         """ Return how much we transferred to partner. """
-        return self.our_state.transferred_amount(self.partner_state)
+        return self.our_state.transferred_amount
 
     @property
     def balance(self):
@@ -262,11 +262,11 @@ class Channel(object):
         The locked value is equal to locked transfers that have been
         initialized but their secret has not being revealed.
         """
-        return self.partner_state.locked()
+        return self.our_state.locked()
 
     @property
     def outstanding(self):
-        return self.our_state.locked()
+        return self.partner_state.locked()
 
     def get_settle_expiration(self, block_number):
         closed_block = self.external_state.closed_block
@@ -278,7 +278,7 @@ class Channel(object):
         return blocks_until_settlement
 
     def handle_closed(self, block_number, closing_address):  # pylint: disable=unused-argument
-        balance_proof = self.our_state.balance_proof
+        balance_proof = self.partner_state.balance_proof
 
         # the channel was closed, update our half of the state if we need to
         if closing_address != self.our_state.address:
@@ -440,8 +440,8 @@ class Channel(object):
         is_invalid_nonce = (
             transfer.nonce < 1 or
             (
-                to_state.nonce is not None and
-                transfer.nonce != to_state.nonce + 1
+                from_state.nonce is not None and
+                transfer.nonce != from_state.nonce + 1
             )
         )
         if is_invalid_nonce:
@@ -462,7 +462,7 @@ class Channel(object):
         # a Secret was in traffic) the balance _will_ be wrong, so first check
         # the locksroot and then the balance
         if isinstance(transfer, LockedTransfer):
-            if to_state.balance_proof.is_pending(transfer.lock.hashlock):
+            if from_state.balance_proof.is_pending(transfer.lock.hashlock):
                 # this may occur on normal operation
                 if log.isEnabledFor(logging.INFO):
                     log.info(
@@ -472,16 +472,15 @@ class Channel(object):
                         to=pex(to_state.address),
                         hashlock=pex(transfer.lock.hashlock),
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
-                        lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
+                        lockhashes=lpex(from_state.balance_proof.unclaimed_merkletree()),
                         received_locksroot=pex(transfer.locksroot),
                     )
-
                 raise ValueError('hashlock is already registered')
 
             # As a receiver: Check that all locked transfers are registered in
             # the locksroot, if any hashlock is missing there is no way to
             # claim it while the channel is closing
-            expected_locksroot = to_state.compute_merkleroot_with(transfer.lock)
+            expected_locksroot = from_state.compute_merkleroot_with(transfer.lock)
             if expected_locksroot != transfer.locksroot:
                 # this should not happen
                 if log.isEnabledFor(logging.WARN):
@@ -491,7 +490,7 @@ class Channel(object):
                         from_=pex(from_state.address),
                         to=pex(to_state.address),
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
-                        lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
+                        lockhashes=lpex(from_state.balance_proof.unclaimed_merkletree()),
                         expected_locksroot=pex(expected_locksroot),
                         received_locksroot=pex(transfer.locksroot),
                     )
@@ -529,7 +528,7 @@ class Channel(object):
                 raise ValueError('Lock expires after the settlement period.')
 
         # only check the balance if the locksroot matched
-        if transfer.transferred_amount < from_state.transferred_amount(to_state):
+        if transfer.transferred_amount < from_state.transferred_amount:
             if log.isEnabledFor(logging.ERROR):
                 log.error(
                     'NEGATIVE TRANSFER',
@@ -541,7 +540,7 @@ class Channel(object):
 
             raise ValueError('Negative transfer')
 
-        amount = transfer.transferred_amount - from_state.transferred_amount(to_state)
+        amount = transfer.transferred_amount - from_state.transferred_amount
         distributable = from_state.distributable(to_state)
 
         if isinstance(transfer, DirectTransfer):
@@ -554,8 +553,8 @@ class Channel(object):
 
         elif isinstance(transfer, Secret):
             hashlock = sha3(transfer.secret)
-            lock = to_state.balance_proof.get_lock_by_hashlock(hashlock)
-            transferred_amount = from_state.transferred_amount(to_state) + lock.amount
+            lock = from_state.balance_proof.get_lock_by_hashlock(hashlock)
+            transferred_amount = from_state.transferred_amount + lock.amount
 
             # transfer.transferred_amount could be larger than the previous
             # transferred_amount + lock.amount, that scenario is a bug of the
@@ -579,15 +578,15 @@ class Channel(object):
                     node=pex(self.our_state.address),
                     from_=pex(from_state.address),
                     to=pex(to_state.address),
-                    currentlocksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
-                    lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
+                    currentlocksroot=pex(from_state.balance_proof.merkleroot_for_unclaimed()),
+                    lockhashes=lpex(from_state.balance_proof.unclaimed_merkletree()),
                     lock_amount=transfer.lock.amount,
                     lock_expiration=transfer.lock.expiration,
                     lock_hashlock=pex(transfer.lock.hashlock),
                     lockhash=pex(sha3(transfer.lock.as_bytes)),
                 )
 
-            to_state.register_locked_transfer(transfer)
+            from_state.register_locked_transfer(transfer)
 
             # register this channel as waiting for the secret (the secret can
             # be revealed through a message or a blockchain log)
@@ -597,10 +596,10 @@ class Channel(object):
             )
 
         if isinstance(transfer, DirectTransfer):
-            to_state.register_direct_transfer(transfer)
+            from_state.register_direct_transfer(transfer)
 
         elif isinstance(transfer, Secret):
-            to_state.register_secretmessage(from_state, transfer)
+            from_state.register_secretmessage(transfer)
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
@@ -609,14 +608,14 @@ class Channel(object):
                 from_=pex(from_state.address),
                 to=pex(to_state.address),
                 transfer=repr(transfer),
-                transferred_amount=from_state.transferred_amount(to_state),
+                transferred_amount=from_state.transferred_amount,
                 nonce=from_state.nonce,
-                current_locksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
+                current_locksroot=pex(from_state.balance_proof.merkleroot_for_unclaimed()),
             )
 
     def get_next_nonce(self):
-        if self.partner_state.nonce:
-            return self.partner_state.nonce + 1
+        if self.our_state.nonce:
+            return self.our_state.nonce + 1
 
         # 0 must not be used since in the netting contract it represents null.
         return 1
@@ -644,7 +643,7 @@ class Channel(object):
 
             raise ValueError('Insufficient funds')
 
-        transferred_amount = from_.transferred_amount(to_) + amount
+        transferred_amount = from_.transferred_amount + amount
         current_locksroot = to_.balance_proof.merkleroot_for_unclaimed()
 
         nonce = self.get_next_nonce()
@@ -682,8 +681,8 @@ class Channel(object):
 
         lock = Lock(amount, expiration, hashlock)
 
-        updated_locksroot = to_.compute_merkleroot_with(include=lock)
-        transferred_amount = from_.transferred_amount(to_)
+        updated_locksroot = from_.compute_merkleroot_with(include=lock)
+        transferred_amount = from_.transferred_amount
         nonce = self.get_next_nonce()
 
         return LockedTransfer(
@@ -762,15 +761,14 @@ class Channel(object):
         hashlock = sha3(secret)
 
         from_ = self.our_state
-        to_ = self.partner_state
 
-        lock = to_.balance_proof.get_lock_by_hashlock(hashlock)
+        lock = from_.balance_proof.get_lock_by_hashlock(hashlock)
         lockhashed = sha3(lock.as_bytes)
-        leafs = to_.balance_proof.unclaimed_merkletree()
+        leafs = from_.balance_proof.unclaimed_merkletree()
         leafs.remove(lockhashed)
 
         locksroot_with_pending_lock_removed = Merkletree(leafs).merkleroot or EMPTY_MERKLE_ROOT
-        transferred_amount = from_.transferred_amount(to_) + lock.amount
+        transferred_amount = from_.transferred_amount + lock.amount
 
         nonce = self.get_next_nonce()
 
