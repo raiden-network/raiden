@@ -242,7 +242,7 @@ class Channel(object):
     @property
     def transferred_amount(self):
         """ Return how much we transferred to partner. """
-        return self.our_state.transferred_amount
+        return self.our_state.transferred_amount(self.partner_state)
 
     @property
     def balance(self):
@@ -440,7 +440,14 @@ class Channel(object):
         # nonce is changed only when a transfer is un/registered, if the test
         # fails either we are out of sync, a message out of order, or it's a
         # forged transfer
-        if transfer.nonce < 1 or transfer.nonce != from_state.nonce:
+        is_invalid_nonce = (
+            transfer.nonce < 1 or
+            (
+                from_state.nonce is not None and
+                transfer.nonce != from_state.nonce + 1
+            )
+        )
+        if is_invalid_nonce:
             if log.isEnabledFor(logging.WARN):
                 log.warn(
                     'Received out of order transfer from %s. Expected '
@@ -507,7 +514,7 @@ class Channel(object):
                 raise ValueError('Lock expires after the settlement period.')
 
         # only check the balance if the locksroot matched
-        if transfer.transferred_amount < from_state.transferred_amount:
+        if transfer.transferred_amount < from_state.transferred_amount(to_state):
             if log.isEnabledFor(logging.ERROR):
                 log.error(
                     'NEGATIVE TRANSFER',
@@ -519,7 +526,7 @@ class Channel(object):
 
             raise ValueError('Negative transfer')
 
-        amount = transfer.transferred_amount - from_state.transferred_amount
+        amount = transfer.transferred_amount - from_state.transferred_amount(to_state)
         distributable = from_state.distributable(to_state)
 
         if isinstance(transfer, DirectTransfer):
@@ -533,7 +540,7 @@ class Channel(object):
         elif isinstance(transfer, Secret):
             hashlock = sha3(transfer.secret)
             lock = to_state.balance_proof.get_lock_by_hashlock(hashlock)
-            transferred_amount = from_state.transferred_amount + lock.amount
+            transferred_amount = from_state.transferred_amount(to_state) + lock.amount
 
             # transfer.transferred_amount could be larger than the previous
             # transferred_amount + lock.amount, that scenario is a bug of the
@@ -581,9 +588,6 @@ class Channel(object):
         elif isinstance(transfer, Secret):
             to_state.register_secretmessage(from_state, transfer)
 
-        from_state.transferred_amount = transfer.transferred_amount
-        from_state.nonce += 1
-
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
                 'REGISTERED TRANSFER',
@@ -595,6 +599,14 @@ class Channel(object):
                 nonce=from_state.nonce,
                 current_locksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
             )
+
+    def get_nonce(self):
+        if self.our_state.nonce:
+            return self.our_state.nonce
+
+        # Sequential nonce, current value has not been used, 0 must not be used
+        # since in the netting contract it represents null.
+        return self.external_state.opened_block * (2 ** 32)
 
     def create_directtransfer(self, amount, identifier):
         """ Return a DirectTransfer message.
@@ -619,12 +631,14 @@ class Channel(object):
 
             raise ValueError('Insufficient funds')
 
-        transferred_amount = from_.transferred_amount + amount
+        transferred_amount = from_.transferred_amount(to_) + amount
         current_locksroot = to_.balance_proof.merkleroot_for_unclaimed()
+
+        nonce = self.get_nonce() + 1
 
         return DirectTransfer(
             identifier=identifier,
-            nonce=from_.nonce,
+            nonce=nonce,
             token=self.token_address,
             channel=self.channel_address,
             transferred_amount=transferred_amount,
@@ -656,11 +670,12 @@ class Channel(object):
         lock = Lock(amount, expiration, hashlock)
 
         updated_locksroot = to_.compute_merkleroot_with(include=lock)
-        transferred_amount = from_.transferred_amount
+        transferred_amount = from_.transferred_amount(to_)
+        nonce = self.get_nonce() + 1
 
         return LockedTransfer(
             identifier=identifier,
-            nonce=from_.nonce,
+            nonce=nonce,
             token=self.token_address,
             channel=self.channel_address,
             transferred_amount=transferred_amount,
@@ -742,11 +757,13 @@ class Channel(object):
         leafs.remove(lockhashed)
 
         locksroot_with_pending_lock_removed = Merkletree(leafs).merkleroot or EMPTY_MERKLE_ROOT
-        transferred_amount = from_.transferred_amount + lock.amount
+        transferred_amount = from_.transferred_amount(to_) + lock.amount
+
+        nonce = self.get_nonce() + 1
 
         secret = Secret(
             identifier,
-            from_.nonce,
+            nonce,
             self.channel_address,
             transferred_amount,
             locksroot_with_pending_lock_removed,
@@ -830,11 +847,6 @@ class ChannelSerialization(object):
         self.our_balance_proof = channel_instance.our_state.balance_proof
         self.partner_balance_proof = channel_instance.partner_state.balance_proof
 
-        self.our_transferred_amount = channel_instance.our_state.transferred_amount
-        self.partner_transferred_amount = channel_instance.partner_state.transferred_amount
-
-        self.our_nonce = channel_instance.our_state.nonce
-
     def __eq__(self, other):
         if isinstance(other, ChannelSerialization):
             return (
@@ -844,10 +856,7 @@ class ChannelSerialization(object):
                 self.our_address == other.our_address and
                 self.reveal_timeout == other.reveal_timeout and
                 self.our_balance_proof == other.our_balance_proof and
-                self.partner_balance_proof == other.partner_balance_proof and
-                self.our_transferred_amount == other.our_transferred_amount and
-                self.partner_transferred_amount == other.partner_transferred_amount and
-                self.our_nonce == other.our_nonce
+                self.partner_balance_proof == other.partner_balance_proof
             )
         return False
 

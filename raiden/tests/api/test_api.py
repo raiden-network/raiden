@@ -11,8 +11,11 @@ from raiden.api.v1.encoding import (
     AddressField,
     HexAddressConverter,
 )
-from raiden.channel.netting_channel import Channel
-from raiden.channel.participant_state import ChannelEndState
+from raiden.channel import (
+    BalanceProof,
+    Channel,
+    ChannelEndState,
+)
 from raiden.utils import channel_to_api_dict
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
@@ -111,12 +114,12 @@ def test_channel_to_api_dict():
     our_state = ChannelEndState(
         our_address,
         our_balance,
-        opened_block,
+        BalanceProof(None),
     )
     partner_state = ChannelEndState(
         partner_address,
         partner_balance,
-        opened_block,
+        BalanceProof(None),
     )
 
     # mock external state to provide the channel address

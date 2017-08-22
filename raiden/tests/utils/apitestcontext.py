@@ -3,7 +3,12 @@ import json
 
 from pyethapp.jsonrpc import address_decoder
 
-from raiden.channel import Channel, ChannelEndState, ChannelExternalState
+from raiden.channel import (
+    BalanceProof,
+    Channel,
+    ChannelEndState,
+    ChannelExternalState,
+)
 from raiden.api.objects import ChannelList
 from raiden.api.v1.encoding import (
     ChannelSchema,
@@ -144,8 +149,16 @@ class ApiTestContext():
         our_address = make_address()
         our_balance = balance
         partner_balance = balance
-        our_state = ChannelEndState(our_address, our_balance, 1)
-        partner_state = ChannelEndState(partner_address, partner_balance, 1)
+        our_state = ChannelEndState(
+            our_address,
+            our_balance,
+            BalanceProof(None),
+        )
+        partner_state = ChannelEndState(
+            partner_address,
+            partner_balance,
+            BalanceProof(None),
+        )
 
         channel_for_hashlock = list()
         netting_channel = NettingChannelMock(make_address())

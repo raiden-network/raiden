@@ -32,7 +32,7 @@ UnlockProof = namedtuple('UnlockProof', ('merkle_proof', 'lock_encoded', 'secret
 class BalanceProof(object):
     """ Saves the state required to settle a netting contract. """
 
-    def __init__(self):
+    def __init__(self, balance_proof):
         # Mediating locks for which the secret is unknown
         self.hashlocks_to_pendinglocks = dict()
 
@@ -41,7 +41,7 @@ class BalanceProof(object):
         self.hashlocks_to_unclaimedlocks = dict()
 
         # The latest known balance proof that can be used on-chain
-        self.balance_proof = None
+        self.balance_proof = balance_proof
 
     def unclaimed_merkletree(self):
         all_locks = self.hashlocks_to_pendinglocks.values()
@@ -88,6 +88,29 @@ class BalanceProof(object):
             lock.lock.amount
             for lock in alllocks
         )
+
+    def register_balanceproof_without_lock(self, balance_proof, lock):
+        lockhashed = sha3(lock.as_bytes)
+
+        if not isinstance(balance_proof, BalanceProofState):
+            raise ValueError('balance_proof must be a BalanceProof instance')
+
+        if not self.is_known(lock.hashlock):
+            raise ValueError('hashlock is not registered')
+
+        leafs = self.unclaimed_merkletree()
+        leafs.remove(lockhashed)
+        new_locksroot = Merkletree(leafs).merkleroot
+
+        if balance_proof.locksroot != new_locksroot:
+            raise InvalidLocksRoot(new_locksroot, balance_proof.locksroot)
+
+        if lock.hashlock in self.hashlocks_to_pendinglocks:
+            del self.hashlocks_to_pendinglocks[lock.hashlock]
+        else:
+            del self.hashlocks_to_unclaimedlocks[lock.hashlock]
+
+        self.balance_proof = balance_proof
 
     def register_balanceproof_with_lock(self, balance_proof, lock):
         lockhashed = sha3(lock.as_bytes)

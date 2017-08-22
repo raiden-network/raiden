@@ -236,7 +236,9 @@ class RaidenMessageHandler(object):
                 )
             )
 
-        amount = message.transferred_amount - channel.partner_state.transferred_amount
+        amount = message.transferred_amount - channel.partner_state.transferred_amount(
+            channel.our_state
+        )
         state_change = ReceiveTransferDirect(
             message.identifier,
             amount,
