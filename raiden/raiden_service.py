@@ -575,8 +575,9 @@ class RaidenService(object):
             channel_details['our_address'],
             channel_details['our_balance'],
             opened_block,
-            serialized_channel.our_transferred_amount
+            serialized_channel.our_transferred_amount,
         )
+        our_state.nonce = serialized_channel.our_nonce
 
         partner_state = ChannelEndState(
             channel_details['partner_address'],
