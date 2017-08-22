@@ -68,7 +68,10 @@ class ChannelExternalState(object):
         return self._settled_block
 
     def set_opened(self, block_number):
-        if self._opened_block != 0:
+        if block_number <= 0:
+            raise ValueError('opened block must be non-zero and positive')
+
+        if self._opened_block != 0 and self._opened_block != block_number:
             raise RuntimeError(
                 'channel is already open on different block prior:%s new:%s'
                 % (self._opened_block, block_number)
@@ -77,6 +80,9 @@ class ChannelExternalState(object):
         self._opened_block = block_number
 
     def set_closed(self, block_number):
+        if block_number <= 0:
+            raise ValueError('closed block must be non-zero and positive')
+
         if self._closed_block != 0 and self._closed_block != block_number:
             return False
 
@@ -85,6 +91,9 @@ class ChannelExternalState(object):
         return True
 
     def set_settled(self, block_number):
+        if block_number <= 0:
+            raise ValueError('settled block must be non-zero and positive')
+
         if self._settled_block != 0 and self._settled_block != block_number:
             return False
 
