@@ -54,7 +54,7 @@ variable "instance_type" {
 variable "volume_size" {
     type = "map"
     default = {
-        "infrastructure" = 10,
+        "infrastructure" = 50,
         "eth" = 30,
     }
 }

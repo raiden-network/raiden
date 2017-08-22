@@ -2,6 +2,7 @@
   gather_facts: no
   become: yes
   roles:
+    - ssh_keys
     - hostname
     - docker
 
