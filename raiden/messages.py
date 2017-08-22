@@ -6,7 +6,7 @@ from raiden.encoding import messages, signing
 from raiden.encoding.format import buffer_for
 from raiden.encoding.signing import recover_publickey
 from raiden.utils import publickey_to_address, sha3, ishash, pex
-from raiden.transfer.state import BalanceProof
+from raiden.transfer.state import BalanceProofState
 
 __all__ = (
     'Ack',
@@ -260,7 +260,7 @@ class EnvelopeMessage(SignedMessage):
         return message
 
     def to_balanceproof(self):
-        return BalanceProof(
+        return BalanceProofState(
             self.nonce,
             self.transferred_amount,
             self.locksroot,

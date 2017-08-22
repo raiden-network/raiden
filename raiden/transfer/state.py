@@ -147,7 +147,7 @@ class RoutesState(State):
         return not self.__eq__(other)
 
 
-class BalanceProof(State):
+class BalanceProofState(State):
     def __init__(
             self,
             nonce,
@@ -165,7 +165,7 @@ class BalanceProof(State):
         self.signature = signature
 
     def __eq__(self, other):
-        if isinstance(other, BalanceProof):
+        if isinstance(other, BalanceProofState):
             return (
                 self.nonce == other.nonce and
                 self.transferred_amount == other.transferred_amount and

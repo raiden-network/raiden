@@ -4,7 +4,7 @@ from itertools import chain
 
 from ethereum import slogging
 
-from raiden.transfer.state import BalanceProof as BalanceProofState
+from raiden.transfer.state import BalanceProofState
 from raiden.messages import EMPTY_MERKLE_ROOT
 from raiden.mtree import Merkletree
 from raiden.utils import sha3
