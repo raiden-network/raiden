@@ -78,23 +78,19 @@ class ChannelExternalState(object):
 
     def set_closed(self, block_number):
         if self._closed_block != 0 and self._closed_block != block_number:
-            raise RuntimeError(
-                'channel is already closed on different block %s %s'
-                % (self._closed_block, block_number)
-            )
+            return False
 
         self._closed_block = block_number
         self.close_event.set()
+        return True
 
     def set_settled(self, block_number):
         if self._settled_block != 0 and self._settled_block != block_number:
-            raise RuntimeError(
-                'channel is already settled on different block %s %s'
-                % (self._settled_block, block_number)
-            )
+            return False
 
         self._settled_block = block_number
         self.settle_event.set()
+        return True
 
     def query_settled(self):
         # FIXME: the if None: return 0 constraint should be ensured on the
@@ -825,15 +821,27 @@ class Channel(object):
 
         elif isinstance(state_change, ContractReceiveClosed):
             if state_change.channel_address == self.channel_address:
-                self.external_state.set_closed(state_change.block_number)
-
-                self.handle_closed(state_change.block_number)
+                if self.external_state.set_closed(state_change.block_number):
+                    self.handle_closed(state_change.block_number)
+                else:
+                    log.warn(
+                        'channel is already closed on a different block',
+                        channel_address=pex(self.channel_address),
+                        closed_block=self._closed_block,
+                        this_block=state_change.block_number
+                    )
 
         elif isinstance(state_change, ContractReceiveSettled):
             if state_change.channel_address == self.channel_address:
-                self.external_state.set_settled(state_change.block_number)
-
-                self.handle_settled(state_change.block_number)
+                if self.external_state.set_settled(state_change.block_number):
+                    self.handle_settled(state_change.block_number)
+                else:
+                    log.warn(
+                        'channel is already settled on a different block',
+                        channel_address=pex(self.channel_address),
+                        settled_block=self._settled_block,
+                        this_block=state_change.block_number
+                    )
 
         elif isinstance(state_change, ContractReceiveBalance):
             participant_address = state_change.participant_address
