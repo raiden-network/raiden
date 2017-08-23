@@ -1064,9 +1064,9 @@ class NettingChannel(object):
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
-                locksroot=locksroot,
-                extra_hash=extra_hash,
-                signature=signature,
+                locksroot=encode_hex(locksroot),
+                extra_hash=encode_hex(extra_hash),
+                signature=encode_hex(signature),
             )
 
             self.client.poll(
@@ -1079,9 +1079,9 @@ class NettingChannel(object):
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
-                locksroot=locksroot,
-                extra_hash=extra_hash,
-                signature=signature,
+                locksroot=encode_hex(locksroot),
+                extra_hash=encode_hex(extra_hash),
+                signature=encode_hex(signature),
             )
             raise
         else:
@@ -1090,9 +1090,9 @@ class NettingChannel(object):
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
-                locksroot=locksroot,
-                extra_hash=extra_hash,
-                signature=signature,
+                locksroot=encode_hex(locksroot),
+                extra_hash=encode_hex(extra_hash),
+                signature=encode_hex(signature),
             )
 
     def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
@@ -1118,9 +1118,9 @@ class NettingChannel(object):
                     contract=pex(self.address),
                     nonce=nonce,
                     transferred_amount=transferred_amount,
-                    locksroot=locksroot,
-                    extra_hash=extra_hash,
-                    signature=signature,
+                    locksroot=encode_hex(locksroot),
+                    extra_hash=encode_hex(extra_hash),
+                    signature=encode_hex(signature),
                 )
 
                 raise
@@ -1130,9 +1130,9 @@ class NettingChannel(object):
                     contract=pex(self.address),
                     nonce=nonce,
                     transferred_amount=transferred_amount,
-                    locksroot=locksroot,
-                    extra_hash=extra_hash,
-                    signature=signature,
+                    locksroot=encode_hex(locksroot),
+                    extra_hash=encode_hex(extra_hash),
+                    signature=encode_hex(signature),
                 )
             # TODO: check if the ChannelSecretRevealed event was emitted and if
             # it wasn't raise an error
