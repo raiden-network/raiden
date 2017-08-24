@@ -29,7 +29,7 @@ The Developer Preview includes
 - A :doc:`REST API <rest_api>` with endpoints for all functionality.
 - Possibility to create token networks for all ERC20 tokens.
 - Restartability of Raiden nodes in case of a proper shutdown of the Raiden.
-- :ref:`ERC20 token swaps <token_swaps>`.
+- :ref:`ERC20 token swaps <token-swaps>`.
 
 
 The Developer Preview is not
