@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from docutils.parsers.rst.directives.admonitions import BaseAdmonition
+from sphinx.util import compat
+compat.make_admonition = BaseAdmonition
 #
 # Raiden documentation build configuration file, created by
 # sphinx-quickstart2 on Mon Oct 24 10:55:13 2016.
@@ -38,6 +41,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
+    'sphinxcontrib.images',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

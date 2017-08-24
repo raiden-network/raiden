@@ -11,7 +11,7 @@ The main focus of the web application is to display functionality and not to loo
 
 Running the web application
 ---------------------------
-There are a few simple steps that needs to be carried out in order to run the Raiden web application. Firstly, Raiden needs to be installed. See :doc:`install instructions <installation>` for this.
+There are a few simple steps that needs to be carried out in order to run the Raiden web application. Firstly, Raiden needs to be installed. See :ref:`install instructions <installation>` for this.
 
 The only dependency needed to run the web application is `node.js <https://docs.npmjs.com/getting-started/installing-node>`_.
 
@@ -21,7 +21,7 @@ Once Raiden and node.js has been installed, it is quite easy to install and star
 
 This could be run automatically as part of installing Raiden, but to keep the run time of tests down, it's not.
 
-With the web application installed, we can :doc:`fire up Raiden <running_raiden>`. Raiden can be started without the web application by providing the ``--no-web-ui`` flag.
+With the web application installed, we can :ref:`fire up Raiden <running_raiden>`. Raiden can be started without the web application by providing the ``--no-web-ui`` flag.
 
 Now all that is left to do is to navigate to `localhost:5001 <localhost:5001>`_ and interaction with Raiden through a web application can begin.
 
@@ -32,7 +32,7 @@ The first thing that will meet the user is the landing page. The landing page is
 
 Below is a screenshot of the landing page.
 
-.. image:: images/raiden_webui_landing_page_screenshot.png
+.. thumbnail:: images/raiden_webui_landing_page_screenshot.png
     :alt: Raiden web app landing page
 
 One last thing that might be interesting to note is that the address of the running Raiden node is always displayed in the top bar.
@@ -55,7 +55,7 @@ The last point the ``Actions`` menu is ``Watch Events``. This will simply open t
 In this view it is also possible to ``Swap Tokens``. This is done by pressing the ``Swap Tokens`` button and then filling in the form. For more information on what a token swap is, please see :ref:`token swaps <token-swaps>`.
 
 
-.. image:: images/raiden_webui_tokens_view_screenshot.png
+.. thumbnail:: images/raiden_webui_tokens_page_screenshot.png
     :alt: Raiden web app tokens page
 
 Above is a screenshot of the ``Tokens`` view with some registered tokens.
@@ -69,7 +69,7 @@ Once a channel is opened it will show up in the list of open channels. For each 
 ``Transfer`` sends a transfer to the counterparty of the channel. ``Deposit`` allows the user to deposit more funds in the channel. ``Close`` closes the channel and updated the ``State`` of the channel to ``closed``. Once the channel is closed no more transfers can be carried out and the ``settle_timeout`` is initialised. Furthermore once the ``settle_timeout`` has expired ``Settle`` can be called. This will settle the channel and payout the correct amount of the deposit to each channel participant. It is possible to sort the list of channels by any of the columns or to search for a specific partner or token address etc. using the ``Filter`` field.
 
 
-.. image:: images/raiden_webui_channels_view_screenshot.png
+.. thumbnail:: images/raiden_webui_channels_page_screenshot.png
     :alt: Raiden web app channels page
 
 Above is a screenshot of the ``Channels`` view with some open channels.
