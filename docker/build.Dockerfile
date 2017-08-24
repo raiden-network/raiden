@@ -90,4 +90,4 @@ RUN sed -i -s '1 s/^\#\!.*python\(.*\)/#!\/usr\/bin\/env python\1/' /raiden.AppD
 RUN apt-get -y install python
 
 # how to build AppImage
-RUN echo "\n\nRun these commands to generate the AppImage:\n\tdocker run --name bundler --privileged -e ARCH=x86_64 -e APP=raiden -e LOWERAPP=raiden --workdir / --entrypoint /bin/bash raidenbundler -c 'source functions.sh && generate_appimage'\ndocker cp bundler:raiden--x86_64.AppImage .\n\tdocker rm bundler\n\n"
+RUN echo "\n\nRun these commands to generate the AppImage:\n\tdocker run --name bundler --privileged -e ARCH=x86_64 -e APP=raiden -e LOWERAPP=raiden --workdir / --entrypoint /bin/bash raidenbundler -c 'source functions.sh && generate_appimage'\ndocker cp bundler:/out/raiden-.glibcPRIVATE-x86_64.AppImage dist/raiden--x86_64.AppImage\n\tdocker rm bundler\n\n"
