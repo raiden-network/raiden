@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from ethereum.utils import encode_hex
 from raiden.transfer.architecture import State
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
@@ -225,10 +226,10 @@ class LockedTransferState(State):
         return '<HashTimeLocked id={} amount={} token={} target={} expire={} hashlock={}>'.format(
             self.identifier,
             self.amount,
-            self.token,
-            self.target,
+            encode_hex(self.token),
+            encode_hex(self.target),
             self.expiration,
-            self.hashlock,
+            encode_hex(self.hashlock),
         )
 
     def almost_equal(self, other):
@@ -359,3 +360,17 @@ class MediationPairState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __repr__(self):
+        return (
+            '<MediationPairState payer_route:{payer_route} payer_transfer:{payer_transfer} '
+            'payer_state:{payer_state} payee_route:{payee_route} '
+            'payee_transfer:{payee_transfer} payee_state:{payee_state}>'
+        ).format(
+            payer_route=self.payer_route,
+            payer_transfer=self.payer_transfer,
+            payer_state=self.payer_state,
+            payee_route=self.payee_route,
+            payee_transfer=self.payee_transfer,
+            payee_state=self.payee_state
+        )
