@@ -4,7 +4,7 @@ FROM ubuntu:12.04.5
 # install build dependencies
 RUN apt-get update && \
  apt-get install -y curl wget automake build-essential git-core libffi-dev \ 
- libgmp-dev libssl-dev libtool pkg-config fuse
+ libgmp-dev libssl-dev libtool pkg-config fuse libsqlite3-dev
 
 # prepare AppDir
 RUN bash -c 'mkdir -p /raiden.AppDir/usr/{local,bin,share,lib}/'
@@ -40,7 +40,7 @@ RUN mkdir -p /apps && \
     git checkout $RAIDEN_VERSION && \
     sed -s 's/^-e //' requirements.txt > _requirements.txt && \
     /raiden.AppDir/usr/bin/pip install -r _requirements.txt && \
-    PATH=/raiden.AppDir/usr/bin:$PATH /usr/bin/env python setup.py compile_contracts install && \
+    PATH=/raiden.AppDir/usr/bin:$PATH /usr/bin/env python setup.py compile_contracts build install && \
     find /raiden.AppDir/ -iname '*.pyo' -exec rm {} \; && \
     rm /raiden.AppDir/usr/lib/libpython*.a
 
