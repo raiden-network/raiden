@@ -1,7 +1,7 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule, APP_INITIALIZER } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { HttpModule, Http } from '@angular/http';
+import { HttpClientModule } from '@angular/common/http';
 import { DataTableModule, SharedModule, DataListModule, CarouselModule,
     ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule,
     TabViewModule, DropdownModule, MessagesModule, MenuModule,
@@ -61,7 +61,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         BrowserModule,
         FormsModule,
         ReactiveFormsModule,
-        HttpModule,
+        HttpClientModule,
         DataTableModule,
         SharedModule,
         DataListModule,

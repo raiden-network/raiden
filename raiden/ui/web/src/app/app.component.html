@@ -1,8 +1,14 @@
 <div class="topnav" id="myTopnav">
   <img src="assets/favicon.png">
   <a target="_blank" href="http://raiden.network/">Raiden Network</a>
-  <strong>{{raidenAddress}}</strong>
-  <i class="fa fa-bars fa-2x toggle-btn" (click)="menuCollapsed=!menuCollapsed"></i>
+  <strong class="address">{{raidenAddress}}</strong>
+  <i class="fa fa-bars fa-2x toggle-btn pull-right" (click)="menuCollapsed=!menuCollapsed"></i>
+  <a class="busy pull-right" *ngIf="raidenService.requestsCnt$ | async; let reqCnt">
+    <span class="fa-stack">
+      <i class="fa fa-spinner fa-pulse fa-fw fa-stack-2x"></i>
+      <i class="fa fa-stack-1x counter">{{ reqCnt }}</i>
+    </span>
+  </a>
 </div>
 <div class="nav-side-menu" [class.collapsed]="menuCollapsed">
   <div class="menu-list">

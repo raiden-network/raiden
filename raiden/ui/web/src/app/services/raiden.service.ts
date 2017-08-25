@@ -1,6 +1,7 @@
 import { Injectable, NgZone } from '@angular/core';
-import { Http, Headers, RequestOptions, Response, URLSearchParams } from '@angular/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { RaidenConfig } from './raiden.config';
 import { tokenabi } from './tokenabi';
 import { Usertoken } from '../models/usertoken';
@@ -19,7 +20,12 @@ export class RaidenService {
     private userTokens: { [id: string]: Usertoken |null} = {};
     private _identifier: number = Math.floor(Math.random() * 900 + 100);
 
-    constructor(private http: Http,
+    private _requestsSubject = new BehaviorSubject<number>(0);
+    public readonly requestsCnt$ = this._requestsSubject.asObservable()
+        .scan((acc, value) => Math.max(acc + value, 0), 0);
+
+    constructor(
+        private http: HttpClient,
         private config: RaidenConfig,
         private sharedService: SharedService,
         private zone: NgZone) {
@@ -28,6 +34,13 @@ export class RaidenService {
 
     private zoneEncap(cb: CallbackFunc): CallbackFunc {
         return (err, res) => this.zone.run(() => cb(err, res));
+    }
+
+    private httpEncap<T>(req: Observable<T>): Observable<T> {
+        return Observable.of(true)
+            .do(() => this.requestStarted(req))
+            .switchMap(() => req)
+            .finally(() => this.requestFinished(req));
     }
 
     get identifier(): number {
@@ -43,23 +56,30 @@ export class RaidenService {
             this.config.web3.eth.getBlockNumber(this.zoneEncap(cb)))();
     }
 
+    requestStarted(req) {
+        this._requestsSubject.next(+1);
+    }
+
+    requestFinished(req) {
+        this._requestsSubject.next(-1);
+    }
+
     public getRaidenAddress(): Observable<string> {
-        return this.http.get(`${this.config.api}/address`)
-            .map((response) => this.raidenAddress = response.json().our_address)
+        return this.httpEncap(this.http.get<{ our_address: string }>(`${this.config.api}/address`))
+            .map((data) => this.raidenAddress = data.our_address)
             .catch((error) => this.handleError(error));
     }
 
-    public getChannels(): Observable<Channel[]> {
-        return this.http.get(`${this.config.api}/channels`)
-            .map((response) => <Channel[]>response.json())
+    public getChannels(): Observable<Array<Channel>> {
+        return this.httpEncap(this.http.get<Array<Channel>>(`${this.config.api}/channels`))
             .catch((error) => this.handleError(error));
     }
 
-    public getTokensBalances(refresh: boolean = true): Observable<Usertoken[]> {
-        return this.http.get(`${this.config.api}/tokens`)
+    public getTokensBalances(refresh: boolean = true): Observable<Array<Usertoken>> {
+        return this.httpEncap(this.http.get<Array<{ address: string }>>(`${this.config.api}/tokens`))
             .combineLatest(this.getChannels())
-            .map(([response, channels]): Observable<Usertoken>[] => {
-                const tokenArray: Array<{ address: string }> = response.json();
+            .map(([data, channels]): Array<Observable<Usertoken>> => {
+                const tokenArray = data;
                 return tokenArray
                     .map((token) => this.getUsertoken(
                         token.address,
@@ -74,8 +94,7 @@ export class RaidenService {
                         })
                     );
             })
-            .switchMap((obsArray) => Observable.zip(...obsArray)
-                .first())
+            .switchMap((obsArray) => Observable.zip(...obsArray).first())
             .map((tokenArray) => tokenArray.filter((token) => !!token))
             .catch((error) => this.handleError(error));
     }
@@ -84,7 +103,7 @@ export class RaidenService {
         partnerAddress: string,
         tokenAddress: string,
         balance: number,
-        settleTimeout: number): Observable<any> {
+        settleTimeout: number): Observable<Channel> {
         console.log('Inside the open channel service');
         const data = {
             'partner_address': partnerAddress,
@@ -92,14 +111,8 @@ export class RaidenService {
             'balance': balance,
             'settle_timeout': settleTimeout
         };
-        const headers = new Headers({ 'Content-Type': 'application/json' });
-        const options = new RequestOptions({ headers: headers });
-        return this.http.put(`${this.config.api}/channels`,
-            JSON.stringify(data),
-            options)
-            .map((response) => response.json())
+        return this.httpEncap(this.http.put<Channel>(`${this.config.api}/channels`, data))
             .catch((error) => this.handleError(error));
-
     }
 
     public initiateTransfer(
@@ -110,12 +123,8 @@ export class RaidenService {
             'amount': amount,
             'identifier': this.identifier
         };
-        const headers = new Headers({ 'Content-Type': 'application/json' });
-        const options = new RequestOptions({ headers: headers });
         console.log(`${this.config.api}/transfers/${tokenAddress}/${partnerAddress}`);
-        return this.http.post(`${this.config.api}/transfers/${tokenAddress}/${partnerAddress}`,
-            JSON.stringify(data), options)
-            .map((res) => res.json())
+        return this.httpEncap(this.http.post(`${this.config.api}/transfers/${tokenAddress}/${partnerAddress}`, data))
             .catch((error) => this.handleError(error));
     }
 
@@ -123,11 +132,7 @@ export class RaidenService {
         const data = {
             'balance': balance
         };
-        const headers = new Headers({ 'Content-Type': 'application/json' });
-        const options = new RequestOptions({ headers: headers });
-        return this.http.patch(`${this.config.api}/channels/${channelAddress}`,
-            JSON.stringify(data), options)
-            .map((response) => response.json())
+        return this.httpEncap(this.http.patch(`${this.config.api}/channels/${channelAddress}`, data))
             .catch((error) => this.handleError(error));
     }
 
@@ -135,11 +140,7 @@ export class RaidenService {
         const data = {
             'state': 'closed'
         };
-        const headers = new Headers({ 'Content-Type': 'application/json' });
-        const options = new RequestOptions({ headers: headers });
-        return this.http.patch(`${this.config.api}/channels/${channelAddress}`,
-            JSON.stringify(data), options)
-            .map((response) => response.json())
+        return this.httpEncap(this.http.patch(`${this.config.api}/channels/${channelAddress}`, data))
             .catch((error) => this.handleError(error));
     }
 
@@ -147,16 +148,12 @@ export class RaidenService {
         const data = {
             'state': 'settled'
         };
-        const headers = new Headers({ 'Content-Type': 'application/json' });
-        const options = new RequestOptions({ headers: headers });
-        return this.http.patch(`${this.config.api}/channels/${channelAddress}`,
-            JSON.stringify(data), options)
-            .map((response) => response.json())
+        return this.httpEncap(this.http.patch(`${this.config.api}/channels/${channelAddress}`, data))
             .catch((error) => this.handleError(error));
     }
 
     public registerToken(tokenAddress: string): Observable<Usertoken> {
-        return this.http.put(`${this.config.api}/tokens/${tokenAddress}`, '{}')
+        return this.httpEncap(this.http.put(`${this.config.api}/tokens/${tokenAddress}`, {}))
             .switchMap(() => this.getUsertoken(tokenAddress)
                 .map((userToken) => {
                     if (userToken === null) {
@@ -172,23 +169,19 @@ export class RaidenService {
         const data = {
             'funds': funds
         }
-        const headers = new Headers({ 'Content-Type': 'application/json' });
-        const options = new RequestOptions({ headers: headers });
-        return this.http.put(`${this.config.api}/connection/${tokenAddress}`,
-            JSON.stringify(data), options)
-            .map((response) => response.json())
+        return this.httpEncap(this.http.put(`${this.config.api}/connection/${tokenAddress}`, data))
             .catch((error) => this.handleError(error));
     }
 
     public leaveTokenNetwork(tokenAddress: string): Observable<any> {
-        return this.http.delete(`${this.config.api}/connection/${tokenAddress}`)
+        return this.httpEncap(this.http.delete(`${this.config.api}/connection/${tokenAddress}`))
             .catch((error) => this.handleError(error));
     }
 
     public getEvents(
         eventsParam: EventsParam,
         fromBlock?: number,
-        toBlock?: number): Observable<Event[]> {
+        toBlock?: number): Observable<Array<Event>> {
         let path: string;
         if (eventsParam.channel) {
             path = `channels/${eventsParam.channel}`;
@@ -197,15 +190,14 @@ export class RaidenService {
         } else {
             path = 'network';
         }
-        const params = new URLSearchParams();
+        let params = new HttpParams();
         if (fromBlock) {
-            params.set('from_block', '' + fromBlock);
+            params = params.set('from_block', '' + fromBlock);
         }
         if (toBlock) {
-            params.set('to_block', '' + toBlock);
+            params = params.set('to_block', '' + toBlock);
         }
-        return this.http.get(`${this.config.api}/events/${path}`, {search: params})
-            .map((response) => <Event[]>response.json())
+        return this.httpEncap(this.http.get<Array<Event>>(`${this.config.api}/events/${path}`, { params }))
             .catch((error) => this.handleError(error));
     }
 
@@ -217,13 +209,11 @@ export class RaidenService {
             receiving_token: swap.receiving_token,
             receiving_amount: swap.receiving_amount,
         };
-        const headers = new Headers({ 'Content-Type': 'application/json' });
-        const options = new RequestOptions({ headers: headers });
-        return this.http.put(`${this.config.api}/token_swaps/${swap.partner_address}/${swap.identifier}`,
-            JSON.stringify(data), options)
-            .switchMap((response) => response.ok
-                ? Observable.of(true)
-                : Observable.throw(response.toString()))
+        return this.httpEncap(this.http.put(`${this.config.api}/token_swaps/${swap.partner_address}/${swap.identifier}`,
+                data, { observe: 'response'}))
+            .switchMap((response) => response.ok ?
+                Observable.of(true) :
+                Observable.throw(response.toString()))
             .catch((error) => this.handleError(error));
     }
 
@@ -241,78 +231,78 @@ export class RaidenService {
     private getUsertoken(
         tokenAddress: string,
         refresh: boolean = true): Observable<Usertoken |null> {
-            const tokenContractInstance = this.tokenContract.at(tokenAddress);
-            const userToken: Usertoken |null | undefined = this.userTokens[tokenAddress];
-            if (userToken === undefined) {
-                return Observable.bindNodeCallback((cb: CallbackFunc) =>
-                    tokenContractInstance.symbol(this.zoneEncap(cb)))()
-                    .catch((error) => Observable.of(null))
-                    .combineLatest(
-                    Observable.bindNodeCallback((cb: CallbackFunc) =>
-                        tokenContractInstance.name(this.zoneEncap(cb)))()
-                        .catch((error) => Observable.of(null)),
-                    Observable.bindNodeCallback((addr: string, cb: CallbackFunc) =>
-                        tokenContractInstance.balanceOf(
-                            addr,
-                            this.zoneEncap(cb)
-                        ))(this.raidenAddress)
-                        .map((balance) => balance.toNumber())
-                        .catch((error) => Observable.of(null))
-                    )
-                    .map(([symbol, name, balance]): Usertoken => {
-                        if (balance === null) {
-                            return null;
-                        }
-                        return {
-                            address: tokenAddress,
-                            symbol,
-                            name,
-                            balance
-                        };
-                    })
-                    .do((token) => this.userTokens[tokenAddress] = token);
-            } else if (refresh && userToken !== null) {
-                return Observable.bindNodeCallback((addr: string, cb: CallbackFunc) =>
+        const tokenContractInstance = this.tokenContract.at(tokenAddress);
+        const userToken: Usertoken |null | undefined = this.userTokens[tokenAddress];
+        if (userToken === undefined) {
+            return Observable.bindNodeCallback((cb: CallbackFunc) =>
+                tokenContractInstance.symbol(this.zoneEncap(cb)))()
+                .catch((error) => Observable.of(null))
+                .combineLatest(
+                Observable.bindNodeCallback((cb: CallbackFunc) =>
+                    tokenContractInstance.name(this.zoneEncap(cb)))()
+                    .catch((error) => Observable.of(null)),
+                Observable.bindNodeCallback((addr: string, cb: CallbackFunc) =>
                     tokenContractInstance.balanceOf(
                         addr,
                         this.zoneEncap(cb)
                     ))(this.raidenAddress)
                     .map((balance) => balance.toNumber())
                     .catch((error) => Observable.of(null))
-                    .map((balance) => {
-                        if (balance === null) {
-                            return null;
-                        }
-                        userToken.balance = balance;
-                        return userToken;
-                    });
-            } else {
-                return Observable.of(userToken);
-            }
+                )
+                .map(([symbol, name, balance]): Usertoken => {
+                    if (balance === null) {
+                        return null;
+                    }
+                    return {
+                        address: tokenAddress,
+                        symbol,
+                        name,
+                        balance
+                    };
+                })
+                .do((token) => this.userTokens[tokenAddress] = token);
+        } else if (refresh && userToken !== null) {
+            return Observable.bindNodeCallback((addr: string, cb: CallbackFunc) =>
+                tokenContractInstance.balanceOf(
+                    addr,
+                    this.zoneEncap(cb)
+                ))(this.raidenAddress)
+                .map((balance) => balance.toNumber())
+                .catch((error) => Observable.of(null))
+                .map((balance) => {
+                    if (balance === null) {
+                        return null;
+                    }
+                    userToken.balance = balance;
+                    return userToken;
+                });
+        } else {
+            return Observable.of(userToken);
         }
+    }
 
     private handleError(error: Response | any) {
-    // In a real world app, you might use a remote logging infrastructure
-    let errMsg: string;
-    if (error instanceof Response) {
-        let body;
-        try {
-            body = error.json() || '';
-        } catch (e) {
-            body = error.text();
+        // In a real world app, you might use a remote logging infrastructure
+        let errMsg: string;
+        if (error instanceof Response) {
+            let body;
+            try {
+                body = error.json() || '';
+            } catch (e) {
+                body = error.text();
+            }
+            const err = body || JSON.stringify(body);
+            errMsg = `${error.status} - ${error.statusText || ''} ${err}`;
+        } else {
+            errMsg = error.message ? error.message : error.toString();
         }
-        const err = body || JSON.stringify(body);
-        errMsg = `${error.status} - ${error.statusText || ''} ${err}`;
-    } else {
-        errMsg = error.message ? error.message : error.toString();
+        console.error(errMsg);
+        this.sharedService.msg({
+            severity: 'error',
+            summary: 'Raiden Error',
+            detail: JSON.stringify(errMsg),
+        });
+        return Observable.throw(errMsg);
     }
-    console.error(errMsg);
-    this.sharedService.msg({
-        severity: 'error',
-        summary: 'Raiden Error',
-        detail: JSON.stringify(errMsg),
-    });
-    return Observable.throw(errMsg);
-}
 
 }

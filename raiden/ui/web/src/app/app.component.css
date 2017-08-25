@@ -86,9 +86,7 @@
   .topnav .toggle-btn {
     display: block;
     cursor: pointer;
-    position: absolute;
-    right: 10px;
-    top: 10px;
+    margin: 10px 10px 0px 0px;
     z-index: 10 !important;
     padding: 3px;
     background-color: #ffffff;
@@ -137,13 +135,22 @@ body {
     font-size: 17px;
 }
 
+.topnav a.busy {
+    padding: 9px;
+}
+
+.topnav a.busy .counter {
+    font-weight: 700;
+    font-size: 14px;
+}
+
 /* Change the color of links on hover */
 .topnav a:hover {
     background-color: #ddd;
     color: black;
 }
 
-.topnav strong {
+.topnav .address {
     float: left;
     display: block;
     color: #f2f2f2;
