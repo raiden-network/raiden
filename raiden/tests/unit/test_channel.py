@@ -425,7 +425,10 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
 
     # start at 1 because we can't use amount=0
     transfers_amount = [i for i in range(1, number_of_transfers + 1)]
-    transfers_secret = [str(i) for i in range(number_of_transfers)]
+    transfers_secret = [
+        format(i, '>032')
+        for i in range(number_of_transfers)
+    ]
 
     claimed_amount = 0
     distributed_amount = 0
@@ -433,12 +436,13 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
     for i, (amount, secret) in enumerate(zip(transfers_amount, transfers_secret)):
         block_number = app0.raiden.chain.block_number()
         expiration = block_number + settle_timeout - 1
+        identifier = i
         mediated_transfer = channel0.create_mediatedtransfer(
             transfer_initiator=app0.raiden.address,
             transfer_target=app1.raiden.address,
             fee=0,
             amount=amount,
-            identifier=1,
+            identifier=identifier,
             expiration=expiration,
             hashlock=sha3(secret),
         )
@@ -476,8 +480,13 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
             secret = transfers_secret[i - 1]
 
             # synchronized clamining
-            channel0.release_lock(secret)
-            channel1.withdraw_lock(secret)
+            secret_message = channel0.create_secret(
+                identifier,
+                secret,
+            )
+            app0.raiden.sign(secret_message)
+            channel0.register_transfer(block_number, secret_message)
+            channel1.register_transfer(block_number, secret_message)
 
             # update test state
             claimed_amount += transfer.lock.amount
