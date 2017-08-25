@@ -396,7 +396,7 @@ class RestAPI(object):
                 token_address=token_address,
                 target=target_address,
                 amount=amount,
-                identifier=identifier
+                identifier=identifier,
             )
         except (InvalidAmount, InvalidAddress, NoPathError) as e:
             return make_response(str(e), httplib.CONFLICT)
