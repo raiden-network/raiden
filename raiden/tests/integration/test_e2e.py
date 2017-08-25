@@ -113,8 +113,6 @@ def test_mediation(
 
     token_address = token_addresses[0]
     app0, app1, app2 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-    channel_1_0 = channel(app0, app1, token_address)
-    channel_0_2 = channel(app0, app2, token_address)
 
     identifier = 1
     amount = 1
