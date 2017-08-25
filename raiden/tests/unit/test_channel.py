@@ -355,7 +355,9 @@ def test_python_channel():
     assert test_channel.our_state.locked() == 0
     assert test_channel.partner_state.locked() == amount2
 
-    test_channel.release_lock(secret)
+    secret_message = test_channel.create_secret(identifier, secret)
+    secret_message.sign(privkey1, address1)
+    test_channel.register_transfer(block_number, secret_message)
 
     assert test_channel.contract_balance == balance1
     assert test_channel.balance == balance1 - amount1 - amount2
