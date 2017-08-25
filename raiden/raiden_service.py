@@ -879,9 +879,9 @@ class RaidenService(object):
 
         if not direct_channel.can_transfer:
             log.info(
-                'DIRECT CHANNEL %s > %s is closed or has no funding',
-                pex(direct_channel.our_state.address),
-                pex(direct_channel.partner_state.address),
+                'DIRECT CHANNEL is closed or has no funding',
+                from_=pex(direct_channel.our_state.address),
+                to=pex(direct_channel.partner_state.address),
             )
 
             async_result = self._mediated_transfer(
@@ -893,10 +893,10 @@ class RaidenService(object):
 
         elif amount > direct_channel.distributable:
             log.info(
-                'DIRECT CHANNEL %s > %s doesnt have enough funds [%s]',
-                pex(direct_channel.our_state.address),
-                pex(direct_channel.partner_state.address),
-                amount,
+                'DIRECT CHANNEL does not have enough funds',
+                from_=pex(direct_channel.our_state.address),
+                to=pex(direct_channel.partner_state.address),
+                amount=amount,
             )
 
             async_result = self._mediated_transfer(

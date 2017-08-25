@@ -341,13 +341,13 @@ class Channel(object):
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'SECRET REGISTERED node:%s %s > %s token:%s hashlock:%s amount:%s',
-                    pex(self.our_state.address),
-                    pex(self.our_state.address),
-                    pex(self.partner_state.address),
-                    pex(self.token_address),
-                    pex(hashlock),
-                    lock.amount,
+                    'SECRET REGISTERED',
+                    node=pex(self.our_state.address),
+                    from_=pex(self.our_state.address),
+                    to=pex(self.partner_state.address),
+                    token=pex(self.token_address),
+                    hashlock=pex(hashlock),
+                    amount=lock.amount,
                 )
 
             self.our_state.register_secret(secret)
@@ -357,13 +357,13 @@ class Channel(object):
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'SECRET REGISTERED node:%s %s > %s token:%s hashlock:%s amount:%s',
-                    pex(self.our_state.address),
-                    pex(self.partner_state.address),
-                    pex(self.our_state.address),
-                    pex(self.token_address),
-                    pex(hashlock),
-                    lock.amount,
+                    'SECRET REGISTERED',
+                    node=pex(self.our_state.address),
+                    from_=pex(self.partner_state.address),
+                    to=pex(self.our_state.address),
+                    token=pex(self.token_address),
+                    hashlock=pex(hashlock),
+                    amount=lock.amount,
                 )
 
             self.partner_state.register_secret(secret)
@@ -393,10 +393,10 @@ class Channel(object):
         else:
             if log.isEnabledFor(logging.WARN):
                 log.warn(
-                    'Received a transfer with sender %s who is not '
-                    'a part of the channel %s',
-                    pex(transfer.sender),
-                    pex(transfer.channel)
+                    'Received a transfer from party that is not a part of the channel',
+                    node=self.our_state.address,
+                    from_=pex(transfer.sender),
+                    channel=pex(transfer.channel)
                 )
             raise UnknownAddress(transfer)
 
@@ -439,6 +439,9 @@ class Channel(object):
                     pex(transfer.sender),
                     from_state.nonce,
                     transfer.nonce,
+                    from_=pex(transfer.sender),
+                    expected_nonce=from_state.nonce,
+                    nonce=transfer.nonce,
                 )
             raise InvalidNonce(transfer)
 
@@ -456,12 +459,12 @@ class Channel(object):
             if expected_locksroot != transfer.locksroot:
                 if log.isEnabledFor(logging.ERROR):
                     log.error(
-                        'LOCKSROOT MISMATCH node:%s %s > %s lockhash:%s lockhashes:%s',
-                        pex(self.our_state.address),
-                        pex(from_state.address),
-                        pex(to_state.address),
-                        pex(sha3(transfer.lock.as_bytes)),
-                        lpex(to_state.balance_proof.unclaimed_merkletree()),
+                        'LOCKSROOT MISMATCH',
+                        node=pex(self.our_state.address),
+                        from_=pex(from_state.address),
+                        to=pex(to_state.address),
+                        lockhash=pex(sha3(transfer.lock.as_bytes)),
+                        lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
                         expected_locksroot=pex(expected_locksroot),
                         received_locksroot=pex(transfer.locksroot),
                     )
@@ -498,11 +501,11 @@ class Channel(object):
         if transfer.transferred_amount < from_state.transferred_amount:
             if log.isEnabledFor(logging.ERROR):
                 log.error(
-                    'NEGATIVE TRANSFER node:%s %s > %s %s',
-                    pex(self.our_state.address),
-                    pex(from_state.address),
-                    pex(to_state.address),
-                    transfer,
+                    'NEGATIVE TRANSFER',
+                    node=pex(self.our_state.address),
+                    from_=pex(from_state.address),
+                    to=pex(to_state.address),
+                    transfer=transfer,
                 )
 
             raise ValueError('Negative transfer')
@@ -541,12 +544,12 @@ class Channel(object):
         if isinstance(transfer, LockedTransfer):
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'REGISTERED LOCK node:%s %s > %s currentlocksroot:%s lockhashes:%s',
-                    pex(self.our_state.address),
-                    pex(from_state.address),
-                    pex(to_state.address),
-                    pex(to_state.balance_proof.merkleroot_for_unclaimed()),
-                    lpex(to_state.balance_proof.unclaimed_merkletree()),
+                    'REGISTERED LOCK',
+                    node=pex(self.our_state.address),
+                    from_=pex(from_state.address),
+                    to=pex(to_state.address),
+                    currentlocksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
+                    lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
 
                     lock_amount=transfer.lock.amount,
                     lock_expiration=transfer.lock.expiration,
@@ -574,16 +577,14 @@ class Channel(object):
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
-                'REGISTERED TRANSFER node:%s %s > %s '
-                'transfer:%s transferred_amount:%s nonce:%s '
-                'current_locksroot:%s',
-                pex(self.our_state.address),
-                pex(from_state.address),
-                pex(to_state.address),
-                repr(transfer),
-                from_state.transferred_amount,
-                from_state.nonce,
-                pex(to_state.balance_proof.merkleroot_for_unclaimed()),
+                'REGISTERED TRANSFER',
+                node=pex(self.our_state.address),
+                from_=pex(from_state.address),
+                to=pex(to_state.address),
+                transfer=repr(transfer),
+                transferred_amount=from_state.transferred_amount,
+                nonce=from_state.nonce,
+                current_locksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
             )
 
     def create_directtransfer(self, amount, identifier):

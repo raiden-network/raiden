@@ -144,6 +144,7 @@ class BaseMediatedTransferTask(Task):
                 current_block,
                 self.__class__,
                 pex(transfer),
+                block_number=current_block,
             )
 
         yield TIMEOUT
@@ -434,9 +435,9 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
         if log.isEnabledFor(logging.DEBUG):
             node_address = raiden.address
             log.debug(
-                'MAKER TOKEN SWAP FAILED initiator:%s to_nodeaddress:%s',
-                pex(node_address),
-                pex(to_nodeaddress),
+                'MAKER TOKEN SWAP FAILED',
+                from_=pex(node_address),
+                to=pex(to_nodeaddress),
             )
 
         # all routes failed
@@ -493,8 +494,8 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
             if response is None:
                 if log.isEnabledFor(logging.DEBUG):
                     log.debug(
-                        'MAKER SWAP TIMED OUT hashlock:%s',
-                        pex(from_token_transfer.lock.hashlock),
+                        'MAKER SWAP TIMED OUT',
+                        hashlock=pex(from_token_transfer.lock.hashlock),
                     )
 
                 return None
@@ -621,9 +622,9 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
             if log.isEnabledFor(logging.DEBUG):
                 node_address = raiden.address
                 log.debug(
-                    'TAKER TOKEN SWAP FAILED, NO ROUTES initiator:%s from_nodeaddress:%s',
-                    pex(node_address),
-                    pex(maker_address),
+                    'TAKER TOKEN SWAP FAILED, NO ROUTES',
+                    from_=pex(node_address),
+                    to=pex(maker_address),
                 )
 
             return
@@ -637,11 +638,11 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'TAKER TOKEN SWAP %s -> %s msghash:%s hashlock:%s',
-                    pex(maker_paying_transfer.target),
-                    pex(maker_address),
-                    pex(maker_paying_transfer.hash),
-                    pex(hashlock),
+                    'TAKER TOKEN SWAP',
+                    from_=pex(maker_paying_transfer.target),
+                    to=pex(maker_address),
+                    msghash=pex(maker_paying_transfer.hash),
+                    hashlock=pex(hashlock),
                 )
 
             # make a paying MediatedTransfer with same hashlock/identifier and the
@@ -666,9 +667,9 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
-                    'EXCHANGE TRANSFER NEW PATH path:%s hashlock:%s',
-                    lpex(taker_paying_hop),
-                    pex(hashlock),
+                    'EXCHANGE TRANSFER NEW PATH',
+                    path=lpex(taker_paying_hop),
+                    hashlock=pex(hashlock),
                 )
 
             # register the task to receive Refund/Secrect/RevealSecret messages
@@ -747,9 +748,9 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
                 if log.isEnabledFor(logging.DEBUG):
                     node_address = raiden.address
                     log.debug(
-                        'TAKER TOKEN SWAP FAILED initiator:%s from_nodeaddress:%s',
-                        pex(node_address),
-                        pex(maker_address),
+                        'TAKER TOKEN SWAP FAILED',
+                        from_=pex(node_address),
+                        to=pex(maker_address),
                     )
 
                 self.async_result.set(False)
@@ -761,9 +762,9 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
         if log.isEnabledFor(logging.DEBUG):
             node_address = raiden.address
             log.debug(
-                'TAKER TOKEN SWAP FAILED initiator:%s from_nodeaddress:%s',
-                pex(node_address),
-                pex(maker_address),
+                'TAKER TOKEN SWAP FAILED',
+                from_=pex(node_address),
+                to=pex(maker_address),
             )
 
         self.async_result.set(False)
@@ -810,9 +811,9 @@ class TakerTokenSwapTask(BaseMediatedTransferTask):
 
             if response is None:
                 log.error(
-                    'TAKER SWAP TIMED OUT node:%s hashlock:%s',
-                    pex(raiden.address),
-                    pex(mediated_transfer.lock.hashlock),
+                    'TAKER SWAP TIMED OUT',
+                    node=pex(raiden.address),
+                    hashlock=pex(mediated_transfer.lock.hashlock),
                 )
                 return (response, secret)
 

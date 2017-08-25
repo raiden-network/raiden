@@ -508,10 +508,10 @@ class RaidenProtocol(object):
 
         if log.isEnabledFor(logging.DEBUG):
             log.debug(
-                'new queue created for (%s, %s) > %s',
-                pex(self.raiden.address),
-                pex(token_address),
-                pex(receiver_address),
+                'new queue created for',
+                node=pex(self.raiden.address),
+                token=pex(token_address),
+                remote=pex(receiver_address),
             )
 
         return queue
@@ -574,10 +574,11 @@ class RaidenProtocol(object):
 
         if log.isEnabledFor(logging.INFO):
             log.info(
-                'SENDING ACK %s > %s %s',
-                pex(self.raiden.address),
-                pex(receiver_address),
-                ack_message,
+                'SENDING ACK',
+                node=pex(self.raiden.address),
+                from_=pex(self.raiden.address),
+                to=pex(receiver_address),
+                message=ack_message,
             )
 
         messagedata = ack_message.encode()
@@ -657,18 +658,18 @@ class RaidenProtocol(object):
             if waitack is None:
                 if log.isEnabledFor(logging.INFO):
                     log.info(
-                        'ACK FOR UNKNOWN ECHO node:%s echohash:%s',
-                        pex(self.raiden.address),
-                        pex(message.echo)
+                        'ACK FOR UNKNOWN ECHO',
+                        node=pex(self.raiden.address),
+                        echohash=pex(message.echo)
                     )
 
             else:
                 if log.isEnabledFor(logging.INFO):
                     log.info(
-                        'ACK RECEIVED node:%s receiver:%s echohash:%s',
-                        pex(self.raiden.address),
-                        pex(waitack.receiver_address),
-                        pex(message.echo)
+                        'ACK RECEIVED',
+                        node=pex(self.raiden.address),
+                        receiver=pex(waitack.receiver_address),
+                        echohash=pex(message.echo)
                     )
 
                 waitack.async_result.set(True)
@@ -676,10 +677,10 @@ class RaidenProtocol(object):
         elif isinstance(message, SignedMessage):
             if log.isEnabledFor(logging.INFO):
                 log.info(
-                    'MESSAGE RECEIVED node:%s echohash:%s %s',
-                    pex(self.raiden.address),
-                    pex(echohash),
-                    message,
+                    'MESSAGE RECEIVED',
+                    node=pex(self.raiden.address),
+                    echohash=pex(echohash),
+                    message=message,
                 )
 
             try:
@@ -710,6 +711,6 @@ class RaidenProtocol(object):
 
         elif log.isEnabledFor(logging.ERROR):
             log.error(
-                'Invalid message %s',
-                data.encode('hex'),
+                'Invalid message',
+                message=data.encode('hex'),
             )
