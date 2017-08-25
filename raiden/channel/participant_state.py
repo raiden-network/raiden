@@ -101,9 +101,12 @@ class ChannelEndState(object):
         balance_proof = direct_transfer.to_balanceproof()
         self.balance_proof.register_balanceproof(balance_proof)
 
-    def register_secretmessage(self, partner, secret):
-        self.release_lock(partner, secret.secret)
-        balance_proof = secret.to_balanceproof()
+    def register_secretmessage(self, partner, message_secret):
+        lock = self.balance_proof.release_lock_by_secret(message_secret.secret)
+        amount = lock.amount
+        partner.transferred_amount += amount
+
+        balance_proof = message_secret.to_balanceproof()
         self.balance_proof.register_balanceproof(balance_proof)
 
     def register_secret(self, secret):
@@ -114,19 +117,3 @@ class ChannelEndState(object):
             or a `SecretRevealed` event happens.
         """
         self.balance_proof.register_secret(secret)
-
-    def release_lock(self, partner, secret):
-        """ Update the balance by claiming a lock.
-
-        This method needs to be called when the `sender` of the lock sends a
-        `Secret` message otherwise the node's locksroot will be out-of-sync and
-        messages will be rejected.
-
-        Args:
-            secret: The secret being registered.
-        """
-        # Start of the critical read/write section
-        lock = self.balance_proof.release_lock_by_secret(secret)
-        amount = lock.amount
-        partner.transferred_amount += amount
-        # end of the critical read/write section

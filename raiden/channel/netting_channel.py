@@ -368,46 +368,6 @@ class Channel(object):
 
             self.partner_state.register_secret(secret)
 
-    def release_lock(self, secret):
-        """ Release a lock for a transfer that was initiated from this node.
-
-        Only the sender of the mediated transfer can release a lock, the
-        receiver might know the secret but it needs to wait for a message from
-        the initiator. This is because the sender needs to coordinate state
-        updates (the hashlock for the transfers that are in transit and/or in
-        queue need to be in sync with the state known by the partner).
-
-        Note:
-            Releasing a lock should always be accompanied by at least one
-            Secret message to the partner node.
-
-            The node should also release the locks for the refund transfer.
-        """
-        hashlock = sha3(secret)
-
-        if not self.partner_state.balance_proof.is_known(hashlock):
-            msg = "The secret doesn't unlock any hashlock. hashlock:{} token:{}".format(
-                pex(hashlock),
-                pex(self.token_address),
-            )
-
-            raise ValueError(msg)
-
-        lock = self.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
-
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'TOKEN UNLOCKED %s > %s token:%s hashlock:%s lockhash:%s amount:%s',
-                pex(self.our_state.address),
-                pex(self.partner_state.address),
-                pex(self.token_address),
-                pex(hashlock),
-                pex(sha3(lock.as_bytes)),
-                lock.amount,
-            )
-
-        self.partner_state.release_lock(self.our_state, secret)
-
     def register_transfer(self, block_number, transfer):
         """ Register a signed transfer, updating the channel's state accordingly. """
 
