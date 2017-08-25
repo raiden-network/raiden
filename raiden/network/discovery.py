@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import socket
 
+from ethereum import slogging
+
+from raiden.exceptions import UnknownAddress
 from raiden.utils import (
     host_port_to_endpoint,
     isaddress,
@@ -8,6 +11,8 @@ from raiden.utils import (
     split_endpoint,
 )
 from raiden.exceptions import InvalidAddress
+
+log = slogging.getLogger(__name__)
 
 
 class Discovery(object):
@@ -70,8 +75,27 @@ class ContractDiscovery(Discovery):
         if not isinstance(port, (int, long)):
             raise ValueError('port must be a valid number')
 
-        endpoint = host_port_to_endpoint(host, port)
-        self.discovery_proxy.register_endpoint(node_address, endpoint)
+        try:
+            current_value = self.get(node_address)
+        except UnknownAddress:
+            current_value = None
+
+        if current_value == (host, port):
+            log.info(
+                'endpoint already registered',
+                node_address=pex(node_address),
+                host=host,
+                port=port
+            )
+        else:
+            endpoint = host_port_to_endpoint(host, port)
+            self.discovery_proxy.register_endpoint(node_address, endpoint)
+            log.info(
+                'registered endpoint in discovery',
+                node_address=pex(node_address),
+                host=host,
+                port=port
+            )
 
     def get(self, node_address):
         endpoint = self.discovery_proxy.endpoint_by_address(node_address)
