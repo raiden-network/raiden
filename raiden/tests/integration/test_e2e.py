@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import pytest
+import gevent
 
 from raiden.utils import sha3
 from raiden.tests.utils.transfer import (
@@ -127,6 +128,9 @@ def test_mediation(
     mediator_chain = app0.raiden.chain
     settle_expiration = mediator_chain.block_number() + settle_timeout + 1
     wait_until_block(mediator_chain, settle_expiration)
+
+    # context switch needed for tester to process the EventWithdrawSuccess
+    gevent.sleep(1)
 
     app0_events = [
         event.event_object
