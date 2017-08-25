@@ -31,6 +31,7 @@ from raiden.transfer.mediated_transfer.events import (
     SendMediatedTransfer,
     SendRevealSecret,
     SendSecretRequest,
+    EventWithdrawSuccess,
 )
 from raiden.messages import MediatedTransfer
 
@@ -128,6 +129,12 @@ def test_mediation(
     mediator_chain = app0.raiden.chain
     settle_expiration = mediator_chain.block_number() + settle_timeout + 1
     wait_until_block(mediator_chain, settle_expiration)
+
+    app0_events = [
+        event.event_object
+        for event in get_all_state_events(app0.raiden.transaction_log)
+    ]
+    assert must_contain_entry(app0_events, EventWithdrawSuccess, {})
 
 
 @pytest.mark.parametrize('privatekey_seed', ['fullnetwork:{}'])
