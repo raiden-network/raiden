@@ -844,7 +844,7 @@ def handle_balanceproof(state, state_change):
     """ Handle a ReceiveBalanceProof state change. """
     events = list()
     for pair in state.transfers_pair:
-        if pair.payer_route.channel_address == state_change.node_address:
+        if pair.payer_route.node_address == state_change.node_address:
             withdraw = EventWithdrawSuccess(
                 pair.payee_transfer.identifier,
                 pair.payee_transfer.hashlock,
