@@ -408,34 +408,6 @@ class Channel(object):
 
         self.partner_state.release_lock(self.our_state, secret)
 
-    def withdraw_lock(self, secret):
-        """ A lock was released by the sender, withdraw its funds and update
-        the state.
-        """
-        hashlock = sha3(secret)
-
-        if not self.our_state.balance_proof.is_known(hashlock):
-            msg = "The secret doesn't withdraw any hashlock. hashlock:{} token:{}".format(
-                pex(hashlock),
-                pex(self.token_address),
-            )
-            raise ValueError(msg)
-
-        lock = self.our_state.balance_proof.get_lock_by_hashlock(hashlock)
-
-        if log.isEnabledFor(logging.DEBUG):
-            log.debug(
-                'TOKEN WITHDRAWN %s < %s token:%s hashlock:%s lockhash:%s amount:%s',
-                pex(self.our_state.address),
-                pex(self.partner_state.address),
-                pex(self.token_address),
-                pex(hashlock),
-                pex(sha3(lock.as_bytes)),
-                lock.amount,
-            )
-
-        self.our_state.release_lock(self.partner_state, secret)
-
     def register_transfer(self, block_number, transfer):
         """ Register a signed transfer, updating the channel's state accordingly. """
 
