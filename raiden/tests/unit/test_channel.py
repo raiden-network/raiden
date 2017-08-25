@@ -599,15 +599,16 @@ def test_locked_transfer(raiden_network, settle_timeout):
     block_number = app0.raiden.chain.block_number()
     expiration = block_number + settle_timeout - 1
 
-    secret = 'secret'
+    secret = 'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
+    identifier = 1
     mediated_transfer = channel0.create_mediatedtransfer(
         transfer_initiator=app0.raiden.address,
         transfer_target=app1.raiden.address,
         fee=0,
         amount=amount,
-        identifier=1,
+        identifier=identifier,
         expiration=expiration,
         hashlock=hashlock,
     )
@@ -628,8 +629,16 @@ def test_locked_transfer(raiden_network, settle_timeout):
         channel1, balance1, [mediated_transfer.lock],
     )
 
-    channel0.release_lock(secret)
-    channel1.withdraw_lock(secret)
+    secret_message = channel0.create_secret(identifier, secret)
+    app0.raiden.sign(secret_message)
+    channel0.register_transfer(
+        app0.raiden.chain.block_number(),
+        secret_message,
+    )
+    channel1.register_transfer(
+        app1.raiden.get_block_number(),
+        secret_message,
+    )
 
     # upon revelation of the secret both balances are updated
     assert_synched_channels(
