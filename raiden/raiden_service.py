@@ -489,13 +489,13 @@ class RaidenService(object):
             # withdraw a pending lock
             if channel.our_state.balance_proof.is_unclaimed(hashlock):
                 if partner_secret_message:
-                    matching_sender = (
-                        partner_secret_message.sender == channel.partner_state.address
+                    is_balance_proof = (
+                        partner_secret_message.sender == channel.partner_state.address and
+                        partner_secret_message.channel == channel.channel_address
                     )
-                    matching_token = partner_secret_message.channel == channel.channel_address
 
-                    if matching_sender and matching_token:
-                        channel.withdraw_lock(secret)
+                    if is_balance_proof:
+                        channel.register_transfer(partner_secret_message)
                         channels_to_remove.append(channel)
                     else:
                         channel.register_secret(secret)
