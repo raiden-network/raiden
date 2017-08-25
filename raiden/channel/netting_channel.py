@@ -433,9 +433,10 @@ class Channel(object):
         else:
             if log.isEnabledFor(logging.WARN):
                 log.warn(
-                    'Received a transfer were the sender %s who is not '
-                    'a part of the channel',
+                    'Received a transfer with sender %s who is not '
+                    'a part of the channel %s',
                     pex(transfer.sender),
+                    pex(transfer.channel)
                 )
             raise UnknownAddress(transfer)
 
