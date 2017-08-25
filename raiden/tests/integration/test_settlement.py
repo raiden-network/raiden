@@ -238,7 +238,7 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
     unlock_proof = back_channel.our_state.balance_proof.compute_proof_for_lock(secret, lock)
 
     # Update the hashlock
-    claim_lock(raiden_network, token, secret)
+    claim_lock(raiden_network, identifier, token, secret)
     direct_transfer(app0, app1, token, amount)
 
     # The direct transfer locksroot must remove the unlocked lock and update

@@ -152,24 +152,27 @@ def pending_mediated_transfer(app_chain, token, amount, identifier, expiration):
     return secret
 
 
-def claim_lock(app_chain, token, secret):
+def claim_lock(app_chain, identifier, token, secret):
     """ Unlock a pending transfer. """
     for from_, to_ in zip(app_chain[:-1], app_chain[1:]):
-        channel_ = channel(from_, to_, token)
-        withdraw_or_unlock(channel_, secret)
+        from_channel = channel(from_, to_, token)
+        to_channel = channel(to_, from_, token)
 
-        channel_ = channel(to_, from_, token)
-        withdraw_or_unlock(channel_, secret)
+        secret_message = from_channel.create_secret(
+            identifier,
+            secret,
+        )
+        from_.raiden.sign(secret_message)
 
+        from_channel.register_transfer(
+            from_.raiden.get_block_number(),
+            secret_message,
+        )
 
-def withdraw_or_unlock(channel_, secret):
-    hashlock = sha3(secret)
-
-    if channel_.our_state.balance_proof.is_pending(hashlock):
-        channel_.withdraw_lock(secret)
-
-    if channel_.partner_state.balance_proof.is_pending(hashlock):
-        channel_.release_lock(secret)
+        to_channel.register_transfer(
+            to_.raiden.get_block_number(),
+            secret_message,
+        )
 
 
 def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1,

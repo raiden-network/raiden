@@ -129,8 +129,6 @@ class StateMachineEventHandler(object):
             self.raiden.send_async(event.receiver, reveal_message)
 
         elif isinstance(event, SendBalanceProof):
-            # TODO: issue #189
-
             # unlock and update remotely (send the Secret message)
             self.raiden.handle_secret(
                 event.identifier,
