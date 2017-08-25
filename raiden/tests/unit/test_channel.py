@@ -11,6 +11,7 @@ from raiden.messages import (
     DirectTransfer,
     Lock,
     LockedTransfer,
+    Secret,
 )
 from raiden.utils import sha3
 from raiden.tests.utils.messages import make_mediated_transfer
@@ -175,7 +176,16 @@ def test_end_state():
     assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
-    state2.release_lock(state1, lock_secret)
+    secret_message = Secret(
+        identifier=1,
+        nonce=1,
+        channel=channel_address,
+        transferred_amount=transferred_amount,
+        locksroot=EMPTY_MERKLE_ROOT,
+        secret=lock_secret,
+    )
+    secret_message.sign(privkey1, address1)
+    state2.register_secretmessage(state1, secret_message)
 
     assert state1.contract_balance == balance1 + 10
     assert state2.contract_balance == balance2
