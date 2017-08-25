@@ -64,7 +64,7 @@ bundle:
 	-(docker rm bundler)
 	docker run --name bundler --privileged -e ARCH=x86_64 -e APP=raiden -e LOWERAPP=raiden --workdir / --entrypoint /bin/bash raidenbundler -c 'source functions.sh && generate_appimage'
 	mkdir -p dist
-	docker cp bundler:/out/raiden--x86_64.AppImage dist/raiden--x86_64.AppImage
+	docker cp bundler:/out/raiden-.glibcPRIVATE-x86_64.AppImage dist/raiden--x86_64.AppImage
 	docker rm bundler
 
 test_bundle_docker := docker run --privileged --rm -v $(shell pwd)/dist:/data

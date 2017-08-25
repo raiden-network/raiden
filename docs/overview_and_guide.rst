@@ -47,6 +47,31 @@ After you have done that you can proceed to install the dependencies::
 
 You will also need an Ethereum client that is connected to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
 
+.. _binary_releases:
+
+(Optional) AppImage
+**************************
+
+For easier installation and portability, we create `AppImage <http://appimage.org/>`_ releases, that should work on most 64bit GNU/Linux distributions. For official releases, you will find the AppImage on the `github release page <https://github.com/raiden-network/raiden/releases>`_. AppImages are built from the main github repository, you will need to have ``make`` and ``docker`` installed.
+
+Building it
+-----------
+
+Calling::
+
+    make bundle
+
+will build ``raiden`` with all dependencies (including the webUI) inside a docker container and copy the build
+artifact to ``dist/raiden--x86_64.AppImage``. If you want to build a specific (git-tagged or branched) version, you can provide the git checkout target e.g. like this::
+
+    RAIDEN_VERSION=v1.0.0 make bundle
+
+Using it
+--------
+
+The release artifact ``raiden--x86_64.AppImage`` is an executable that takes the same commandline flags as the main
+``raiden`` script. See `AppImage Documentation <https://github.com/AppImage/AppImageKit/blob/appimagetool/master/README.md>`_ for advanced integration with your distribution.
+
 .. _running_raiden:
 
 Firing it up
@@ -85,4 +110,4 @@ After account creation, launch Raiden with the path of your keystore supplied an
 Select the Ethereum account when prompted, and type in the account's password.
 
 
-See the :doc:`API walkthrough <api_walkthrough>` for further intstructions on how to interact with Raiden.
+See the :doc:`API walkthrough <api_walkthrough>` for further instructions on how to interact with Raiden.

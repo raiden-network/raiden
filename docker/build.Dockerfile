@@ -3,8 +3,8 @@ FROM ubuntu:12.04.5
 
 # install build dependencies
 RUN apt-get update && \
- apt-get install -y curl wget automake build-essential git-core libffi-dev \ 
- libgmp-dev libssl-dev libtool pkg-config fuse
+ apt-get install -y curl wget automake build-essential git-core libffi-dev \
+ libgmp-dev libssl-dev libtool pkg-config fuse libsqlite3-dev
 
 # prepare AppDir
 RUN bash -c 'mkdir -p /raiden.AppDir/usr/{local,bin,share,lib}/'
@@ -18,7 +18,7 @@ RUN curl -o Python-2.7.12.tar.xz https://www.python.org/ftp/python/2.7.12/Python
     cd Python-2.7.12 &&\
     ./configure --prefix=/raiden.AppDir/usr && \
     make && \
-    make install && \ 
+    make install && \
     cd .. && \
     rm -r Python-2.7.12*
 
@@ -33,14 +33,31 @@ RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/downl
 # use --build-arg RAIDEN_VERSION=v0.0.3 to build a specific (tagged) version
 ARG RAIDEN_VERSION
 
-# install raiden (replacing all --editable requirements)
+# install node for webui
+RUN curl -L -o /tmp/node.tar.gz https://nodejs.org/download/release/v8.2.1/node-v8.2.1-linux-x64.tar.gz && \
+    cd /tmp && \
+    tar xzvf node.tar.gz &&\
+    mkdir /tmp/node_modules && \
+    chmod -R a+rwX /tmp/node_modules
+
+# clone raiden
 RUN mkdir -p /apps && \
-    git clone https://github.com/raiden-network/raiden.git /apps/raiden && \
-    cd /apps/raiden  && \ 
-    git checkout $RAIDEN_VERSION && \
+    git clone https://github.com/raiden-network/raiden.git /apps/raiden
+
+WORKDIR /apps/raiden
+
+# install requirements (replacing all --editable requirements)
+RUN git checkout $RAIDEN_VERSION && \
     sed -s 's/^-e //' requirements.txt > _requirements.txt && \
-    /raiden.AppDir/usr/bin/pip install -r _requirements.txt && \
-    PATH=/raiden.AppDir/usr/bin:$PATH /usr/bin/env python setup.py compile_contracts install && \
+    /raiden.AppDir/usr/bin/pip install -r _requirements.txt
+
+# build & install raiden with contracts, webui and smoketest
+RUN echo "recursive-include raiden/ui/web/dist *" >> MANIFEST.in && \
+    USER=root \
+    NPM_CONFIG_PREFIX=/tmp/node_modules \
+    NODE_PATH=/tmp/node_modules \
+    PATH=/tmp/node-v8.2.1-linux-x64/bin:/raiden.AppDir/usr/bin:$PATH \
+    /usr/bin/env python setup.py compile_contracts compile_webui build install && \
     find /raiden.AppDir/ -iname '*.pyo' -exec rm {} \; && \
     rm /raiden.AppDir/usr/lib/libpython*.a
 
@@ -73,4 +90,4 @@ RUN sed -i -s '1 s/^\#\!.*python\(.*\)/#!\/usr\/bin\/env python\1/' /raiden.AppD
 RUN apt-get -y install python
 
 # how to build AppImage
-RUN echo "\n\nRun these commands to generate the AppImage:\n\tdocker run --name bundler --privileged -e ARCH=x86_64 -e APP=raiden -e LOWERAPP=raiden --workdir / --entrypoint /bin/bash raidenbundler -c 'source functions.sh && generate_appimage'\ndocker cp bundler:raiden--x86_64.AppImage .\n\tdocker rm bundler\n\n"
+RUN echo "\n\nRun these commands to generate the AppImage:\n\tdocker run --name bundler --privileged -e ARCH=x86_64 -e APP=raiden -e LOWERAPP=raiden --workdir / --entrypoint /bin/bash raidenbundler -c 'source functions.sh && generate_appimage'\ndocker cp bundler:/out/raiden-.glibcPRIVATE-x86_64.AppImage dist/raiden--x86_64.AppImage\n\tdocker rm bundler\n\n"
