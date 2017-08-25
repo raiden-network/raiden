@@ -479,7 +479,7 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
             transfer = transfers_list[i - 1]
             secret = transfers_secret[i - 1]
 
-            # synchronized clamining
+            # synchronized claiming
             secret_message = channel0.create_secret(
                 identifier,
                 secret,
