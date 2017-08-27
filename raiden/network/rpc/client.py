@@ -17,6 +17,7 @@ from pyethapp.jsonrpc import (
     data_encoder,
     quantity_decoder,
     default_gasprice,
+    quantity_encoder,
 )
 from pyethapp.rpc_client import topic_encoder, block_tag_encoder
 import requests
@@ -55,6 +56,7 @@ from raiden.exceptions import SamePeerAddress
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
+client_settings = {'block_gas_limit': GAS_LIMIT}
 
 # Coding standard for this module:
 #
@@ -285,6 +287,14 @@ def decode_topic(topic):
     return int(topic[2:], 16)
 
 
+def get_block_gas_limit():
+    return client_settings['block_gas_limit']
+
+
+def set_block_gas_limit(gas_limit):
+    client_settings['block_gas_limit'] = gas_limit
+
+
 def estimate_and_transact(classobject, callobj, *args):
     """Estimate gas using eth_estimateGas. Multiply by 2 to make sure sufficient gas is provided
     Limit maximum gas to GAS_LIMIT to avoid exceeding blockgas limit
@@ -299,7 +309,7 @@ def estimate_and_transact(classobject, callobj, *args):
     #     startgas=classobject.startgas,
     #     gasprice=classobject.gasprice
     # )
-    estimated_gas = GAS_LIMIT
+    estimated_gas = get_block_gas_limit()
     transaction_hash = callobj.transact(
         *args,
         startgas=estimated_gas,
@@ -325,6 +335,10 @@ class BlockChainService(object):
 
     def block_number(self):
         return self.client.blocknumber()
+
+    def block_gas_limit(self, blocknumber):
+        block = self.client.call('eth_getBlockByNumber', quantity_encoder(blocknumber), False)
+        return int(block['gasLimit'], 0)
 
     def is_synced(self):
         result = self.client.call('eth_syncing')

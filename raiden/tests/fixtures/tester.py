@@ -88,6 +88,7 @@ def tester_state(deploy_key, private_keys, tester_blockgas_limit):
     tester_state.db = db
     tester_state.env = env
     tester_state.block = genesis_block
+    tester_state.block_gas_limit = tester_blockgas_limit
     tester_state.blocks = [genesis_block]
 
     return tester_state
