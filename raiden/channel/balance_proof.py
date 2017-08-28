@@ -98,9 +98,9 @@ class BalanceProof(object):
         if not self.is_known(lock.hashlock):
             raise ValueError('hashlock is not registered')
 
-        leafs = self.unclaimed_merkletree()
-        leafs.remove(lockhashed)
-        new_locksroot = Merkletree(leafs).merkleroot
+        leaves = self.unclaimed_merkletree()
+        leaves.remove(lockhashed)
+        new_locksroot = Merkletree(leaves).merkleroot
 
         if balance_proof.locksroot != new_locksroot:
             raise InvalidLocksRoot(new_locksroot, balance_proof.locksroot)
@@ -121,9 +121,9 @@ class BalanceProof(object):
         if self.is_known(lock.hashlock):
             raise ValueError('hashlock is already registered')
 
-        leafs = self.unclaimed_merkletree()
-        leafs.append(lockhashed)
-        new_locksroot = Merkletree(leafs).merkleroot
+        leaves = self.unclaimed_merkletree()
+        leaves.append(lockhashed)
+        new_locksroot = Merkletree(leaves).merkleroot
 
         if balance_proof.locksroot != new_locksroot:
             raise InvalidLocksRoot(new_locksroot, balance_proof.locksroot)
