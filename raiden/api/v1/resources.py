@@ -212,3 +212,12 @@ class ConnectionsResource(BaseResource):
 
     def get(self, token_address):
         return self.rest_api.get_connection_manager(token_address=token_address)
+
+
+class ConnectionManagersResource(BaseResource):
+
+    def __init__(self, **kwargs):
+        super(ConnectionManagersResource, self).__init__(**kwargs)
+
+    def get(self):
+        return self.rest_api.get_connection_managers_list()

@@ -151,7 +151,7 @@ class RaidenAPI(object):
         if not connection_manager:
             return None
         else:
-            return connection_manager
+            return connection_manager.funds
 
     def get_connection_managers_list(self):
         connection_managers = []
@@ -159,7 +159,7 @@ class RaidenAPI(object):
         for token in self.get_tokens_list():
             connection_manager = self.raiden.connection_manager_for_token(token)
             if connection_manager is not None:
-                connection_managers.append(connection_manager)
+                connection_managers.append(connection_manager.token_address)
 
         return connection_managers
 
@@ -239,7 +239,7 @@ class RaidenAPI(object):
         netting_channel.deposit(amount)
         # Wait until the balance has been updated via a state transition triggered
         # by processing the `ChannelNewBalance` event
-        wait_timeout_secs = 60  # FIXME: unconfigurable timeout
+        wait_timeout_secs = 60
         if not channel.wait_for_balance_update(
                 old_balance,
                 wait_timeout_secs,
@@ -525,15 +525,6 @@ class RaidenAPI(object):
         graph = self.raiden.token_to_channelgraph[token_address]
         if not graph.has_path(self.raiden.address, target):
             raise NoPathError('No path to address found')
-
-        log.debug(
-            'initiating transfer',
-            initiator=pex(self.raiden.address),
-            target=pex(target),
-            token=pex(token_address),
-            amount=amount,
-            identifier=identifier
-        )
 
         async_result = self.raiden.transfer_async(
             token_address,

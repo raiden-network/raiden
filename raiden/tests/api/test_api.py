@@ -1094,3 +1094,57 @@ def test_get_connection_manager_for_token(
     assert_proper_response(response)
     cm_funds = response.json()
     assert cm_funds == funds
+
+
+def test_get_connection_managers_list(
+        api_backend,
+        api_test_context,
+        api_raiden_service):
+
+    # check that no connection managers exists yet
+    request = grequests.get(
+        api_url_for(api_backend, 'connectionmanagersresource')
+    )
+    response = request.send().response
+    token_addresses = response.json()
+    assert token_addresses == []
+
+    funds = 100
+    token_address1 = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    connect_data_obj = {
+        'funds': funds,
+    }
+    request = grequests.put(
+        api_url_for(api_backend, 'connectionsresource', token_address=token_address1),
+        json=connect_data_obj,
+    )
+    response = request.send().response
+    assert_empty_response_with_code(response, httplib.NO_CONTENT)
+
+    # check that there now is one registered channel manager
+    request = grequests.get(
+        api_url_for(api_backend, 'connectionmanagersresource')
+    )
+    response = request.send().response
+    token_addresses = response.json()
+    assert token_addresses == [token_address1]
+
+    funds = 100
+    token_address2 = '0x3edf0f56aa9716b898ec8ea674fdde714fd979de'
+    connect_data_obj = {
+        'funds': funds,
+    }
+    request = grequests.put(
+        api_url_for(api_backend, 'connectionsresource', token_address=token_address2),
+        json=connect_data_obj,
+    )
+    response = request.send().response
+    assert_empty_response_with_code(response, httplib.NO_CONTENT)
+
+    # check that there now are two registered channel managers
+    request = grequests.get(
+        api_url_for(api_backend, 'connectionmanagersresource')
+    )
+    response = request.send().response
+    token_addresses = response.json()
+    assert token_addresses == [token_address1, token_address2]
