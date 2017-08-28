@@ -595,7 +595,7 @@ class Channel(object):
                 from_=pex(from_state.address),
                 to=pex(to_state.address),
                 transfer=repr(transfer),
-                transferred_amount=from_state.transferred_amount,
+                transferred_amount=from_state.transferred_amount(to_state),
                 nonce=from_state.nonce,
                 current_locksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
             )
