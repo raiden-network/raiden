@@ -1037,3 +1037,60 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.CONFLICT
+
+
+def test_get_connection_manager_for_token(
+        api_backend,
+        api_test_context,
+        api_raiden_service):
+
+    # first check we don't have any existing conection manager
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    request = grequests.get(
+        api_url_for(api_backend, 'connectionsresource', token_address=token_address)
+    )
+    response = request.send().response
+    assert_response_with_code(response, status_code=httplib.NO_CONTENT)
+
+    funds = 100
+    initial_channel_target = DEFAULT_INITIAL_CHANNEL_TARGET
+    joinable_funds_target = DEFAULT_JOINABLE_FUNDS_TARGET
+    token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
+    connect_data_obj = {
+        'funds': funds,
+    }
+    request = grequests.put(
+        api_url_for(api_backend, 'connectionsresource', token_address=token_address),
+        json=connect_data_obj,
+    )
+    response = request.send().response
+    assert_empty_response_with_code(response, httplib.NO_CONTENT)
+
+    # check that channels got created
+    request = grequests.get(
+        api_url_for(api_backend, 'channelsresource')
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    channels = response.json()
+    # There should be three channels according to the default initial_channel_target
+    assert len(channels) == DEFAULT_INITIAL_CHANNEL_TARGET
+    assert response.json() == api_test_context.expect_channels()
+
+    expected_balance = int((funds * joinable_funds_target) / initial_channel_target)
+    assert channels[0]['balance'] == expected_balance
+    assert channels[1]['balance'] == expected_balance
+    assert channels[2]['balance'] == expected_balance
+    assert channels[0]['state'] == CHANNEL_STATE_OPENED
+    assert channels[1]['state'] == CHANNEL_STATE_OPENED
+    assert channels[2]['state'] == CHANNEL_STATE_OPENED
+
+    # Check that a channel manager was created and returned
+    request = grequests.get(
+        api_url_for(api_backend, 'connectionsresource', token_address=token_address)
+    )
+    response = request.send().response
+    assert response is not None and response.status_code == httplib.OK
+    assert_proper_response(response)
+    cm_funds = response.json()
+    assert cm_funds == funds

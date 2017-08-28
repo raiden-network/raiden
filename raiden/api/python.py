@@ -145,6 +145,24 @@ class RaidenAPI(object):
         connection_manager = self.raiden.connection_manager_for_token(token_address)
         connection_manager.leave()
 
+    def get_connection_manager(self, token_address):
+        """Get the connection manager for a specific token"""
+        connection_manager = self.raiden.connection_manager_for_token(token_address)
+        if not connection_manager:
+            return None
+        else:
+            return connection_manager
+
+    def get_connection_managers_list(self):
+        connection_managers = []
+
+        for token in self.get_tokens_list():
+            connection_manager = self.raiden.connection_manager_for_token(token)
+            if connection_manager is not None:
+                connection_managers.append(connection_manager)
+
+        return connection_managers
+
     def open(
             self,
             token_address,
