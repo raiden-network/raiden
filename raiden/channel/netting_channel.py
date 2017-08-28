@@ -604,9 +604,8 @@ class Channel(object):
         if self.our_state.nonce:
             return self.our_state.nonce
 
-        # Sequential nonce, current value has not been used, 0 must not be used
-        # since in the netting contract it represents null.
-        return self.external_state.opened_block * (2 ** 32)
+        # 0 must not be used since in the netting contract it represents null.
+        return 1
 
     def create_directtransfer(self, amount, identifier):
         """ Return a DirectTransfer message.
