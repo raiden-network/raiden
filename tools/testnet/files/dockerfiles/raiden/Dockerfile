@@ -1,6 +1,10 @@
 FROM python:2.7
 MAINTAINER Ulrich Petri <ulrich@brainbot.com>
 
+ARG REPO=ulope/raiden
+ARG BRANCH=testnet_supermerge
+ARG SOLC_RELEASE=0.4.13
+
 RUN \
     apt update && \
     apt install -y build-essential curl git libffi-dev libgmp-dev libssl-dev libtool pkg-config apt-transport-https lsb-release && \
@@ -10,11 +14,13 @@ RUN \
     apt update && \
     apt install nodejs && \
     rm -rf /var/lib/apt/lists/* && \
-    curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.13/solc-static-linux && \
+    curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v${SOLC_RELEASE}/solc-static-linux && \
     chmod +x /usr/bin/solc
 
+# This is a "hack" to automatically invalidate the cache in case there are new commits
+ADD https://api.github.com/repos/${REPO}/commits/${BRANCH} /dev/null
 RUN \
-    git clone -b testnet_supermerge https://github.com/ulope/raiden.git /app && \
+    git clone -b ${BRANCH} https://github.com/${REPO}.git /app && \
     pip --version && \
     pip install -r /app/requirements.txt -e /app && \
     pip install python-logstash && \
