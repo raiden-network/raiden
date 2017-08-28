@@ -10,10 +10,7 @@ log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 class ChannelEndState(object):
     """ Tracks the state of one of the participants in a channel. """
 
-    def __init__(self,
-                 participant_address,
-                 participant_balance,
-                 balance_proof):
+    def __init__(self, participant_address, participant_balance, balance_proof):
 
         # since ethereum only uses integral values we cannot use float/Decimal
         if not isinstance(participant_balance, (int, long)):
