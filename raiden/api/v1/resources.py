@@ -209,3 +209,6 @@ class ConnectionsResource(BaseResource):
 
     def delete(self, token_address):
         return self.rest_api.leave(token_address=token_address)
+
+    def get(self, token_address):
+        return self.rest_api.get_connection_manager(token_address=token_address)

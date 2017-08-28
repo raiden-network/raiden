@@ -42,6 +42,12 @@ class NettingChannelMock(object):
         return self.state == CHANNEL_STATE_SETTLED
 
 
+class ConnectionManagerMock(object):
+    def __init__(self, token_address, funds):
+        self.token_address = token_address
+        self.funds = funds
+
+
 class ApiTestContext():
 
     def __init__(self, reveal_timeout):
@@ -52,6 +58,7 @@ class ApiTestContext():
         self.channel_list_schema = ChannelListSchema()
         self.reveal_timeout = reveal_timeout
         self.tokens_to_manager_address = dict()
+        self.connection_managers = []
 
     def add_events(self, events):
         self.events += events
@@ -314,6 +321,9 @@ class ApiTestContext():
             channel = self.make_channel(token_address=token_address, balance=funding)
             self.channels.append(channel)
 
+        connection_manager = ConnectionManagerMock(token_address, funds)
+        self.connection_managers.append(connection_manager)
+
     def leave(self, token_address):
 
         if not isaddress(token_address):
@@ -323,6 +333,17 @@ class ApiTestContext():
         for channel in channels:
             channel.external_state.netting_channel.state = CHANNEL_STATE_SETTLED
             channel.external_state._settled_block = 1
+
+    def get_connection_manager(self, token_address):
+
+        if not isaddress(token_address):
+            raise InvalidAddress('not an address %s' % pex(token_address))
+
+        for connection_manager in self.connection_managers:
+            if (connection_manager.token_address == token_address):
+                return connection_manager.funds
+
+        return None
 
     def get_all_channels_for_token(self, token_address):
         channels = [channel for channel in self.channels if channel.token_address == token_address]

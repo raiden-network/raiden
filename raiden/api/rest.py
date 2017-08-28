@@ -331,6 +331,19 @@ class RestAPI(object):
         self.raiden_api.leave_token_network(token_address)
         return make_response('', httplib.NO_CONTENT)
 
+    def get_connection_manager(self, token_address):
+        connection_manager = self.raiden_api.get_connection_manager(token_address)
+
+        if connection_manager is None:
+            return make_response('No connection manager exists for token', httplib.NO_CONTENT)
+
+        if connection_manager is not None:
+            return jsonify(connection_manager)
+
+    def get_connection_managers_list(self):
+        raiden_service_result = self.raiden_api.get_connection_managers_list()
+        assert isinstance(raiden_service_result, list)
+
     def get_channel_list(self, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
         assert isinstance(raiden_service_result, list)
