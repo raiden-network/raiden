@@ -345,6 +345,14 @@ class ApiTestContext():
 
         return None
 
+    def get_connection_managers_list(self):
+        token_addresses = []
+
+        for connection_manager in self.connection_managers:
+            token_addresses.append(connection_manager.token_address)
+
+        return token_addresses
+
     def get_all_channels_for_token(self, token_address):
         channels = [channel for channel in self.channels if channel.token_address == token_address]
 

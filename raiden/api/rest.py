@@ -49,6 +49,7 @@ from raiden.api.v1.resources import (
     TokenSwapsResource,
     TransferToTargetResource,
     ConnectionsResource,
+    ConnectionManagersResource,
 )
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
@@ -183,6 +184,10 @@ class APIServer(object):
         self.add_resource(
             ConnectionsResource,
             '/connection/<hexaddress:token_address>'
+        )
+        self.add_resource(
+            ConnectionManagersResource,
+            '/connection'
         )
 
     def _serve_webui(self, file='index.html'):
@@ -343,6 +348,12 @@ class RestAPI(object):
     def get_connection_managers_list(self):
         raiden_service_result = self.raiden_api.get_connection_managers_list()
         assert isinstance(raiden_service_result, list)
+
+        new_list = []
+        for result in raiden_service_result:
+            new_list.append(address_encoder(result))
+
+        return jsonify(new_list)
 
     def get_channel_list(self, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
