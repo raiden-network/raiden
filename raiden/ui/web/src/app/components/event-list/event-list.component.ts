@@ -6,7 +6,7 @@ import { RaidenService } from '../../services/raiden.service';
 import { Event, EventsParam } from '../../models/event';
 
 const INTERVAL = 5000;
-const BLOCK_START = 1422953; // block where the registry contract was deployed
+const BLOCK_START = 1509634; // block where the registry contract was deployed
 
 @Component({
     selector: 'app-event-list',
@@ -24,16 +24,24 @@ export class EventListComponent implements OnInit {
     constructor(private raidenService: RaidenService) { }
 
     ngOnInit() {
-        let from: number = BLOCK_START;
+        let fromBlock: number = BLOCK_START;
         let first = true;
         const data_excl = ['event_type', 'block_number', 'timestamp'];
         const firerSub: BehaviorSubject<void> = new BehaviorSubject(null);
         this.events$ = firerSub
             .do(() => this.loading = true)
-            .switchMap(() => this.raidenService.getEvents(
+            .switchMap(() => this.raidenService.getBlockNumber())
+            .switchMap((latestBlock) => {
+                if (fromBlock > latestBlock) {
+                    return Observable.of([]);
+                }
+                const obs = this.raidenService.getEvents(
                     this.eventsParam,
-                    from)
-                .finally(() => this.loading = false))
+                    fromBlock,
+                    latestBlock);
+                fromBlock = latestBlock + 1;
+                return obs;
+            })
             .map((events) => events.map((event) =>
                 <Event>Object.assign(event,
                     {
@@ -48,7 +56,6 @@ export class EventListComponent implements OnInit {
                     this.activity.emit();
                 }
                 first = false;
-                from = this.raidenService.blockNumber + 1;
             })
             .scan((oldEvents, newEvents) => {
                 // this scan/reducer agregates new events (since next_block) with old ones,
@@ -65,6 +72,7 @@ export class EventListComponent implements OnInit {
                 }
                 return events;
             }, [])
-            .do(() => setTimeout(() => firerSub.next(null), INTERVAL));
+            .do(() => setTimeout(() => firerSub.next(null), INTERVAL))
+            .do(() => this.loading = false);
     }
 }

@@ -86,24 +86,17 @@ export class ChannelTableComponent implements OnInit {
                     this.tempChannel.token_address,
                     this.tempChannel.partner_address,
                     this.amount)
-                    .subscribe(
-                    (response) => {
-                        this.showMessage(response);
-                    }
-                    );
+                    .subscribe((response) => this.showMessage(response));
                 break;
             case 'deposit':
                 this.raidenService.depositToChannel(
                     this.tempChannel.channel_address,
-                    this.amount).subscribe((response) => {
-                        this.showMessage(response);
-                    });
+                    this.amount)
+                    .subscribe((response) => this.showMessage(response));
                 break;
             case 'close':
                 this.raidenService.closeChannel(this.tempChannel.channel_address)
-                    .subscribe((response) => {
-                        this.showMessage(response);
-                    });
+                    .subscribe((response) => this.showMessage(response));
                 break;
             case 'settle':
                 this.raidenService.settleChannel(this.tempChannel.channel_address)
