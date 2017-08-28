@@ -239,7 +239,7 @@ class RaidenAPI(object):
         netting_channel.deposit(amount)
         # Wait until the balance has been updated via a state transition triggered
         # by processing the `ChannelNewBalance` event
-        wait_timeout_secs = 60
+        wait_timeout_secs = 60  # FIXME: unconfigurable timeout
         if not channel.wait_for_balance_update(
                 old_balance,
                 wait_timeout_secs,
@@ -525,6 +525,15 @@ class RaidenAPI(object):
         graph = self.raiden.token_to_channelgraph[token_address]
         if not graph.has_path(self.raiden.address, target):
             raise NoPathError('No path to address found')
+
+        log.debug(
+            'initiating transfer',
+            initiator=pex(self.raiden.address),
+            target=pex(target),
+            token=pex(token_address),
+            amount=amount,
+            identifier=identifier
+        )
 
         async_result = self.raiden.transfer_async(
             token_address,
