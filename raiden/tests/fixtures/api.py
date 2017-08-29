@@ -101,7 +101,11 @@ def api_raiden_service(
     monkeypatch.setattr(api, 'expect_token_swap', api_test_context.expect_token_swap)
     monkeypatch.setattr(api, 'connect_token_network', api_test_context.connect)
     monkeypatch.setattr(api, 'leave_token_network', api_test_context.leave)
-    monkeypatch.setattr(api, 'get_connection_manager', api_test_context.get_connection_manager)
+    monkeypatch.setattr(
+        api,
+        'get_connection_manager_funds',
+        api_test_context.get_connection_manager_funds
+    )
     monkeypatch.setattr(
         api,
         'get_connection_managers_list',

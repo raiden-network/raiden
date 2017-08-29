@@ -334,7 +334,7 @@ class ApiTestContext():
             channel.external_state.netting_channel.state = CHANNEL_STATE_SETTLED
             channel.external_state._settled_block = 1
 
-    def get_connection_manager(self, token_address):
+    def get_connection_manager_funds(self, token_address):
 
         if not isaddress(token_address):
             raise InvalidAddress('not an address %s' % pex(token_address))
