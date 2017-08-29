@@ -25,11 +25,9 @@ def test_settle_event(settle_timeout, tester_state, tester_events, tester_nettin
     # settle + a transfer per participant
     assert len(previous_events) + 3 == len(tester_events)
 
-    block_number = tester_state.block.number
     settle_event = tester_events[-1]
     assert settle_event == {
         '_event_type': 'ChannelSettled',
-        'block_number': block_number,
     }
 
 

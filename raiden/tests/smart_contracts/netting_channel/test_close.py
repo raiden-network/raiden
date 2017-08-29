@@ -26,12 +26,10 @@ def test_close_event(tester_state, tester_nettingcontracts, tester_events):
     nettingchannel.close(sender=pkey0)
     assert len(previous_events) + 1 == len(tester_events)
 
-    block_number = tester_state.block.number
     close_event = tester_events[-1]
     assert close_event == {
         '_event_type': 'ChannelClosed',
         'closing_address': encode_hex(address),
-        'block_number': block_number,
     }
 
 
