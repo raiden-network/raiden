@@ -8,10 +8,10 @@ contract NettingChannelContract {
     using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
 
-    event ChannelNewBalance(address token_address, address participant, uint balance, uint block_number);
-    event ChannelClosed(address closing_address, uint block_number);
-    event TransferUpdated(address node_address, uint block_number);
-    event ChannelSettled(uint block_number);
+    event ChannelNewBalance(address token_address, address participant, uint balance);
+    event ChannelClosed(address closing_address);
+    event TransferUpdated(address node_address);
+    event ChannelSettled();
     event ChannelSecretRevealed(bytes32 secret, address receiver_address);
 
     modifier settleTimeoutNotTooLow(uint t) {
@@ -48,7 +48,7 @@ contract NettingChannelContract {
         (success, balance) = data.deposit(amount);
 
         if (success == true) {
-            ChannelNewBalance(data.token, msg.sender, balance, block.number);
+            ChannelNewBalance(data.token, msg.sender, balance);
         }
 
         return success;
@@ -88,7 +88,7 @@ contract NettingChannelContract {
             extra_hash,
             signature
         );
-        ChannelClosed(msg.sender, data.closed);
+        ChannelClosed(msg.sender);
     }
 
     /// @notice Dispute the state after closing, called by the counterparty (the
@@ -107,7 +107,7 @@ contract NettingChannelContract {
             extra_hash,
             signature
         );
-        TransferUpdated(msg.sender, block.number);
+        TransferUpdated(msg.sender);
     }
 
     /// @notice Unlock a locked transfer.
@@ -126,7 +126,7 @@ contract NettingChannelContract {
     ///         have passed.
     function settle() {
         data.settle();
-        ChannelSettled(block.number);
+        ChannelSettled();
     }
 
     /// @notice Returns the number of blocks until the settlement timeout.
