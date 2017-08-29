@@ -25,6 +25,7 @@ from raiden.transfer.state import (
 from raiden.settings import (
     DEFAULT_JOINABLE_FUNDS_TARGET,
     DEFAULT_INITIAL_CHANNEL_TARGET,
+    DEFAULT_REVEAL_TIMEOUT,
 )
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
 
@@ -365,12 +366,11 @@ def test_api_open_close_and_settle_channel(
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = 1650
-    reveal_timeout = 30
+    reveal_timeout = DEFAULT_REVEAL_TIMEOUT
     channel_data_obj = {
         'partner_address': partner_address,
         'token_address': token_address,
         'settle_timeout': settle_timeout,
-        'reveal_timeout': reveal_timeout,
     }
     request = grequests.put(
         api_url_for(api_backend, 'channelsresource'),
@@ -384,6 +384,8 @@ def test_api_open_close_and_settle_channel(
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
+    # reveal_timeout not specified, expect it to be the default
+    expected_response['reveal_timeout'] = reveal_timeout
     # can't know the channel address beforehand but make sure we get one
     assert 'channel_address' in response
     channel_address = response['channel_address']
@@ -444,7 +446,7 @@ def test_api_open_channel_invalid_input(
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0xea674fdde714fd979de3edf0f56aa9716b898ec8'
     settle_timeout = NETTINGCHANNEL_SETTLE_TIMEOUT_MIN - 1
-    reveal_timeout = 30
+    reveal_timeout = DEFAULT_REVEAL_TIMEOUT
     channel_data_obj = {
         'partner_address': partner_address,
         'token_address': token_address,
