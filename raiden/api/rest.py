@@ -336,8 +336,8 @@ class RestAPI(object):
         self.raiden_api.leave_token_network(token_address)
         return make_response('', httplib.NO_CONTENT)
 
-    def get_connection_manager(self, token_address):
-        connection_manager = self.raiden_api.get_connection_manager(token_address)
+    def get_connection_manager_funds(self, token_address):
+        connection_manager = self.raiden_api.get_connection_manager_funds(token_address)
 
         if connection_manager is None:
             return make_response('No connection manager exists for token', httplib.NO_CONTENT)
