@@ -444,6 +444,9 @@ Possible Responses
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
 +------------------+---------------------------+
+| 409 Conflict     | Provided channel does not |
+|                  | exist                     |
++------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
@@ -487,6 +490,9 @@ Possible Responses
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
++------------------+---------------------------+
+| 409 Conflict     | Provided channel does not |
+|                  | exist                     |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
@@ -539,6 +545,9 @@ Possible Responses
 +------------------+---------------------------+
 | 402 Payment      | Insufficient balance to   |
 |     required     | do a deposit              |
++------------------+---------------------------+
+| 409 Conflict     | Provided channel does not |
+|                  | exist                     |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
