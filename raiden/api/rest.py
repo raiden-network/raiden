@@ -11,6 +11,8 @@ from werkzeug.exceptions import NotFound
 from gevent.wsgi import WSGIServer
 
 from pyethapp.jsonrpc import address_encoder
+from ethereum import slogging
+
 from raiden.exceptions import (
     EthNodeCommunicationError,
     InvalidAddress,
@@ -57,6 +59,8 @@ from raiden.raiden_service import (
 )
 from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
 from raiden.utils import channel_to_api_dict
+
+log = slogging.get_logger(__name__)
 
 
 def normalize_events_list(old_list):
@@ -213,7 +217,7 @@ class APIServer(object):
         self.flask_app.run(host=host, port=port, **kwargs)
 
     def start(self, host='127.0.0.1', port=5001):
-        self.wsgiserver = WSGIServer((host, port), self.flask_app)
+        self.wsgiserver = WSGIServer((host, port), self.flask_app, log=log, error_log=log)
         self.wsgiserver.start()
 
     def stop(self, timeout=5):
