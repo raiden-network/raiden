@@ -19,7 +19,6 @@ from raiden.exceptions import (
 )
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
 from raiden.utils import (
-    get_contract_path,
     isaddress,
     pex,
     privatekey_to_address,
@@ -178,7 +177,8 @@ class ChannelExternalStateTester(object):
 
 
 class FilterTesterMock(object):
-    def __init__(self, contract_address, topics, filter_id_raw):
+    def __init__(self, tester_state, contract_address, topics, filter_id_raw):
+        self.tester_state = tester_state
         self.filter_id_raw = filter_id_raw
         self.contract_address = contract_address
         self.topics = topics
@@ -202,10 +202,12 @@ class FilterTesterMock(object):
         )
 
         if valid_topics and valid_address:
+            block_number = getattr(event, 'block_number', None) or self.tester_state.block.number
             self.events.append({
                 'topics': event.topics,
                 'data': event.data,
                 'address': event.address,
+                'block_number': block_number,
             })
 
             # TODO: update all event listeners to update the app's states.
@@ -465,7 +467,12 @@ class RegistryTesterMock(object):
     def tokenadded_filter(self, **kwargs):
         """May also receive from_block, to_block but they are not used here"""
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        filter_ = FilterTesterMock(
+            self.tester_state,
+            self.address,
+            topics,
+            next(FILTER_ID_GENERATOR)
+        )
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
 
@@ -555,7 +562,12 @@ class ChannelManagerTesterMock(object):
 
     def channelnew_filter(self):
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW)]
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        filter_ = FilterTesterMock(
+            self.tester_state,
+            self.address,
+            topics,
+            next(FILTER_ID_GENERATOR)
+        )
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
 
@@ -582,7 +594,7 @@ class NettingChannelTesterMock(object):
         self.channelsettle_filters = list()
 
         # check we are a participant of the channel
-        our_address = privatekey_to_address(self.private_key)
+        privatekey_to_address(self.private_key)
         self.detail()
 
     def token_address(self):
@@ -778,6 +790,11 @@ class NettingChannelTesterMock(object):
 
     def all_events_filter(self):
         topics = None
-        filter_ = FilterTesterMock(self.address, topics, next(FILTER_ID_GENERATOR))
+        filter_ = FilterTesterMock(
+            self.tester_state,
+            self.address,
+            topics,
+            next(FILTER_ID_GENERATOR)
+        )
         self.tester_state.block.log_listeners.append(filter_.event)
         return filter_
