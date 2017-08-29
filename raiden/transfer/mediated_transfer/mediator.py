@@ -380,26 +380,28 @@ def set_expired_pairs(transfers_pair, block_number):
         if block_number > pair.payer_transfer.expiration:
             assert pair.payee_state == 'payee_expired'
             assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
-            pair.payer_state = 'payer_expired'
 
-            withdraw_failed = EventWithdrawFailed(
-                pair.payer_transfer.identifier,
-                pair.payer_transfer.hashlock,
-                'lock expired',
-            )
-            events.append(withdraw_failed)
+            if pair.payer_state != 'payer_expired':
+                pair.payer_state = 'payer_expired'
+                withdraw_failed = EventWithdrawFailed(
+                    pair.payer_transfer.identifier,
+                    pair.payer_transfer.hashlock,
+                    'lock expired',
+                )
+                events.append(withdraw_failed)
 
         elif block_number > pair.payee_transfer.expiration:
             assert pair.payee_state not in STATE_TRANSFER_PAID
             assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
-            pair.payee_state = 'payee_expired'
 
-            unlock_failed = EventUnlockFailed(
-                pair.payee_transfer.identifier,
-                pair.payee_transfer.hashlock,
-                'lock expired',
-            )
-            events.append(unlock_failed)
+            if pair.payee_state != 'payee_expired':
+                pair.payee_state = 'payee_expired'
+                unlock_failed = EventUnlockFailed(
+                    pair.payee_transfer.identifier,
+                    pair.payee_transfer.hashlock,
+                    'lock expired',
+                )
+                events.append(unlock_failed)
 
     return events
 
