@@ -24,7 +24,8 @@ from raiden.exceptions import (
     SamePeerAddress,
     NoTokenManager,
     AddressWithoutCode,
-    DuplicatedChannelError
+    DuplicatedChannelError,
+    ChannelNotFound,
 )
 from raiden.api.v1.encoding import (
     ChannelSchema,
@@ -435,7 +436,15 @@ class RestAPI(object):
             )
 
         # find the channel
-        channel = self.raiden_api.get_channel(channel_address)
+        try:
+            channel = self.raiden_api.get_channel(channel_address)
+        except ChannelNotFound:
+            return make_response(
+                "Requested channel {} not found".format(
+                    address_encoder(channel_address)),
+                httplib.CONFLICT
+            )
+
         current_state = channel.state
 
         # if we patch with `balance` it's a deposit

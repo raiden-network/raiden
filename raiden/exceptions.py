@@ -18,6 +18,11 @@ class HashLengthNot32(RaidenError):
 
 # Exceptions raised due to user interaction (the user may be another software)
 
+class ChannelNotFound(RaidenError):
+    """ Raised when a provided channel via the REST api is not found in the
+    internal data structures"""
+    pass
+
 
 class InsufficientFunds(RaidenError):
     """ Raised when provided account doesn't have token funds to complete the

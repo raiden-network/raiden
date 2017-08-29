@@ -30,6 +30,7 @@ from raiden.exceptions import (
     InvalidState,
     InsufficientFunds,
     NoTokenManager,
+    ChannelNotFound,
 )
 from raiden.utils import (
     isaddress,
@@ -68,7 +69,7 @@ class RaidenAPI(object):
             if channel.channel_address == channel_address:
                 return channel
 
-        raise ValueError("Channel not found")
+        raise ChannelNotFound()
 
     def manager_address_if_token_registered(self, token_address):
         """
