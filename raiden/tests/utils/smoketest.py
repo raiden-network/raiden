@@ -8,7 +8,7 @@ import tempfile
 import distutils.spawn
 import pdb
 import traceback
-import grequests
+import requests
 import httplib
 from string import Template
 
@@ -92,8 +92,7 @@ def run_restapi_smoketests(raiden_service, test_config):
     url = (
         'http://localhost:{port}/api/1/channels'
     ).format(port=5001)
-    request = grequests.get(url)
-    response = request.send().response
+    response = requests.get(url)
 
     assert response.status_code == httplib.OK
 
