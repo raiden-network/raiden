@@ -62,8 +62,11 @@ def host_port_to_endpoint(host, port):
 
 
 def split_endpoint(endpoint):
-    host, port = endpoint.split(':')[:2]
-    port = int(port)
+    match = re.match(r'(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?', endpoint, re.I)
+    if not match:
+        raise ValueError('Invalid endpoint', endpoint)
+    host, port = match.groups()
+    port = port and int(port)
     return (host, port)
 
 

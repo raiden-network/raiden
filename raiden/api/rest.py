@@ -2,7 +2,7 @@
 
 import httplib
 import json
-from flask import Flask, make_response, url_for, send_from_directory
+from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
 from flask_restful import Api, abort
 from flask_cors import CORS
@@ -60,7 +60,7 @@ from raiden.raiden_service import (
     create_default_identifier,
 )
 from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
-from raiden.utils import channel_to_api_dict
+from raiden.utils import channel_to_api_dict, split_endpoint
 
 log = slogging.get_logger(__name__)
 
@@ -195,6 +195,11 @@ class APIServer(object):
             assert file
             web3 = self.flask_app.config.get('WEB3_ENDPOINT')
             if web3 and 'config.' in file and file.endswith('.json'):
+                if any(h in web3 for h in ('localhost', '127.0.0.1', '::1')) and\
+                        request.headers.get('Host'):
+                    _, _port = split_endpoint(web3)
+                    _host, _ = split_endpoint(request.headers.get('Host'))
+                    web3 = "http://{}:{}".format(_host, _port)
                 response = jsonify({'raiden': self._api_prefix, 'web3': web3})
             else:
                 response = send_from_directory(self.flask_app.config['WEBUI_PATH'], file)
