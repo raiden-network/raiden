@@ -195,10 +195,10 @@ class APIServer(object):
             assert file
             web3 = self.flask_app.config.get('WEB3_ENDPOINT')
             if web3 and 'config.' in file and file.endswith('.json'):
-                if any(h in web3 for h in ('localhost', '127.0.0.1', '::1')) and\
-                        request.headers.get('Host'):
+                host = request.headers.get('Host')
+                if any(h in web3 for h in ('localhost', '127.0.0.1')) and host:
                     _, _port = split_endpoint(web3)
-                    _host, _ = split_endpoint(request.headers.get('Host'))
+                    _host, _ = split_endpoint(host)
                     web3 = "http://{}:{}".format(_host, _port)
                 response = jsonify({'raiden': self._api_prefix, 'web3': web3})
             else:
