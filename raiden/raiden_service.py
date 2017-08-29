@@ -92,6 +92,8 @@ from raiden.utils import (
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+# register filelock logger
+filelock.logger = slogging.get_logger('filelock')
 
 
 def create_default_identifier():
