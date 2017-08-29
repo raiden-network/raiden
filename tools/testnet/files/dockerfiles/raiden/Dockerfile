@@ -1,8 +1,6 @@
 FROM python:2.7
 MAINTAINER Ulrich Petri <ulrich@brainbot.com>
 
-ARG REPO=ulope/raiden
-ARG BRANCH=testnet_supermerge
 ARG SOLC_RELEASE=0.4.13
 
 RUN \
@@ -17,9 +15,14 @@ RUN \
     curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v${SOLC_RELEASE}/solc-static-linux && \
     chmod +x /usr/bin/solc
 
+# These are defined down here to avoid rebuilding the "apt" part on repo/branch change
+ARG REPO=raiden-network/raiden
+ARG BRANCH=master
+
 # This is a "hack" to automatically invalidate the cache in case there are new commits
 ADD https://api.github.com/repos/${REPO}/commits/${BRANCH} /dev/null
 RUN \
+    echo Cloning ${REPO}@${BRANCH} && \
     git clone -b ${BRANCH} https://github.com/${REPO}.git /app && \
     pip --version && \
     pip install -r /app/requirements.txt -e /app && \
