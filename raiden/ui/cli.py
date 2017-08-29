@@ -432,6 +432,13 @@ def run(ctx, **kwargs):
             log_json=kwargs['log_json'],
             log_file=kwargs['logfile']
         )
+        if kwargs['logfile']:
+            # Disable stream logging
+            root = slogging.getLogger()
+            for handler in root.handlers:
+                if isinstance(handler, slogging.logging.StreamHandler):
+                    root.handlers.remove(handler)
+                    break
 
         # TODO:
         # - Ask for confirmation to quit if there are any locked transfers that did
