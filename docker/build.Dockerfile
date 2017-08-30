@@ -27,18 +27,23 @@ RUN curl -o get-pip.py https://bootstrap.pypa.io/get-pip.py && \
     usr/bin/python get-pip.py && \
     rm get-pip.py
 
-RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.13/solc-static-linux && \
-    chmod +x /usr/bin/solc
-
-# use --build-arg RAIDEN_VERSION=v0.0.3 to build a specific (tagged) version
-ARG RAIDEN_VERSION
-
 # install node for webui
 RUN curl -L -o /tmp/node.tar.gz https://nodejs.org/download/release/v8.2.1/node-v8.2.1-linux-x64.tar.gz && \
     cd /tmp && \
     tar xzvf node.tar.gz &&\
     mkdir /tmp/node_modules && \
     chmod -R a+rwX /tmp/node_modules
+
+# use --build-arg RAIDEN_VERSION=v0.0.3 to build a specific (tagged) version
+ARG RAIDEN_VERSION=master
+
+# This is a "hack" to automatically invalidate the cache in case there are new commits
+ADD https://api.github.com/repos/raiden-network/raiden/commits/${RAIDEN_VERSION} /dev/null
+
+# install solc
+RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.13/solc-static-linux && \
+    chmod +x /usr/bin/solc
+
 
 # clone raiden
 RUN mkdir -p /apps && \
