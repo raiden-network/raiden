@@ -438,9 +438,11 @@ class RestAPI(object):
             return make_response(str(e), httplib.PAYMENT_REQUIRED)
 
         if transfer_result is False:
-            return make_response("Payment couldn't be completed "
-                                 "(insufficient funds or no route to target).",
-                                 httplib.CONFLICT)
+            return make_response(
+                "Payment couldn't be completed "
+                "(insufficient funds or no route to target).",
+                httplib.CONFLICT
+            )
 
         transfer = {
             'initiator_address': self.raiden_api.raiden.address,
