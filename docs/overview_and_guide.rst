@@ -64,7 +64,7 @@ Calling::
 will build ``raiden`` with all dependencies (including the webUI) inside a docker container and copy the build
 artifact to ``dist/raiden--x86_64.AppImage``. If you want to build a specific (git-tagged or branched) version, you can provide the git checkout target e.g. like this::
 
-    RAIDEN_VERSION=v1.0.0 make bundle
+    RAIDENVERSION=v1.0.0 make bundle
 
 Using it
 --------
