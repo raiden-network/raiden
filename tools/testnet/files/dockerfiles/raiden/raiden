@@ -2,12 +2,12 @@
 import json
 import os
 import sys
-from json.encoder import JSONEncoder
+from json import JSONEncoder
 
 from ethereum import slogging
-from logstash import UDPLogstashHandler
-from logstash.formatter import LogstashFormatterVersion1
+from logstash import LogstashFormatterVersion1, UDPLogstashHandler
 from pkg_resources import load_entry_point
+
 
 """
 Modified entrypoint script to inject logstash handler.
@@ -19,7 +19,7 @@ class REPRJSONEncoder(JSONEncoder):
         return repr(o)
 
 
-class NotCrashingLogtashFormatter(LogstashFormatterVersion1):
+class NotCrashingLogstashFormatter(LogstashFormatterVersion1):
     @classmethod
     def serialize(cls, message):
         if sys.version_info < (3, 0):
@@ -28,7 +28,7 @@ class NotCrashingLogtashFormatter(LogstashFormatterVersion1):
             return bytes(json.dumps(message, cls=REPRJSONEncoder), 'utf-8')
 
     def get_extra_fields(self, record):
-        fields = super(NotCrashingLogtashFormatter, self).get_extra_fields(record)
+        fields = super(NotCrashingLogstashFormatter, self).get_extra_fields(record)
         if 'original_msg' in fields and record.args:
             fields['original_msg'] = fields['original_msg'] % record.args
         return fields
@@ -39,7 +39,7 @@ class NotCrashingUDPLogstashHandler(UDPLogstashHandler):
         super(NotCrashingUDPLogstashHandler, self).__init__(host, port, message_type, tags, fqdn,
                                                             version)
         if version == 1:
-            self.formatter = NotCrashingLogtashFormatter(message_type, tags, fqdn)
+            self.formatter = NotCrashingLogstashFormatter(message_type, tags, fqdn)
         else:
             raise RuntimeError("Not supported")
 
