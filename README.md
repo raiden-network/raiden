@@ -11,7 +11,7 @@ Raiden is a proposed extension to Ethereum which scales-out asset transfer capac
 You can find the installation instructions of [Raiden PoC-0](https://github.com/raiden-network/raiden/wiki/Raiden-PoC%E2%80%900#getting-started-with-raiden) on the wiki, but for the latest releases, make sure you are using the Ropsten testnet instead.
 
 ### macOS specifics
-First install the system-dependecies for a successful build of the Python packages
+First install the system-dependencies for a successful build of the Python packages
 ```
 brew install pkg-config libffi automake
 ```
