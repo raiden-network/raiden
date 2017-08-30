@@ -59,8 +59,8 @@ docs:
 	$(MAKE) -C docs html
 
 bundle:
-	# pass RAIDEN_VERSION=<git version tag> to build a specific version
-	docker build -t raidenbundler --build-arg RAIDEN_VERSION=$(RAIDEN_VERSION) -f docker/build.Dockerfile docker
+	# pass RAIDENVERSION=<git version tag> to build a specific version
+	docker build -t raidenbundler --build-arg RAIDENVERSION=$(RAIDENVERSION) -f docker/build.Dockerfile docker
 	-(docker rm bundler)
 	docker run --name bundler --privileged -e ARCH=x86_64 -e APP=raiden -e LOWERAPP=raiden --workdir / --entrypoint /bin/bash raidenbundler -c 'source functions.sh && generate_appimage'
 	mkdir -p dist

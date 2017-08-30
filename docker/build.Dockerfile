@@ -34,11 +34,12 @@ RUN curl -L -o /tmp/node.tar.gz https://nodejs.org/download/release/v8.2.1/node-
     mkdir /tmp/node_modules && \
     chmod -R a+rwX /tmp/node_modules
 
-# use --build-arg RAIDEN_VERSION=v0.0.3 to build a specific (tagged) version
-ARG RAIDEN_VERSION=master
+# use --build-arg RAIDENVERSION=v0.0.3 to build a specific (tagged) version
+ARG REPO=raiden-network/raiden
+ARG RAIDENVERSION=master
 
 # This is a "hack" to automatically invalidate the cache in case there are new commits
-ADD https://api.github.com/repos/raiden-network/raiden/commits/${RAIDEN_VERSION} /dev/null
+ADD https://api.github.com/repos/${REPO}/commits/${RAIDENVERSION} /dev/null
 
 # install solc
 RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.13/solc-static-linux && \
@@ -47,12 +48,12 @@ RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/downl
 
 # clone raiden
 RUN mkdir -p /apps && \
-    git clone https://github.com/raiden-network/raiden.git /apps/raiden
+    git clone https://github.com/${REPO}.git /apps/raiden
 
 WORKDIR /apps/raiden
 
 # install requirements (replacing all --editable requirements)
-RUN git checkout $RAIDEN_VERSION && \
+RUN git checkout $RAIDENVERSION && \
     sed -s 's/^-e //' requirements.txt > _requirements.txt && \
     /raiden.AppDir/usr/bin/pip install -r _requirements.txt
 
@@ -71,7 +72,7 @@ WORKDIR /
 # add .desktop file
 ADD raiden.desktop /raiden.AppDir/raiden.desktop
 RUN cd /apps/raiden && \
-    VERSIONSTRING=${RAIDEN_VERSION:-"git-"$(git rev-parse HEAD)} && \
+    VERSIONSTRING=${RAIDENVERSION:-"git-"$(git rev-parse HEAD)} && \
     sed -s -i "s/XXVERSIONXX/$VERSIONSTRING/" /raiden.AppDir/raiden.desktop
 # add icon
 ADD raiden.svg /raiden.AppDir/raiden.svg
