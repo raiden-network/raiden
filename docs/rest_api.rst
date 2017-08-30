@@ -6,7 +6,7 @@ Raiden's API Documentation
 
 Introduction
 *************
-Raiden has a Restful API with URL endpoints corresponding to actions that the user can perform with his channels. The endpoints accept and return JSON encoded objects. The api url path always contains the api version in order to differentiate queries to
+Raiden has a Restful API with URL endpoints corresponding to user-facing interaction allowed by a Raiden node. The endpoints accept and return JSON encoded objects. The api url path always contains the api version in order to differentiate queries to
 different API versions. All queries start with: ``/api/<version>/``
 
 
@@ -59,9 +59,6 @@ Event Object
 
 Channels events are encoded as json objects with the event arguments as attributes
 of the dictionary, with one difference. The ``event_type`` is also added for all events to easily distinguish between events.
-
-
-
 
 
 
@@ -119,7 +116,7 @@ Example Response
 |                  | registered                 |
 +------------------+----------------------------+
 
-And with a 201 response we also get::
+And with a 201 response we also get the address as can be seen below::
 
     {"channel_manager_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"}
 
@@ -397,7 +394,7 @@ Possible Responses
 |                  | ethereum node             |
 +------------------+---------------------------+
 | 409 Conflict     | If the input is invalid,  |
-|                  | such as too low settle    |
+|                  | such as too low a settle  |
 |                  | timeout                   |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
@@ -563,12 +560,12 @@ containing the connection details such as the funding you want to put into the n
 
 ``PUT /api/<version>/connection/<token_address>``
 
-The request will only return once the transfer either succeeded or failed. A transfer can fail due to the expiration of a lock.
+The request will only return once all blockchain calls for opening and/or depositing to a channel have completed.
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``PUT /api/v1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
+``PUT /api/1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
 with payload::
 
@@ -596,17 +593,16 @@ Possible Responses
 Leaving a token network
 -----------------------
 
-You can leave a token network by making a ``DELETE`` request to the following endpoint along with a json payload containing
-details about the way you want to leave the network. For instance if you want to wait for settlement and the timeout period.
+You can leave a token network by making a ``DELETE`` request to the following endpoint along with a json payload containing details about the way you want to leave the network. For instance if you want to wait for settlement and the timeout period.
 
 ``DELETE /api/<version>/connection/<token_address>``
 
-The request will only return once the transfer either succeeded or failed. A transfer can fail due to the expiration of a lock.
+The request will only return once all blockchain calls for closing/settling a channel have completed.
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``DELETE /api/v1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
+``DELETE /api/1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
 
 Example Response
@@ -631,12 +627,11 @@ Transfers
 Initiating a Transfer
 ---------------------
 
-You can create a new transfer by making a ``POST`` request to the following endpoint along with a json payload containing
-the transfer details such as amount and identifier. Identifier is optional.
+You can create a new transfer by making a ``POST`` request to the following endpoint along with a json payload containing the transfer details such as amount and identifier. Identifier is optional.
 
 ``POST /api/<version>/transfers/<token_address>/<target_address>``
 
-The request will only return once the transfer either succeeded or failed. A transfer can fail due to the expiration of a lock.
+The request will only return once the transfer either succeeded or failed. A transfer can fail due to the expiration of a lock, the target being offline, channels on the path to the target not having enough ``settle_timeout`` and ``reveal_timeout`` in order to allow the transfer to be propagated safely e.t.c
 
 Example Request
 ^^^^^^^^^^^^^^^
@@ -677,12 +672,17 @@ Possible Responses
 | 400 Bad Request  | If the provided json is in|
 |                  | some way malformed        |
 +------------------+---------------------------+
-| 408 Timeout      | If a timeout happened     |
-|                  | during the transfer       |
-+------------------+---------------------------+
 | 402 Payment      | If the transfer can't     |
 |     required     | start due to insufficient |
 |                  | balance                   |
++------------------+---------------------------+
+| 408 Timeout      | If a timeout happened     |
+|                  | during the transfer       |
++------------------+---------------------------+
+| 409 Conflict     | If the address or the     |
+|                  | amount is invalid or if   |
+|                  | there is no path to the   |
+|                  | target                    |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
