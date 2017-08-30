@@ -34,17 +34,16 @@ RUN curl -L -o /tmp/node.tar.gz https://nodejs.org/download/release/v8.2.1/node-
     mkdir /tmp/node_modules && \
     chmod -R a+rwX /tmp/node_modules
 
+# install solc
+RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.13/solc-static-linux && \
+    chmod +x /usr/bin/solc
+
 # use --build-arg RAIDENVERSION=v0.0.3 to build a specific (tagged) version
 ARG REPO=raiden-network/raiden
 ARG RAIDENVERSION=master
 
 # This is a "hack" to automatically invalidate the cache in case there are new commits
 ADD https://api.github.com/repos/${REPO}/commits/${RAIDENVERSION} /dev/null
-
-# install solc
-RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.13/solc-static-linux && \
-    chmod +x /usr/bin/solc
-
 
 # clone raiden
 RUN mkdir -p /apps && \
