@@ -44,7 +44,7 @@ script:
 - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 after_success:
 - coveralls
-- make bundle
+- if [ -n "$TRAVIS_TAG" ]; then make bundle; fi
 notifications:
   slack:
     secure: Q8/IZikyfs/tzB6UsAgdQ9PAXQUeU5SN6uBRayvFX/gqVoLhB0uQLNXgHoM8x/mnR6w3voVtpNtEqIsCEbxhVqk5ckybVup4pt7vGH9ssElTffhu09TwbfUZpDCUUUMXjBbELAaO9ArOI0h0QLu5yR54eJtX3/EjcP1vUye/urn24YarAwLeV3lSEIQsWpaCAMM0WpRrKcYKb09bWI+uzSumZclUEV3oal84cTEFiZ5YAcUOVB89pfjg4gyl2nIk93v58UeDdxrFBtuGs4AjDpP3xDiPgFlRPgD9xZM4VD99+osVlKi9xJ5jly4c6sg5t5HvU6UXbkYjHZN6EV8n+RYxxR4c3/EL7OkD3PxUBqNyN0YjAkQbXOrmc7MndNJyAx3X+btgC9FbyzB9KALlzb+BWNMBXyZC/IFWiu3TtESz9f7wIxmkLyGwkzw7NvJBKmwqQRXLFnkL61AQESTA8X0U1Ibwy6tt8UK6UqkrU6NELMGd/F3wppLBgKCWJDWqgppG3Da2ZaP829KlmwioSWK/ZrqESRLysJ1bk8XPMlBF4SwVFIxBrWDM33QYjKTzifSEItfxP9y0PnQ0fMzdLgbXRMF3ubmbBE0PZdxibY9K+cueP0aKtkswSP+KUfpKtHmV2LKgtsRXEgM1AnTOoQJ2kQ4KszT6sljIvncxVx8=
