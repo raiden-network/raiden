@@ -26,6 +26,7 @@ from raiden.exceptions import (
     AddressWithoutCode,
     DuplicatedChannelError,
     ChannelNotFound,
+    IdentifierCollision,
 )
 from raiden.api.v1.encoding import (
     ChannelSchema,
@@ -439,9 +440,23 @@ class RestAPI(object):
                 amount=amount,
                 identifier=identifier
             )
-        except (InvalidAmount, InvalidAddress, NoPathError) as e:
+        except (InvalidAmount, InvalidAddress, NoPathError, IdentifierCollision) as e:
+            log.exception(
+                'Transfer exception',
+                identifier=identifier,
+                amount=amount,
+                token=token_address,
+                target=target_address,
+            )
             return make_response(str(e), httplib.CONFLICT)
         except (InsufficientFunds) as e:
+            log.exception(
+                'Insuficient funds for transfer',
+                identifier=identifier,
+                amount=amount,
+                token=token_address,
+                target=target_address,
+            )
             return make_response(str(e), httplib.PAYMENT_REQUIRED)
 
         if transfer_result is False:
