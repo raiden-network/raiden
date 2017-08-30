@@ -19,7 +19,7 @@ Dependencies
 * You need to make sure that your system has `solc`, the ethereum solidity compiler installed. Refer to `its documentation <http://solidity.readthedocs.io/en/latest/installing-solidity.html>`_ for the installation steps.
 * You will need to have an ethereum client installed in your system.
    * Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ for instructions on the go-ethereum client.
-   * Check `this link <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ for instructions on the parity client.
+   * Follow `these instructions <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ for  the parity client.
 * You will also need to obtain the `system dependencies for pyethapp <https://github.com/ethereum/pyethapp/#installation-on-ubuntudebian>`_.
 
 
@@ -55,7 +55,7 @@ You will also need an Ethereum client that is connected to the Ropsten testnet. 
 For easier installation and portability, we create `AppImage <http://appimage.org/>`_ releases, that should work on most 64bit GNU/Linux distributions. For official releases, you will find the AppImage on the `github release page <https://github.com/raiden-network/raiden/releases>`_. AppImages are built from the main github repository, you will need to have ``make`` and ``docker`` installed.
 
 Building it
------------
+~~~~~~~~~~~
 
 Calling::
 
@@ -67,7 +67,7 @@ artifact to ``dist/raiden--x86_64.AppImage``. If you want to build a specific (g
     RAIDEN_VERSION=v1.0.0 make bundle
 
 Using it
---------
+~~~~~~~~
 
 The release artifact ``raiden--x86_64.AppImage`` is an executable that takes the same commandline flags as the main
 ``raiden`` script. See `AppImage Documentation <https://github.com/AppImage/AppImageKit/blob/appimagetool/master/README.md>`_ for advanced integration with your distribution.

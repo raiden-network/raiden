@@ -28,7 +28,7 @@ The Developer Preview includes
 - Automatically joining a token network and connecting to peers.
 - A :doc:`REST API <rest_api>` with endpoints for all functionality.
 - Possibility to create token networks for all ERC20 tokens.
-- Restartability of Raiden nodes in case of a proper shutdown of the Raiden.
+- Restartability in case of a proper shutdown of the Raiden node.
 - :ref:`ERC20 token swaps <token-swaps>`.
 
 
