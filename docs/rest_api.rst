@@ -58,7 +58,7 @@ Event Object
 ==============
 
 Channels events are encoded as json objects with the event arguments as attributes
-of the dictionary, with one difference. The ``event_type`` is also added for all events to easily distinguish between events.
+of the dictionary, with one difference. The ``event_type`` and the ``block_number`` are also added for all events to easily distinguish between events.
 
 
 
