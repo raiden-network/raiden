@@ -646,11 +646,15 @@ class RaidenProtocol(object):
             return
 
         # Repeat the ACK if the message has been handled before
+        message = decode(data)
         echohash = sha3(data + self.raiden.address)
         if echohash in self.receivedhashes_to_acks:
-            return self._maybe_send_ack(*self.receivedhashes_to_acks[echohash])
-
-        message = decode(data)
+            # Check if host_post is still current for the ACK repeat
+            current_host_port = self.get_host_port(message.sender)
+            host_port, messagedata = self.receivedhashes_to_acks[echohash]
+            if host_port != current_host_port:
+                self.receivedhashes_to_acks[echohash] = (current_host_port, messagedata)
+            return self._maybe_send_ack(current_host_port, messagedata)
 
         if isinstance(message, Ack):
             waitack = self.senthashes_to_states.get(message.echo)
