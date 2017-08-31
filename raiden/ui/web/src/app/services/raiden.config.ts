@@ -5,13 +5,24 @@ declare var Web3;
 interface RDNConfig {
     raiden: string;
     web3: string;
+    web3_fallback?: string;
+    poll_interval?: number;
+    block_start?: number;
+    http_timeout?: number;
 };
 
-const WEB3_FALLBACK = 'http://localhost:8545';
+const default_config: RDNConfig = {
+    raiden: '/api/1',
+    web3: '/web3',
+    web3_fallback: 'http://localhost:8545',
+    poll_interval: 5000,
+    block_start: 1509634,
+    http_timeout: 120000,
+};
 
 @Injectable()
 export class RaidenConfig {
-    public config: RDNConfig;
+    public config: RDNConfig = default_config;
     public api: string;
     public web3: any;
 
@@ -21,15 +32,15 @@ export class RaidenConfig {
         return new Promise((resolve) => {
             this.http.get<RDNConfig>(url)
                 .subscribe((config) => {
-                    this.config = config;
+                    this.config = Object.assign({}, default_config, config);
                     this.api = this.config.raiden;
                     this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3));
                     // make a simple test call to web3
                     this.web3.version.getNetwork((err, res) => {
                         if (err) {
                             console.error('Invalid web3 endpoint', err);
-                            console.info('Switching to fallback: ' + WEB3_FALLBACK);
-                            this.config.web3 = WEB3_FALLBACK;
+                            console.info('Switching to fallback: ' + this.config.web3_fallback);
+                            this.config.web3 = this.config.web3_fallback;
                             this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3));
                         }
                         resolve();
