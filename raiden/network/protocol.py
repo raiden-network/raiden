@@ -582,16 +582,15 @@ class RaidenProtocol(object):
             )
 
         messagedata = ack_message.encode()
-        host_port = self.get_host_port(receiver_address)
-        self.receivedhashes_to_acks[ack_message.echo] = (host_port, messagedata)
-
+        self.receivedhashes_to_acks[ack_message.echo] = (receiver_address, messagedata)
         self._maybe_send_ack(*self.receivedhashes_to_acks[ack_message.echo])
 
-    def _maybe_send_ack(self, host_port, messagedata):
+    def _maybe_send_ack(self, receiver_address, messagedata):
         """ ACK must not go into the queue, otherwise nodes will deadlock
         waiting for the confirmation.
         """
         if self.transport.server.started:
+            host_port = self.get_host_port(receiver_address)
             self.transport.send(
                 self.raiden,
                 host_port,
@@ -646,15 +645,11 @@ class RaidenProtocol(object):
             return
 
         # Repeat the ACK if the message has been handled before
-        message = decode(data)
         echohash = sha3(data + self.raiden.address)
         if echohash in self.receivedhashes_to_acks:
-            # Check if host_post is still current for the ACK repeat
-            current_host_port = self.get_host_port(message.sender)
-            host_port, messagedata = self.receivedhashes_to_acks[echohash]
-            if host_port != current_host_port:
-                self.receivedhashes_to_acks[echohash] = (current_host_port, messagedata)
-            return self._maybe_send_ack(current_host_port, messagedata)
+            return self._maybe_send_ack(*self.receivedhashes_to_acks[echohash])
+
+        message = decode(data)
 
         if isinstance(message, Ack):
             waitack = self.senthashes_to_states.get(message.echo)
