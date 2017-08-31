@@ -113,6 +113,9 @@ class UDPTransport(object):
 
     def start(self):
         assert not self.server.started
+        # server.stop() clears the handle, since this may be a restart the
+        # handle must always be set
+        self.server.set_handle(self.receive)
         self.server.start()
 
 

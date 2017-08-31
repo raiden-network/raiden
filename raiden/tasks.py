@@ -34,7 +34,7 @@ class AlarmTask(Task):
         self.callbacks = list()
         self.stop_event = AsyncResult()
         self.chain = chain
-        self.last_block_number = self.chain.block_number()
+        self.last_block_number = None
 
         # TODO: Start with a larger wait_time and decrease it as the
         # probability of a new block increases.
@@ -56,10 +56,8 @@ class AlarmTask(Task):
 
     def remove_callback(self, callback):
         """Remove callback from the list of callbacks if it exists"""
-        try:
+        if callback in self.callbacks:
             self.callbacks.remove(callback)
-        except:
-            pass
 
     def _run(self):  # pylint: disable=method-hidden
         log.debug('starting block number', block_number=self.last_block_number)
@@ -81,6 +79,9 @@ class AlarmTask(Task):
                 sleep_time = 0.001
             else:
                 sleep_time = self.wait_time - work_time
+
+        # stopping
+        self.callbacks = list()
 
     def poll_for_new_block(self):
         current_block = self.chain.block_number()
@@ -112,6 +113,10 @@ class AlarmTask(Task):
 
             for callback in remove:
                 self.callbacks.remove(callback)
+
+    def start(self):
+        self.last_block_number = self.chain.block_number()
+        super(AlarmTask, self).start()
 
     def stop_and_wait(self):
         self.stop_event.set(True)
