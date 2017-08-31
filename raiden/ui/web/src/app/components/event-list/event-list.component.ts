@@ -2,11 +2,10 @@ import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
+import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
 import { Event, EventsParam } from '../../models/event';
 
-const INTERVAL = 5000;
-const BLOCK_START = 1509634; // block where the registry contract was deployed
 
 @Component({
     selector: 'app-event-list',
@@ -21,10 +20,13 @@ export class EventListComponent implements OnInit {
     public events$: Observable<Event[]>;
     public loading = true;
 
-    constructor(private raidenService: RaidenService) { }
+    constructor(
+        private raidenConfig: RaidenConfig,
+        private raidenService: RaidenService
+    ) { }
 
     ngOnInit() {
-        let fromBlock: number = BLOCK_START;
+        let fromBlock: number = this.raidenConfig.config.block_start;
         let first = true;
         const data_excl = ['event_type', 'block_number', 'timestamp'];
         const firerSub: BehaviorSubject<void> = new BehaviorSubject(null);
@@ -72,7 +74,7 @@ export class EventListComponent implements OnInit {
                 }
                 return events;
             }, [])
-            .do(() => setTimeout(() => firerSub.next(null), INTERVAL))
+            .do(() => setTimeout(() => firerSub.next(null), this.raidenConfig.config.poll_interval))
             .do(() => this.loading = false);
     }
 }

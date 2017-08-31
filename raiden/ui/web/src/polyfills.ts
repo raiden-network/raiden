@@ -76,6 +76,7 @@ import 'rxjs/add/observable/zip';
 import 'rxjs/add/observable/bindNodeCallback';
 
 import 'rxjs/add/operator/first';
+import 'rxjs/add/operator/timeout';
 import 'rxjs/add/operator/catch';
 import 'rxjs/add/operator/do';
 import 'rxjs/add/operator/map';
