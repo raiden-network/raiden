@@ -151,7 +151,7 @@ The other ways to query information about the channels is to navigate the docume
 hierarchy of the API and find the channel address which will lead you to the master
 resource as shown above.
 
-Querying All Channels
+Querying all channels
 --------------------------
 
 By making a ``GET`` request to ``/api/<version>/channels`` you can get a list of all non-settled channels.
@@ -227,7 +227,7 @@ Possible Responses
 +------------------+---------------------------+
 
 
-Querying All Partners for a Token
+Querying all partners for a Token
 -----------------------------------
 
 By making a ``GET`` request to ``/api/<version>/tokens/<token_address>/partners`` you can get a list of all partners
