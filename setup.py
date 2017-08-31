@@ -101,7 +101,7 @@ class CompileWebUI(Command):
         self.announce('WebUI compiled with success!', level=distutils.log.INFO)
 
 
-with open('README.md') as readme_file:
+with open('README.rst') as readme_file:
     readme = readme_file.read()
 
 
@@ -110,8 +110,12 @@ history = ''
 
 install_requires_replacements = {
     "git+https://github.com/LefterisJP/pyethapp@raiden_pyethapp_fork#egg=pyethapp": "pyethapp",
-    "git+https://github.com/LefterisJP/pyethereum@take_solidity_interface_into_account#egg=ethereum": "ethereum",
-    "git+https://github.com/LefterisJP/pyelliptic@make_compatible_with_openssl1_1#egg=pyelliptic": "pyelliptic",
+    (
+        "git+https://github.com/LefterisJP/pyethereum"
+        "@take_solidity_interface_into_account#egg=ethereum"): "ethereum",
+    (
+        "git+https://github.com/LefterisJP/pyelliptic"
+        "@make_compatible_with_openssl1_1#egg=pyelliptic"): "pyelliptic",
     "git+https://github.com/konradkonrad/pystun@develop#egg=pystun": "pystun",
 }
 
