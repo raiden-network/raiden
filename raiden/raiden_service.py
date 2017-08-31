@@ -5,16 +5,16 @@ import sys
 import itertools
 import cPickle as pickle
 import random
-import filelock
 from collections import defaultdict
 
+import filelock
 import gevent
 from gevent.event import AsyncResult
 from coincurve import PrivateKey
 from ethereum import slogging
 from ethereum.utils import encode_hex
-from raiden.network.rpc.client import JSONRPCPollTimeoutException
 
+from raiden.network.rpc.client import JSONRPCPollTimeoutException
 from raiden.constants import (
     UINT64_MAX,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
@@ -143,14 +143,21 @@ def save_snapshot(serialization_file, raiden):
 def endpoint_registry_exception_handler(greenlet):
     try:
         greenlet.get()
-    except (JSONRPCPollTimeoutException, Exception) as e:
-        if (e.args[0] == "timeout when polling for transaction" or
-           isinstance(e, JSONRPCPollTimeoutException)):
-                log.fatal("Endpoint registry failed: %s. "
-                          "Ethereum RPC API might be unreachable.",
-                          repr(e))
+    except Exception as e:  # pylint: disable=broad-except
+        rpc_unreachable = (
+            e.args[0] == 'timeout when polling for transaction' or
+            isinstance(e, JSONRPCPollTimeoutException)
+        )
+
+        if rpc_unreachable:
+            log.fatal(
+                'Endpoint registry failed: %s. '
+                'Ethereum RPC API might be unreachable.',
+                repr(e),
+            )
         else:
-            log.fatal("Endpoint registry failed: %s. ", repr(e))
+            log.fatal('Endpoint registry failed: %s. ', repr(e))
+
         sys.exit(1)
 
 
@@ -166,6 +173,8 @@ class RaidenService(object):
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
     def __init__(self, chain, private_key_bin, transport, discovery, config):
+        # pylint: disable=too-many-statements
+
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
@@ -258,13 +267,11 @@ class RaidenService(object):
             self.serialization_file = None
             self.db_lock = None
 
-        # It's okay for the transport and the endpoint registration to race. If
-        # the registration happens before the transport won't be initialized
-        # and messages won't be handle before the node is fully initialized,
-        # until the protocol is started this node will be considered offline.
-        # The protocol finishing first is the happy case.
-        self.start()
+        # If the endpoint registration fails the node will quit, this must
+        # finish before starting the protocol
         endpoint_registration_event.join()
+
+        self.start()
 
     def start(self):
         """ Start the node.
