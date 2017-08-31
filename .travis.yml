@@ -27,19 +27,13 @@ cache:
   - "$HOME/.ethash"
   - "$HOME/.bin"
 before_install:
-- mkdir -p $HOME/.bin
-- export PATH=$PATH:$HOME/.bin
-- "./.travis/download_geth.sh"
-- "./.travis/download_solc.sh"
+  - mkdir -p $HOME/.bin
+  - export PATH=$PATH:$HOME/.bin
+  - ./.travis/before_install.sh
 install:
-- pip install -U pip wheel coveralls "coverage<4.4"
-- pip install pytest-travis-fold
-- pip install flake8
-- pip install -r requirements-dev.txt
-- pip install .
+  ./.travis/install.sh
 before_script:
-- flake8 raiden/ tools/
-- raiden smoketest
+  ./.travis/before_script.sh
 script:
 - coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 after_success:
@@ -52,6 +46,9 @@ notifications:
 jobs:
   include:
     stage: deploy
+    before_install: if [ -n "$TRAVIS_TAG" ]; then mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; ./.travis/before_install.sh; fi
+    install: if [ -n "$TRAVIS_TAG" ]; then . .travis/install.sh; fi
+    before_script: if [ -n "$TRAVIS_TAG" ]; then . .travis/before_script; fi
     script: if [ -n "$TRAVIS_TAG" ]; then make bundle; fi
     env: TEST_TYPE=""
     deploy:
