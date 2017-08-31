@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-import logging
-
 from ethereum import slogging
 
 from raiden.messages import EnvelopeMessage
@@ -47,19 +45,15 @@ class RaidenMessageHandler(object):
 
     def on_message(self, message, msghash):  # noqa pylint: disable=unused-argument
         """ Handles `message` and sends an ACK on success. """
-        if log.isEnabledFor(logging.INFO):
-            log.info('message received', message=message)
-
         cmdid = message.cmdid
 
-        # using explicity dispatch to make the code grepable
-        if cmdid == messages.ACK:
-            pass
+        # ack and ping messages are not forwarded to the handler
+        # if cmdid == messages.ACK:
+        #     pass
+        # elif cmdid == messages.PING:
+        #     pass
 
-        elif cmdid == messages.PING:
-            pass
-
-        elif cmdid == messages.SECRETREQUEST:
+        if cmdid == messages.SECRETREQUEST:
             self.message_secretrequest(message)
 
         elif cmdid == messages.REVEALSECRET:

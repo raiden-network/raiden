@@ -36,6 +36,7 @@ from raiden.utils import isaddress, sha3, pex
 from raiden.utils.notifying_queue import NotifyingQueue
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
+ping_log = slogging.get_logger(__name__ + '.ping')  # pylint: disable=invalid-name
 
 # - async_result available for code that wants to block on message acknowledgment
 # - receiver_address used to tie back the echohash to the receiver (mainly for
@@ -511,7 +512,7 @@ class RaidenProtocol(object):
                 'new queue created for',
                 node=pex(self.raiden.address),
                 token=pex(token_address),
-                remote=pex(receiver_address),
+                to=pex(receiver_address),
             )
 
         return queue
@@ -552,6 +553,15 @@ class RaidenProtocol(object):
                 token_address,
             )
 
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'SENDING MESSAGE',
+                    to=pex(receiver_address),
+                    node=pex(self.raiden.address),
+                    message=message,
+                    echohash=pex(echohash),
+                )
+
             queue.put(messagedata)
         else:
             waitack = self.senthashes_to_states[echohash]
@@ -571,15 +581,6 @@ class RaidenProtocol(object):
 
         if not isinstance(ack_message, Ack):
             raise ValueError('Use maybe_send_ack only for Ack messages')
-
-        if log.isEnabledFor(logging.INFO):
-            log.info(
-                'SENDING ACK',
-                node=pex(self.raiden.address),
-                from_=pex(self.raiden.address),
-                to=pex(receiver_address),
-                message=ack_message,
-            )
 
         messagedata = ack_message.encode()
         self.receivedhashes_to_acks[ack_message.echo] = (receiver_address, messagedata)
@@ -655,23 +656,45 @@ class RaidenProtocol(object):
             waitack = self.senthashes_to_states.get(message.echo)
 
             if waitack is None:
-                if log.isEnabledFor(logging.INFO):
-                    log.info(
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug(
                         'ACK FOR UNKNOWN ECHO',
                         node=pex(self.raiden.address),
-                        echohash=pex(message.echo)
+                        echohash=pex(message.echo),
                     )
 
             else:
-                if log.isEnabledFor(logging.INFO):
-                    log.info(
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug(
                         'ACK RECEIVED',
                         node=pex(self.raiden.address),
                         receiver=pex(waitack.receiver_address),
-                        echohash=pex(message.echo)
+                        echohash=pex(message.echo),
                     )
 
                 waitack.async_result.set(True)
+
+        elif isinstance(message, Ping):
+            if ping_log.isEnabledFor(logging.DEBUG):
+                ping_log.debug(
+                    'PING RECEIVED',
+                    node=pex(self.raiden.address),
+                    echohash=pex(echohash),
+                    message=message,
+                )
+
+            # ping handler does nothing
+            # self.raiden.on_message(message, echohash)
+
+            ack = Ack(
+                self.raiden.address,
+                echohash,
+            )
+
+            self.maybe_send_ack(
+                message.sender,
+                ack,
+            )
 
         elif isinstance(message, SignedMessage):
             if log.isEnabledFor(logging.INFO):
@@ -693,6 +716,14 @@ class RaidenProtocol(object):
                 )
 
                 try:
+                    if log.isEnabledFor(logging.DEBUG):
+                        log.debug(
+                            'SENDING ACK',
+                            node=pex(self.raiden.address),
+                            to=pex(message.sender),
+                            echohash=pex(echohash),
+                        )
+
                     self.maybe_send_ack(
                         message.sender,
                         ack,
@@ -702,8 +733,6 @@ class RaidenProtocol(object):
 
             except (UnknownAddress, InvalidNonce, TransferWhenClosed, TransferUnwanted) as e:
                 log.DEV('maybe unwanted transfer', e=e)
-                if log.isEnabledFor(logging.DEBUG):
-                    log.debug(str(e))
 
             except (UnknownTokenAddress, InvalidLocksRoot) as e:
                 if log.isEnabledFor(logging.WARN):

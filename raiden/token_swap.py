@@ -436,7 +436,7 @@ class MakerTokenSwapTask(BaseMediatedTransferTask):
             node_address = raiden.address
             log.debug(
                 'MAKER TOKEN SWAP FAILED',
-                from_=pex(node_address),
+                node=pex(node_address),
                 to=pex(to_nodeaddress),
             )
 
