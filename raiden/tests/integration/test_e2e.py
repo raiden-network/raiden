@@ -140,6 +140,8 @@ def test_fullnetwork(
         amount
     )
 
+    gevent.sleep(0.5)
+
     # This is the only possible path, the transfer must go backwards
     assert_path_mediated_transfer(
         get_sent_transfer(channel_0_3, 0),

@@ -178,7 +178,7 @@ def test_token_swap(raiden_network, deposit, settle_timeout):
         taker_address,
     )
 
-    async_result.wait()
+    assert async_result.wait()
 
     # wait for the taker to receive and process the messages
     gevent.sleep(0.5)
