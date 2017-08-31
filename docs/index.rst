@@ -1,8 +1,8 @@
-Raiden Network Documentation
-*****************************
+Raiden Network Documentation v\ |version|
+*****************************************
 
 
-This is the documentation of the `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
+This is the documentation for v\ |version| of the `Raiden Network <http://raiden.network/>`_. You can find the source code in `our Github Repository <https://github.com/raiden-network/raiden>`_.
 
 Contents
 ************
@@ -16,5 +16,3 @@ Contents
   what_is_the_dev_preview
   webui_tutorial
   Raiden Codebase Documentation <./_build/generated/modules>
-
-
