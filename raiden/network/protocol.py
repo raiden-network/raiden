@@ -681,6 +681,7 @@ class RaidenProtocol(object):
                     node=pex(self.raiden.address),
                     echohash=pex(echohash),
                     message=message,
+                    message_sender=pex(message.sender)
                 )
 
             try:
