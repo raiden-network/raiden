@@ -8,7 +8,7 @@ Introduction
 =============
 Raiden has a Restful API with URL endpoints corresponding to actions that users can perform with their channels. The endpoints accept and return JSON encoded objects. The API URL path always contains the API version in order to differentiate queries to different API versions. All queries start with: ``/api/<version>/`` where ``<version>`` is an integer representing the current API version.
 
-The steps necessary in order to participate in a Raiden Token Network, will be walked through in this guide. Some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels, will be provided.
+This section will walk through the steps necessary to participate in a Raiden Token Network. Some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels, will be provided.
 
 Before getting started with below guides, please see :doc:`Overview and Guide <overview_and_guide>`, to make sure that connection to Raiden is established.
 
@@ -108,7 +108,7 @@ with the payload::
         "balance": 7331
     }
 
-To see if and when the counterparty deposited tokens, the channel can be queried for the corresponding events::
+To see if and when the counterparty deposited tokens, the channel can be queried for the corresponding events. The ``from_block`` parameter in the request represents the block number to query from::
 
     GET /api/1/events/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226?from_block=1337
 
