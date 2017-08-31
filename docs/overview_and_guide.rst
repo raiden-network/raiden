@@ -50,12 +50,13 @@ You will also need an Ethereum client that is connected to the Ropsten testnet. 
 .. _binary_releases:
 
 (Optional) AppImage
-**************************
+~~~~~~~~~~~~~~~~~~~
 
-For easier installation and portability, we create `AppImage <http://appimage.org/>`_ releases, that should work on most 64bit GNU/Linux distributions. For official releases, you will find the AppImage on the `github release page <https://github.com/raiden-network/raiden/releases>`_. AppImages are built from the main github repository, you will need to have ``make`` and ``docker`` installed.
+For easier installation and portability, we create `AppImage <http://appimage.org/>`_ releases, that should work on most 64bit GNU/Linux distributions. For official releases, you will find the AppImage on the `GitHub release page <https://github.com/raiden-network/raiden/releases>`_.
 
-Building it
-~~~~~~~~~~~
+**Building it**
+
+AppImages are built from the main GitHub repository, you will need to have ``make`` and ``docker`` installed.
 
 Calling::
 
@@ -66,8 +67,7 @@ artifact to ``dist/raiden--x86_64.AppImage``. If you want to build a specific (g
 
     RAIDENVERSION=v1.0.0 make bundle
 
-Using it
-~~~~~~~~
+**Using it**
 
 The release artifact ``raiden--x86_64.AppImage`` is an executable that takes the same commandline flags as the main
 ``raiden`` script. See `AppImage Documentation <https://github.com/AppImage/AppImageKit/blob/appimagetool/master/README.md>`_ for advanced integration with your distribution.
@@ -80,13 +80,13 @@ Firing it up
 Using geth
 ~~~~~~~~~~
 
-Run the client and let it sync with the Ropsten testnet::
+Run the Ethereum client and let it sync with the Ropsten testnet::
 
     geth --testnet --fast --bootnodes "enode://20c9ad97c081d63397d7b685a412227a40e23c8bdc6688c6f37e97cfbc22d2b4d1db1510d8f61e6a8866ad7f0e17c02b14182d37ea7c3c8b9c2683aeb6b733a1@52.169.14.227:30303,enode://6ce05930c72abc632c58e2e4324f7c7ea478cec0ed4fa2528982cf34483094e9cbc9216e7aa349691242576d552a2a56aaeae426c5303ded677ce455ba1acd9d@13.84.180.240:30303"
 
 Unless you already have an account you can also create one in the console by invoking ``personal.newAccount()``.
 
-If problems arise for above method, please see `the Ropsen README <https://github.com/ethereum/ropsten>`_ for further instructions.
+If problems arise for above method, please see `the Ropsten README <https://github.com/ethereum/ropsten>`_ for further instructions.
 
 Then launch Raiden with the default testnet keystore path::
 
@@ -103,9 +103,9 @@ After syncing the chain, create an account on the Ropsten testnet by navigating 
 
     http://127.0.0.1:8180
 
-After account creation, launch Raiden with the path of your keystore supplied and the RPC endpoint of the parity client (defaults show)::
+After account creation, launch Raiden with the path of your keystore supplied::
 
-    raiden --keystore-path "~/.local/share/io.parity.ethereum/keys/test" --eth-rpc-endpoint "127.0.0.1:8545"
+    raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test"
 
 Select the Ethereum account when prompted, and type in the account's password.
 
