@@ -195,8 +195,7 @@ class ChannelGraph(object):
             channelmanager_address,
             token_address,
             edge_list,
-            channels_details,
-            block_number):
+            channels_details):
 
         if not isaddress(token_address):
             raise ValueError('token_address must be a valid address')
@@ -236,21 +235,32 @@ class ChannelGraph(object):
         return not self.__eq__(other)
 
     def add_channel(self, details):
+        """ Instantiate a channel this node participates and add to the graph.
+
+        If the channel is already registered do nothing.
+        """
         channel_address = details.channel_address
-        partner_state = details.partner_state
 
-        channel = Channel(
-            details.our_state,
-            partner_state,
-            details.external_state,
-            self.token_address,
-            details.reveal_timeout,
-            details.settle_timeout,
-        )
-        self.add_path(details.our_state.address, partner_state.address)
+        if details.our_state.address != self.our_address:
+            raise ValueError(
+                "Address mismatch, our_address doesn't match the channel details"
+            )
 
-        self.partneraddress_to_channel[partner_state.address] = channel
-        self.address_to_channel[channel_address] = channel
+        if channel_address not in self.address_to_channel:
+            partner_state = details.partner_state
+
+            channel = Channel(
+                details.our_state,
+                partner_state,
+                details.external_state,
+                self.token_address,
+                details.reveal_timeout,
+                details.settle_timeout,
+            )
+            self.add_path(details.our_state.address, partner_state.address)
+
+            self.partneraddress_to_channel[partner_state.address] = channel
+            self.address_to_channel[channel_address] = channel
 
     def get_channel_by_contract_address(self, netting_channel_address):
         """ Return the channel with `netting_channel_address`.
