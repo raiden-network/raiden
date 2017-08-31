@@ -34,6 +34,17 @@ ChannelDetails = namedtuple(
     )
 )
 
+ChannelGraphConfig = namedtuple(
+    'ChannelGraphConfig',
+    (
+        'our_address',
+        'channelmanager_address',
+        'token_address',
+        'settle_timeout_min',
+        'settle_timeout_max',
+    )
+)
+
 
 def make_graph(edge_list):
     """ Return a graph that represents the connections among the netting
@@ -189,25 +200,23 @@ def get_best_routes(
 class ChannelGraph(object):
     """ Has Graph based on the channels and can find path between participants. """
 
-    def __init__(
-            self,
-            our_address,
-            channelmanager_address,
-            token_address,
-            edge_list,
-            channels_details,
-            block_number):
+    def __init__(self, config, edge_list, channels_details):
 
-        if not isaddress(token_address):
+        if not isinstance(config, ChannelGraphConfig):
+            raise ValueError('config must be a ChannelGraphConfig instance.')
+
+        if not isaddress(config.token_address):
             raise ValueError('token_address must be a valid address')
 
         graph = make_graph(edge_list)
         self.address_to_channel = dict()
         self.graph = graph
-        self.our_address = our_address
         self.partneraddress_to_channel = dict()
-        self.token_address = token_address
-        self.channelmanager_address = channelmanager_address
+
+        self.our_address = config.our_address
+        self.token_address = config.token_address
+        self.channelmanager_address = config.channelmanager_address
+        self.config = config
 
         for details in channels_details:
             try:
@@ -225,10 +234,8 @@ class ChannelGraph(object):
                 self.address_to_channel == other.address_to_channel and
                 # networkx.classes.graph.Graph has no __eq__
                 self.graph.__dict__ == other.graph.__dict__ and
-                self.our_address == other.our_address and
                 self.partneraddress_to_channel == other.partneraddress_to_channel and
-                self.token_address == other.token_address and
-                self.channelmanager_address == other.channelmanager_address
+                self.config == other.config
             )
         return False
 
@@ -238,6 +245,20 @@ class ChannelGraph(object):
     def add_channel(self, details):
         channel_address = details.channel_address
         partner_state = details.partner_state
+
+        if details.settle_timeout < self.config['settle_timeout_min']:
+            log.info('ignoring channel {} because the settlement period is too low'.format(
+                pex(details.channel_address)
+            ))
+
+            return
+
+        if self.config['settle_timeout_max'] < details.settle_timeout:
+            log.info('ignoring channel {} because the settlement period is too high'.format(
+                pex(details.channel_address)
+            ))
+
+            return
 
         channel = Channel(
             details.our_state,
