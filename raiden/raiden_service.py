@@ -640,8 +640,6 @@ class RaidenService(object):
         # some events might be applied twice.
         self.pyethapp_blockchain_events.add_proxies_listeners(proxies)
 
-        block_number = self.get_block_number()
-
         for manager in proxies.channel_managers:
             token_address = manager.token_address()
             manager_address = manager.address
@@ -659,7 +657,6 @@ class RaidenService(object):
                 token_address,
                 edge_list,
                 channels_detail,
-                block_number,
             )
 
             self.manager_to_token[manager_address] = token_address
@@ -700,14 +697,12 @@ class RaidenService(object):
             for channel in netting_channels
         ]
 
-        block_number = self.get_block_number()
         graph = ChannelGraph(
             self.address,
             manager_address,
             token_address,
             edge_list,
             channels_detail,
-            block_number,
         )
 
         self.manager_to_token[manager_address] = token_address
