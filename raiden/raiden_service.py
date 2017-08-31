@@ -224,7 +224,7 @@ class RaidenService(object):
             config['protocol']['nat_invitation_timeout'],
         )
 
-        # TODO: remove this cyclic depency
+        # TODO: remove this cyclic dependency
         transport.protocol = self.protocol
 
         self.message_handler = RaidenMessageHandler(self)
@@ -233,11 +233,7 @@ class RaidenService(object):
         self.greenlet_task_dispatcher = GreenletTasksDispatcher()
         self.on_message = self.message_handler.on_message
         self.alarm = AlarmTask(chain)
-
-        # prime the block number cache and set the callbacks
-        self._blocknumber = self.alarm.last_block_number
-        self.alarm.register_callback(self.poll_blockchain_events)
-        self.alarm.register_callback(self.set_block_number)
+        self._blocknumber = None
 
         self.transaction_log = StateChangeLog(
             storage_instance=StateChangeLogSQLiteBackend(
@@ -254,12 +250,8 @@ class RaidenService(object):
             if not os.path.exists(self.snapshot_dir):
                 os.makedirs(self.snapshot_dir)
 
-            # prevent two instances from concurrently accesing the same db
+            # Prevent concurrent acces to the same db
             self.db_lock = filelock.FileLock(self.lock_file)
-            self.db_lock.acquire(timeout=0)
-            assert self.db_lock.is_locked
-
-            self.restore_from_snapshots()
         else:
             self.database_dir = None
             self.lock_file = None
@@ -274,11 +266,18 @@ class RaidenService(object):
         self.start()
 
     def start(self):
-        """ Start the node.
+        """ Start the node. """
+        if self.database_dir is not None:
+            self.db_lock.acquire(timeout=0)
+            assert self.db_lock.is_locked
+            self.restore_from_snapshots()
 
-        This must only be called after the instance is fully initialized.
-        """
         self.alarm.start()
+
+        # Prime the block number cache and set the callbacks
+        self._blocknumber = self.alarm.last_block_number
+        self.alarm.register_callback(self.poll_blockchain_events)
+        self.alarm.register_callback(self.set_block_number)
 
         # Registry registration must start *after* the alarm task, this avoid
         # corner cases were the registry is queried in block A, a new block B
@@ -297,6 +296,27 @@ class RaidenService(object):
             for neighbour in graph.get_neighbours():
                 if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                     self.start_health_check_for(neighbour)
+
+    def stop(self):
+        """ Stop the node. """
+        wait_for = [self.alarm]
+        wait_for.extend(self.greenlet_task_dispatcher.stop())
+
+        self.alarm.stop_async()
+
+        wait_for.extend(self.protocol.greenlets)
+        self.pyethapp_blockchain_events.uninstall_all_event_listeners()
+
+        self.protocol.stop_and_wait()
+
+        gevent.wait(wait_for)
+
+        # save the state after all tasks are done
+        if self.serialization_file:
+            save_snapshot(self.serialization_file, self)
+
+        if self.db_lock is not None:
+            self.db_lock.release()
 
     def __repr__(self):
         return '<{} {}>'.format(self.__class__.__name__, pex(self.address))
@@ -823,26 +843,6 @@ class RaidenService(object):
                     if channel.state != CHANNEL_STATE_SETTLED
                 ]
             )
-
-    def stop(self):
-        wait_for = [self.alarm]
-        wait_for.extend(self.greenlet_task_dispatcher.stop())
-
-        self.alarm.stop_async()
-
-        wait_for.extend(self.protocol.greenlets)
-        self.pyethapp_blockchain_events.uninstall_all_event_listeners()
-
-        self.protocol.stop_and_wait()
-
-        gevent.wait(wait_for)
-
-        # save the state after all tasks are done
-        if self.serialization_file:
-            save_snapshot(self.serialization_file, self)
-
-        if self.db_lock is not None:
-            self.db_lock.release()
 
     def transfer_async(self, token_address, amount, target, identifier=None):
         """ Transfer `amount` between this node and `target`.
