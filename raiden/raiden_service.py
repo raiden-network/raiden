@@ -2,7 +2,6 @@
 # pylint: disable=too-many-lines
 import os
 import sys
-from os import path
 import itertools
 import cPickle as pickle
 import random
@@ -102,7 +101,7 @@ def create_default_identifier():
 
 
 def load_snapshot(serialization_file):
-    if path.exists(serialization_file):
+    if os.path.exists(serialization_file):
         with open(serialization_file, 'rb') as handler:
             return pickle.load(handler)
 
@@ -175,29 +174,6 @@ class RaidenService(object):
                 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
             ))
 
-        # create lock file only if SQLite backend is file, to prevent two instances
-        #  from accesing a single db
-        if config['database_path'] != ':memory:':
-            self.db_lock = filelock.FileLock(path.dirname(config['database_path']) + "/.lock")
-            self.db_lock.acquire(timeout=0)
-            assert self.db_lock.is_locked
-        else:
-            self.db_lock = None
-
-        private_key = PrivateKey(private_key_bin)
-        pubkey = private_key.public_key.format(compressed=False)
-        protocol = RaidenProtocol(
-            transport,
-            discovery,
-            self,
-            config['protocol']['retry_interval'],
-            config['protocol']['retries_before_backoff'],
-            config['protocol']['nat_keepalive_retries'],
-            config['protocol']['nat_keepalive_timeout'],
-            config['protocol']['nat_invitation_timeout'],
-        )
-        transport.protocol = protocol
-
         self.token_to_channelgraph = dict()
         self.tokens_to_connectionmanagers = dict()
         self.manager_to_token = dict()
@@ -216,18 +192,38 @@ class RaidenService(object):
         self.chain = chain
         self.config = config
         self.privkey = private_key_bin
-        self.pubkey = pubkey
-        self.private_key = private_key
         self.address = privatekey_to_address(private_key_bin)
-        self.protocol = protocol
+
+        endpoint_registration_event = gevent.spawn(
+            discovery.register,
+            self.address,
+            config['external_ip'],
+            config['external_port'],
+        )
+        endpoint_registration_event.link_exception(endpoint_registry_exception_handler)
+
+        self.private_key = PrivateKey(private_key_bin)
+        self.pubkey = self.private_key.public_key.format(compressed=False)
+        self.protocol = RaidenProtocol(
+            transport,
+            discovery,
+            self,
+            config['protocol']['retry_interval'],
+            config['protocol']['retries_before_backoff'],
+            config['protocol']['nat_keepalive_retries'],
+            config['protocol']['nat_keepalive_timeout'],
+            config['protocol']['nat_invitation_timeout'],
+        )
+
+        # TODO: remove this cyclic depency
+        transport.protocol = self.protocol
 
         self.message_handler = RaidenMessageHandler(self)
         self.state_machine_event_handler = StateMachineEventHandler(self)
         self.pyethapp_blockchain_events = PyethappBlockchainEvents()
         self.greenlet_task_dispatcher = GreenletTasksDispatcher()
-        self.alarm = AlarmTask(chain)
-
         self.on_message = self.message_handler.on_message
+        self.alarm = AlarmTask(chain)
 
         # prime the block number cache and set the callbacks
         self._blocknumber = self.alarm.last_block_number
@@ -240,41 +236,53 @@ class RaidenService(object):
             )
         )
 
-        self.register_registry(self.chain.default_registry.address)
-        registry_event = gevent.spawn(
-            discovery.register,
-            self.address,
-            config['external_ip'],
-            config['external_port'],
-        )
-        registry_event.link_exception(endpoint_registry_exception_handler)
-
-        self.serialization_file = None
         if config['database_path'] != ':memory:':
-            snapshot_dir = os.path.join(
-                path.dirname(self.config['database_path']),
-                'snapshots'
-            )
-            if not os.path.exists(snapshot_dir):
-                os.makedirs(
-                    snapshot_dir
-                )
+            self.database_dir = os.path.dirname(config['database_path'])
+            self.lock_file = os.path.join(self.database_dir, '.lock')
+            self.snapshot_dir = os.path.join(self.database_dir, 'snapshots')
+            self.serialization_file = os.path.join(self.snapshot_dir, 'data.pickle')
 
-            self.serialization_file = path.join(
-                snapshot_dir,
-                'data.pickle',
-            )
+            if not os.path.exists(self.snapshot_dir):
+                os.makedirs(self.snapshot_dir)
+
+            # prevent two instances from concurrently accesing the same db
+            self.db_lock = filelock.FileLock(self.lock_file)
+            self.db_lock.acquire(timeout=0)
+            assert self.db_lock.is_locked
 
             self.restore_from_snapshots()
+        else:
+            self.database_dir = None
+            self.lock_file = None
+            self.snapshot_dir = None
+            self.serialization_file = None
+            self.db_lock = None
 
-        registry_event.join()
+        # It's okay for the transport and the endpoint registration to race. If
+        # the registration happens before the transport won't be initialized
+        # and messages won't be handle before the node is fully initialized,
+        # until the protocol is started this node will be considered offline.
+        # The protocol finishing first is the happy case.
+        self.start()
+        endpoint_registration_event.join()
+
+    def start(self):
+        """ Start the node.
+
+        This must only be called after the instance is fully initialized.
+        """
         self.alarm.start()
 
-        # start the protocol, the node has fully started
+        # Registry registration must start *after* the alarm task, this avoid
+        # corner cases were the registry is queried in block A, a new block B
+        # is mined, and the alarm starts polling at block C.
+        self.register_registry(self.chain.default_registry.address)
+
+        # Start the protocol after the registry is queried to avoid warning
+        # about unknown channels.
         self.protocol.start()
 
-        # health check needs the protocol layer, so it must be started
-        # afterwards
+        # Health check needs the protocol layer
         self.start_neighbours_healthcheck()
 
     def start_neighbours_healthcheck(self):
