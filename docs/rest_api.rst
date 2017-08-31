@@ -123,8 +123,8 @@ And with a 201 response we also get the address as can be seen below::
 Querying Information About Channels and Tokens
 ===============================================
 
-Querying specific channel
---------------------------
+Querying a specific channel
+----------------------------
 
 There are multiple ways to query information about your channels. The most direct, if you know the channel address, is to query the channel master resource endpoint ``/api/<version>/channels/<channel_address>`` with a ``GET`` request.
 
