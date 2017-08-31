@@ -58,7 +58,7 @@ Event Object
 ==============
 
 Channels events are encoded as json objects with the event arguments as attributes
-of the dictionary, with one difference. The ``event_type`` is also added for all events to easily distinguish between events.
+of the dictionary, with one difference. The ``event_type`` and the ``block_number`` are also added for all events to easily distinguish between events.
 
 
 
@@ -123,8 +123,8 @@ And with a 201 response we also get the address as can be seen below::
 Querying Information About Channels and Tokens
 ===============================================
 
-Querying specific channel
---------------------------
+Querying a specific channel
+----------------------------
 
 There are multiple ways to query information about your channels. The most direct, if you know the channel address, is to query the channel master resource endpoint ``/api/<version>/channels/<channel_address>`` with a ``GET`` request.
 
@@ -151,7 +151,7 @@ The other ways to query information about the channels is to navigate the docume
 hierarchy of the API and find the channel address which will lead you to the master
 resource as shown above.
 
-Querying All Channels
+Querying all channels
 --------------------------
 
 By making a ``GET`` request to ``/api/<version>/channels`` you can get a list of all non-settled channels.
@@ -227,7 +227,7 @@ Possible Responses
 +------------------+---------------------------+
 
 
-Querying All Partners for a Token
+Querying all partners for a Token
 -----------------------------------
 
 By making a ``GET`` request to ``/api/<version>/tokens/<token_address>/partners`` you can get a list of all partners
