@@ -4,6 +4,7 @@ import pytest
 
 from raiden.mtree import check_proof
 from raiden.messages import RevealSecret
+from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.tests.utils.messages import setup_messages_cb
 from raiden.tests.utils.network import CHAIN
@@ -27,20 +28,6 @@ from raiden.transfer.state_change import Block
 from raiden.utils import sha3, privatekey_to_address
 
 # pylint: disable=too-many-locals,too-many-statements
-
-
-def assert_secretreveal_or_withdraw(state_change, secret, channel_address, raiden_address):
-    if isinstance(state_change, ReceiveSecretReveal):
-        assert state_change.secret == secret
-        assert state_change.sender == raiden_address
-    elif isinstance(state_change, ContractReceiveWithdraw):
-        assert state_change.channel_address == channel_address
-        assert state_change.secret == secret
-        assert state_change.receiver == raiden_address
-    else:
-        raise ValueError(
-            '{} is neither ReceiveSecretReveal or ContractReceiveWithdraw'.format(state_change)
-        )
 
 
 @pytest.mark.parametrize('privatekey_seed', ['settlement:{}'])
@@ -175,23 +162,27 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
         if not isinstance(change[1], Block)
     ]
 
-    state_change1 = state_changes[0]
-    state_change2 = state_changes[1]
-    state_change3 = state_changes[2]
-    state_change4 = state_changes[3]
+    assert must_contain_entry(state_changes, ContractReceiveClosed, {
+        'channel_address': nettingaddress0,
+        'closing_address': bob_app.raiden.address,
+        'block_number': alice_bob_channel.external_state.closed_block,
+    })
 
-    assert isinstance(state_change1, ContractReceiveClosed)
-    assert state_change1.channel_address == nettingaddress0
-    assert state_change1.closing_address == bob_app.raiden.address
-    assert state_change1.block_number == alice_bob_channel.external_state.closed_block
+    assert must_contain_entry(state_changes, ReceiveSecretReveal, {
+        'secret': secret,
+        'sender': bob_app.raiden.address,
+    })
 
-    # Can't be sure of the order in which we encounter the SecretReveal and the withdraw
-    assert_secretreveal_or_withdraw(state_change2, secret, nettingaddress0, bob_app.raiden.address)
-    assert_secretreveal_or_withdraw(state_change3, secret, nettingaddress0, bob_app.raiden.address)
+    assert must_contain_entry(state_changes, ContractReceiveWithdraw, {
+        'channel_address': nettingaddress0,
+        'secret': secret,
+        'receiver': bob_app.raiden.address,
+    })
 
-    assert isinstance(state_change4, ContractReceiveSettled)
-    assert state_change4.channel_address == nettingaddress0
-    assert state_change4.block_number == bob_alice_channel.external_state.settled_block
+    assert must_contain_entry(state_changes, ContractReceiveSettled, {
+        'channel_address': nettingaddress0,
+        'block_number': bob_alice_channel.external_state.settled_block,
+    })
 
 
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
