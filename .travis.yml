@@ -52,7 +52,8 @@ notifications:
 jobs:
   include:
     stage: deploy
-    script: make bundle
+    script: if [ -n "$TRAVIS_TAG" ]; then make bundle; fi
+    env: TEST_TYPE=""
     deploy:
     - provider: releases
       api_key:
