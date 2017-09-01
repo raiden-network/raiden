@@ -18,7 +18,6 @@ export class RaidenService {
     public tokenContract: any;
     public raidenAddress: string;
     private userTokens: { [id: string]: Usertoken |null} = {};
-    private _identifier: number = Math.floor(Math.random() * 900 + 100);
 
     private _requestsSubject = new BehaviorSubject<number>(0);
     public readonly requestsCnt$ = this._requestsSubject.asObservable()
@@ -48,7 +47,7 @@ export class RaidenService {
     }
 
     get identifier(): number {
-        return this._identifier++;
+        return Math.floor(Date.now() / 1000) * 1000 + Math.floor(Math.random() * 1000);
     }
 
     get blockNumber(): number {
@@ -285,7 +284,7 @@ export class RaidenService {
         }
     }
 
-    private handleError(error: Response | any) {
+    private handleError(error: Response | Error | any) {
         // In a real world app, you might use a remote logging infrastructure
         let errMsg: string;
         if (error instanceof Response) {
