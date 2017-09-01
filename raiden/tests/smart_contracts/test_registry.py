@@ -6,7 +6,7 @@ from ethereum import tester
 
 from raiden.tests.fixtures.tester import tester_token_address
 from raiden.utils import sha3
-from raiden.settings import RAIDEN_VERSION
+from raiden.utils import get_system_spec
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -73,6 +73,8 @@ def test_all_contracts_same_version(
         endpoint_discovery_services):
     """ Test that all contracts in the repository have the same version"""
     privatekey0 = tester.DEFAULT_KEY
+    RAIDEN_VERSION = get_system_spec()['raiden']
+    RAIDEN_VERSION = RAIDEN_VERSION.split('+')[0]
 
     registry_version = tester_registry.contract_version(sender=privatekey0)
     channelmanager_version = tester_channelmanager.contract_version(sender=privatekey0)

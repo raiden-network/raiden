@@ -3,7 +3,6 @@ from ethereum.utils import denoms, int_to_big_endian
 
 INITIAL_PORT = 40001
 
-RAIDEN_VERSION = "0.0.6"  # Keep in sync with version in setup.py
 CACHE_TTL = 60
 ESTIMATED_BLOCK_TIME = 7
 GAS_LIMIT = 3141592  # Morden's gasLimit.
