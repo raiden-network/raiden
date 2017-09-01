@@ -681,10 +681,8 @@ class RaidenProtocol(object):
                     node=pex(self.raiden.address),
                     echohash=pex(echohash),
                     message=message,
+                    sender=pex(message.sender),
                 )
-
-            # ping handler does nothing
-            # self.raiden.on_message(message, echohash)
 
             ack = Ack(
                 self.raiden.address,
