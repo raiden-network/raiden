@@ -2,6 +2,7 @@
 import itertools
 from collections import namedtuple, defaultdict
 
+from pyethapp.rpc_client import JSONRPCClientReplyError
 from pyethapp.jsonrpc import address_decoder
 from ethereum import slogging
 
@@ -248,18 +249,40 @@ def pyethapp_event_to_state_change(pyethapp_event):  # pylint: disable=too-many-
 class PyethappBlockchainEvents(object):
     """ Pyethapp events polling. """
 
-    def __init__(self):
+    def __init__(self, chain, address, registry_address):
         self.event_listeners = list()
+        self.chain = chain
+        self.address = address
+        self.registry_address = registry_address
 
     def poll_all_event_listeners(self):
         result = list()
 
-        for event_listener in self.event_listeners:
-            decoded_events = poll_event_listener(
-                event_listener.pyethapp_filter,
-                event_listener.translator,
-            )
-            result.extend(decoded_events)
+        reinstalled_filters = False
+        while True:
+            try:
+                for event_listener in self.event_listeners:
+                    decoded_events = poll_event_listener(
+                        event_listener.pyethapp_filter,
+                        event_listener.translator,
+                    )
+                    result.extend(decoded_events)
+                break
+            except JSONRPCClientReplyError as e:
+                # If the eth client has restarted and we reconnected to it then
+                # filters will no longer exist there. In that case we will need
+                # to recreate all the filters.
+                if not reinstalled_filters and str(e) == 'filter not found':
+                    self.event_listeners = list()
+                    result = list()
+                    reinstalled_filters = True
+                    self.add_proxies_listeners(get_relevant_proxies(
+                        self.chain,
+                        self.address,
+                        self.registry_address,
+                    ))
+                else:
+                    raise e
 
         return result
 

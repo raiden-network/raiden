@@ -222,7 +222,11 @@ class RaidenService(object):
 
         message_handler = RaidenMessageHandler(self)
         state_machine_event_handler = StateMachineEventHandler(self)
-        pyethapp_blockchain_events = PyethappBlockchainEvents()
+        pyethapp_blockchain_events = PyethappBlockchainEvents(
+            self.chain,
+            self.address,
+            self.chain.default_registry.address
+        )
         greenlet_task_dispatcher = GreenletTasksDispatcher()
 
         alarm = AlarmTask(chain)

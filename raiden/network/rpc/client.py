@@ -143,10 +143,12 @@ def patch_send_transaction(client, nonce_offset=0):
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
         assert hasattr(client, 'privkey') and client.privkey
         tx.sign(client.privkey)
+
         result = client.call(
             'eth_sendRawTransaction',
             data_encoder(rlp.encode(tx)),
         )
+
         return result[2 if result.startswith('0x') else 0:]
 
     if patch_necessary:
@@ -280,6 +282,27 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes
 
+    def _checkNodeConnection(func, *args, **kwargs):
+
+        def retry_if_disconnect(self, *args, **kwargs):
+            tries = 5
+            reconnect_wait_secs = 4
+            while tries != 0:
+                try:
+                    result = func(self, *args, **kwargs)
+                    break
+                except requests.exceptions.ConnectionError:
+                    log.info(
+                        'Timeout in eth client connection. Is client offline? Trying'
+                        ' again in {} secs. {} tries remaining'.format(reconnect_wait_secs, tries),
+                    )
+                    gevent.sleep(reconnect_wait_secs)
+                    tries -= 1
+
+            return result
+
+        return retry_if_disconnect
+
     def __init__(
             self,
             privatekey_bin,
@@ -315,9 +338,11 @@ class BlockChainService(object):
         if level:
             self.client.print_communication = True
 
+    @_checkNodeConnection
     def block_number(self):
         return self.client.blocknumber()
 
+    @_checkNodeConnection
     def estimate_blocktime(self, oldest=256):
         """Calculate a blocktime estimate based on some past blocks.
         Args:
@@ -340,6 +365,7 @@ class BlockChainService(object):
         delta = last_timestamp - first_timestamp
         return float(delta) / interval
 
+    @_checkNodeConnection
     def get_block_header(self, block_number):
         block_number = block_tag_encoder(block_number)
         return self.client.call('eth_getBlockByNumber', block_number, False)
@@ -354,6 +380,7 @@ class BlockChainService(object):
 
         return current_block
 
+    @_checkNodeConnection
     def token(self, token_address):
         """ Return a proxy to interact with a token. """
         if token_address not in self.address_to_token:
@@ -365,6 +392,7 @@ class BlockChainService(object):
 
         return self.address_to_token[token_address]
 
+    @_checkNodeConnection
     def discovery(self, discovery_address):
         """ Return a proxy to interact with the discovery. """
         if discovery_address not in self.address_to_discovery:
@@ -376,6 +404,7 @@ class BlockChainService(object):
 
         return self.address_to_discovery[discovery_address]
 
+    @_checkNodeConnection
     def netting_channel(self, netting_channel_address):
         """ Return a proxy to interact with a NettingChannelContract. """
         if netting_channel_address not in self.address_to_nettingchannel:
@@ -388,6 +417,7 @@ class BlockChainService(object):
 
         return self.address_to_nettingchannel[netting_channel_address]
 
+    @_checkNodeConnection
     def manager(self, manager_address):
         """ Return a proxy to interact with a ChannelManagerContract. """
         if manager_address not in self.address_to_channelmanager:
@@ -404,6 +434,7 @@ class BlockChainService(object):
 
         return self.address_to_channelmanager[manager_address]
 
+    @_checkNodeConnection
     def manager_by_token(self, token_address):
         """ Find the channel manager for `token_address` and return a proxy to
         interact with it.
@@ -428,6 +459,7 @@ class BlockChainService(object):
 
         return self.token_to_channelmanager[token_address]
 
+    @_checkNodeConnection
     def registry(self, registry_address):
         if registry_address not in self.address_to_registry:
             self.address_to_registry[registry_address] = Registry(
@@ -438,9 +470,11 @@ class BlockChainService(object):
 
         return self.address_to_registry[registry_address]
 
+    @_checkNodeConnection
     def uninstall_filter(self, filter_id_raw):
         self.client.call('eth_uninstallFilter', filter_id_raw)
 
+    @_checkNodeConnection
     def deploy_contract(self, contract_name, contract_file, constructor_parameters=None):
         contract_path = get_contract_path(contract_file)
         contracts = _solidity.compile_file(contract_path, libraries=dict())
@@ -462,6 +496,7 @@ class BlockChainService(object):
         )
         return proxy.address
 
+    @_checkNodeConnection
     def deploy_and_register_token(self, contract_name, contract_file, constructor_parameters=None):
         assert self.default_registry
 
