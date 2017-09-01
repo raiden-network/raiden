@@ -71,7 +71,7 @@ WORKDIR /
 # add .desktop file
 ADD raiden.desktop /raiden.AppDir/raiden.desktop
 RUN cd /apps/raiden && \
-    VERSIONSTRING=$(raiden version --short) && \
+    VERSIONSTRING=$(/raiden.AppDir/usr/bin/raiden version --short) && \
     sed -s -i "s/XXVERSIONXX/$VERSIONSTRING/" /raiden.AppDir/raiden.desktop
 # add icon
 ADD raiden.svg /raiden.AppDir/raiden.svg
