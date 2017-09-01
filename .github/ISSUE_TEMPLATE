@@ -25,4 +25,4 @@ Example:
 Bother with this section only if you are reporting a bug
 
 ### System Description
-Here add a detailed description of your system, raiden version, geth version, solidity version e.t.c.
+Here add a detailed description of your system, e.g. output of `raiden version`, `geth version`, `solc --version` e.t.c.
