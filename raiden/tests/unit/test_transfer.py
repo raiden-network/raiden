@@ -47,6 +47,7 @@ from raiden.network.protocol import (
     NODE_NETWORK_UNREACHABLE,
     NODE_NETWORK_UNKNOWN,
 )
+from raiden.exceptions import IdentifierCollision
 
 
 # pylint: disable=too-many-locals,too-many-statements,line-too-long
@@ -180,6 +181,63 @@ def test_transfer(raiden_network):
         direct_messages[0],
         decoded_messages,
     )
+
+
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('number_of_nodes', [2])
+def test_idempotent_transfer(raiden_network):
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    messages = setup_messages_cb()
+
+    graph0 = app0.raiden.token_to_channelgraph.values()[0]
+    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+
+    channel0 = graph0.partneraddress_to_channel[app1.raiden.address]
+    channel1 = graph1.partneraddress_to_channel[app0.raiden.address]
+
+    balance0 = channel0.balance
+    balance1 = channel1.balance
+
+    assert graph0.token_address == graph1.token_address
+    assert app1.raiden.address in graph0.partneraddress_to_channel
+
+    amount = 10
+    identifier = 1337
+    target = app1.raiden.address
+
+    # assert multiple transfers with same identifier are idempotent
+    for _ in range(2):
+        result = app0.raiden.transfer_async(
+            graph0.token_address,
+            amount,
+            target,
+            identifier,
+        )
+
+        result.get(timeout=10)
+
+        assert_synched_channels(
+            channel0, balance0 - amount, [],
+            channel1, balance1 + amount, []
+        )
+
+        decoded_messages = [decode(m) for m in messages]
+        direct_messages = get_messages_by_type(decoded_messages, DirectTransfer)
+
+        assert len(direct_messages) == 1
+        assert direct_messages[0].transferred_amount == amount
+
+    # assert error if same identifier is re-used with different amount
+    with pytest.raises(IdentifierCollision):
+        result = app0.raiden.transfer_async(
+            graph0.token_address,
+            2 * amount,
+            target,
+            identifier,
+        )
+
+        result.get(timeout=10)
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])

@@ -171,14 +171,28 @@ class StateMachineEventHandler(object):
             self.raiden.send_async(receiver, refund_transfer)
 
         elif isinstance(event, EventTransferSentSuccess):
-            for result in self.raiden.identifier_to_results[event.identifier]:
-                result.set(True)
+            result = self.raiden.identifier_to_result.get(event.identifier)
+            if result:
+                result.async_result.set(True)
+            else:
+                log.warning(
+                    'EventTransferSentSuccess of unknown transfer',
+                    event=event,
+                )
 
         elif isinstance(event, EventTransferSentFailed):
-            for result in self.raiden.identifier_to_results[event.identifier]:
-                result.set(False)
+            result = self.raiden.identifier_to_result.get(event.identifier)
+            if result:
+                result.async_result.set(False)
+            else:
+                log.warning(
+                    'EventTransferSentFailed of unknown transfer',
+                    event=event,
+                )
+
         elif isinstance(event, UNEVENTEFUL_EVENTS):
             pass
+
         elif isinstance(event, EventUnlockFailed):
             log.error(
                 'UnlockFailed!',

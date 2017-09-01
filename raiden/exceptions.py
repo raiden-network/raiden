@@ -159,3 +159,8 @@ class NoTokenManager(RaidenError):
 
 class DuplicatedChannelError(RaidenError):
     """Raised if someone tries to create a channel that already exists."""
+
+
+class IdentifierCollision(RaidenError):
+    """Raide when an API call which requires unique identifier for a
+    given set of parameters, receives another call with different parameters"""

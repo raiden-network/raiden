@@ -7,7 +7,7 @@ import itertools
 import cPickle as pickle
 import random
 import filelock
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 import gevent
 from gevent.event import AsyncResult
@@ -18,6 +18,7 @@ from raiden.network.rpc.client import JSONRPCPollTimeoutException
 
 from raiden.constants import (
     UINT64_MAX,
+    ROPSTEN_REGISTRY_ADDRESS,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
 )
 from raiden.blockchain.events import (
@@ -68,7 +69,7 @@ from raiden.channel import (
 from raiden.channel.netting_channel import (
     ChannelSerialization,
 )
-from raiden.exceptions import InvalidAddress, AddressWithoutCode
+from raiden.exceptions import InvalidAddress, AddressWithoutCode, IdentifierCollision
 from raiden.network.channelgraph import (
     get_best_routes,
     channel_to_routestate,
@@ -82,7 +83,6 @@ from raiden.messages import (
 from raiden.network.protocol import (
     RaidenProtocol,
 )
-from raiden.constants import ROPSTEN_REGISTRY_ADDRESS
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
@@ -94,6 +94,13 @@ from raiden.utils import (
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 # register filelock logger
 filelock.logger = slogging.get_logger('filelock')
+
+TransferResult = namedtuple('TransferResult', (
+    'async_result',
+    'amount',
+    'token',
+    'target',
+))
 
 
 def create_default_identifier():
@@ -204,7 +211,7 @@ class RaidenService(object):
         self.swapkey_to_greenlettask = dict()
 
         self.identifier_to_statemanagers = defaultdict(list)
-        self.identifier_to_results = defaultdict(list)
+        self.identifier_to_result = dict()
 
         # This is a map from a hashlock to a list of channels, the same
         # hashlock can be used in more than one token (for tokenswaps), a
@@ -847,22 +854,39 @@ class RaidenService(object):
         if identifier is None:
             identifier = create_default_identifier()
 
-        direct_channel = graph.partneraddress_to_channel.get(target)
-        if direct_channel:
+        result = self.identifier_to_result.get(identifier)
+        if result:
+            if result.token != token_address or result.target != target or result.amount != amount:
+                raise IdentifierCollision(
+                    'Identifier colision with different transfer data',
+                    result
+                )
+
+            async_result = result.async_result
+
+        elif target in graph.partneraddress_to_channel:
             async_result = self._direct_or_mediated_transfer(
                 token_address,
                 amount,
                 identifier,
-                direct_channel,
+                graph.partneraddress_to_channel[target],
             )
-            return async_result
 
-        async_result = self._mediated_transfer(
-            token_address,
-            amount,
-            identifier,
-            target,
-        )
+        else:
+            async_result = self._mediated_transfer(
+                token_address,
+                amount,
+                identifier,
+                target,
+            )
+
+        if not result:
+            self.identifier_to_result[identifier] = TransferResult(
+                async_result=async_result,
+                amount=amount,
+                token=token_address,
+                target=target,
+            )
 
         return async_result
 
@@ -1006,7 +1030,6 @@ class RaidenService(object):
         # TODO: implement the network timeout raiden.config['msg_timeout'] and
         # cancel the current transfer if it hapens (issue #374)
         self.identifier_to_statemanagers[identifier].append(state_manager)
-        self.identifier_to_results[identifier].append(async_result)
 
         return async_result
 
