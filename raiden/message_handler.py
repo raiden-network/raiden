@@ -48,10 +48,6 @@ class RaidenMessageHandler(object):
         cmdid = message.cmdid
 
         # ack and ping messages are not forwarded to the handler
-        # if cmdid == messages.ACK:
-        #     pass
-        # elif cmdid == messages.PING:
-        #     pass
 
         if cmdid == messages.SECRETREQUEST:
             self.message_secretrequest(message)
