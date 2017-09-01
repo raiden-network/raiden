@@ -128,9 +128,35 @@ test_requirements = []
 
 version = '0.0.6'  # preserve format, this is read from __init__.py
 
+
+def read_version_from_git():
+    try:
+        import subprocess
+        import shlex
+        git_version, err = subprocess.Popen(
+            shlex.split('git describe --tags'),
+            stdout=subprocess.PIPE,
+        ).communicate()
+        if git_version.startswith('v'):
+            git_version = git_version[1:]
+
+        git_version = git_version.strip()
+        # if this is has commits after the tag, it's a prerelease:
+        if git_version.count('-') == 2:
+            spec, _, commit = git_version.split('-')
+            if commit.startswith('g'):
+                commit = commit[1:]
+            return '{}+git.r{}'.format(spec, commit)
+        else:
+            return git_version
+    except BaseException as e:
+        print('could not read version from git: {}'.format(e))
+        return version
+
+
 setup(
     name='raiden',
-    version=version,
+    version=read_version_from_git(),
     description="",
     long_description=readme + '\n\n' + history,
     author='HeikoHeiko',
@@ -142,7 +168,7 @@ setup(
     zip_safe=False,
     keywords='raiden',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
