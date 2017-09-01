@@ -1,7 +1,7 @@
 FROM python:2.7
 MAINTAINER Ulrich Petri <ulrich@brainbot.com>
 
-ARG SOLC_RELEASE=0.4.13
+ARG SOLC_RELEASE=0.4.16
 
 RUN \
     apt update && \
