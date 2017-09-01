@@ -3,6 +3,8 @@ pragma solidity ^0.4.11;
 import "./ChannelManagerContract.sol";
 
 contract Registry {
+    uint constant public contract_version = 1;
+
     mapping(address => address) public registry;
     address[] public tokens;
 

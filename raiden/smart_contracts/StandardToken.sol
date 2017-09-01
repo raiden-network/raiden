@@ -10,6 +10,7 @@ pragma solidity ^0.4.11;
 import "./Token.sol";
 
 contract StandardToken is Token {
+    uint constant public contract_version = 1;
 
     function transfer(address _to, uint256 _value) returns (bool success) {
         //Default assumes totalSupply can't be over max (2^256 - 1).
