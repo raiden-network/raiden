@@ -34,13 +34,17 @@ export class RaidenConfig {
                 .subscribe((config) => {
                     this.config = Object.assign({}, default_config, config);
                     this.api = this.config.raiden;
-                    this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3));
+                    this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3, 2000));
                     // make a simple test call to web3
                     this.web3.version.getNetwork((err, res) => {
                         if (err) {
                             console.error('Invalid web3 endpoint', err);
                             console.info('Switching to fallback: ' + this.config.web3_fallback);
                             this.config.web3 = this.config.web3_fallback;
+                            this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3));
+                        } else {
+                            // on success, reconstruct without timeout,
+                            // because of long (events) running requests
                             this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3));
                         }
                         resolve();
