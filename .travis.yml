@@ -49,7 +49,7 @@ jobs:
     before_install: if [ -n "$TRAVIS_TAG" ]; then mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; ./.travis/before_install.sh; fi
     install: if [ -n "$TRAVIS_TAG" ]; then . .travis/install.sh; fi
     before_script: if [ -n "$TRAVIS_TAG" ]; then . .travis/before_script; fi
-    script: if [ -n "$TRAVIS_TAG" ]; then make bundle; fi
+    script: if [ -n "$TRAVIS_TAG" ]; then RAIDENVERSION=$TRAVIS_TAG make bundle; fi
     env: TEST_TYPE=""
     deploy:
     - provider: releases
