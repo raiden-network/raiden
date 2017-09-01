@@ -155,3 +155,22 @@ def fix_tester_storage(storage):
         new_val = '0x%064x' % int(val, 16)
         new_storage[new_key] = new_val
     return new_storage
+
+
+def get_system_spec():
+    """Collect informations about the system and installation.
+    """
+    import pkg_resources
+    import raiden
+    import platform
+    system_spec = dict(
+        raiden=pkg_resources.require(raiden.__name__)[0].version,
+        python_implementation=platform.python_implementation(),
+        python_version=platform.python_version(),
+        system='{} {} {}'.format(
+            platform.system(),
+            '_'.join(platform.architecture()),
+            platform.release()
+        )
+    )
+    return system_spec

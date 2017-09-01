@@ -32,7 +32,7 @@ from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     GAS_PRICE
 )
-from raiden.utils import split_endpoint
+from raiden.utils import split_endpoint, get_system_spec
 from raiden.tests.utils.smoketest import (
     load_or_create_smoketest_config,
     start_ethereum,
@@ -424,6 +424,7 @@ def prompt_account(address_hex, keystore_path, password_file):
 @click.pass_context
 def run(ctx, **kwargs):
     if ctx.invoked_subcommand is None:
+        print('Welcome to Raiden, version {}!'.format(get_system_spec()['raiden']))
         from raiden.ui.console import Console
         from raiden.api.python import RaidenAPI
 
@@ -514,6 +515,23 @@ def run(ctx, **kwargs):
 
 @run.command()
 @click.option(
+    '--short',
+    is_flag=True,
+    help='Only display Raiden version'
+)
+def version(short, **kwargs):
+    """Print version information and exit. """
+    if short:
+        print(get_system_spec()['raiden'])
+    else:
+        print(json.dumps(
+            get_system_spec(),
+            indent=2
+        ))
+
+
+@run.command()
+@click.option(
     '--debug/--no-debug',
     default=False,
     help='Drop into pdb on errors (default: False).'
@@ -533,6 +551,7 @@ def smoketest(ctx, debug, **kwargs):
             if data is not None:
                 handler.writelines([(data + os.linesep).encode('utf-8')])
 
+    append_report('raiden version', json.dumps(get_system_spec()))
     append_report('raiden log', None)
 
     print("[1/5] getting smoketest configuration")
