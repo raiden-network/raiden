@@ -873,18 +873,18 @@ class RaidenService(object):
         incremented.
 
         Because the transfer is non cancellable, there is a level of trust with
-        the target, after the message is sent the target is effectively paid
-        and there it is not possible to revert.
+        the target. After the message is sent the target is effectively paid
+        and then it is not possible to revert.
 
-        The async result will be set to False iif there is no direct channel
+        The async result will be set to False iff there is no direct channel
         with the target or the payer does not have balance to complete the
         transfer, otherwise because the transfer is non expirable the async
         result *will never be set to False* and if the message is sent it will
         hang until the target node acknowledge the message.
 
         This transfer should be used as an optimization, since only two packets
-        are required to complete the transfer (form the payer perspective),
-        where as the mediated transfer requires 6 messages.
+        are required to complete the transfer (from the payer's perspective),
+        whereas the mediated transfer requires 6 messages.
         """
         graph = self.token_to_channelgraph[token_address]
         direct_channel = graph.partneraddress_to_channel.get(target)
