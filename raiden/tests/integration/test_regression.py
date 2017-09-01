@@ -35,9 +35,10 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
     for app in raiden_network:
         app.raiden.poll_blockchain_events()
 
-    transfer = app0.raiden.transfer_async(
+    transfer = app0.raiden.mediated_transfer_async(
         token,
         1,
-        app4.raiden.address
+        app4.raiden.address,
+        1,
     )
     assert transfer.wait()

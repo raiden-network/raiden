@@ -247,24 +247,23 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
     paths = main_graph.get_paths_of_length(source, num_hops)
 
     # sanity check
-    assert len(paths)
+    assert paths
 
     path = paths[0]
     target = path[-1]
 
     # addresses
-    a, b, c = path
     token_address = main_graph.token_address
 
     amount = 10
 
     # measure the hot path
     with profiling.profile():
-        result = main_app.raiden.transfer_async(
+        result = main_app.raiden.mediated_transfer_async(
             token_address,
             amount,
             target,
-            1  # TODO: fill in identifier
+            1,
         )
         result.wait()
 

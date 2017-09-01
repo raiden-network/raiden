@@ -230,7 +230,7 @@ def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_ti
 
     # Update the hashlock
     claim_lock(raiden_network, identifier, token, secret)
-    direct_transfer(app0, app1, token, amount)
+    direct_transfer(app0, app1, token, amount, identifier=1)
 
     # The direct transfer locksroot must remove the unlocked lock and update
     # the transferred amount, the withdraw must fail.

@@ -159,10 +159,11 @@ def test_receive_mediated_before_deposit(raiden_network, token_addresses):
     assert bob_charlie.distributable == deposit_amount
 
     transfer_amount = 1
-    async_result = app_alice.raiden.transfer_async(
+    async_result = app_alice.raiden.mediated_transfer_async(
         token_address,
         transfer_amount,
         app_charlie.raiden.address,
+        1,
     )
     assert async_result.wait(10)
 

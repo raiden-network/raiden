@@ -844,7 +844,7 @@ class RaidenService(object):
                 ]
             )
 
-    def transfer_async(self, token_address, amount, target, identifier=None):
+    def mediated_transfer_async(self, token_address, amount, target, identifier):
         """ Transfer `amount` between this node and `target`.
 
         This method will start an asyncronous transfer, the transfer might fail
@@ -853,24 +853,10 @@ class RaidenService(object):
             - Existence of a path that can be used, through the usage of direct
               or intermediary channels.
             - Network speed, making the transfer sufficiently fast so it doesn't
-              timeout.
+              expire.
         """
-        graph = self.token_to_channelgraph[token_address]
 
-        if identifier is None:
-            identifier = create_default_identifier()
-
-        direct_channel = graph.partneraddress_to_channel.get(target)
-        if direct_channel:
-            async_result = self._direct_or_mediated_transfer(
-                token_address,
-                amount,
-                identifier,
-                direct_channel,
-            )
-            return async_result
-
-        async_result = self._mediated_transfer(
+        async_result = self.start_mediated_transfer(
             token_address,
             amount,
             identifier,
@@ -879,41 +865,37 @@ class RaidenService(object):
 
         return async_result
 
-    def _direct_or_mediated_transfer(self, token_address, amount, identifier, direct_channel):
-        """ Check the direct channel and if possible use it, otherwise start a
-        mediated transfer.
+    def direct_transfer_async(self, token_address, amount, target, identifier):
+        """ Do a direct tranfer with target.
+
+        Direct transfers are non cancellable and non expirable, since these
+        transfers are a signed balance proof with the transferred amount
+        incremented.
+
+        Because the transfer is non cancellable, there is a level of trust with
+        the target, after the message is sent the target is effectively paid
+        and there it is not possible to revert.
+
+        The async result will be set to False iif there is no direct channel
+        with the target or the payer does not have balance to complete the
+        transfer, otherwise because the transfer is non expirable the async
+        result *will never be set to False* and if the message is sent it will
+        hang until the target node acknowledge the message.
+
+        This transfer should be used as an optimization, since only two packets
+        are required to complete the transfer (form the payer perspective),
+        where as the mediated transfer requires 6 messages.
         """
+        graph = self.token_to_channelgraph[token_address]
+        direct_channel = graph.partneraddress_to_channel.get(target)
 
-        if not direct_channel.can_transfer:
-            log.info(
-                'DIRECT CHANNEL is closed or has no funding',
-                from_=pex(direct_channel.our_state.address),
-                to=pex(direct_channel.partner_state.address),
-            )
+        direct_channel_with_capacity = (
+            direct_channel and
+            direct_channel.can_transfer and
+            amount <= direct_channel.distributable
+        )
 
-            async_result = self._mediated_transfer(
-                token_address,
-                amount,
-                identifier,
-                direct_channel.partner_state.address,
-            )
-
-        elif amount > direct_channel.distributable:
-            log.info(
-                'DIRECT CHANNEL does not have enough funds',
-                from_=pex(direct_channel.our_state.address),
-                to=pex(direct_channel.partner_state.address),
-                amount=amount,
-            )
-
-            async_result = self._mediated_transfer(
-                token_address,
-                amount,
-                identifier,
-                direct_channel.partner_state.address,
-            )
-
-        else:
+        if direct_channel_with_capacity:
             direct_transfer = direct_channel.create_directtransfer(amount, identifier)
             self.sign(direct_transfer)
             direct_channel.register_transfer(
@@ -945,10 +927,11 @@ class RaidenService(object):
                 direct_transfer,
             )
 
-        return async_result
+        else:
+            async_result = AsyncResult()
+            async_result.set(False)
 
-    def _mediated_transfer(self, token_address, amount, identifier, target):
-        return self.start_mediated_transfer(token_address, amount, identifier, target)
+        return async_result
 
     def start_mediated_transfer(self, token_address, amount, identifier, target):
         # pylint: disable=too-many-locals
