@@ -136,7 +136,7 @@ class MediatedTransferTestHelper(object):
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_transfer(raiden_network):
+def test_direct_transfer(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     messages = setup_messages_cb()
@@ -155,10 +155,11 @@ def test_transfer(raiden_network):
 
     amount = 10
     target = app1.raiden.address
-    result = app0.raiden.transfer_async(
+    result = app0.raiden.direct_transfer_async(
         graph0.token_address,
         amount,
         target,
+        identifier=1,
     )
 
     result.wait(timeout=10)
@@ -191,10 +192,11 @@ def test_transfer_channels(raiden_network, token_addresses):
     app0, app1 = raiden_network
 
     amount = 10
-    async_result = app0.raiden.transfer_async(
+    async_result = app0.raiden.mediated_transfer_async(
         token_address,
         amount,
         app1.raiden.address,
+        identifier=1,
     )
 
     assert async_result.wait() is False
@@ -213,17 +215,19 @@ def test_transfer_noroutes(raiden_network, token_addresses):
     token_address = token_addresses[0]
 
     amount = 10
-    async_result = app0.raiden.transfer_async(
+    async_result = app0.raiden.mediated_transfer_async(
         token_address,
         amount,
         app2.raiden.address,
+        identifier=1,
     )
     assert async_result.wait() is False
 
-    async_result = app0.raiden.transfer_async(
+    async_result = app0.raiden.mediated_transfer_async(
         token_address,
         amount,
         app3.raiden.address,
+        identifier=1,
     )
     assert async_result.wait() is False
 
@@ -256,10 +260,11 @@ def test_mediated_transfer(raiden_network):
 
     amount = 10
 
-    result = alice_app.raiden.transfer_async(
+    result = alice_app.raiden.mediated_transfer_async(
         token_address,
         amount,
         charlie_address,
+        identifier=1,
     )
 
     assert channel_ab.locked == amount
@@ -286,10 +291,11 @@ def test_direct_transfer_exceeding_distributable(raiden_network, token_addresses
     alice_app, bob_app = raiden_network
     token_address = token_addresses[0]
 
-    result = alice_app.raiden.transfer_async(
+    result = alice_app.raiden.direct_transfer_async(
         token_address,
         deposit * 2,
         bob_app.raiden.address,
+        identifier=1,
     )
 
     assert not result.wait(timeout=10)
@@ -302,10 +308,11 @@ def test_mediated_transfer_with_entire_deposit(raiden_network, token_addresses, 
     alice_app, bob_app, charlie_app = raiden_network
     token_address = token_addresses[0]
 
-    result = alice_app.raiden.transfer_async(
+    result = alice_app.raiden.mediated_transfer_async(
         token_address,
         deposit,
         charlie_app.raiden.address,
+        identifier=1,
     )
 
     channel_ab = channel(alice_app, bob_app, token_address)
@@ -316,10 +323,11 @@ def test_mediated_transfer_with_entire_deposit(raiden_network, token_addresses, 
     assert result.wait(timeout=10)
     gevent.sleep(.1)  # wait for charlie to sync
 
-    result = charlie_app.raiden.transfer_async(
+    result = charlie_app.raiden.mediated_transfer_async(
         token_address,
         deposit * 2,
         alice_app.raiden.address,
+        identifier=1,
     )
     assert result.wait(timeout=10)
 
@@ -360,11 +368,11 @@ def test_cancel_transfer(raiden_chain, token, deposit):
 
     # drain the channel app1 -> app2
     amount12 = 50
-    direct_transfer(app1, app2, token, amount12)
+    direct_transfer(app1, app2, token, amount12, identifier=1)
 
     # drain the channel app2 -> app3
     amount23 = 80
-    direct_transfer(app2, app3, token, amount23)
+    direct_transfer(app2, app3, token, amount23, identifier=2)
 
     assert_synched_channels(
         channel(app1, app2, token), deposit - amount12, [],
@@ -418,10 +426,11 @@ def test_healthcheck_with_normal_peer(raiden_network):
 
     amount = 10
     target = app1.raiden.address
-    result = app0.raiden.transfer_async(
+    result = app0.raiden.direct_transfer_async(
         graph0.token_address,
         amount,
         target,
+        identifier=1,
     )
     assert result.wait(timeout=10)
 
@@ -573,10 +582,11 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
 
     amount = 10
     target = app1.raiden.address
-    result = app0.raiden.transfer_async(
+    result = app0.raiden.direct_transfer_async(
         graph0.token_address,
         amount,
         target,
+        identifier=1,
     )
 
     assert result.wait(timeout=10)
@@ -621,10 +631,11 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     )
 
     amount = 10
-    result = alice_app.raiden.transfer_async(
+    result = alice_app.raiden.mediated_transfer_async(
         token_address,
         amount,
         charlie_app.raiden.address,
+        identifier=1,
     )
 
     assert result.wait(timeout=10)
@@ -673,10 +684,11 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
 
     alice_address, bob_address, charlie_address = path
     amount = 10
-    result = alice_app.raiden.transfer_async(
+    result = alice_app.raiden.mediated_transfer_async(
         token_address,
         amount,
         charlie_address,
+        identifier=1,
     )
 
     assert result.wait(timeout=10)
@@ -727,10 +739,11 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     assert app1.raiden.address in graph0.partneraddress_to_channel
 
     amount = 10
-    result = app0.raiden.transfer_async(
+    result = app0.raiden.direct_transfer_async(
         graph0.token_address,
         amount,
         target=app1.raiden.address,
+        identifier=1,
     )
 
     assert result.wait(timeout=10)
@@ -775,10 +788,11 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     assert app1.raiden.address in graph0.partneraddress_to_channel
 
     amount = 10
-    result = app0.raiden.transfer_async(
+    result = app0.raiden.direct_transfer_async(
         graph0.token_address,
         amount,
         target=app1.raiden.address,
+        identifier=1,
     )
 
     assert result.wait(timeout=10)
@@ -824,10 +838,11 @@ def test_transfer_from_outdated(raiden_network, settle_timeout):
     assert app1.raiden.address in graph0.partneraddress_to_channel
 
     amount = 10
-    result = app0.raiden.transfer_async(
+    result = app0.raiden.direct_transfer_async(
         graph0.token_address,
         amount,
         target=app1.raiden.address,
+        identifier=1,
     )
 
     assert result.wait(timeout=10)

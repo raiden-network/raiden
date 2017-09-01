@@ -535,11 +535,11 @@ class RaidenAPI(object):
             identifier=identifier
         )
 
-        async_result = self.raiden.transfer_async(
+        async_result = self.raiden.mediated_transfer_async(
             token_address,
             amount,
             target,
-            identifier=identifier,
+            identifier,
         )
         return async_result
 

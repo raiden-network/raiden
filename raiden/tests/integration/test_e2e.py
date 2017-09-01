@@ -63,13 +63,7 @@ def assert_path_mediated_transfer(*transfers):
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('settle_timeout', [50])
-def test_mediation(
-        raiden_network,
-        token_addresses,
-        deposit,
-        settle_timeout,
-        reveal_timeout):
-
+def test_mediation(raiden_network, token_addresses, settle_timeout):
     # The network has the following topology:
     #
     # App1 <--> App0 <--> App2
@@ -79,11 +73,11 @@ def test_mediation(
 
     identifier = 1
     amount = 1
-    async_result = app1.raiden.transfer_async(
+    async_result = app1.raiden.mediated_transfer_async(
         token_address,
         amount,
         app2.raiden.address,
-        identifier
+        identifier,
     )
     assert async_result.wait()
 
@@ -111,6 +105,7 @@ def test_fullnetwork(
         deposit,
         settle_timeout,
         reveal_timeout):
+    # pylint: disable=too-many-locals,too-many-statements
 
     # The network has the following topology:
     #
@@ -129,7 +124,7 @@ def test_fullnetwork(
 
     # Exhaust the channel deposit (to force the mediated transfer to go backwards)
     amount = deposit
-    direct_transfer(app0, app1, token_address, amount)
+    direct_transfer(app0, app1, token_address, amount, identifier=1)
     assert get_sent_transfer(channel_0_1, 0).transferred_amount == amount
 
     amount = int(deposit / 2.)

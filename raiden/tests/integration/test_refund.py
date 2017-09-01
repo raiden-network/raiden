@@ -26,12 +26,12 @@ def test_refund_messages(raiden_chain, token_addresses, deposit):
 
     # Exhaust the channel App1 <-> App2 (to force the refund transfer)
     amount = deposit
-    direct_transfer(app1, app2, token_address, amount)
+    direct_transfer(app1, app2, token_address, amount, identifier=1)
     assert get_sent_transfer(channel_1_2, 0).transferred_amount == amount
 
     amount = int(deposit / 2.)
     identifier = 1
-    async_result = app0.raiden.transfer_async(
+    async_result = app0.raiden.mediated_transfer_async(
         token_address,
         amount,
         app2.raiden.address,

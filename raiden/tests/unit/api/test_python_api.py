@@ -207,7 +207,8 @@ def test_api_channel_events(raiden_chain):
         app0,
         app1,
         token_address,
-        amount
+        amount,
+        identifier=1,
     )
 
     results = RaidenAPI(app0.raiden).get_channel_events(channel_0_1.channel_address, 0)

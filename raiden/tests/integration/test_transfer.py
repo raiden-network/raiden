@@ -16,10 +16,11 @@ def test_direct_transfer_to_offline_node(raiden_network, token_addresses):
 
     amount = 10
     target = app1.raiden.address
-    async_result = app0.raiden.transfer_async(
+    async_result = app0.raiden.direct_transfer_async(
         token_address,
         amount,
         target,
+        identifier=1,
     )
 
     assert async_result.wait(5) is None
