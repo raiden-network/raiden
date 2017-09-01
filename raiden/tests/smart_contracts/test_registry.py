@@ -63,3 +63,21 @@ def test_registry_nonexistent_token(tester_registry, tester_events):
     fake_token_address = sha3('token')[:20]
     with pytest.raises(tester.TransactionFailed):
         tester_registry.addToken(fake_token_address, sender=privatekey0)
+
+
+def test_all_contracts_same_version(
+        tester_registry,
+        tester_channelmanager,
+        tester_nettingcontracts,
+        endpoint_discovery_services):
+    """ Test that all contracts in the repository have the same version"""
+    privatekey0 = tester.DEFAULT_KEY
+
+    registry_version = tester_registry.contract_version(sender=privatekey0)
+    channelmanager_version = tester_channelmanager.contract_version(sender=privatekey0)
+    channel_version = tester_nettingcontracts[0][2].contract_version(sender=privatekey0)
+
+    endpointregistry_version = endpoint_discovery_services[0].version()
+
+    assert registry_version == channelmanager_version == channel_version
+    assert channel_version == endpointregistry_version

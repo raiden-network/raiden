@@ -106,3 +106,6 @@ class ContractDiscovery(Discovery):
         host, port = host_port
         endpoint = host_port_to_endpoint(host, port)
         return self.discovery_proxy.address_by_endpoint(endpoint)
+
+    def version(self):
+        return self.discovery_proxy.version()
