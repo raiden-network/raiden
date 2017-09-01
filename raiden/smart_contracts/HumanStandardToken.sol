@@ -15,7 +15,6 @@ pragma solidity ^0.4.11;
 import "./StandardToken.sol";
 
 contract HumanStandardToken is StandardToken {
-
     function () {
         //if ether is sent to this address, revert the transaction
         revert();

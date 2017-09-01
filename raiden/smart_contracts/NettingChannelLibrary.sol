@@ -3,6 +3,8 @@ pragma solidity ^0.4.11;
 import "./Token.sol";
 
 library NettingChannelLibrary {
+    uint constant public contract_version = 1;
+
     struct Participant
     {
         address node_address;
