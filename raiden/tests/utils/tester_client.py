@@ -393,6 +393,9 @@ class DiscoveryTesterMock(object):
 
         return address.decode('hex')
 
+    def version(self):
+        return self.proxy.contract_version()
+
 
 class TokenTesterMock(object):
     def __init__(self, tester_state, private_key, address):

@@ -597,6 +597,9 @@ class Discovery(object):
 
         return address.decode('hex')
 
+    def version(self):
+        return self.proxy.contract_version.call()
+
 
 class Token(object):
     def __init__(
