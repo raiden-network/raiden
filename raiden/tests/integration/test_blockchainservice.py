@@ -358,4 +358,4 @@ def test_channel_with_self(raiden_network, settle_timeout, blockchain_type):
         tx = graph0.proxy.newChannel(app0.raiden.address, settle_timeout)
         # wait to make sure we get the receipt
         wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + 5)
-        assert check_transaction_threw(app0.raiden.chain.client, tx) is True
+        assert check_transaction_threw(app0.raiden.chain.client, tx)

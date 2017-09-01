@@ -24,7 +24,8 @@ from raiden.exceptions import (
     UnknownAddress,
     AddressWithoutCode,
     NoTokenManager,
-    DuplicatedChannelError
+    DuplicatedChannelError,
+    TransactionThrew,
 )
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
 from raiden.settings import (
@@ -74,7 +75,10 @@ def check_transaction_threw(client, transaction_hash):
     encoded_transaction = data_encoder(transaction_hash.decode('hex'))
     transaction = client.call('eth_getTransactionByHash', encoded_transaction)
     receipt = client.call('eth_getTransactionReceipt', encoded_transaction)
-    return int(transaction['gas'], 0) == int(receipt['gasUsed'], 0)
+    if int(transaction['gas'], 0) != int(receipt['gasUsed'], 0):
+        return False
+    else:
+        return receipt
 
 
 def patch_send_transaction(client, nonce_offset=0):
@@ -570,15 +574,10 @@ class Discovery(object):
             startgas=DISCOVERY_REGISTRATION_GAS
         )
 
-        try:
-            self.client.poll(
-                transaction_hash.decode('hex'),
-                timeout=self.poll_timeout,
-            )
-        except JSONRPCPollTimeoutException as e:
-            raise e
-        except InvalidTransaction as e:
-            raise e
+        self.client.poll(
+            transaction_hash.decode('hex'),
+            timeout=self.poll_timeout,
+        )
 
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = node_address_bin.encode('hex')
@@ -646,12 +645,10 @@ class Token(object):
             allowance,
         )
 
-        try:
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException as e:
-            raise e
-        except InvalidTransaction as e:
-            raise e
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        threw = check_transaction_threw(self.client, transaction_hash)
+        if threw:
+            raise TransactionThrew('Approve transaction threw', threw)
 
     def balance_of(self, address):
         """ Return the balance of `address`. """
@@ -665,12 +662,10 @@ class Token(object):
             amount,
         )
 
-        try:
-            self.client.poll(transaction_hash.decode('hex'))
-        except JSONRPCPollTimeoutException as e:
-            raise e
-        except InvalidTransaction as e:
-            raise e
+        self.client.poll(transaction_hash.decode('hex'))
+        threw = check_transaction_threw(self.client, transaction_hash)
+        if threw:
+            raise TransactionThrew('Transfer transaction threw', threw)
 
         # TODO: check Transfer event
 
@@ -714,12 +709,10 @@ class Registry(object):
             token_address,
         )
 
-        try:
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException as e:
-            raise e
-        except InvalidTransaction as e:
-            raise e
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        threw = check_transaction_threw(self.client, transaction_hash)
+        if threw:
+            raise TransactionThrew('AddToken transaction threw', threw)
 
         channel_manager_address_encoded = self.proxy.channelManagerByToken.call(
             token_address,
@@ -834,12 +827,7 @@ class ChannelManager(object):
             settle_timeout,
         )
 
-        try:
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException as e:
-            raise e
-        except InvalidTransaction as e:
-            raise e
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
         if check_transaction_threw(self.client, transaction_hash):
             raise DuplicatedChannelError('Duplicated channel')
@@ -1023,18 +1011,12 @@ class NettingChannel(object):
                 current_balance,
             ))
 
-        transaction_hash = estimate_and_transact(
-            self,
-            self.proxy.deposit,
-            amount,
-        )
+        transaction_hash = estimate_and_transact(self, self.proxy.deposit, amount)
 
-        try:
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException as e:
-            raise e
-        except InvalidTransaction as e:
-            raise e
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        threw = check_transaction_threw(self.client, transaction_hash)
+        if threw:
+            raise TransactionThrew('Deposit transaction threw', threw)
 
         log.info('deposit called', contract=pex(self.address), amount=amount)
 
@@ -1163,12 +1145,7 @@ class NettingChannel(object):
                 secret,
             )
 
-            try:
-                self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-            except JSONRPCPollTimeoutException as e:
-                raise e
-            except InvalidTransaction as e:
-                raise e
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
 
             # TODO: check if the ChannelSecretRevealed event was emitted and if
             # it wasn't raise an error
@@ -1188,12 +1165,10 @@ class NettingChannel(object):
             self.proxy.settle,
         )
 
-        try:
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        except JSONRPCPollTimeoutException as e:
-            raise e
-        except InvalidTransaction as e:
-            raise e
+        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        threw = check_transaction_threw(self.client, transaction_hash)
+        if threw:
+            raise TransactionThrew('Settle transaction threw', threw)
 
         # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
         log.info('settle called', contract=pex(self.address))
