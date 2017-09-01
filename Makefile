@@ -58,6 +58,7 @@ docs:
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 
+RAIDENVERSION ?= 'master'
 bundle:
 	# pass RAIDENVERSION=<git version tag> to build a specific version
 	docker build -t raidenbundler --build-arg RAIDENVERSION=$(RAIDENVERSION) -f docker/build.Dockerfile docker
