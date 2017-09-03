@@ -79,7 +79,10 @@ def allcontracts(contract_files):
     return {
         "{}:{}".format(c, name_from_file(c)): compile_contract(
             get_contract_path(c),
-            name_from_file(c)) for c in contract_files
+            name_from_file(c),
+            optimize=False
+        )
+        for c in contract_files
     }
 
 
