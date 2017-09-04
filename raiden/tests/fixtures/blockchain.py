@@ -18,7 +18,6 @@ from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
 from raiden.network.rpc.client import (
-    patch_send_transaction,
     patch_send_message,
     BlockChainService,
 )
@@ -284,6 +283,7 @@ def token_addresses(
 def blockchain_services(
         request,
         deploy_key,
+        deploy_client,
         private_keys,
         poll_timeout,
         blockchain_backend,  # This fixture is required because it will start
@@ -302,10 +302,10 @@ def blockchain_services(
     if blockchain_type == 'geth':
         return _jsonrpc_services(
             deploy_key,
+            deploy_client,
             private_keys,
             request.config.option.verbose,
             poll_timeout,
-            blockchain_rpc_ports[0],
             registry_address,  # _jsonrpc_services will handle the None value
         )
 
@@ -344,6 +344,7 @@ def endpoint_discovery_services(blockchain_services, blockchain_type, cached_gen
 def blockchain_backend(
         request,
         deploy_key,
+        deploy_client,
         private_keys,
         blockchain_private_keys,
         blockchain_p2p_ports,
@@ -363,6 +364,7 @@ def blockchain_backend(
         return _geth_blockchain(
             request,
             deploy_key,
+            deploy_client,
             private_keys,
             blockchain_private_keys,
             blockchain_p2p_ports,
@@ -378,9 +380,31 @@ def blockchain_backend(
     raise ValueError('unknow cluster type {}'.format(blockchain_type))
 
 
+@pytest.fixture
+def deploy_client(blockchain_type, blockchain_rpc_ports, deploy_key, request):
+    if blockchain_type == 'geth':
+        host = '0.0.0.0'
+        print_communication = request.config.option.verbose > 6
+        rpc_port = blockchain_rpc_ports[0]
+
+        deploy_client = JSONRPCClient(
+            host=host,
+            port=rpc_port,
+            privkey=deploy_key,
+            print_communication=print_communication,
+        )
+
+        # cant patch transaction because the blockchain may not be running yet
+        # patch_send_transaction(deploy_client)
+        patch_send_message(deploy_client)
+
+        return deploy_client
+
+
 def _geth_blockchain(
         request,
         deploy_key,
+        deploy_client,
         private_keys,
         blockchain_private_keys,
         blockchain_p2p_ports,
@@ -389,16 +413,15 @@ def _geth_blockchain(
         genesis_path):
 
     """ Helper to do proper cleanup. """
-    verbosity = request.config.option.verbose
-
     geth_processes = geth_create_blockchain(
         deploy_key,
+        deploy_client,
         private_keys,
         blockchain_private_keys,
         blockchain_rpc_ports,
         blockchain_p2p_ports,
         str(tmpdir),
-        verbosity,
+        request.config.option.verbose,
         genesis_path,
     )
 
@@ -414,27 +437,16 @@ def _geth_blockchain(
 
 def _jsonrpc_services(
         deploy_key,
+        deploy_client,
         private_keys,
         verbose,
         poll_timeout,
-        rpc_port,
         registry_address=None):
-
-    host = '0.0.0.0'
-    print_communication = verbose > 6
-    deploy_client = JSONRPCClient(
-        host=host,
-        port=rpc_port,
-        privkey=deploy_key,
-        print_communication=print_communication,
-    )
 
     # we cannot instantiate BlockChainService without a registry, so first
     # deploy it directly with a JSONRPCClient
     if registry_address is None:
         address = privatekey_to_address(deploy_key)
-        patch_send_transaction(deploy_client)
-        patch_send_message(deploy_client)
 
         registry_path = get_contract_path('Registry.sol')
         registry_contracts = compile_file(registry_path, libraries=dict())
@@ -452,12 +464,15 @@ def _jsonrpc_services(
         )
         registry_address = registry_proxy.address
 
+    host = '0.0.0.0'
     deploy_blockchain = BlockChainService(
         deploy_key,
         registry_address,
         host,
         deploy_client.port,
     )
+    # HACK: reusing the deploy_client to preserve the client nonce state
+    deploy_blockchain.client = deploy_client
 
     blockchain_services = list()
     for privkey in private_keys:

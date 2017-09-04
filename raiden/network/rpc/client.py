@@ -145,8 +145,8 @@ def patch_send_transaction(client, nonce_offset=0):
         nonce = get_nonce()
 
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
-        assert hasattr(client, 'privkey') and client.privkey
         tx.sign(client.privkey)
+
         result = client.call(
             'eth_sendRawTransaction',
             data_encoder(rlp.encode(tx)),
@@ -541,6 +541,9 @@ class Discovery(object):
             gasprice=GAS_PRICE,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
+        if not isaddress(discovery_address):
+            raise ValueError('discovery_address must be a valid address')
+
         result = jsonrpc_client.call(
             'eth_getCode',
             address_encoder(discovery_address),
@@ -609,6 +612,9 @@ class Token(object):
             gasprice=GAS_PRICE,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
+        if not isaddress(token_address):
+            raise ValueError('token_address must be a valid address')
+
         result = jsonrpc_client.call(
             'eth_getCode',
             address_encoder(token_address),
@@ -671,9 +677,17 @@ class Token(object):
 
 
 class Registry(object):
-    def __init__(self, jsonrpc_client, registry_address, startgas=GAS_LIMIT,
-                 gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def __init__(
+            self,
+            jsonrpc_client,
+            registry_address,
+            startgas=GAS_LIMIT,
+            gasprice=GAS_PRICE,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
+
+        if not isaddress(registry_address):
+            raise ValueError('registry_address must be a valid address')
 
         result = jsonrpc_client.call(
             'eth_getCode',
@@ -772,6 +786,9 @@ class ChannelManager(object):
             gasprice=GAS_PRICE,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
+
+        if not isaddress(manager_address):
+            raise ValueError('manager_address must be a valid address')
 
         result = jsonrpc_client.call(
             'eth_getCode',

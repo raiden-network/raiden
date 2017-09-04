@@ -236,7 +236,7 @@ class ConnectionManager(object):
             )
         # this can fail because of a race condition, where the channel partner opens first
         except DuplicatedChannelError:
-            log.error('partner opened channel first')
+            log.info('partner opened channel first')
 
         channelgraph = self.raiden.token_to_channelgraph[self.token_address]
         if partner not in channelgraph.partneraddress_to_channel:
