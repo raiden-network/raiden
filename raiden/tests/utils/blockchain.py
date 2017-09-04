@@ -14,11 +14,11 @@ from devp2p.crypto import privtopub
 from ethereum import slogging
 from ethereum.utils import denoms, encode_hex
 from pyethapp.jsonrpc import address_encoder
-from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
 from raiden.utils import privatekey_to_address
 from raiden.tests.utils.genesis import GENESIS_STUB
+from raiden.network.rpc.client import patch_send_transaction
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -142,36 +142,31 @@ def geth_init_datadir(datadir, genesis_path):
         datadir (str): the datadir in which the blockchain is initialized.
     """
     try:
-        subprocess.check_output([
+        args = [
             'geth',
             '--datadir',
             datadir,
             'init',
-            genesis_path],
-            stderr=subprocess.STDOUT
-        )
+            genesis_path,
+        ]
+        subprocess.check_output(args, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise ValueError(
-            """Initializing geth with custom genesis returned {} with error:
-{}""".format(e.returncode, e.output))
+        msg = 'Initializing geth with custom genesis returned {} with error:\n {}'.format(
+            e.returncode,
+            e.output,
+        )
+        raise ValueError(msg)
 
 
-def geth_wait_and_check(privatekeys, rpc_ports):
+def geth_wait_and_check(deploy_client, privatekeys):
     """ Wait until the geth cluster is ready. """
     address = address_encoder(privatekey_to_address(privatekeys[0]))
     jsonrpc_running = False
-    tries = 5
-    rpc_port = rpc_ports[0]
-    jsonrpc_client = JSONRPCClient(
-        host='0.0.0.0',
-        port=rpc_port,
-        privkey=privatekeys[0],
-        print_communication=False,
-    )
 
+    tries = 5
     while not jsonrpc_running and tries > 0:
         try:
-            jsonrpc_client.call('eth_getBalance', address, 'latest')
+            deploy_client.call('eth_getBalance', address, 'latest')
             jsonrpc_running = True
         except ConnectionError:
             gevent.sleep(0.5)
@@ -182,17 +177,11 @@ def geth_wait_and_check(privatekeys, rpc_ports):
 
     for key in sorted(set(privatekeys)):
         address = address_encoder(privatekey_to_address(key))
-        jsonrpc_client = JSONRPCClient(
-            host='0.0.0.0',
-            port=rpc_port,
-            privkey=key,
-            print_communication=False,
-        )
 
         tries = 10
         balance = '0x0'
         while balance == '0x0' and tries > 0:
-            balance = jsonrpc_client.call('eth_getBalance', address, 'latest')
+            balance = deploy_client.call('eth_getBalance', address, 'latest')
             gevent.sleep(1)
             tries -= 1
 
@@ -202,6 +191,7 @@ def geth_wait_and_check(privatekeys, rpc_ports):
 
 def geth_create_blockchain(
         deploy_key,
+        deploy_client,
         private_keys,
         blockchain_private_keys,
         rpc_ports,
@@ -210,7 +200,7 @@ def geth_create_blockchain(
         verbosity,
         genesis_path=None,
         logdirectory=None):
-    # pylint: disable=too-many-locals,too-many-statements,too-many-arguments
+    # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
 
     nodes_configuration = []
     key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports)
@@ -307,7 +297,8 @@ def geth_create_blockchain(
         processes_list.append(process)
         assert process.returncode is None
 
-    geth_wait_and_check(private_keys, rpc_ports)
+    geth_wait_and_check(deploy_client, private_keys)
+    patch_send_transaction(deploy_client)
 
     # reenter echo mode (disabled by geth pasphrase prompt)
     if isinstance(sys.stdin, file):
