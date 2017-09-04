@@ -1,7 +1,10 @@
+from __future__ import print_function
 import os
 
 import click
 import re
+
+import sys
 from click.types import File
 
 IMPORT_RE = re.compile(r'^import +["\'](?P<contract>[^"\']+.sol)["\'];$')
@@ -26,11 +29,11 @@ class ContractJoiner(object):
     def join(self, contract_file):
         out = []
         if contract_file.name in self.seen:
-            print('Skipping duplicate {}'.format(contract_file.name))
+            print('Skipping duplicate {}'.format(contract_file.name), file=sys.stderr)
             return []
 
         self.seen.add(contract_file.name)
-        print('Reading {}'.format(contract_file.name))
+        print('Reading {}'.format(contract_file.name), file=sys.stderr)
 
         for line in contract_file:
             line = line.strip('\r\n')

@@ -105,7 +105,8 @@ def get_static_or_compile(
     compiled = _solidity.compile_contract(
         contract_path,
         contract_name,
-        combined='abi'
+        combined='abi',
+        optimize=False
     )
     if store_updated:
         compiled['checksum'] = checksum
