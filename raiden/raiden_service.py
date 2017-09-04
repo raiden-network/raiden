@@ -301,17 +301,19 @@ class RaidenService(object):
 
     def stop(self):
         """ Stop the node. """
-        wait_for = [self.alarm]
-        wait_for.extend(self.greenlet_task_dispatcher.stop())
-
         self.alarm.stop_async()
-
-        wait_for.extend(self.protocol.greenlets)
-        self.pyethapp_blockchain_events.uninstall_all_event_listeners()
-
         self.protocol.stop_and_wait()
 
+        wait_for = [self.alarm]
+        wait_for.extend(self.protocol.greenlets)
+        wait_for.extend(self.greenlet_task_dispatcher.stop())
         gevent.wait(wait_for)
+
+        # Filters must be uninstalled after the alarm task has stopped. Since
+        # the events are polled by a alarm task callback, if the filters are
+        # uninstalled before the alarm task is fully stopped the callback
+        # `poll_blockchain_events` will fail.
+        self.pyethapp_blockchain_events.uninstall_all_event_listeners()
 
         # save the state after all tasks are done
         if self.serialization_file:
