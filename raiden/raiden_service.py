@@ -267,11 +267,6 @@ class RaidenService(object):
 
     def start(self):
         """ Start the node. """
-        if self.database_dir is not None:
-            self.db_lock.acquire(timeout=0)
-            assert self.db_lock.is_locked
-            self.restore_from_snapshots()
-
         self.alarm.start()
 
         # Prime the block number cache and set the callbacks
@@ -283,6 +278,13 @@ class RaidenService(object):
         # corner cases were the registry is queried in block A, a new block B
         # is mined, and the alarm starts polling at block C.
         self.register_registry(self.chain.default_registry.address)
+
+        # Restore from snapshot must come after registering the registry as we
+        # need to know the registered tokens to populate `token_to_channelgraph`
+        if self.database_dir is not None:
+            self.db_lock.acquire(timeout=0)
+            assert self.db_lock.is_locked
+            self.restore_from_snapshots()
 
         # Start the protocol after the registry is queried to avoid warning
         # about unknown channels.
