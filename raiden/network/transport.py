@@ -102,6 +102,9 @@ class UDPTransport(object):
         if sleep_timeout:
             gevent.sleep(sleep_timeout)
 
+        if not hasattr(self.server, 'socket'):
+            raise RuntimeError('trying to send a message on a closed server')
+
         self.server.sendto(bytes_, host_port)
 
         # enable debugging using the DummyNetwork callbacks
