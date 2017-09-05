@@ -53,11 +53,12 @@ Raiden follows `semver <http://semver.org/>`_ versioning (format ``{major}.{mino
 
 The Raiden `smart contracts <https://github.com/raiden-network/raiden/tree/master/raiden/smart_contracts>`_ also have a version identifier, ``contract_version``, that corresponds to the Raiden software version. During the ``0.x.y`` series they will follow the Raiden release versions only on the ``{major}.{minor}`` parts; the patch part is replaced by ``_``, e.g. ``contract_version = "0.1._";``.
 
-This allows you to be sure, that the version of the smart contract ABI matches those that are deployed on the testnet. In other words, if the smart contract code changes, the Raiden version will minimally increase the ``{minor}`` part, and, if a Raiden release introduces a breaking change, the smart contract versions will also be increased.
+This allows you to be sure, that the version of the smart contract ABI matches those that are deployed on the testnet. In other words, if the smart contract code changes, the Raiden version will at least increase the ``{minor}`` part, and, if a Raiden release introduces a breaking change, the smart contract versions will also be increased.
 
 **Note for Developers:**
-The version reported by ``raiden.utils.get_system_spec()`` depends on the ``pkg_resources`` version. If you are working
-on an editable source install from git, i.e. ``pip install -e .``, you should make sure to
+The version reported by ``raiden.utils.get_system_spec()`` depends on the ``pkg_resources`` version, which is configured
+during ``install`` based on git tags. If you are working on an editable source install from git, i.e. ``pip install -e .``, you should make sure to
 
-- add ``fetch = +refs/tags/*:refs/tags/*`` to your ``.git/config`` file
+- add ``fetch = +refs/tags/*:refs/tags/*`` to the ``[remote "origin"]`` entry of your ``.git/config`` file (`see here
+  <https://stackoverflow.com/a/16678319>`_ for details).
 - call ``pip install -e .`` again after every new (tagged) release.
