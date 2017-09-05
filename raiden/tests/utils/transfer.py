@@ -282,7 +282,7 @@ def increase_transferred_amount(from_channel, to_channel, amount):
     need of creating transfers.
     """
     identifier = 1
-    nonce = from_channel.get_nonce() + 1
+    nonce = from_channel.get_next_nonce()
     direct_transfer_message = DirectTransfer(
         identifier=identifier,
         nonce=nonce,
@@ -303,7 +303,7 @@ def make_direct_transfer_from_channel(block_number, channel, partner_channel, am
     """ Helper to create and register a direct transfer from `channel` to
     `partner_channel`.
     """
-    identifier = channel.get_nonce() + 1
+    identifier = channel.get_next_nonce()
 
     direct_transfer = channel.create_directtransfer(
         amount,
@@ -341,7 +341,7 @@ def make_mediated_transfer(
     """ Helper to create and register a mediated transfer from `channel` to
     `partner_channel`.
     """
-    identifier = channel.get_nonce() + 1
+    identifier = channel.get_next_nonce()
     fee = 0
 
     mediated_transfer = channel.create_mediatedtransfer(  # pylint: disable=redefined-outer-name

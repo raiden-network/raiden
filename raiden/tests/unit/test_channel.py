@@ -718,8 +718,8 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
 
     # handcrafted transfer because channel.create_transfer won't create it
     transfer2 = DirectTransfer(
-        1,  # TODO: fill in identifier
-        nonce=channel0.get_nonce(),
+        1,
+        nonce=channel0.get_next_nonce(),
         token=channel0.token_address,
         channel=channel0.channel_address,
         transferred_amount=channel1.balance + balance0 + amount,
@@ -794,7 +794,7 @@ def test_channel_must_accept_expired_locks():
 
     block_number = 10
     transfer = make_mediated_transfer(
-        nonce=test_channel.get_nonce(),
+        nonce=test_channel.get_next_nonce(),
         token=test_channel.token_address,
         channel=test_channel.channel_address,
         expiration=block_number + settle_timeout,
