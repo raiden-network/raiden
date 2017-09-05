@@ -4,6 +4,7 @@ from collections import deque
 import gevent
 from gevent.queue import Queue
 from gevent.lock import Semaphore
+from gevent.event import Event
 from ethereum import slogging
 import click
 
@@ -31,6 +32,7 @@ class EchoNode(object):
 
     def __init__(self, api, token_address):
         assert isinstance(api, RaidenAPI)
+        self.ready = Event()
 
         self.api = api
         self.token_address = token_address
@@ -71,6 +73,8 @@ class EchoNode(object):
         If `EchoNode.stop()` is called, it will give the return signal to be removed from
         the AlarmTask callbacks.
         """
+        if not self.ready.is_set():
+            self.ready.set()
         log.DEV('echo_node callback', block_number=block_number)
         if self.stop_signal is not None:
             return REMOVE_CALLBACK

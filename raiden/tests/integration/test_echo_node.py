@@ -68,6 +68,8 @@ def test_echo_node_response(
     echo_api = RaidenAPI(echo_app.raiden)
 
     echo_node = EchoNode(echo_api, token_address)
+    echo_node.ready.wait(timeout=30)
+    assert echo_node.ready.is_set()
 
     expected = list()
 
