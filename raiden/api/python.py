@@ -22,6 +22,7 @@ from raiden.transfer.events import (
     EventTransferReceivedSuccess,
 )
 from raiden.exceptions import (
+    EthNodeCommunicationError,
     NoPathError,
     InvalidAddress,
     InvalidAmount,
@@ -240,16 +241,21 @@ class RaidenAPI(object):
         netting_channel.deposit(amount)
 
         # Wait until the balance has been updated via a state transition triggered
-        # by processing the `ChannelNewBalance` event
+        # by processing the `ChannelNewBalance` event.
         # Usually, it'll take a single gevent.sleep, as we already have waited
         # for it to be mined, and only need to give the event handling greenlet
         # the chance to process the event, but let's wait 10s to be safe
+        wait_timeout_secs = 10  # FIXME: hardcoded timeout
         if not wait_until(
             lambda: channel.contract_balance != old_balance,
-            10,
+            wait_timeout_secs,
             self.raiden.alarm.wait_time,
         ):
-            log.debug('Wait until failed', contract_balance=channel.contract_balance)
+            raise EthNodeCommunicationError(
+                'After {} seconds the deposit was not properly processed.'.format(
+                    wait_timeout_secs
+                )
+            )
 
         return channel
 
