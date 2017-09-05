@@ -147,8 +147,10 @@ def read_version_from_git():
             if commit.startswith('g'):
                 commit = commit[1:]
             return '{}+git.r{}'.format(spec, commit)
-        else:
+        elif git_version.count('.') == 2:
             return git_version
+        else:
+            return version
     except BaseException as e:
         print('could not read version from git: {}'.format(e))
         return version
