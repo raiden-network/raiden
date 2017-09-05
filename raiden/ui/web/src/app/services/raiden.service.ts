@@ -97,7 +97,10 @@ export class RaidenService {
                         })
                     );
             })
-            .switchMap((obsArray) => Observable.zip(...obsArray).first())
+            .switchMap((obsArray) => obsArray && obsArray.length ?
+                Observable.zip(...obsArray).first() :
+                Observable.of([])
+            )
             .map((tokenArray) => tokenArray.filter((token) => !!token))
             .catch((error) => this.handleError(error));
     }
