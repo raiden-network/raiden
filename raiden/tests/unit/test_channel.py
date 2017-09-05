@@ -390,7 +390,7 @@ def test_python_channel():
     assert test_channel.get_next_nonce() == 4
 
 
-def test_channel_increase_nonce():
+def test_channel_increase_nonce_and_transferred_amount():
     """ The nonce must increase with each new transfer. """
     token_address = make_address()
     privkey1, address1 = make_privkey_address()
@@ -416,6 +416,7 @@ def test_channel_increase_nonce():
     )
 
     previous_nonce = test_channel.get_next_nonce()
+    previous_transferred = test_channel.transferred_amount
 
     amount = 7
     block_number = 1
@@ -425,9 +426,13 @@ def test_channel_increase_nonce():
         test_channel.register_transfer(block_number, direct_transfer)
 
         new_nonce = test_channel.get_next_nonce()
+        new_transferred = test_channel.transferred_amount
+
         assert new_nonce == previous_nonce + 1
+        assert new_transferred == previous_transferred + amount
 
         previous_nonce = new_nonce
+        previous_transferred = new_transferred
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
