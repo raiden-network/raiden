@@ -446,14 +446,14 @@ class Channel(object):
             )
         )
         if is_invalid_nonce:
-            if log.isEnabledFor(logging.WARN):
-                log.warn(
-                    'Received out of order transfer from %s. Expected '
-                    'nonce: %s but got nonce: %s',
-                    pex(transfer.sender),
-                    from_state.nonce,
-                    transfer.nonce,
+            # this may occur on normal operation
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'INVALID NONCE',
+                    node=pex(self.our_address),
                     from_=pex(transfer.sender),
+                    to=pex(to_state.address),
+
                     expected_nonce=from_state.nonce,
                     nonce=transfer.nonce,
                 )
@@ -464,6 +464,20 @@ class Channel(object):
         # the locksroot and then the balance
         if isinstance(transfer, LockedTransfer):
             if to_state.balance_proof.is_pending(transfer.lock.hashlock):
+                # this may occur on normal operation
+                if log.isEnabledFor(logging.INFO):
+                    log.info(
+                        'duplicated lock',
+                        node=pex(self.our_address),
+                        from_=pex(from_state.address),
+                        to=pex(to_state.address),
+
+                        hashlock=pex(transfer.lock.hashlock),
+                        lockhash=pex(sha3(transfer.lock.as_bytes)),
+                        lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
+                        received_locksroot=pex(transfer.locksroot),
+                    )
+
                 raise ValueError('hashlock is already registered')
 
             # As a receiver: Check that all locked transfers are registered in
@@ -471,12 +485,14 @@ class Channel(object):
             # claim it while the channel is closing
             expected_locksroot = to_state.compute_merkleroot_with(transfer.lock)
             if expected_locksroot != transfer.locksroot:
-                if log.isEnabledFor(logging.ERROR):
-                    log.error(
+                # this should not happen
+                if log.isEnabledFor(logging.WARN):
+                    log.warn(
                         'LOCKSROOT MISMATCH',
-                        node=pex(self.our_state.address),
+                        node=pex(self.our_address),
                         from_=pex(from_state.address),
                         to=pex(to_state.address),
+
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
                         lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
                         expected_locksroot=pex(expected_locksroot),
@@ -502,12 +518,17 @@ class Channel(object):
             is_sender = transfer.sender == self.our_address
 
             if is_sender and expires_after_settle:
-                log.error(
-                    'Lock expires after the settlement period.',
-                    lock_expiration=transfer.lock.expiration,
-                    current_block=block_number,
-                    end_settle_period=end_settle_period,
-                )
+                if log.isEnabledFor(logging.ERROR):
+                    log.error(
+                        'Lock expires after the settlement period.',
+                        node=pex(self.our_address),
+                        from_=pex(from_state.address),
+                        to=pex(to_state.address),
+
+                        lock_expiration=transfer.lock.expiration,
+                        current_block=block_number,
+                        end_settle_period=end_settle_period,
+                    )
 
                 raise ValueError('Lock expires after the settlement period.')
 
@@ -519,6 +540,7 @@ class Channel(object):
                     node=pex(self.our_state.address),
                     from_=pex(from_state.address),
                     to=pex(to_state.address),
+
                     transfer=transfer,
                 )
 
@@ -562,9 +584,9 @@ class Channel(object):
                     node=pex(self.our_state.address),
                     from_=pex(from_state.address),
                     to=pex(to_state.address),
+
                     currentlocksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
                     lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
-
                     lock_amount=transfer.lock.amount,
                     lock_expiration=transfer.lock.expiration,
                     lock_hashlock=pex(transfer.lock.hashlock),
@@ -592,8 +614,9 @@ class Channel(object):
                 node=pex(self.our_state.address),
                 from_=pex(from_state.address),
                 to=pex(to_state.address),
+
                 transfer=repr(transfer),
-                transferred_amount=from_state.transferred_amount,
+                transferred_amount=from_state.transferred_amount(to_state),
                 nonce=from_state.nonce,
                 current_locksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
             )
@@ -783,7 +806,7 @@ class Channel(object):
                     log.warn(
                         'channel is already closed on a different block',
                         channel_address=pex(self.channel_address),
-                        closed_block=self._closed_block,
+                        closed_block=self.external_state.closed_block,
                         this_block=state_change.block_number
                     )
 
@@ -795,7 +818,7 @@ class Channel(object):
                     log.warn(
                         'channel is already settled on a different block',
                         channel_address=pex(self.channel_address),
-                        settled_block=self._settled_block,
+                        settled_block=self.external_state.settled_block,
                         this_block=state_change.block_number
                     )
 

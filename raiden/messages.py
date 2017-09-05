@@ -332,10 +332,11 @@ class SecretRequest(SignedMessage):
         self.amount = amount
 
     def __repr__(self):
-        return '<{} [hashlock:{} amount:{}]>'.format(
+        return '<{} [hashlock:{} amount:{} hash:{}]>'.format(
             self.__class__.__name__,
             pex(self.hashlock),
             self.amount,
+            pex(self.hash),
         )
 
     @staticmethod
@@ -396,16 +397,16 @@ class Secret(EnvelopeMessage):
 
     def __repr__(self):
         return (
-            '<{} [sender:{} hashlock:{} nonce:{} channel:{}'
-            ' transferred_amount:{} locksroot:{}]>'
+            '<{} [channel:{} nonce:{} transferred_amount:{} locksroot:{} '
+            'hash:{} hashlock:{}]>'
         ).format(
             self.__class__.__name__,
-            pex(self.sender),
-            pex(self.hashlock),
-            self.nonce,
             pex(self.channel),
+            self.nonce,
             self.transferred_amount,
             pex(self.locksroot),
+            pex(self.hash),
+            pex(self.hashlock),
         )
 
     @property
@@ -453,9 +454,10 @@ class RevealSecret(SignedMessage):
         self._hashlock = None
 
     def __repr__(self):
-        return '<{} [hashlock:{}]>'.format(
+        return '<{} [hashlock:{} hash:{}]>'.format(
             self.__class__.__name__,
             pex(self.hashlock),
+            pex(self.hash),
         )
 
     @property
@@ -553,6 +555,22 @@ class DirectTransfer(EnvelopeMessage):
         packed.recipient = self.recipient
         packed.locksroot = self.locksroot
         packed.signature = self.signature
+
+    def __repr__(self):
+        representation = (
+            '<{} [channel:{} nonce:{} transferred_amount:{} locksroot:{} '
+            'hash:{} id:{}]>'
+        ).format(
+            self.__class__.__name__,
+            pex(self.channel),
+            self.nonce,
+            self.transferred_amount,
+            pex(self.locksroot),
+            pex(self.hash),
+            self.identifier,
+        )
+
+        return representation
 
 
 class Lock(MessageHashable):
@@ -796,15 +814,19 @@ class MediatedTransfer(LockedTransfer):
 
     def __repr__(self):
         representation = (
-            '<{} [token:{} nonce:{} transferred_amount:{} lock_amount:{} hash:{} locksroot:{}]>'
+            '<{} [channel:{} nonce:{} transferred_amount:{} locksroot:{} '
+            'hash:{} id:{} hashlock:{} expiration:{} amount:{}]>'
         ).format(
             self.__class__.__name__,
-            pex(self.token),
+            pex(self.channel),
             self.nonce,
             self.transferred_amount,
-            self.lock.amount,
-            pex(self.hash),
             pex(self.locksroot),
+            pex(self.hash),
+            self.identifier,
+            pex(self.lock.hashlock),
+            self.lock.expiration,
+            self.lock.amount,
         )
 
         return representation
