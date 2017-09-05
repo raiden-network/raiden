@@ -164,3 +164,7 @@ class DuplicatedChannelError(RaidenError):
 class TransactionThrew(RaidenError):
     """Raised when, after waiting for a transaction to be mined,
     the gasUsed in receipt is the same as the provided transaction gas limit"""
+    def __init__(self, txname, receipt):
+        super(TransactionThrew, self).__init__(
+            '{} transaction threw. Receipt={}'.format(receipt)
+        )
