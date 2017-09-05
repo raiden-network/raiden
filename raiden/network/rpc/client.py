@@ -646,9 +646,9 @@ class Token(object):
         )
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        threw = check_transaction_threw(self.client, transaction_hash)
-        if threw:
-            raise TransactionThrew('Approve transaction threw', threw)
+        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
+        if tx_receipt_or_false:
+            raise TransactionThrew('Approve', tx_receipt_or_false)
 
     def balance_of(self, address):
         """ Return the balance of `address`. """
@@ -663,9 +663,9 @@ class Token(object):
         )
 
         self.client.poll(transaction_hash.decode('hex'))
-        threw = check_transaction_threw(self.client, transaction_hash)
-        if threw:
-            raise TransactionThrew('Transfer transaction threw', threw)
+        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
+        if tx_receipt_or_false:
+            raise TransactionThrew('Transfer', tx_receipt_or_false)
 
         # TODO: check Transfer event
 
@@ -710,9 +710,9 @@ class Registry(object):
         )
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        threw = check_transaction_threw(self.client, transaction_hash)
-        if threw:
-            raise TransactionThrew('AddToken transaction threw', threw)
+        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
+        if tx_receipt_or_false:
+            raise TransactionThrew('AddToken', tx_receipt_or_false)
 
         channel_manager_address_encoded = self.proxy.channelManagerByToken.call(
             token_address,
@@ -1014,9 +1014,9 @@ class NettingChannel(object):
         transaction_hash = estimate_and_transact(self, self.proxy.deposit, amount)
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        threw = check_transaction_threw(self.client, transaction_hash)
-        if threw:
-            raise TransactionThrew('Deposit transaction threw', threw)
+        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
+        if tx_receipt_or_false:
+            raise TransactionThrew('Deposit', tx_receipt_or_false)
 
         log.info('deposit called', contract=pex(self.address), amount=amount)
 
@@ -1166,9 +1166,9 @@ class NettingChannel(object):
         )
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        threw = check_transaction_threw(self.client, transaction_hash)
-        if threw:
-            raise TransactionThrew('Settle transaction threw', threw)
+        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
+        if tx_receipt_or_false:
+            raise TransactionThrew('Settle', tx_receipt_or_false)
 
         # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
         log.info('settle called', contract=pex(self.address))
