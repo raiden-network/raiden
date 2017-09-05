@@ -190,8 +190,12 @@ def wait_until(func, wait_for=None, sleep_for=0.5):
         func(): result of func, if truth value, or None"""
     start = time.time()
     res = func()
-    while (True if wait_for is None else (time.time() - start < wait_for))\
-            and not res:
+    loop_cond = True
+    while loop_cond:
         gevent.sleep(sleep_for)
         res = func()
+        loop_cond = (
+            (True if wait_for is None else (time.time() - start < wait_for)) and
+            not res
+        )
     return res or None
