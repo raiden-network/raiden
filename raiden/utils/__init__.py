@@ -179,13 +179,13 @@ def get_system_spec():
 
 
 def wait_until(func, wait_for=None, sleep_for=0.5):
-    """Preemptively (gevent) test for a function and wait for it to return a
-    truth value and returns it, or None if a timeout is given and the function
-    didn't return inside time timeout
+    """Test for a function and wait for it to return a truth value or to timeout.
+    Returns the value or None if a timeout is given and the function didn't return
+    inside time timeout
     Args:
         func (callable): a function to be evaluated, use lambda if parameters are required
-        wait_for (float, integer, None): the maximum time to wait, or None for infinite loop
-        sleep_form (float, integer): how much to gevent.sleep between calls
+        wait_for (float, integer, None): the maximum time to wait, or None for an infinite loop
+        sleep_for (float, integer): how much to gevent.sleep between calls
     Returns:
         func(): result of func, if truth value, or None"""
     start = time.time()
