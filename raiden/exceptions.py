@@ -159,3 +159,12 @@ class NoTokenManager(RaidenError):
 
 class DuplicatedChannelError(RaidenError):
     """Raised if someone tries to create a channel that already exists."""
+
+
+class TransactionThrew(RaidenError):
+    """Raised when, after waiting for a transaction to be mined,
+    the gasUsed in receipt is the same as the provided transaction gas limit"""
+    def __init__(self, txname, receipt):
+        super(TransactionThrew, self).__init__(
+            '{} transaction threw. Receipt={}'.format(receipt)
+        )

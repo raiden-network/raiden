@@ -95,7 +95,16 @@ class UDPTransport(object):
             host_port (Tuple[(str, int)]): Tuple with the host name and port number.
             bytes_ (bytes): The bytes that are going to be sent through the wire.
         """
-        gevent.sleep(self.throttle_policy.consume(1))
+        sleep_timeout = self.throttle_policy.consume(1)
+
+        # Don't sleep if timeout is zero, otherwise a context-switch is done
+        # and the message is delayed, increasing it's latency
+        if sleep_timeout:
+            gevent.sleep(sleep_timeout)
+
+        if not hasattr(self.server, 'socket'):
+            raise RuntimeError('trying to send a message on a closed server')
+
         self.server.sendto(bytes_, host_port)
 
         # enable debugging using the DummyNetwork callbacks

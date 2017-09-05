@@ -590,8 +590,17 @@ class RaidenProtocol(object):
         """ ACK must not go into the queue, otherwise nodes will deadlock
         waiting for the confirmation.
         """
+        host_port = self.get_host_port(receiver_address)
+
+        # ACKs are sent at the end of the receive method, after the message is
+        # sucessfully processed. It may be the case that the server is stopped
+        # after the message is received but before the ack is sent, under that
+        # circumstance the udp socket would be unavaiable and then an exception
+        # is raised.
+        #
+        # This check verifies the udp socket is still available before trying
+        # to send the ack. There must be *no context-switches after this test*.
         if self.transport.server.started:
-            host_port = self.get_host_port(receiver_address)
             self.transport.send(
                 self.raiden,
                 host_port,

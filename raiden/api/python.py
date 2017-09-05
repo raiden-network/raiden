@@ -35,6 +35,7 @@ from raiden.exceptions import (
 from raiden.utils import (
     isaddress,
     pex,
+    wait_until,
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -236,16 +237,22 @@ class RaidenAPI(object):
         # Obtain the netting channel and fund it by depositing the amount
         old_balance = channel.contract_balance
         netting_channel = self.raiden.chain.netting_channel(netcontract_address)
+        # actually make the deposit, and wait for it to be mined
         netting_channel.deposit(amount)
+
         # Wait until the balance has been updated via a state transition triggered
-        # by processing the `ChannelNewBalance` event
-        wait_timeout_secs = 60  # FIXME: unconfigurable timeout
-        if not channel.wait_for_balance_update(
-                old_balance,
-                wait_timeout_secs,
-                self.raiden.alarm.wait_time):
+        # by processing the `ChannelNewBalance` event.
+        # Usually, it'll take a single gevent.sleep, as we already have waited
+        # for it to be mined, and only need to give the event handling greenlet
+        # the chance to process the event, but let's wait 10s to be safe
+        wait_timeout_secs = 10  # FIXME: hardcoded timeout
+        if not wait_until(
+            lambda: channel.contract_balance != old_balance,
+            wait_timeout_secs,
+            self.raiden.alarm.wait_time,
+        ):
             raise EthNodeCommunicationError(
-                'After {} seconds the deposit event was not seen by the ethereum node.'.format(
+                'After {} seconds the deposit was not properly processed.'.format(
                     wait_timeout_secs
                 )
             )
