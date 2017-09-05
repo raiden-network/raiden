@@ -13,6 +13,7 @@ import sys
 import yaml
 import gevent
 import networkx
+from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.app import App
@@ -38,8 +39,7 @@ def random_raiden_network(
         blockchain_service,
         node_addresses,
         deposit,
-        settle_timeout
-):
+        settle_timeout):
     """ Creates random channels among the test nodes until we have a connected graph. """
     graph = networkx.Graph()
     graph.add_nodes_from(node_addresses)
@@ -78,11 +78,11 @@ def random_raiden_network(
 def setup_tps(
         rpc_server,
         config_path,
-        channelmanager_address,
+        privatekey,
+        registry_address,
         token_address,
         deposit,
-        settle_timeout
-):
+        settle_timeout):
     """ Creates the required contract and the fully connected Raiden network
     prior to running the test.
 
@@ -94,14 +94,19 @@ def setup_tps(
         token_address (str): The address of the token used for testing.
         deposit (int): The default deposit that will be made for all test nodes.
     """
-    # TODO:
-    #  - create/register the channel manager
+    host, port = rpc_server.split(':')
+    rpc_client = JSONRPCClient(
+        privkey=privatekey,
+        host=host,
+        port=port,
+    )
 
-    rpc_connection = rpc_server.split(':')
-    rpc_connection = (rpc_connection[0], int(rpc_connection[1]))
-
-    blockchain_service = BlockChainService(rpc_connection, channelmanager_address)
-    blockchain_service.new_channel_manager_contract(token_address=token_address)
+    blockchain_service = BlockChainService(
+        privatekey,
+        registry_address,
+        rpc_client,
+    )
+    blockchain_service.default_registry.add_token(token_address)
 
     with codecs.open(config_path, encoding='utf8') as handler:
         config = yaml.load(handler)
@@ -135,12 +140,12 @@ def tps_run(
         host,
         port,
         config,
+        privatekey,
         rpc_server,
-        channelmanager_address,
+        registry_address,
         token_address,
         transfer_amount,
-        parallel
-):
+        parallel):
     # pylint: disable=too-many-locals,too-many-arguments
     ourprivkey, _ = hostport_to_privkeyaddr(host, port)
 
@@ -154,7 +159,20 @@ def tps_run(
     config['port'] = port
     config['privkey'] = ourprivkey
 
-    blockchain_service = BlockChainService(rpc_server, channelmanager_address)
+    rpc_connection = rpc_server.split(':')
+    host, port = (rpc_connection[0], int(rpc_connection[1]))
+
+    rpc_client = JSONRPCClient(
+        privkey=privatekey,
+        host=host,
+        port=port,
+    )
+
+    blockchain_service = BlockChainService(
+        privatekey,
+        registry_address,
+        rpc_client,
+    )
 
     discovery = Discovery()
     found_ouraddress = False
@@ -171,19 +189,6 @@ def tps_run(
         sys.exit(1)
 
     app = App(config, blockchain_service, discovery)
-
-    for token_address in blockchain_service.token_addresses:
-        all_netting_contracts = blockchain_service.nettingaddresses_by_token_participant(
-            token_address,
-            app.raiden.address,
-        )
-
-        for netting_contract_address in all_netting_contracts:
-            app.raiden.setup_channel(
-                token_address,
-                netting_contract_address,
-                app.config['reveal_timeout'],
-            )
 
     for _ in range(parallel):
         gevent.spawn(random_transfer, app, token_address, transfer_amount)
@@ -221,11 +226,13 @@ def main():
 
     setupparser.add_argument('rpc_server')
     setupparser.add_argument('config')
-    setupparser.add_argument('channelmanager_address')
+    setupparser.add_argument('registry_address')
+    setupparser.add_argument('privatekey')
 
     runparser.add_argument('rpc_server')
     runparser.add_argument('config')
-    runparser.add_argument('channelmanager_address')
+    runparser.add_argument('privatekey')
+    runparser.add_argument('registry_address')
     runparser.add_argument('host')
     runparser.add_argument('port')
     runparser.add_argument(
@@ -242,8 +249,9 @@ def main():
             args.host,
             args.port,
             args.config,
+            args.privatekey.decode('hex'),
             args.rpc_server,
-            args.channelmanager_address,
+            args.registry_address,
             TOKEN_ADDRESS,
             TRANSFER_AMOUNT,
             args.parallel,
@@ -253,7 +261,8 @@ def main():
         setup_tps(
             args.rpc_server,
             args.config,
-            args.channelmanager_address,
+            args.privatekey.decode('hex'),
+            args.registry_address,
             TOKEN_ADDRESS,
             deposit,
             DEFAULT_SETTLE_TIMEOUT,

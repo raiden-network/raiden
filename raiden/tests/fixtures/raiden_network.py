@@ -57,13 +57,11 @@ def raiden_chain(
         'with 0, 1 or 2 channels'
     )
 
-    verbosity = request.config.option.verbose
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
         raiden_udp_ports,
         transport_class,
-        verbosity,
         reveal_timeout,
         settle_timeout,
         database_paths,
@@ -115,14 +113,11 @@ def raiden_network(
         nat_keepalive_retries,
         nat_keepalive_timeout):
 
-    verbosity = request.config.option.verbose
-
     raiden_apps = create_apps(
         blockchain_services.blockchain_services,
         endpoint_discovery_services,
         raiden_udp_ports,
         transport_class,
-        verbosity,
         reveal_timeout,
         settle_timeout,
         database_paths,

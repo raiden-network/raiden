@@ -217,7 +217,7 @@ class FilterTesterMock(object):
 
 
 class BlockChainServiceTesterMock(object):
-    def __init__(self, private_key, tester_state, registry_address, **kwargs):
+    def __init__(self, private_key, tester_state, registry_address):
         self.tester_state = tester_state
         default_registry = RegistryTesterMock(tester_state, private_key, registry_address)
 
@@ -232,9 +232,6 @@ class BlockChainServiceTesterMock(object):
         self.address_to_nettingchannel = dict()
         self.address_to_registry = dict()
         self.token_to_channelmanager = dict()
-
-    def set_verbosity(self, level):
-        pass
 
     def block_number(self):
         return self.tester_state.block.number

@@ -4,20 +4,21 @@ from __future__ import print_function
 
 import signal
 import json
+import time
+import random
 
 import click
 import gevent
 from gevent import monkey
-import time
-import random
 from ethereum import slogging
-
 from ethereum.utils import decode_hex
-from raiden.console import ConsoleTools
+from pyethapp.rpc_client import JSONRPCClient
+
 from raiden.app import App
 from raiden.network.rpc.client import BlockChainService
 from raiden.network.discovery import ContractDiscovery
 from raiden.utils import split_endpoint
+from raiden.ui.console import ConsoleTools
 
 
 monkey.patch_all()
@@ -83,11 +84,18 @@ def run(privatekey,
     config['port'] = listen_port
     config['privatekey_hex'] = privatekey
 
+    privatekey_bin = decode_hex(privatekey)
+
+    rpc_client = JSONRPCClient(
+        privkey=privatekey_bin,
+        host='127.0.0.1',
+        port='8545',
+    )
+
     blockchain_service = BlockChainService(
-        decode_hex(privatekey),
+        privatekey_bin,
         decode_hex(registry_contract_address),
-        host="127.0.0.1",
-        port="8545",
+        rpc_client,
     )
 
     discovery = ContractDiscovery(
