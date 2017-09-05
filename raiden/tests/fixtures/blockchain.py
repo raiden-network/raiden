@@ -19,6 +19,7 @@ from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
 from raiden.network.rpc.client import (
     patch_send_message,
+    patch_send_transaction,
     BlockChainService,
 )
 from raiden.network.discovery import (
@@ -141,7 +142,6 @@ def cached_genesis(request, blockchain_type):
         endpoint_discovery_services,
         request.getfixturevalue('raiden_udp_ports'),
         DummyTransport,  # Do not use a UDP server to avoid port reuse in MacOSX
-        request.config.option.verbose,
         request.getfixturevalue('reveal_timeout'),
         request.getfixturevalue('settle_timeout'),
         request.getfixturevalue('database_paths'),
@@ -464,23 +464,31 @@ def _jsonrpc_services(
         )
         registry_address = registry_proxy.address
 
-    host = '0.0.0.0'
+    # at this point the blockchain must be running, this will overwrite the
+    # method so even if the client is patched twice, it should work fine
+    patch_send_transaction(deploy_client)
+
     deploy_blockchain = BlockChainService(
         deploy_key,
         registry_address,
-        host,
-        deploy_client.port,
+        deploy_client,
     )
-    # HACK: reusing the deploy_client to preserve the client nonce state
-    deploy_blockchain.client = deploy_client
 
+    host = '0.0.0.0'
     blockchain_services = list()
     for privkey in private_keys:
+        rpc_client = JSONRPCClient(
+            privkey=privkey,
+            host=host,
+            port=deploy_client.port,
+        )
+        patch_send_transaction(rpc_client)
+        patch_send_message(rpc_client)
+
         blockchain = BlockChainService(
             privkey,
             registry_address,
-            host,
-            deploy_client.port,
+            rpc_client,
         )
         blockchain_services.append(blockchain)
 

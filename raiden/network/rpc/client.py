@@ -16,7 +16,7 @@ from pyethapp.jsonrpc import (
     data_encoder,
     default_gasprice,
 )
-from pyethapp.rpc_client import topic_encoder, JSONRPCClient, block_tag_encoder
+from pyethapp.rpc_client import topic_encoder, block_tag_encoder
 import requests
 
 from raiden import messages
@@ -288,10 +288,8 @@ class BlockChainService(object):
             self,
             privatekey_bin,
             registry_address,
-            host,
-            port,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
-            **kwargs):
+            jsonrpc_client,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         self.address_to_token = dict()
         self.address_to_discovery = dict()
@@ -300,24 +298,11 @@ class BlockChainService(object):
         self.address_to_registry = dict()
         self.token_to_channelmanager = dict()
 
-        jsonrpc_client = JSONRPCClient(
-            privkey=privatekey_bin,
-            host=host,
-            port=port,
-            print_communication=kwargs.get('print_communication', False),
-        )
-        patch_send_transaction(jsonrpc_client)
-        patch_send_message(jsonrpc_client)
-
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
         self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
         self.default_registry = self.registry(registry_address)
-
-    def set_verbosity(self, level):
-        if level:
-            self.client.print_communication = True
 
     def block_number(self):
         return self.client.blocknumber()
