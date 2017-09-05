@@ -126,7 +126,7 @@ install_requires = list(set(
 
 test_requirements = []
 
-version = '0.0.6'  # Keep in sync with RAIDEN_VERSION in raiden/settings.py
+version = '0.0.7'  # Keep in sync with RAIDEN_VERSION in raiden/settings.py
 
 
 def read_version_from_git():
