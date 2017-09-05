@@ -3,7 +3,7 @@ pragma solidity ^0.4.11;
 import "./Token.sol";
 
 library NettingChannelLibrary {
-    string constant public contract_version = "0.0.6";
+    string constant public contract_version = "0.0._";
 
     struct Participant
     {
