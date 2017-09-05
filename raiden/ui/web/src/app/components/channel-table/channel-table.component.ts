@@ -173,11 +173,35 @@ export class ChannelTableComponent implements OnInit {
 
     public menuFor(channel: Channel): MenuItem[] {
         return [
-            { label: 'Transfer', icon: 'fa-exchange', command: () => this.onTransfer(channel) },
-            { label: 'Deposit', icon: 'fa-money', command: () => this.onDeposit(channel) },
-            { label: 'Close', icon: 'fa-close', command: () => this.onClose(channel) },
-            { label: 'Settle', icon: 'fa-book', command: () => this.onSettle(channel) },
-            { label: 'Watch Events', icon: 'fa-clock-o', command: () => this.watchChannelEvents(channel) },
+            {
+                label: 'Transfer',
+                icon: 'fa-exchange',
+                disabled: channel.state !== 'opened',
+                command: () => this.onTransfer(channel)
+            },
+            {
+                label: 'Deposit',
+                icon: 'fa-money',
+                disabled: channel.state !== 'opened',
+                command: () => this.onDeposit(channel)
+            },
+            {
+                label: 'Close',
+                icon: 'fa-close',
+                disabled: channel.state !== 'opened',
+                command: () => this.onClose(channel)
+            },
+            {
+                label: 'Settle',
+                icon: 'fa-book',
+                disabled: channel.state !== 'closed',
+                command: () => this.onSettle(channel)
+            },
+            {
+                label: 'Watch Events',
+                icon: 'fa-clock-o',
+                command: () => this.watchChannelEvents(channel)
+            },
         ];
     }
 
