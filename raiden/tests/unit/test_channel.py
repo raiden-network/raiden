@@ -88,6 +88,9 @@ def test_end_state():
     assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
 
+    assert state1.nonce is None
+    assert state2.nonce is None
+
     lock = Lock(
         lock_amount,
         lock_expiration,
@@ -138,6 +141,9 @@ def test_end_state():
     assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
+    assert state1.nonce is None
+    assert state2.nonce is 1
+
     with pytest.raises(ValueError):
         state1.update_contract_balance(balance1 - 10)
 
@@ -160,6 +166,9 @@ def test_end_state():
     assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
+    assert state1.nonce is None
+    assert state2.nonce is 1
+
     # registering the secret should not change the locked amount
     state2.register_secret(lock_secret)
 
@@ -180,9 +189,12 @@ def test_end_state():
     assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == lock_hash
 
+    assert state1.nonce is None
+    assert state2.nonce is 1
+
     secret_message = Secret(
         identifier=1,
-        nonce=1,
+        nonce=2,
         channel=channel_address,
         transferred_amount=transferred_amount + lock_amount,
         locksroot=EMPTY_MERKLE_ROOT,
@@ -207,6 +219,9 @@ def test_end_state():
 
     assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
     assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
+
+    assert state1.nonce is None
+    assert state2.nonce is 2
 
 
 def test_invalid_timeouts():
@@ -293,6 +308,7 @@ def test_python_channel():
     assert test_channel.locked == partner_state.locked()
     assert test_channel.our_state.locked() == 0
     assert test_channel.partner_state.locked() == 0
+    assert test_channel.get_next_nonce() == 1
 
     with pytest.raises(ValueError):
         test_channel.create_directtransfer(
@@ -325,6 +341,7 @@ def test_python_channel():
     assert test_channel.locked == 0
     assert test_channel.our_state.locked() == 0
     assert test_channel.partner_state.locked() == 0
+    assert test_channel.get_next_nonce() == 2
 
     secret = sha3('test_channel')
     hashlock = sha3(secret)
@@ -356,6 +373,7 @@ def test_python_channel():
     assert test_channel.locked == amount2
     assert test_channel.our_state.locked() == 0
     assert test_channel.partner_state.locked() == amount2
+    assert test_channel.get_next_nonce() == 3
 
     secret_message = test_channel.create_secret(identifier, secret)
     secret_message.sign(privkey1, address1)
@@ -369,6 +387,47 @@ def test_python_channel():
     assert test_channel.locked == 0
     assert test_channel.our_state.locked() == 0
     assert test_channel.partner_state.locked() == 0
+    assert test_channel.get_next_nonce() == 4
+
+
+def test_channel_increase_nonce():
+    """ The nonce must increase with each new transfer. """
+    token_address = make_address()
+    privkey1, address1 = make_privkey_address()
+    address2 = make_address()
+
+    balance1 = 70
+    balance2 = 110
+
+    reveal_timeout = 5
+    settle_timeout = 15
+
+    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
+    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
+    external_state = make_external_state()
+
+    test_channel = Channel(
+        our_state,
+        partner_state,
+        external_state,
+        token_address,
+        reveal_timeout,
+        settle_timeout,
+    )
+
+    previous_nonce = test_channel.get_next_nonce()
+
+    amount = 7
+    block_number = 1
+    for _ in range(10):
+        direct_transfer = test_channel.create_directtransfer(amount, identifier=1)
+        direct_transfer.sign(privkey1, address1)
+        test_channel.register_transfer(block_number, direct_transfer)
+
+        new_nonce = test_channel.get_next_nonce()
+        assert new_nonce == previous_nonce + 1
+
+        previous_nonce = new_nonce
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
