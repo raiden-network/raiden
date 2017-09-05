@@ -7,7 +7,7 @@
 pragma solidity ^0.4.11;
 
 contract EndpointRegistry{
-    string constant public contract_version = "0.0.6";
+    string constant public contract_version = "0.0._";
 
     event AddressRegistered(address indexed eth_address, string socket);
 
