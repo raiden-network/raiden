@@ -24,8 +24,6 @@ from raiden.api.objects import (
     AddressList,
     Channel,
     ChannelList,
-    Token,
-    TokensList,
     PartnersPerToken,
     PartnersPerTokenList
 )
@@ -145,24 +143,6 @@ class EventRequestSchema(BaseSchema):
         strict = True
         # decoding to a dict is required by the @use_kwargs decorator from webargs
         decoding_class = dict
-
-
-class TokenSchema(BaseSchema):
-    """Simple token schema only with an address field. In the future we could
-    add other attributes like 'name. If not replace it with the AddressSchema'"""
-    address = AddressField()
-
-    class Meta:
-        strict = True
-        decoding_class = Token
-
-
-class TokensListSchema(BaseListSchema):
-    data = fields.Nested(TokenSchema, many=True)
-
-    class Meta:
-        strict = True
-        decoding_class = TokensList
 
 
 class AddressSchema(BaseSchema):
