@@ -22,6 +22,10 @@ class TokensList(FlatList):
     pass
 
 
+class AddressList(FlatList):
+    pass
+
+
 class PartnersPerTokenList(FlatList):
     pass
 
@@ -31,6 +35,13 @@ class EventsList(FlatList):
 
 
 class Token(object):
+    """If we don't end up adding anything to the token schema just delete it
+    and use Address"""
+    def __init__(self, token_address):
+        self.address = token_address
+
+
+class Address(object):
     def __init__(self, token_address):
         self.address = token_address
 

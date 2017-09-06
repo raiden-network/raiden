@@ -31,6 +31,7 @@ from raiden.api.v1.encoding import (
     ChannelSchema,
     ChannelListSchema,
     TokensListSchema,
+    AddressListSchema,
     PartnersPerTokenListSchema,
     HexAddressConverter,
     TransferSchema,
@@ -59,7 +60,7 @@ from raiden.transfer.state import (
 from raiden.raiden_service import (
     create_default_identifier,
 )
-from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList
+from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList, AddressList
 from raiden.utils import channel_to_api_dict, split_endpoint
 
 log = slogging.get_logger(__name__)
@@ -250,6 +251,7 @@ class RestAPI(object):
         self.channel_schema = ChannelSchema()
         self.channel_list_schema = ChannelListSchema()
         self.tokens_list_schema = TokensListSchema()
+        self.address_list_schema = AddressListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.transfer_schema = TransferSchema()
 
@@ -345,8 +347,11 @@ class RestAPI(object):
         return make_response('', httplib.NO_CONTENT)
 
     def leave(self, token_address, leave_all=False):
-        self.raiden_api.leave_token_network(token_address, leave_all)
-        return make_response('', httplib.NO_CONTENT)
+        closed_channels = self.raiden_api.leave_token_network(token_address, leave_all)
+        closed_channels = [{'address': channel.channel_address} for channel in closed_channels]
+        channel_addresses_list = AddressList(closed_channels)
+        result = self.address_list_schema.dump(channel_addresses_list)
+        return jsonify(result.data)
 
     def get_connection_manager_funds(self, token_address):
         connection_manager = self.raiden_api.get_connection_manager_funds(token_address)
