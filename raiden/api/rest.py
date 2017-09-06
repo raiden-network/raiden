@@ -344,8 +344,8 @@ class RestAPI(object):
         )
         return make_response('', httplib.NO_CONTENT)
 
-    def leave(self, token_address):
-        self.raiden_api.leave_token_network(token_address)
+    def leave(self, token_address, leave_all=False):
+        self.raiden_api.leave_token_network(token_address, leave_all)
         return make_response('', httplib.NO_CONTENT)
 
     def get_connection_manager_funds(self, token_address):
