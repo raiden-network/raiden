@@ -384,14 +384,13 @@ def blockchain_backend(
 def deploy_client(blockchain_type, blockchain_rpc_ports, deploy_key, request):
     if blockchain_type == 'geth':
         host = '0.0.0.0'
-        print_communication = request.config.option.verbose > 6
         rpc_port = blockchain_rpc_ports[0]
 
         deploy_client = JSONRPCClient(
             host=host,
             port=rpc_port,
             privkey=deploy_key,
-            print_communication=print_communication,
+            print_communication=False,
         )
 
         # cant patch transaction because the blockchain may not be running yet
@@ -481,6 +480,7 @@ def _jsonrpc_services(
             privkey=privkey,
             host=host,
             port=deploy_client.port,
+            print_communication=False,
         )
         patch_send_transaction(rpc_client)
         patch_send_message(rpc_client)
