@@ -174,7 +174,7 @@ class AddressSchema(BaseSchema):
 
 
 class AddressListSchema(BaseListSchema):
-    data = fields.Nested(AddressSchema, many=True)
+    data = fields.List(AddressField())
 
     class Meta:
         strict = True

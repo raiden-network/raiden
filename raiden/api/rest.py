@@ -348,7 +348,7 @@ class RestAPI(object):
 
     def leave(self, token_address, leave_all=False):
         closed_channels = self.raiden_api.leave_token_network(token_address, leave_all)
-        closed_channels = [{'address': channel.channel_address} for channel in closed_channels]
+        closed_channels = [channel.channel_address for channel in closed_channels]
         channel_addresses_list = AddressList(closed_channels)
         result = self.address_list_schema.dump(channel_addresses_list)
         return jsonify(result.data)
