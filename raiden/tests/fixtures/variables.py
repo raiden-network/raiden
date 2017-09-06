@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=redefined-outer-name
 import os
+import random
 
 import pytest
 from raiden.network.utils import get_free_port
@@ -49,6 +50,28 @@ def reveal_timeout(blockchain_type):
 @pytest.fixture
 def events_poll_timeout():
     return DEFAULT_EVENTS_POLL_TIMEOUT
+
+
+@pytest.fixture
+def random_marker():
+    """ A random marker used to identify a pytest run.
+
+    Some tests will spawn a private chain, the private chain will be one or
+    more ethereum nodes on a new subprocesss. These nodes may fail to start on
+    concurrent test runs, mostly because of port number conflicts, but even
+    though the test fails to start its private chain it may run interacting
+    with the geth process from a different test run! This leads to
+    unreasonable test errors.
+
+    This fixture creates a random marker used to distinguish pytest runs and
+    avoid test failures. Note this could fail for other reasons and fail to
+    detect unwanted interations if the user sets the PYTHONHASHSEED to the same
+    value.
+    """
+    random_hex = hex(random.getrandbits(100))
+
+    # strip the leading 0x and trailing L
+    return random_hex[2:-1]
 
 
 @pytest.fixture
