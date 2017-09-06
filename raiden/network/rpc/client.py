@@ -16,7 +16,7 @@ from pyethapp.jsonrpc import (
     data_encoder,
     default_gasprice,
 )
-from pyethapp.rpc_client import topic_encoder, JSONRPCClient, block_tag_encoder
+from pyethapp.rpc_client import topic_encoder, block_tag_encoder
 import requests
 
 from raiden import messages
@@ -76,7 +76,7 @@ def check_transaction_threw(client, transaction_hash):
     transaction = client.call('eth_getTransactionByHash', encoded_transaction)
     receipt = client.call('eth_getTransactionReceipt', encoded_transaction)
     if int(transaction['gas'], 0) != int(receipt['gasUsed'], 0):
-        return False
+        return None
     else:
         return receipt
 
@@ -145,8 +145,8 @@ def patch_send_transaction(client, nonce_offset=0):
         nonce = get_nonce()
 
         tx = Transaction(nonce, gasprice, startgas, to, value, data)
-        assert hasattr(client, 'privkey') and client.privkey
         tx.sign(client.privkey)
+
         result = client.call(
             'eth_sendRawTransaction',
             data_encoder(rlp.encode(tx)),
@@ -288,10 +288,8 @@ class BlockChainService(object):
             self,
             privatekey_bin,
             registry_address,
-            host,
-            port,
-            poll_timeout=DEFAULT_POLL_TIMEOUT,
-            **kwargs):
+            jsonrpc_client,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         self.address_to_token = dict()
         self.address_to_discovery = dict()
@@ -300,24 +298,11 @@ class BlockChainService(object):
         self.address_to_registry = dict()
         self.token_to_channelmanager = dict()
 
-        jsonrpc_client = JSONRPCClient(
-            privkey=privatekey_bin,
-            host=host,
-            port=port,
-            print_communication=kwargs.get('print_communication', False),
-        )
-        patch_send_transaction(jsonrpc_client)
-        patch_send_message(jsonrpc_client)
-
         self.client = jsonrpc_client
         self.private_key = privatekey_bin
         self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
         self.default_registry = self.registry(registry_address)
-
-    def set_verbosity(self, level):
-        if level:
-            self.client.print_communication = True
 
     def block_number(self):
         return self.client.blocknumber()
@@ -541,6 +526,9 @@ class Discovery(object):
             gasprice=GAS_PRICE,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
+        if not isaddress(discovery_address):
+            raise ValueError('discovery_address must be a valid address')
+
         result = jsonrpc_client.call(
             'eth_getCode',
             address_encoder(discovery_address),
@@ -609,6 +597,9 @@ class Token(object):
             gasprice=GAS_PRICE,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
+        if not isaddress(token_address):
+            raise ValueError('token_address must be a valid address')
+
         result = jsonrpc_client.call(
             'eth_getCode',
             address_encoder(token_address),
@@ -646,9 +637,9 @@ class Token(object):
         )
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
-        if tx_receipt_or_false:
-            raise TransactionThrew('Approve', tx_receipt_or_false)
+        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+        if receipt_or_none:
+            raise TransactionThrew('Approve', receipt_or_none)
 
     def balance_of(self, address):
         """ Return the balance of `address`. """
@@ -663,17 +654,25 @@ class Token(object):
         )
 
         self.client.poll(transaction_hash.decode('hex'))
-        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
-        if tx_receipt_or_false:
-            raise TransactionThrew('Transfer', tx_receipt_or_false)
+        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+        if receipt_or_none:
+            raise TransactionThrew('Transfer', receipt_or_none)
 
         # TODO: check Transfer event
 
 
 class Registry(object):
-    def __init__(self, jsonrpc_client, registry_address, startgas=GAS_LIMIT,
-                 gasprice=GAS_PRICE, poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def __init__(
+            self,
+            jsonrpc_client,
+            registry_address,
+            startgas=GAS_LIMIT,
+            gasprice=GAS_PRICE,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
+
+        if not isaddress(registry_address):
+            raise ValueError('registry_address must be a valid address')
 
         result = jsonrpc_client.call(
             'eth_getCode',
@@ -710,9 +709,9 @@ class Registry(object):
         )
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
-        if tx_receipt_or_false:
-            raise TransactionThrew('AddToken', tx_receipt_or_false)
+        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+        if receipt_or_none:
+            raise TransactionThrew('AddToken', receipt_or_none)
 
         channel_manager_address_encoded = self.proxy.channelManagerByToken.call(
             token_address,
@@ -772,6 +771,9 @@ class ChannelManager(object):
             gasprice=GAS_PRICE,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
+
+        if not isaddress(manager_address):
+            raise ValueError('manager_address must be a valid address')
 
         result = jsonrpc_client.call(
             'eth_getCode',
@@ -1014,9 +1016,9 @@ class NettingChannel(object):
         transaction_hash = estimate_and_transact(self, self.proxy.deposit, amount)
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
-        if tx_receipt_or_false:
-            raise TransactionThrew('Deposit', tx_receipt_or_false)
+        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+        if receipt_or_none:
+            raise TransactionThrew('Deposit', receipt_or_none)
 
         log.info('deposit called', contract=pex(self.address), amount=amount)
 
@@ -1166,9 +1168,9 @@ class NettingChannel(object):
         )
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        tx_receipt_or_false = check_transaction_threw(self.client, transaction_hash)
-        if tx_receipt_or_false:
-            raise TransactionThrew('Settle', tx_receipt_or_false)
+        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+        if receipt_or_none:
+            raise TransactionThrew('Settle', receipt_or_none)
 
         # TODO: check if the ChannelSettled event was emitted and if it wasn't raise an error
         log.info('settle called', contract=pex(self.address))

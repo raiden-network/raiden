@@ -188,10 +188,20 @@ def wait_until(func, wait_for=None, sleep_for=0.5):
         sleep_for (float, integer): how much to gevent.sleep between calls
     Returns:
         func(): result of func, if truth value, or None"""
-    start = time.time()
     res = func()
-    while (True if wait_for is None else (time.time() - start < wait_for))\
-            and not res:
-        gevent.sleep(sleep_for)
-        res = func()
-    return res or None
+
+    if res:
+        return res
+
+    if wait_for:
+        deadline = time.time() + wait_for
+        while not res and time.time() <= deadline:
+            gevent.sleep(sleep_for)
+            res = func()
+
+    else:
+        while not res:
+            gevent.sleep(sleep_for)
+            res = func()
+
+    return res

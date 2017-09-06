@@ -224,7 +224,6 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
     discovery_mock = Discovery()
     endpoint_discovery_services = [discovery_mock for _ in private_keys]
 
-    verbosity = 3
     apps = create_apps(
         blockchain_services,
         endpoint_discovery_services,
@@ -233,7 +232,6 @@ def profile_transfer(num_nodes=10, channels_per_node=2):
         deposit,
         DEFAULT_SETTLE_TIMEOUT,
         UDPTransport,
-        verbosity,
     )
 
     main_app = apps[0]

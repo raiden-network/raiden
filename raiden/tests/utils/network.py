@@ -229,7 +229,6 @@ def create_apps(
         endpoint_discovery_services,
         raiden_udp_ports,
         transport_class,
-        verbosity,
         reveal_timeout,
         settle_timeout,
         database_paths,
@@ -267,9 +266,6 @@ def create_apps(
         port = raiden_udp_ports[idx]
         private_key = blockchain.private_key
         nodeid = privatekey_to_address(private_key)
-
-        if verbosity > 7:
-            blockchain.set_verbosity(1)
 
         # split the nodes into two different networks
         if idx > half_of_nodes:

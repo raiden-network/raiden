@@ -1,13 +1,11 @@
 {
   "/api": {
     "target": "http://localhost:5001",
-    "secure": false,
-    "loglevel": "debug"
+    "proxyTimeout": 600000
   },
   "/web3": {
     "target": "http://localhost:8545",
-    "secure": false,
-    "loglevel": "debug",
-    "pathRewrite": {"^/web3": ""}
+    "pathRewrite": {"^/web3": ""},
+    "proxyTimeout": 60000
   }
 }

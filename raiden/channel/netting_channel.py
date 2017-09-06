@@ -441,8 +441,8 @@ class Channel(object):
         is_invalid_nonce = (
             transfer.nonce < 1 or
             (
-                from_state.nonce is not None and
-                transfer.nonce != from_state.nonce + 1
+                to_state.nonce is not None and
+                transfer.nonce != to_state.nonce + 1
             )
         )
         if is_invalid_nonce:
@@ -598,9 +598,9 @@ class Channel(object):
                 current_locksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
             )
 
-    def get_nonce(self):
-        if self.our_state.nonce:
-            return self.our_state.nonce
+    def get_next_nonce(self):
+        if self.partner_state.nonce:
+            return self.partner_state.nonce + 1
 
         # 0 must not be used since in the netting contract it represents null.
         return 1
@@ -631,7 +631,7 @@ class Channel(object):
         transferred_amount = from_.transferred_amount(to_) + amount
         current_locksroot = to_.balance_proof.merkleroot_for_unclaimed()
 
-        nonce = self.get_nonce() + 1
+        nonce = self.get_next_nonce()
 
         return DirectTransfer(
             identifier=identifier,
@@ -668,7 +668,7 @@ class Channel(object):
 
         updated_locksroot = to_.compute_merkleroot_with(include=lock)
         transferred_amount = from_.transferred_amount(to_)
-        nonce = self.get_nonce() + 1
+        nonce = self.get_next_nonce()
 
         return LockedTransfer(
             identifier=identifier,
@@ -756,7 +756,7 @@ class Channel(object):
         locksroot_with_pending_lock_removed = Merkletree(leafs).merkleroot or EMPTY_MERKLE_ROOT
         transferred_amount = from_.transferred_amount(to_) + lock.amount
 
-        nonce = self.get_nonce() + 1
+        nonce = self.get_next_nonce()
 
         secret = Secret(
             identifier,

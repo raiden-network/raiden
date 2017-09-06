@@ -14,11 +14,11 @@ from devp2p.crypto import privtopub
 from ethereum import slogging
 from ethereum.utils import denoms, encode_hex
 from pyethapp.jsonrpc import address_encoder
-from pyethapp.rpc_client import JSONRPCClient
 from requests import ConnectionError
 
 from raiden.utils import privatekey_to_address
 from raiden.tests.utils.genesis import GENESIS_STUB
+from raiden.network.rpc.client import patch_send_transaction
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -33,6 +33,20 @@ def wait_until_block(chain, block):
     curr_block = chain.block_number()
     while curr_block < block:
         curr_block = chain.next_block()
+
+
+def clique_extradata(extra_vanity, extra_seal):
+    if len(extra_vanity) > 64:
+        raise ValueError('extra_vanity length must be smaller-or-equal to 64')
+
+    # Format is determined by the clique PoA:
+    # https://github.com/ethereum/EIPs/issues/225
+    # - First EXTRA_VANITY bytes (fixed) may contain arbitrary signer vanity data
+    # - Last EXTRA_SEAL bytes (fixed) is the signer's signature sealing the header
+    return '0x{:0<64}{:0<170}'.format(
+        extra_vanity,
+        extra_seal,
+    )
 
 
 def geth_to_cmd(node, datadir, verbosity):
@@ -103,7 +117,7 @@ def geth_create_account(datadir, privkey):
     assert create.returncode == 0
 
 
-def geth_bare_genesis(genesis_path, private_keys):
+def geth_bare_genesis(genesis_path, private_keys, random_marker):
     """Writes a bare genesis to `genesis_path`.
 
     Args:
@@ -111,6 +125,7 @@ def geth_bare_genesis(genesis_path, private_keys):
         private_keys list(str): iterable list of privatekeys whose corresponding accounts will
                     have a premined balance available.
     """
+
     account_addresses = [
         privatekey_to_address(key)
         for key in sorted(set(private_keys))
@@ -126,8 +141,9 @@ def geth_bare_genesis(genesis_path, private_keys):
     genesis['alloc'].update(alloc)
 
     genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
-    genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
-        'raiden'.encode('hex'),
+
+    genesis['extraData'] = clique_extradata(
+        random_marker,
         address_encoder(account_addresses[0])[2:],
     )
 
@@ -142,57 +158,52 @@ def geth_init_datadir(datadir, genesis_path):
         datadir (str): the datadir in which the blockchain is initialized.
     """
     try:
-        subprocess.check_output([
+        args = [
             'geth',
             '--datadir',
             datadir,
             'init',
-            genesis_path],
-            stderr=subprocess.STDOUT
-        )
+            genesis_path,
+        ]
+        subprocess.check_output(args, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise ValueError(
-            """Initializing geth with custom genesis returned {} with error:
-{}""".format(e.returncode, e.output))
+        msg = 'Initializing geth with custom genesis returned {} with error:\n {}'.format(
+            e.returncode,
+            e.output,
+        )
+        raise ValueError(msg)
 
 
-def geth_wait_and_check(privatekeys, rpc_ports):
+def geth_wait_and_check(deploy_client, privatekeys, random_marker):
     """ Wait until the geth cluster is ready. """
-    address = address_encoder(privatekey_to_address(privatekeys[0]))
     jsonrpc_running = False
-    tries = 5
-    rpc_port = rpc_ports[0]
-    jsonrpc_client = JSONRPCClient(
-        host='0.0.0.0',
-        port=rpc_port,
-        privkey=privatekeys[0],
-        print_communication=False,
-    )
 
+    tries = 5
     while not jsonrpc_running and tries > 0:
         try:
-            jsonrpc_client.call('eth_getBalance', address, 'latest')
-            jsonrpc_running = True
+            block = deploy_client.call('eth_getBlockByNumber', '0x0', True)
         except ConnectionError:
             gevent.sleep(0.5)
             tries -= 1
+        else:
+            jsonrpc_running = True
+            running_marker = block['extraData'][2:len(random_marker) + 2]
+            if running_marker != random_marker:
+                raise RuntimeError(
+                    'the test marker does not match, maybe two tests are running in '
+                    'parallel with the same port?'
+                )
 
     if jsonrpc_running is False:
         raise ValueError('geth didnt start the jsonrpc interface')
 
     for key in sorted(set(privatekeys)):
         address = address_encoder(privatekey_to_address(key))
-        jsonrpc_client = JSONRPCClient(
-            host='0.0.0.0',
-            port=rpc_port,
-            privkey=key,
-            print_communication=False,
-        )
 
         tries = 10
         balance = '0x0'
         while balance == '0x0' and tries > 0:
-            balance = jsonrpc_client.call('eth_getBalance', address, 'latest')
+            balance = deploy_client.call('eth_getBalance', address, 'latest')
             gevent.sleep(1)
             tries -= 1
 
@@ -202,15 +213,17 @@ def geth_wait_and_check(privatekeys, rpc_ports):
 
 def geth_create_blockchain(
         deploy_key,
+        deploy_client,
         private_keys,
         blockchain_private_keys,
         rpc_ports,
         p2p_ports,
         base_datadir,
         verbosity,
+        random_marker,
         genesis_path=None,
         logdirectory=None):
-    # pylint: disable=too-many-locals,too-many-statements,too-many-arguments
+    # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
 
     nodes_configuration = []
     key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports)
@@ -256,7 +269,7 @@ def geth_create_blockchain(
         os.makedirs(nodedir)
 
         if genesis_path is None:
-            geth_bare_genesis(node_genesis_path, all_keys)
+            geth_bare_genesis(node_genesis_path, all_keys, random_marker)
         else:
             shutil.copy(genesis_path, node_genesis_path)
 
@@ -305,12 +318,18 @@ def geth_create_blockchain(
             )
 
         processes_list.append(process)
-        assert process.returncode is None
 
-    geth_wait_and_check(private_keys, rpc_ports)
+    geth_wait_and_check(deploy_client, private_keys, random_marker)
+    patch_send_transaction(deploy_client)
 
     # reenter echo mode (disabled by geth pasphrase prompt)
     if isinstance(sys.stdin, file):
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
+
+    for process in processes_list:
+        process.poll()
+
+        if process.returncode is not None:
+            raise ValueError('geth failed to start')
 
     return processes_list

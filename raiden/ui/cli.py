@@ -13,9 +13,10 @@ import click
 import gevent
 import gevent.monkey
 from ethereum import slogging
-from pyethapp.jsonrpc import address_decoder, address_encoder
-from tinyrpc import BadRequestError
 from ethereum.utils import denoms
+from pyethapp.jsonrpc import address_decoder, address_encoder
+from pyethapp.rpc_client import JSONRPCClient
+from tinyrpc import BadRequestError
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -27,6 +28,10 @@ from raiden.constants import (
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.sockfactory import socket_factory
 from raiden.network.utils import get_free_port
+from raiden.network.rpc.client import (
+    patch_send_message,
+    patch_send_transaction,
+)
 from raiden.settings import (
     INITIAL_PORT,
     DEFAULT_NAT_KEEPALIVE_RETRIES,
@@ -169,12 +174,9 @@ OPTIONS = [
         type=int,
     ),
     click.option(
-        '--console/--no-console',
-        help=(
-            'Start with or without the command line interface. Default is to '
-            'start with the CLI disabled'
-        ),
-        default=False,
+        '--console',
+        help='Start the interactive raiden console',
+        is_flag=True
     ),
     click.option(
         '--rpc/--no-rpc',
@@ -218,6 +220,11 @@ OPTIONS = [
         ),
         default=True,
     ),
+    click.option(
+        '--eth-client-communication',
+        help='Print all communication with the underlying eth client',
+        is_flag=True,
+    )
 ]
 
 
@@ -249,7 +256,8 @@ def app(address,
         console,
         password_file,
         web_ui,
-        datadir):
+        datadir,
+        eth_client_communication):
 
     from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
@@ -302,12 +310,22 @@ def app(address,
     else:
         rpc_host, rpc_port = split_endpoint(endpoint)
 
+    rpc_client = JSONRPCClient(
+        privkey=privatekey_bin,
+        host=rpc_host,
+        port=rpc_port,
+        print_communication=eth_client_communication,
+    )
+
+    # this assumes the eth node is already online
+    patch_send_transaction(rpc_client)
+    patch_send_message(rpc_client)
+
     try:
         blockchain_service = BlockChainService(
             privatekey_bin,
             registry_contract_address,
-            host=rpc_host,
-            port=rpc_port,
+            rpc_client,
         )
     except ValueError as e:
         # ValueError exception raised if:
@@ -532,9 +550,9 @@ def version(short, **kwargs):
 
 @run.command()
 @click.option(
-    '--debug/--no-debug',
-    default=False,
-    help='Drop into pdb on errors (default: False).'
+    '--debug',
+    is_flag=True,
+    help='Drop into pdb on errors.'
 )
 @click.pass_context
 def smoketest(ctx, debug, **kwargs):
