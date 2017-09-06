@@ -150,7 +150,7 @@ class ConnectionManager(object):
         Note, that this does not time out.
         """
         not_settled_channels = [
-            channel for channel in self.closed_channels
+            channel for channel in closed_channels
             if not channel.state != CHANNEL_STATE_SETTLED
         ]
         while any(c.state != CHANNEL_STATE_SETTLED for c in not_settled_channels):
