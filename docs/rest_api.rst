@@ -209,8 +209,8 @@ Example Response
 ::
 
     [
-        {"address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"},
-        {"address": "0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6"}
+        "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6"
     ]
 
 Possible Responses
@@ -602,6 +602,8 @@ Important note. If no arguments are given then raiden will only close and settle
 
 If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``leave_all_channels=true``
 
+A list with the addresses of all the closed channels will be returned.
+
 Example Request
 ^^^^^^^^^^^^^^^
 
@@ -616,7 +618,14 @@ with payload::
 
 Example Response
 ^^^^^^^^^^^^^^^^
-``204 NO CONTENT``
+``200 OKAY`` with
+::
+
+    [
+        "0x41bcbc2fd72a731bcc136cf6f7442e9c19e9f313",
+        "0x5a5f458f6c1a034930e45dc9a64b99d7def06d7e",
+        "0x8942c06faa74cebff7d55b79f9989adfc85c6b85"
+    ]
 
 Possible Responses
 ^^^^^^^^^^^^^^^^^^
