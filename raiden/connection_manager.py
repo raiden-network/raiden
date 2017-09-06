@@ -112,7 +112,7 @@ class ConnectionManager(object):
         gevent.spawn(self.leave).link(leave_result)
         return leave_result
 
-    def leave(self):
+    def leave(self, leave_all=False):
         """ Leave the token network.
         This implies closing all channels and waiting for all channels to be settled.
         """
@@ -122,20 +122,23 @@ class ConnectionManager(object):
         if self.initial_channel_target > 0:
             self.initial_channel_target = 0
 
-        self.close_all()
+        self.close_all(leave_all)
         return self.wait_for_settle()
 
-    def close_all(self):
-        """ Close all receiving channels in the token network.
-        Note: we're just discarding all channels we haven't received anything. This potentially
-        leaves deposits locked in channels after `closing`. This is "safe" from an accounting
-        point of view (deposits can not be lost), but may still be undesirable from a liquidity
-        point of view (deposits will only be freed after manually closing or after the partner
-        closed the channel).
+    def close_all(self, leave_all=False):
+        """ Close all channels in the token network.
+        Note: By default we're just discarding all channels we haven't received anything.
+        This potentially leaves deposits locked in channels after `closing`. This is "safe"
+        from an accounting point of view (deposits can not be lost), but may still be
+        undesirable from a liquidity point of view (deposits will only be freed after
+        manually closing or after the partner closed the channel).
+
+        If leave_all is True then we close and settle all channels irrespective of them
+        having received transfers or not.
         """
         with self.lock:
             self.initial_channel_target = 0
-            channels_to_close = self.receiving_channels[:]
+            channels_to_close = self.open_channels[:] if leave_all else self.receiving_channels[:]
             for channel in channels_to_close:
                 # FIXME: race condition, this can fail if channel was closed externally
                 self.api.close(self.token_address, channel.partner_address)

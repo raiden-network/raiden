@@ -273,3 +273,16 @@ class ConnectionsConnectSchema(BaseSchema):
     class Meta:
         strict = True
         decoding_class = dict
+
+
+class ConnectionsLeaveSchema(BaseSchema):
+    leave_all_channels = fields.Boolean(
+        required=False,
+        default=False,
+        missing=False,
+        location='json'
+    )
+
+    class Meta:
+        strict = True
+        decoding_class = dict
