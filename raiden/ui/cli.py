@@ -175,10 +175,7 @@ OPTIONS = [
     ),
     click.option(
         '--console',
-        help=(
-            'Start with or without the command line interface. Default is to '
-            'start with the CLI disabled'
-        ),
+        help='Start the interactive raiden console',
         is_flag=True
     ),
     click.option(
@@ -555,7 +552,7 @@ def version(short, **kwargs):
 @click.option(
     '--debug',
     is_flag=True,
-    help='Drop into pdb on errors (default: False).'
+    help='Drop into pdb on errors.'
 )
 @click.pass_context
 def smoketest(ctx, debug, **kwargs):
