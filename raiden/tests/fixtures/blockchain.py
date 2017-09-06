@@ -26,6 +26,7 @@ from raiden.network.discovery import (
     ContractDiscovery,
 )
 from raiden.tests.utils.blockchain import (
+    clique_extradata,
     geth_create_blockchain,
 )
 from raiden.tests.utils.network import (
@@ -218,9 +219,11 @@ def cached_genesis(request, blockchain_type):
 
     genesis = GENESIS_STUB.copy()
     genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
-    genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
-        'raiden'.encode('hex'),
-        address_encoder(account_addresses[0])[2:]
+
+    random_marker = request.getfixturevalue('random_marker')
+    genesis['extraData'] = clique_extradata(
+        random_marker,
+        address_encoder(account_addresses[0])[2:],
     )
     genesis['alloc'] = alloc
     genesis['config']['defaultDiscoveryAddress'] = address_encoder(endpoint_discovery_address)
@@ -350,6 +353,7 @@ def blockchain_backend(
         blockchain_p2p_ports,
         blockchain_rpc_ports,
         tmpdir,
+        random_marker,
         blockchain_type,
         cached_genesis):
 
@@ -370,6 +374,7 @@ def blockchain_backend(
             blockchain_p2p_ports,
             blockchain_rpc_ports,
             tmpdir,
+            random_marker,
             genesis_path,
         )
 
@@ -409,6 +414,7 @@ def _geth_blockchain(
         blockchain_p2p_ports,
         blockchain_rpc_ports,
         tmpdir,
+        random_marker,
         genesis_path):
 
     """ Helper to do proper cleanup. """
@@ -421,6 +427,7 @@ def _geth_blockchain(
         blockchain_p2p_ports,
         str(tmpdir),
         request.config.option.verbose,
+        random_marker,
         genesis_path,
     )
 
