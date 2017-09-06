@@ -30,7 +30,6 @@ from raiden.exceptions import (
 from raiden.api.v1.encoding import (
     ChannelSchema,
     ChannelListSchema,
-    TokensListSchema,
     AddressListSchema,
     PartnersPerTokenListSchema,
     HexAddressConverter,
@@ -60,7 +59,7 @@ from raiden.transfer.state import (
 from raiden.raiden_service import (
     create_default_identifier,
 )
-from raiden.api.objects import ChannelList, TokensList, PartnersPerTokenList, AddressList
+from raiden.api.objects import ChannelList, PartnersPerTokenList, AddressList
 from raiden.utils import channel_to_api_dict, split_endpoint
 
 log = slogging.get_logger(__name__)
@@ -250,7 +249,6 @@ class RestAPI(object):
         self.raiden_api = raiden_api
         self.channel_schema = ChannelSchema()
         self.channel_list_schema = ChannelListSchema()
-        self.tokens_list_schema = TokensListSchema()
         self.address_list_schema = AddressListSchema()
         self.partner_per_token_list_schema = PartnersPerTokenListSchema()
         self.transfer_schema = TransferSchema()
@@ -383,13 +381,8 @@ class RestAPI(object):
     def get_tokens_list(self):
         raiden_service_result = self.raiden_api.get_tokens_list()
         assert isinstance(raiden_service_result, list)
-
-        new_list = []
-        for result in raiden_service_result:
-            new_list.append({'address': result})
-
-        tokens_list = TokensList(new_list)
-        result = self.tokens_list_schema.dump(tokens_list)
+        tokens_list = AddressList(raiden_service_result)
+        result = self.address_list_schema.dump(tokens_list)
         return jsonify(result.data)
 
     def get_network_events(self, from_block, to_block):
