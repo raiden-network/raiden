@@ -223,6 +223,11 @@ OPTIONS = [
         ),
         default=True,
     ),
+    click.option(
+        '--eth-client-communication',
+        help='Print all communication with the underlying eth client',
+        is_flag=True,
+    )
 ]
 
 
@@ -254,7 +259,8 @@ def app(address,
         console,
         password_file,
         web_ui,
-        datadir):
+        datadir,
+        eth_client_communication):
 
     from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
@@ -311,6 +317,7 @@ def app(address,
         privkey=privatekey_bin,
         host=rpc_host,
         port=rpc_port,
+        print_communication=eth_client_communication,
     )
 
     # this assumes the eth node is already online
