@@ -598,10 +598,20 @@ You can leave a token network by making a ``DELETE`` request to the following en
 
 The request will only return once all blockchain calls for closing/settling a channel have completed.
 
+Important note. If no arguments are given then raiden will only close and settle channels where your node has received transfers. This is safe from an accounting point of view since deposits can't be lost and provides for the fastest and cheapest way to leave a token network when you want to shut down your node.
+
+If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``leave_all_channels=true``
+
 Example Request
 ^^^^^^^^^^^^^^^
 
 ``DELETE /api/1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
+
+with payload::
+
+  {
+      "leave_all_channels": true
+  }
 
 
 Example Response
