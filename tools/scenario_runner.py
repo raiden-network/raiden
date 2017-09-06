@@ -90,6 +90,7 @@ def run(privatekey,
         privkey=privatekey_bin,
         host='127.0.0.1',
         port='8545',
+        print_communication=False,
     )
 
     blockchain_service = BlockChainService(

@@ -99,6 +99,7 @@ def setup_tps(
         privkey=privatekey,
         host=host,
         port=port,
+        print_communication=False,
     )
 
     blockchain_service = BlockChainService(
@@ -166,6 +167,7 @@ def tps_run(
         privkey=privatekey,
         host=host,
         port=port,
+        print_communication=False,
     )
 
     blockchain_service = BlockChainService(
