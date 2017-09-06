@@ -174,12 +174,12 @@ OPTIONS = [
         type=int,
     ),
     click.option(
-        '--console/--no-console',
+        '--console',
         help=(
             'Start with or without the command line interface. Default is to '
             'start with the CLI disabled'
         ),
-        default=False,
+        is_flag=True
     ),
     click.option(
         '--rpc/--no-rpc',
@@ -553,8 +553,8 @@ def version(short, **kwargs):
 
 @run.command()
 @click.option(
-    '--debug/--no-debug',
-    default=False,
+    '--debug',
+    is_flag=True,
     help='Drop into pdb on errors (default: False).'
 )
 @click.pass_context
