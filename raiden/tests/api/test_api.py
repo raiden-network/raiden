@@ -619,8 +619,8 @@ def test_api_tokens(
     assert_proper_response(response)
     response = response.json()
     expected_response = [
-        {'address': '0x61c808d82a3ac53231750dadc13c777b59310bd9'},
-        {'address': '0xea674fdde714fd979de3edf0f56aa9716b898ec8'},
+        '0x61c808d82a3ac53231750dadc13c777b59310bd9',
+        '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
     ]
     assert all(r in response for r in expected_response)
 
@@ -1019,7 +1019,11 @@ def test_connect_and_leave_token_network(
         api_url_for(api_backend, 'connectionsresource', token_address=token_address),
     )
     response = request.send().response
-    assert_empty_response_with_code(response, httplib.NO_CONTENT)
+    assert(not api_test_context.last_leave_all)
+    assert_proper_response(response)
+    response = response.json()
+    expected_response = [channel['channel_address'] for channel in channels]
+    assert all(r in response for r in expected_response)
 
     # check that all channels were settled after calling `leave`
     request = grequests.get(
@@ -1032,6 +1036,15 @@ def test_connect_and_leave_token_network(
     assert channels[0]['state'] == CHANNEL_STATE_SETTLED
     assert channels[1]['state'] == CHANNEL_STATE_SETTLED
     assert channels[2]['state'] == CHANNEL_STATE_SETTLED
+
+    # Let's try to leave again but this time give the leave_all argument
+    request = grequests.delete(
+        api_url_for(api_backend, 'connectionsresource', token_address=token_address),
+        json={'leave_all_channels': True},
+    )
+    response = request.send().response
+    assert_proper_response(response)
+    assert(api_test_context.last_leave_all)
 
 
 def test_register_token(api_backend, api_test_context, api_raiden_service):
