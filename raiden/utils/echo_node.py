@@ -3,8 +3,9 @@ from collections import deque
 
 import gevent
 from gevent.queue import Queue
-from gevent.lock import Semaphore
+from gevent.lock import BoundedSemaphore
 from gevent.event import Event
+from gevent.timeout import Timeout
 from ethereum import slogging
 import click
 
@@ -48,22 +49,18 @@ class EchoNode(object):
                     pex(self.api.raiden.address),
                     pex(self.token_address),
                 ))
-            self.last_poll_block = self.api.raiden.get_block_number()
             self.api.connect_token_network(
                 self.token_address,
                 token.balance_of(self.api.raiden.address),
                 initial_channel_target=10,
                 joinable_funds_target=.5,
             )
-        else:
-            self.last_poll_block = min(
-                channel.external_state.opened_block for channel in open_channels
-            )
 
+        self.last_poll_block = self.api.raiden.get_block_number()
         self.received_transfers = Queue()
         self.stop_signal = None  # used to signal REMOVE_CALLBACK and stop echo_workers
         self.greenlets = list()
-        self.lock = Semaphore()
+        self.lock = BoundedSemaphore()
         self.handled_transfers = deque(list(), TRANSFER_MEMORY)
         # register ourselves with the raiden alarm task
         self.api.raiden.alarm.register_callback(self.echo_node_alarm_callback)
@@ -75,7 +72,7 @@ class EchoNode(object):
         """
         if not self.ready.is_set():
             self.ready.set()
-        log.DEV('echo_node callback', block_number=block_number)
+        log.debug('echo_node callback', block_number=block_number)
         if self.stop_signal is not None:
             return REMOVE_CALLBACK
         else:
@@ -88,31 +85,48 @@ class EchoNode(object):
         adds all new events to the `self.received_transfers` queue and
         spawns an `self.echo_node_worker`, if there were new events. """
 
-        with self.lock:
-            channels = self.api.get_channel_list(token_address=self.token_address)
-            received_transfers = list()
-            for channel in channels:
-                channel_events = self.api.get_channel_events(
-                    channel.channel_address,
-                    self.last_poll_block
-                )
-                received_transfers.extend([
-                    event for event in channel_events
-                    if event['_event_type'] == 'EventTransferReceivedSuccess'
-                ])
-            if received_transfers:
-                self.last_poll_block = max(
-                    event['block_number']
-                    for event in received_transfers
-                )
-            for transfer in received_transfers:
-                self.received_transfers.put(transfer)
-            if len(received_transfers):
-                self.greenlets.append(gevent.spawn(self.echo_worker))
+        locked = False
+        try:
+            with Timeout(10):
+                locked = self.lock.acquire(blocking=False)
+                if not locked:
+                    return
+                else:
+                    channels = self.api.get_channel_list(token_address=self.token_address)
+                    received_transfers = list()
+                    for channel in channels:
+                        channel_events = self.api.get_channel_events(
+                            channel.channel_address,
+                            self.last_poll_block
+                        )
+                        received_transfers.extend([
+                            event for event in channel_events
+                            if event['_event_type'] == 'EventTransferReceivedSuccess'
+                        ])
+                    for transfer in received_transfers:
+                        self.received_transfers.put(transfer)
+                    # only set last_poll_block after events are enqueued (timeout safe)
+                    if received_transfers:
+                        self.last_poll_block = max(
+                            event['block_number']
+                            for event in received_transfers
+                        )
+                    if received_transfers:
+                        log.debug(
+                            'spawning echo worker',
+                            received_transfers=len(received_transfers)
+                        )
+                        self.greenlets.append(gevent.spawn(self.echo_worker))
+        except Timeout:
+            log.info('timeout while polling for events')
+        finally:
+            if locked:
+                self.lock.release()
 
     def echo_worker(self):
         """ The `echo_worker` works through the `self.received_transfers` queue and spawns
         `self.on_transfer` greenlets for all transfers. """
+        log.debug('echo worker', qsize=self.received_transfers.qsize())
         while self.stop_signal is None and self.received_transfers.qsize() > 0:
             transfer = self.received_transfers.get()
             self.greenlets.append(gevent.spawn(self.on_transfer, transfer))
@@ -131,14 +145,14 @@ class EchoNode(object):
             initiator """
         echo_amount = 0
         if transfer in self.handled_transfers:
-            log.DEV(
+            log.debug(
                 'duplicate transfer received',
                 initiator=pex(transfer['initiator']),
                 amount=transfer['amount'],
                 identifier=transfer['identifier']
             )
         elif transfer['amount'] % 3 == 0:
-            log.DEV(
+            log.debug(
                 'minus one transfer received',
                 initiator=pex(transfer['initiator']),
                 amount=transfer['amount'],
@@ -149,7 +163,7 @@ class EchoNode(object):
             # FIXME: the lottery transfers are not yet implemented.
             # the idea is, to collect 7 transfers with amount == 7 and randomly chose one initator,
             # that will receive 49 tokens back
-            log.DEV(
+            log.warn(
                 'not implemented: lucky number transfer received. handling like regular transfer',
                 initiator=pex(transfer['initiator']),
                 amount=transfer['amount'],
@@ -157,7 +171,7 @@ class EchoNode(object):
             )
             echo_amount = transfer['amount']
         else:
-            log.DEV(
+            log.debug(
                 'echo transfer received',
                 initiator=pex(transfer['initiator']),
                 amount=transfer['amount'],
@@ -165,7 +179,7 @@ class EchoNode(object):
             )
             echo_amount = transfer['amount']
         if echo_amount:
-            log.DEV(
+            log.debug(
                 'sending echo transfer',
                 target=pex(transfer['initiator']),
                 amount=echo_amount,
