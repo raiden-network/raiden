@@ -122,8 +122,9 @@ class ConnectionManager(object):
         if self.initial_channel_target > 0:
             self.initial_channel_target = 0
 
-        self.close_all(leave_all)
-        return self.wait_for_settle()
+        closed_channels = self.close_all(leave_all)
+        self.wait_for_settle(closed_channels)
+        return closed_channels
 
     def close_all(self, leave_all=False):
         """ Close all channels in the token network.
@@ -142,13 +143,14 @@ class ConnectionManager(object):
             for channel in channels_to_close:
                 # FIXME: race condition, this can fail if channel was closed externally
                 self.api.close(self.token_address, channel.partner_address)
+            return channels_to_close
 
-    def wait_for_settle(self):
-        """Wait for all channels of the token network to settle.
+    def wait_for_settle(self, closed_channels):
+        """Wait for all closed channels of the token network to settle.
         Note, that this does not time out.
         """
         not_settled_channels = [
-            channel for channel in self.receiving_channels
+            channel for channel in self.closed_channels
             if not channel.state != CHANNEL_STATE_SETTLED
         ]
         while any(c.state != CHANNEL_STATE_SETTLED for c in not_settled_channels):

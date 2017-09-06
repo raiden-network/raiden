@@ -144,7 +144,7 @@ class RaidenAPI(object):
         settlement.
         """
         connection_manager = self.raiden.connection_manager_for_token(token_address)
-        connection_manager.leave(leave_all)
+        return connection_manager.leave(leave_all)
 
     def get_connection_manager_funds(self, token_address):
         """Get the connection manager for a specific token"""

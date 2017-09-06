@@ -20,6 +20,8 @@ from pyethapp.jsonrpc import (
 )
 
 from raiden.api.objects import (
+    Address,
+    AddressList,
     Channel,
     ChannelList,
     Token,
@@ -147,7 +149,7 @@ class EventRequestSchema(BaseSchema):
 
 class TokenSchema(BaseSchema):
     """Simple token schema only with an address field. In the future we could
-    add other attributes like 'name'"""
+    add other attributes like 'name. If not replace it with the AddressSchema'"""
     address = AddressField()
 
     class Meta:
@@ -161,6 +163,22 @@ class TokensListSchema(BaseListSchema):
     class Meta:
         strict = True
         decoding_class = TokensList
+
+
+class AddressSchema(BaseSchema):
+    address = AddressField()
+
+    class Meta:
+        strict = True
+        decoding_class = Address
+
+
+class AddressListSchema(BaseListSchema):
+    data = fields.Nested(AddressSchema, many=True)
+
+    class Meta:
+        strict = True
+        decoding_class = AddressList
 
 
 class PartnersPerTokenSchema(BaseSchema):
