@@ -1,5 +1,3 @@
-import { MenuItem } from 'primeng/primeng';
-
 export interface Channel {
     channel_address: string;
     partner_address: string;
@@ -8,5 +6,4 @@ export interface Channel {
     balance: number;
     settle_timeout: number;
     reveal_timeout: number;
-    menu?: MenuItem[];
 };
