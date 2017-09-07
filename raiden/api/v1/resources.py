@@ -178,10 +178,10 @@ class ConnectionsResource(BaseResource):
         )
 
     @use_kwargs(delete_schema, locations=('json',))
-    def delete(self, token_address, leave_all_channels):
+    def delete(self, token_address, only_receiving_channels):
         return self.rest_api.leave(
             token_address=token_address,
-            leave_all=leave_all_channels
+            only_receiving=only_receiving_channels
         )
 
     def get(self, token_address):

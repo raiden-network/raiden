@@ -274,10 +274,10 @@ class ConnectionsConnectSchema(BaseSchema):
 
 
 class ConnectionsLeaveSchema(BaseSchema):
-    leave_all_channels = fields.Boolean(
+    only_receiving_channels = fields.Boolean(
         required=False,
-        default=False,
-        missing=False,
+        default=True,
+        missing=True,
         location='json'
     )
 
