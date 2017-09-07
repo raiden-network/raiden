@@ -85,11 +85,11 @@ def test_echo_node_response(
         transfer_event.wait(timeout=20)
         expected.append(amount)
 
-    while len(echo_node.handled_transfers) < len(expected):
+    while echo_node.num_handled_transfers < len(expected):
         gevent.sleep(.5)
 
     # Check that all transfers were handled correctly
-    for handled_transfer in echo_node.handled_transfers:
+    for handled_transfer in echo_node.seen_transfers:
         app = address_to_app[handled_transfer['initiator']]
         events = get_channel_events_for_token(app, token_address, 0)
         received = {}
@@ -168,12 +168,12 @@ def test_echo_node_lottery(
     ).wait(timeout=20)
     expected.append(amount)
 
-    while len(echo_node.handled_transfers) < len(expected):
+    while echo_node.num_handled_transfers < len(expected):
         gevent.sleep(.5)
 
     received = {}
     # Check that payout was generated and pool_size_query answered
-    for handled_transfer in echo_node.handled_transfers:
+    for handled_transfer in echo_node.seen_transfers:
         app = address_to_app[handled_transfer['initiator']]
         events = get_channel_events_for_token(app, token_address, 0)
 

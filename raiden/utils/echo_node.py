@@ -21,14 +21,14 @@ from raiden.ui.cli import (
     ADDRESS_TYPE
 )
 from raiden.tasks import REMOVE_CALLBACK
-from raiden.utils import pex
+from raiden.utils import pex, get_system_spec
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.api.python import RaidenAPI
 
 log = slogging.getLogger(__name__)
 
 # number of transfers we will check for duplicates
-TRANSFER_MEMORY = 256
+TRANSFER_MEMORY = 4096
 
 
 class EchoNode(object):
@@ -63,10 +63,12 @@ class EchoNode(object):
         self.stop_signal = None  # used to signal REMOVE_CALLBACK and stop echo_workers
         self.greenlets = list()
         self.lock = BoundedSemaphore()
-        self.handled_transfers = deque(list(), TRANSFER_MEMORY)
+        self.seen_transfers = deque(list(), TRANSFER_MEMORY)
+        self.num_handled_transfers = 0
         self.lottery_pool = Queue()
         # register ourselves with the raiden alarm task
         self.api.raiden.alarm.register_callback(self.echo_node_alarm_callback)
+        self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
 
     def echo_node_alarm_callback(self, block_number):
         """ This can be registered with the raiden AlarmTask.
@@ -86,7 +88,7 @@ class EchoNode(object):
         """ This will be triggered once for each `echo_node_alarm_callback`.
         It polls all channels for `EventTransferReceivedSuccess` events,
         adds all new events to the `self.received_transfers` queue and
-        spawns `self.echo_node_worker`, if there were new events. """
+        respawns `self.echo_node_worker`, if it died. """
 
         locked = False
         try:
@@ -106,20 +108,29 @@ class EchoNode(object):
                             event for event in channel_events
                             if event['_event_type'] == 'EventTransferReceivedSuccess'
                         ])
-                    for transfer in received_transfers:
+                    for event in received_transfers:
+                        transfer = event.copy()
+                        transfer.pop('block_number')
                         self.received_transfers.put(transfer)
-                    # only set last_poll_block after events are enqueued (timeout safe)
+                    # set last_poll_block after events are enqueued (timeout safe)
                     if received_transfers:
                         self.last_poll_block = max(
                             event['block_number']
                             for event in received_transfers
                         )
-                    if received_transfers:
+                    # proceed last_poll_block if the blockchain proceeded
+                    delta_blocks = self.api.raiden.get_block_number() - self.last_poll_block
+                    if delta_blocks > 1:
+                        self.last_poll_block += 1
+
+                    if not self.echo_worker_greenlet.started:
                         log.debug(
-                            'spawning echo worker',
-                            received_transfers=len(received_transfers)
+                            'restarting echo_worker_greenlet',
+                            dead=self.echo_worker_greenlet.dead,
+                            successful=self.echo_worker_greenlet.successful(),
+                            exception=self.echo_worker_greenlet.exception
                         )
-                        self.greenlets.append(gevent.spawn(self.echo_worker))
+                        self.echo_worker_greenlet = gevent.spawn(self.echo_worker)
         except Timeout:
             log.info('timeout while polling for events')
         finally:
@@ -128,17 +139,28 @@ class EchoNode(object):
 
     def echo_worker(self):
         """ The `echo_worker` works through the `self.received_transfers` queue and spawns
-        `self.on_transfer` greenlets for all transfers. """
+        `self.on_transfer` greenlets for all not-yet-seen transfers. """
         log.debug('echo worker', qsize=self.received_transfers.qsize())
-        while self.stop_signal is None and self.received_transfers.qsize() > 0:
-            transfer = self.received_transfers.get()
-            self.greenlets.append(gevent.spawn(self.on_transfer, transfer))
+        while self.stop_signal is None:
+            if self.received_transfers.qsize() > 0:
+                transfer = self.received_transfers.get()
+                if transfer in self.seen_transfers:
+                    log.debug(
+                        'duplicate transfer ignored',
+                        initiator=pex(transfer['initiator']),
+                        amount=transfer['amount'],
+                        identifier=transfer['identifier']
+                    )
+                else:
+                    self.seen_transfers.append(transfer)
+                    self.greenlets.append(gevent.spawn(self.on_transfer, transfer))
+            else:
+                gevent.sleep(.5)
 
     def on_transfer(self, transfer):
-        """ This checks for duplicated transfer events and handles the echo logic, as described in
+        """ This handles the echo logic, as described in
         https://github.com/raiden-network/raiden/issues/651:
 
-            - consecutive transfers with same `amount`, `identifier` and `initiator` are ignored
             - for transfers with an amount that satisfies `amount % 3 == 0`, it sends a transfer
             with an amount of `amount - 1` back to the initiator
             - for transfers with a "lucky number" amount `amount == 7` it does not send anything
@@ -150,14 +172,6 @@ class EchoNode(object):
             - for all other transfers it sends a transfer with the same `amount` back to the
             initiator """
         echo_amount = 0
-        if transfer in self.handled_transfers:
-            log.debug(
-                'duplicate transfer received',
-                initiator=pex(transfer['initiator']),
-                amount=transfer['amount'],
-                identifier=transfer['identifier']
-            )
-            return
         if transfer['amount'] % 3 == 0:
             log.debug(
                 'minus one transfer received',
@@ -191,7 +205,6 @@ class EchoNode(object):
                 )
                 # signal the poolsize to the participant
                 echo_amount = len(tickets)
-                self.handled_transfers.append(transfer)
 
             # payout
             elif len(tickets) == 6:
@@ -206,7 +219,6 @@ class EchoNode(object):
                 echo_amount = 49
             else:
                 self.lottery_pool.put(transfer)
-                self.handled_transfers.append(transfer)
 
         else:
             log.debug(
@@ -225,6 +237,7 @@ class EchoNode(object):
                 orig_identifier=transfer['identifier'],
                 echo_identifier=transfer['identifier'] + echo_amount,
                 token_address=pex(self.token_address),
+                num_handled_transfers=self.num_handled_transfers + 1
             )
 
             self.api.transfer_and_wait(
@@ -233,7 +246,7 @@ class EchoNode(object):
                 transfer['initiator'],
                 identifier=transfer['identifier'] + echo_amount
             )
-            self.handled_transfers.append(transfer)
+        self.num_handled_transfers += 1
 
     def stop(self):
         self.stop_signal = True
@@ -248,7 +261,19 @@ def runner(ctx, **kwargs):
     """ Start a raiden Echo Node that will send received transfers back to the initiator. """
     # This is largely a copy&paste job from `raiden.ui.cli::run`, with the difference that
     # an `EchoNode` is instantiated from the App's `RaidenAPI`.
-    slogging.configure(kwargs['logging'], log_file=kwargs['logfile'])
+    print('Welcome to Raiden, version {} [Echo Node]'.format(get_system_spec()['raiden']))
+    slogging.configure(
+        kwargs['logging'],
+        log_json=kwargs['log_json'],
+        log_file=kwargs['logfile']
+    )
+    if kwargs['logfile']:
+        # Disable stream logging
+        root = slogging.getLogger()
+        for handler in root.handlers:
+            if isinstance(handler, slogging.logging.StreamHandler):
+                root.handlers.remove(handler)
+                break
 
     token_address = kwargs.pop('token_address')
 
@@ -280,8 +305,7 @@ def runner(ctx, **kwargs):
             print(
                 "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
                 "See the Raiden documentation for all available endpoints at\n"
-                "https://github.com/raiden-network/raiden/blob/master"
-                "/docs/Rest-Api.rst".format(
+                "http://raiden-network.readthedocs.io/en/stable/rest_api.html".format(
                     api_host,
                     api_port,
                 )
