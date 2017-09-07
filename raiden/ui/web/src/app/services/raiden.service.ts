@@ -56,25 +56,23 @@ export class RaidenService {
             .catch((error) => this.handleError(error));
     }
 
-    public getTokensBalances(refresh: boolean = true): Observable<Array<Usertoken>> {
+    public getTokens(refresh: boolean = false): Observable<Array<Usertoken>> {
         return this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`)
-            .combineLatest(this.getChannels())
-            .map(([data, channels]): Array<Observable<Usertoken>> => {
-                const tokenArray = data;
-                return tokenArray
-                    .map((token) => this.getUsertoken(
-                        token,
-                        refresh)
-                        .map((userToken) => {
-                            if (userToken) {
-                                return Object.assign(userToken,
-                                    { channelCnt: channels.filter((channel) =>
-                                        channel.token_address === token).length });
-                            }
-                            return userToken;
-                        })
-                    );
-            })
+            .combineLatest(refresh ?
+                this.http.get<Array<string>>(`${this.raidenConfig.api}/connection`) :
+                Observable.of(null))
+            .map(([tokenArray, connections]): Array<Observable<Usertoken>> =>
+                tokenArray
+                    .map((token) =>
+                        this.getUsertoken(token, refresh)
+                            .map((userToken) => userToken && connections ?
+                                Object.assign(userToken,
+                                    { connected: connections.filter((connection) =>
+                                        connection === token).length > 0 }) :
+                                userToken
+                            )
+                    )
+            )
             .switchMap((obsArray) => obsArray && obsArray.length ?
                 Observable.zip(...obsArray).first() :
                 Observable.of([])

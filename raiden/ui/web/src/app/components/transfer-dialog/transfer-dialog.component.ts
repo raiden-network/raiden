@@ -37,7 +37,7 @@ export class TransferDialogComponent implements OnInit, OnDestroy {
             amount: [null, (control) => control.value > 0 ? undefined : {invalidAmount: true}]
         });
 
-        this.tokenAddressMapping$ = this.raidenService.getTokensBalances(false)
+        this.tokenAddressMapping$ = this.raidenService.getTokens()
             .map((userTokens) => userTokens.map((userToken) =>
                 ({
                     value: userToken.address,

@@ -19,7 +19,7 @@
       <p-column header="Actions" [style]="{width: '6em', 'text-align': 'center'}">
         <ng-template let-token="rowData" pTemplate="body">
           <p-menu #menu popup="popup" [model]="token.menu" appendTo="body"></p-menu>
-          <button pButton #menuButton type="button" icon="fa-ellipsis-v" [ngClass]="token.channelCnt > 0 ? 'ui-button-primary' : 'ui-button-secondary'" (click)="menu.toggle($event)"></button>
+          <button pButton #menuButton type="button" icon="fa-ellipsis-v" [ngClass]="token.connected ? 'ui-button-primary' : 'ui-button-secondary'" (click)="menu.toggle($event)"></button>
         </ng-template>
       </p-column>
     </p-dataTable>
