@@ -1019,7 +1019,7 @@ def test_connect_and_leave_token_network(
         api_url_for(api_backend, 'connectionsresource', token_address=token_address),
     )
     response = request.send().response
-    assert(not api_test_context.last_leave_all)
+    assert(api_test_context.last_only_receiving)
     assert_proper_response(response)
     response = response.json()
     expected_response = [channel['channel_address'] for channel in channels]
@@ -1037,14 +1037,14 @@ def test_connect_and_leave_token_network(
     assert channels[1]['state'] == CHANNEL_STATE_SETTLED
     assert channels[2]['state'] == CHANNEL_STATE_SETTLED
 
-    # Let's try to leave again but this time give the leave_all argument
+    # Let's try to leave again but this time set only_receiving to False
     request = grequests.delete(
         api_url_for(api_backend, 'connectionsresource', token_address=token_address),
-        json={'leave_all_channels': True},
+        json={'only_receiving_channels': False},
     )
     response = request.send().response
     assert_proper_response(response)
-    assert(api_test_context.last_leave_all)
+    assert(not api_test_context.last_only_receiving)
 
 
 def test_register_token(api_backend, api_test_context, api_raiden_service):

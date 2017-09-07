@@ -139,12 +139,12 @@ class RaidenAPI(object):
             joinable_funds_target=joinable_funds_target
         )
 
-    def leave_token_network(self, token_address, leave_all=False):
+    def leave_token_network(self, token_address, only_receiving=True):
         """Instruct the ConnectionManager to close all channels and wait for
         settlement.
         """
         connection_manager = self.raiden.connection_manager_for_token(token_address)
-        return connection_manager.leave(leave_all)
+        return connection_manager.leave(only_receiving)
 
     def get_connection_manager_funds(self, token_address):
         """Get the connection manager for a specific token"""
