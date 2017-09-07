@@ -79,19 +79,19 @@ export class RaidenService {
     }
 
     public getTokensBalances(refresh: boolean = true): Observable<Array<Usertoken>> {
-        return this.httpEncap(this.http.get<Array<{ address: string }>>(`${this.raidenConfig.api}/tokens`))
+        return this.httpEncap(this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`))
             .combineLatest(this.getChannels())
             .map(([data, channels]): Array<Observable<Usertoken>> => {
                 const tokenArray = data;
                 return tokenArray
                     .map((token) => this.getUsertoken(
-                        token.address,
+                        token,
                         refresh)
                         .map((userToken) => {
                             if (userToken) {
                                 return Object.assign(userToken,
                                     { channelCnt: channels.filter((channel) =>
-                                        channel.token_address === token.address).length });
+                                        channel.token_address === token).length });
                             }
                             return userToken;
                         })
