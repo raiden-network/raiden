@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from collections import deque
+import random
 
 import gevent
 from gevent.queue import Queue
@@ -17,7 +18,8 @@ from raiden.ui.cli import (
     signal,
     APIServer,
     RestAPI,
-    ADDRESS_TYPE)
+    ADDRESS_TYPE
+)
 from raiden.tasks import REMOVE_CALLBACK
 from raiden.utils import pex
 from raiden.transfer.state import CHANNEL_STATE_OPENED
@@ -25,7 +27,7 @@ from raiden.api.python import RaidenAPI
 
 log = slogging.getLogger(__name__)
 
-# number of transfer's we will check for duplicates
+# number of transfers we will check for duplicates
 TRANSFER_MEMORY = 256
 
 
@@ -62,6 +64,7 @@ class EchoNode(object):
         self.greenlets = list()
         self.lock = BoundedSemaphore()
         self.handled_transfers = deque(list(), TRANSFER_MEMORY)
+        self.lottery_pool = Queue()
         # register ourselves with the raiden alarm task
         self.api.raiden.alarm.register_callback(self.echo_node_alarm_callback)
 
@@ -83,7 +86,7 @@ class EchoNode(object):
         """ This will be triggered once for each `echo_node_alarm_callback`.
         It polls all channels for `EventTransferReceivedSuccess` events,
         adds all new events to the `self.received_transfers` queue and
-        spawns an `self.echo_node_worker`, if there were new events. """
+        spawns `self.echo_node_worker`, if there were new events. """
 
         locked = False
         try:
@@ -135,12 +138,15 @@ class EchoNode(object):
         """ This checks for duplicated transfer events and handles the echo logic, as described in
         https://github.com/raiden-network/raiden/issues/651:
 
+            - consecutive transfers with same `amount`, `identifier` and `initiator` are ignored
             - for transfers with an amount that satisfies `amount % 3 == 0`, it sends a transfer
             with an amount of `amount - 1` back to the initiator
             - for transfers with a "lucky number" amount `amount == 7` it does not send anything
             back immediately -- after having received "lucky number transfers" from 7 different
             addresses it sends a transfer with `amount = 49` to one randomly chosen one
-            (from the 7 lucky addresses) [NOT YET IMPLEMENTED]
+            (from the 7 lucky addresses)
+            - consecutive entries to the lucky lottery will receive the current pool size as the
+            `echo_amount`
             - for all other transfers it sends a transfer with the same `amount` back to the
             initiator """
         echo_amount = 0
@@ -151,7 +157,8 @@ class EchoNode(object):
                 amount=transfer['amount'],
                 identifier=transfer['identifier']
             )
-        elif transfer['amount'] % 3 == 0:
+            return
+        if transfer['amount'] % 3 == 0:
             log.debug(
                 'minus one transfer received',
                 initiator=pex(transfer['initiator']),
@@ -159,17 +166,48 @@ class EchoNode(object):
                 identifier=transfer['identifier']
             )
             echo_amount = transfer['amount'] - 1
+
         elif transfer['amount'] == 7:
-            # FIXME: the lottery transfers are not yet implemented.
-            # the idea is, to collect 7 transfers with amount == 7 and randomly chose one initator,
-            # that will receive 49 tokens back
-            log.warn(
-                'not implemented: lucky number transfer received. handling like regular transfer',
+            log.debug(
+                'lucky number transfer received',
                 initiator=pex(transfer['initiator']),
                 amount=transfer['amount'],
-                identifier=transfer['identifier']
+                identifier=transfer['identifier'],
+                poolsize=self.lottery_pool.qsize(),
             )
-            echo_amount = transfer['amount']
+
+            # obtain a local copy of the pool
+            pool = self.lottery_pool.copy()
+            tickets = [pool.get() for _ in range(pool.qsize())]
+            assert pool.empty()
+            del pool
+
+            if any(ticket['initiator'] == transfer['initiator'] for ticket in tickets):
+                log.debug(
+                    'duplicate lottery entry',
+                    initiator=pex(transfer['initiator']),
+                    identifier=transfer['identifier'],
+                    poolsize=len(tickets),
+                )
+                # signal the poolsize to the participant
+                echo_amount = len(tickets)
+                self.handled_transfers.append(transfer)
+
+            # payout
+            elif len(tickets) == 6:
+                log.info('payout!')
+                # reset the pool
+                assert self.lottery_pool.qsize() == 6
+                self.lottery_pool = Queue()
+                # add new participant
+                tickets.append(transfer)
+                # chose the winner
+                transfer = random.choice(tickets)
+                echo_amount = 49
+            else:
+                self.lottery_pool.put(transfer)
+                self.handled_transfers.append(transfer)
+
         else:
             log.debug(
                 'echo transfer received',
@@ -178,6 +216,7 @@ class EchoNode(object):
                 identifier=transfer['identifier']
             )
             echo_amount = transfer['amount']
+
         if echo_amount:
             log.debug(
                 'sending echo transfer',
