@@ -1,14 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { MenuItem } from 'primeng/primeng';
 
+import { RaidenConfig } from '../../services/raiden.config';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { Channel } from '../../models/channel';
 import { EventsParam } from '../../models/event';
 import { WithMenu } from '../../models/withmenu';
-
-const INTERVAL = 5000;
 
 @Component({
     selector: 'app-channel-table',
@@ -17,6 +17,7 @@ const INTERVAL = 5000;
 })
 export class ChannelTableComponent implements OnInit {
 
+    private channelsSubject: BehaviorSubject<void> = new BehaviorSubject(null);
     public channels$: Observable<Array<WithMenu<Channel>>>;
     public amount: number;
     public displayDialog: boolean;
@@ -26,11 +27,15 @@ export class ChannelTableComponent implements OnInit {
     public watchEvents: EventsParam[] = [];
     public tabIndex = 0;
 
-    constructor(private raidenService: RaidenService,
+    constructor(
+        private raidenConfig: RaidenConfig,
+        private raidenService: RaidenService,
         private sharedService: SharedService) { }
 
     ngOnInit() {
-        this.channels$ = Observable.timer(0, INTERVAL)
+        let timeout;
+        this.channels$ = this.channelsSubject
+            .do(() => clearTimeout(timeout))
             .switchMap(() => this.raidenService.getChannels())
             .map((newChannels) => newChannels.map((newchannel) =>
                 Object.assign(newchannel, { menu: null }) as WithMenu<Channel>
@@ -56,7 +61,9 @@ export class ChannelTableComponent implements OnInit {
                     newChannels.find((c) =>
                         c.channel_address === oldchannel.channel_address)
                 );
-            }, []);
+            }, [])
+            .do(() => timeout = setTimeout(() => this.channelsSubject.next(null),
+                this.raidenConfig.config.poll_interval));
     }
 
     public onTransfer(channel: Channel) {
@@ -94,23 +101,29 @@ export class ChannelTableComponent implements OnInit {
             case 'transfer':
                 console.log('Inside Manage Channel TRansfer');
                 this.raidenService.initiateTransfer(
-                    this.tempChannel.token_address,
-                    this.tempChannel.partner_address,
-                    this.amount)
+                        this.tempChannel.token_address,
+                        this.tempChannel.partner_address,
+                        this.amount
+                    )
+                    .finally(() => this.channelsSubject.next(null))
                     .subscribe((response) => this.showMessage(response));
                 break;
             case 'deposit':
                 this.raidenService.depositToChannel(
-                    this.tempChannel.channel_address,
-                    this.amount)
+                        this.tempChannel.channel_address,
+                        this.amount
+                    )
+                    .finally(() => this.channelsSubject.next(null))
                     .subscribe((response) => this.showMessage(response));
                 break;
             case 'close':
                 this.raidenService.closeChannel(this.tempChannel.channel_address)
+                    .finally(() => this.channelsSubject.next(null))
                     .subscribe((response) => this.showMessage(response));
                 break;
             case 'settle':
                 this.raidenService.settleChannel(this.tempChannel.channel_address)
+                    .finally(() => this.channelsSubject.next(null))
                     .subscribe((response) => {
                         this.showMessage(response);
                     });
