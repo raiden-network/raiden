@@ -9,6 +9,7 @@ import { SharedService } from '../../services/shared.service';
 import { Usertoken } from '../../models/usertoken';
 import { Message, ConfirmationService } from 'primeng/primeng';
 import { EventsParam } from '../../models/event';
+import { WithMenu } from '../../models/withmenu';
 
 @Component({
     selector: 'app-token-network',
@@ -20,7 +21,7 @@ export class TokenNetworkComponent implements OnInit {
     @Input() raidenAddress: string;
 
     private tokensSubject: BehaviorSubject<void> = new BehaviorSubject(null);
-    public tokensBalances$: Observable<Usertoken[]>;
+    public tokensBalances$: Observable<Array<WithMenu<Usertoken>>>;
     public selectedToken: Usertoken;
     public refreshing = true;
     public watchEvents: EventsParam[] = [{}];
@@ -40,7 +41,10 @@ export class TokenNetworkComponent implements OnInit {
             .do(() => this.refreshing = true)
             .switchMap(() => this.raidenService.getTokensBalances())
             .map((userTokens) => userTokens.map((userToken) =>
-                Object.assign(userToken, { menu: this.menuFor(userToken) })
+                Object.assign(
+                    userToken,
+                    { menu: this.menuFor(userToken) }
+                ) as WithMenu<Usertoken>
             ))
             .do(() => this.refreshing = false);
     }

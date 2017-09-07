@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { Observable } from 'rxjs/Observable';
+import { MenuItem } from 'primeng/primeng';
 
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { Channel } from '../../models/channel';
 import { EventsParam } from '../../models/event';
-import { MenuItem } from 'primeng/primeng';
+import { WithMenu } from '../../models/withmenu';
 
 const INTERVAL = 5000;
 
@@ -16,7 +17,7 @@ const INTERVAL = 5000;
 })
 export class ChannelTableComponent implements OnInit {
 
-    public channels$: Observable<Channel[]>;
+    public channels$: Observable<Array<WithMenu<Channel>>>;
     public amount: number;
     public displayDialog: boolean;
     public displayOpenChannelDialog: boolean;
@@ -31,20 +32,30 @@ export class ChannelTableComponent implements OnInit {
     ngOnInit() {
         this.channels$ = Observable.timer(0, INTERVAL)
             .switchMap(() => this.raidenService.getChannels())
+            .map((newChannels) => newChannels.map((newchannel) =>
+                Object.assign(newchannel, { menu: null }) as WithMenu<Channel>
+            ))
             .scan((oldChannels, newChannels) => {
                 // use scan and Object.assign to keep object references and
                 // improve *ngFor change detection on data table
                 for (const newchannel of newChannels) {
-                    const oldchannel = oldChannels.find((c) =>
+                    const oldchannel: WithMenu<Channel> = oldChannels.find((c) =>
                         c.channel_address === newchannel.channel_address);
                     if (oldchannel) {
-                        Object.assign(oldchannel, newchannel);
+                        Object.assign(oldchannel, newchannel, { menu: oldchannel.menu });
                     } else {
-                        oldChannels.push(Object.assign(newchannel, { menu: this.menuFor(newchannel) }));
+                        oldChannels.push(
+                            Object.assign(
+                                newchannel,
+                                { menu: this.menuFor(newchannel) }
+                            ) as WithMenu<Channel>
+                        );
                     }
                 }
                 return oldChannels.filter((oldchannel) =>
-                    newChannels.find((c) => c.channel_address === oldchannel.channel_address));
+                    newChannels.find((c) =>
+                        c.channel_address === oldchannel.channel_address)
+                );
             }, []);
     }
 
