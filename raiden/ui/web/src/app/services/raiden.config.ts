@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+
+import { SharedService } from './shared.service';
+
 declare var Web3;
 
 interface RDNConfig {
@@ -26,7 +29,8 @@ export class RaidenConfig {
     public api: string;
     public web3: any;
 
-    constructor(private http: HttpClient) { }
+    constructor(private http: HttpClient,
+                private sharedService: SharedService) { }
 
     load(url: string) {
         return new Promise((resolve) => {
@@ -47,6 +51,7 @@ export class RaidenConfig {
                             // because of long (events) running requests
                             this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3));
                         }
+                        this.sharedService.httpTimeout = this.config.http_timeout;
                         resolve();
                     });
                 });

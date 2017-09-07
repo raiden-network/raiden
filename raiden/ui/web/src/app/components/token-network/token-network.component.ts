@@ -38,11 +38,11 @@ export class TokenNetworkComponent implements OnInit {
     ngOnInit() {
         this.tokensBalances$ = this.tokensSubject
             .do(() => this.refreshing = true)
-            .switchMap(() => this.raidenService.getTokensBalances()
-                .finally(() => this.refreshing = false))
-            .map((userTokens) => userTokens.map(
-                (userToken) => Object.assign(userToken, { menu: this.menuFor(userToken) })
-            ));
+            .switchMap(() => this.raidenService.getTokensBalances())
+            .map((userTokens) => userTokens.map((userToken) =>
+                Object.assign(userToken, { menu: this.menuFor(userToken) })
+            ))
+            .do(() => this.refreshing = false);
     }
 
     private menuFor(userToken: Usertoken): MenuItem[] {
