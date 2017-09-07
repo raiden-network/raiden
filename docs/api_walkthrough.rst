@@ -316,15 +316,21 @@ For easy testing of Raiden, there is a specialized Raiden node running, the "Rai
 - for a transfer with any other ``amount`` it returns ``echo_amount = amount``
 
 
-The address of the Echo Node is ``FIXME`` and it is connected to the Raiden Testnet Token (RTT) with the address ``FIXME``. To interact with the Echo Node, first :ref:`join the RTT network <joining-existing-token-network>` (you can obtain RTT tokens by calling ``FIXME``), then send a transfer to it::
+The address of the Echo Node is ``0x02f4b6bc65561a792836212ebc54434db0ab759a`` and it is connected to the Raiden Testnet Token (RTT) with the address ``0x0f114a1e9db192502e7856309cc899952b3db1ed``. The RTT token contract is verified and can be seen in `etherscan <https://ropsten.etherscan.io/address/0x0f114a1e9db192502e7856309cc899952b3db1ed#code>`_. To interact with the Echo Node, first :ref:`join the RTT network <joining-existing-token-network>`.
 
-    POST /api/1/connection/FIXME_RTT_ADDRESS
+You can obtain RTT tokens by calling the ``mint()`` function of the token. In javascript you can load the RTT token contract and call mint as such:::
 
-Payload::
+        var rtt_token_abi = [{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"}],"name":"approve","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":false,"inputs":[],"name":"mint","outputs":[],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"supply","type":"uint256"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_from","type":"address"},{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"version","outputs":[{"name":"","type":"string"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"payable":false,"type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"}],"name":"mint","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"amount","type":"uint256"},{"name":"target","type":"address"}],"name":"mintFor","outputs":[],"payable":false,"type":"function"},{"constant":false,"inputs":[{"name":"_spender","type":"address"},{"name":"_value","type":"uint256"},{"name":"_extraData","type":"bytes"}],"name":"approveAndCall","outputs":[{"name":"success","type":"bool"}],"payable":false,"type":"function"},{"constant":true,"inputs":[{"name":"_owner","type":"address"},{"name":"_spender","type":"address"}],"name":"allowance","outputs":[{"name":"remaining","type":"uint256"}],"payable":false,"type":"function"},{"inputs":[{"name":"_tokenName","type":"string"},{"name":"_tokenSymbol","type":"string"}],"payable":false,"type":"constructor"},{"payable":false,"type":"fallback"},{"anonymous":false,"inputs":[{"indexed":true,"name":"_from","type":"address"},{"indexed":true,"name":"_to","type":"address"},{"indexed":false,"name":"_value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"_owner","type":"address"},{"indexed":true,"name":"_spender","type":"address"},{"indexed":false,"name":"_value","type":"uint256"}],"name":"Approval","type":"event"}];
+        var rtt_token_address = "0x0f114a1e9db192502e7856309cc899952b3db1ed";
+        var rtt_token = web3.eth.contract(rtt_token_abi).at(rtt_token_address);
+	rtt_token.mint();
+
+
+Then you can send a transfer to it via the transfer endpoint: ``POST /api/1/transfers/0x0f114a1e9db192502e7856309cc899952b3db1ed/0x02f4b6bc65561a792836212ebc54434db0ab759a`` and with a payload containing the amount you want to send and an optional identifier::
 
     {
         "amount": 1,
-        "identifier": 42
+	"identifer": 43,
     }
 
 Afterwards you can check your events and you should find an event with::
@@ -332,7 +338,7 @@ Afterwards you can check your events and you should find an event with::
     {
         "amount": 1,
         "identifier": 43,
-        "initiator": FIXME_echo_node_address
+        "initiator": "0x02f4b6bc65561a792836212ebc54434db0ab759a"
     }
 
 According to the rules from above, you should try the same with different amounts, ``3``, ``6``, ``7``, ... -- have fun!
