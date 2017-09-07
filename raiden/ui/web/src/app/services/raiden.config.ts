@@ -19,7 +19,7 @@ const default_config: RDNConfig = {
     web3: '/web3',
     web3_fallback: 'http://localhost:8545',
     poll_interval: 5000,
-    block_start: 1509634,
+    block_start: 1603031,
     http_timeout: 600000,
 };
 
