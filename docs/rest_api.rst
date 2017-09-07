@@ -592,7 +592,7 @@ Possible Responses
 Leaving a token network
 -----------------------
 
-You can leave a token network by making a ``DELETE`` request to the following endpoint along with a json payload containing details about the way you want to leave the network. For instance if you want to wait for settlement and the timeout period.
+You can leave a token network by making a ``DELETE`` request to the following endpoint along with a json payload containing details about the way you want to leave the network.
 
 ``DELETE /api/<version>/connection/<token_address>``
 
@@ -600,7 +600,7 @@ The request will only return once all blockchain calls for closing/settling a ch
 
 Important note. If no arguments are given then raiden will only close and settle channels where your node has received transfers. This is safe from an accounting point of view since deposits can't be lost and provides for the fastest and cheapest way to leave a token network when you want to shut down your node.
 
-If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``leave_all_channels=true``
+If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``only_receiving_channels=false``
 
 A list with the addresses of all the closed channels will be returned.
 
@@ -612,7 +612,7 @@ Example Request
 with payload::
 
   {
-      "leave_all_channels": true
+      "only_receiving_channels": false
   }
 
 
