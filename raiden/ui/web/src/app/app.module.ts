@@ -1,7 +1,7 @@
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule, APP_INITIALIZER } from '@angular/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { HttpClientModule } from '@angular/common/http';
+import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
 import { DataTableModule, SharedModule, DataListModule, CarouselModule,
     ButtonModule, AccordionModule, GrowlModule, DialogModule, SplitButtonModule,
     TabViewModule, DropdownModule, MessagesModule, MenuModule,
@@ -23,8 +23,9 @@ import { JoinDialogComponent } from './components/join-dialog/join-dialog.compon
 import { RegisterDialogComponent } from './components/register-dialog/register-dialog.component';
 import { OpenDialogComponent } from './components/open-dialog/open-dialog.component';
 
-import { RaidenConfig } from './services/raiden.config';
 import { SharedService } from './services/shared.service';
+import { RaidenInterceptor } from './services/raiden.interceptor';
+import { RaidenConfig } from './services/raiden.config';
 import { RaidenService } from './services/raiden.service';
 import { KeysPipe } from './pipes/keys.pipe';
 import { SubsetPipe } from './pipes/subset.pipe';
@@ -82,6 +83,13 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         ClipboardModule,
     ],
     providers: [
+        SharedService,
+        {
+            provide: HTTP_INTERCEPTORS,
+            useClass: RaidenInterceptor,
+            deps: [SharedService],
+            multi: true
+        },
         RaidenConfig,
         {
             provide: APP_INITIALIZER,
@@ -89,7 +97,6 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
             deps: [RaidenConfig],
             multi: true
         },
-        SharedService,
         RaidenService,
         ConfirmationService,
     ],

@@ -19,10 +19,6 @@ export class RaidenService {
     public raidenAddress: string;
     private userTokens: { [id: string]: Usertoken |null} = {};
 
-    private _requestsSubject = new BehaviorSubject<number>(0);
-    public readonly requestsCnt$ = this._requestsSubject.asObservable()
-        .scan((acc, value) => Math.max(acc + value, 0), 0);
-
     constructor(
         private http: HttpClient,
         private zone: NgZone,
@@ -34,16 +30,6 @@ export class RaidenService {
 
     private zoneEncap(cb: CallbackFunc): CallbackFunc {
         return (err, res) => this.zone.run(() => cb(err, res));
-    }
-
-    private httpEncap<T>(req: Observable<T>): Observable<T> {
-        let obs = Observable.of(true)
-            .do(() => this.requestStarted(req))
-            .switchMap(() => req);
-        if (this.raidenConfig.config.http_timeout) {
-            obs = obs.timeout(this.raidenConfig.config.http_timeout);
-        }
-        return obs.finally(() => this.requestFinished(req));
     }
 
     get identifier(): number {
@@ -59,27 +45,19 @@ export class RaidenService {
             this.raidenConfig.web3.eth.getBlockNumber(this.zoneEncap(cb)))();
     }
 
-    requestStarted(req) {
-        this._requestsSubject.next(+1);
-    }
-
-    requestFinished(req) {
-        this._requestsSubject.next(-1);
-    }
-
     public getRaidenAddress(): Observable<string> {
-        return this.httpEncap(this.http.get<{ our_address: string }>(`${this.raidenConfig.api}/address`))
+        return this.http.get<{ our_address: string }>(`${this.raidenConfig.api}/address`)
             .map((data) => this.raidenAddress = data.our_address)
             .catch((error) => this.handleError(error));
     }
 
     public getChannels(): Observable<Array<Channel>> {
-        return this.httpEncap(this.http.get<Array<Channel>>(`${this.raidenConfig.api}/channels`))
+        return this.http.get<Array<Channel>>(`${this.raidenConfig.api}/channels`)
             .catch((error) => this.handleError(error));
     }
 
     public getTokensBalances(refresh: boolean = true): Observable<Array<Usertoken>> {
-        return this.httpEncap(this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`))
+        return this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`)
             .combineLatest(this.getChannels())
             .map(([data, channels]): Array<Observable<Usertoken>> => {
                 const tokenArray = data;
@@ -117,7 +95,7 @@ export class RaidenService {
             'balance': balance,
             'settle_timeout': settleTimeout
         };
-        return this.httpEncap(this.http.put<Channel>(`${this.raidenConfig.api}/channels`, data))
+        return this.http.put<Channel>(`${this.raidenConfig.api}/channels`, data)
             .catch((error) => this.handleError(error));
     }
 
@@ -130,7 +108,7 @@ export class RaidenService {
             'identifier': this.identifier
         };
         console.log(`${this.raidenConfig.api}/transfers/${tokenAddress}/${partnerAddress}`);
-        return this.httpEncap(this.http.post(`${this.raidenConfig.api}/transfers/${tokenAddress}/${partnerAddress}`, data))
+        return this.http.post(`${this.raidenConfig.api}/transfers/${tokenAddress}/${partnerAddress}`, data)
             .catch((error) => this.handleError(error));
     }
 
@@ -138,7 +116,7 @@ export class RaidenService {
         const data = {
             'balance': balance
         };
-        return this.httpEncap(this.http.patch(`${this.raidenConfig.api}/channels/${channelAddress}`, data))
+        return this.http.patch(`${this.raidenConfig.api}/channels/${channelAddress}`, data)
             .catch((error) => this.handleError(error));
     }
 
@@ -146,7 +124,7 @@ export class RaidenService {
         const data = {
             'state': 'closed'
         };
-        return this.httpEncap(this.http.patch(`${this.raidenConfig.api}/channels/${channelAddress}`, data))
+        return this.http.patch(`${this.raidenConfig.api}/channels/${channelAddress}`, data)
             .catch((error) => this.handleError(error));
     }
 
@@ -154,12 +132,12 @@ export class RaidenService {
         const data = {
             'state': 'settled'
         };
-        return this.httpEncap(this.http.patch(`${this.raidenConfig.api}/channels/${channelAddress}`, data))
+        return this.http.patch(`${this.raidenConfig.api}/channels/${channelAddress}`, data)
             .catch((error) => this.handleError(error));
     }
 
     public registerToken(tokenAddress: string): Observable<Usertoken> {
-        return this.httpEncap(this.http.put(`${this.raidenConfig.api}/tokens/${tokenAddress}`, {}))
+        return this.http.put(`${this.raidenConfig.api}/tokens/${tokenAddress}`, {})
             .switchMap(() => this.getUsertoken(tokenAddress)
                 .map((userToken) => {
                     if (userToken === null) {
@@ -175,12 +153,12 @@ export class RaidenService {
         const data = {
             'funds': funds
         }
-        return this.httpEncap(this.http.put(`${this.raidenConfig.api}/connection/${tokenAddress}`, data))
+        return this.http.put(`${this.raidenConfig.api}/connection/${tokenAddress}`, data)
             .catch((error) => this.handleError(error));
     }
 
     public leaveTokenNetwork(tokenAddress: string): Observable<any> {
-        return this.httpEncap(this.http.delete(`${this.raidenConfig.api}/connection/${tokenAddress}`))
+        return this.http.delete(`${this.raidenConfig.api}/connection/${tokenAddress}`)
             .catch((error) => this.handleError(error));
     }
 
@@ -203,7 +181,7 @@ export class RaidenService {
         if (toBlock) {
             params = params.set('to_block', '' + toBlock);
         }
-        return this.httpEncap(this.http.get<Array<Event>>(`${this.raidenConfig.api}/events/${path}`, { params }))
+        return this.http.get<Array<Event>>(`${this.raidenConfig.api}/events/${path}`, { params })
             .catch((error) => this.handleError(error));
     }
 
@@ -215,8 +193,8 @@ export class RaidenService {
             receiving_token: swap.receiving_token,
             receiving_amount: swap.receiving_amount,
         };
-        return this.httpEncap(this.http.put(`${this.raidenConfig.api}/token_swaps/${swap.partner_address}/${swap.identifier}`,
-                data, { observe: 'response'}))
+        return this.http.put(`${this.raidenConfig.api}/token_swaps/${swap.partner_address}/${swap.identifier}`,
+                data, { observe: 'response'})
             .switchMap((response) => response.ok ?
                 Observable.of(true) :
                 Observable.throw(response.toString()))
