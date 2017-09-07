@@ -622,7 +622,7 @@ def test_api_tokens(
         '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
     ]
-    assert all(r in response for r in expected_response)
+    assert set(response) == set(expected_response)
 
 
 def test_query_partners_by_token(
@@ -1023,7 +1023,7 @@ def test_connect_and_leave_token_network(
     assert_proper_response(response)
     response = response.json()
     expected_response = [channel['channel_address'] for channel in channels]
-    assert all(r in response for r in expected_response)
+    assert set(response) == set(expected_response)
 
     # check that all channels were settled after calling `leave`
     request = grequests.get(
