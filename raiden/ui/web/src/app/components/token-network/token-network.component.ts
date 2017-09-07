@@ -39,7 +39,7 @@ export class TokenNetworkComponent implements OnInit {
     ngOnInit() {
         this.tokensBalances$ = this.tokensSubject
             .do(() => this.refreshing = true)
-            .switchMap(() => this.raidenService.getTokensBalances())
+            .switchMap(() => this.raidenService.getTokens(true))
             .map((userTokens) => userTokens.map((userToken) =>
                 Object.assign(
                     userToken,
@@ -59,13 +59,13 @@ export class TokenNetworkComponent implements OnInit {
             {
                 label: 'Leave Network',
                 icon: 'fa-sign-out',
-                disabled: !(userToken.channelCnt > 0),
+                disabled: !(userToken.connected),
                 command: () => this.showLeaveDialog(userToken),
             },
             {
                 label: 'Transfer',
                 icon: 'fa-exchange',
-                disabled: !(userToken.channelCnt > 0),
+                disabled: !(userToken.connected),
                 command: () => this.showTransferDialog(userToken),
             },
             {

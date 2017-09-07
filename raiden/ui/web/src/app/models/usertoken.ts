@@ -3,5 +3,5 @@ export interface Usertoken {
     symbol: string;
     name: string;
     balance: number;
-    channelCnt?: number;
+    connected?: boolean;
 };

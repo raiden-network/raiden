@@ -26,7 +26,7 @@ export class OpenDialogComponent implements OnInit, OnDestroy {
         private fb: FormBuilder) { }
 
     ngOnInit() {
-        this.tokenAddressMapping$ = this.raidenService.getTokensBalances(false)
+        this.tokenAddressMapping$ = this.raidenService.getTokens()
             .map((userTokens) => userTokens.map((userToken) =>
                 ({
                     value: userToken.address,

@@ -36,11 +36,11 @@ export class SwapDialogComponent implements OnInit, OnDestroy {
         private fb: FormBuilder) { }
 
     ngOnInit() {
-        this.tokenAddressMapping$ = this.raidenService.getTokensBalances(false)
+        this.tokenAddressMapping$ = this.raidenService.getTokens()
             .map((userTokens) => userTokens.map((userToken) =>
                 ({
                     value: userToken.address,
-                    label: userToken.name + ' (' + userToken.address + ')',
+                    label: `${userToken.name} (${userToken.address})`
                 }))
             )
             .share();
