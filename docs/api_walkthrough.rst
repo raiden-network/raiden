@@ -305,6 +305,34 @@ If the balances of the tokens involved for Alice and Bob are now checked they sh
 
 
 
-Interacting with the Raiden echo node
+Interacting with the Raiden Echo Node
 =====================================
-TODO once the echo node is ready
+For easy testing of Raiden, there is a specialized Raiden node running, the "Raiden Echo Node". The Echo Node responds to received transfers by sending a transfer back to the initiator. The echo transfer follows certain rules:
+
+- consecutive transfers with the same ``identifier`` and same ``amount`` are ignored
+- the ``echo_identifier`` of all echo transfers is ``identifier + echo_amount``
+- transfers with an ``amount`` divisable by ``3`` will be answered with an echo transfer of ``echo_amount = amount - 1``
+- transfers with an ``amount = 7`` are special lottery transfers. They will go to a lottery pool. After the Echo Node has received seven lottery transfers, it will chose a winner that receives an echo transfer with ``echo_amount = 49`` and the pool is reset. To query the current number of tickets in the pool, a participant can send another transfer with ``amount = 7`` -- if the participant already takes part in the current draw, the Echo Node will respond with a transfer with ``echo_amount = lottery_pool_size``, otherwise it will enter the pool.
+- for a transfer with any other ``amount`` it returns ``echo_amount = amount``
+
+
+The address of the Echo Node is ``FIXME`` and it is connected to the Raiden Testnet Token (RTT) with the address ``FIXME``. To interact with the Echo Node, first :ref:`join the RTT network <joining-existing-token-network>` (you can obtain RTT tokens by calling ``FIXME``), then send a transfer to it::
+
+    POST /api/1/connection/FIXME_RTT_ADDRESS
+
+Payload::
+
+    {
+        "amount": 1,
+        "identifier": 42
+    }
+
+Afterwards you can check your events and you should find an event with::
+
+    {
+        "amount": 1,
+        "identifier": 43,
+        "initiator": FIXME_echo_node_address
+    }
+
+According to the rules from above, you should try the same with different amounts, ``3``, ``6``, ``7``, ... -- have fun!
