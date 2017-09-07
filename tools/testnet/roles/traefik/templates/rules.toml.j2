@@ -11,6 +11,6 @@
     backend = "be_{{ hostvars[node]['hostname'] }}"
     passHostHeader = true
     [frontends.fe_{{ hostvars[node]['hostname'] }}.routes.route1]
-      rule = "Host:{{ hostvars[node]['hostname'].replace("_", "-") }}.raidentestnet.ulo.pe"
+      rule = "Host:{{ hostvars[node]['hostname'].replace("_", "-") }}.{{ testnet_domain }}"
       entryPoints = "http"
 {% endfor %}
