@@ -471,7 +471,6 @@ class Channel(object):
                         node=pex(self.our_address),
                         from_=pex(from_state.address),
                         to=pex(to_state.address),
-
                         hashlock=pex(transfer.lock.hashlock),
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
                         lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
@@ -492,7 +491,6 @@ class Channel(object):
                         node=pex(self.our_address),
                         from_=pex(from_state.address),
                         to=pex(to_state.address),
-
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
                         lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
                         expected_locksroot=pex(expected_locksroot),
@@ -524,7 +522,6 @@ class Channel(object):
                         node=pex(self.our_address),
                         from_=pex(from_state.address),
                         to=pex(to_state.address),
-
                         lock_expiration=transfer.lock.expiration,
                         current_block=block_number,
                         end_settle_period=end_settle_period,
@@ -540,7 +537,6 @@ class Channel(object):
                     node=pex(self.our_state.address),
                     from_=pex(from_state.address),
                     to=pex(to_state.address),
-
                     transfer=transfer,
                 )
 
@@ -584,7 +580,6 @@ class Channel(object):
                     node=pex(self.our_state.address),
                     from_=pex(from_state.address),
                     to=pex(to_state.address),
-
                     currentlocksroot=pex(to_state.balance_proof.merkleroot_for_unclaimed()),
                     lockhashes=lpex(to_state.balance_proof.unclaimed_merkletree()),
                     lock_amount=transfer.lock.amount,
@@ -614,7 +609,6 @@ class Channel(object):
                 node=pex(self.our_state.address),
                 from_=pex(from_state.address),
                 to=pex(to_state.address),
-
                 transfer=repr(transfer),
                 transferred_amount=from_state.transferred_amount(to_state),
                 nonce=from_state.nonce,
