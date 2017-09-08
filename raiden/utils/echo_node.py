@@ -214,7 +214,7 @@ class EchoNode(object):
                 self.lottery_pool = Queue()
                 # add new participant
                 tickets.append(transfer)
-                # chose the winner
+                # choose the winner
                 transfer = random.choice(tickets)
                 echo_amount = 49
             else:
