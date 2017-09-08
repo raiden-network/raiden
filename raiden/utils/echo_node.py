@@ -118,7 +118,7 @@ class EchoNode(object):
                             event['block_number']
                             for event in received_transfers
                         )
-                    # proceed last_poll_block if the blockchain proceeded
+                    # increase last_poll_block if the blockchain proceeded
                     delta_blocks = self.api.raiden.get_block_number() - self.last_poll_block
                     if delta_blocks > 1:
                         self.last_poll_block += 1
