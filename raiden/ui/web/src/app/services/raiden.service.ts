@@ -210,9 +210,10 @@ export class RaidenService {
             .first();
     }
 
-    private getUsertoken(
+    public getUsertoken(
         tokenAddress: string,
-        refresh: boolean = true): Observable<Usertoken |null> {
+        refresh: boolean = true
+    ): Observable<Usertoken | null> {
         const tokenContractInstance = this.tokenContract.at(tokenAddress);
         const userToken: Usertoken |null | undefined = this.userTokens[tokenAddress];
         if (userToken === undefined) {

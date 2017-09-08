@@ -29,6 +29,7 @@ import { RaidenConfig } from './services/raiden.config';
 import { RaidenService } from './services/raiden.service';
 import { KeysPipe } from './pipes/keys.pipe';
 import { SubsetPipe } from './pipes/subset.pipe';
+import { TokenPipe } from './pipes/token.pipe';
 
 const appRoutes: Routes = [
     { path: '', redirectTo: '/home', pathMatch: 'full' },
@@ -50,12 +51,13 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         TokenNetworkComponent,
         HomeComponent,
         SwapDialogComponent,
-        KeysPipe,
-        SubsetPipe,
         TransferDialogComponent,
         JoinDialogComponent,
         RegisterDialogComponent,
         OpenDialogComponent,
+        KeysPipe,
+        SubsetPipe,
+        TokenPipe,
     ],
     imports: [
         RouterModule.forRoot(appRoutes),
@@ -99,6 +101,7 @@ export function ConfigLoader(raidenConfig: RaidenConfig) {
         },
         RaidenService,
         ConfirmationService,
+        TokenPipe,
     ],
     bootstrap: [AppComponent]
 })

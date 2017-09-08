@@ -46,7 +46,8 @@ export class TokenNetworkComponent implements OnInit {
                     { menu: this.menuFor(userToken) }
                 ) as WithMenu<Usertoken>
             ))
-            .do(() => this.refreshing = false);
+            .do(() => this.refreshing = false,
+                () => this.refreshing = false);
     }
 
     private menuFor(userToken: Usertoken): MenuItem[] {
@@ -65,7 +66,7 @@ export class TokenNetworkComponent implements OnInit {
             {
                 label: 'Transfer',
                 icon: 'fa-exchange',
-                disabled: !(userToken.connected),
+                disabled: !(userToken.connected && userToken.balance > 0),
                 command: () => this.showTransferDialog(userToken),
             },
             {
