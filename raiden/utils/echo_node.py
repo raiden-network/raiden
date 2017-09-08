@@ -251,6 +251,7 @@ class EchoNode(object):
 
     def stop(self):
         self.stop_signal = True
+        self.greenlets.append(self.echo_worker_greenlet)
         gevent.wait(self.greenlets)
 
 
