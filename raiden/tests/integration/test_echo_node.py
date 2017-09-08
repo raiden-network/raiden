@@ -15,10 +15,7 @@ from raiden.tests.utils import get_channel_events_for_token
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('reveal_timeout', [18])
 @pytest.mark.parametrize('settle_timeout', [64])
-def test_event_transfer_received_success(
-    token_addresses,
-    raiden_chain,
-):
+def test_event_transfer_received_success(token_addresses, raiden_chain):
     app0, app1, app2, receiver_app = raiden_chain
     token_address = token_addresses[0]
     start_block = receiver_app.raiden.get_block_number()
@@ -58,10 +55,7 @@ def test_event_transfer_received_success(
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('reveal_timeout', [18])
 @pytest.mark.parametrize('settle_timeout', [64])
-def test_echo_node_response(
-    token_addresses,
-    raiden_chain,
-):
+def test_echo_node_response(token_addresses, raiden_chain):
     app0, app1, app2, echo_app = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]
@@ -115,10 +109,7 @@ def test_echo_node_response(
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('reveal_timeout', [20])
 @pytest.mark.parametrize('settle_timeout', [120])
-def test_echo_node_lottery(
-    token_addresses,
-    raiden_chain,
-):
+def test_echo_node_lottery(token_addresses, raiden_chain):
     app0, app1, app2, app3, echo_app, app4, app5, app6 = raiden_chain
     address_to_app = {app.raiden.address: app for app in raiden_chain}
     token_address = token_addresses[0]
@@ -145,12 +136,13 @@ def test_echo_node_lottery(
     # test duplicated identifier + amount is ignored
     transfer_event = RaidenAPI(app5.raiden).transfer_async(
         token_address,
-        amount,
+        amount,  # same amount as before
         echo_app.raiden.address,
-        10 ** 6
+        10 ** 6  # app5 used this identifier before
     ).wait(timeout=20)
+
     # test pool size querying
-    pool_query_identifier = 77
+    pool_query_identifier = 77  # unused identifier different from previous one
     transfer_event = RaidenAPI(app5.raiden).transfer_async(
         token_address,
         amount,
