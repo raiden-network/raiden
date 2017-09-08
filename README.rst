@@ -37,42 +37,16 @@ Then set the environment variable for your `pkg-config` path to `libffi`::
 
 
 Ropsten testnet
-~~~~~~~~~~~~~~~
+---------------
 
-These are the currently deployed contract addresses for the Ropsten testnet:
+These are the currently deployed raiden contract addresses for the Ropsten testnet:
 
-* Netting Channel Library: 0x5208baa313256c0e703c96b06c896875b823cc11_
-* Channel Manager Library: 0x196da534e3860398f2d9c27cb93fb4bac69715eb_
-* Registry Contract: 0x32c5dab9b099a5b6c0e626c1862c07b30f58d76a_
-* Discovery Contract: 0x79ab17cc105e820368e695dfa547604651d02cbb_
+* Netting Channel Library: 0x0966d741b83de207579fbd8fd3097dcf7c294fa4_
+* Channel Manager Library: 0x7f77e6687d1647d55ea89315267cc347bc3a212b_
+* Registry Contract: 0xce30a13daa47c0f35631e5ed750e39c12172f325_
+* Discovery Contract: 0xaecb64f87c7fa12d983e541eabb0064fc9d87c4f_
 
-.. _0x5208baa313256c0e703c96b06c896875b823cc11: https://ropsten.etherscan.io/address/0x5208baa313256c0e703c96b06c896875b823cc11
-.. _0x196da534e3860398f2d9c27cb93fb4bac69715eb: https://ropsten.etherscan.io/address/0x196da534e3860398f2d9c27cb93fb4bac69715eb
-.. _0x32c5dab9b099a5b6c0e626c1862c07b30f58d76a: https://ropsten.etherscan.io/address/0x32c5dab9b099a5b6c0e626c1862c07b30f58d76a)
-.. _0x79ab17cc105e820368e695dfa547604651d02cbb: https://ropsten.etherscan.io/address/0x79ab17cc105e820368e695dfa547604651d02cbb)
-
-Versions and releases
-~~~~~~~~~~~~~~~~~~~~~
-
-Currently we aim to create proof of concept releases weekly, not based on a certain
-feature level. All proof of concept releases will have version numbers in the
-`0.0.x` range (so `PoC-1` = `0.0.1`).
-
-Create a PoC release
-++++++++++++++++++++
-
-Install bumpversion_
-
-.. _bumpversion: https://github.com/peritus/bumpversion
-
-Update your `master` branch to the latest upstream version::
-
-    git checkout master && git pull --rebase
-
-Call the release script::
-
-    prepare_poc_release.sh
-
-This will bump the version, create a commit on a new branch `poc_release_{version}`, push this branch to the upstream repository and create a PR.
-
-Follow the steps from the script to merge the PR and tag the result on the master branch, which will trigger the [PyPI](https://pypi.python.org) release.
+.. _0x0966d741b83de207579fbd8fd3097dcf7c294fa4: https://ropsten.etherscan.io/address/0x0966d741b83de207579fbd8fd3097dcf7c294fa4#code
+.. _0x7f77e6687d1647d55ea89315267cc347bc3a212b: https://ropsten.etherscan.io/address/0x7f77e6687d1647d55ea89315267cc347bc3a212b#code
+.. _0xce30a13daa47c0f35631e5ed750e39c12172f325: https://ropsten.etherscan.io/address/0xce30a13daa47c0f35631e5ed750e39c12172f325#code
+.. _0xaecb64f87c7fa12d983e541eabb0064fc9d87c4f: https://ropsten.etherscan.io/address/0xaecb64f87c7fa12d983e541eabb0064fc9d87c4f#code
