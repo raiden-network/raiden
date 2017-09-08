@@ -146,7 +146,7 @@ def read_version_from_git():
             spec, _, commit = git_version.split('-')
             if commit.startswith('g'):
                 commit = commit[1:]
-            return '{}+git.r{}'.format(spec, commit)
+            return '{}+git.r{}'.format(version, commit)
         elif git_version.count('.') == 2:
             return git_version
         else:
