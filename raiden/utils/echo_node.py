@@ -197,6 +197,7 @@ class EchoNode(object):
             del pool
 
             if any(ticket['initiator'] == transfer['initiator'] for ticket in tickets):
+                assert transfer not in tickets
                 log.debug(
                     'duplicate lottery entry',
                     initiator=pex(transfer['initiator']),
