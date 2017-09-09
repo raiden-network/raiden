@@ -48,7 +48,7 @@ If it does not exist in the list, it is desired to :ref:`register the token <add
 
 Registering a token
 --------------------
-In order to register a token only its address is needed. When a new token is registered a Channel Manager contract is deployed, which makes it quite an expensive thing to do in terms of gas usage ``TODO insert estimated gas price``.
+In order to register a token only its address is needed. When a new token is registered a Channel Manager contract is deployed, which makes it quite an expensive thing to do in terms of gas usage (costs about 1.8 million gas).
 
 To register a token simply use the endpoint listed below::
 
