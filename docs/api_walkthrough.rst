@@ -1,5 +1,5 @@
 Getting started with the Raiden API
-###################################
+########################################
 
 .. toctree::
   :maxdepth: 3
@@ -10,14 +10,14 @@ Raiden has a Restful API with URL endpoints corresponding to actions that users 
 
 This section will walk through the steps necessary to participate in a Raiden Token Network. Some different scenarios such as joining an already existing token network, registering a new token network, together with opening, closing and settling channels, will be provided.
 
-Before getting started with below guides, please see :doc:`Overview and Guide <overview_and_guide>`, to make sure that connection to Raiden is established.
+Before getting started with below guides, please see :doc:`Overview and Guide <overview_and_guide>`, to make sure that a proper connection to Raiden is established.
 
 Furthermore, to see all available endpoints, please see :doc:`REST API Endpoints <rest_api>`.
 
 
 Scenarios
-=========
-Below is a series of different scenarios showing different ways that the Raiden API can be used and interacted with.
+==========
+Below is a series of different scenarios showing different ways a user can interact with the Raiden API.
 
 A good way to check that Raiden was started correctly before proceeding is to check that the Raiden address is the same address as the Ethereum address chosen, when starting the Raiden node::
 
@@ -28,10 +28,10 @@ If this returns the same address, we know that the Raiden node is up and running
 .. _bootstrapping-a-token-network:
 
 Bootstrapping a token network
-=============================
-In this scenario it is assumed that a user holds some ERC20 tokens of a type that has not yet been registered in the Raiden smart contracts. Assume that the address of the token is ``0x9aBa529db3FF2D8409A1da4C9eB148879b046700``.
+===============================
+In this scenario it is assumed that a user holds some ERC20 tokens of a type that has not yet been registered in the Raiden smart contract with address ``0x9aBa529db3FF2D8409A1da4C9eB148879b046700``.
 
-The user wants to register the token, which will create a `Channel Manager <https://github.com/raiden-network/raiden/blob/a64c03c5faff01c9bd6aab9bd357ba44c113129e/raiden/smart_contracts/ChannelManagerContract.sol>`_. For each registered token there is a channel manager. Channel managers are responsible of opening new payment channels between two parties.
+The user wants to register the token, which will create a `Channel Manager <https://github.com/raiden-network/raiden/blob/a64c03c5faff01c9bd6aab9bd357ba44c113129e/raiden/smart_contracts/ChannelManagerContract.sol>`_. For each registered token there is a corresponding channel manager. Channel managers are responsible for opening new payment channels between two parties.
 
 
 Checking if a token is already registered
@@ -47,7 +47,7 @@ If it does not exist in the list, it is desired to :ref:`register the token <add
 .. _adding-a-token:
 
 Registering a token
--------------------
+--------------------
 In order to register a token only its address is needed. When a new token is registered a Channel Manager contract is deployed, which makes it quite an expensive thing to do in terms of gas usage ``TODO insert estimated gas price``.
 
 To register a token simply use the endpoint listed below::
@@ -58,13 +58,13 @@ If successful this call will return the address of the freshly created Channel M
 
     {"channel_manager_address": "0xC4F8393fb7971E8B299bC1b302F85BfFB3a1275a"}
 
-The token is now registered. However, since the token was just registered, there will be no other Raiden nodes connected to the token network and hence no nodes to connect to. This means that the network for this specific token needs to be bootstrapped. If the address, is known, of some other Raiden node that holds some of the tokens just created or it's simply desired to transfer some tokens to another Raiden node in a one-way-channel, it can be done quite easily by simply opening a channel with this node. The way to open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
+The token is now registered. However, since the token was just registered, there will be no other Raiden nodes connected to the token network and hence no nodes to connect to. This means that the network for this specific token needs to be bootstrapped. If the address of some other Raiden node that holds some of the tokens is known  or it's simply desired to transfer some tokens to another Raiden node in a one-way-channel, it can be done by simply opening a channel with this node. The way to open a channel with another Raiden node is the same whether the partner already holds some tokens or not.
 
 
 .. _opening-a-channel:
 
 Opening a channel
------------------
+-------------------
 To open a channel with another Raiden node four things are needed: the address of the token, the address of the partner node, the amount of tokens desired for deposit, and the settlement timeout period. With these things ready a channel can be opened::
 
     PUT /api/1/channels
@@ -97,7 +97,7 @@ Here it's interesting to notice that a ``channel_address`` has been generated. T
 .. _depositing-to-a-channel:
 
 Depositing to a channel
------------------------
+------------------------
 A payment channel is now open between the user's node and a counterparty with the address ``0x61c808d82a3ac53231750dadc13c777b59310bd9``. However, since only one of the nodes has deposited to the channel, only that node can make transfers at this point in time. Now would be a good time to notify the counterparty that a channel has been opened with it, so that it can also deposit to the channel. All the counterparty needs in order to do this is the address of the payment channel::
 
     PATCH /api/1/channels/0x2a65aca4d5fc5b5c859090a6c34d164135398226
@@ -138,7 +138,7 @@ In :ref:`the next scenario <joining-existing-token-network>` it will be explaine
 .. _joining-existing-token-network:
 
 Joining an already existing token network
-=========================================
+==========================================
 In :ref:`above scenario <bootstrapping-a-token-network>` it was shown how to bootstrap a token network for an unregistered token. In this section the most common way of joining a token network will be explained. In most cases users don't want to create a new token network, but they want to join an already existing token network for an ERC20 token that they already hold.
 
 The main focus of this section will be the usage of the ``connect`` and the ``leave`` endpoints. The ``connect`` endpoint allows users to automatically connect to a token network and open channels with other nodes. Furthermore the ``leave`` endpoint allows users to leave a token network by automatically closing and settling all of their open channels.
@@ -149,7 +149,7 @@ It's assumed that a user holds 2000 of some awesome ERC20 token (AET). The user 
 .. _connect-to-network:
 
 Connect
--------
+---------
 Connecting to an already existing token network is quite simple. All that is needed, is as mentioned above, the address of the token network to join and the amount of the corresponding token that the user is willing to deposit in channels::
 
     PUT /api/v1/connection/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
@@ -168,7 +168,7 @@ The user node is now connected to the token network for the AET token, and shoul
 .. _leave-network:
 
 Leave
------
+------
 If at some point it is desired to leave the token network, the ``leave`` endpoint is available. This endpoint will take care of closing and settling all open channels for a specific in the token network::
 
     DELETE /api/v1/connection/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
@@ -179,14 +179,14 @@ This call will take some time to finalize, due to the nature of the way that set
 .. _transferring-tokens:
 
 Transferring tokens
-===================
+====================
 So far it has been shown how to bootstrap a token network, how to join an already existing token network, and how to leave a token network. However, it still remains to take a look at what Raiden is really all about - transferring tokens from one node to another in off-chain payment channels. It's assumed that a node is connected to the token network of the AET token mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
 
 
 .. _transfer:
 
 Transfer
---------
+---------
 Transferring tokens to another node is quite easy. The address of the token desired for transfer is known ``0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671``. All that then remains is the address of the target node. Assume the address of the transfer node is ``0x61c808d82a3ac53231750dadc13c777b59310bd9``::
 
     POST /api/1/transfers/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671/0x61c808d82a3ac53231750dadc13c777b59310bd9
@@ -211,7 +211,7 @@ Please note that one of the most powerful features of Raiden is that users can s
 .. _close:
 
 Close
------
+------
 If at any point in time it is desired to close a specific channel it can be done with the ``close`` endpoint::
 
     PATCH /api/1/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224
@@ -266,7 +266,7 @@ Here it's interesting to notice that the balance of the channel is now ``0`` and
 .. _token-swaps:
 
 Token Swaps
-===========
+=============
 Something that has not yet been mentioned in this guide is the functionality of token swaps. A token swap allows Alice and Bob to transfer ``tokenA`` for ``tokenB``. This means that if both Alice and Bob participate in the token networks for ``tokenA`` and ``tokenB``, then they're able to atomically swap some amount of ``tokenA`` for some amount of ``tokenB``. Let's say Alice wants to buy 10 ``tokenB`` for 2 ``tokenA``. If Bob agrees to these terms a swap can be carried out using the ``token_swaps`` endpoint. In the case of the example above, Alice would be the ``maker`` and Bob would be the ``taker``::
 
     PUT /api/1/token_swaps/0x61c808d82a3ac53231750dadc13c777b59310bd9/1337
@@ -306,7 +306,7 @@ If the balances of the tokens involved for Alice and Bob are now checked they sh
 
 
 Interacting with the Raiden Echo Node
-=====================================
+======================================
 For easy testing of Raiden, there is a specialized Raiden node running, the "Raiden Echo Node". The Echo Node responds to received transfers by sending a transfer back to the initiator. The echo transfer follows certain rules:
 
 - consecutive transfers with the same ``identifier`` and same ``amount`` are ignored (as in: the Echo Node just keeps your money)
