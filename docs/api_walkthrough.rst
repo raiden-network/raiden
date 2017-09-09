@@ -160,7 +160,7 @@ With the payload::
         "funds": 2000
     }
 
-This will automatically connect to and open channels with three random peers in the token network, with 20% of the funds deposited in each channel. Furthermore it will leave 40% of the funds initially unassigned. This will allow new nodes joining the network to open bi-directionally funded payment channels with this node in the same way that it just opened channels with random nodes already in the network. The default values of opening three channels and leaving 40% of the tokens for new nodes to connect with, can be changed by adding ``"initial_channel_target": our_value`` and ``"joinable_funds_target": our_decimal_number`` to the payload.
+This will automatically connect to and open channels with three random peers in the token network, with 20% of the funds deposited to each channel. Furthermore it will leave 40% of the funds initially unassigned. This will allow new nodes joining the network to open bi-directionally funded payment channels with this node in the same way that it just opened channels with random nodes already in the network. The default behaviour of opening three channels and leaving 40% of the tokens for new nodes to connect with, can be changed by adding ``"initial_channel_target": 3`` and ``"joinable_funds_target": 0.4`` to the payload and adjusting the default value.
 
 The user node is now connected to the token network for the AET token, and should have a path to all other nodes that have joined this token network, so that it can transfer tokens to all nodes participating in this network. See the :ref:`Transferring tokens <transferring-tokens>` section for instructions on how to transfer tokens to other nodes.
 
@@ -175,12 +175,20 @@ If at some point it is desired to leave the token network, the ``leave`` endpoin
 
 This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For instance there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
 
+For reasons of speed and financial efficiency the ``leave`` call will only close and settle channels for which your node has received a transfer.
+
+If you want to override the default behaviour and leave all open channels add the follow payload::
+
+  {
+      "only_receiving_channels": false
+  }
+
 
 .. _transferring-tokens:
 
 Transferring tokens
 ====================
-So far it has been shown how to bootstrap a token network, how to join an already existing token network, and how to leave a token network. However, it still remains to take a look at what Raiden is really all about - transferring tokens from one node to another in off-chain payment channels. It's assumed that a node is connected to the token network of the AET token mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
+So far it has been shown how to bootstrap a token network, how to join an already existing token network, and how to leave a token network. Next we see how to transfer tokens from one node to another in off-chain payment channels. For the example it's assumed that a node is connected to the token network of the AET token mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
 
 
 .. _transfer:
@@ -239,7 +247,7 @@ Notice how the ``state`` is now set to ``"closed"`` compared to the previous cha
 
 Settle
 ------
-Once ``close`` has been called, the settle timeout period starts. During this period the counterparty of the node who closed the channel can provide its last received message. When the settlement timeout period is over, the channel can finally be settled by doing::
+Once ``close`` has been called, the settle timeout period starts. During this period the counterparty of the node who closed the channel has to provide its last received message. When the settlement timeout period is over, the channel can finally be settled by doing::
 
     PATCH /api/1/channels/0x000397DFD32aFAAE870E6b5FB44154FD43e43224
 
@@ -249,7 +257,7 @@ with the payload::
         "state":"settled"
     }
 
-this will trigger the ``settle()`` function in the `NettingChannelContract <https://github.com/raiden-network/raiden/blob/a64c03c5faff01c9bd6aab9bd357ba44c113129e/raiden/smart_contracts/NettingChannelContract.sol#L104>`_ smart contract. Once settlement is successful a channel object will be returned::
+this will trigger the ``settle()`` function in the `NettingChannel <https://github.com/raiden-network/raiden/blob/a64c03c5faff01c9bd6aab9bd357ba44c113129e/raiden/smart_contracts/NettingChannelContract.sol#L104>`_ smart contract. Once settlement is successful a channel object will be returned::
 
     {
         "channel_address": "0x000397DFD32aFAAE870E6b5FB44154FD43e43224",
@@ -260,14 +268,17 @@ this will trigger the ``settle()`` function in the `NettingChannelContract <http
         "settle_timeout": 600
     }
 
-Here it's interesting to notice that the balance of the channel is now ``0`` and that the state is set to ``"settled"``. This means that the netted balances that the two parties participating in the channel owe each other has now been transferred on the blockchain and that the life cycle of the payment channel has ended.
+Here it's interesting to notice that the balance of the channel is now ``0`` and that the state is set to ``"settled"``. This means that the netted balances that the two parties participating in the channel owe each other has now been transferred on the blockchain and that the life cycle of the payment channel has ended. At this point the blockchain contract has also self-destructed.
 
 
 .. _token-swaps:
 
 Token Swaps
 =============
-Something that has not yet been mentioned in this guide is the functionality of token swaps. A token swap allows Alice and Bob to transfer ``tokenA`` for ``tokenB``. This means that if both Alice and Bob participate in the token networks for ``tokenA`` and ``tokenB``, then they're able to atomically swap some amount of ``tokenA`` for some amount of ``tokenB``. Let's say Alice wants to buy 10 ``tokenB`` for 2 ``tokenA``. If Bob agrees to these terms a swap can be carried out using the ``token_swaps`` endpoint. In the case of the example above, Alice would be the ``maker`` and Bob would be the ``taker``::
+
+.. warning:: Token swaps have not been tested sufficiently and are still in an experimental mode.
+
+Something that has not yet been mentioned in this guide is the functionality of token swaps. A token swap allows Alice and Bob to exchange ``tokenA`` for ``tokenB``. This means that if both Alice and Bob participate in the token networks for ``tokenA`` and ``tokenB``, then they're able to atomically swap some amount of ``tokenA`` for some amount of ``tokenB``. Let's say Alice wants to buy 10 ``tokenB`` for 2 ``tokenA``. If Bob agrees to these terms a swap can be carried out using the ``token_swaps`` endpoint. In the case of the example above, Alice would be the ``maker`` and Bob would be the ``taker``::
 
     PUT /api/1/token_swaps/0x61c808d82a3ac53231750dadc13c777b59310bd9/1337
 
@@ -301,7 +312,7 @@ Here the address is the address of Alice and note that the identifier is the sam
 
 Note that the ``role`` is changed from ``maker`` to ``taker``. Furthermore the sending and receiving parameters have been reversed. This is because the swap is now seen from Bob's perspective.
 
-If the balances of the tokens involved for Alice and Bob are now checked they should reflect that they have been updated.
+At this point Alice's and Bob's balances should reflect the state after the swap.
 
 
 
