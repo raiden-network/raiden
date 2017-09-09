@@ -29,7 +29,7 @@ If this returns the same address, we know that the Raiden node is up and running
 
 Bootstrapping a token network
 ===============================
-In this scenario it is assumed that a user holds some ERC20 tokens of a type that has not yet been registered in the Raiden smart contract with address ``0x9aBa529db3FF2D8409A1da4C9eB148879b046700``.
+In this scenario it is assumed that a user holds some ERC20 token, with address ``0x9aBa529db3FF2D8409A1da4C9eB148879b046700``, which has not yet been registered with Raiden.
 
 The user wants to register the token, which will create a `Channel Manager <https://github.com/raiden-network/raiden/blob/a64c03c5faff01c9bd6aab9bd357ba44c113129e/raiden/smart_contracts/ChannelManagerContract.sol>`_. For each registered token there is a corresponding channel manager. Channel managers are responsible for opening new payment channels between two parties.
 
@@ -175,9 +175,9 @@ If at some point it is desired to leave the token network, the ``leave`` endpoin
 
 This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For instance there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
 
-For reasons of speed and financial efficiency the ``leave`` call will only close and settle channels for which your node has received a transfer.
+For reasons of speed and financial efficiency the ``leave`` call will only close and settle channels for which the node has received a transfer.
 
-If you want to override the default behaviour and leave all open channels add the follow payload::
+To override the default behaviour and leave all open channels add the following payload::
 
   {
       "only_receiving_channels": false
@@ -188,7 +188,8 @@ If you want to override the default behaviour and leave all open channels add th
 
 Transferring tokens
 ====================
-So far it has been shown how to bootstrap a token network, how to join an already existing token network, and how to leave a token network. Next we see how to transfer tokens from one node to another in off-chain payment channels. For the example it's assumed that a node is connected to the token network of the AET token mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
+
+For the token transfer example it is assumed a node is connected to the token network of the AET token mentioned above. In this case the node is connected to five peers, since the standard ``connect()`` parameters were used.
 
 
 .. _transfer:
