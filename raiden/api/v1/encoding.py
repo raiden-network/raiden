@@ -20,10 +20,10 @@ from pyethapp.jsonrpc import (
 )
 
 from raiden.api.objects import (
+    Address,
+    AddressList,
     Channel,
     ChannelList,
-    Token,
-    TokensList,
     PartnersPerToken,
     PartnersPerTokenList
 )
@@ -145,22 +145,20 @@ class EventRequestSchema(BaseSchema):
         decoding_class = dict
 
 
-class TokenSchema(BaseSchema):
-    """Simple token schema only with an address field. In the future we could
-    add other attributes like 'name'"""
+class AddressSchema(BaseSchema):
     address = AddressField()
 
     class Meta:
         strict = True
-        decoding_class = Token
+        decoding_class = Address
 
 
-class TokensListSchema(BaseListSchema):
-    data = fields.Nested(TokenSchema, many=True)
+class AddressListSchema(BaseListSchema):
+    data = fields.List(AddressField())
 
     class Meta:
         strict = True
-        decoding_class = TokensList
+        decoding_class = AddressList
 
 
 class PartnersPerTokenSchema(BaseSchema):
@@ -238,12 +236,11 @@ class TokenSwapsSchema(BaseSchema):
     role = fields.String(
         required=True,
         validate=validate.OneOf(['maker', 'taker']),
-        location='json',
     )
-    sending_amount = fields.Integer(required=True, location='json')
-    sending_token = AddressField(required=True, location='json')
-    receiving_amount = fields.Integer(required=True, location='json')
-    receiving_token = AddressField(required=True, location='json')
+    sending_amount = fields.Integer(required=True)
+    sending_token = AddressField(required=True)
+    receiving_amount = fields.Integer(required=True)
+    receiving_token = AddressField(required=True)
 
     class Meta:
         strict = True
@@ -263,12 +260,23 @@ class TransferSchema(BaseSchema):
 
 
 class ConnectionsConnectSchema(BaseSchema):
-    funds = fields.Integer(required=True, location='json')
+    funds = fields.Integer(required=True)
     initial_channel_target = fields.Integer(
         missing=DEFAULT_INITIAL_CHANNEL_TARGET,
-        location='json'
     )
-    joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET, location='json')
+    joinable_funds_target = fields.Decimal(missing=DEFAULT_JOINABLE_FUNDS_TARGET)
+
+    class Meta:
+        strict = True
+        decoding_class = dict
+
+
+class ConnectionsLeaveSchema(BaseSchema):
+    only_receiving_channels = fields.Boolean(
+        required=False,
+        default=True,
+        missing=True,
+    )
 
     class Meta:
         strict = True

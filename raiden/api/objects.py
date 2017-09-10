@@ -22,6 +22,10 @@ class TokensList(FlatList):
     pass
 
 
+class AddressList(FlatList):
+    pass
+
+
 class PartnersPerTokenList(FlatList):
     pass
 
@@ -30,7 +34,7 @@ class EventsList(FlatList):
     pass
 
 
-class Token(object):
+class Address(object):
     def __init__(self, token_address):
         self.address = token_address
 

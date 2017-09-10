@@ -324,15 +324,20 @@ class ApiTestContext():
         connection_manager = ConnectionManagerMock(token_address, funds)
         self.connection_managers.append(connection_manager)
 
-    def leave(self, token_address):
-
+    def leave(self, token_address, only_receiving):
         if not isaddress(token_address):
             raise InvalidAddress('not an address %s' % pex(token_address))
+
+        # for the mocking purposes let's just ignore only_receiving_ but keep its
+        # value in the mock context for checking
+        self.last_only_receiving = only_receiving
 
         channels = self.get_all_channels_for_token(token_address)
         for channel in channels:
             channel.external_state.netting_channel.state = CHANNEL_STATE_SETTLED
             channel.external_state._settled_block = 1
+
+        return channels
 
     def get_connection_manager_funds(self, token_address):
 

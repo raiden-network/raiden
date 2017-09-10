@@ -112,7 +112,7 @@ class ConnectionManager(object):
         gevent.spawn(self.leave).link(leave_result)
         return leave_result
 
-    def leave(self):
+    def leave(self, only_receiving=True):
         """ Leave the token network.
         This implies closing all channels and waiting for all channels to be settled.
         """
@@ -122,30 +122,37 @@ class ConnectionManager(object):
         if self.initial_channel_target > 0:
             self.initial_channel_target = 0
 
-        self.close_all()
-        return self.wait_for_settle()
+        closed_channels = self.close_all(only_receiving)
+        self.wait_for_settle(closed_channels)
+        return closed_channels
 
-    def close_all(self):
-        """ Close all receiving channels in the token network.
-        Note: we're just discarding all channels we haven't received anything. This potentially
-        leaves deposits locked in channels after `closing`. This is "safe" from an accounting
-        point of view (deposits can not be lost), but may still be undesirable from a liquidity
-        point of view (deposits will only be freed after manually closing or after the partner
-        closed the channel).
+    def close_all(self, only_receiving=True):
+        """ Close all channels in the token network.
+        Note: By default we're just discarding all channels we haven't received anything.
+        This potentially leaves deposits locked in channels after `closing`. This is "safe"
+        from an accounting point of view (deposits can not be lost), but may still be
+        undesirable from a liquidity point of view (deposits will only be freed after
+        manually closing or after the partner closed the channel).
+
+        If only_receiving is False then we close and settle all channels irrespective of them
+        having received transfers or not.
         """
         with self.lock:
             self.initial_channel_target = 0
-            channels_to_close = self.receiving_channels[:]
+            channels_to_close = (
+                self.receiving_channels[:] if only_receiving else self.open_channels[:]
+            )
             for channel in channels_to_close:
                 # FIXME: race condition, this can fail if channel was closed externally
                 self.api.close(self.token_address, channel.partner_address)
+            return channels_to_close
 
-    def wait_for_settle(self):
-        """Wait for all channels of the token network to settle.
+    def wait_for_settle(self, closed_channels):
+        """Wait for all closed channels of the token network to settle.
         Note, that this does not time out.
         """
         not_settled_channels = [
-            channel for channel in self.receiving_channels
+            channel for channel in closed_channels
             if not channel.state != CHANNEL_STATE_SETTLED
         ]
         while any(c.state != CHANNEL_STATE_SETTLED for c in not_settled_channels):

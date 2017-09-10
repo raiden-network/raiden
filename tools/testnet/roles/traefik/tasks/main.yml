@@ -6,8 +6,8 @@
 
 - name: Traefik config file
   become: yes
-  copy:
-    src: files/traefik.toml
+  template:
+    src: templates/traefik.toml.j2
     dest: /etc/traefik/traefik.toml
 
 - name: Traefik raiden proxy config

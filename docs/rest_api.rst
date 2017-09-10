@@ -209,8 +209,8 @@ Example Response
 ::
 
     [
-        {"address": "0xea674fdde714fd979de3edf0f56aa9716b898ec8"},
-        {"address": "0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6"}
+        "0xea674fdde714fd979de3edf0f56aa9716b898ec8",
+        "0x61bb630d3b2e8eda0fc1d50f9f958ec02e3969f6"
     ]
 
 Possible Responses
@@ -592,21 +592,40 @@ Possible Responses
 Leaving a token network
 -----------------------
 
-You can leave a token network by making a ``DELETE`` request to the following endpoint along with a json payload containing details about the way you want to leave the network. For instance if you want to wait for settlement and the timeout period.
+You can leave a token network by making a ``DELETE`` request to the following endpoint along with a json payload containing details about the way you want to leave the network.
 
 ``DELETE /api/<version>/connection/<token_address>``
 
 The request will only return once all blockchain calls for closing/settling a channel have completed.
+
+Important note. If no arguments are given then raiden will only close and settle channels where your node has received transfers. This is safe from an accounting point of view since deposits can't be lost and provides for the fastest and cheapest way to leave a token network when you want to shut down your node.
+
+If the default behaviour is not desired and the goal is to leave all channels irrespective of having received transfers or not then you should provide as payload to the request ``only_receiving_channels=false``
+
+A list with the addresses of all the closed channels will be returned.
 
 Example Request
 ^^^^^^^^^^^^^^^
 
 ``DELETE /api/1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
+with payload::
+
+  {
+      "only_receiving_channels": false
+  }
+
 
 Example Response
 ^^^^^^^^^^^^^^^^
-``204 NO CONTENT``
+``200 OKAY`` with
+::
+
+    [
+        "0x41bcbc2fd72a731bcc136cf6f7442e9c19e9f313",
+        "0x5a5f458f6c1a034930e45dc9a64b99d7def06d7e",
+        "0x8942c06faa74cebff7d55b79f9989adfc85c6b85"
+    ]
 
 Possible Responses
 ^^^^^^^^^^^^^^^^^^

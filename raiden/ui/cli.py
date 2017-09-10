@@ -492,8 +492,7 @@ def run(ctx, **kwargs):
                     print(
                         "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
                         "See the Raiden documentation for all available endpoints at\n"
-                        "https://github.com/raiden-network/raiden/blob/master"
-                        "/docs/Rest-Api.rst".format(
+                        "http://raiden-network.readthedocs.io/en/stable/rest_api.html".format(
                             api_host,
                             api_port,
                         )

@@ -17,10 +17,10 @@ logLevel = "INFO"
 email = "ulrich@brainbot.com"
 storage = "/etc/traefik/acme.json"
 entrypoint = "https"
-OnHostRule = true
+OnDemand = true
 
 [docker]
-domain = "raidentestnet.ulo.pe"
+domain = "{{ testnet_domain }}"
 endpoint = "unix:///var/run/docker.sock"
 exposedbydefault = false
 watch = true

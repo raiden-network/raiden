@@ -48,5 +48,5 @@
       - 5601:5601
     labels:
       traefik.enable: "true"
-      traefik.frontend.rule: "Host:logs.raidentestnet.ulo.pe"
+      traefik.frontend.rule: "Host:logs.{{ testnet_domain }}"
       traefik.frontend.entryPoints: "https"

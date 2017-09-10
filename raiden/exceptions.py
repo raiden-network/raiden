@@ -166,5 +166,5 @@ class TransactionThrew(RaidenError):
     the gasUsed in receipt is the same as the provided transaction gas limit"""
     def __init__(self, txname, receipt):
         super(TransactionThrew, self).__init__(
-            '{} transaction threw. Receipt={}'.format(receipt)
+            '{} transaction threw. Receipt={}'.format(txname, receipt)
         )

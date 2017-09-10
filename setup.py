@@ -126,7 +126,7 @@ install_requires = list(set(
 
 test_requirements = []
 
-version = '0.0.7'  # Do not edit: this is maintained by bumpversion (see .bumpversion.cfg)
+version = '0.0.9'  # Do not edit: this is maintained by bumpversion (see .bumpversion.cfg)
 
 
 def read_version_from_git():
@@ -146,7 +146,7 @@ def read_version_from_git():
             spec, _, commit = git_version.split('-')
             if commit.startswith('g'):
                 commit = commit[1:]
-            return '{}+git.r{}'.format(spec, commit)
+            return '{}+git.r{}'.format(version, commit)
         elif git_version.count('.') == 2:
             return git_version
         else:
