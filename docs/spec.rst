@@ -7,11 +7,11 @@ Raiden Specification
 Introduction
 ============
 
-.. note:: This document, just like the Raiden protocol is a constant work in progress 
+.. note:: This document, just like the Raiden protocol is a constant work in progress
 
 Raiden is a payment network built on top of the ethereum network. The goal of the Raiden project is to provide an easy to use conduit for off-chain payments without the need of trust among the involved parties.
 
-While there are plans to extend Raiden to generalized state channels and channels with multiple parties, this documentation concerns only off-chain payment channels. 
+While there are plans to extend Raiden to generalized state channels and channels with multiple parties, this documentation concerns only off-chain payment channels.
 
 How does the Raiden Network provide safety without trust?
 ---------------------------------------------------------
@@ -60,7 +60,7 @@ These are the channel properties: (without error checking)
 # monotonically increasing
 channel_capacity(p1, p2) = p1.total_deposit + p2.total_deposit
 received(p) = partner(p).transferred_amonut
-sent(p) = p.transferred_amount 
+sent(p) = p.transferred_amount
 
 # derived values
 netted_balance(p) = p.total_deposit + received(p) - sent(p)
@@ -76,7 +76,7 @@ Balance Proofs
 
 The netting channel requires a balance proof containing the information to properly settle:
 
-- nonce 
+- nonce
 - transferred amount
 - the root node of the pending locks merkle tree
 - a signature containing all the above
@@ -98,17 +98,48 @@ A :term:`DirectTransfer` does not rely on locks to complete. It is automatically
 
 - The sender must assume the transfer is completed once the message is sent to the network, there is no workaround. The acknowledgement in this case is only used as a synchronization primitive, the payer will only know about the transfer once the message is received.
 
+A succesfull direct transfer involves only 2 messages. The direct transfer message and an ``ACK``. For an Alice - Bob example:
+
+- Alice wants to transfer ``n`` tokens to Bob.
+- Alice creates a new transfer with:
+  - ``transferred_amount`` = ``current_value + n``
+  - ``locksroot`` = ``current_locksroot_value``
+  - ``nonce`` = ``current_value + 1``
+- Alice signs the transfer and sends it to Bob and at this point should consider the transfer complete.
+
 Mediated Transfers
 ------------------
 
 A :term:`MediatedTransfer` is a hashlocked transfer. Currently raiden supports only one type of lock. The lock has an amount that is being transferred, a hash(secret) used to verify the secret that unlocks it, and an expiration to determine its validity.
 
-Mediated transfers have an :term:`initiator` and a :term:`target` and a number of hops in between. The number of hops can also be zero.
+Mediated transfers have an :term:`initiator` and a :term:`target` and a number of hops in between. The number of hops can also be zero. Assuming ``N`` number of hops a mediated transfer will require ``6N + 8`` messages to complete. These are:
+
+- ``N + 1`` mediated or refund messages
+- ``1`` secret request
+- ``N + 1`` secret reveal
+- ``N + 1`` secret
+- ``3N + 4`` ACK
+
+For the simplest Alice - Bob example:
+
+- Alice wants to transfer ``n`` tokens to Bob.
+- Alice creates a new transfer with:
+  - ``transferred_amount`` = ``current_value``
+  - ``lock`` = ``Lock(n, hash(secret), expiration)``
+  - ``locksroot`` = ``updated value containing  the lock``
+  - ``nonce`` = ``current_value + 1``
+- Alice signs the trasfer and sends it to Bob.
+- Bob requests the secret that can be used for withdrawing the transfer.
+- Alice sends the ``SecretReveal``to Bob and at this point she must assume the transfer is complete.
+- Bob receives the secret and at this point has effectively secured the transfer of ``n`` tokens to his side.
+- Bob sends the secret back to Alice to inform her that the secret is known and acts as a request for off-chain synchronization.
+- Finally Alice sends a Secret message to Bob. This acts also as a synchronization message informing Bob that the lock will be removed from the merkle tree and that the transferred_amount and locksroot values are updated.
+
 
 Refund Transfers
 ----------------
 
-  
+
 A :term:`RefundTransfer` is a mediated transfers used in the special circumstance of when a node cannot make forward progress, and a routing backtrack must be done.
 
 Third parties
@@ -279,7 +310,7 @@ This greatly reduces the possible interactions with the smart contract and effec
    With the introduction of third parties this will no longer be true and the design will become more complex.
 
 .. _protocol-messages-no-inherited-trust:
-   
+
 Network Protocol Messages Must not have Inherited Trust
 -------------------------------------------------------
 
