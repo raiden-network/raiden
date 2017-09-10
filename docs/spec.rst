@@ -16,18 +16,18 @@ While there are plans to extend Raiden to generalized state channels and channel
 How does the Raiden Network provide safety without trust?
 ---------------------------------------------------------
 
-To achieve safety all value transfers done off-chain must be backed up by value stored in the blockchain. Off-chain payments would be susceptible to double spending if that was not the case. The payment channel is represented in the blockchain by a smart contract which:
+To achieve safety, all value transfers done off-chain must be backed up by value stored in the blockchain. Off-chain payments would be susceptible to double spending if that was not the case. The payment channel is represented in the blockchain by a smart contract which:
 
-- Provides shared rules, agreed up-front by both parties, for the channel operation.
+- Provides shared rules, agreed up-front by both parties, for the channel's operation.
 - Holds the token value in escrow to back the off-chain payments.
 - Arbitrates disputes using rules that cannot be abused by one party.
 
 Given the above properties Raiden can safely do off-chain value transfers, knowing that once a dispute happens the smart contract can be used to settle and withdraw the token.
 
-The netting channel smart contract
+The Netting Channel Smart Contract
 ==================================
 
-The netting channel smart contract is the executable code that contains the shared rules for operating an off-chain payment channel. These rules are implicitly agreed upon by each participant whenever a channel is used. The netting channel allows for:
+The :term:`netting channel` smart contract is the executable code that contains the shared rules for operating an off-chain payment channel. These rules are implicitly agreed upon by each participant whenever a channel is used. The netting channel allows for:
 
 - A large number of bidirectional value transfers among the channel participants.
 - Conditional value transfers that have an expiration and predefined rules to withdraw.
@@ -37,49 +37,34 @@ Each netting channel backs a bi-directional off-chain payment channel. They deal
 
 Transfers may be conditionally finalized, meaning that at any given point in time there may be multiple in-flight transfers waiting to be completed. These transfers are represented by lock structures that contain a token amount, expiration, and hashlock. The set of all pending transfers is encoded in a merkle tree and represented in each transfer by its root.
 
-The channel's capacity is equal to the total deposits by both participants. The capacity is both the largest value a transfer may have and the total amount of token in pending transfers. The capacity is divided as available and locked balance to each participant/direction. The available balances vary during the lifetime of the channel depending on the direction and value of the completed transfers. It can be increased either by a participant's deposit or by a counterparty's payment. The locked balance depends on the direction and value of the pending locked transfers. It is increased with each locked transfer and decreased when the transfer is finalized, successfully or otherwise.
+The :term:`channel capacity` is equal to the total deposits by both participants. The capacity is both the largest value a transfer may have and the total amount of token in pending transfers. The capacity is divided as available and locked balance to each participant/direction. The available balances vary during the lifetime of the channel depending on the direction and value of the completed transfers. It can be increased either by a participant's deposit or by a counterparty's payment. The locked balance depends on the direction and value of the pending locked transfers. It is increased with each locked transfer and decreased when the transfer is finalized, successfully or otherwise.
 
 A channel's life cycle
 ----------------------
 
-- Deployment
-- Funding / Usage
-- Close
-- Settle
+1. Deployment
+2. Funding / Usage
+3. Close
+4. Settle
 
 After being deployed the channel may receive multiple deposits from either participant. Once the counterparty acknowledges it, the depositor may do transfers with the available balance.
 
-Once either party wants to withdraw their tokens or a dispute arises the channel must be closed. After the close function is called the settlement window opens. Within the settlement window both participants must update the counterparty state and withdraw the unlocked locks. A party can not perform a partial withdrawal.
+Once either party wants to withdraw their tokens or a dispute arises the channel must be closed. After the close function is called the :term:`settlement window` opens. Within the settlement window both participants must update the counterparty state and withdraw the unlocked locks. A party can not perform a partial withdrawal.
 
-The ``transferUpdate()`` function call receives a signed balance proof which contains an envelope with channel specific data. These are the merkle tree root, the transferred_amount, and a nonce. Since a node can only provide a signed message from the counterparty we know the data wasn’t tampered with and is valid. To disincentivize a node from providing an older message, withdraw balances are netted from the transferred amount, a monotonically increasing value. As a consequence there are no negative value transfers, and if a participant provides an older message the wrongdoer's netted balance will be smaller.
+The ``updateTransfer()`` function call receives a signed balance proof which contains an envelope with channel specific data. These are the :term:`merkletree root`, the :term:`transferred amount`, and a nonce. Since a node can only provide a signed message from the counterparty we know the data wasn’t tampered with and that it is valid. To disincentivize a node from providing an older message, withdraw balances are netted from the transferred amount, a monotonically increasing value. As a consequence there are no negative value transfers and if a participant provides an older message the wrongdoer's netted balance will end up being smaller.
 
-A lock withdrawal is another netting channel operation, it receives an unlock proof composed of the lock data structure, a proof that this lock was contained in the merkle tree, and the secret that unlocks it. The channel validates the lock, checks the containment proof by recomputing the merkle tree root, and checks the secret, if all checks pass the transferred_amount of the counterparty is increased.
+Another netting channel operation is the  lock withdrawal. It receives an unlock proof composed of the lock data structure, a proof that this lock was contained in the merkle tree and the secret that unlocks it. The channel validates the lock, checks the containment proof by recomputing the merkle tree root and checks the secret. If all checks pass the transferred amount of the counterparty is increased.
 
-These are the channel properties: (without error checking)
-
-# monotonically increasing
-channel_capacity(p1, p2) = p1.total_deposit + p2.total_deposit
-received(p) = partner(p).transferred_amonut
-sent(p) = p.transferred_amount
-
-# derived values
-netted_balance(p) = p.total_deposit + received(p) - sent(p)
-available_balance(p) = netted_balance(p) - locked_balance(p)
-locked_balance(p) = sum(lock.amount for lock in p.sent_pending_transfers)
-
-# this follows as properties
-netted_balance(p1) + netted_balance(p2) == channel_capacity(p1, p2)
-available_balance(p) + locked_balance(p) == netted_balance(p)
 
 Balance Proofs
 --------------
 
-The netting channel requires a balance proof containing the information to properly settle:
+The netting channel requires a :term:`balance proof` containing the information to properly settle. These are:
 
-- nonce
-- transferred amount
-- the root node of the pending locks merkle tree
-- a signature containing all the above
+- A nonce
+- The transferred amount
+- The root node of the pending locks merkle tree
+- A signature containing all the above
 
 For this reason each transfer must be encoded as a balance proof, this follows from the fact that transfer messages change the node balance and must be provable to the netting channel.
 
@@ -278,6 +263,8 @@ Each of these hops forwarded a MediatedTransfer, paying fees and sending the tra
 
 	   Path finding services: Nodes may choose routing services to update with their current available balance, the routing services will charge a fee to the users to provide routes.
 	   Onion encryption: To improve anonymity, encryption may be used. The initiator will choose a path that cannot be changed during the transfer and onion encrypt the hops. Notes: garbage of a variable length must be added to the end of the onion encrypted path to hide the path length.
+
+.. _merkletree-section:
 
 Merkle Tree
 ===========
