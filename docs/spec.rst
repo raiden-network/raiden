@@ -144,8 +144,10 @@ Once the transfer target has received the mediated transfer it will request from
 Once the secret is known by the target the payments flow from the back to the front of the payment chain. That means starting at Charlie who will request a withdrawal from Bob, informing Bob about the known secret, allowing Bob to request a withdrawal from Alice.
 
 .. topic:: Alternative Protocol Implementation
+
 	   There is nothing about the way that locks operate that forbids transfer splitting, i.e.: a mediator doesn’t have enough capacity on a channel but it can forward the transfer to two or more channels that on aggregate have the correct amount.
 	   Although that scheme is possible, it is not currently considered because of some added complexity. The target node would either need to know the transfer id and amount prior to it’s start, or it would need to make multiple secret requests to the initiator, as new transfers with the same hashlock arrives, until the correct transfer amount is reached.
+
 
 Locks
 =====
@@ -184,6 +186,7 @@ The second is the mediator’s responsibility to choose a lock expiration for th
 The number of blocks for the above is named :term:`reveal_timeout`.
 
 .. topic:: Alternative Protocol Implementation
+
 	   The reveal timeout is large because sudden bursts of ethereum transactions will saturate the block chain (after the block gas is used the block cannot append more transactions). This delays the processing of closing/withdraw transactions enough that token loss is possible. At the same time it is impossible to predict how long these bursts will be. Ideally the smart contract would be able compute the unlock operations that could have been executed and count lock expiration to the available gas slots.
 
 Failed Mediated Transfers
@@ -200,6 +203,7 @@ The initiator might not have received the SecretRequest for yet another set of r
 For any of the above scenarios, each hop must hold the lock and wait until it expires before unlocking the token and letting the payer add it back to its available balance.
 
 .. topic:: Alternative Protocol Implementation
+
 	   Use a new lock type that can be withdrawn if any of two secrets is revealed. Each mediator sends the payee transfer with a controlled refund secret. If the next hop cannot proceed with the transfer it sends back a mediated transfer using the *same* refund hashlock. This allows the mediator controlling the refund secret to release both locks without a risk of double spending.
 
 Channel Closing and Settlement
@@ -218,6 +222,7 @@ Once the channel enters the settlement window the partner state can be updated b
 With third parties the process changes slightly. Since third parties are allowed to call ``updateTransfer`` multiple times, the transferred_amount and locksroot must be reset each time a new transfer is provided, and locks that have been withdrawn must be withdrawn again.
 
 .. topic:: Alternative Protocol Implementation
+
 	   The current implementation has a local unlock, meaning that the same hashlock may be provided multiple times, once for each mediator that is closing the channel. The sprites [TODO: add link] approach uses a global registry of known secrets and requires the secret to be unlocked only once. This saves the computation of the hash function for each “additional” withdraw.
 	   - a node doesn't need to close the channel to unlock, since the secret can be registered with the secret manager, that reduces the reveal timeout by ``Δ``
 	   - a node doesn't need to care about learning the secret through the blockchain and reapplying it in it's own channel, the reduces the reveal timeout by ``x``
@@ -239,6 +244,7 @@ B will mediate the transfer and do its own local path routing. It chose C, which
 Each of these hops forwarded a MediatedTransfer, paying fees and sending the transfer value to the next hop to mediate the transfer.
 
 .. topic:: Alternative Protocol Implementation
+
 	   Path finding services: Nodes may choose routing services to update with their current available balance, the routing services will charge a fee to the users to provide routes.
 	   Onion encryption: To improve anonymity, encryption may be used. The initiator will choose a path that cannot be changed during the transfer and onion encrypt the hops. Notes: garbage of a variable length must be added to the end of the onion encrypted path to hide the path length.
 
@@ -252,4 +258,51 @@ The `merkle tree <https://en.wikipedia.org/wiki/Merkle_tree>`_ data blocks are c
 The merkle tree must have a deterministic order, that can be computed by any participant or the channel contract. The leaf nodes are defined to be in lexicographical order of the elements (lock hashes). For the other levels the interior nodes are also computed from the lexicographical order.
 
 .. topic:: Alternative Protocol Implementation
+
 	   Use time order for the leaves and lexicographical for the intermediary nodes. This will greatly improve insertion performance since only the rightmost side of the tree must be recomputed. It may also improve removals since the nodes to the left don’t need to be recomputed.
+
+Raiden Design Choices
+=====================
+
+One Contract per Channel
+------------------------
+
+We don’t want to have shared smart contracts hold big amount of tokens in escrow. This will not provide security but will diminish the losses from potential attacks and isolate problems.
+
+Nodes can not Update their Own State
+------------------------------------
+
+This greatly reduces the possible interactions with the smart contract and effectively makes cheating impossible. Either party may only provide messages that contain an unforgeable signature.
+
+.. note::
+
+   With the introduction of third parties this will no longer be true and the design will become more complex.
+
+.. _protocol-messages-no-inherited-trust:
+   
+Network Protocol Messages Must not have Inherited Trust
+-------------------------------------------------------
+
+We don’t support informational messages like ``TransferTimeout``, ``TransferCancelled``, nor messages that can lead to change of the channel state without some mechanism backed by the smart contract as this would imply trust between participants and open attack vectors.
+
+We also don’t support messages from nodes saying that something happened on the blockchain because that is both redundant and imply trust in the message.
+
+Invalid  Messages can Happen
+----------------------------
+
+Raiden is built on top of an asynchronous network and one may not trivially assume that things are globally ordered, so invalid messages cannot be naively assumed as an attack.
+
+The lack of synchronization messages is a security measure as seen in the :ref:`above section <protocol-messages-no-inherited-trust>`. As a consequence there are race conditions. For example picture a fresh channel between Alice and BoB.
+
+- Alice deposits 10
+- Alice sends a transfer of 5 to Bob
+- Bob received the transfer, checks if Alice may spend this amount and it fails.
+- Bob polls the blockchain and learns about the ChannelDeposit event
+
+This is fixed in the protocol layer with a retry mechanism. It assumes the partner node has a properly working ethereum client and that he is polling for events from the block.
+
+Hashlocks are not Transfer Identifiers
+--------------------------------------
+
+Even though hashlocks are unique, this value is not used as an identifier because routing via a specific path may fail. The initiator is at a position where he may choose to discard a path and retry with a different first hop. For this reason hashlocks can change for the same payment and an additional field just for transfer identification is used.
+
