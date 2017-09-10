@@ -321,7 +321,7 @@ Interacting with the Raiden Echo Node
 ======================================
 For easy testing of Raiden, there is a specialized Raiden node running, the "Raiden Echo Node". The Echo Node responds to received transfers by sending a transfer back to the initiator. The echo transfer follows certain rules:
 
-- consecutive transfers with the same ``identifier`` and same ``amount`` are ignored (as in: the Echo Node just keeps your money)
+- consecutive transfers with the same ``identifier`` and same ``amount`` from the same address are ignored (as in: the Echo Node just keeps your money)
 - the ``echo_identifier`` of all echo transfers is ``identifier + echo_amount``
 - transfers with an ``amount`` divisible by ``3`` will be answered with an echo transfer of ``echo_amount = amount - 1``
 - transfers with an ``amount = 7`` are special lottery transfers. They will go to a lottery pool. After the Echo Node has received seven lottery transfers, it will choose a winner that receives an echo transfer with ``echo_amount = 49`` and the pool is reset. To query the current number of tickets in the pool, a participant can send another transfer with ``amount = 7`` -- if the participant already takes part in the current draw, the Echo Node will respond with a transfer with ``echo_amount = lottery_pool_size``, otherwise it will enter the pool.
