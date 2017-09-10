@@ -1,35 +1,46 @@
 System Requirements and Installation Guide
-==================================================
+##################################################
 .. toctree::
   :maxdepth: 2
 
 Introduction
-************
+============
 Raiden is a payment channel implementation which provides scalable, low latency, and cheap token transfers for Ethereum.
 
+.. _binary_releases:
 
-Getting Started
-***************
+Installation
+============
+The preferred way to install Raiden is downloading a self contained application bundle from the `GitHub release page <https://github.com/raiden-network/raiden/releases>`_. Download the latest ``raiden--x86_64.AppImage``, and make it executable::
 
-In order to install Raiden at the moment you need to clone it from Github and compile it from source
+    chmod +x raiden--x86_64.AppImage
+
+The Raiden `AppImage <http://appimage.org/>`_ should work on most 64bit GNU/Linux distributions without any specific system dependencies, other than an Ethereum client installed in your system (see below). The Raiden AppImage bundle takes the same command line arguments as the ``raiden`` script.  
 
 Dependencies
 ************
+You will need to have an Ethereum client installed in your system.
 
-* You need to make sure that your system has `solc`, the ethereum solidity compiler installed. Refer to `its documentation <http://solidity.readthedocs.io/en/latest/installing-solidity.html>`_ for the installation steps.
-* You will need to have an ethereum client installed in your system.
-   * Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ for instructions on the go-ethereum client.
-   * Follow `these instructions <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ for  the parity client.
-* You will also need to obtain the `system dependencies for pyethapp <https://github.com/ethereum/pyethapp/#installation-on-ubuntudebian>`_.
+- Check `this link <https://github.com/ethereum/go-ethereum/wiki/Building-Ethereum>`_ for instructions on the go-ethereum client.
+- Follow `these instructions <https://github.com/paritytech/parity#simple-one-line-installer-for-mac-and-ubuntu>`_ for  the parity client.
 
+Now you are ready :ref:`to get started <running_raiden>`. 
 
 .. _installation:
 
-Installation
-************
+For developers
+==============
+If you plan to develop on the Raiden source code, or the AppImage install does not work for your system, you can follow these steps to install a development version.
+
+Additional dependencies for development installations
+*****************************************************
+- You need to make sure that your system has ``solc``, the ethereum solidity compiler installed. Refer to `its documentation <http://solidity.readthedocs.io/en/latest/installing-solidity.html>`_ for the installation steps.
+- You will also need to obtain the `system dependencies for pyethapp <https://github.com/ethereum/pyethapp/#installation-on-ubuntudebian>`_.
+
+Installation from source
+************************
 
 Clone the repository::
-
 
     git clone https://github.com/raiden-network/raiden.git
 
@@ -45,40 +56,16 @@ After you have done that you can proceed to install the dependencies::
     pip install --upgrade -r requirements.txt
     python setup.py develop
 
-You will also need an Ethereum client that is connected to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
+You will also need to connect your Ethereum client to the Ropsten testnet. See below for guidelines on how to connect with both Parity and Geth.
 
-.. _binary_releases:
-
-(Optional) AppImage
-~~~~~~~~~~~~~~~~~~~
-
-For easier installation and portability, we create `AppImage <http://appimage.org/>`_ releases, that should work on most 64bit GNU/Linux distributions. For official releases, you will find the AppImage on the `GitHub release page <https://github.com/raiden-network/raiden/releases>`_.
-
-**Building it**
-
-AppImages are built from the main GitHub repository, you will need to have ``make`` and ``docker`` installed.
-
-Calling::
-
-    make bundle
-
-will build ``raiden`` with all dependencies (including the webUI) inside a docker container and copy the build
-artifact to ``dist/raiden--x86_64.AppImage``. If you want to build a specific (git-tagged or branched) version, you can provide the git checkout target e.g. like this::
-
-    RAIDENVERSION=v1.0.0 make bundle
-
-**Using it**
-
-The release artifact ``raiden--x86_64.AppImage`` is an executable that takes the same commandline flags as the main
-``raiden`` script. See `AppImage Documentation <https://github.com/AppImage/AppImageKit/blob/appimagetool/master/README.md>`_ for advanced integration with your distribution.
 
 .. _running_raiden:
 
 Firing it up
-*************
+=============
 
 Using geth
-~~~~~~~~~~
+**********
 
 Run the Ethereum client and let it sync with the Ropsten testnet::
 
@@ -93,7 +80,7 @@ Then launch Raiden with the default testnet keystore path::
     raiden --keystore-path  ~/.ethereum/testnet/keystore
 
 Using parity
-~~~~~~~~~~~~
+************
 
 Run the client and let it sync with the Ropsten testnet::
 
