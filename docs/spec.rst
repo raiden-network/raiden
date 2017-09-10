@@ -81,13 +81,35 @@ The netting channel requires a balance proof containing the information to prope
 - the root node of the pending locks merkle tree
 - a signature containing all the above
 
-For this reason each transfer must be encoded as a balance proof, this follows from the fact that transfer messages change the node balance and must be provable to the netting channel. Transfers come in three different flavors:
+For this reason each transfer must be encoded as a balance proof, this follows from the fact that transfer messages change the node balance and must be provable to the netting channel.
 
-- DirectTransfers: These transfers don’t rely on locks to complete, they are automatically completed once the network packet is sent off [note 2].
+Raiden Transfers
+================
+
+Transfers in Raiden come in three different flavors.
+
+Direct Transfers
+----------------
+
+
+A :term:`DirectTransfer` does not rely on locks to complete. It is automatically completed once the network packet is sent off. Since Raiden runs on top of an asynchronous network that can not guarantee delivery, transfers can not be completed atomically. The main points to consider about direct transfers are the following:
+
+- These messages are not locked, meaning the envelope transferred_amount is incremented and the message may be used to withdraw the token. This means that a :term:`payer` is unconditionally transferring the token, regardless of getting a service or not. Trust is assumed among the payer/:term:`payee` to complete the goods transaction.
+
+- The sender must assume the transfer is completed once the message is sent to the network, there is no workaround. The acknowledgement in this case is only used as a synchronization primitive, the payer will only know about the transfer once the message is received.
+
+Mediated Transfers
+------------------
+
+A :term:`MediatedTransfer` is a hashlocked transfer. Currently raiden supports only one type of lock. The lock has an amount that is being transferred, a hash(secret) used to verify the secret that unlocks it, and an expiration to determine its validity.
+
+Mediated transfers have an :term:`initiator` and a :term:`target` and a number of hops in between. The number of hops can also be zero.
+
+Refund Transfers
+----------------
+
   
-- MediatedTransfers: These transfers are locked. Currently raiden supports only one type of lock. The lock has an amount that is being transferred, a hash(secret) used to verify the secret that unlocks it, and an expiration to determine its validity.
-  
-- RefundTransfers: These are mediated transfers used in the special circumstance of when a node cannot make forward progress, and a routing backtrack must be done.
+A :term:`RefundTransfer` is a mediated transfers used in the special circumstance of when a node cannot make forward progress, and a routing backtrack must be done.
 
 Third parties
 =============
@@ -159,7 +181,7 @@ The second is the mediator’s responsibility to choose a lock expiration for th
 - Updating the counter party transfer.
 - Withdrawing the lock on the closed channel.
 
-The number of blocks for the above is named reveal_timeout.
+The number of blocks for the above is named :term:`reveal_timeout`.
 
 .. topic:: Alternative Protocol Implementation
 	   The reveal timeout is large because sudden bursts of ethereum transactions will saturate the block chain (after the block gas is used the block cannot append more transactions). This delays the processing of closing/withdraw transactions enough that token loss is possible. At the same time it is impossible to predict how long these bursts will be. Ideally the smart contract would be able compute the unlock operations that could have been executed and count lock expiration to the available gas slots.
@@ -231,5 +253,3 @@ The merkle tree must have a deterministic order, that can be computed by any par
 
 .. topic:: Alternative Protocol Implementation
 	   Use time order for the leaves and lexicographical for the intermediary nodes. This will greatly improve insertion performance since only the rightmost side of the tree must be recomputed. It may also improve removals since the nodes to the left don’t need to be recomputed.
-
-
