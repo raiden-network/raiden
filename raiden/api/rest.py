@@ -223,11 +223,11 @@ class APIServer(object):
                     methods=('GET', ),
                 )
 
-    def _serve_webui(self, file='index.html'):  # pylint: disable=redefined-builtin
+    def _serve_webui(self, file_name='index.html'):  # pylint: disable=redefined-builtin
         try:
-            assert file
+            assert file_name
             web3 = self.flask_app.config.get('WEB3_ENDPOINT')
-            if web3 and 'config.' in file and file.endswith('.json'):
+            if web3 and 'config.' in file_name and file_name.endswith('.json'):
                 host = request.headers.get('Host')
                 if any(h in web3 for h in ('localhost', '127.0.0.1')) and host:
                     _, _port = split_endpoint(web3)
@@ -235,7 +235,7 @@ class APIServer(object):
                     web3 = 'http://{}:{}'.format(_host, _port)
                 response = jsonify({'raiden': self._api_prefix, 'web3': web3})
             else:
-                response = send_from_directory(self.flask_app.config['WEBUI_PATH'], file)
+                response = send_from_directory(self.flask_app.config['WEBUI_PATH'], file_name)
         except (NotFound, AssertionError):
             response = send_from_directory(self.flask_app.config['WEBUI_PATH'], 'index.html')
         return response
@@ -485,7 +485,7 @@ class RestAPI(object):
                 errors=str(e),
                 status_code=http.client.CONFLICT
             )
-        except (InsufficientFunds) as e:
+        except InsufficientFunds as e:
             return api_error(
                 errors=str(e),
                 status_code=http.client.PAYMENT_REQUIRED
