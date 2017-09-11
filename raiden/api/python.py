@@ -158,11 +158,15 @@ class RaidenAPI(object):
             return connection_manager.funds
 
     def get_connection_managers_list(self):
+        """Get a list of connection managers with open channels"""
         connection_managers = []
 
         for token in self.get_tokens_list():
-            connection_manager = self.raiden.connection_manager_for_token(token)
-            if connection_manager is not None:
+            try:
+                connection_manager = self.raiden.connection_manager_for_token(token)
+            except InvalidAddress:
+                connection_manager = None
+            if connection_manager is not None and connection_manager.open_channels:
                 connection_managers.append(connection_manager.token_address)
 
         return connection_managers
