@@ -488,7 +488,8 @@ Possible Responses
 |                  | some way malformed        |
 +------------------+---------------------------+
 | 409 Conflict     | Provided channel does not |
-|                  | exist                     |
+|                  | exist, or is inside       |
+|                  | settlement period         |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
