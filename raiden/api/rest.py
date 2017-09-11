@@ -352,13 +352,10 @@ class RestAPI(object):
         return jsonify(result.data)
 
     def get_connection_manager_funds(self, token_address):
-        connection_manager = self.raiden_api.get_connection_manager_funds(token_address)
-
-        if connection_manager is None:
+        funds = self.raiden_api.get_connection_manager_funds(token_address)
+        if funds is None:
             return make_response('No connection manager exists for token', httplib.NO_CONTENT)
-
-        if connection_manager is not None:
-            return jsonify(connection_manager)
+        return jsonify(funds)
 
     def get_connection_managers_list(self):
         raiden_service_result = self.raiden_api.get_connection_managers_list()

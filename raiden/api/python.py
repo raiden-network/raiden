@@ -150,12 +150,16 @@ class RaidenAPI(object):
         return connection_manager.leave(only_receiving)
 
     def get_connection_manager_funds(self, token_address):
-        """Get the connection manager for a specific token"""
-        connection_manager = self.raiden.connection_manager_for_token(token_address)
-        if not connection_manager:
-            return None
+        """Get the sum of all connection manager's open channels deposits"""
+        try:
+            connection_manager = self.raiden.connection_manager_for_token(token_address)
+        except InvalidAmount:
+            connection_manager = None
+        if connection_manager is not None and connection_manager.open_channels:
+            return connection_manager.sum_deposits
         else:
-            return connection_manager.funds
+            # explicitly return None, in case of invalid connection manager
+            return None
 
     def get_connection_managers_list(self):
         """Get a list of connection managers with open channels"""

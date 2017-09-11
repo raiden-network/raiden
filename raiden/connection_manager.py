@@ -86,9 +86,7 @@ class ConnectionManager(object):
                 'connect() called on an already joined token network',
                 token_address=pex(self.token_address),
                 open_channels=len(open_channels),
-                sum_deposits=sum(
-                    channel.contract_balance for channel in open_channels
-                ),
+                sum_deposits=self.sum_deposits,
                 funds=funds,
             )
 
@@ -320,9 +318,7 @@ class ConnectionManager(object):
         """The remaining funds after subtracting the already deposited amounts.
         """
         if self.funds > 0:
-            remaining = self.funds - sum(
-                channel.contract_balance for channel in self.open_channels
-            )
+            remaining = self.funds - self.sum_deposits
             assert isinstance(remaining, int)
             return remaining
         return 0
@@ -336,6 +332,11 @@ class ConnectionManager(object):
             self.api.get_channel_list(token_address=self.token_address)
             if channel.state == CHANNEL_STATE_OPENED
         ]
+
+    @property
+    def sum_deposits(self):
+        """Shorthand for getting sum of all open channels deposited funds"""
+        return sum(channel.contract_balance for channel in self.open_channels)
 
     @property
     def receiving_channels(self):
