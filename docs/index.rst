@@ -20,4 +20,6 @@ Contents
   rest_api
   what_is_the_dev_preview
   webui_tutorial
+  spec
+  glossary
   Raiden Codebase Documentation <./_build/generated/modules>
