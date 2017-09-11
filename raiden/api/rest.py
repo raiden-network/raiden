@@ -363,12 +363,9 @@ class RestAPI(object):
     def get_connection_managers_list(self):
         raiden_service_result = self.raiden_api.get_connection_managers_list()
         assert isinstance(raiden_service_result, list)
-
-        new_list = []
-        for result in raiden_service_result:
-            new_list.append(address_encoder(result))
-
-        return jsonify(new_list)
+        tokens_list = AddressList(raiden_service_result)
+        result = self.address_list_schema.dump(tokens_list)
+        return jsonify(result.data)
 
     def get_channel_list(self, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
