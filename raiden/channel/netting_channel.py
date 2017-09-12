@@ -782,10 +782,12 @@ class Channel(object):
 
     def state_transition(self, state_change):
         if isinstance(state_change, Block):
-            settlement_end = self.external_state.closed_block + self.settle_timeout
 
-            if self.state == CHANNEL_STATE_CLOSED and state_change.block_number > settlement_end:
-                self.external_state.settle()
+            if self.state == CHANNEL_STATE_CLOSED:
+                settlement_end = self.external_state.closed_block + self.settle_timeout
+
+                if state_change.block_number > settlement_end:
+                    self.external_state.settle()
 
         elif isinstance(state_change, ContractReceiveClosed):
             if state_change.channel_address == self.channel_address:

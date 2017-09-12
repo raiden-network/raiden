@@ -13,6 +13,10 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
+from raiden.exceptions import (
+    TransactionThrew,
+    AddressWithoutCode,
+)
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -31,11 +35,10 @@ class ConnectionManager(object):
     BOOTSTRAP_ADDR = BOOTSTRAP_ADDR_HEX.decode('hex')
 
     def __init__(
-        self,
-        raiden,
-        token_address,
-        channelgraph,
-    ):
+            self,
+            raiden,
+            token_address,
+            channelgraph):
         self.lock = Semaphore()
         self.raiden = raiden
         self.api = RaidenAPI(raiden)
@@ -46,11 +49,10 @@ class ConnectionManager(object):
         self.joinable_funds_target = 0
 
     def connect(
-        self,
-        funds,
-        initial_channel_target=3,
-        joinable_funds_target=.4
-    ):
+            self,
+            funds,
+            initial_channel_target=3,
+            joinable_funds_target=.4):
         """Connect to the network.
         Use this to establish a connection with the token network.
 
@@ -257,11 +259,14 @@ class ConnectionManager(object):
                 token_address=pex(self.token_address),
             )
         else:
-            self.api.deposit(
-                self.token_address,
-                partner,
-                funding_amount,
-            )
+            try:
+                self.api.deposit(
+                    self.token_address,
+                    partner,
+                    funding_amount,
+                )
+            except (TransactionThrew, AddressWithoutCode):
+                pass
 
     def find_new_partners(self, number):
         """Search the token network for potential channel partners.

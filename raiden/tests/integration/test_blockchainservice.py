@@ -7,15 +7,19 @@ import itertools
 import pytest
 from ethereum import _solidity
 from ethereum._solidity import compile_file
-from ethereum.utils import denoms
-from pyethapp.rpc_client import JSONRPCClient
-from pyethapp.jsonrpc import default_gasprice
-from raiden.tests.utils.blockchain import wait_until_block
 from ethereum.tester import TransactionFailed
+from ethereum.utils import denoms
+from pyethapp.jsonrpc import default_gasprice
+from pyethapp.rpc_client import JSONRPCClient
 
+from raiden.tests.utils.blockchain import wait_until_block
 from raiden.network.rpc.client import (
-    decode_topic, patch_send_transaction, patch_send_message, check_transaction_threw
+    decode_topic,
+    patch_send_transaction,
+    patch_send_message,
+    check_transaction_threw,
 )
+from raiden.exceptions import AddressWithoutCode
 from raiden.utils import privatekey_to_address, get_contract_path
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 from raiden.exceptions import SamePeerAddress
@@ -115,8 +119,8 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     netting_channel_01.deposit(100)
     assert netting_channel_01.can_transfer() is False
     assert netting_channel_02.can_transfer() is False
-    assert netting_channel_01.detail(None)['our_balance'] == 0
-    assert netting_channel_02.detail(None)['our_balance'] == 0
+    assert netting_channel_01.detail(app0.raiden.address)['our_balance'] == 0
+    assert netting_channel_02.detail(app0.raiden.address)['our_balance'] == 0
 
     # single-funded channel
     app0.raiden.chain.token(token_address).approve(netting_address_01, 100)
@@ -124,8 +128,8 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is False
 
-    assert netting_channel_01.detail(None)['our_balance'] == 100
-    assert netting_channel_02.detail(None)['our_balance'] == 0
+    assert netting_channel_01.detail(app0.raiden.address)['our_balance'] == 100
+    assert netting_channel_02.detail(app0.raiden.address)['our_balance'] == 0
 
     # double-funded channel
     app0.raiden.chain.token(token_address).approve(netting_address_02, 70)
@@ -133,16 +137,16 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is True
 
-    assert netting_channel_02.detail(None)['our_balance'] == 70
-    assert netting_channel_02.detail(None)['partner_balance'] == 0
+    assert netting_channel_02.detail(app0.raiden.address)['our_balance'] == 70
+    assert netting_channel_02.detail(app0.raiden.address)['partner_balance'] == 0
 
     app2.raiden.chain.token(token_address).approve(netting_address_02, 130)
     app2.raiden.chain.netting_channel(netting_address_02).deposit(130)
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is True
 
-    assert netting_channel_02.detail(None)['our_balance'] == 70
-    assert netting_channel_02.detail(None)['partner_balance'] == 130
+    assert netting_channel_02.detail(app0.raiden.address)['our_balance'] == 70
+    assert netting_channel_02.detail(app0.raiden.address)['partner_balance'] == 130
 
     # open channel with same peer again after settling
     netting_channel_01.close(
@@ -155,8 +159,12 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 
     wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + settle_timeout + 1)
     netting_channel_01.settle()
-    assert netting_channel_01.opened() is ''
-    assert netting_channel_01.closed() != 0
+
+    with pytest.raises(AddressWithoutCode):
+        netting_channel_01.closed()
+
+    with pytest.raises(AddressWithoutCode):
+        netting_channel_01.opened()
 
     # open channel with same peer again
     netting_address_01_reopened = manager0.new_netting_channel(

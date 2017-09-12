@@ -31,8 +31,8 @@ def check_channel(app1, app2, netting_channel_address, deposit_amount):
         assert netcontract1.can_transfer()
         assert netcontract2.can_transfer()
 
-    app1_details = netcontract1.detail()
-    app2_details = netcontract2.detail()
+    app1_details = netcontract1.detail(app1.raiden.address)
+    app2_details = netcontract2.detail(app2.raiden.address)
 
     assert app1_details['our_address'] == app2_details['partner_address']
     assert app1_details['partner_address'] == app2_details['our_address']
