@@ -21,11 +21,12 @@ import requests
 
 from raiden import messages
 from raiden.exceptions import (
-    UnknownAddress,
     AddressWithoutCode,
-    NoTokenManager,
     DuplicatedChannelError,
+    JSONRPCPollTimeoutException,
+    NoTokenManager,
     TransactionThrew,
+    UnknownAddress,
 )
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
 from raiden.settings import (
@@ -63,11 +64,14 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 #   - poll for the transaction hash
 #   - check if the proper events were emited
 #   - use `call` and `transact` to interact with pyethapp.rpc_client proxies
-
-
-class JSONRPCPollTimeoutException(Exception):
-    # FIXME import this from pyethapp.rpc_client once it is implemented
-    pass
+# - Check errors:
+#   - `call` returns the empty string if the target smart contract does not
+#   exist, handle it accordingly (there is no way to distinguish a function
+#   that returns the empty string from the error)
+#   - `transact` may fail with an ethereum exception, this will spend all gas
+#   (there is no way to distinguish a transaction that used exactly all the
+#   available gas). Note: There is a new opcode in draft that wont use all gas
+#   https://github.com/ethereum/EIPs/pull/206
 
 
 def check_transaction_threw(client, transaction_hash):
@@ -75,10 +79,11 @@ def check_transaction_threw(client, transaction_hash):
     encoded_transaction = data_encoder(transaction_hash.decode('hex'))
     transaction = client.call('eth_getTransactionByHash', encoded_transaction)
     receipt = client.call('eth_getTransactionReceipt', encoded_transaction)
+
     if int(transaction['gas'], 0) != int(receipt['gasUsed'], 0):
         return None
-    else:
-        return receipt
+
+    return receipt
 
 
 def patch_send_transaction(client, nonce_offset=0):
@@ -193,8 +198,10 @@ def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_blo
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     if isinstance(from_block, int):
         from_block = hex(from_block)
+
     if isinstance(to_block, int):
         to_block = hex(to_block)
+
     json_data = {
         'fromBlock': from_block or hex(0),
         'toBlock': to_block or 'latest',
@@ -214,8 +221,10 @@ def get_filter_events(jsonrpc_client, contract_address, topics, from_block=None,
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     if isinstance(from_block, int):
         from_block = hex(from_block)
+
     if isinstance(to_block, int):
         to_block = hex(to_block)
+
     json_data = {
         'fromBlock': from_block or hex(0),
         'toBlock': to_block or 'latest',
@@ -345,6 +354,9 @@ class BlockChainService(object):
 
     def token(self, token_address):
         """ Return a proxy to interact with a token. """
+        if not isaddress(token_address):
+            raise ValueError('token_address must be a valid address')
+
         if token_address not in self.address_to_token:
             self.address_to_token[token_address] = Token(
                 self.client,
@@ -356,6 +368,9 @@ class BlockChainService(object):
 
     def discovery(self, discovery_address):
         """ Return a proxy to interact with the discovery. """
+        if not isaddress(discovery_address):
+            raise ValueError('discovery_address must be a valid address')
+
         if discovery_address not in self.address_to_discovery:
             self.address_to_discovery[discovery_address] = Discovery(
                 self.client,
@@ -367,6 +382,9 @@ class BlockChainService(object):
 
     def netting_channel(self, netting_channel_address):
         """ Return a proxy to interact with a NettingChannelContract. """
+        if not isaddress(netting_channel_address):
+            raise ValueError('netting_channel_address must be a valid address')
+
         if netting_channel_address not in self.address_to_nettingchannel:
             channel = NettingChannel(
                 self.client,
@@ -379,6 +397,9 @@ class BlockChainService(object):
 
     def manager(self, manager_address):
         """ Return a proxy to interact with a ChannelManagerContract. """
+        if not isaddress(manager_address):
+            raise ValueError('manager_address must be a valid address')
+
         if manager_address not in self.address_to_channelmanager:
             manager = ChannelManager(
                 self.client,
@@ -400,12 +421,18 @@ class BlockChainService(object):
         If the token is not already registered it raises `JSONRPCClientReplyError`,
         since we try to instantiate a Channel manager with an empty address.
         """
+        if not isaddress(token_address):
+            raise ValueError('token_address must be a valid address')
+
         if token_address not in self.token_to_channelmanager:
             token = self.token(token_address)  # check that the token exists
             manager_address = self.default_registry.manager_address_by_token(token.address)
+
             if manager_address == '':
-                raise NoTokenManager('Manager for token 0x{} does not exist'.format(
-                                     (str(token_address).encode('hex'))))
+                raise NoTokenManager(
+                    'Manager for token 0x{} does not exist'.format(token_address.encode('hex'))
+                )
+
             manager = ChannelManager(
                 self.client,
                 address_decoder(manager_address),
@@ -418,6 +445,9 @@ class BlockChainService(object):
         return self.token_to_channelmanager[token_address]
 
     def registry(self, registry_address):
+        if not isaddress(registry_address):
+            raise ValueError('registry_address must be a valid address')
+
         if registry_address not in self.address_to_registry:
             self.address_to_registry[registry_address] = Registry(
                 self.client,
@@ -567,6 +597,10 @@ class Discovery(object):
             timeout=self.poll_timeout,
         )
 
+        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+        if receipt_or_none:
+            raise TransactionThrew('Register Endpoint', receipt_or_none)
+
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = node_address_bin.encode('hex')
         endpoint = self.proxy.findEndpointByAddress.call(node_address_hex)
@@ -702,6 +736,9 @@ class Registry(object):
         return self.proxy.channelManagerByToken.call(token_address)
 
     def add_token(self, token_address):
+        if not isaddress(token_address):
+            raise ValueError('token_address must be a valid address')
+
         transaction_hash = estimate_and_transact(
             self,
             self.proxy.addToken,
@@ -914,50 +951,68 @@ class NettingChannel(object):
             startgas=GAS_LIMIT,
             gasprice=GAS_PRICE,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
-        # pylint: disable=too-many-arguments
-
-        result = jsonrpc_client.call(
-            'eth_getCode',
-            address_encoder(channel_address),
-            'latest',
-        )
-
-        if result == '0x':
-            raise AddressWithoutCode('Netting channel address {} does not contain code'.format(
-                address_encoder(channel_address),
-            ))
-
-        proxy = jsonrpc_client.new_abi_contract(
-            CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
-            address_encoder(channel_address),
-        )
 
         self.address = channel_address
-        self.proxy = proxy
         self.client = jsonrpc_client
         self.startgas = startgas
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
 
+        self.client = jsonrpc_client
+        self.proxy = jsonrpc_client.new_abi_contract(
+            CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
+            address_encoder(channel_address),
+        )
+
         # check we are a participant of the given channel
         self.node_address = privatekey_to_address(self.client.privkey)
         self.detail(self.node_address)
+        self._check_exists()
+
+    def _check_exists(self):
+        result = self.client.call(
+            'eth_getCode',
+            address_encoder(self.address),
+            'latest',
+        )
+
+        if result == '0x':
+            raise AddressWithoutCode('Netting channel address {} does not contain code'.format(
+                address_encoder(self.address),
+            ))
 
     def token_address(self):
-        return address_decoder(self.proxy.tokenAddress.call())
+        """ Returns the type of token that can be transferred by the channel.
+
+        Raises:
+            AddressWithoutCode: If the channel was settled prior to the call.
+        """
+        try:
+            address = self.proxy.tokenAddress.call()
+        except:
+            self._check_exists()
+            raise
+
+        if address == '':
+            self._check_exists()
+
+        return address_decoder(address)
 
     def detail(self, our_address):
-        """`our_address` is an argument used only in mock_client.py but is also
-        kept here to maintain a consistent interface"""
-        our_address = self.client.sender
-        data = self.proxy.addressAndBalance.call(startgas=self.startgas)
-        settle_timeout = self.proxy.settleTimeout.call(startgas=self.startgas)
+        """ Returns a dictionary with the details of the netting channel.
 
-        if data == '':
-            raise RuntimeError('addressAndBalance call failed.')
+        Raises:
+            AddressWithoutCode: If the channel was settled prior to the call.
+        """
+        assert our_address == self.client.sender
 
-        if settle_timeout == '':
-            raise RuntimeError('settleTimeout call failed.')
+        try:
+            data = self.proxy.addressAndBalance.call(startgas=self.startgas)
+        except:
+            self._check_exists()
+            raise
+
+        settle_timeout = self.settle_timeout()
 
         if address_decoder(data[0]) == our_address:
             return {
@@ -984,25 +1039,113 @@ class NettingChannel(object):
         ))
 
     def settle_timeout(self):
-        settle_timeout = self.proxy.settleTimeout.call()
+        """ Returns the netting channel settle_timeout.
+
+        Raises:
+            AddressWithoutCode: If the channel was settled prior to the call.
+        """
+
+        try:
+            settle_timeout = self.proxy.settleTimeout.call()
+        except:
+            self._check_exists()
+            raise
+
+        if settle_timeout == '':
+            self._check_exists()
+            raise RuntimeError('settle_timeout returned empty')
+
         return settle_timeout
 
+    def opened(self):
+        """ Returns the block in which the channel was created.
+
+        Raises:
+            AddressWithoutCode: If the channel was settled prior to the call.
+        """
+        try:
+            opened = self.proxy.opened.call()
+        except:
+            self._check_exists()
+            raise
+
+        if opened == '':
+            self._check_exists()
+            raise RuntimeError('opened returned empty')
+
+        return opened
+
+    def closed(self):
+        """ Returns the block in which the channel was closed or 0.
+
+        Raises:
+            AddressWithoutCode: If the channel was settled prior to the call.
+        """
+        try:
+            closed = self.proxy.closed.call()
+        except:
+            self._check_exists()
+            raise
+
+        if closed == '':
+            self._check_exists()
+            raise RuntimeError('closed returned empty')
+
+        return closed
+
+    def closing_address(self):
+        """ Returns the address of the closer, if the channel is closed, None
+        otherwise.
+
+        Raises:
+            AddressWithoutCode: If the channel was settled prior to the call.
+        """
+        try:
+            closer = self.proxy.closingAddress()
+        except:
+            self._check_exists()
+            raise
+
+        if closer:
+            return address_decoder(closer)
+
+        return None
+
     def can_transfer(self):
-        if self.proxy.closed.call() != 0:
+        """ Returns True if the channel is opened and the node has deposit in
+        it.
+
+        Note: Having a deposit does not imply in having a balance for off-chain
+        transfers.
+
+        Raises:
+            AddressWithoutCode: If the channel was settled prior to the call.
+        """
+        closed = self.closed()
+
+        if closed != 0:
             return False
 
-        return (
-            self.proxy.opened.call() != 0 and
-            self.detail(None)['our_balance'] > 0
-        )
+        return self.detail(self.client.sender)['our_balance'] > 0
 
     def deposit(self, amount):
+        """ Deposit amount token in the channel.
+
+        Raises:
+            AddressWithoutCode: If the channel was settled prior to the call.
+            RuntimeError: If the netting channel token address is empty.
+        """
         if not isinstance(amount, (int, long)):
             raise ValueError('amount needs to be an integral number.')
 
+        token_address = self.token_address()
+
+        if token_address == '':
+            raise RuntimeError('netting channel returned empty address')
+
         token = Token(
             self.client,
-            self.token_address(),
+            token_address,
             poll_timeout=self.poll_timeout,
         )
         current_balance = token.balance_of(self.node_address)
@@ -1013,50 +1156,61 @@ class NettingChannel(object):
                 current_balance,
             ))
 
-        transaction_hash = estimate_and_transact(self, self.proxy.deposit, amount)
-
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
-        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
-        if receipt_or_none:
-            raise TransactionThrew('Deposit', receipt_or_none)
-
         log.info('deposit called', contract=pex(self.address), amount=amount)
 
-    def opened(self):
-        return self.proxy.opened.call()
-
-    def closed(self):
-        return self.proxy.closed.call()
-
-    def closing_address(self):
-        return address_decoder(self.proxy.closingAddress())
-
-    def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
-        transaction_hash = estimate_and_transact(
-            self,
-            self.proxy.close,
-            nonce,
-            transferred_amount,
-            locksroot,
-            extra_hash,
-            signature,
-        )
+        try:
+            transaction_hash = estimate_and_transact(self, self.proxy.deposit, amount)
+        except:
+            log.critical('deposit failed', contract=pex(self.address))
+            self._check_exists()
+            raise
 
         try:
-            log.info(
-                'closing channel',
-                contract=pex(self.address),
-                nonce=nonce,
-                transferred_amount=transferred_amount,
-                locksroot=encode_hex(locksroot),
-                extra_hash=encode_hex(extra_hash),
-                signature=encode_hex(signature),
-            )
-
             self.client.poll(
                 transaction_hash.decode('hex'),
                 timeout=self.poll_timeout,
             )
+        except (InvalidTransaction, JSONRPCPollTimeoutException):
+            log.critical('deposit failed', contract=pex(self.address))
+            raise
+        except:
+            log.critical('deposit failed', contract=pex(self.address))
+            self._check_exists()
+            raise
+
+        receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+        if receipt_or_none:
+            raise TransactionThrew('Deposit', receipt_or_none)
+
+        log.info('deposit sucessfull', contract=pex(self.address), amount=amount)
+
+    def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
+        """ Close the channel using the provided balance proof.
+
+        Raises:
+            AddressWithoutCode: If the channel was settled prior to the call.
+        """
+        log.info(
+            'closing channel',
+            contract=pex(self.address),
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locksroot=encode_hex(locksroot),
+            extra_hash=encode_hex(extra_hash),
+            signature=encode_hex(signature),
+        )
+
+        try:
+            transaction_hash = estimate_and_transact(
+                self,
+                self.proxy.close,
+                nonce,
+                transferred_amount,
+                locksroot,
+                extra_hash,
+                signature,
+            )
+            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
         except (InvalidTransaction, JSONRPCPollTimeoutException):
             log.critical(
                 'close failed',
@@ -1068,9 +1222,9 @@ class NettingChannel(object):
                 signature=encode_hex(signature),
             )
             raise
-        else:
-            log.info(
-                'close sucessfull',
+        except:
+            log.critical(
+                'close failed',
                 contract=pex(self.address),
                 nonce=nonce,
                 transferred_amount=transferred_amount,
@@ -1078,6 +1232,18 @@ class NettingChannel(object):
                 extra_hash=encode_hex(extra_hash),
                 signature=encode_hex(signature),
             )
+            self._check_exists()
+            raise
+
+        log.info(
+            'close sucessfull',
+            contract=pex(self.address),
+            nonce=nonce,
+            transferred_amount=transferred_amount,
+            locksroot=encode_hex(locksroot),
+            extra_hash=encode_hex(extra_hash),
+            signature=encode_hex(signature),
+        )
 
     def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         if signature:
@@ -1106,20 +1272,20 @@ class NettingChannel(object):
                     extra_hash=encode_hex(extra_hash),
                     signature=encode_hex(signature),
                 )
-
                 raise
-            else:
-                log.info(
-                    'updateTransfer sucessfull',
-                    contract=pex(self.address),
-                    nonce=nonce,
-                    transferred_amount=transferred_amount,
-                    locksroot=encode_hex(locksroot),
-                    extra_hash=encode_hex(extra_hash),
-                    signature=encode_hex(signature),
-                )
-            # TODO: check if the ChannelSecretRevealed event was emitted and if
-            # it wasn't raise an error
+            except:
+                self._check_exists()
+                raise
+
+            log.info(
+                'updateTransfer sucessfull',
+                contract=pex(self.address),
+                nonce=nonce,
+                transferred_amount=transferred_amount,
+                locksroot=encode_hex(locksroot),
+                extra_hash=encode_hex(extra_hash),
+                signature=encode_hex(signature),
+            )
 
     def withdraw(self, unlock_proofs):
         # force a list to get the length (could be a generator)
