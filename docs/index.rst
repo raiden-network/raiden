@@ -21,6 +21,7 @@ Contents
   what_is_the_dev_preview
   webui_tutorial
   spec
+  smart_contracts
   changelog
   glossary
   Raiden Codebase Documentation <./_build/generated/modules>
