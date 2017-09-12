@@ -69,7 +69,7 @@ author = u'Raiden Project'
 # built documents.
 #
 # The short X.Y version.
-version = u'0.0.9'
+version = u'0.1.0'
 # The full version, including alpha/beta/rc tags.
 release = version
 
