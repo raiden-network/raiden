@@ -612,7 +612,7 @@ class RaidenAPI(object):
         netting_channel = channel.external_state.netting_channel
 
         current_block = self.raiden.chain.block_number()
-        settle_timeout = netting_channel.detail(self.raiden.address)['settle_timeout']
+        settle_timeout = netting_channel.detail()['settle_timeout']
         settle_expiration = channel.external_state.closed_block + settle_timeout
 
         if current_block <= settle_expiration:

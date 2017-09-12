@@ -959,14 +959,14 @@ class NettingChannel(object):
         self.poll_timeout = poll_timeout
 
         self.client = jsonrpc_client
+        self.node_address = privatekey_to_address(self.client.privkey)
         self.proxy = jsonrpc_client.new_abi_contract(
             CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
             address_encoder(channel_address),
         )
 
         # check we are a participant of the given channel
-        self.node_address = privatekey_to_address(self.client.privkey)
-        self.detail(self.node_address)
+        self.detail()
         self._check_exists()
 
     def _check_exists(self):
@@ -998,13 +998,13 @@ class NettingChannel(object):
 
         return address_decoder(address)
 
-    def detail(self, our_address):
+    def detail(self):
         """ Returns a dictionary with the details of the netting channel.
 
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        assert our_address == self.client.sender
+        our_address = privatekey_to_address(self.client.privkey)
 
         try:
             data = self.proxy.addressAndBalance.call(startgas=self.startgas)
@@ -1126,7 +1126,7 @@ class NettingChannel(object):
         if closed != 0:
             return False
 
-        return self.detail(self.client.sender)['our_balance'] > 0
+        return self.detail()['our_balance'] > 0
 
     def deposit(self, amount):
         """ Deposit amount token in the channel.

@@ -563,7 +563,7 @@ class RaidenService(object):
             del self.token_to_hashlock_to_channels[token_address][hashlock]
 
     def get_channel_details(self, token_address, netting_channel):
-        channel_details = netting_channel.detail(self.address)
+        channel_details = netting_channel.detail()
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
@@ -611,7 +611,7 @@ class RaidenService(object):
 
         # restoring balances from the blockchain since the serialized
         # value could be falling behind.
-        channel_details = netting_channel.detail(self.address)
+        channel_details = netting_channel.detail()
 
         # our_address is checked by detail
         assert channel_details['partner_address'] == serialized_channel.partner_address

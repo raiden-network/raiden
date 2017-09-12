@@ -583,7 +583,7 @@ class NettingChannelTesterMock(object):
 
         # check we are a participant of the channel
         our_address = privatekey_to_address(self.private_key)
-        self.detail(our_address)
+        self.detail()
 
     def token_address(self):
         result = address_decoder(self.proxy.tokenAddress())
@@ -600,8 +600,7 @@ class NettingChannelTesterMock(object):
         if closed != 0:
             return False
 
-        our_address = privatekey_to_address(self.private_key)
-        return self.detail(our_address)['our_balance'] > 0
+        return self.detail()['our_balance'] > 0
 
     def deposit(self, amount):
         self._check_exists()
@@ -648,13 +647,13 @@ class NettingChannelTesterMock(object):
         if closing_address is not None:
             return address_decoder(closing_address)
 
-    def detail(self, our_address):
+    def detail(self):
         """ FIXME: 'our_address' is only needed for the pure python mock implementation """
         self._check_exists()
-        assert our_address == privatekey_to_address(self.private_key)
 
         data = self.proxy.addressAndBalance()
         settle_timeout = self.proxy.settleTimeout()
+        our_address = privatekey_to_address(self.private_key)
 
         if address_decoder(data[0]) == our_address:
             return {

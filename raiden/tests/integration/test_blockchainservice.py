@@ -119,8 +119,8 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     netting_channel_01.deposit(100)
     assert netting_channel_01.can_transfer() is False
     assert netting_channel_02.can_transfer() is False
-    assert netting_channel_01.detail(app0.raiden.address)['our_balance'] == 0
-    assert netting_channel_02.detail(app0.raiden.address)['our_balance'] == 0
+    assert netting_channel_01.detail()['our_balance'] == 0
+    assert netting_channel_02.detail()['our_balance'] == 0
 
     # single-funded channel
     app0.raiden.chain.token(token_address).approve(netting_address_01, 100)
@@ -128,8 +128,8 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is False
 
-    assert netting_channel_01.detail(app0.raiden.address)['our_balance'] == 100
-    assert netting_channel_02.detail(app0.raiden.address)['our_balance'] == 0
+    assert netting_channel_01.detail()['our_balance'] == 100
+    assert netting_channel_02.detail()['our_balance'] == 0
 
     # double-funded channel
     app0.raiden.chain.token(token_address).approve(netting_address_02, 70)
@@ -137,16 +137,16 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is True
 
-    assert netting_channel_02.detail(app0.raiden.address)['our_balance'] == 70
-    assert netting_channel_02.detail(app0.raiden.address)['partner_balance'] == 0
+    assert netting_channel_02.detail()['our_balance'] == 70
+    assert netting_channel_02.detail()['partner_balance'] == 0
 
     app2.raiden.chain.token(token_address).approve(netting_address_02, 130)
     app2.raiden.chain.netting_channel(netting_address_02).deposit(130)
     assert netting_channel_01.can_transfer() is True
     assert netting_channel_02.can_transfer() is True
 
-    assert netting_channel_02.detail(app0.raiden.address)['our_balance'] == 70
-    assert netting_channel_02.detail(app0.raiden.address)['partner_balance'] == 130
+    assert netting_channel_02.detail()['our_balance'] == 70
+    assert netting_channel_02.detail()['partner_balance'] == 130
 
     # open channel with same peer again after settling
     netting_channel_01.close(
