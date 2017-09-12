@@ -43,6 +43,8 @@ class ConnectionManagerMock(object):
     def __init__(self, token_address, funds):
         self.token_address = token_address
         self.funds = funds
+        self.sum_deposits = funds
+        self.open_channels = []
 
 
 class ApiTestContext():
@@ -336,22 +338,15 @@ class ApiTestContext():
 
         return channels
 
-    def get_connection_manager_funds(self, token_address):
-
-        if not isaddress(token_address):
-            raise InvalidAddress('not an address %s' % pex(token_address))
+    def get_connection_managers_info(self):
+        token_addresses = {}
 
         for connection_manager in self.connection_managers:
-            if (connection_manager.token_address == token_address):
-                return connection_manager.funds
-
-        return None
-
-    def get_connection_managers_list(self):
-        token_addresses = []
-
-        for connection_manager in self.connection_managers:
-            token_addresses.append(connection_manager.token_address)
+            token_addresses[connection_manager.token_address] = {
+                "funds": connection_manager.funds,
+                "sum_deposits": connection_manager.sum_deposits,
+                "channels": len(connection_manager.open_channels)
+            }
 
         return token_addresses
 
