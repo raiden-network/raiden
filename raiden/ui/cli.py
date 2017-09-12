@@ -161,7 +161,7 @@ OPTIONS = [
             'Max time in seconds for which an address can send no packets and '
             'still be considered healthy.'
         ),
-        default=120,
+        default=30,
         type=int,
     ),
     click.option(
@@ -284,9 +284,9 @@ def app(address,
         config['external_ip'] = listen_host
         config['external_port'] = listen_port
 
-    retries = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
-    config['protocol']['nat_keepalive_retries'] = retries
-    config['protocol']['nat_keepalive_timeout'] = send_ping_time
+    config['protocol']['nat_keepalive_retries'] = DEFAULT_NAT_KEEPALIVE_RETRIES
+    timeout = max_unresponsive_time / DEFAULT_NAT_KEEPALIVE_RETRIES
+    config['protocol']['nat_keepalive_timeout'] = timeout
 
     address_hex = address_encoder(address) if address else None
     address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
