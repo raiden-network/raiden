@@ -9,13 +9,11 @@ Raiden Network
 
 .. _Raiden Network documentation: http://raiden-network.readthedocs.io/
 
-Raiden is a proposed extension to Ethereum which scales-out asset transfer capacity in the network.
-It is inspired by the `Lightning Network`_ which leverages off-chain asset transfers to carry out the vast majority of transactions.
+The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token.
+
+The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
+
 For more information please visit http://raiden.network/.
-
-.. _Lightning Network: https://lightning.network/
-
-**Note:** *This is work in progress*
 
 Installation
 ------------
@@ -23,17 +21,6 @@ Installation
 Please refer to the `Installation`_ section in the official docs.
 
 .. _Installation: http://raiden-network.readthedocs.io/en/stable/overview_and_guide.html#installation
-
-macOS specifics
-~~~~~~~~~~~~~~~
-
-First install the system-dependencies for a successful build of the Python packages::
-
-    brew install pkg-config libffi automake
-
-Then set the environment variable for your `pkg-config` path to `libffi`::
-
-    export PKG_CONFIG_PATH=/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig/
 
 
 Ropsten testnet
