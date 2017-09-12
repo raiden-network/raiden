@@ -22,8 +22,8 @@ def check_channel(app1, app2, netting_channel_address, deposit_amount):
         assert netcontract1.can_transfer()
         assert netcontract2.can_transfer()
 
-    app1_details = netcontract1.detail(app1.raiden.address)
-    app2_details = netcontract2.detail(app2.raiden.address)
+    app1_details = netcontract1.detail()
+    app2_details = netcontract2.detail()
 
     assert app1_details['our_address'] == app2_details['partner_address']
     assert app1_details['partner_address'] == app2_details['our_address']
@@ -75,8 +75,8 @@ def setup_channels(token_address, app_pairs, deposit, settle_timeout):
         first_netting_channel = first.raiden.chain.netting_channel(netcontract_address)
         second_netting_channel = second.raiden.chain.netting_channel(netcontract_address)
 
-        details1 = first_netting_channel.detail(first.raiden.address)
-        details2 = second_netting_channel.detail(second.raiden.address)
+        details1 = first_netting_channel.detail()
+        details2 = second_netting_channel.detail()
 
         assert details1['our_balance'] == deposit
         assert details1['partner_balance'] == deposit
