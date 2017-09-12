@@ -640,6 +640,52 @@ Possible Responses
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
+Querying connections details
+------------------------------
+
+You can query for details of previously joined token networks by making a GET request to the connection endpoint.
+
+``GET /api/<version>/connection``
+
+The request will return a JSON object where each key is a token address for which you have open channels.
+The values are a JSON object containing numeric values for ``funds`` from last connect request, ``sum_deposits``
+of all currently open channels and number of ``channels`` currently open for that token.
+
+Example Request
+^^^^^^^^^^^^^^^
+
+``GET /api/1/connection``
+
+Example Response
+^^^^^^^^^^^^^^^^
+``200 OK``
+
+::
+
+    {
+        "0x2a65aca4d5fc5b5c859090a6c34d164135398226": {
+            "funds": 100,
+            "sum_deposits": 67,
+            "channels": 3
+        },
+        "0x0f114a1e9db192502e7856309cc899952b3db1ed": {
+            "funds": 49
+            "sum_deposits": 31,
+            "channels": 1
+        }
+    }
+
+Possible Responses
+^^^^^^^^^^^^^^^^^^
+
++------------------+---------------------------+
+| HTTP Code        | Condition                 |
++==================+===========================+
+| 200 OK           | For a successful query    |
++------------------+---------------------------+
+| 500 Server Error | Internal Raiden node error|
++------------------+---------------------------+
+
 Transfers
 =========
 
