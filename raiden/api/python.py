@@ -149,21 +149,10 @@ class RaidenAPI(object):
         connection_manager = self.raiden.connection_manager_for_token(token_address)
         return connection_manager.leave(only_receiving)
 
-    def get_connection_manager_funds(self, token_address):
-        """Get the sum of all connection manager's open channels deposits"""
-        try:
-            connection_manager = self.raiden.connection_manager_for_token(token_address)
-        except InvalidAmount:
-            connection_manager = None
-        if connection_manager is not None and connection_manager.open_channels:
-            return connection_manager.sum_deposits
-        else:
-            # explicitly return None, in case of invalid connection manager
-            return None
-
-    def get_connection_managers_list(self):
-        """Get a list of connection managers with open channels"""
-        connection_managers = []
+    def get_connection_managers_info(self):
+        """Get a dict whose keys are token addresses and whose values are
+        open channels, funds of last request, sum of deposits and number of channels"""
+        connection_managers = dict()
 
         for token in self.get_tokens_list():
             try:
@@ -171,7 +160,11 @@ class RaidenAPI(object):
             except InvalidAddress:
                 connection_manager = None
             if connection_manager is not None and connection_manager.open_channels:
-                connection_managers.append(connection_manager.token_address)
+                connection_managers[connection_manager.token_address] = {
+                    "funds": connection_manager.funds,
+                    "sum_deposits": connection_manager.sum_deposits,
+                    "channels": len(connection_manager.open_channels),
+                }
 
         return connection_managers
 
