@@ -2,13 +2,16 @@ import { Injectable, NgZone } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
+
 import { RaidenConfig } from './raiden.config';
+import { SharedService } from './shared.service';
 import { tokenabi } from './tokenabi';
+
 import { Usertoken } from '../models/usertoken';
 import { Channel } from '../models/channel';
 import { Event, EventsParam } from '../models/event';
 import { SwapToken } from '../models/swaptoken';
-import { SharedService } from './shared.service';
+import { Connection, Connections } from '../models/connection';
 
 type CallbackFunc = (error: Error, result: any) => void;
 
@@ -59,17 +62,17 @@ export class RaidenService {
     public getTokens(refresh: boolean = false): Observable<Array<Usertoken>> {
         return this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`)
             .combineLatest(refresh ?
-                this.http.get<Array<string>>(`${this.raidenConfig.api}/connection`) :
+                this.http.get<Connections>(`${this.raidenConfig.api}/connection`) :
                 Observable.of(null))
             .map(([tokenArray, connections]): Array<Observable<Usertoken>> =>
                 tokenArray
                     .map((token) =>
                         this.getUsertoken(token, refresh)
                             .map((userToken) => userToken && connections ?
-                                Object.assign(userToken,
-                                    { connected: connections.filter((connection) =>
-                                        connection === token).length > 0 }) :
-                                userToken
+                                Object.assign(
+                                    userToken,
+                                    { connected: connections[token] }
+                                ) : userToken
                             )
                     )
             )

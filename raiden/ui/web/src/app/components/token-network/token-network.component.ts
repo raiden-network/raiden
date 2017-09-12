@@ -66,7 +66,7 @@ export class TokenNetworkComponent implements OnInit {
             {
                 label: 'Transfer',
                 icon: 'fa-exchange',
-                disabled: !(userToken.connected && userToken.balance > 0),
+                disabled: !(userToken.connected && userToken.connected.sum_deposits > 0),
                 command: () => this.showTransferDialog(userToken),
             },
             {
