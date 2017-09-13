@@ -21,5 +21,6 @@ Contents
   what_is_the_dev_preview
   webui_tutorial
   spec
+  changelog
   glossary
   Raiden Codebase Documentation <./_build/generated/modules>
