@@ -21,6 +21,10 @@ coverage>=4.0<4.4
 
 # Documentation
 sphinx>=1.5.1<2.0.0
+sphinx_rtd_theme
+sphinxcontrib-images
+# Pinning to latest master commit because it works with sphinx version >= 1.5.0
+git+https://github.com/bitprophet/releases.git@8261431dc8b40f6e4f587503e8a50f9d3290af74
 
 # Release
 bumpversion>=0.5.3
