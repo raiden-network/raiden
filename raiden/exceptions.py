@@ -7,11 +7,6 @@ class RaidenError(Exception):
     pass
 
 
-class JSONRPCPollTimeoutException(RaidenError):
-    # FIXME import this from pyethapp.rpc_client once it is implemented
-    pass
-
-
 # Exceptions raised due to programming errors
 
 class HashLengthNot32(RaidenError):
