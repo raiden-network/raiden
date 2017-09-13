@@ -45,7 +45,7 @@ class ChannelExternalState(object):
 
         self._opened_block = netting_channel.opened()
         self._closed_block = netting_channel.closed()
-        self._settled_block = netting_channel.settled()
+        self._settled_block = 0
 
         self.close_event = Event()
         self.settle_event = Event()
@@ -98,11 +98,6 @@ class ChannelExternalState(object):
         self._settled_block = block_number
         self.settle_event.set()
         return True
-
-    def query_settled(self):
-        # FIXME: the if None: return 0 constraint should be ensured on the
-        # proxy side; see also #394
-        return self.netting_channel.settled() or 0
 
     def close(self, balance_proof):
         if not self._called_close:

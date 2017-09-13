@@ -3,10 +3,10 @@
   <a target="_blank" href="http://raiden.network/">Raiden Network</a>
   <strong class="address">{{raidenAddress}}</strong>
   <i class="fa fa-bars fa-2x toggle-btn pull-right" (click)="menuCollapsed=!menuCollapsed"></i>
-  <a class="busy pull-right" *ngIf="raidenService.requestsCnt$ | async; let reqCnt">
+  <a class="busy pull-right" *ngIf="sharedService.requests$ | async; let reqCount">
     <span class="fa-stack">
       <i class="fa fa-spinner fa-pulse fa-fw fa-stack-2x"></i>
-      <i class="fa fa-stack-1x counter">{{ reqCnt }}</i>
+      <i class="fa fa-stack-1x counter">{{ reqCount }}</i>
     </span>
   </a>
 </div>

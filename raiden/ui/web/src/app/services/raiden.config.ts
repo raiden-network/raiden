@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+
+import { SharedService } from './shared.service';
+
 declare var Web3;
 
 interface RDNConfig {
@@ -16,7 +19,7 @@ const default_config: RDNConfig = {
     web3: '/web3',
     web3_fallback: 'http://localhost:8545',
     poll_interval: 5000,
-    block_start: 1509634,
+    block_start: 1603031,
     http_timeout: 600000,
 };
 
@@ -26,7 +29,8 @@ export class RaidenConfig {
     public api: string;
     public web3: any;
 
-    constructor(private http: HttpClient) { }
+    constructor(private http: HttpClient,
+                private sharedService: SharedService) { }
 
     load(url: string) {
         return new Promise((resolve) => {
@@ -39,7 +43,7 @@ export class RaidenConfig {
                     this.web3.version.getNetwork((err, res) => {
                         if (err) {
                             console.error('Invalid web3 endpoint', err);
-                            console.info('Switching to fallback: ' + this.config.web3_fallback);
+                            console.log('Switching to fallback: ' + this.config.web3_fallback);
                             this.config.web3 = this.config.web3_fallback;
                             this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3));
                         } else {
@@ -47,6 +51,7 @@ export class RaidenConfig {
                             // because of long (events) running requests
                             this.web3 = new Web3(new Web3.providers.HttpProvider(this.config.web3));
                         }
+                        this.sharedService.httpTimeout = this.config.http_timeout;
                         resolve();
                     });
                 });

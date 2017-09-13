@@ -3,7 +3,7 @@ pragma solidity ^0.4.11;
 import "./NettingChannelLibrary.sol";
 
 contract NettingChannelContract {
-    string constant public contract_version = "0.0._";
+    string constant public contract_version = "0.1._";
 
     using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
@@ -126,7 +126,7 @@ contract NettingChannelContract {
     ///         have passed.
     function settle() {
         data.settle();
-        ChannelSettled(data.settled);
+        ChannelSettled(block.number);
     }
 
     /// @notice Returns the number of blocks until the settlement timeout.
@@ -151,12 +151,6 @@ contract NettingChannelContract {
     /// @return The block number for when the channel was closed.
     function closed() constant returns (uint) {
         return data.closed;
-    }
-
-    /// @notice Returns the block number for when the channel was settled.
-    /// @return The block number for when the channel was settled.
-    function settled() constant returns (uint) {
-        return data.settled;
     }
 
     /// @notice Returns the address of the closing participant.

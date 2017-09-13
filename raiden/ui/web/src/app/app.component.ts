@@ -12,8 +12,8 @@ export class AppComponent implements OnInit {
     public raidenAddress;
     public menuCollapsed = false;
 
-    constructor(public raidenService: RaidenService,
-                public sharedService: SharedService) { }
+    constructor(public sharedService: SharedService,
+                public raidenService: RaidenService) { }
 
     ngOnInit() {
         this.raidenService.getRaidenAddress()

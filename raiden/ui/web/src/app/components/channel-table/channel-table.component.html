@@ -18,7 +18,7 @@
       </p-column>
       <p-column field="token_address" header="Token" [sortable]="true">
         <ng-template let-col let-data="rowData" pTemplate="body">
-          <span [title]="data[col.field]">{{ data[col.field] }}</span>
+          <span [title]="data[col.field]">{{ data[col.field] | token | async }}</span>
         </ng-template>
       </p-column>
       <p-column field="balance" header="Balance" [style]="{width: '7em', 'text-align': 'center'}" [sortable]="true"></p-column>

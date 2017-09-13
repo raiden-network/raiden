@@ -1,13 +1,20 @@
 import { Injectable } from '@angular/core';
-import { Subject } from 'rxjs/Subject';
-import { Channel } from '../models/channel';
+import { HttpRequest } from '@angular/common/http';
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { Message } from 'primeng/primeng';
+
+import { Channel } from '../models/channel';
 
 
 @Injectable()
 export class SharedService {
 
+    public httpTimeout: number;
     public messages: Message[] = [];
+
+    private requestsSubject = new BehaviorSubject<number>(0);
+    public readonly requests$ = this.requestsSubject.asObservable()
+        .scan((acc, value) => Math.max(acc + value, 0), 0);
 
     public msg(message: Message) {
         this.messages = [...this.messages, message];
@@ -15,6 +22,14 @@ export class SharedService {
 
     public cleanMessages() {
         this.messages = [];
+    }
+
+    requestStarted(req?: HttpRequest<any>) {
+        this.requestsSubject.next(+1);
+    }
+
+    requestFinished(req?: HttpRequest<any>) {
+        this.requestsSubject.next(-1);
     }
 
 }

@@ -7,6 +7,7 @@ import { SelectItem } from 'primeng/primeng';
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
 import { SwapToken } from '../../models/swaptoken';
+import { TokenPipe } from '../../pipes/token.pipe';
 
 const DIV = '/';
 const TEST_CONTROLS = ['partner_address', 'identifier',
@@ -31,18 +32,16 @@ export class SwapDialogComponent implements OnInit, OnDestroy {
     public showTakerString$: Observable<boolean>;
     public takerStringFC: FormControl = new FormControl(null);
 
-    constructor(private raidenService: RaidenService,
+    constructor(
+        private raidenService: RaidenService,
         private sharedService: SharedService,
-        private fb: FormBuilder) { }
+        private fb: FormBuilder,
+        private tokenPipe: TokenPipe,
+    ) { }
 
     ngOnInit() {
-        this.tokenAddressMapping$ = this.raidenService.getTokensBalances(false)
-            .map((userTokens) => userTokens.map((userToken) =>
-                ({
-                    value: userToken.address,
-                    label: userToken.name + ' (' + userToken.address + ')',
-                }))
-            )
+        this.tokenAddressMapping$ = this.raidenService.getTokens()
+            .map((userTokens) => this.tokenPipe.tokensToSelectItems(userTokens))
             .share();
 
         this.form = this.fb.group({

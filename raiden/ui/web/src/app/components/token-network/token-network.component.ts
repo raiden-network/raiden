@@ -9,6 +9,7 @@ import { SharedService } from '../../services/shared.service';
 import { Usertoken } from '../../models/usertoken';
 import { Message, ConfirmationService } from 'primeng/primeng';
 import { EventsParam } from '../../models/event';
+import { WithMenu } from '../../models/withmenu';
 
 @Component({
     selector: 'app-token-network',
@@ -20,7 +21,7 @@ export class TokenNetworkComponent implements OnInit {
     @Input() raidenAddress: string;
 
     private tokensSubject: BehaviorSubject<void> = new BehaviorSubject(null);
-    public tokensBalances$: Observable<Usertoken[]>;
+    public tokensBalances$: Observable<Array<WithMenu<Usertoken>>>;
     public selectedToken: Usertoken;
     public refreshing = true;
     public watchEvents: EventsParam[] = [{}];
@@ -38,11 +39,15 @@ export class TokenNetworkComponent implements OnInit {
     ngOnInit() {
         this.tokensBalances$ = this.tokensSubject
             .do(() => this.refreshing = true)
-            .switchMap(() => this.raidenService.getTokensBalances()
-                .finally(() => this.refreshing = false))
-            .map((userTokens) => userTokens.map(
-                (userToken) => Object.assign(userToken, { menu: this.menuFor(userToken) })
-            ));
+            .switchMap(() => this.raidenService.getTokens(true))
+            .map((userTokens) => userTokens.map((userToken) =>
+                Object.assign(
+                    userToken,
+                    { menu: this.menuFor(userToken) }
+                ) as WithMenu<Usertoken>
+            ))
+            .do(() => this.refreshing = false,
+                () => this.refreshing = false);
     }
 
     private menuFor(userToken: Usertoken): MenuItem[] {
@@ -55,13 +60,13 @@ export class TokenNetworkComponent implements OnInit {
             {
                 label: 'Leave Network',
                 icon: 'fa-sign-out',
-                disabled: !(userToken.channelCnt > 0),
+                disabled: !(userToken.connected),
                 command: () => this.showLeaveDialog(userToken),
             },
             {
                 label: 'Transfer',
                 icon: 'fa-exchange',
-                disabled: !(userToken.channelCnt > 0),
+                disabled: !(userToken.connected && userToken.balance > 0),
                 command: () => this.showTransferDialog(userToken),
             },
             {

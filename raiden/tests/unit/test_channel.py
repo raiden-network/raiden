@@ -38,9 +38,6 @@ class NettingChannelMock(object):
     def closed(self):
         return 0
 
-    def settled(self):
-        return 0
-
 
 def make_external_state():
     channel_for_hashlock = list()
@@ -882,9 +879,6 @@ def test_channel_close_called_only_once():
             return 1
 
         def closed(self):
-            return 0
-
-        def settled(self):
             return 0
 
         def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):

@@ -2,10 +2,11 @@ import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angu
 import { FormControl, FormGroup, FormBuilder } from '@angular/forms';
 import { Observable } from 'rxjs/Observable';
 import { Subscription } from 'rxjs/Subscription';
+import { SelectItem } from 'primeng/primeng';
 
 import { RaidenService } from '../../services/raiden.service';
 import { SharedService } from '../../services/shared.service';
-import { SelectItem } from 'primeng/primeng';
+import { TokenPipe } from '../../pipes/token.pipe';
 
 @Component({
     selector: 'app-open-dialog',
@@ -21,18 +22,16 @@ export class OpenDialogComponent implements OnInit, OnDestroy {
     public tokenAddressMapping$: Observable<SelectItem[]>;
     public form: FormGroup;
 
-    constructor(private raidenService: RaidenService,
+    constructor(
+        private raidenService: RaidenService,
         private sharedService: SharedService,
-        private fb: FormBuilder) { }
+        private fb: FormBuilder,
+        private tokenPipe: TokenPipe,
+    ) { }
 
     ngOnInit() {
-        this.tokenAddressMapping$ = this.raidenService.getTokensBalances(false)
-            .map((userTokens) => userTokens.map((userToken) =>
-                ({
-                    value: userToken.address,
-                    label: userToken.name + ' (' + userToken.address + ')',
-                }))
-            );
+        this.tokenAddressMapping$ = this.raidenService.getTokens()
+            .map((userTokens) => this.tokenPipe.tokensToSelectItems(userTokens));
 
         this.form = this.fb.group({
             partner_address: [null, (control) =>

@@ -35,6 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath('../raiden/')))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'releases',
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
@@ -43,6 +44,10 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinxcontrib.images',
 ]
+
+# 'releases' (changelog) settings
+releases_issue_uri = "https://github.com/raiden-network/raiden/issues/%s"
+releases_release_uri = "https://github.com/raiden-network/raiden/releases/tags/%s"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -62,15 +67,14 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Raiden Network'
-copyright = u'2016-2017, Brainbot AG'
-author = u'Brainbot AG'
+author = u'Raiden Project'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = u'0.0.9'
+version = u'0.1.0'
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -167,6 +171,8 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_show_copyright = False
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -273,7 +279,7 @@ latex_elements = {
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
     (master_doc, 'Raiden.tex', u'Raiden Network Documentation',
-     u'Brainbot AG', 'manual'),
+     u'Raiden Project', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

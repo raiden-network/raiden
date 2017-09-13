@@ -38,9 +38,6 @@ class NettingChannelMock(object):
     def closed(self):
         return self.state == CHANNEL_STATE_CLOSED or self.state == CHANNEL_STATE_SETTLED
 
-    def settled(self):
-        return self.state == CHANNEL_STATE_SETTLED
-
 
 class ConnectionManagerMock(object):
     def __init__(self, token_address, funds):

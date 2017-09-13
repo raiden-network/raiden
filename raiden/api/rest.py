@@ -515,7 +515,7 @@ class RestAPI(object):
             return jsonify(result.data)
 
         if state == CHANNEL_STATE_SETTLED:
-            if current_state == CHANNEL_STATE_SETTLED or current_state == CHANNEL_STATE_OPENED:
+            if current_state != CHANNEL_STATE_CLOSED:
                 return make_response(
                     'Attempted to settle a channel at its {} state'.format(current_state),
                     httplib.CONFLICT,
@@ -526,13 +526,13 @@ class RestAPI(object):
                     channel.partner_address
                 )
             except InvalidState:
-                result = make_response(
+                return make_response(
                     'Settlement period is not yet over',
                     httplib.CONFLICT,
                 )
             else:
                 result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-            return jsonify(result.data)
+                return jsonify(result.data)
 
         # should never happen, channel_state is validated in the schema
         return make_response(
