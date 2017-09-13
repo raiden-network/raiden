@@ -395,7 +395,6 @@ def test_new_channel_state(private_keys, tester_state, tester_channelmanager):
     assert channel.tokenAddress(sender=pkey0) == tester_channelmanager.tokenAddress(sender=pkey0)
     assert channel.opened(sender=pkey0) == tester_state.block.number - 1
     assert channel.closed(sender=pkey0) == 0
-    assert channel.settled(sender=pkey0) == 0
 
     address_and_balances = channel.addressAndBalance(sender=pkey0)
     address0 = privatekey_to_address(pkey0)
