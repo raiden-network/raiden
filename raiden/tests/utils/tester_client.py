@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from collections import defaultdict
 from itertools import count
 
@@ -47,17 +48,16 @@ def tester_deploy_contract(
         tester_state,
         private_key,
         contract_name,
-        contract_file,
+        contract_path,
         constructor_parameters=None):
 
-    contract_path = get_contract_path(contract_file)
     all_contracts = _solidity.compile_file(contract_path, libraries=dict())
 
     contract_key = solidity_get_contract_key(all_contracts, contract_path, contract_name)
     contract = all_contracts[contract_key]
     contract_interface = contract['abi']
 
-    log.info('Deploying "{}" contract'.format(contract_file))
+    log.info('Deploying "{}" contract'.format(os.path.basename(contract_path)))
 
     dependencies = deploy_dependencies_symbols(all_contracts)
     deployment_order = dependencies_order_of_build(contract_key, dependencies)
@@ -323,21 +323,21 @@ class BlockChainServiceTesterMock(object):
     def uninstall_filter(self, filter_id_raw):
         pass
 
-    def deploy_contract(self, contract_name, contract_file, constructor_parameters=None):
+    def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
         return tester_deploy_contract(
             self.tester_state,
             self.private_key,
             contract_name,
-            contract_file,
+            contract_path,
             constructor_parameters,
         )
 
-    def deploy_and_register_token(self, contract_name, contract_file, constructor_parameters=None):
+    def deploy_and_register_token(self, contract_name, contract_path, constructor_parameters=None):
         assert self.default_registry
 
         token_address = self.deploy_contract(
             contract_name,
-            contract_file,
+            contract_path,
             constructor_parameters,
         )
         self.default_registry.add_token(token_address)  # pylint: disable=no-member

@@ -42,9 +42,10 @@ def test_new_netting_contract(raiden_network, token_amount, settle_timeout):
 
     blockchain_service0 = app0.raiden.chain
 
+    humantoken_path = get_contract_path('HumanStandardToken.sol')
     token_address = blockchain_service0.deploy_and_register_token(
         contract_name='HumanStandardToken',
-        contract_file='HumanStandardToken.sol',
+        contract_path=humantoken_path,
         constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
     )
 
