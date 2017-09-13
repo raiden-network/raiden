@@ -144,7 +144,10 @@ class ChannelExternalStateTester(object):
 
     @property
     def settled_block(self):
-        return self.netting_channel.settled()
+        # XXX: Not sure about this. In normal operation (netting_channel.py)
+        # this is set from the settled event. Does this even make sense to
+        # be queried by tester?
+        return 0
 
     def can_transfer(self):
         return self.netting_channel.can_transfer()
@@ -641,10 +644,6 @@ class NettingChannelTesterMock(object):
         closing_address = self.proxy.closingAddress()
         if closing_address is not None:
             return address_decoder(closing_address)
-
-    def settled(self):
-        settled = self.proxy.settled()
-        return settled
 
     def detail(self, our_address):
         """ FIXME: 'our_address' is only needed for the pure python mock implementation """

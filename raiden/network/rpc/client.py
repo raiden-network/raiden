@@ -1031,9 +1031,6 @@ class NettingChannel(object):
     def closing_address(self):
         return address_decoder(self.proxy.closingAddress())
 
-    def settled(self):
-        return self.proxy.settled.call()
-
     def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         transaction_hash = estimate_and_transact(
             self,
