@@ -65,14 +65,14 @@ def _token_addresses(
         if register:
             token_address = deploy_service.deploy_and_register_token(
                 contract_name='HumanStandardToken',
-                contract_file='HumanStandardToken.sol',
+                contract_path=get_contract_path('HumanStandardToken.sol'),
                 constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
             )
             result.append(token_address)
         else:
             token_address = deploy_service.deploy_contract(
                 contract_name='HumanStandardToken',
-                contract_file='HumanStandardToken.sol',
+                contract_path=get_contract_path('HumanStandardToken.sol'),
                 constructor_parameters=(token_amount, 'raiden', 2, 'Rd'),
             )
             result.append(token_address)
@@ -127,7 +127,7 @@ def cached_genesis(request, blockchain_type):
 
     endpoint_discovery_address = deploy_service.deploy_contract(
         'EndpointRegistry',
-        'EndpointRegistry.sol',
+        get_contract_path('EndpointRegistry.sol'),
     )
 
     endpoint_discovery_services = [
@@ -334,7 +334,7 @@ def endpoint_discovery_services(blockchain_services, blockchain_type, cached_gen
     if discovery_address is None:
         discovery_address = blockchain_services.deploy_service.deploy_contract(
             'EndpointRegistry',
-            'EndpointRegistry.sol',
+            get_contract_path('EndpointRegistry.sol'),
         )
 
     return [
@@ -386,7 +386,7 @@ def blockchain_backend(
 
 
 @pytest.fixture
-def deploy_client(blockchain_type, blockchain_rpc_ports, deploy_key, request):
+def deploy_client(blockchain_type, blockchain_rpc_ports, deploy_key):
     if blockchain_type == 'geth':
         host = '0.0.0.0'
         rpc_port = blockchain_rpc_ports[0]
@@ -515,7 +515,7 @@ def _tester_services(deploy_key, private_keys, tester_blockgas_limit):
         tester,
         deploy_key,
         contract_name='Registry',
-        contract_file='Registry.sol',
+        contract_path=get_contract_path('Registry.sol'),
     )
 
     deploy_blockchain = BlockChainServiceTesterMock(

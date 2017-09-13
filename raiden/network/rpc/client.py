@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from time import time as now
 
 import rlp
@@ -35,7 +36,6 @@ from raiden.settings import (
     GAS_PRICE,
 )
 from raiden.utils import (
-    get_contract_path,
     isaddress,
     pex,
     privatekey_to_address,
@@ -460,13 +460,12 @@ class BlockChainService(object):
     def uninstall_filter(self, filter_id_raw):
         self.client.call('eth_uninstallFilter', filter_id_raw)
 
-    def deploy_contract(self, contract_name, contract_file, constructor_parameters=None):
-        contract_path = get_contract_path(contract_file)
+    def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
         contracts = _solidity.compile_file(contract_path, libraries=dict())
 
         log.info(
             'Deploying "%s" contract',
-            contract_file,
+            os.path.basename(contract_path),
         )
 
         proxy = self.client.deploy_solidity_contract(
@@ -481,12 +480,12 @@ class BlockChainService(object):
         )
         return proxy.address
 
-    def deploy_and_register_token(self, contract_name, contract_file, constructor_parameters=None):
+    def deploy_and_register_token(self, contract_name, contract_path, constructor_parameters=None):
         assert self.default_registry
 
         token_address = self.deploy_contract(
             contract_name,
-            contract_file,
+            contract_path,
             constructor_parameters,
         )
         self.default_registry.add_token(token_address)  # pylint: disable=no-member
