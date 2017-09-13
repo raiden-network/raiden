@@ -14,7 +14,6 @@ from coincurve import PrivateKey
 from ethereum import slogging
 from ethereum.utils import encode_hex
 
-from raiden.network.rpc.client import JSONRPCPollTimeoutException
 from raiden.constants import (
     UINT64_MAX,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
@@ -145,8 +144,7 @@ def endpoint_registry_exception_handler(greenlet):
         greenlet.get()
     except Exception as e:  # pylint: disable=broad-except
         rpc_unreachable = (
-            e.args[0] == 'timeout when polling for transaction' or
-            isinstance(e, JSONRPCPollTimeoutException)
+            e.args[0] == 'timeout when polling for transaction'
         )
 
         if rpc_unreachable:
