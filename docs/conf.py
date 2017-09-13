@@ -35,6 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath('../raiden/')))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'releases',
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
@@ -43,6 +44,10 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinxcontrib.images',
 ]
+
+# 'releases' (changelog) settings
+releases_issue_uri = "https://github.com/raiden-network/raiden/issues/%s"
+releases_release_uri = "https://github.com/raiden-network/raiden/releases/tags/%s"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

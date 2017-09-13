@@ -27,3 +27,4 @@ psutil
 filelock
 sphinx_rtd_theme
 sphinxcontrib-images
+releases
