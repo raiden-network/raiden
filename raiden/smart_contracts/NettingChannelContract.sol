@@ -126,7 +126,7 @@ contract NettingChannelContract {
     ///         have passed.
     function settle() {
         data.settle();
-        ChannelSettled(data.settled);
+        ChannelSettled(block.number);
     }
 
     /// @notice Returns the number of blocks until the settlement timeout.
@@ -151,12 +151,6 @@ contract NettingChannelContract {
     /// @return The block number for when the channel was closed.
     function closed() constant returns (uint) {
         return data.closed;
-    }
-
-    /// @notice Returns the block number for when the channel was settled.
-    /// @return The block number for when the channel was settled.
-    function settled() constant returns (uint) {
-        return data.settled;
     }
 
     /// @notice Returns the address of the closing participant.

@@ -35,7 +35,6 @@ library NettingChannelLibrary {
         uint settle_timeout;
         uint opened;
         uint closed;
-        uint settled;
         address closing_address;
         Token token;
         Participant[2] participants;
@@ -44,8 +43,8 @@ library NettingChannelLibrary {
     }
 
 
-    modifier notSettledButClosed(Data storage self) {
-        require(self.settled <= 0 && self.closed > 0);
+    modifier isClosed(Data storage self) {
+        require(self.closed > 0);
         _;
     }
 
@@ -56,11 +55,6 @@ library NettingChannelLibrary {
 
     modifier timeoutOver(Data storage self) {
         require(self.closed + self.settle_timeout <= block.number);
-        _;
-    }
-
-    modifier channelSettled(Data storage self) {
-        require(self.settled != 0);
         _;
     }
 
@@ -153,7 +147,7 @@ library NettingChannelLibrary {
         bytes32 extra_hash,
         bytes signature
     )
-        notSettledButClosed(self)
+        isClosed(self)
         stillTimeout(self)
     {
         address transfer_address;
@@ -220,7 +214,7 @@ library NettingChannelLibrary {
     /// @param merkle_proof The merkle proof
     /// @param secret The secret
     function withdraw(Data storage self, bytes locked_encoded, bytes merkle_proof, bytes32 secret)
-        notSettledButClosed(self)
+        isClosed(self)
     {
         uint amount;
         uint8 index;
@@ -298,7 +292,7 @@ library NettingChannelLibrary {
     /// @dev Settles the balances of the two parties fo the channel
     /// @return The participants with netted balances
     function settle(Data storage self)
-        notSettledButClosed(self)
+        isClosed(self)
         timeoutOver(self)
     {
         uint8 closing_index;
@@ -307,8 +301,6 @@ library NettingChannelLibrary {
         uint256 counter_net;
         uint256 closer_amount;
         uint256 counter_amount;
-
-        self.settled = block.number;
 
         closing_index = index_or_throw(self, self.closing_address);
         counter_index = 1 - closing_index;
@@ -350,7 +342,7 @@ library NettingChannelLibrary {
             require(self.token.transfer(closing_party.node_address, closer_amount));
         }
 
-        kill(self);
+        selfdestruct(0x00000000000000000000);
     }
 
     // NOTES:
@@ -441,9 +433,5 @@ library NettingChannelLibrary {
 
     function max(uint a, uint b) constant internal returns (uint) {
         return a > b ? a : b;
-    }
-
-    function kill(Data storage self) channelSettled(self) {
-        selfdestruct(0x00000000000000000000);
     }
 }
