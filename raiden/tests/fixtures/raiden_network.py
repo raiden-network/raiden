@@ -139,9 +139,6 @@ def raiden_network(
             settle_timeout
         )
 
-    for app in raiden_apps:
-        app.raiden.register_registry(app.raiden.chain.default_registry.address)
-
     _raiden_cleanup(request, raiden_apps)
 
     # The block_number is primed on the app creation, but after the app is
