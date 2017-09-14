@@ -81,7 +81,7 @@ class ChannelExternalState(object):
         if block_number <= 0:
             raise ValueError('closed block must be non-zero and positive')
 
-        if self._closed_block != 0 and self._closed_block != block_number:
+        if self._closed_block != 0:
             return False
 
         self._closed_block = block_number
