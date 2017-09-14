@@ -14,8 +14,8 @@ from raiden.transfer.state import (
     CHANNEL_STATE_SETTLED,
 )
 from raiden.exceptions import (
-    TransactionThrew,
     AddressWithoutCode,
+    TransactionThrew,
 )
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -265,8 +265,10 @@ class ConnectionManager(object):
                     partner,
                     funding_amount,
                 )
-            except (TransactionThrew, AddressWithoutCode):
-                pass
+            except AddressWithoutCode:
+                log.warn('connection manager: channel closed just after it was created')
+            except TransactionThrew:
+                log.exception('connection manager: deposit failed')
 
     def find_new_partners(self, number):
         """Search the token network for potential channel partners.
