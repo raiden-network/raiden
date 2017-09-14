@@ -232,8 +232,17 @@ class RaidenAPI(object):
         if not isaddress(partner_address):
             raise InvalidAddress('Expected binary address format for partner in channel deposit')
 
-        graph = self.raiden.token_to_channelgraph[token_address]
-        channel = graph.partneraddress_to_channel[partner_address]
+        graph = self.raiden.token_to_channelgraph.get(token_address)
+        if graph is None:
+            raise InvalidAddress('Unknown token address')
+
+        channel = graph.partneraddress_to_channel.get(partner_address)
+        if channel is None:
+            raise InvalidAddress('No channel with partner_address for the given token')
+
+        if channel.token_address != token_address:
+            raise InvalidAddress('token_address does not match the netting channel attribute')
+
         token = self.raiden.chain.token(token_address)
         netcontract_address = channel.external_state.netting_channel.address
         old_balance = channel.contract_balance
