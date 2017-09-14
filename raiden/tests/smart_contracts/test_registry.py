@@ -58,6 +58,13 @@ def test_registry(tester_registry, tester_events, private_keys, tester_state):
     assert tester_events[1]['channel_manager_address'] == contract_address2
 
 
+def test_registry_reject_empty_address(tester_registry, tester_events, private_keys, tester_state):
+    privatekey0 = tester.DEFAULT_KEY
+
+    with pytest.raises(Exception):
+        tester_registry.addToken('', sender=privatekey0)
+
+
 def test_registry_nonexistent_token(tester_registry, tester_events):
     privatekey0 = tester.DEFAULT_KEY
 
