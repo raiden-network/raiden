@@ -128,6 +128,7 @@ class RaidenAPI(object):
         try:
             connection_manager = self.raiden.connection_manager_for_token(token_address)
         except InvalidAddress:
+            # token is not yet registered
             self.raiden.chain.default_registry.add_token(token_address)
 
             # wait for registration
@@ -214,7 +215,7 @@ class RaidenAPI(object):
         given `token_address` in order to be able to do transfers.
 
         Raises:
-            InvalidAddress: If either token_address or partner_address is not a
+            InvalidAddress: If either token_address or partner_address is not
             20 bytes long.
             TransactionThrew: May happen for multiple reasons:
                 - If the token approval fails, e.g. the token may validate if
@@ -252,7 +253,7 @@ class RaidenAPI(object):
         # user spent his balance before deposit.
         balance = token.balance_of(self.raiden.address.encode('hex'))
         if not balance >= amount:
-            msg = "Not enough balance to deposit. {} Available={} Tried={}".format(
+            msg = 'Not enough balance to deposit. {} Available={} Tried={}'.format(
                 pex(token_address),
                 balance,
                 amount,

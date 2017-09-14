@@ -802,7 +802,7 @@ class Channel(object):
                     )
                 else:
                     log.warn(
-                        'channel closed on a different block or close event happend twice',
+                        'channel closed on a different block or close event happened twice',
                         channel_address=pex(self.channel_address),
                         closed_block=self.external_state.closed_block,
                         this_block=state_change.block_number
