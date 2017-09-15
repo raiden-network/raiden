@@ -294,7 +294,7 @@ Raiden Design Choices
 One Contract per Channel
 ------------------------
 
-We don’t want to have shared smart contracts hold big amount of tokens in escrow. This will not provide security but will diminish the losses from potential attacks and isolate problems.
+At the beginning Raiden was designed with simplicity in mind and the one contract per channel made the code simpler. We have plans to `change <https://github.com/raiden-network/raiden/issues/1025>`_ to a single contract per token.
 
 Nodes can not Update their Own State
 ------------------------------------
