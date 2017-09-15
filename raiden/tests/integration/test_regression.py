@@ -115,7 +115,7 @@ def test_regression_multiple_revealsecret(raiden_network, token_addresses):
 
     The step marked with an asterisk above introduced a context-switch, this
     allowed a second Reveal Secret message to be handled before the channel was
-    unregistered, because the the channel was updated an exception was raised
+    unregistered, because the channel was already updated an exception was raised
     for an unknown secret.
     """
     app0, app1 = raiden_network

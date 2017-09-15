@@ -514,6 +514,7 @@ class RaidenService(object):
         revealsecret_message = RevealSecret(secret)
         self.sign(revealsecret_message)
 
+        messages_to_send = []
         for channel in channels_list:
             if channel.partner_state.balance_proof.is_unclaimed(hashlock):
                 secret = channel.create_secret(identifier, secret)
@@ -524,10 +525,11 @@ class RaidenService(object):
                     secret,
                 )
 
-                self.send_async(
+                messages_to_send.append((
                     channel.partner_state.address,
                     secret,
-                )
+                ))
+
                 channels_to_remove.append(channel)
 
             # withdraw a pending lock
@@ -539,26 +541,36 @@ class RaidenService(object):
                     )
 
                     if is_balance_proof:
-                        channel.register_transfer(partner_secret_message)
+                        channel.register_transfer(
+                            self.get_block_number(),
+                            partner_secret_message,
+                        )
                         channels_to_remove.append(channel)
                     else:
                         channel.register_secret(secret)
-                        self.send_async(
+                        messages_to_send.append((
                             channel.partner_state.address,
                             revealsecret_message,
-                        )
+                        ))
                 else:
                     channel.register_secret(secret)
-                    self.send_async(
+                    messages_to_send.append((
                         channel.partner_state.address,
                         revealsecret_message,
-                    )
+                    ))
 
         for channel in channels_to_remove:
             channels_list.remove(channel)
 
         if not channels_list:
             del self.token_to_hashlock_to_channels[token_address][hashlock]
+
+        # send the messages last to avoid races
+        for recipient, message in messages_to_send:
+            self.send_async(
+                recipient,
+                message,
+            )
 
     def get_channel_details(self, token_address, netting_channel):
         channel_details = netting_channel.detail()
