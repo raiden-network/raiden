@@ -25,3 +25,4 @@ Flask-Cors==3.0.2
 pytest>=3.0.4
 psutil
 filelock
+netifaces
