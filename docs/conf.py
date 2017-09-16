@@ -355,3 +355,9 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #
 # texinfo_no_detailmenu = False
+
+
+# Enables 0.x.y releases to not be grouped into feature and bugfix releases
+# see: http://releases.readthedocs.io/en/latest/concepts.html#unstable-prehistory-mode
+# This needs to be kept enabled even once 1.0 has been reached!
+releases_unstable_prehistory = True
