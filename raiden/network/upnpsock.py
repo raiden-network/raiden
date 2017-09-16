@@ -44,7 +44,7 @@ def connect():
     upnp.discoverdelay = 200
     providers = upnp.discover()
     if providers > 1:
-        log.warning('multiple upnp providers found', num_providers=providers)
+        log.debug('multiple upnp providers found', num_providers=providers)
     elif providers < 1:
         log.error('no upnp providers found')
         return
@@ -150,16 +150,7 @@ def open_port(upnp, internal_port, external_start_port=None):
         success = register(internal_port, external_port)
 
     if success:
-        internal = '{}:{}'.format(upnp.lanaddr, internal_port)
-        external = '{}:{}'.format(upnp.externalipaddress(), external_port)
-
-        log.info(
-            'registered port-mapping per upnp',
-            internal=internal,
-            external=external,
-        )
-
-        return (upnp.externalipaddress(), external_port)
+        return upnp.externalipaddress(), external_port
     else:
         log.error(
             'could not register a port-mapping',

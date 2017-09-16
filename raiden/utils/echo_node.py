@@ -10,11 +10,11 @@ from gevent.timeout import Timeout
 from ethereum import slogging
 import click
 
+from raiden.network.sockfactory import SocketFactory
 from raiden.ui.cli import (
     options,
     app,
     split_endpoint,
-    socket_factory,
     signal,
     APIServer,
     RestAPI,
@@ -280,7 +280,7 @@ def runner(ctx, **kwargs):
     token_address = kwargs.pop('token_address')
 
     (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
-    with socket_factory(listen_host, listen_port) as mapped_socket:
+    with SocketFactory(listen_host, listen_port, strategy=kwargs['nat']) as mapped_socket:
         kwargs['mapped_socket'] = mapped_socket
 
         app_ = ctx.invoke(app, **kwargs)

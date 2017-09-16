@@ -14,6 +14,7 @@ import gevent
 import gevent.monkey
 from ethereum import slogging
 from ethereum.utils import denoms
+from ipaddress import IPv4Address, AddressValueError
 from pyethapp.jsonrpc import address_decoder, address_encoder
 from pyethapp.rpc_client import JSONRPCClient
 from tinyrpc import BadRequestError
@@ -26,7 +27,7 @@ from raiden.constants import (
     DISCOVERY_REGISTRATION_GAS
 )
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.sockfactory import socket_factory
+from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.network.rpc.client import (
     patch_send_message,
@@ -89,7 +90,27 @@ class AddressType(click.ParamType):
             self.fail('Please specify a valid hex-encoded address.')
 
 
+class NATChoiceType(click.Choice):
+    def convert(self, value, param, ctx):
+        if value.startswith('ext:'):
+            ip, _, port = value[4:].partition(':')
+            try:
+                IPv4Address(ip.decode('UTF-8', 'ignore'))
+            except AddressValueError:
+                self.fail('invalid IP address: {}'.format(ip), param, ctx)
+            if port:
+                try:
+                    port = int(port, 0)
+                except ValueError:
+                    self.fail('invalid port number: {}'.format(port), param, ctx)
+            else:
+                port = None
+            return ip, port
+        return super(NATChoiceType, self).convert(value, param, ctx)
+
+
 ADDRESS_TYPE = AddressType()
+
 
 OPTIONS = [
     click.option(
@@ -224,6 +245,20 @@ OPTIONS = [
         '--eth-client-communication',
         help='Print all communication with the underlying eth client',
         is_flag=True,
+    ),
+    click.option(
+        '--nat',
+        help='Manually specify method to use for determining public IP / NAT traversal.\n'
+             'Available methods:\n'
+             '"auto" - Try UPnP, then STUN, fallback to none\n'
+             '"upnp" - Try UPnP, fallback to none\n'
+             '"stun" - Try STUN, fallback to none\n'
+             '"none" - Use the local interface address '
+             '(this will likely cause connectivity issues)\n'
+             '"ext:<IP>[:<PORT>]" - manually specify the external IP (and optionally port no.)',
+        type=NATChoiceType(['auto', 'upnp', 'stun', 'none', 'ext:<IP>[:<PORT>]']),
+        default='auto',
+        show_default=True
     )
 ]
 
@@ -257,7 +292,8 @@ def app(address,
         password_file,
         web_ui,
         datadir,
-        eth_client_communication):
+        eth_client_communication,
+        nat):
 
     from raiden.app import App
     from raiden.network.rpc.client import BlockChainService
@@ -464,7 +500,7 @@ def run(ctx, **kwargs):
         # not timeout.
         (listen_host, listen_port) = split_endpoint(kwargs['listen_address'])
         try:
-            with socket_factory(listen_host, listen_port) as mapped_socket:
+            with SocketFactory(listen_host, listen_port, strategy=kwargs['nat']) as mapped_socket:
                 kwargs['mapped_socket'] = mapped_socket
 
                 app_ = ctx.invoke(app, **kwargs)
