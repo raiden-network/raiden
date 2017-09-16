@@ -184,14 +184,8 @@ class ConnectionsResource(BaseResource):
             only_receiving=only_receiving_channels
         )
 
-    def get(self, token_address):
-        return self.rest_api.get_connection_manager_funds(token_address=token_address)
-
 
 class ConnectionManagersResource(BaseResource):
 
-    def __init__(self, **kwargs):
-        super(ConnectionManagersResource, self).__init__(**kwargs)
-
     def get(self):
-        return self.rest_api.get_connection_managers_list()
+        return self.rest_api.get_connection_managers_info()

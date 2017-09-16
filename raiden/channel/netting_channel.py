@@ -15,6 +15,7 @@ from raiden.messages import (
 from raiden.mtree import Merkletree
 from raiden.utils import sha3, pex, lpex
 from raiden.exceptions import (
+    AddressWithoutCode,
     InsufficientBalance,
     InvalidLocksRoot,
     InvalidNonce,
@@ -81,7 +82,7 @@ class ChannelExternalState(object):
         if block_number <= 0:
             raise ValueError('closed block must be non-zero and positive')
 
-        if self._closed_block != 0 and self._closed_block != block_number:
+        if self._closed_block != 0:
             return False
 
         self._closed_block = block_number
@@ -276,16 +277,19 @@ class Channel(object):
 
         return blocks_until_settlement
 
-    def handle_closed(self, block_number):  # pylint: disable=unused-argument
+    def handle_closed(self, block_number, closing_address):  # pylint: disable=unused-argument
         balance_proof = self.our_state.balance_proof
 
         # the channel was closed, update our half of the state if we need to
-        closing_address = self.external_state.netting_channel.closing_address()
         if closing_address != self.our_state.address:
             self.external_state.update_transfer(balance_proof.balance_proof)
 
         unlock_proofs = balance_proof.get_known_unlocks()
-        self.external_state.withdraw(unlock_proofs)
+
+        try:
+            self.external_state.withdraw(unlock_proofs)
+        except AddressWithoutCode:
+            log.error('withdraw failed, channel is gone.')
 
     def handle_settled(self, block_number):  # pylint: disable=unused-argument
         pass
@@ -782,18 +786,23 @@ class Channel(object):
 
     def state_transition(self, state_change):
         if isinstance(state_change, Block):
-            settlement_end = self.external_state.closed_block + self.settle_timeout
 
-            if self.state == CHANNEL_STATE_CLOSED and state_change.block_number > settlement_end:
-                self.external_state.settle()
+            if self.state == CHANNEL_STATE_CLOSED:
+                settlement_end = self.external_state.closed_block + self.settle_timeout
+
+                if state_change.block_number > settlement_end:
+                    self.external_state.settle()
 
         elif isinstance(state_change, ContractReceiveClosed):
             if state_change.channel_address == self.channel_address:
                 if self.external_state.set_closed(state_change.block_number):
-                    self.handle_closed(state_change.block_number)
+                    self.handle_closed(
+                        state_change.block_number,
+                        state_change.closing_address,
+                    )
                 else:
                     log.warn(
-                        'channel is already closed on a different block',
+                        'channel closed on a different block or close event happened twice',
                         channel_address=pex(self.channel_address),
                         closed_block=self.external_state.closed_block,
                         this_block=state_change.block_number

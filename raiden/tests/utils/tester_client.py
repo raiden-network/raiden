@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from collections import defaultdict
 from itertools import count
 
@@ -7,11 +8,12 @@ from ethereum.tester import TransactionFailed
 from ethereum.abi import ContractTranslator
 from ethereum.utils import decode_hex, encode_hex
 from ethereum._solidity import solidity_get_contract_key
-from pyethapp.jsonrpc import address_decoder
+from pyethapp.jsonrpc import address_decoder, address_encoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
 from raiden import messages
 from raiden.exceptions import (
+    AddressWithoutCode,
     UnknownAddress,
     DuplicatedChannelError,
 )
@@ -46,17 +48,16 @@ def tester_deploy_contract(
         tester_state,
         private_key,
         contract_name,
-        contract_file,
+        contract_path,
         constructor_parameters=None):
 
-    contract_path = get_contract_path(contract_file)
     all_contracts = _solidity.compile_file(contract_path, libraries=dict())
 
     contract_key = solidity_get_contract_key(all_contracts, contract_path, contract_name)
     contract = all_contracts[contract_key]
     contract_interface = contract['abi']
 
-    log.info('Deploying "{}" contract'.format(contract_file))
+    log.info('Deploying "{}" contract'.format(os.path.basename(contract_path)))
 
     dependencies = deploy_dependencies_symbols(all_contracts)
     deployment_order = dependencies_order_of_build(contract_key, dependencies)
@@ -125,6 +126,7 @@ class ChannelExternalStateTester(object):
             private_key,
             address,
         )
+        self.settled_block = 0
 
         self.callbacks_on_opened = list()
         self.callbacks_on_closed = list()
@@ -141,13 +143,6 @@ class ChannelExternalStateTester(object):
     @property
     def closed_block(self):
         return self.netting_channel.closed()
-
-    @property
-    def settled_block(self):
-        # XXX: Not sure about this. In normal operation (netting_channel.py)
-        # this is set from the settled event. Does this even make sense to
-        # be queried by tester?
-        return 0
 
     def can_transfer(self):
         return self.netting_channel.can_transfer()
@@ -328,21 +323,21 @@ class BlockChainServiceTesterMock(object):
     def uninstall_filter(self, filter_id_raw):
         pass
 
-    def deploy_contract(self, contract_name, contract_file, constructor_parameters=None):
+    def deploy_contract(self, contract_name, contract_path, constructor_parameters=None):
         return tester_deploy_contract(
             self.tester_state,
             self.private_key,
             contract_name,
-            contract_file,
+            contract_path,
             constructor_parameters,
         )
 
-    def deploy_and_register_token(self, contract_name, contract_file, constructor_parameters=None):
+    def deploy_and_register_token(self, contract_name, contract_path, constructor_parameters=None):
         assert self.default_registry
 
         token_address = self.deploy_contract(
             contract_name,
-            contract_file,
+            contract_path,
             constructor_parameters,
         )
         self.default_registry.add_token(token_address)  # pylint: disable=no-member
@@ -587,7 +582,8 @@ class NettingChannelTesterMock(object):
         self.channelsettle_filters = list()
 
         # check we are a participant of the channel
-        self.detail(None)
+        our_address = privatekey_to_address(self.private_key)
+        self.detail()
 
     def token_address(self):
         result = address_decoder(self.proxy.tokenAddress())
@@ -599,18 +595,15 @@ class NettingChannelTesterMock(object):
 
     def can_transfer(self):
         # do not mine in this method
-        closed = self.proxy.closed()
+        closed = self.closed()
 
         if closed != 0:
             return False
 
-        opened = self.proxy.opened()
-        return (
-            opened != 0 and
-            self.detail(None)['our_balance'] > 0
-        )
+        return self.detail()['our_balance'] > 0
 
     def deposit(self, amount):
+        self._check_exists()
         token = TokenTesterMock(
             self.tester_state,
             self.private_key,
@@ -627,30 +620,40 @@ class NettingChannelTesterMock(object):
         self.proxy.deposit(amount)
         self.tester_state.mine(number_of_blocks=1)
 
-    #  tester's opened() and closed() methods must return empty string to be compatible with
-    # a JSON RPC client that uses geth as a backend
+    def _check_exists(self):
+        if self.tester_state.block.get_code(self.address) == '':
+            raise AddressWithoutCode('Netting channel address {} does not contain code'.format(
+                address_encoder(self.address),
+            ))
+
     def opened(self):
+        self._check_exists()
         opened = self.proxy.opened()
-        return opened if opened is not None else ''
+        assert isinstance(opened, (int, long)), 'opened must not be None nor empty string'
+        return opened
 
     def closed(self):
+        self._check_exists()
         closed = self.proxy.closed()
-        return closed if closed is not None else ''
+        assert isinstance(closed, (int, long)), 'closed must not be None nor empty string'
+        return closed
 
     def closing_address(self):
         """Returns the address of the participant that called close, or None if the channel is
         not closed.
         """
+        self._check_exists()
         closing_address = self.proxy.closingAddress()
         if closing_address is not None:
             return address_decoder(closing_address)
 
-    def detail(self, our_address):
+    def detail(self):
         """ FIXME: 'our_address' is only needed for the pure python mock implementation """
-        our_address = privatekey_to_address(self.private_key)
-        data = self.proxy.addressAndBalance()
+        self._check_exists()
 
+        data = self.proxy.addressAndBalance()
         settle_timeout = self.proxy.settleTimeout()
+        our_address = privatekey_to_address(self.private_key)
 
         if address_decoder(data[0]) == our_address:
             return {
@@ -678,6 +681,7 @@ class NettingChannelTesterMock(object):
 
     def close(self, nonce, transferred_amount, locksroot, extra_hash, signature):
         # this transaction may fail if there is a race to close the channel
+        self._check_exists()
 
         log.info(
             'closing channel',
@@ -709,6 +713,7 @@ class NettingChannelTesterMock(object):
         )
 
     def update_transfer(self, nonce, transferred_amount, locksroot, extra_hash, signature):
+        self._check_exists()
         if signature:
             log.info(
                 'update_transfer called',
@@ -740,6 +745,7 @@ class NettingChannelTesterMock(object):
             )
 
     def withdraw(self, unlock_proofs):
+        self._check_exists()
         # force a list to get the length (could be a generator)
         unlock_proofs = list(unlock_proofs)
         log.info('{} locks to unlock'.format(len(unlock_proofs)), contract=pex(self.address))
@@ -766,6 +772,7 @@ class NettingChannelTesterMock(object):
             )
 
     def settle(self):
+        self._check_exists()
         self.proxy.settle()
         self.tester_state.mine(number_of_blocks=1)
 

@@ -132,11 +132,6 @@ class RaidenMessageHandler(object):
         except ValueError:
             log.info('Message for unknown channel: {}'.format(pex(message.channel)))
         else:
-            channel.register_transfer(
-                self.raiden.get_block_number(),
-                message,
-            )
-
             self.raiden.handle_secret(
                 identifier,
                 channel.token_address,

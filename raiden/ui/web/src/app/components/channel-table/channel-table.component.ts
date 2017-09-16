@@ -200,7 +200,7 @@ export class ChannelTableComponent implements OnInit {
             {
                 label: 'Transfer',
                 icon: 'fa-exchange',
-                disabled: channel.state !== 'opened',
+                disabled: !(channel.state === 'opened' && channel.balance > 0),
                 command: () => this.onTransfer(channel)
             },
             {

@@ -300,7 +300,7 @@ class ConsoleTools(object):
                 closed_at=channel.external_state.closed_block or 'not yet',
                 settled_at=channel.external_state.settled_block or 'not yet',
             ),
-            funding=channel.external_state.netting_channel.detail(self._raiden.address),
+            funding=channel.external_state.netting_channel.detail(),
             token=dict(
                 our_balance=token.balance_of(self._raiden.address),
                 partner_balance=token.balance_of(peer_address),

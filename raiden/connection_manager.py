@@ -13,6 +13,10 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
+from raiden.exceptions import (
+    AddressWithoutCode,
+    TransactionThrew,
+)
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -31,11 +35,10 @@ class ConnectionManager(object):
     BOOTSTRAP_ADDR = BOOTSTRAP_ADDR_HEX.decode('hex')
 
     def __init__(
-        self,
-        raiden,
-        token_address,
-        channelgraph,
-    ):
+            self,
+            raiden,
+            token_address,
+            channelgraph):
         self.lock = Semaphore()
         self.raiden = raiden
         self.api = RaidenAPI(raiden)
@@ -46,11 +49,10 @@ class ConnectionManager(object):
         self.joinable_funds_target = 0
 
     def connect(
-        self,
-        funds,
-        initial_channel_target=3,
-        joinable_funds_target=.4
-    ):
+            self,
+            funds,
+            initial_channel_target=3,
+            joinable_funds_target=.4):
         """Connect to the network.
         Use this to establish a connection with the token network.
 
@@ -84,9 +86,7 @@ class ConnectionManager(object):
                 'connect() called on an already joined token network',
                 token_address=pex(self.token_address),
                 open_channels=len(open_channels),
-                sum_deposits=sum(
-                    channel.contract_balance for channel in open_channels
-                ),
+                sum_deposits=self.sum_deposits,
                 funds=funds,
             )
 
@@ -257,11 +257,16 @@ class ConnectionManager(object):
                 token_address=pex(self.token_address),
             )
         else:
-            self.api.deposit(
-                self.token_address,
-                partner,
-                funding_amount,
-            )
+            try:
+                self.api.deposit(
+                    self.token_address,
+                    partner,
+                    funding_amount,
+                )
+            except AddressWithoutCode:
+                log.warn('connection manager: channel closed just after it was created')
+            except TransactionThrew:
+                log.exception('connection manager: deposit failed')
 
     def find_new_partners(self, number):
         """Search the token network for potential channel partners.
@@ -313,9 +318,7 @@ class ConnectionManager(object):
         """The remaining funds after subtracting the already deposited amounts.
         """
         if self.funds > 0:
-            remaining = self.funds - sum(
-                channel.contract_balance for channel in self.open_channels
-            )
+            remaining = self.funds - self.sum_deposits
             assert isinstance(remaining, int)
             return remaining
         return 0
@@ -329,6 +332,11 @@ class ConnectionManager(object):
             self.api.get_channel_list(token_address=self.token_address)
             if channel.state == CHANNEL_STATE_OPENED
         ]
+
+    @property
+    def sum_deposits(self):
+        """Shorthand for getting sum of all open channels deposited funds"""
+        return sum(channel.contract_balance for channel in self.open_channels)
 
     @property
     def receiving_channels(self):

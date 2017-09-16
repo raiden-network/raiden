@@ -464,9 +464,11 @@ def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     # Bob needs to provide a transfer otherwise it's netted balance will be
     # wrong, so he is incetivized to use Alice's transfer with the largest
     # transferred_amount.
-    channel1.external_state.update_transfer(
-        alice_second_transfer,
-    )
+    #
+    # This is done automatically
+    # channel1.external_state.update_transfer(
+    #     alice_second_transfer,
+    # )
 
     # wait until the settle timeout has passed
     settle_expiration = chain0.block_number() + settle_timeout

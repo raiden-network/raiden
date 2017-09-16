@@ -351,24 +351,13 @@ class RestAPI(object):
         result = self.address_list_schema.dump(channel_addresses_list)
         return jsonify(result.data)
 
-    def get_connection_manager_funds(self, token_address):
-        connection_manager = self.raiden_api.get_connection_manager_funds(token_address)
-
-        if connection_manager is None:
-            return make_response('No connection manager exists for token', httplib.NO_CONTENT)
-
-        if connection_manager is not None:
-            return jsonify(connection_manager)
-
-    def get_connection_managers_list(self):
-        raiden_service_result = self.raiden_api.get_connection_managers_list()
-        assert isinstance(raiden_service_result, list)
-
-        new_list = []
-        for result in raiden_service_result:
-            new_list.append(address_encoder(result))
-
-        return jsonify(new_list)
+    def get_connection_managers_info(self):
+        raiden_service_result = self.raiden_api.get_connection_managers_info()
+        assert isinstance(raiden_service_result, dict)
+        # encode token addresses indexes
+        result = {address_encoder(token_address): info
+                  for token_address, info in raiden_service_result.iteritems()}
+        return jsonify(result)
 
     def get_channel_list(self, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
