@@ -231,6 +231,9 @@ def single_queue_send(
       with the event_stop.
     - If there are many queues for the same receiver_address, it is the
       caller's responsibility to not start them together to avoid congestion.
+    - This task assumes the endpoint is never cleared after it's first known,
+      if this assumption changes the code must be updated to handle unknow
+      addresses.
     """
 
     # A NotifyingQueue is required to implement cancelability, otherwise the
@@ -244,6 +247,12 @@ def single_queue_send(
         queue,
         event_stop,
     )
+
+    # Wait for the endpoint registration or to quit
+    event_first_of(
+        event_healthy,
+        event_stop,
+    ).wait()
 
     while True:
         data_or_stop.wait()
@@ -307,13 +316,36 @@ def healthcheck(
 
     # Always call `clear` before `set`, since only `set` does context-switches
     # it's easier to reason about tasks that are waiting on both events.
+
+    # Wait for the end-point registration or for the node to quit
+    try:
+        protocol.get_host_port(receiver_address)
+    except UnknownAddress:
+        event_healthy.clear()
+        event_unhealthy.set()
+
+        backoff = timeout_exponential_backoff(
+            nat_keepalive_retries,
+            nat_keepalive_timeout,
+            nat_invitation_timeout,
+        )
+        sleep = next(backoff)
+
+        while not event_stop.wait(sleep):
+            try:
+                protocol.get_host_port(receiver_address)
+            except UnknownAddress:
+                sleep = next(backoff)
+            else:
+                break
+
+    # Don't wait to send the first Ping and to start sending messages if the
+    # endpoint is known
+    sleep = 0
     event_unhealthy.clear()
     event_healthy.set()
 
-    # Don't wait to send the first Ping
-    sleep = 0
-
-    while not event_stop.wait(sleep) is True:
+    while not event_stop.wait(sleep):
         sleep = nat_keepalive_timeout
 
         ping_nonce['nonce'] += 1
