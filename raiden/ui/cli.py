@@ -90,52 +90,76 @@ def toggle_trace_profiler(raiden):
         raiden.profiler.start()
 
 
-def wait_for_sync(blockchain_service, url, tolerance, sleep):
-    try:
-        oracle_block = quantity_decoder(requests.get(url).json()['result'])
+def etherscan_query_with_retries(url, sleep, retries=3):
+    for _ in range(retries - 1):
+        try:
+            etherscan_block = quantity_decoder(requests.get(url).json()['result'])
+        except (RequestException, ValueError, KeyError):
+            pass
+        else:
+            return etherscan_block
+
+    etherscan_block = quantity_decoder(requests.get(url).json()['result'])
+    return etherscan_block
+
+
+def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
+    local_block = blockchain_service.client.blocknumber()
+    etherscan_block = etherscan_query_with_retries(url, sleep)
+
+    if local_block >= etherscan_block - tolerance:
+        return
+
+    print('Waiting for the ethereum node to synchronize. [Use ^C to exit]')
+    print('{}/~{}'.format(local_block, etherscan_block), end='')
+
+    for i in count():
+        sys.stdout.flush()
+        gevent.sleep(sleep)
         local_block = blockchain_service.client.blocknumber()
 
-        if local_block >= oracle_block - tolerance:
-            return
+        # update the oracle block number sparsely to not spam the server
+        if local_block >= etherscan_block or i % 50 == 0:
+            etherscan_block = etherscan_query_with_retries(url, sleep)
 
-        print('Waiting for the ethereum node to synchronize. [Use ^C to exit]')
-        print('{}/~{}'.format(local_block, oracle_block), end='')
+            if local_block >= etherscan_block - tolerance:
+                return
 
-        for i in count():
-            sys.stdout.flush()
-            gevent.sleep(sleep)
-            local_block = blockchain_service.client.blocknumber()
+        print(CLEARLINE + CURSOR_STARTLINE, end='')
+        print('{}/~{}'.format(local_block, etherscan_block), end='')
 
-            # update the oracle block number sparsely to not spam the server
-            if local_block >= oracle_block or i % 50 == 0:
-                oracle_block = quantity_decoder(requests.get(url).json()['result'])
 
-                if local_block >= oracle_block - tolerance:
-                    return
+def wait_for_sync_rpc_api(blockchain_service, url, tolerance, sleep):
+    if blockchain_service.is_synced():
+        return
 
+    print('Waiting for the ethereum node to synchronize [Use ^C to exit].')
+
+    for i in count():
+        if i % 3 == 0:
             print(CLEARLINE + CURSOR_STARTLINE, end='')
-            print('{}/~{}'.format(local_block, oracle_block), end='')
 
-    except (RequestException, ValueError):
-        print('Cannot use {}. Request failed'.format(url))
-        print('Falling back to eth_sync api.')
+        print('.', end='')
+        sys.stdout.flush()
+
+        gevent.sleep(sleep)
 
         if blockchain_service.is_synced():
             return
 
-        print('Waiting for the ethereum node to synchronize [Use ^C to exit].')
 
-        for i in count():
-            if i % 3 == 0:
-                print(CLEARLINE + CURSOR_STARTLINE, end='')
+def wait_for_sync(blockchain_service, url, tolerance, sleep):
+    # print something since the actual test may take a few moment for the first
+    # iteration
+    print('Checking if the ethereum node is synchronized')
 
-            print('.', end='')
-            sys.stdout.flush()
+    try:
+        wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep)
+    except (RequestException, ValueError, KeyError):
+        print('Cannot use {}. Request failed'.format(url))
+        print('Falling back to eth_sync api.')
 
-            gevent.sleep(sleep)
-
-            if blockchain_service.is_synced():
-                return
+        wait_for_sync_rpc_api(blockchain_service, url, tolerance, sleep)
 
 
 class AddressType(click.ParamType):
