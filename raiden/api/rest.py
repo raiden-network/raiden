@@ -374,7 +374,7 @@ class RestAPI(object):
         return api_response(
             result=dict(),
             error_msg='',
-            status=httplib.NO_CONTENT
+            status_code=httplib.NO_CONTENT
         )
 
     def leave(self, token_address, only_receiving):
