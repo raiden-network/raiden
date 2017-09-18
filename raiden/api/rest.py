@@ -80,9 +80,9 @@ def normalize_events_list(old_list):
     return new_list
 
 
-def jsonify_with_response(data, status_code):
+def api_response(result, error_msg='', status_code=httplib.OK):
     response = make_response((
-        json.dumps(data),
+        json.dumps(dict(error_msg=error_msg, result=result)),
         status_code,
         {'mimetype': 'application/json', 'Content-Type': 'application/json'}
     ))
@@ -254,19 +254,24 @@ class RestAPI(object):
         self.transfer_schema = TransferSchema()
 
     def get_our_address(self):
-        return {'our_address': address_encoder(self.raiden_api.address)}
+        return api_response(result=dict(our_address=address_encoder(self.raiden_api.address)))
 
     def register_token(self, token_address):
         manager_address = self.raiden_api.manager_address_if_token_registered(token_address)
 
         if manager_address is not None:
-            return make_response('Token is already registered', httplib.CONFLICT)
+            return api_response(
+                result=dict(),
+                error_msg='Token is already registered',
+                status_code=httplib.CONFLICT
+            )
 
         if manager_address is None:
             manager_address = self.raiden_api.register_token(token_address)
 
-        return jsonify_with_response(
-            data=dict(channel_manager_address=address_encoder(manager_address)),
+        return api_response(
+            result=dict(channel_manager_address=address_encoder(manager_address)),
+            error_msg='',
             status_code=httplib.CREATED
         )
 
@@ -286,7 +291,11 @@ class RestAPI(object):
             )
         except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
                 AddressWithoutCode, NoTokenManager, DuplicatedChannelError) as e:
-            return make_response(str(e), httplib.CONFLICT)
+            return api_response(
+                result=dict(),
+                error_msg=str(e),
+                status_code=httplib.CONFLICT
+            )
 
         if balance:
             # make initial deposit
@@ -297,12 +306,24 @@ class RestAPI(object):
                     balance
                 )
             except EthNodeCommunicationError as e:
-                return make_response(str(e), httplib.REQUEST_TIMEOUT)
+                return api_response(
+                    result=dict(),
+                    error_msg=str(e),
+                    status_code=httplib.REQUEST_TIMEOUT
+                )
             except InsufficientFunds as e:
-                return make_response(str(e), httplib.PAYMENT_REQUIRED)
+                return api_response(
+                    result=dict(),
+                    error_msg=str(e),
+                    status_code=httplib.PAYMENT_REQUIRED
+                )
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-        return jsonify_with_response(data=result.data, status_code=httplib.CREATED)
+        return api_response(
+            result=result.data,
+            error_msg='',
+            status_code=httplib.CREATED
+        )
 
     def deposit(self, token_address, partner_address, amount):
         try:
@@ -312,12 +333,20 @@ class RestAPI(object):
                 amount
             )
         except EthNodeCommunicationError as e:
-            return make_response(str(e), httplib.REQUEST_TIMEOUT)
+            return api_response(
+                result=dict(),
+                error_msg=str(e),
+                status_code=httplib.REQUEST_TIMEOUT
+            )
         except InsufficientFunds as e:
-            return make_response(str(e), httplib.PAYMENT_REQUIRED)
+            return api_response(
+                result=dict(),
+                error_msg=str(e),
+                status_code=httplib.PAYMENT_REQUIRED
+            )
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-        return jsonify(result.data)
+        return api_response(result=result.data)
 
     def close(self, token_address, partner_address):
 
@@ -327,7 +356,7 @@ class RestAPI(object):
         )
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-        return jsonify(result.data)
+        return api_response(result=result.data)
 
     def connect(
             self,
@@ -342,22 +371,28 @@ class RestAPI(object):
             initial_channel_target,
             joinable_funds_target
         )
-        return make_response('', httplib.NO_CONTENT)
+        return api_response(
+            result=dict(),
+            error_msg='',
+            status=httplib.NO_CONTENT
+        )
 
     def leave(self, token_address, only_receiving):
         closed_channels = self.raiden_api.leave_token_network(token_address, only_receiving)
         closed_channels = [channel.channel_address for channel in closed_channels]
         channel_addresses_list = AddressList(closed_channels)
         result = self.address_list_schema.dump(channel_addresses_list)
-        return jsonify(result.data)
+        return api_response(result=result.data)
 
     def get_connection_managers_info(self):
         raiden_service_result = self.raiden_api.get_connection_managers_info()
         assert isinstance(raiden_service_result, dict)
         # encode token addresses indexes
-        result = {address_encoder(token_address): info
-                  for token_address, info in raiden_service_result.iteritems()}
-        return jsonify(result)
+        result = {
+            address_encoder(token_address): info
+            for token_address, info in raiden_service_result.iteritems()
+        }
+        return api_response(result=result)
 
     def get_channel_list(self, token_address=None, partner_address=None):
         raiden_service_result = self.raiden_api.get_channel_list(token_address, partner_address)
@@ -365,37 +400,37 @@ class RestAPI(object):
 
         channel_list = ChannelList(raiden_service_result)
         result = self.channel_list_schema.dump(channel_list)
-        return jsonify(result.data)
+        return api_response(result=result.data)
 
     def get_tokens_list(self):
         raiden_service_result = self.raiden_api.get_tokens_list()
         assert isinstance(raiden_service_result, list)
         tokens_list = AddressList(raiden_service_result)
         result = self.address_list_schema.dump(tokens_list)
-        return jsonify(result.data)
+        return api_response(result=result.data)
 
     def get_network_events(self, from_block, to_block):
         raiden_service_result = self.raiden_api.get_network_events(
             from_block, to_block
         )
-        return normalize_events_list(raiden_service_result)
+        return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_token_network_events(self, token_address, from_block, to_block):
         raiden_service_result = self.raiden_api.get_token_network_events(
             token_address, from_block, to_block
         )
-        return normalize_events_list(raiden_service_result)
+        return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_channel_events(self, channel_address, from_block, to_block):
         raiden_service_result = self.raiden_api.get_channel_events(
             channel_address, from_block, to_block
         )
-        return normalize_events_list(raiden_service_result)
+        return api_response(result=normalize_events_list(raiden_service_result))
 
     def get_channel(self, channel_address):
         channel = self.raiden_api.get_channel(channel_address)
         result = self.channel_schema.dump(channel_to_api_dict(channel))
-        return jsonify(result.data)
+        return api_response(result=result.data)
 
     def get_partners_by_token(self, token_address):
         return_list = []
@@ -412,7 +447,7 @@ class RestAPI(object):
 
         schema_list = PartnersPerTokenList(return_list)
         result = self.partner_per_token_list_schema.dump(schema_list)
-        return jsonify(result.data)
+        return api_response(result=result.data)
 
     def initiate_transfer(self, token_address, target_address, amount, identifier):
 
@@ -427,15 +462,24 @@ class RestAPI(object):
                 identifier=identifier
             )
         except (InvalidAmount, InvalidAddress, NoPathError) as e:
-            return make_response(str(e), httplib.CONFLICT)
+            return api_response(
+                result=dict(),
+                error_msg=str(e),
+                status_code=httplib.CONFLICT
+            )
         except (InsufficientFunds) as e:
-            return make_response(str(e), httplib.PAYMENT_REQUIRED)
+            return api_response(
+                result=dict(),
+                error_msg=str(e),
+                status_code=httplib.PAYMENT_REQUIRED
+            )
 
         if transfer_result is False:
-            return make_response(
-                "Payment couldn't be completed "
+            return api_response(
+                result=dict(),
+                error_msg="Payment couldn't be completed "
                 "(insufficient funds or no route to target).",
-                httplib.CONFLICT
+                status_code=httplib.CONFLICT
             )
 
         transfer = {
@@ -446,28 +490,32 @@ class RestAPI(object):
             'identifier': identifier,
         }
         result = self.transfer_schema.dump(transfer)
-        return jsonify(result.data)
+        return api_response(result=result.data)
 
     def patch_channel(self, channel_address, balance=None, state=None):
         if balance is not None and state is not None:
-            return make_response(
-                'Can not update balance and change channel state at the same time',
-                httplib.CONFLICT,
+            return api_response(
+                result=dict(),
+                error_msg='Can not update balance and change channel state at the same time',
+                status_code=httplib.CONFLICT,
             )
         elif balance is None and state is None:
-            return make_response(
-                'Nothing to do. Should either provide \'balance\' or \'state\' argument',
-                httplib.BAD_REQUEST,
+            return api_response(
+                result=dict(),
+                error_msg="Nothing to do. Should either provide 'balance' or 'state' argument",
+                status_code=httplib.BAD_REQUEST,
             )
 
         # find the channel
         try:
             channel = self.raiden_api.get_channel(channel_address)
         except ChannelNotFound:
-            return make_response(
-                "Requested channel {} not found".format(
-                    address_encoder(channel_address)),
-                httplib.CONFLICT
+            return api_response(
+                result=dict(),
+                error_msg="Requested channel {} not found".format(
+                    address_encoder(channel_address)
+                ),
+                status_code=httplib.CONFLICT
             )
 
         current_state = channel.state
@@ -475,9 +523,10 @@ class RestAPI(object):
         # if we patch with `balance` it's a deposit
         if balance is not None:
             if current_state != CHANNEL_STATE_OPENED:
-                return make_response(
-                    "Can't deposit on a closed channel",
-                    httplib.CONFLICT,
+                return api_response(
+                    result=dict(),
+                    error_msg="Can't deposit on a closed channel",
+                    status_code=httplib.CONFLICT,
                 )
             try:
                 raiden_service_result = self.raiden_api.deposit(
@@ -486,28 +535,35 @@ class RestAPI(object):
                     balance
                 )
             except InsufficientFunds as e:
-                return make_response(str(e), httplib.PAYMENT_REQUIRED)
+                return api_response(
+                    result=dict(),
+                    error_msg=str(e),
+                    status_code=httplib.PAYMENT_REQUIRED
+                )
             result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-            return jsonify(result.data)
+            return api_response(result=result.data)
 
         if state == CHANNEL_STATE_CLOSED:
             if current_state != CHANNEL_STATE_OPENED:
-                return make_response(
-                    'Attempted to close an already closed channel',
-                    httplib.CONFLICT,
+                return api_response(
+                    result=dict(),
+                    error_msg='Attempted to close an already closed channel',
+                    status_code=httplib.CONFLICT,
                 )
             raiden_service_result = self.raiden_api.close(
                 channel.token_address,
                 channel.partner_address
             )
             result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-            return jsonify(result.data)
+            return api_response(result=result.data)
 
         if state == CHANNEL_STATE_SETTLED:
             if current_state != CHANNEL_STATE_CLOSED:
-                return make_response(
-                    'Attempted to settle a channel at its {} state'.format(current_state),
-                    httplib.CONFLICT,
+                return api_response(
+                    result=dict(),
+                    error_msg='Attempted to settle a channel at its '
+                    '{} state'.format(current_state),
+                    status_code=httplib.CONFLICT,
                 )
             try:
                 raiden_service_result = self.raiden_api.settle(
@@ -515,18 +571,20 @@ class RestAPI(object):
                     channel.partner_address
                 )
             except InvalidState:
-                return make_response(
-                    'Settlement period is not yet over',
-                    httplib.CONFLICT,
+                return api_response(
+                    result=dict(),
+                    error_msg='Settlement period is not yet over',
+                    status_code=httplib.CONFLICT,
                 )
             else:
                 result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-                return jsonify(result.data)
+                return api_response(result=result.data)
 
         # should never happen, channel_state is validated in the schema
-        return make_response(
-            'Provided invalid channel state {}'.format(state),
-            httplib.BAD_REQUEST,
+        return api_response(
+            result=dict(),
+            error_msg='Provided invalid channel state {}'.format(state),
+            status_code=httplib.BAD_REQUEST,
         )
 
     def token_swap(
@@ -561,12 +619,13 @@ class RestAPI(object):
             )
         else:
             # should never happen, role is validated in the schema
-            return make_response(
-                'Provided invalid token swap role {}'.format(role),
-                httplib.BAD_REQUEST,
+            return api_response(
+                result=dict(),
+                error_msg='Provided invalid token swap role {}'.format(role),
+                status_code=httplib.BAD_REQUEST,
             )
 
-        return jsonify_with_response(dict(), httplib.CREATED)
+        return api_response(result=dict(), error_msg='', status_code=httplib.CREATED)
 
 
 @parser.error_handler
