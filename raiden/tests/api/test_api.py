@@ -33,8 +33,15 @@ from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
 def assert_empty_response_with_code(response, status_code):
     assert (
         response is not None and
-        response._content == '' and
+        'result' in response.json() and response.json()['result'] == '' and
         response.status_code == status_code
+    )
+
+
+def assert_no_content_response(response):
+    assert(
+        response is not None and response._content == '' and
+        response.status_code == httplib.NO_CONTENT
     )
 
 
@@ -231,7 +238,9 @@ def test_api_query_our_address(
     )
     response = request.send().response
     assert_proper_response(response)
-    assert response.json() == dict(our_address=address_encoder(api_raiden_service.address))
+    assert response.json()['result'] == dict(
+        our_address=address_encoder(api_raiden_service.address)
+    )
 
 
 def test_api_query_channels(
@@ -244,12 +253,12 @@ def test_api_query_channels(
     )
     response = request.send().response
     assert_proper_response(response)
-    assert response.json() == api_test_context.expect_channels()
+    assert response.json()['result'] == api_test_context.expect_channels()
 
     api_test_context.make_channel_and_add()
     response = request.send().response
     assert_proper_response(response)
-    assert response.json() == api_test_context.expect_channels()
+    assert response.json()['result'] == api_test_context.expect_channels()
 
 
 def test_api_open_and_deposit_channel(
@@ -274,7 +283,7 @@ def test_api_open_and_deposit_channel(
     response = request.send().response
 
     assert_proper_response(response, httplib.CREATED)
-    response = response.json()
+    response = response.json()['result']
     expected_response = channel_data_obj
     expected_response['balance'] = 0
     expected_response['state'] = CHANNEL_STATE_OPENED
@@ -301,7 +310,7 @@ def test_api_open_and_deposit_channel(
     response = request.send().response
 
     assert_proper_response(response, httplib.CREATED)
-    response = response.json()
+    response = response.json()['result']
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
@@ -322,7 +331,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
+    response = response.json()['result']
     expected_response = {
         'channel_address': first_channel_address,
         'partner_address': first_partner_address,
@@ -345,7 +354,7 @@ def test_api_open_and_deposit_channel(
 
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
+    response = response.json()['result']
     expected_response = {
         'channel_address': second_channel_address,
         'partner_address': second_partner_address,
@@ -380,7 +389,7 @@ def test_api_open_close_and_settle_channel(
 
     balance = 0
     assert_proper_response(response, status_code=httplib.CREATED)
-    response = response.json()
+    response = response.json()['result']
     expected_response = channel_data_obj
     expected_response['balance'] = balance
     expected_response['state'] = CHANNEL_STATE_OPENED
@@ -412,7 +421,7 @@ def test_api_open_close_and_settle_channel(
         'state': CHANNEL_STATE_CLOSED,
         'balance': balance
     }
-    assert response.json() == expected_response
+    assert response.json()['result'] == expected_response
 
     # let's settle the channel
     request = grequests.patch(
@@ -421,7 +430,7 @@ def test_api_open_close_and_settle_channel(
             'channelsresourcebychanneladdress',
             channel_address=channel_address
         ),
-        json={'state': CHANNEL_STATE_SETTLED}
+        json=dict(state=CHANNEL_STATE_SETTLED)
     )
     response = request.send().response
     assert_proper_response(response)
@@ -434,7 +443,7 @@ def test_api_open_close_and_settle_channel(
         'state': CHANNEL_STATE_SETTLED,
         'balance': balance
     }
-    assert response.json() == expected_response
+    assert response.json()['result'] == expected_response
 
 
 def test_api_open_channel_invalid_input(
@@ -482,7 +491,7 @@ def test_api_channel_state_change_errors(
     )
     response = request.send().response
     assert_proper_response(response, httplib.CREATED)
-    response = response.json()
+    response = response.json()['result']
     channel_address = response['channel_address']
 
     # let's try to settle the channel (we are bad!)
@@ -492,7 +501,7 @@ def test_api_channel_state_change_errors(
             'channelsresourcebychanneladdress',
             channel_address=channel_address
         ),
-        json={'state': CHANNEL_STATE_SETTLED}
+        json=dict(state=CHANNEL_STATE_SETTLED)
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.CONFLICT
@@ -503,7 +512,7 @@ def test_api_channel_state_change_errors(
             'channelsresourcebychanneladdress',
             channel_address=channel_address
         ),
-        json={'state': 'inlimbo'}
+        json=dict(state='inlimbo')
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.BAD_REQUEST
@@ -514,7 +523,7 @@ def test_api_channel_state_change_errors(
             'channelsresourcebychanneladdress',
             channel_address=channel_address
         ),
-        json={'state': CHANNEL_STATE_CLOSED, 'balance': 200}
+        json=dict(state=CHANNEL_STATE_CLOSED, balance=200)
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.CONFLICT
@@ -536,7 +545,7 @@ def test_api_channel_state_change_errors(
             'channelsresourcebychanneladdress',
             channel_address=channel_address
         ),
-        json={'state': CHANNEL_STATE_CLOSED}
+        json=dict(state=CHANNEL_STATE_CLOSED)
     )
     response = request.send().response
     assert_proper_response(response)
@@ -546,7 +555,7 @@ def test_api_channel_state_change_errors(
             'channelsresourcebychanneladdress',
             channel_address=channel_address
         ),
-        json={'state': CHANNEL_STATE_SETTLED}
+        json=dict(state=CHANNEL_STATE_SETTLED)
     )
     response = request.send().response
     assert_proper_response(response)
@@ -558,7 +567,7 @@ def test_api_channel_state_change_errors(
             'channelsresourcebychanneladdress',
             channel_address=channel_address
         ),
-        json={'balance': 500}
+        json=dict(balance=500)
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.CONFLICT
@@ -570,7 +579,7 @@ def test_api_channel_state_change_errors(
             'channelsresourcebychanneladdress',
             channel_address=channel_address
         ),
-        json={'state': CHANNEL_STATE_SETTLED}
+        json=dict(state=CHANNEL_STATE_SETTLED)
     )
     response = request.send().response
     assert response is not None and response.status_code == httplib.CONFLICT
@@ -617,7 +626,7 @@ def test_api_tokens(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
+    response = response.json()['result']
     expected_response = [
         '0x61c808d82a3ac53231750dadc13c777b59310bd9',
         '0xea674fdde714fd979de3edf0f56aa9716b898ec8',
@@ -645,7 +654,7 @@ def test_query_partners_by_token(
     )
     response = request.send().response
     assert_proper_response(response, httplib.CREATED)
-    response = response.json()
+    response = response.json()['result']
     first_channel_address = response['channel_address']
 
     channel_data_obj['partner_address'] = second_partner_address
@@ -655,7 +664,7 @@ def test_query_partners_by_token(
     )
     response = request.send().response
     assert_proper_response(response, httplib.CREATED)
-    response = response.json()
+    response = response.json()['result']
     second_channel_address = response['channel_address']
 
     # and a channel for another token
@@ -678,7 +687,7 @@ def test_query_partners_by_token(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
+    response = response.json()['result']
     expected_response = [
         {
             'partner_address': first_partner_address,
@@ -754,7 +763,7 @@ def test_query_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response._content)['result']
     assert len(response) == 1
     assert response[0] == {
         'event_type': 'TokenAdded',
@@ -776,7 +785,7 @@ def test_query_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response._content)['result']
     assert len(response) == 1
     assert response[0] == {
         'event_type': 'ChannelNew',
@@ -802,7 +811,7 @@ def test_query_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response._content)['result']
     assert len(response) == 2
     assert response[0] == {
         'event_type': 'ChannelNewBalance',
@@ -847,7 +856,7 @@ def test_break_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response._content)['result']
     assert len(response) == 1
     assert response[0] == {
         'event_type': 'ChannelNew',
@@ -869,7 +878,7 @@ def test_break_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response._content)['result']
     assert len(response) == 1
     assert response[0] == {
         'event_type': 'ChannelSettled',
@@ -962,7 +971,7 @@ def test_api_transfers(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = response.json()
+    response = response.json()['result']
     assert response == transfer
 
 
@@ -977,9 +986,9 @@ def test_connect_and_leave_token_network(
     )
     response = request.send().response
     assert_proper_response(response)
-    channels = response.json()
+    channels = response.json()['result']
     assert not channels
-    assert response.json() == api_test_context.expect_channels()
+    assert not api_test_context.expect_channels()
 
     funds = 100
     initial_channel_target = DEFAULT_INITIAL_CHANNEL_TARGET
@@ -993,7 +1002,7 @@ def test_connect_and_leave_token_network(
         json=connect_data_obj,
     )
     response = request.send().response
-    assert_empty_response_with_code(response, httplib.NO_CONTENT)
+    assert_no_content_response(response)
 
     # check that channels got created
     request = grequests.get(
@@ -1001,10 +1010,10 @@ def test_connect_and_leave_token_network(
     )
     response = request.send().response
     assert_proper_response(response)
-    channels = response.json()
+    channels = response.json()['result']
     # There should be three channels according to the default initial_channel_target
     assert len(channels) == DEFAULT_INITIAL_CHANNEL_TARGET
-    assert response.json() == api_test_context.expect_channels()
+    assert response.json()['result'] == api_test_context.expect_channels()
 
     expected_balance = int((funds * joinable_funds_target) / initial_channel_target)
     assert channels[0]['balance'] == expected_balance
@@ -1021,7 +1030,7 @@ def test_connect_and_leave_token_network(
     response = request.send().response
     assert(api_test_context.last_only_receiving)
     assert_proper_response(response)
-    response = response.json()
+    response = response.json()['result']
     expected_response = [channel['channel_address'] for channel in channels]
     assert set(response) == set(expected_response)
 
@@ -1032,7 +1041,7 @@ def test_connect_and_leave_token_network(
     response = request.send().response
     assert_proper_response(response)
 
-    channels = response.json()
+    channels = response.json()['result']
     assert channels[0]['state'] == CHANNEL_STATE_SETTLED
     assert channels[1]['state'] == CHANNEL_STATE_SETTLED
     assert channels[2]['state'] == CHANNEL_STATE_SETTLED
@@ -1056,7 +1065,7 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
     )
     response = request.send().response
     assert_proper_response(response, status_code=httplib.CREATED)
-    assert 'channel_manager_address' in response.json()
+    assert 'channel_manager_address' in response.json()['result']
 
     # now try to reregister it and get the error
     request = grequests.put(api_url_for(
@@ -1078,7 +1087,7 @@ def test_get_connection_managers_info(
         api_url_for(api_backend, 'connectionmanagersresource')
     )
     response = request.send().response
-    token_addresses = response.json()
+    token_addresses = response.json()['result']
     assert token_addresses == dict()
 
     funds = 100
@@ -1091,14 +1100,14 @@ def test_get_connection_managers_info(
         json=connect_data_obj,
     )
     response = request.send().response
-    assert_empty_response_with_code(response, httplib.NO_CONTENT)
+    assert_no_content_response(response)
 
     # check that there now is one registered channel manager
     request = grequests.get(
         api_url_for(api_backend, 'connectionmanagersresource')
     )
     response = request.send().response
-    token_addresses = response.json()
+    token_addresses = response.json()['result']
     assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 1
     assert token_address1 in token_addresses
     assert isinstance(token_addresses[token_address1], dict)
@@ -1114,14 +1123,14 @@ def test_get_connection_managers_info(
         json=connect_data_obj,
     )
     response = request.send().response
-    assert_empty_response_with_code(response, httplib.NO_CONTENT)
+    assert_no_content_response(response)
 
     # check that there now are two registered channel managers
     request = grequests.get(
         api_url_for(api_backend, 'connectionmanagersresource')
     )
     response = request.send().response
-    token_addresses = response.json()
+    token_addresses = response.json()['result']
     assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 2
     assert token_address2 in token_addresses
     assert isinstance(token_addresses[token_address2], dict)
