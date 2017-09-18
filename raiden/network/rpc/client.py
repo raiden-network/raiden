@@ -327,7 +327,7 @@ class BlockChainService(object):
         if result is False:
             return True
 
-        current_block = quantity_decoder(result['currentBlock'])
+        current_block = self.block_number()
         highest_block = quantity_decoder(result['highestBlock'])
 
         if highest_block - current_block > 2:
