@@ -127,7 +127,7 @@ def wait_for_sync(blockchain_service, url, tolerance, sleep):
 
         for i in count():
             if i % 3 == 0:
-                print(CLEARLINE + CURSOR_STARTLINE , end='')
+                print(CLEARLINE + CURSOR_STARTLINE, end='')
 
             print('.', end='')
             sys.stdout.flush()
@@ -441,6 +441,7 @@ def app(address,
     if sync_check:
         try:
             net_id = int(blockchain_service.client.call('net_version'))
+            network = ID_TO_NETWORKNAME[net_id]
         except:  # pylint: disable=bare-except
             print(
                 "Couldn't determine the network the ethereum node is connected to.\n"
@@ -450,7 +451,6 @@ def app(address,
             )
             sys.exit(1)
 
-        network = ID_TO_NETWORKNAME[net_id]
         url = ETHERSCAN_API.format(
             network=network,
             action='eth_blockNumber',
