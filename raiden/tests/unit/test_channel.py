@@ -226,7 +226,7 @@ def test_end_state():
     assert state2.nonce is None
 
 
-def test_sender_cannot_overspent():
+def test_sender_cannot_overspend():
     token_address = make_address()
     privkey1, address1 = make_privkey_address()
     address2 = make_address()

@@ -195,7 +195,7 @@ def assert_synched_channels(channel0, balance0, outstanding_locks0, channel1,
     assert_balance(channel0, balance0, locked_amount0, channel0.balance - locked_amount1)
     assert_balance(channel1, balance1, locked_amount1, channel1.balance - locked_amount0)
 
-    # a participant outstanding is the other pending locks.
+    # a participant's outstanding is the other's pending locks.
     pending_locks0 = outstanding_locks1
     pending_locks1 = outstanding_locks0
 
@@ -238,40 +238,42 @@ def assert_mirror(channel0, channel1):
     assert channel1.distributable == channel0.partner_state.distributable(channel0.our_state)
 
 
-def assert_locked(channel0, pending_locks):
-    """ Assert the locks create from `channel`. """
+def assert_locked(from_channel, pending_locks):
+    """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     leafs = [sha3(lock.as_bytes) for lock in pending_locks]
     hashroot = Merkletree(leafs).merkleroot
 
-    assert len(channel0.our_state.balance_proof.hashlocks_to_pendinglocks) == len(
+    assert len(from_channel.our_state.balance_proof.hashlocks_to_pendinglocks) == len(
         pending_locks
     )
-    assert channel0.our_state.balance_proof.merkleroot_for_unclaimed() == hashroot
-    assert channel0.our_state.locked() == sum(lock.amount for lock in pending_locks)
-    assert channel0.locked == sum(lock.amount for lock in pending_locks)
+    assert from_channel.our_state.balance_proof.merkleroot_for_unclaimed() == hashroot
+    assert from_channel.our_state.locked() == sum(lock.amount for lock in pending_locks)
+    assert from_channel.locked == sum(lock.amount for lock in pending_locks)
 
     for lock in pending_locks:
-        assert lock.hashlock in channel0.our_state.balance_proof.hashlocks_to_pendinglocks
+        assert lock.hashlock in from_channel.our_state.balance_proof.hashlocks_to_pendinglocks
 
 
-def assert_balance(channel0, balance, outstanding, distributable):
-    """ Assert the channel0 overall token values. """
-    assert channel0.balance == balance
-    assert channel0.distributable == distributable
-    assert channel0.outstanding == outstanding
+def assert_balance(from_channel, balance, outstanding, distributable):
+    """ Assert the from_channel overall token values. """
+    assert from_channel.balance == balance
+    assert from_channel.distributable == distributable
+    assert from_channel.outstanding == outstanding
 
-    # the amount of token locked in the partner end of the channel is equal to how much
-    # we have outstading
-    assert channel0.partner_state.locked() == outstanding
+    # the amount of token locked in the partner end of the from_channel is equal to how much
+    # we have outstanding
+    assert from_channel.partner_state.locked() == outstanding
 
-    assert channel0.balance == channel0.our_state.balance(channel0.partner_state)
-    assert channel0.distributable == channel0.our_state.distributable(channel0.partner_state)
+    assert from_channel.balance == from_channel.our_state.balance(from_channel.partner_state)
 
-    assert channel0.balance >= 0
-    assert channel0.distributable >= 0
-    assert channel0.locked >= 0
-    assert channel0.balance == channel0.locked + channel0.distributable
+    distributable = from_channel.our_state.distributable(from_channel.partner_state)
+    assert from_channel.distributable == distributable
+
+    assert from_channel.balance >= 0
+    assert from_channel.distributable >= 0
+    assert from_channel.locked >= 0
+    assert from_channel.balance == from_channel.locked + from_channel.distributable
 
 
 def increase_transferred_amount(from_channel, to_channel, amount):
@@ -298,38 +300,38 @@ def increase_transferred_amount(from_channel, to_channel, amount):
     to_channel.partner_state.register_direct_transfer(direct_transfer_message)
 
 
-def make_direct_transfer_from_channel(block_number, channel, partner_channel, amount, pkey):
-    """ Helper to create and register a direct transfer from `channel` to
+def make_direct_transfer_from_channel(block_number, from_channel, partner_channel, amount, pkey):
+    """ Helper to create and register a direct transfer from `from_channel` to
     `partner_channel`.
     """
-    identifier = channel.get_next_nonce()
+    identifier = from_channel.get_next_nonce()
 
-    direct_transfer = channel.create_directtransfer(
+    direct_transfer_msg = from_channel.create_directtransfer(
         amount,
         identifier=identifier,
     )
 
     address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
-    direct_transfer.sign(sign_key, address)
+    direct_transfer_msg.sign(sign_key, address)
 
-    # if this fails it's not the right key for the current `channel`
-    assert direct_transfer.sender == channel.our_state.address
+    # if this fails it's not the right key for the current `from_channel`
+    assert direct_transfer_msg.sender == from_channel.our_state.address
 
-    channel.register_transfer(
+    from_channel.register_transfer(
         block_number,
-        direct_transfer,
+        direct_transfer_msg,
     )
     partner_channel.register_transfer(
         block_number,
-        direct_transfer,
+        direct_transfer_msg,
     )
 
-    return direct_transfer
+    return direct_transfer_msg
 
 
 def make_mediated_transfer(
-        channel,
+        from_channel,
         partner_channel,
         initiator,
         target,
@@ -337,13 +339,13 @@ def make_mediated_transfer(
         pkey,
         block_number,
         secret=None):
-    """ Helper to create and register a mediated transfer from `channel` to
+    """ Helper to create and register a mediated transfer from `from_channel` to
     `partner_channel`.
     """
-    identifier = channel.get_next_nonce()
+    identifier = from_channel.get_next_nonce()
     fee = 0
 
-    mediated_transfer = channel.create_mediatedtransfer(  # pylint: disable=redefined-outer-name
+    mediated_transfer_msg = from_channel.create_mediatedtransfer(
         initiator,
         target,
         fee,
@@ -355,25 +357,25 @@ def make_mediated_transfer(
 
     address = privatekey_to_address(pkey)
     sign_key = PrivateKey(pkey)
-    mediated_transfer.sign(sign_key, address)
+    mediated_transfer_msg.sign(sign_key, address)
 
-    channel.block_number = block_number
+    from_channel.block_number = block_number
     partner_channel.block_number = block_number
 
-    # if this fails it's not the right key for the current `channel`
-    assert mediated_transfer.sender == channel.our_state.address
+    # if this fails it's not the right key for the current `from_channel`
+    assert mediated_transfer_msg.sender == from_channel.our_state.address
 
-    channel.register_transfer(
+    from_channel.register_transfer(
         block_number,
-        mediated_transfer,
+        mediated_transfer_msg,
     )
     partner_channel.register_transfer(
         block_number,
-        mediated_transfer,
+        mediated_transfer_msg,
     )
 
     if secret is not None:
-        channel.register_secret(secret)
+        from_channel.register_secret(secret)
         partner_channel.register_secret(secret)
 
-    return mediated_transfer
+    return mediated_transfer_msg
