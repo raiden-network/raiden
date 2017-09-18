@@ -231,8 +231,8 @@ def single_queue_send(
       with the event_stop.
     - If there are many queues for the same receiver_address, it is the
       caller's responsibility to not start them together to avoid congestion.
-    - This task assumes the endpoint is never cleared after it's first known,
-      if this assumption changes the code must be updated to handle unknow
+    - This task assumes the endpoint is never cleared after it's first known.
+      If this assumption changes the code must be updated to handle unknown
       addresses.
     """
 
