@@ -599,7 +599,6 @@ class NettingChannelTesterMock(object):
         self.channelsettle_filters = list()
 
         # check we are a participant of the channel
-        privatekey_to_address(self.private_key)
         self.detail()
 
     def token_address(self):
