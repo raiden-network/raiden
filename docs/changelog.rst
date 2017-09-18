@@ -2,6 +2,8 @@
 Changelog
 =========
 
+
+* :feature:`1022` Include ``error_msg`` in all epi responses and place result under a corresponding ``result`` key.
 * :bug:`450` Removed ``block_number`` from contracts events, using block_number from block on which it was mined.
 * :bug:`870` User selectable NAT traversal
 * :feature:`921` Add ``/api/1/connection`` API endpoint returning information about all connected token networks.
