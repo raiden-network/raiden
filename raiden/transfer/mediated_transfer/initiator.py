@@ -277,6 +277,8 @@ def handle_secretreveal(state, state_change):
 
         transfer_success = EventTransferSentSuccess(
             transfer.identifier,
+            transfer.amount,
+            transfer.target,
         )
 
         unlock_success = EventUnlockSuccess(

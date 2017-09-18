@@ -928,6 +928,8 @@ class RaidenService(object):
             # TODO: This should be set once the direct transfer is acknowledged
             transfer_success = EventTransferSentSuccess(
                 identifier,
+                amount,
+                target,
             )
             self.transaction_log.log_events(
                 state_change_id,
