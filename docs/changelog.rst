@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :bug:`450` Removed ``block_number`` from contracts events, using block_number from block on which it was mined.
 * :bug:`870` User selectable NAT traversal
 * :feature:`921` Add ``/api/1/connection`` API endpoint returning information about all connected token networks.
 * :bug:`1011` Remove ``settled`` attribute from the NettingChannel smart contract.
