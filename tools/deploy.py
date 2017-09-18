@@ -9,10 +9,10 @@ import logging
 from ethereum import slogging
 from ethereum._solidity import compile_contract
 from ethereum.utils import decode_hex
-from pyethapp.jsonrpc import default_gasprice
 from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.network.rpc.client import patch_send_message, patch_send_transaction
+from raiden.settings import GAS_PRICE
 from raiden.utils import get_contract_path
 
 
@@ -86,7 +86,7 @@ def allcontracts(contract_files):
     }
 
 
-def deploy_file(contract, compiled_contracts, client):
+def deploy_file(contract, compiled_contracts, client, gas_price=GAS_PRICE):
     libraries = dict()
     filename, _, name = contract.partition(":")
     log.info("Deploying %s", name)
@@ -97,18 +97,18 @@ def deploy_file(contract, compiled_contracts, client):
         libraries,
         '',
         contract_path=filename,
-        gasprice=default_gasprice
+        gasprice=gas_price
     )
     log.info("Deployed %s @ 0x%s", name, proxy.address.encode('hex'))
     libraries[contract] = proxy.address.encode('hex')
     return libraries
 
 
-def deploy_all(client):
+def deploy_all(client, gas_price=GAS_PRICE):
     compiled_contracts = allcontracts(RAIDEN_CONTRACT_FILES)
     deployed = {}
     for contract in CONTRACTS_TO_DEPLOY:
-        deployed.update(deploy_file(contract, compiled_contracts, client))
+        deployed.update(deploy_file(contract, compiled_contracts, client, gas_price))
     return deployed
 
 
@@ -116,9 +116,10 @@ def deploy_all(client):
                     "Requires the private key to an account with enough balance to deploy all "
                     "four contracts.")
 @click.option("--pretty", is_flag=True)
+@click.option("--gas-price", default=4, help="Gas price to use in GWei", show_default=True)
 @click.option("--port", type=int, default=8545, show_default=True)
 @click.argument("privatekey_hex")
-def main(privatekey_hex, port, pretty):
+def main(privatekey_hex, pretty, gas_price, port):
     slogging.configure(":debug")
     # Fix pyethapp.rpc_client not using slogging library
     rpc_logger = logging.getLogger('pyethapp.rpc_client')
@@ -136,7 +137,7 @@ def main(privatekey_hex, port, pretty):
     patch_send_transaction(client)
     patch_send_message(client)
 
-    deployed = deploy_all(client)
+    deployed = deploy_all(client, gas_price)
     print(json.dumps(deployed, indent=2 if pretty else None))
 
 
