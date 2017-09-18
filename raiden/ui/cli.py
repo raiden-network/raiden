@@ -292,9 +292,8 @@ OPTIONS = [
     click.option(
         '--sync-check/--no-sync-check',
         help=(
-            'Enable/Disable usage of an oracle to check if the ethereum node is synchronized'
+            'Checks if the ethereum node is synchronized against etherscan.'
         ),
-        default=True,
     ),
     click.option(
         '--api-address',
