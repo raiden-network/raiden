@@ -23,14 +23,12 @@ NETTINGCHANNEL_SETTLE_TIMEOUT_MIN = 6
 UDP_MAX_MESSAGE_SIZE = 1200
 
 MAINNET = 'mainnet'
-MORDEN = 'morden'
 ROPSTEN = 'ropsten'
 RINKEBY = 'rinkeby'
 KOVAN = 'kovan'
 
 ID_TO_NETWORKNAME = {
     1: MAINNET,
-    2: MORDEN,
     3: ROPSTEN,
     4: RINKEBY,
     42: KOVAN,
