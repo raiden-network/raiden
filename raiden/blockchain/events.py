@@ -52,6 +52,7 @@ def poll_event_listener(pyethapp_filter, translator):
         )
 
         if decoded_event is not None:
+            decoded_event['block_number'] = log_event.get('block_number')
             pyethapp_event = PyethappEvent(
                 log_event['address'],
                 decoded_event,
