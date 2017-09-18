@@ -97,9 +97,9 @@ def test_state_operators():
 
 
 def test_event_operators():
-    a = EventTransferSentSuccess(2)
-    b = EventTransferSentSuccess(2)
-    c = EventTransferSentSuccess(3)
+    a = EventTransferSentSuccess(2, 5, sha3('target'))
+    b = EventTransferSentSuccess(2, 5, sha3('target'))
+    c = EventTransferSentSuccess(3, 4, sha3('target'))
 
     assert a == b
     assert not a != b

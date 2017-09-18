@@ -84,6 +84,9 @@ def test_initiator_log_directransfer_success(
     ]
     assert sucessful_transfers[0] == EventTransferSentSuccess(
         identifier,
+        amount,
+        app1.raiden.address,
+
     )
 
 

@@ -26,15 +26,19 @@ class EventTransferSentSuccess(Event):
         sucessful but there is no knowledge about the global transfer.
     """
 
-    def __init__(self, identifier):
+    def __init__(self, identifier, amount, target):
         self.identifier = identifier
+        self.amount = amount
+        self.target = target
 
     def __eq__(self, other):
         if not isinstance(other, EventTransferSentSuccess):
             return False
 
         return (
-            self.identifier == other.identifier
+            self.identifier == other.identifier and
+            self.amount == other.amount and
+            self.target == other.target
         )
 
     def __ne__(self, other):

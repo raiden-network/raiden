@@ -76,6 +76,8 @@ def normalize_events_list(old_list):
         # be exported in hex to the outside world
         if new_event['event_type'] == 'EventTransferReceivedSuccess':
             new_event['initiator'] = address_encoder(new_event['initiator'])[2:]
+        if new_event['event_type'] == 'EventTransferSentSuccess':
+            new_event['target'] == address_encoder(new_event['target'])[2:]
         new_list.append(new_event)
     return new_list
 

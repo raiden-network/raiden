@@ -221,6 +221,8 @@ def test_api_channel_events(raiden_chain):
 
         if idx == 2:
             assert result['_event_type'] == 'EventTransferSentSuccess'
+            assert result['amount'] == amount
+            assert result['target'] == app1.raiden.address
         else:
             assert result['_event_type'] == 'ChannelNewBalance'
 

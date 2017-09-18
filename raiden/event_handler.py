@@ -38,7 +38,7 @@ from raiden.transfer.mediated_transfer.events import (
 from raiden.utils import sha3, pex
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
-UNEVENTEFUL_EVENTS = (
+UNEVENTFUL_EVENTS = (
     EventTransferReceivedSuccess,
     EventUnlockSuccess,
     EventWithdrawFailed,
@@ -177,7 +177,7 @@ class StateMachineEventHandler(object):
         elif isinstance(event, EventTransferSentFailed):
             for result in self.raiden.identifier_to_results[event.identifier]:
                 result.set(False)
-        elif isinstance(event, UNEVENTEFUL_EVENTS):
+        elif isinstance(event, UNEVENTFUL_EVENTS):
             pass
         elif isinstance(event, EventUnlockFailed):
             log.error(
