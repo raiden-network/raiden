@@ -72,9 +72,12 @@ test_bundle_docker := docker run --privileged --rm -v $(shell pwd)/dist:/data
 test_bundle_exe := /data/raiden--x86_64.AppImage --help
 test_bundle_test := grep -q "Usage: raiden"
 
+pyibundle:
+	pyinstaller --noconfirm --clean raiden.spec
+
 # test_bundle_distro <distro_name> <pre execution commands>
 define test_bundle_distro
-	################ 
+	################
 	# Testing "$(1)"
 	docker pull $(1)
 	${test_bundle_docker} $(1) sh -c \
@@ -116,7 +119,7 @@ test-bundle:
 
 # test_bundle_distro <distro_name> <pre execution commands>
 define test_bundle_distro_fail
-	################ 
+	################
 	# Testing "$(1)"
 	docker pull $(1)
 	! ${test_bundle_docker} $(1) sh -c \
@@ -157,4 +160,4 @@ blockchain-geth:
 	./tools/startcluster.py
 
 deploy: compile
-	./tools/deploy.py	
+	./tools/deploy.py
