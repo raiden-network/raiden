@@ -58,7 +58,10 @@ Event Object
 Channels events are encoded as json objects with the event arguments as attributes
 of the dictionary, with one difference. The ``event_type`` and the ``block_number`` are also added for all events to easily distinguish between events.
 
+Errors
+======
 
+For any non-succesful http status code, e.g. ``409 CONFLICT`` or ``400 BAD REQUEST`` there will be an accompanying ``errors`` field in the response json which you can check for more information on what went wrong with your request.
 
 Endpoints
 ***********
