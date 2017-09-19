@@ -80,9 +80,18 @@ def normalize_events_list(old_list):
     return new_list
 
 
-def api_response(result, error_msg='', status_code=httplib.OK):
+def api_response(result, status_code=httplib.OK):
     response = make_response((
-        json.dumps(dict(error_msg=error_msg, result=result)),
+        json.dumps(result),
+        status_code,
+        {'mimetype': 'application/json', 'Content-Type': 'application/json'}
+    ))
+    return response
+
+
+def api_error(errors, status_code=httplib.CONFLICT):
+    response = make_response((
+        json.dumps(dict(errors=errors)),
         status_code,
         {'mimetype': 'application/json', 'Content-Type': 'application/json'}
     ))
@@ -260,18 +269,13 @@ class RestAPI(object):
         manager_address = self.raiden_api.manager_address_if_token_registered(token_address)
 
         if manager_address is not None:
-            return api_response(
-                result=dict(),
-                error_msg='Token is already registered',
-                status_code=httplib.CONFLICT
-            )
+            return api_error(errors='Token is already registered')
 
         if manager_address is None:
             manager_address = self.raiden_api.register_token(token_address)
 
         return api_response(
             result=dict(channel_manager_address=address_encoder(manager_address)),
-            error_msg='',
             status_code=httplib.CREATED
         )
 
@@ -291,9 +295,8 @@ class RestAPI(object):
             )
         except (InvalidAddress, InvalidSettleTimeout, SamePeerAddress,
                 AddressWithoutCode, NoTokenManager, DuplicatedChannelError) as e:
-            return api_response(
-                result=dict(),
-                error_msg=str(e),
+            return api_error(
+                errors=str(e),
                 status_code=httplib.CONFLICT
             )
 
@@ -306,22 +309,19 @@ class RestAPI(object):
                     balance
                 )
             except EthNodeCommunicationError as e:
-                return api_response(
-                    result=dict(),
-                    error_msg=str(e),
+                return api_error(
+                    errors=str(e),
                     status_code=httplib.REQUEST_TIMEOUT
                 )
             except InsufficientFunds as e:
-                return api_response(
-                    result=dict(),
-                    error_msg=str(e),
+                return api_error(
+                    errors=str(e),
                     status_code=httplib.PAYMENT_REQUIRED
                 )
 
         result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
         return api_response(
             result=result.data,
-            error_msg='',
             status_code=httplib.CREATED
         )
 
@@ -333,15 +333,13 @@ class RestAPI(object):
                 amount
             )
         except EthNodeCommunicationError as e:
-            return api_response(
-                result=dict(),
-                error_msg=str(e),
+            return api_error(
+                errors=str(e),
                 status_code=httplib.REQUEST_TIMEOUT
             )
         except InsufficientFunds as e:
-            return api_response(
-                result=dict(),
-                error_msg=str(e),
+            return api_error(
+                errors=str(e),
                 status_code=httplib.PAYMENT_REQUIRED
             )
 
@@ -373,7 +371,6 @@ class RestAPI(object):
         )
         return api_response(
             result=dict(),
-            error_msg='',
             status_code=httplib.NO_CONTENT
         )
 
@@ -462,22 +459,19 @@ class RestAPI(object):
                 identifier=identifier
             )
         except (InvalidAmount, InvalidAddress, NoPathError) as e:
-            return api_response(
-                result=dict(),
-                error_msg=str(e),
+            return api_error(
+                errors=str(e),
                 status_code=httplib.CONFLICT
             )
         except (InsufficientFunds) as e:
-            return api_response(
-                result=dict(),
-                error_msg=str(e),
+            return api_error(
+                errors=str(e),
                 status_code=httplib.PAYMENT_REQUIRED
             )
 
         if transfer_result is False:
-            return api_response(
-                result=dict(),
-                error_msg="Payment couldn't be completed "
+            return api_error(
+                errors="Payment couldn't be completed "
                 "(insufficient funds or no route to target).",
                 status_code=httplib.CONFLICT
             )
@@ -494,15 +488,13 @@ class RestAPI(object):
 
     def patch_channel(self, channel_address, balance=None, state=None):
         if balance is not None and state is not None:
-            return api_response(
-                result=dict(),
-                error_msg='Can not update balance and change channel state at the same time',
+            return api_error(
+                errors='Can not update balance and change channel state at the same time',
                 status_code=httplib.CONFLICT,
             )
         elif balance is None and state is None:
-            return api_response(
-                result=dict(),
-                error_msg="Nothing to do. Should either provide 'balance' or 'state' argument",
+            return api_error(
+                errors="Nothing to do. Should either provide 'balance' or 'state' argument",
                 status_code=httplib.BAD_REQUEST,
             )
 
@@ -510,9 +502,8 @@ class RestAPI(object):
         try:
             channel = self.raiden_api.get_channel(channel_address)
         except ChannelNotFound:
-            return api_response(
-                result=dict(),
-                error_msg="Requested channel {} not found".format(
+            return api_error(
+                errors="Requested channel {} not found".format(
                     address_encoder(channel_address)
                 ),
                 status_code=httplib.CONFLICT
@@ -523,9 +514,8 @@ class RestAPI(object):
         # if we patch with `balance` it's a deposit
         if balance is not None:
             if current_state != CHANNEL_STATE_OPENED:
-                return api_response(
-                    result=dict(),
-                    error_msg="Can't deposit on a closed channel",
+                return api_error(
+                    errors="Can't deposit on a closed channel",
                     status_code=httplib.CONFLICT,
                 )
             try:
@@ -535,9 +525,8 @@ class RestAPI(object):
                     balance
                 )
             except InsufficientFunds as e:
-                return api_response(
-                    result=dict(),
-                    error_msg=str(e),
+                return api_error(
+                    errors=str(e),
                     status_code=httplib.PAYMENT_REQUIRED
                 )
             result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
@@ -545,9 +534,8 @@ class RestAPI(object):
 
         if state == CHANNEL_STATE_CLOSED:
             if current_state != CHANNEL_STATE_OPENED:
-                return api_response(
-                    result=dict(),
-                    error_msg='Attempted to close an already closed channel',
+                return api_error(
+                    errors='Attempted to close an already closed channel',
                     status_code=httplib.CONFLICT,
                 )
             raiden_service_result = self.raiden_api.close(
@@ -559,9 +547,8 @@ class RestAPI(object):
 
         if state == CHANNEL_STATE_SETTLED:
             if current_state != CHANNEL_STATE_CLOSED:
-                return api_response(
-                    result=dict(),
-                    error_msg='Attempted to settle a channel at its '
+                return api_error(
+                    errors='Attempted to settle a channel at its '
                     '{} state'.format(current_state),
                     status_code=httplib.CONFLICT,
                 )
@@ -571,9 +558,8 @@ class RestAPI(object):
                     channel.partner_address
                 )
             except InvalidState:
-                return api_response(
-                    result=dict(),
-                    error_msg='Settlement period is not yet over',
+                return api_error(
+                    errors='Settlement period is not yet over',
                     status_code=httplib.CONFLICT,
                 )
             else:
@@ -581,9 +567,8 @@ class RestAPI(object):
                 return api_response(result=result.data)
 
         # should never happen, channel_state is validated in the schema
-        return api_response(
-            result=dict(),
-            error_msg='Provided invalid channel state {}'.format(state),
+        return api_error(
+            errors='Provided invalid channel state {}'.format(state),
             status_code=httplib.BAD_REQUEST,
         )
 
@@ -619,13 +604,12 @@ class RestAPI(object):
             )
         else:
             # should never happen, role is validated in the schema
-            return api_response(
-                result=dict(),
-                error_msg='Provided invalid token swap role {}'.format(role),
+            return api_error(
+                errors='Provided invalid token swap role {}'.format(role),
                 status_code=httplib.BAD_REQUEST,
             )
 
-        return api_response(result=dict(), error_msg='', status_code=httplib.CREATED)
+        return api_response(result=dict(), status_code=httplib.CREATED)
 
 
 @parser.error_handler
