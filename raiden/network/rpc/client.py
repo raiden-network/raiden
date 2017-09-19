@@ -8,7 +8,6 @@ import gevent
 from gevent.lock import Semaphore
 from ethereum import slogging
 from ethereum import _solidity
-from ethereum.exceptions import InvalidTransaction
 from ethereum.transactions import Transaction
 from ethereum.utils import encode_hex, normalize_address
 from pyethapp.jsonrpc import (
@@ -1284,21 +1283,18 @@ class NettingChannel(object):
 
             self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+            lock = messages.Lock.from_bytes(locked_encoded)
             if receipt_or_none:
                 log.critical(
                     'withdraw failed',
                     contract=pex(self.address),
-                    nonce=nonce,
-                    transferred_amount=transferred_amount,
-                    locksroot=encode_hex(locksroot),
-                    extra_hash=encode_hex(extra_hash),
-                    signature=encode_hex(signature),
+                    lock=lock,
+                    secret=encode_hex(secret)
                 )
                 self._check_exists()
                 failed = True
 
             if log.isEnabledFor(logging.INFO):
-                lock = messages.Lock.from_bytes(locked_encoded)
                 log.info(
                     'withdraw sucessfull',
                     contract=pex(self.address),

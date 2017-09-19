@@ -593,10 +593,6 @@ def test_transfer(raiden_network, token_addresses):
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
 
-    # check agreement on addresses
-    address0 = channel0.our_state.address
-    address1 = channel1.our_state.address
-
     app0_token = app0.raiden.token_to_channelgraph.keys()[0]
     app1_token = app1.raiden.token_to_channelgraph.keys()[0]
 
