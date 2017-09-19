@@ -222,19 +222,30 @@ def fix_tester_storage(storage):
 
 
 def get_system_spec():
-    """Collect informations about the system and installation.
+    """Collect information about the system and installation.
     """
     import pkg_resources
     import platform
+
+    if sys.platform == 'darwin':
+        system_info = 'macOS {} {}'.format(
+            platform.mac_ver()[0],
+            platform.architecture()[0]
+        )
+    else:
+        system_info = '{} {} {} {} / {}'.format(
+            platform.system(),
+            '_'.join(platform.architecture()),
+            platform.release(),
+            platform.machine(),
+            ' '.join(part for part in platform.linux_distribution() if part)
+        )
+
     system_spec = dict(
         raiden=pkg_resources.require(raiden.__name__)[0].version,
         python_implementation=platform.python_implementation(),
         python_version=platform.python_version(),
-        system='{} {} {}'.format(
-            platform.system(),
-            '_'.join(platform.architecture()),
-            platform.release()
-        )
+        system=system_info
     )
     return system_spec
 
@@ -266,3 +277,7 @@ def wait_until(func, wait_for=None, sleep_for=0.5):
             res = func()
 
     return res
+
+
+def is_frozen():
+    return getattr(sys, 'frozen', False)
