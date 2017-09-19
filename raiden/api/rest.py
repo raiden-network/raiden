@@ -2,6 +2,8 @@
 
 import httplib
 import json
+
+import sys
 from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
 from flask_restful import Api, abort
@@ -59,7 +61,7 @@ from raiden.raiden_service import (
     create_default_identifier,
 )
 from raiden.api.objects import ChannelList, PartnersPerTokenList, AddressList
-from raiden.utils import address_encoder, channel_to_api_dict, split_endpoint
+from raiden.utils import address_encoder, channel_to_api_dict, split_endpoint, is_frozen
 
 log = slogging.get_logger(__name__)
 
@@ -206,6 +208,9 @@ class APIServer(object):
         self.wsgiserver = None
         self.flask_app.register_blueprint(self.blueprint)
         self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
+        if is_frozen():
+            # Inside frozen pyinstaller image
+            self.flask_app.config['WEBUI_PATH'] = '{}/raiden/ui/web/dist/'.format(sys.prefix)
 
         if web_ui:
             for route in ('/ui/<path:file>', '/ui', '/ui/', '/index.html', '/'):

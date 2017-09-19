@@ -18,9 +18,9 @@ For more information please visit http://raiden.network/.
 Installation
 ------------
 
-Please refer to the `Installation`_ section in the official docs.
+Please refer to the `Installation section`_ in the official docs.
 
-.. _Installation: http://raiden-network.readthedocs.io/en/stable/overview_and_guide.html#installation
+.. _Installation section: http://raiden-network.readthedocs.io/en/stable/overview_and_guide.html#installation
 
 
 Ropsten testnet
