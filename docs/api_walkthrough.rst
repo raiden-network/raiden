@@ -342,10 +342,10 @@ Then you can send a transfer to it via the transfer endpoint: ``POST /api/1/tran
 
     {
         "amount": 1,
-        "identifer": 43,
+        "identifer": 42,
     }
 
-Afterwards you can check your events and you should find an event with::
+Afterwards you can check your events and you should find an ``EventTransferReceivedSuccess`` event with::
 
     {
         "amount": 1,

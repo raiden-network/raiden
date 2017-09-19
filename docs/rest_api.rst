@@ -197,8 +197,8 @@ Possible Responses
 
 
 
-Querying all traded Tokens
---------------------------
+Querying all registered Tokens
+------------------------------
 
 By making a ``GET`` request to ``/api/<version>/tokens`` you get a list of addresses of all registered tokens.
 
@@ -900,7 +900,9 @@ Example Response
         }, {
             "event_type": "EventTransferSentSuccess",
             "identifier": 14909067296492875713,
-            "block_number": 26
+            "block_number": 2226,
+            "amount": 7,
+            "target": "0xc7262f1447fcb2f75ab14b2a28deed6006eea95b"
         }
     ]
 
