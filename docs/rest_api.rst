@@ -189,6 +189,9 @@ Possible Responses
 +==================+===========================+
 | 200 OK           | For a successful Query    |
 +------------------+---------------------------+
+| 404 Not Found    | If the channel does not   |
+|                  | exist                     |
++------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
@@ -223,6 +226,9 @@ Possible Responses
 | HTTP Code        | Condition                 |
 +==================+===========================+
 | 200 OK           | For a successful Query    |
++------------------+---------------------------+
+| 404 Not Found    | If the token does not     |
+|                  | exist                     |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
@@ -267,6 +273,9 @@ Possible Responses
 +------------------+---------------------------+
 | 302 Redirect     | If the user accesses the  |
 |                  | channel link endpoint     |
++------------------+---------------------------+
+| 404 Not Found    | If the token does not     |
+|                  | exist                     |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
@@ -857,6 +866,9 @@ Possible Responses
 | 400 Bad Request  | If the provided query     |
 |                  | string is  malformed      |
 +------------------+---------------------------+
+| 404 Not Found    | If the token does not     |
+|                  | exist                     |
++------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
@@ -902,6 +914,9 @@ Possible Responses
 +------------------+---------------------------+
 | 400 Bad Request  | If the provided query     |
 |                  | string is  malformed      |
++------------------+---------------------------+
+| 404 Not Found    | If the channel does not   |
+|                  | exist                     |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
