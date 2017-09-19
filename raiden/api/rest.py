@@ -89,7 +89,17 @@ def api_response(result, status_code=httplib.OK):
     return response
 
 
-def api_error(errors, status_code=httplib.CONFLICT):
+ERROR_STATUS_CODES = [
+    httplib.CONFLICT,
+    httplib.REQUEST_TIMEOUT,
+    httplib.PAYMENT_REQUIRED,
+    httplib.BAD_REQUEST,
+    httplib.NOT_FOUND,
+]
+
+
+def api_error(errors, status_code):
+    assert status_code in ERROR_STATUS_CODES, "Programming error, unexpected error status code"
     response = make_response((
         json.dumps(dict(errors=errors)),
         status_code,
@@ -269,7 +279,7 @@ class RestAPI(object):
         manager_address = self.raiden_api.manager_address_if_token_registered(token_address)
 
         if manager_address is not None:
-            return api_error(errors='Token is already registered')
+            return api_error(errors='Token is already registered', status_code=httplib.CONFLICT)
 
         if manager_address is None:
             manager_address = self.raiden_api.register_token(token_address)
