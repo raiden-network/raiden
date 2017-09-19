@@ -100,11 +100,13 @@ def test_event_operators():
     a = EventTransferSentSuccess(2, 5, sha3('target'))
     b = EventTransferSentSuccess(2, 5, sha3('target'))
     c = EventTransferSentSuccess(3, 4, sha3('target'))
+    d = EventTransferSentSuccess(3, 4, sha3('differenttarget'))
 
     assert a == b
     assert not a != b
     assert a != c
     assert not a == c
+    assert not c == d
 
     a = EventTransferSentFailed(2, 'BECAUSE')
     b = EventTransferSentFailed(2, 'BECAUSE')
