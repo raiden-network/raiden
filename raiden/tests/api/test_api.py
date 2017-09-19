@@ -30,14 +30,6 @@ from raiden.settings import (
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
 
 
-def assert_empty_response_with_code(response, status_code):
-    assert (
-        response is not None and
-        'result' in response.json() and response.json() == '' and
-        response.status_code == status_code
-    )
-
-
 def assert_no_content_response(response):
     assert(
         response is not None and response._content == '' and
