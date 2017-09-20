@@ -10,8 +10,8 @@ from raiden.api.v1.encoding import (
     AddressField,
     HexAddressConverter,
 )
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
 from raiden.channel import (
-    BalanceProof,
     Channel,
     ChannelEndState,
 )
@@ -26,28 +26,39 @@ from raiden.settings import (
     DEFAULT_INITIAL_CHANNEL_TARGET,
     DEFAULT_REVEAL_TIMEOUT,
 )
-from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+from raiden.mtree import Merkletree
+
+# pylint: disable=too-many-locals,unused-argument,too-many-lines
 
 
 def assert_no_content_response(response):
     assert(
-        response is not None and response._content == '' and
+        response is not None and
+        response.text == '' and
         response.status_code == httplib.NO_CONTENT
     )
 
 
 def assert_response_with_code(response, status_code):
-    assert (response is not None and response.status_code == status_code)
+    assert (
+        response is not None and
+        response.status_code == status_code
+    )
 
 
 def assert_response_with_error(response, status_code):
-    assert (response is not None and response.status_code == status_code and
-            'errors' in response.json() and response.json()['errors'] != '')
+    assert (
+        response is not None and
+        response.status_code == status_code and
+        'errors' in response.json() and
+        response.json()['errors'] != ''
+    )
 
 
 def assert_proper_response(response, status_code=httplib.OK):
     assert (
-        response is not None and response.status_code == status_code and
+        response is not None and
+        response.status_code == status_code and
         response.headers['Content-Type'] == 'application/json'
     )
 
@@ -118,12 +129,14 @@ def test_channel_to_api_dict():
     our_state = ChannelEndState(
         our_address,
         our_balance,
-        BalanceProof(None),
+        None,
+        Merkletree([]),
     )
     partner_state = ChannelEndState(
         partner_address,
         partner_balance,
-        BalanceProof(None),
+        None,
+        Merkletree([]),
     )
 
     # mock external state to provide the channel address
@@ -767,7 +780,7 @@ def test_query_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response.text)
     assert len(response) == 1
     assert response[0] == {
         'event_type': 'TokenAdded',
@@ -789,7 +802,7 @@ def test_query_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response.text)
     assert len(response) == 1
     assert response[0] == {
         'event_type': 'ChannelNew',
@@ -815,7 +828,7 @@ def test_query_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response.text)
     assert len(response) == 2
     assert response[0] == {
         'event_type': 'ChannelNewBalance',
@@ -860,7 +873,7 @@ def test_break_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response.text)
     assert len(response) == 1
     assert response[0] == {
         'event_type': 'ChannelNew',
@@ -882,7 +895,7 @@ def test_break_blockchain_events(
     )
     response = request.send().response
     assert_proper_response(response)
-    response = json.loads(response._content)
+    response = json.loads(response.text)
     assert len(response) == 1
     assert response[0] == {
         'event_type': 'ChannelSettled',
@@ -1032,7 +1045,7 @@ def test_connect_and_leave_token_network(
         api_url_for(api_backend, 'connectionsresource', token_address=token_address),
     )
     response = request.send().response
-    assert(api_test_context.last_only_receiving)
+    assert api_test_context.last_only_receiving
     assert_proper_response(response)
     response = response.json()
     expected_response = [channel['channel_address'] for channel in channels]
@@ -1057,7 +1070,7 @@ def test_connect_and_leave_token_network(
     )
     response = request.send().response
     assert_proper_response(response)
-    assert(not api_test_context.last_only_receiving)
+    assert not api_test_context.last_only_receiving
 
 
 def test_register_token(api_backend, api_test_context, api_raiden_service):
@@ -1065,8 +1078,8 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
     request = grequests.put(api_url_for(
         api_backend,
         'registertokenresource',
-        token_address=token_address)
-    )
+        token_address=token_address,
+    ))
     response = request.send().response
     assert_proper_response(response, status_code=httplib.CREATED)
     assert 'channel_manager_address' in response.json()
@@ -1075,8 +1088,8 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
     request = grequests.put(api_url_for(
         api_backend,
         'registertokenresource',
-        token_address=token_address)
-    )
+        token_address=token_address,
+    ))
     response = request.send().response
     assert_response_with_error(response, httplib.CONFLICT)
 

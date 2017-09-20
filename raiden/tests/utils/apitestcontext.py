@@ -1,17 +1,20 @@
 # -*- coding: utf-8 -*-
 import json
 
-from raiden.channel import (
-    BalanceProof,
-    Channel,
-    ChannelEndState,
-    ChannelExternalState,
-)
 from raiden.api.objects import ChannelList
 from raiden.api.v1.encoding import (
     ChannelSchema,
     ChannelListSchema
 )
+from raiden.channel import (
+    Channel,
+    ChannelEndState,
+    ChannelExternalState,
+)
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+from raiden.exceptions import InvalidAddress, InvalidSettleTimeout
+from raiden.mtree import Merkletree
+from raiden.tests.utils.factories import make_address
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
@@ -22,9 +25,6 @@ from raiden.utils import (
     isaddress,
     pex,
 )
-from raiden.exceptions import InvalidAddress, InvalidSettleTimeout
-from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
-from raiden.tests.utils.factories import make_address
 
 
 class NettingChannelMock(object):
@@ -160,12 +160,14 @@ class ApiTestContext():
         our_state = ChannelEndState(
             our_address,
             our_balance,
-            BalanceProof(None),
+            None,
+            Merkletree([]),
         )
         partner_state = ChannelEndState(
             partner_address,
             partner_balance,
-            BalanceProof(None),
+            None,
+            Merkletree([]),
         )
 
         channel_for_hashlock = list()

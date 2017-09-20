@@ -185,7 +185,7 @@ class BaseMediatedTransferTask(Task):
         identifier = mediated_transfer.identifier
         token = mediated_transfer.token
 
-        while channel.our_state.balance_proof.is_unclaimed(hashlock):
+        while channel.our_state.is_locked(hashlock):
             current_block = raiden.get_block_number()
 
             if current_block > block_to_close:
@@ -199,7 +199,7 @@ class BaseMediatedTransferTask(Task):
                     )
 
                 channel.external_state.close(
-                    channel.our_state.balance_proof.balance_proof,
+                    channel.our_state.balance_proof,
                 )
                 return
 

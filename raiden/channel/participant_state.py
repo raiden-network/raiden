@@ -1,71 +1,149 @@
 # -*- coding: utf-8 -*-
+from collections import namedtuple
+from itertools import chain
+
 from ethereum import slogging
 
+from raiden.exceptions import InvalidLocksRoot
 from raiden.mtree import Merkletree
+from raiden.transfer.state import BalanceProofState
 from raiden.utils import sha3
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
+
+# A lock and its computed hash, this namedtuple is used to keep the
+# `sha3(lock.as_bytes)` cached since this value is used to construct the
+# merkletree
+PendingLock = namedtuple('PendingLock', ('lock', 'lockhashed'))
+
+# The lock and the secret to unlock it, this is all the data required to
+# construct an unlock proof. The proof is not calculated because we only need
+# it when the contract is closed.
+UnlockPartialProof = namedtuple('UnlockPartialProof', ('lock', 'lockhashed', 'secret'))
+
+# The proof that can be used to unlock a secret with a smart contract
+UnlockProof = namedtuple('UnlockProof', ('merkle_proof', 'lock_encoded', 'secret'))
 
 
 class ChannelEndState(object):
     """ Tracks the state of one of the participants in a channel. """
 
-    def __init__(self, participant_address, participant_balance, balance_proof):
+    def __init__(self, participant_address, participant_balance, balance_proof, merkletree):
 
         # since ethereum only uses integral values we cannot use float/Decimal
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
 
+        # This participant balance on-chain
         self.contract_balance = participant_balance
+
+        # This participant address
         self.address = participant_address
+
+        # Locks from mediated transfers which the secret is unknown.
+        self.hashlocks_to_pendinglocks = dict()
+
+        # locks from mediated transfers which the secret is known but there is
+        # no balance proof unlocking it.
+        self.hashlocks_to_unclaimedlocks = dict()
+
+        # A merkletree of the keccak hash of the locks.
+        self.merkletree = merkletree
+
+        # The latest known balance proof that can be used on-chain, may be None.
         self.balance_proof = balance_proof
 
     @property
     def transferred_amount(self):
-        if self.balance_proof.balance_proof:
-            return self.balance_proof.balance_proof.transferred_amount
+        if self.balance_proof:
+            return self.balance_proof.transferred_amount
         return 0
 
     @property
+    def amount_locked(self):
+        alllocks = chain(
+            self.hashlocks_to_pendinglocks.values(),
+            self.hashlocks_to_unclaimedlocks.values(),
+        )
+
+        return sum(
+            lock.lock.amount
+            for lock in alllocks
+        )
+
+    @property
     def nonce(self):
-        if self.balance_proof.balance_proof:
-            return self.balance_proof.balance_proof.nonce
+        if self.balance_proof:
+            return self.balance_proof.nonce
         return None
 
-    def locked(self):
-        """ Return how much token is locked waiting for a secret. """
-        return self.balance_proof.locked()
+    def balance(self, other):
+        return self.contract_balance - self.transferred_amount + other.transferred_amount
+
+    def distributable(self, other):
+        return self.balance(other) - self.amount_locked
+
+    def is_known(self, hashlock):
+        """ True if the `hashlock` correspond to an known lock. """
+        return (
+            hashlock in self.hashlocks_to_pendinglocks or
+            hashlock in self.hashlocks_to_unclaimedlocks
+        )
+
+    def is_locked(self, hashlock):
+        """ True if the `hashlock` is known and the correspoding secret is not. """
+        return hashlock in self.hashlocks_to_pendinglocks
 
     def update_contract_balance(self, contract_balance):
-        """ Update the contract balance, it must always increase. """
+        """ Update the contract balance, it must always increase.
+
+        Raises:
+            ValueError: If the `contract_balance` is smaller than the current
+            balance.
+        """
         if contract_balance < self.contract_balance:
             log.error('contract_balance cannot decrease')
             raise ValueError('contract_balance cannot decrease')
 
         self.contract_balance = contract_balance
 
-    def balance(self, other):
-        """ Return the current available balance of the participant. """
-        return self.contract_balance - self.transferred_amount + other.transferred_amount
+    def get_lock_by_hashlock(self, hashlock):
+        lock = self.hashlocks_to_pendinglocks.get(hashlock)
 
-    def distributable(self, other):
-        """ Return the available amount of the token that can be transferred in
-        the channel.
-        """
-        return self.balance(other) - self.locked()
+        if lock is None:
+            lock = self.hashlocks_to_unclaimedlocks.get(hashlock)
+
+        return lock.lock
 
     def compute_merkleroot_with(self, include):
         """ Compute the resulting merkle root if the lock `include` is added in
         the tree.
         """
-        leafs = self.balance_proof.unclaimed_merkletree()
-        leafs.append(sha3(include.as_bytes))
-        locksroot = Merkletree(leafs).merkleroot
+        if not self.is_known(include.hashlock):
+            leaves = list(self.merkletree.leaves)
+            leaves.append(sha3(include.as_bytes))
+            locksroot = Merkletree(leaves).merkleroot
+        else:
+            locksroot = self.merkletree.locksroot
 
         return locksroot
 
-    # api design: using specialized methods to force the user to register the
+    def compute_merkleroot_without(self, without):
+        """ Compute the resulting merkle root if the lock `include` is added in
+        the tree.
+        """
+        if not self.is_known(without.hashlock):
+            raise ValueError('unknown lock', lock=without)
+
+        leaves = list(self.merkletree.leaves)
+        leaves.remove(sha3(without.as_bytes))
+        locksroot = Merkletree(leaves).merkleroot
+
+        return locksroot
+
+    # Api design: using specialized methods to force the user to register the
     # transfer and the lock in a single step
+
     def register_locked_transfer(self, locked_transfer):
         """ Register the latest known transfer.
 
@@ -82,24 +160,79 @@ class ChannelEndState(object):
 
         Args:
             transfer (LockedTransfer): The transfer to be added.
+
+        Raises:
+            InvalidLocksRoot: If the merkleroot of `locked_transfer` does not
+            match with the expected value.
+
+            ValueError: If the transfer contains a lock that was registered
+            previously.
         """
         balance_proof = locked_transfer.to_balanceproof()
         lock = locked_transfer.lock
-        self.balance_proof.register_balanceproof_with_lock(balance_proof, lock)
+        lockhashed = sha3(lock.as_bytes)
+
+        if self.is_known(lock.hashlock):
+            raise ValueError('hashlock is already registered')
+
+        leaves = list(self.merkletree.leaves)
+        leaves.append(lockhashed)
+
+        merkletree = Merkletree(leaves)
+        if balance_proof.locksroot != merkletree.merkleroot:
+            raise InvalidLocksRoot(merkletree.merkleroot, balance_proof.locksroot)
+
+        self.hashlocks_to_pendinglocks[lock.hashlock] = PendingLock(lock, lockhashed)
+        self.balance_proof = balance_proof
+        self.merkletree = merkletree
 
     def register_direct_transfer(self, direct_transfer):
+        """ Register a direct_transfer.
+
+        Raises:
+            InvalidLocksRoot: If the merkleroot of `direct_transfer` does not
+            match the current value.
+        """
         balance_proof = direct_transfer.to_balanceproof()
-        self.balance_proof.register_balanceproof(balance_proof)
+
+        if balance_proof.locksroot != self.merkletree.merkleroot:
+            raise InvalidLocksRoot(self.merkletree.merkleroot, balance_proof.locksroot)
+
+        self.balance_proof = balance_proof
 
     def register_secretmessage(self, message_secret):
         balance_proof = message_secret.to_balanceproof()
         hashlock = sha3(message_secret.secret)
-        lock = self.balance_proof.get_lock_by_hashlock(hashlock)
+        pendinglock = self.hashlocks_to_pendinglocks.get(hashlock)
 
-        self.balance_proof.register_balanceproof_without_lock(
-            balance_proof,
-            lock,
-        )
+        if not pendinglock:
+            pendinglock = self.hashlocks_to_unclaimedlocks[hashlock]
+
+        lock = pendinglock.lock
+        lockhashed = sha3(lock.as_bytes)
+
+        if not isinstance(balance_proof, BalanceProofState):
+            raise ValueError('balance_proof must be a BalanceProof instance')
+
+        if not self.is_known(lock.hashlock):
+            raise ValueError('hashlock is not registered')
+
+        leaves = list(self.merkletree.leaves)
+        leaves.remove(lockhashed)
+
+        merkletree = Merkletree(leaves)
+        new_locksroot = merkletree.merkleroot
+
+        if balance_proof.locksroot != new_locksroot:
+            raise InvalidLocksRoot(new_locksroot, balance_proof.locksroot)
+
+        if lock.hashlock in self.hashlocks_to_pendinglocks:
+            del self.hashlocks_to_pendinglocks[lock.hashlock]
+        else:
+            del self.hashlocks_to_unclaimedlocks[lock.hashlock]
+
+        self.merkletree = merkletree
+        self.balance_proof = balance_proof
 
     def register_secret(self, secret):
         """ Register a secret so that it can be used in a balance proof.
@@ -107,5 +240,66 @@ class ChannelEndState(object):
         Note:
             This methods needs to be called once a `Secret` message is received
             or a `SecretRevealed` event happens.
+
+        Raises:
+            ValueError: If the hashlock is not known.
         """
-        self.balance_proof.register_secret(secret)
+        hashlock = sha3(secret)
+
+        if not self.is_known(hashlock):
+            raise ValueError('secret doest not correspond to any hashlock')
+
+        if self.is_locked(hashlock):
+            pendinglock = self.hashlocks_to_pendinglocks[hashlock]
+            del self.hashlocks_to_pendinglocks[hashlock]
+
+            self.hashlocks_to_unclaimedlocks[hashlock] = UnlockPartialProof(
+                pendinglock.lock,
+                pendinglock.lockhashed,
+                secret,
+            )
+
+    def get_known_unlocks(self):
+        """ Generate unlocking proofs for the known secrets. """
+
+        tree = self.merkletree
+
+        return [
+            self.compute_proof_for_lock(
+                partialproof.secret,
+                partialproof.lock,
+                tree,
+            )
+            for partialproof in self.hashlocks_to_unclaimedlocks.itervalues()
+        ]
+
+    def compute_proof_for_lock(self, secret, lock, tree=None):
+        if tree is None:
+            tree = self.merkletree
+
+        # forcing bytes because ethereum.abi doesnt work with bytearray
+        lock_encoded = bytes(lock.as_bytes)
+        lock_hash = sha3(lock_encoded)
+
+        merkle_proof = tree.make_proof(lock_hash)
+
+        return UnlockProof(
+            merkle_proof,
+            lock_encoded,
+            secret,
+        )
+
+    def __eq__(self, other):
+        if isinstance(other, ChannelEndState):
+            return (
+                self.contract_balance == other.contract_balance and
+                self.address == other.address and
+                self.hashlocks_to_pendinglocks == other.hashlocks_to_pendinglocks and
+                self.hashlocks_to_unclaimedlocks == other.hashlocks_to_unclaimedlocks and
+                self.merkletree == other.merkletree and
+                self.balance_proof == other.balance_proof
+            )
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

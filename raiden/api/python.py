@@ -593,7 +593,7 @@ class RaidenAPI(object):
         graph = self.raiden.token_to_channelgraph[token_address]
         channel = graph.partneraddress_to_channel[partner_address]
 
-        balance_proof = channel.our_state.balance_proof.balance_proof
+        balance_proof = channel.our_state.balance_proof
         channel.external_state.close(balance_proof)
 
         return channel
