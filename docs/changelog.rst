@@ -2,8 +2,8 @@
 Changelog
 =========
 
-* :feature:`1022` Include an ``errors`` field in all unsuccessful API responses.
 * :feature:`1010` Add ``amount`` and ``target`` to ``EventTransferSentSuccess`` event
+* :feature:`1022` Include an ``errors`` field in all unsuccessful API responses.
 * :bug:`450` Removed ``block_number`` from contracts events, using block_number from block on which it was mined.
 * :bug:`870` User selectable NAT traversal
 * :feature:`921` Add ``/api/1/connection`` API endpoint returning information about all connected token networks.
