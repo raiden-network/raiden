@@ -106,12 +106,13 @@ def etherscan_query_with_retries(url, sleep, retries=3):
 def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
     local_block = blockchain_service.client.blocknumber()
     etherscan_block = etherscan_query_with_retries(url, sleep)
+    syncing_str = 'Syncing ... Current: {} / Target: ~{}'
 
     if local_block >= etherscan_block - tolerance:
         return
 
     print('Waiting for the ethereum node to synchronize. [Use ^C to exit]')
-    print('{}/~{}'.format(local_block, etherscan_block), end='')
+    print(syncing_str.format(local_block, etherscan_block), end='')
 
     for i in count():
         sys.stdout.flush()
@@ -126,7 +127,7 @@ def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
                 return
 
         print(CLEARLINE + CURSOR_STARTLINE, end='')
-        print('{}/~{}'.format(local_block, etherscan_block), end='')
+        print(syncing_str.format(local_block, etherscan_block), end='')
 
 
 def wait_for_sync_rpc_api(blockchain_service, url, tolerance, sleep):
