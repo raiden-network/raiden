@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`1037` Add ``show_default`` to CLI options
 * :feature:`670` Block raiden startup until ethereum node is fully synchronized.
 * :feature:`1010` Add ``amount`` and ``target`` to ``EventTransferSentSuccess`` event
 * :feature:`1022` Include an ``errors`` field in all unsuccessful API responses.
