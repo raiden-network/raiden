@@ -108,7 +108,7 @@ def ordered_neighbors(nx_graph, our_address, target_address):
                 target_address,
             )
             heappush(paths, (length, neighbor))
-        except networkx.NetworkXNoPath:
+        except (networkx.NetworkXNoPath, networkx.NodeNotFound):
             pass
 
     return paths
@@ -304,7 +304,7 @@ class ChannelGraph(object):
         """ True if there is a connecting path regardless of the number of hops. """
         try:
             return networkx.has_path(self.graph, source_address, target_address)
-        except networkx.NetworkXError:
+        except (networkx.NodeNotFound, networkx.NetworkXNoPath):
             return False
 
     def has_channel(self, source_address, target_address):
