@@ -12,7 +12,7 @@ rlp>=0.4.3,<0.6.0
 coincurve==4.5.1
 pycryptodome>=3.4.3
 miniupnpc
-networkx
+networkx>=2.0.0
 ethereum-serpent
 repoze.lru
 gevent-websocket==0.9.4
