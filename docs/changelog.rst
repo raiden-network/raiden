@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`670` Block raiden startup until ethereum node is fully synchronized.
 * :feature:`1010` Add ``amount`` and ``target`` to ``EventTransferSentSuccess`` event
 * :feature:`1022` Include an ``errors`` field in all unsuccessful API responses.
 * :bug:`450` Removed ``block_number`` from contracts events, using block_number from block on which it was mined.
