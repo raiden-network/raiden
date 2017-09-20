@@ -202,6 +202,7 @@ OPTIONS = [
               'a keystore file exists in your local system.'),
         default=None,
         type=ADDRESS_TYPE,
+        show_default=True,
     ),
     click.option(
         '--keystore-path',
@@ -209,6 +210,7 @@ OPTIONS = [
               ' provide it using this argument.'),
         default=None,
         type=click.Path(exists=True),
+        show_default=True,
     ),
     click.option(
         '--eth-rpc-endpoint',
@@ -216,43 +218,49 @@ OPTIONS = [
         'Also accepts a protocol prefix (http:// or https://) with optional port',
         default='127.0.0.1:8545',  # geth default jsonrpc port
         type=str,
+        show_default=True,
     ),
     click.option(
         '--registry-contract-address',
         help='hex encoded address of the registry contract.',
         default=ROPSTEN_REGISTRY_ADDRESS,  # testnet default
         type=ADDRESS_TYPE,
+        show_default=True,
     ),
     click.option(
         '--discovery-contract-address',
         help='hex encoded address of the discovery contract.',
         default=ROPSTEN_DISCOVERY_ADDRESS,  # testnet default
         type=ADDRESS_TYPE,
+        show_default=True,
     ),
     click.option(
         '--listen-address',
         help='"host:port" for the raiden service to listen on.',
         default="0.0.0.0:{}".format(INITIAL_PORT),
         type=str,
+        show_default=True,
     ),
     click.option(
         '--rpccorsdomain',
-        help='Comma separated list of domains to accept cross origin requests. \n'
-        '(localhost enabled by default)',
+        help='Comma separated list of domains to accept cross origin requests.',
         default="http://localhost:*/*",
         type=str,
+        show_default=True,
     ),
     click.option(
         '--logging',
         help='ethereum.slogging config-string (\'<logger1>:<level>,<logger2>:<level>\')',
         default=':INFO',
         type=str,
+        show_default=True,
     ),
     click.option(
         '--logfile',
         help='file path for logging to file',
         default=None,
         type=str,
+        show_default=True,
     ),
     click.option(
         '--log-json',
@@ -267,6 +275,7 @@ OPTIONS = [
         ),
         default=30,
         type=int,
+        show_default=True,
     ),
     click.option(
         '--send-ping-time',
@@ -276,6 +285,7 @@ OPTIONS = [
         ),
         default=60,
         type=int,
+        show_default=True,
     ),
     click.option(
         '--console',
@@ -285,23 +295,25 @@ OPTIONS = [
     click.option(
         '--rpc/--no-rpc',
         help=(
-            'Start with or without the RPC server. Default is to start '
-            'the RPC server'
+            'Start with or without the RPC server.'
         ),
         default=True,
+        show_default=True,
     ),
     click.option(
         '--sync-check/--no-sync-check',
         help=(
             'Checks if the ethereum node is synchronized against etherscan.'
         ),
-        default=True
+        default=True,
+        show_default=True,
     ),
     click.option(
         '--api-address',
         help='"host:port" for the RPC server to listen on.',
         default="127.0.0.1:5001",
         type=str,
+        show_default=True,
     ),
     click.option(
         '--datadir',
@@ -315,21 +327,23 @@ OPTIONS = [
             resolve_path=True,
             allow_dash=False,
         ),
+        show_default=True,
     ),
     click.option(
         '--password-file',
         help='Text file containing password for provided account',
         default=None,
         type=click.File(lazy=True),
+        show_default=True,
     ),
     click.option(
         '--web-ui/--no-web-ui',
         help=(
             'Start with or without the web interface. Requires --rpc. '
             'It will be acessible at http://<api-address>. '
-            'Default is to start with the web UI enabled'
         ),
         default=True,
+        show_default=True,
     ),
     click.option(
         '--eth-client-communication',
