@@ -7,6 +7,8 @@ from raiden.api.python import RaidenAPI
 from raiden.tests.utils.network import CHAIN
 from raiden.tests.utils import get_channel_events_for_token
 
+# pylint: disable=too-many-locals
+
 
 # `RaidenAPI.get_channel_events` is not supported in tester
 @pytest.mark.parametrize('blockchain_type', ['geth'])
@@ -32,20 +34,29 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
         transfer_event.wait(timeout=20)
         expected[app.raiden.address] = amount
 
-    initiators = list()
-    received = list()
-    events = get_channel_events_for_token(receiver_app, token_address, start_block)
+    events = get_channel_events_for_token(
+        receiver_app,
+        token_address,
+        start_block,
+    )
+
+    transfer_initiators = list()
+    events_received = list()
     for event in events:
         if event['_event_type'] == 'EventTransferReceivedSuccess':
-            received.append(event)
-            initiators.append(event['initiator'])
+            events_received.append(event)
+            transfer_initiators.append(event['initiator'])
 
-    assert len(received) == 3
-    assert len(initiators) == 3
-    without_receiver_app = [app0.raiden.address, app1.raiden.address, app2.raiden.address]
-    assert set(without_receiver_app) == set(initiators)
-    for event in received:
-        assert expected[event['initiator']] == event['amount']
+            assert expected[event['initiator']] == event['amount']
+
+    assert len(events_received) == len(expected), '# of events must be equal to # of transfers'
+
+    without_receiver_app = [
+        app0.raiden.address,
+        app1.raiden.address,
+        app2.raiden.address,
+    ]
+    assert set(without_receiver_app) == set(transfer_initiators)
 
 
 # `RaidenAPI.get_channel_events` is not supported in tester

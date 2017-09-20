@@ -5,8 +5,15 @@ from itertools import chain
 from ethereum import slogging
 
 from raiden.exceptions import InvalidLocksRoot
-from raiden.mtree import Merkletree
-from raiden.transfer.state import BalanceProofState
+from raiden.transfer.merkle_tree import (
+    EMPTY_MERKLE_TREE,
+    EMPTY_MERKLE_ROOT,
+    LEAVES,
+    compute_layers,
+    compute_merkleproof_for,
+    merkleroot,
+)
+from raiden.transfer.state import BalanceProofState, MerkleTreeState
 from raiden.utils import sha3
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -120,11 +127,13 @@ class ChannelEndState(object):
         the tree.
         """
         if not self.is_known(include.hashlock):
-            leaves = list(self.merkletree.leaves)
+            leaves = list(self.merkletree.layers[LEAVES])
             leaves.append(sha3(include.as_bytes))
-            locksroot = Merkletree(leaves).merkleroot
+
+            tree_with = MerkleTreeState(compute_layers(leaves))
+            locksroot = merkleroot(tree_with)
         else:
-            locksroot = self.merkletree.locksroot
+            locksroot = merkleroot(self.merkletree)
 
         return locksroot
 
@@ -135,9 +144,14 @@ class ChannelEndState(object):
         if not self.is_known(without.hashlock):
             raise ValueError('unknown lock', lock=without)
 
-        leaves = list(self.merkletree.leaves)
+        leaves = list(self.merkletree.layers[LEAVES])
         leaves.remove(sha3(without.as_bytes))
-        locksroot = Merkletree(leaves).merkleroot
+
+        if leaves:
+            tree_without = MerkleTreeState(compute_layers(leaves))
+            locksroot = merkleroot(tree_without)
+        else:
+            locksroot = EMPTY_MERKLE_ROOT
 
         return locksroot
 
@@ -175,16 +189,18 @@ class ChannelEndState(object):
         if self.is_known(lock.hashlock):
             raise ValueError('hashlock is already registered')
 
-        leaves = list(self.merkletree.leaves)
+        leaves = list(self.merkletree.layers[LEAVES])
         leaves.append(lockhashed)
 
-        merkletree = Merkletree(leaves)
-        if balance_proof.locksroot != merkletree.merkleroot:
-            raise InvalidLocksRoot(merkletree.merkleroot, balance_proof.locksroot)
+        newtree = MerkleTreeState(compute_layers(leaves))
+        locksroot = merkleroot(newtree)
+
+        if balance_proof.locksroot != locksroot:
+            raise InvalidLocksRoot(locksroot, balance_proof.locksroot)
 
         self.hashlocks_to_pendinglocks[lock.hashlock] = PendingLock(lock, lockhashed)
         self.balance_proof = balance_proof
-        self.merkletree = merkletree
+        self.merkletree = newtree
 
     def register_direct_transfer(self, direct_transfer):
         """ Register a direct_transfer.
@@ -195,8 +211,8 @@ class ChannelEndState(object):
         """
         balance_proof = direct_transfer.to_balanceproof()
 
-        if balance_proof.locksroot != self.merkletree.merkleroot:
-            raise InvalidLocksRoot(self.merkletree.merkleroot, balance_proof.locksroot)
+        if balance_proof.locksroot != merkleroot(self.merkletree):
+            raise InvalidLocksRoot(merkleroot(self.merkletree), balance_proof.locksroot)
 
         self.balance_proof = balance_proof
 
@@ -217,11 +233,16 @@ class ChannelEndState(object):
         if not self.is_known(lock.hashlock):
             raise ValueError('hashlock is not registered')
 
-        leaves = list(self.merkletree.leaves)
+        leaves = list(self.merkletree.layers[LEAVES])
         leaves.remove(lockhashed)
 
-        merkletree = Merkletree(leaves)
-        new_locksroot = merkletree.merkleroot
+        if leaves:
+            layers = compute_layers(leaves)
+            new_merkletree = MerkleTreeState(layers)
+            new_locksroot = merkleroot(new_merkletree)
+        else:
+            new_merkletree = EMPTY_MERKLE_TREE
+            new_locksroot = EMPTY_MERKLE_ROOT
 
         if balance_proof.locksroot != new_locksroot:
             raise InvalidLocksRoot(new_locksroot, balance_proof.locksroot)
@@ -231,7 +252,7 @@ class ChannelEndState(object):
         else:
             del self.hashlocks_to_unclaimedlocks[lock.hashlock]
 
-        self.merkletree = merkletree
+        self.merkletree = new_merkletree
         self.balance_proof = balance_proof
 
     def register_secret(self, secret):
@@ -281,7 +302,7 @@ class ChannelEndState(object):
         lock_encoded = bytes(lock.as_bytes)
         lock_hash = sha3(lock_encoded)
 
-        merkle_proof = tree.make_proof(lock_hash)
+        merkle_proof = compute_merkleproof_for(tree, lock_hash)
 
         return UnlockProof(
             merkle_proof,

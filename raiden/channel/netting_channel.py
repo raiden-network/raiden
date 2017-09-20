@@ -31,6 +31,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveClosed,
     ContractReceiveSettled,
 )
+from raiden.transfer.merkle_tree import LEAVES, merkleroot
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -586,7 +587,7 @@ class Channel(object):
                     node=pex(self.our_state.address),
                     from_=pex(from_state.address),
                     to=pex(to_state.address),
-                    currentlocksroot=pex(from_state.merkletree.merkleroot),
+                    currentlocksroot=pex(merkleroot(from_state.merkletree)),
                     lockhashes=lpex(lockhashes),
                     lock_amount=transfer.lock.amount,
                     lock_expiration=transfer.lock.expiration,
@@ -618,7 +619,7 @@ class Channel(object):
                 transfer=repr(transfer),
                 transferred_amount=from_state.transferred_amount,
                 nonce=from_state.nonce,
-                current_locksroot=pex(from_state.merkletree.merkleroot),
+                current_locksroot=pex(merkleroot(from_state.merkletree)),
             )
 
     def get_next_nonce(self):
@@ -652,7 +653,7 @@ class Channel(object):
             raise ValueError('Insufficient funds')
 
         transferred_amount = from_.transferred_amount + amount
-        current_locksroot = to_.merkletree.merkleroot
+        current_locksroot = merkleroot(to_.merkletree)
 
         nonce = self.get_next_nonce()
 
@@ -855,8 +856,8 @@ class ChannelSerialization(object):
 
         self.our_balance_proof = channel_instance.our_state.balance_proof
         self.partner_balance_proof = channel_instance.partner_state.balance_proof
-        self.our_leaves = channel_instance.our_state.merkletree.leaves
-        self.partner_leaves = channel_instance.our_state.merkletree.leaves
+        self.our_leaves = channel_instance.our_state.merkletree.layers[LEAVES]
+        self.partner_leaves = channel_instance.our_state.merkletree.layers[LEAVES]
 
     def __eq__(self, other):
         if isinstance(other, ChannelSerialization):

@@ -21,12 +21,12 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
+from raiden.transfer.merkle_tree import EMPTY_MERKLE_TREE
 from raiden.settings import (
     DEFAULT_JOINABLE_FUNDS_TARGET,
     DEFAULT_INITIAL_CHANNEL_TARGET,
     DEFAULT_REVEAL_TIMEOUT,
 )
-from raiden.mtree import Merkletree
 
 # pylint: disable=too-many-locals,unused-argument,too-many-lines
 
@@ -130,13 +130,13 @@ def test_channel_to_api_dict():
         our_address,
         our_balance,
         None,
-        Merkletree([]),
+        EMPTY_MERKLE_TREE,
     )
     partner_state = ChannelEndState(
         partner_address,
         partner_balance,
         None,
-        Merkletree([]),
+        EMPTY_MERKLE_TREE,
     )
 
     # mock external state to provide the channel address
