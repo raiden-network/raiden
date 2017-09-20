@@ -294,6 +294,7 @@ OPTIONS = [
         help=(
             'Checks if the ethereum node is synchronized against etherscan.'
         ),
+        default=True
     ),
     click.option(
         '--api-address',
