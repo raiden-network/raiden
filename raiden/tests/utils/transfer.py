@@ -279,7 +279,7 @@ def assert_balance(from_channel, balance, outstanding, distributable):
 def increase_transferred_amount(from_channel, to_channel, amount):
     # increasing the transferred amount by a value larger than distributable
     # would put one end of the channel in a negative balance, which is
-    # forbindden
+    # forbidden
     assert from_channel.distributable >= amount, 'operation would end up in a incosistent state'
 
     identifier = 1
