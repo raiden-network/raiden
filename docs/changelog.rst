@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature: `507` Making python's channels crash resilient (recoverable). Note, this is a breaking change, the serialization format of channel objects changed to a WAL compatible representation.
 * :feature:`1037` Add ``show_default`` to CLI options
 * :feature:`670` Block raiden startup until ethereum node is fully synchronized.
 * :feature:`1010` Add ``amount`` and ``target`` to ``EventTransferSentSuccess`` event
