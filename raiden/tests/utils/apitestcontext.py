@@ -13,8 +13,8 @@ from raiden.channel import (
 )
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
 from raiden.exceptions import InvalidAddress, InvalidSettleTimeout
-from raiden.mtree import Merkletree
 from raiden.tests.utils.factories import make_address
+from raiden.transfer.merkle_tree import EMPTY_MERKLE_TREE
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
@@ -161,13 +161,13 @@ class ApiTestContext():
             our_address,
             our_balance,
             None,
-            Merkletree([]),
+            EMPTY_MERKLE_TREE,
         )
         partner_state = ChannelEndState(
             partner_address,
             partner_balance,
             None,
-            Merkletree([]),
+            EMPTY_MERKLE_TREE,
         )
 
         channel_for_hashlock = list()

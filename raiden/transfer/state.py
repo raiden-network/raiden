@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import State
 from raiden.utils import pex
+from raiden.exceptions import HashLengthNot32
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 CHANNEL_STATE_CLOSED = 'closed'
@@ -174,6 +175,20 @@ class BalanceProofState(State):
                 self.message_hash == other.message_hash and
                 self.signature == other.signature
             )
+
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
+class MerkleTreeState(State):
+    def __init__(self, layers):
+        self.layers = layers
+
+    def __eq__(self, other):
+        if isinstance(other, MerkleTreeState):
+            return self.layers == other.layers
 
         return False
 

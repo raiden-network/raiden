@@ -2,7 +2,6 @@
 import gevent
 import pytest
 
-from raiden.mtree import check_proof
 from raiden.messages import RevealSecret
 from raiden.tests.utils.events import must_contain_entry
 from raiden.tests.utils.blockchain import wait_until_block
@@ -23,6 +22,7 @@ from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveSettled,
     ReceiveSecretReveal,
 )
+from raiden.transfer.merkle_tree import validate_proof, merkleroot
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.transfer.state_change import Block
 from raiden.utils import sha3, privatekey_to_address
@@ -106,9 +106,9 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     assert sha3(secret) == hashlock
     unlock_proof = bob_alice_channel.partner_state.compute_proof_for_lock(secret, lock)
 
-    root = bob_alice_channel.partner_state.merkletree.merkleroot
+    root = merkleroot(bob_alice_channel.partner_state.merkletree)
 
-    assert check_proof(
+    assert validate_proof(
         unlock_proof.merkle_proof,
         root,
         sha3(transfermessage.lock.as_bytes),

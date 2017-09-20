@@ -77,7 +77,11 @@ from raiden.messages import (
     RevealSecret,
     SignedMessage,
 )
-from raiden.mtree import Merkletree
+from raiden.transfer.state import MerkleTreeState
+from raiden.transfer.merkle_tree import (
+    EMPTY_MERKLE_TREE,
+    compute_layers,
+)
 from raiden.network.protocol import (
     RaidenProtocol,
 )
@@ -588,13 +592,13 @@ class RaidenService(object):
             channel_details['our_address'],
             channel_details['our_balance'],
             None,
-            Merkletree([]),
+            EMPTY_MERKLE_TREE,
         )
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
             None,
-            Merkletree([]),
+            EMPTY_MERKLE_TREE,
         )
 
         def register_channel_for_hashlock(channel, hashlock):
@@ -638,18 +642,30 @@ class RaidenService(object):
         # our_address is checked by detail
         assert channel_details['partner_address'] == serialized_channel.partner_address
 
+        if serialized_channel.our_leaves:
+            our_layers = compute_layers(serialized_channel.our_leaves)
+            our_tree = MerkleTreeState(our_layers)
+        else:
+            our_tree = EMPTY_MERKLE_TREE
+
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
             serialized_channel.our_balance_proof,
-            Merkletree(serialized_channel.our_leaves),
+            our_tree,
         )
+
+        if serialized_channel.partner_leaves:
+            partner_layers = compute_layers(serialized_channel.partner_leaves)
+            partner_tree = MerkleTreeState(partner_layers)
+        else:
+            partner_tree = EMPTY_MERKLE_TREE
 
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
             serialized_channel.partner_balance_proof,
-            Merkletree(serialized_channel.partner_leaves),
+            partner_tree,
         )
 
         def register_channel_for_hashlock(channel, hashlock):

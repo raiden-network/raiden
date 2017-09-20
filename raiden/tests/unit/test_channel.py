@@ -21,11 +21,16 @@ from raiden.messages import (
     Secret,
     MediatedTransfer,
 )
-from raiden.mtree import Merkletree
-from raiden.utils import sha3
+from raiden.tests.utils.factories import make_address, make_privkey_address
 from raiden.tests.utils.messages import make_mediated_transfer
 from raiden.tests.utils.transfer import assert_synched_channels, channel
-from raiden.tests.utils.factories import make_address, make_privkey_address
+from raiden.transfer.merkle_tree import (
+    EMPTY_MERKLE_TREE,
+    compute_layers,
+    merkleroot,
+)
+from raiden.transfer.state import MerkleTreeState
+from raiden.utils import sha3
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -69,8 +74,8 @@ def test_end_state():
     lock_expiration = 10
     lock_hashlock = sha3(lock_secret)
 
-    state1 = ChannelEndState(address1, balance1, None, Merkletree([]))
-    state2 = ChannelEndState(address2, balance2, None, Merkletree([]))
+    state1 = ChannelEndState(address1, balance1, None, EMPTY_MERKLE_TREE)
+    state2 = ChannelEndState(address2, balance2, None, EMPTY_MERKLE_TREE)
 
     assert state1.contract_balance == balance1
     assert state2.contract_balance == balance2
@@ -81,8 +86,8 @@ def test_end_state():
     assert state1.is_locked(lock_hashlock) is False
     assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.merkletree.merkleroot == EMPTY_MERKLE_ROOT
-    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
+    assert merkleroot(state1.merkletree) == EMPTY_MERKLE_ROOT
+    assert merkleroot(state2.merkletree) == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is None
     assert state2.nonce is None
@@ -134,8 +139,8 @@ def test_end_state():
     assert state1.is_locked(lock_hashlock) is True
     assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.merkletree.merkleroot == lock_hash
-    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
+    assert merkleroot(state1.merkletree) == lock_hash
+    assert merkleroot(state2.merkletree) == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is 1
     assert state2.nonce is None
@@ -159,8 +164,8 @@ def test_end_state():
     assert state1.is_locked(lock_hashlock) is True
     assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.merkletree.merkleroot == lock_hash
-    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
+    assert merkleroot(state1.merkletree) == lock_hash
+    assert merkleroot(state2.merkletree) == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is 1
     assert state2.nonce is None
@@ -177,8 +182,8 @@ def test_end_state():
     assert state1.is_locked(lock_hashlock) is False
     assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.merkletree.merkleroot == lock_hash
-    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
+    assert merkleroot(state1.merkletree) == lock_hash
+    assert merkleroot(state2.merkletree) == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is 1
     assert state2.nonce is None
@@ -208,8 +213,8 @@ def test_end_state():
     assert state1.is_locked(lock_hashlock) is False
     assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.merkletree.merkleroot == EMPTY_MERKLE_ROOT
-    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
+    assert merkleroot(state1.merkletree) == EMPTY_MERKLE_ROOT
+    assert merkleroot(state2.merkletree) == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is 2
     assert state2.nonce is None
@@ -227,8 +232,8 @@ def test_sender_cannot_overspend():
     settle_timeout = 15
     block_number = 10
 
-    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
-    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
+    our_state = ChannelEndState(address1, balance1, None, EMPTY_MERKLE_TREE)
+    partner_state = ChannelEndState(address2, balance2, None, EMPTY_MERKLE_TREE)
     external_state = make_external_state()
 
     test_channel = Channel(
@@ -263,10 +268,12 @@ def test_sender_cannot_overspend():
         expiration=expiration,
         hashlock=sha3('test_locked_amount_cannot_be_spent2'),
     )
-    locksroot2 = Merkletree([
+    leaves = [
         sha3(sent_mediated_transfer0.lock.as_bytes),
         sha3(lock2.as_bytes),
-    ]).merkleroot
+    ]
+    tree2 = MerkleTreeState(compute_layers(leaves))
+    locksroot2 = merkleroot(tree2)
 
     sent_mediated_transfer1 = MediatedTransfer(
         identifier=2,
@@ -303,8 +310,8 @@ def test_receiver_cannot_spend_locked_amount():
     settle_timeout = 21
     block_number = 7
 
-    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
-    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
+    our_state = ChannelEndState(address1, balance1, None, EMPTY_MERKLE_TREE)
+    partner_state = ChannelEndState(address2, balance2, None, EMPTY_MERKLE_TREE)
     external_state = make_external_state()
 
     test_channel = Channel(
@@ -341,7 +348,9 @@ def test_receiver_cannot_spend_locked_amount():
         expiration=expiration,
         hashlock=sha3('test_locked_amount_cannot_be_spent2'),
     )
-    locksroot2 = Merkletree([sha3(lock2.as_bytes)]).merkleroot
+    layers = compute_layers([sha3(lock2.as_bytes)])
+    tree2 = MerkleTreeState(layers)
+    locksroot2 = merkleroot(tree2)
 
     send_mediated_transfer0 = MediatedTransfer(
         identifier=1,
@@ -376,8 +385,8 @@ def test_invalid_timeouts():
     balance1 = 10
     balance2 = 10
 
-    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
-    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
+    our_state = ChannelEndState(address1, balance1, None, EMPTY_MERKLE_TREE)
+    partner_state = ChannelEndState(address2, balance2, None, EMPTY_MERKLE_TREE)
     external_state = make_external_state()
 
     # do not allow a reveal timeout larger than the settle timeout
@@ -428,8 +437,8 @@ def test_python_channel():
     settle_timeout = 15
     block_number = 10
 
-    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
-    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
+    our_state = ChannelEndState(address1, balance1, None, EMPTY_MERKLE_TREE)
+    partner_state = ChannelEndState(address2, balance2, None, EMPTY_MERKLE_TREE)
     external_state = make_external_state()
 
     test_channel = Channel(
@@ -543,8 +552,8 @@ def test_channel_increase_nonce_and_transferred_amount():
     reveal_timeout = 5
     settle_timeout = 15
 
-    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
-    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
+    our_state = ChannelEndState(address1, balance1, None, EMPTY_MERKLE_TREE)
+    partner_state = ChannelEndState(address2, balance2, None, EMPTY_MERKLE_TREE)
     external_state = make_external_state()
 
     test_channel = Channel(
@@ -925,7 +934,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
         channel=channel0.channel_address,
         transferred_amount=channel1.balance + balance0 + amount,
         recipient=channel0.partner_state.address,
-        locksroot=channel0.partner_state.merkletree.merkleroot,
+        locksroot=merkleroot(channel0.partner_state.merkletree),
     )
     app0.raiden.sign(transfer2)
 
@@ -976,13 +985,13 @@ def test_channel_must_accept_expired_locks():
         address1,
         balance1,
         None,
-        Merkletree([]),
+        EMPTY_MERKLE_TREE,
     )
     partner_state = ChannelEndState(
         address2,
         balance2,
         None,
-        Merkletree([]),
+        EMPTY_MERKLE_TREE,
     )
     external_state = make_external_state()
 
@@ -1037,8 +1046,8 @@ def test_channel_close_called_only_once():
     reveal_timeout = 5
     settle_timeout = 15
 
-    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
-    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
+    our_state = ChannelEndState(address1, balance1, None, EMPTY_MERKLE_TREE)
+    partner_state = ChannelEndState(address2, balance2, None, EMPTY_MERKLE_TREE)
 
     channel_for_hashlock = list()
     netting_channel = MockCheckCallsToClose()

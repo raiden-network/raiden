@@ -15,7 +15,7 @@ from raiden.blockchain.abi import (
 )
 from raiden.channel import Channel, ChannelEndState
 from raiden.utils import privatekey_to_address, get_contract_path
-from raiden.mtree import Merkletree
+from raiden.transfer.merkle_tree import EMPTY_MERKLE_TREE
 
 
 class InvalidKey(str):
@@ -209,13 +209,13 @@ def channel_from_nettingcontract(
         our_address,
         our_balance,
         None,
-        Merkletree([]),
+        EMPTY_MERKLE_TREE,
     )
     partner_state = ChannelEndState(
         partner_address,
         partner_balance,
         None,
-        Merkletree([]),
+        EMPTY_MERKLE_TREE,
     )
 
     channel = Channel(

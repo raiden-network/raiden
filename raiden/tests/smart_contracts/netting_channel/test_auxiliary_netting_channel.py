@@ -8,11 +8,16 @@ from ethereum.abi import ValueOutOfBounds
 from ethereum.tester import TransactionFailed
 
 from raiden.constants import INT64_MIN, INT64_MAX, UINT64_MIN, UINT64_MAX
-from raiden.utils import get_project_root, sha3
-from raiden.mtree import Merkletree
-from raiden.tests.utils.tests import get_relative_contract
-from raiden.tests.utils.factories import make_privkey_address
 from raiden.messages import DirectTransfer
+from raiden.tests.utils.factories import make_privkey_address
+from raiden.tests.utils.tests import get_relative_contract
+from raiden.transfer.state import MerkleTreeState
+from raiden.transfer.merkle_tree import (
+    compute_layers,
+    merkleroot,
+    compute_merkleproof_for,
+)
+from raiden.utils import get_project_root, sha3
 
 # The computeMerkleRoot function only computes the proof regardless of what the
 # hashes are encoding, so just use some arbitrary data to produce a merkle tree.
@@ -106,17 +111,18 @@ def test_merkle_proof(
     auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
 
     hashes = [sha3(element) for element in tree]
-    merkle_tree = Merkletree(hashes)
+    layers = compute_layers(hashes)
+    merkletree = MerkleTreeState(layers)
 
     for element in tree:
-        proof = merkle_tree.make_proof(sha3(element))
+        proof = compute_merkleproof_for(merkletree, sha3(element))
 
         smart_contact_root = auxiliary.computeMerkleRoot(
             element,
             ''.join(proof),
         )
 
-        assert smart_contact_root == merkle_tree.merkleroot
+        assert smart_contact_root == merkleroot(merkletree)
 
 
 @pytest.mark.parametrize('tree', FAKE_TREE)
@@ -129,14 +135,15 @@ def test_merkle_proof_missing_byte(
     auxiliary = deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
 
     hashes = [sha3(element) for element in tree]
-    merkle_tree = Merkletree(hashes)
+    layers = compute_layers(hashes)
+    merkletree = MerkleTreeState(layers)
 
     element = hashes[-1]
-    merkle_proof = merkle_tree.make_proof(element)
+    proof = compute_merkleproof_for(merkletree, element)
 
     # for each element of the proof, remove a byte from the start and the end and test it
-    for element_to_tamper in range(len(merkle_proof)):
-        tampered_proof = list(merkle_proof)
+    for element_to_tamper in range(len(proof)):
+        tampered_proof = list(proof)
         tampered_proof[element_to_tamper] = tampered_proof[element_to_tamper][:-1]
 
         with pytest.raises(TransactionFailed):
@@ -145,7 +152,7 @@ def test_merkle_proof_missing_byte(
                 ''.join(tampered_proof),
             )
 
-        tampered_proof = list(merkle_proof)
+        tampered_proof = list(proof)
         tampered_proof[element_to_tamper] = tampered_proof[element_to_tamper][1:]
 
         with pytest.raises(TransactionFailed):
