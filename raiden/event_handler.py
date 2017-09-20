@@ -190,7 +190,7 @@ class StateMachineEventHandler(object):
             graph = self.raiden.token_to_channelgraph[event.token]
             channel = graph.address_to_channel[event.channel_address]
 
-            balance_proof = channel.our_state.balance_proof.balance_proof
+            balance_proof = channel.our_state.balance_proof
             channel.external_state.close(balance_proof)
 
         else:

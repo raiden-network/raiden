@@ -60,7 +60,6 @@ from raiden.transfer.log import (
     StateChangeLogSQLiteBackend,
 )
 from raiden.channel import (
-    BalanceProof,
     ChannelEndState,
     ChannelExternalState,
 )
@@ -78,6 +77,7 @@ from raiden.messages import (
     RevealSecret,
     SignedMessage,
 )
+from raiden.mtree import Merkletree
 from raiden.network.protocol import (
     RaidenProtocol,
 )
@@ -521,7 +521,7 @@ class RaidenService(object):
         messages_to_send = []
         for channel in channels_list:
             # unlock a pending lock
-            if channel.our_state.balance_proof.is_unclaimed(hashlock):
+            if channel.our_state.is_known(hashlock):
                 secret = channel.create_secret(identifier, secret)
                 self.sign(secret)
 
@@ -538,7 +538,7 @@ class RaidenService(object):
                 channels_to_remove.append(channel)
 
             # withdraw a pending lock
-            if channel.partner_state.balance_proof.is_unclaimed(hashlock):
+            elif channel.partner_state.is_known(hashlock):
                 if partner_secret_message:
                     is_balance_proof = (
                         partner_secret_message.sender == channel.partner_state.address and
@@ -564,6 +564,11 @@ class RaidenService(object):
                         revealsecret_message,
                     ))
 
+            else:
+                log.error(
+                    'Channel is registered for a given lock but the lock is not contained in it.'
+                )
+
         for channel in channels_to_remove:
             channels_list.remove(channel)
 
@@ -582,12 +587,14 @@ class RaidenService(object):
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
-            BalanceProof(None),
+            None,
+            Merkletree([]),
         )
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
-            BalanceProof(None),
+            None,
+            Merkletree([]),
         )
 
         def register_channel_for_hashlock(channel, hashlock):
@@ -634,13 +641,15 @@ class RaidenService(object):
         our_state = ChannelEndState(
             channel_details['our_address'],
             channel_details['our_balance'],
-            BalanceProof(serialized_channel.our_balance_proof),
+            serialized_channel.our_balance_proof,
+            Merkletree(serialized_channel.our_leaves),
         )
 
         partner_state = ChannelEndState(
             channel_details['partner_address'],
             channel_details['partner_balance'],
-            BalanceProof(serialized_channel.partner_balance_proof),
+            serialized_channel.partner_balance_proof,
+            Merkletree(serialized_channel.partner_leaves),
         )
 
         def register_channel_for_hashlock(channel, hashlock):

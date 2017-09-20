@@ -32,8 +32,10 @@ def merkletreelayers(elements):
     merkleroot """
 
     yield elements
-    if len(elements) == 0:
-        yield [""]
+
+    if not elements:
+        yield [EMPTY_MERKLE_ROOT]
+
     while len(elements) > 1:
         elements = [hash_pair(a, b) for a, b in iterate_pairwise(elements)]
         yield elements
@@ -69,13 +71,13 @@ class Merkletree(object):
         if len(elements) != len(set(elements)):
             raise ValueError('Duplicated element')
 
-        leafs = sorted(item for item in elements)
-        self._layers = list(merkletreelayers(leafs))
+        self.leaves = sorted(item for item in elements)
+        self._layers = list(merkletreelayers(self.leaves))
 
     @property
     def merkleroot(self):
         """ Return the root element of the merkle tree. """
-        return self._layers[-1][0] or EMPTY_MERKLE_ROOT
+        return self._layers[-1][0]
 
     def make_proof(self, element):
         """ The proof contains all elements between `element` and `root`.

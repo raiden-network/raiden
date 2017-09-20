@@ -6,7 +6,6 @@ import pytest
 from ethereum import slogging
 
 from raiden.channel import (
-    BalanceProof,
     Channel,
     ChannelEndState,
     ChannelExternalState,
@@ -70,25 +69,20 @@ def test_end_state():
     lock_expiration = 10
     lock_hashlock = sha3(lock_secret)
 
-    state1 = ChannelEndState(address1, balance1, BalanceProof(None))
-    state2 = ChannelEndState(address2, balance2, BalanceProof(None))
+    state1 = ChannelEndState(address1, balance1, None, Merkletree([]))
+    state2 = ChannelEndState(address2, balance2, None, Merkletree([]))
 
     assert state1.contract_balance == balance1
     assert state2.contract_balance == balance2
     assert state1.balance(state2) == balance1
     assert state2.balance(state1) == balance2
 
-    assert state1.distributable(state2) == balance1
-    assert state2.distributable(state1) == balance2
 
-    assert state1.locked() == 0
-    assert state2.locked() == 0
+    assert state1.is_locked(lock_hashlock) is False
+    assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.balance_proof.is_pending(lock_hashlock) is False
-    assert state2.balance_proof.is_pending(lock_hashlock) is False
-
-    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
-    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
+    assert state1.merkletree.merkleroot == EMPTY_MERKLE_ROOT
+    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is None
     assert state2.nonce is None
@@ -134,14 +128,14 @@ def test_end_state():
     assert state1.distributable(state2) == balance1 - lock_amount
     assert state2.distributable(state1) == balance2
 
-    assert state1.locked() == lock_amount
-    assert state2.locked() == 0
+    assert state1.amount_locked == lock_amount
+    assert state2.amount_locked == 0
 
-    assert state1.balance_proof.is_pending(lock_hashlock) is True
-    assert state2.balance_proof.is_pending(lock_hashlock) is False
+    assert state1.is_locked(lock_hashlock) is True
+    assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == lock_hash
-    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
+    assert state1.merkletree.merkleroot == lock_hash
+    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is 1
     assert state2.nonce is None
@@ -159,14 +153,14 @@ def test_end_state():
     assert state1.distributable(state2) == balance1 - lock_amount + 10
     assert state2.distributable(state1) == balance2
 
-    assert state1.locked() == lock_amount
-    assert state2.locked() == 0
+    assert state1.amount_locked == lock_amount
+    assert state2.amount_locked == 0
 
-    assert state1.balance_proof.is_pending(lock_hashlock) is True
-    assert state2.balance_proof.is_pending(lock_hashlock) is False
+    assert state1.is_locked(lock_hashlock) is True
+    assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == lock_hash
-    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
+    assert state1.merkletree.merkleroot == lock_hash
+    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is 1
     assert state2.nonce is None
@@ -179,17 +173,12 @@ def test_end_state():
     assert state1.balance(state2) == balance1 + 10
     assert state2.balance(state1) == balance2
 
-    assert state1.distributable(state2) == balance1 - lock_amount + 10
-    assert state2.distributable(state1) == balance2
 
-    assert state1.locked() == lock_amount
-    assert state2.locked() == 0
+    assert state1.is_locked(lock_hashlock) is False
+    assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.balance_proof.is_pending(lock_hashlock) is False
-    assert state2.balance_proof.is_pending(lock_hashlock) is False
-
-    assert state1.balance_proof.merkleroot_for_unclaimed() == lock_hash
-    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
+    assert state1.merkletree.merkleroot == lock_hash
+    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is 1
     assert state2.nonce is None
@@ -213,14 +202,14 @@ def test_end_state():
     assert state1.distributable(state2) == balance1 + 10 - lock_amount
     assert state2.distributable(state1) == balance2 + lock_amount
 
-    assert state1.locked() == 0
-    assert state2.locked() == 0
+    assert state1.amount_locked == 0
+    assert state2.amount_locked == 0
 
-    assert state1.balance_proof.is_pending(lock_hashlock) is False
-    assert state2.balance_proof.is_pending(lock_hashlock) is False
+    assert state1.is_locked(lock_hashlock) is False
+    assert state2.is_locked(lock_hashlock) is False
 
-    assert state1.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
-    assert state2.balance_proof.merkleroot_for_unclaimed() == EMPTY_MERKLE_ROOT
+    assert state1.merkletree.merkleroot == EMPTY_MERKLE_ROOT
+    assert state2.merkletree.merkleroot == EMPTY_MERKLE_ROOT
 
     assert state1.nonce is 2
     assert state2.nonce is None
@@ -238,8 +227,8 @@ def test_sender_cannot_overspend():
     settle_timeout = 15
     block_number = 10
 
-    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
-    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
+    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
+    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
     external_state = make_external_state()
 
     test_channel = Channel(
@@ -314,8 +303,8 @@ def test_receiver_cannot_spend_locked_amount():
     settle_timeout = 21
     block_number = 7
 
-    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
-    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
+    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
+    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
     external_state = make_external_state()
 
     test_channel = Channel(
@@ -387,8 +376,8 @@ def test_invalid_timeouts():
     balance1 = 10
     balance2 = 10
 
-    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
-    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
+    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
+    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
     external_state = make_external_state()
 
     # do not allow a reveal timeout larger than the settle timeout
@@ -439,8 +428,8 @@ def test_python_channel():
     settle_timeout = 15
     block_number = 10
 
-    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
-    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
+    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
+    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
     external_state = make_external_state()
 
     test_channel = Channel(
@@ -453,14 +442,13 @@ def test_python_channel():
     )
 
     assert test_channel.contract_balance == our_state.contract_balance
-    assert test_channel.balance == our_state.balance(partner_state)
     assert test_channel.transferred_amount == our_state.transferred_amount
-    assert test_channel.distributable == our_state.distributable(partner_state)
-    assert test_channel.outstanding == our_state.locked()
+    assert test_channel.distributable == our_state.contract_balance
+    assert test_channel.outstanding == our_state.amount_locked
     assert test_channel.outstanding == 0
-    assert test_channel.locked == partner_state.locked()
-    assert test_channel.our_state.locked() == 0
-    assert test_channel.partner_state.locked() == 0
+    assert test_channel.locked == partner_state.amount_locked
+    assert test_channel.our_state.amount_locked == 0
+    assert test_channel.partner_state.amount_locked == 0
     assert test_channel.get_next_nonce() == 1
 
     with pytest.raises(ValueError):
@@ -492,8 +480,8 @@ def test_python_channel():
     assert test_channel.distributable == balance1 - amount1
     assert test_channel.outstanding == 0
     assert test_channel.locked == 0
-    assert test_channel.our_state.locked() == 0
-    assert test_channel.partner_state.locked() == 0
+    assert test_channel.our_state.amount_locked == 0
+    assert test_channel.partner_state.amount_locked == 0
     assert test_channel.get_next_nonce() == 2
 
     secret = sha3('test_channel')
@@ -524,8 +512,8 @@ def test_python_channel():
     assert test_channel.distributable == balance1 - amount1 - amount2
     assert test_channel.outstanding == 0
     assert test_channel.locked == amount2
-    assert test_channel.our_state.locked() == amount2
-    assert test_channel.partner_state.locked() == 0
+    assert test_channel.our_state.amount_locked == amount2
+    assert test_channel.partner_state.amount_locked == 0
     assert test_channel.get_next_nonce() == 3
 
     secret_message = test_channel.create_secret(identifier, secret)
@@ -538,8 +526,8 @@ def test_python_channel():
     assert test_channel.distributable == balance1 - amount1 - amount2
     assert test_channel.outstanding == 0
     assert test_channel.locked == 0
-    assert test_channel.our_state.locked() == 0
-    assert test_channel.partner_state.locked() == 0
+    assert test_channel.our_state.amount_locked == 0
+    assert test_channel.partner_state.amount_locked == 0
     assert test_channel.get_next_nonce() == 4
 
 
@@ -555,8 +543,8 @@ def test_channel_increase_nonce_and_transferred_amount():
     reveal_timeout = 5
     settle_timeout = 15
 
-    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
-    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
+    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
+    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
     external_state = make_external_state()
 
     test_channel = Channel(
@@ -937,7 +925,7 @@ def test_register_invalid_transfer(raiden_network, settle_timeout):
         channel=channel0.channel_address,
         transferred_amount=channel1.balance + balance0 + amount,
         recipient=channel0.partner_state.address,
-        locksroot=channel0.partner_state.balance_proof.merkleroot_for_unclaimed(),
+        locksroot=channel0.partner_state.merkletree.merkleroot,
     )
     app0.raiden.sign(transfer2)
 
@@ -987,12 +975,14 @@ def test_channel_must_accept_expired_locks():
     our_state = ChannelEndState(
         address1,
         balance1,
-        BalanceProof(None),
+        None,
+        Merkletree([]),
     )
     partner_state = ChannelEndState(
         address2,
         balance2,
-        BalanceProof(None),
+        None,
+        Merkletree([]),
     )
     external_state = make_external_state()
 
@@ -1047,8 +1037,8 @@ def test_channel_close_called_only_once():
     reveal_timeout = 5
     settle_timeout = 15
 
-    our_state = ChannelEndState(address1, balance1, BalanceProof(None))
-    partner_state = ChannelEndState(address2, balance2, BalanceProof(None))
+    our_state = ChannelEndState(address1, balance1, None, Merkletree([]))
+    partner_state = ChannelEndState(address2, balance2, None, Merkletree([]))
 
     channel_for_hashlock = list()
     netting_channel = MockCheckCallsToClose()

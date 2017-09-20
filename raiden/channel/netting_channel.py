@@ -6,13 +6,11 @@ from ethereum import slogging
 from ethereum.utils import encode_hex
 
 from raiden.messages import (
-    EMPTY_MERKLE_ROOT,
     DirectTransfer,
     Lock,
     LockedTransfer,
     Secret,
 )
-from raiden.mtree import Merkletree
 from raiden.utils import sha3, pex, lpex
 from raiden.exceptions import (
     AddressWithoutCode,
@@ -245,7 +243,11 @@ class Channel(object):
         Balance is equal to `initial_deposit + received_amount - sent_amount`,
         were both `receive_amount` and `sent_amount` are unlocked.
         """
-        return self.our_state.balance(self.partner_state)
+        return (
+            self.our_state.contract_balance -
+            self.our_state.transferred_amount +
+            self.partner_state.transferred_amount
+        )
 
     @property
     def distributable(self):
@@ -262,11 +264,11 @@ class Channel(object):
         The locked value is equal to locked transfers that have been
         initialized but their secret has not being revealed.
         """
-        return self.our_state.locked()
+        return self.our_state.amount_locked
 
     @property
     def outstanding(self):
-        return self.partner_state.locked()
+        return self.partner_state.amount_locked
 
     def get_settle_expiration(self, block_number):
         closed_block = self.external_state.closed_block
@@ -282,9 +284,9 @@ class Channel(object):
 
         # the channel was closed, update our half of the state if we need to
         if closing_address != self.our_state.address:
-            self.external_state.update_transfer(balance_proof.balance_proof)
+            self.external_state.update_transfer(balance_proof)
 
-        unlock_proofs = balance_proof.get_known_unlocks()
+        unlock_proofs = self.partner_state.get_known_unlocks()
 
         try:
             self.external_state.withdraw(unlock_proofs)
@@ -329,8 +331,8 @@ class Channel(object):
         """
         hashlock = sha3(secret)
 
-        our_known = self.our_state.balance_proof.is_known(hashlock)
-        partner_known = self.partner_state.balance_proof.is_known(hashlock)
+        our_known = self.our_state.is_known(hashlock)
+        partner_known = self.partner_state.is_known(hashlock)
 
         if not our_known and not partner_known:
             msg = (
@@ -343,7 +345,7 @@ class Channel(object):
             raise ValueError(msg)
 
         if our_known:
-            lock = self.our_state.balance_proof.get_lock_by_hashlock(hashlock)
+            lock = self.our_state.get_lock_by_hashlock(hashlock)
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
@@ -359,7 +361,7 @@ class Channel(object):
             self.our_state.register_secret(secret)
 
         if partner_known:
-            lock = self.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
+            lock = self.partner_state.get_lock_by_hashlock(hashlock)
 
             if log.isEnabledFor(logging.DEBUG):
                 log.debug(
@@ -462,9 +464,11 @@ class Channel(object):
         # a Secret was in traffic) the balance _will_ be wrong, so first check
         # the locksroot and then the balance
         if isinstance(transfer, LockedTransfer):
-            if from_state.balance_proof.is_pending(transfer.lock.hashlock):
+            if from_state.is_known(transfer.lock.hashlock):
                 # this may occur on normal operation
                 if log.isEnabledFor(logging.INFO):
+                    lockhashes = list(from_state.hashlocks_to_unclaimedlocks.values())
+                    lockhashes.extend(from_state.hashlocks_to_pendinglocks.values())
                     log.info(
                         'duplicated lock',
                         node=pex(self.our_address),
@@ -472,7 +476,7 @@ class Channel(object):
                         to=pex(to_state.address),
                         hashlock=pex(transfer.lock.hashlock),
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
-                        lockhashes=lpex(from_state.balance_proof.unclaimed_merkletree()),
+                        lockhashes=lpex(lockhashes),
                         received_locksroot=pex(transfer.locksroot),
                     )
                 raise ValueError('hashlock is already registered')
@@ -484,13 +488,15 @@ class Channel(object):
             if expected_locksroot != transfer.locksroot:
                 # this should not happen
                 if log.isEnabledFor(logging.WARN):
+                    lockhashes = list(from_state.hashlocks_to_unclaimedlocks.values())
+                    lockhashes.extend(from_state.hashlocks_to_pendinglocks.values())
                     log.warn(
                         'LOCKSROOT MISMATCH',
                         node=pex(self.our_address),
                         from_=pex(from_state.address),
                         to=pex(to_state.address),
                         lockhash=pex(sha3(transfer.lock.as_bytes)),
-                        lockhashes=lpex(from_state.balance_proof.unclaimed_merkletree()),
+                        lockhashes=lpex(lockhashes),
                         expected_locksroot=pex(expected_locksroot),
                         received_locksroot=pex(transfer.locksroot),
                     )
@@ -553,7 +559,7 @@ class Channel(object):
 
         elif isinstance(transfer, Secret):
             hashlock = sha3(transfer.secret)
-            lock = from_state.balance_proof.get_lock_by_hashlock(hashlock)
+            lock = from_state.get_lock_by_hashlock(hashlock)
             transferred_amount = from_state.transferred_amount + lock.amount
 
             # transfer.transferred_amount could be larger than the previous
@@ -573,13 +579,15 @@ class Channel(object):
 
         if isinstance(transfer, LockedTransfer):
             if log.isEnabledFor(logging.DEBUG):
+                lockhashes = list(from_state.hashlocks_to_unclaimedlocks.values())
+                lockhashes.extend(from_state.hashlocks_to_pendinglocks.values())
                 log.debug(
                     'REGISTERED LOCK',
                     node=pex(self.our_state.address),
                     from_=pex(from_state.address),
                     to=pex(to_state.address),
-                    currentlocksroot=pex(from_state.balance_proof.merkleroot_for_unclaimed()),
-                    lockhashes=lpex(from_state.balance_proof.unclaimed_merkletree()),
+                    currentlocksroot=pex(from_state.merkletree.merkleroot),
+                    lockhashes=lpex(lockhashes),
                     lock_amount=transfer.lock.amount,
                     lock_expiration=transfer.lock.expiration,
                     lock_hashlock=pex(transfer.lock.hashlock),
@@ -610,7 +618,7 @@ class Channel(object):
                 transfer=repr(transfer),
                 transferred_amount=from_state.transferred_amount,
                 nonce=from_state.nonce,
-                current_locksroot=pex(from_state.balance_proof.merkleroot_for_unclaimed()),
+                current_locksroot=pex(from_state.merkletree.merkleroot),
             )
 
     def get_next_nonce(self):
@@ -644,7 +652,7 @@ class Channel(object):
             raise ValueError('Insufficient funds')
 
         transferred_amount = from_.transferred_amount + amount
-        current_locksroot = to_.balance_proof.merkleroot_for_unclaimed()
+        current_locksroot = to_.merkletree.merkleroot
 
         nonce = self.get_next_nonce()
 
@@ -666,18 +674,16 @@ class Channel(object):
         if not self.can_transfer:
             raise ValueError('Transfer not possible, no funding or channel closed.')
 
-        from_ = self.our_state
-        to_ = self.partner_state
-
-        distributable = from_.distributable(to_)
-
-        if amount <= 0 or amount > distributable:
+        if amount <= 0 or amount > self.distributable:
             log.debug(
                 'Insufficient funds',
                 amount=amount,
-                distributable=distributable,
+                distributable=self.distributable,
             )
             raise ValueError('Insufficient funds')
+
+        from_ = self.our_state
+        to_ = self.partner_state
 
         lock = Lock(amount, expiration, hashlock)
 
@@ -762,12 +768,8 @@ class Channel(object):
 
         from_ = self.our_state
 
-        lock = from_.balance_proof.get_lock_by_hashlock(hashlock)
-        lockhashed = sha3(lock.as_bytes)
-        leafs = from_.balance_proof.unclaimed_merkletree()
-        leafs.remove(lockhashed)
-
-        locksroot_with_pending_lock_removed = Merkletree(leafs).merkleroot or EMPTY_MERKLE_ROOT
+        lock = from_.get_lock_by_hashlock(hashlock)
+        locksroot_with_pending_lock_removed = from_.compute_merkleroot_without(lock)
         transferred_amount = from_.transferred_amount + lock.amount
 
         nonce = self.get_next_nonce()
@@ -853,6 +855,8 @@ class ChannelSerialization(object):
 
         self.our_balance_proof = channel_instance.our_state.balance_proof
         self.partner_balance_proof = channel_instance.partner_state.balance_proof
+        self.our_leaves = channel_instance.our_state.merkletree.leaves
+        self.partner_leaves = channel_instance.our_state.merkletree.leaves
 
     def __eq__(self, other):
         if isinstance(other, ChannelSerialization):
@@ -863,7 +867,9 @@ class ChannelSerialization(object):
                 self.our_address == other.our_address and
                 self.reveal_timeout == other.reveal_timeout and
                 self.our_balance_proof == other.our_balance_proof and
-                self.partner_balance_proof == other.partner_balance_proof
+                self.partner_balance_proof == other.partner_balance_proof and
+                self.our_leaves == other.our_leaves and
+                self.partner_leaves == other.partner_leaves
             )
         return False
 

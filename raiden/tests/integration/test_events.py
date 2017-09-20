@@ -320,16 +320,15 @@ def test_secret_revealed(raiden_chain, deposit, settle_timeout, events_poll_time
 
     gevent.sleep(.1)  # wait for the messages
 
-    balance_proof = channel21.our_state.balance_proof
-    lock = balance_proof.get_lock_by_hashlock(hashlock)
-    proof = balance_proof.compute_proof_for_lock(secret, lock)
+    lock = channel21.our_state.get_lock_by_hashlock(hashlock)
+    proof = channel21.our_state.compute_proof_for_lock(secret, lock)
 
     # the secret hasn't been revealed yet (through messages)
-    assert len(balance_proof.hashlocks_to_pendinglocks) == 1
-    proofs = list(balance_proof.get_known_unlocks())
+    assert len(channel21.our_state.hashlocks_to_pendinglocks) == 1
+    proofs = list(channel21.our_state.get_known_unlocks())
     assert len(proofs) == 0
 
-    netting_channel.close(balance_proof.balance_proof)
+    netting_channel.close(channel21.our_state.balance_proof)
 
     # reveal it through the blockchain (this needs to emit the SecretRevealed event)
     netting_channel.withdraw(
