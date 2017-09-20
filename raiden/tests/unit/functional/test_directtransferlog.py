@@ -86,7 +86,6 @@ def test_initiator_log_directransfer_success(
         identifier,
         amount,
         app1.raiden.address,
-
     )
 
 
