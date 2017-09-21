@@ -42,6 +42,15 @@ warn() {
 [ -z "${SOLC_URL}" ] && fail 'missing SOLC_URL'
 [ -z "${SOLC_VERSION}" ] && fail 'missing SOLC_VERSION'
 
+if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+    brew install node || true
+    npm install -g solc@${SOLC_VERSION}
+    # Ensure we're not using a possibly cached linux version
+    rm -f $HOME/.bin/solc || true
+    exit
+fi
+
+
 if [ ! -x $HOME/.bin/solc-${SOLC_VERSION} ]; then
     mkdir -p $HOME/.bin
 
