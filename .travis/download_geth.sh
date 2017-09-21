@@ -39,6 +39,12 @@ warn() {
     fi
 }
 
+if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+    GETH_URL=${GETH_URL_MACOS}
+else
+    GETH_URL=${GETH_URL_LINUX}
+fi
+
 [ -z "${GETH_URL}" ] && fail 'missing GETH_URL'
 [ -z "${GETH_VERSION}" ] && fail 'missing GETH_VERSION'
 
