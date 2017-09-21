@@ -104,7 +104,10 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
     # get proof, that locked transfermessage was in merkle tree, with locked.root
     lock = bob_alice_channel.partner_state.balance_proof.get_lock_by_hashlock(hashlock)
     assert sha3(secret) == hashlock
-    unlock_proof = bob_alice_channel.partner_state.balance_proof.compute_proof_for_lock(secret, lock)
+    unlock_proof = bob_alice_channel.partner_state.balance_proof.compute_proof_for_lock(
+        secret,
+        lock,
+    )
 
     root = bob_alice_channel.partner_state.balance_proof.merkleroot_for_unclaimed()
 
