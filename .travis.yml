@@ -20,20 +20,20 @@ env:
   - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
   - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=tester'
   - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
-cache:
-  pip: true
-  directories:
-  - "$HOME/.cache/pip"
-  - "$HOME/.ethash"
-  - "$HOME/.bin"
-before_install:
-  - mkdir -p $HOME/.bin
-  - export PATH=$PATH:$HOME/.bin
-  - ./.travis/before_install.sh
-install:
-  ./.travis/install.sh
-before_script:
-  ./.travis/before_script.sh
+#cache:
+#  pip: true
+#  directories:
+#  - "$HOME/.cache/pip"
+#  - "$HOME/.ethash"
+#  - "$HOME/.bin"
+#before_install:
+#  - mkdir -p $HOME/.bin
+#  - export PATH=$PATH:$HOME/.bin
+#  - ./.travis/before_install.sh
+#install:
+#  ./.travis/install.sh
+#before_script:
+#  ./.travis/before_script.sh
 script: true
 #- coverage run -m py.test --travis-fold=always -vvvvvv --log-config='raiden:DEBUG' --random $BLOCKCHAIN_TYPE ./raiden/tests/$TEST_TYPE
 after_success:
