@@ -264,7 +264,7 @@ def geth_create_blockchain(
         nodedir = os.path.join(base_datadir, nodekey_part)
         node_genesis_path = os.path.join(nodedir, 'custom_genesis.json')
 
-        assert len(nodedir + '/geth.ipc') < 108, 'geth data path is too large'
+        assert len(nodedir + '/geth.ipc') <= 104, 'geth data path is too large'
 
         os.makedirs(nodedir)
 
