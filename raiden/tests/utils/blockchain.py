@@ -85,6 +85,7 @@ def geth_to_cmd(node, datadir, verbosity):
         '--networkid', '627',
         '--verbosity', str(verbosity),
         '--datadir', datadir,
+        '--txpool.pricebump', '0',
     ])
 
     log.debug('geth command: {}'.format(cmd))

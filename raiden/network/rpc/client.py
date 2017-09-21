@@ -136,7 +136,7 @@ def patch_send_transaction(client, nonce_offset=0):
                     nonce = _query_nonce()
                     # we may have hammered the server and not all tx are
                     # registered as `pending` yet
-                    while nonce < client.current_nonce:
+                    while nonce <= client.current_nonce:
                         log.debug(
                             "nonce on server too low; retrying",
                             server=nonce,
@@ -148,6 +148,8 @@ def patch_send_transaction(client, nonce_offset=0):
                     client.last_nonce_update = query_time
                 else:
                     client.current_nonce += 1
+
+                log.DEV("->>>Getting nonce", address=pex(sender), nonce=client.current_nonce)
                 return client.current_nonce
 
         def _query_nonce():
