@@ -81,6 +81,7 @@ def geth_to_cmd(node, datadir, verbosity):
         '--nodiscover',
         '--ipcdisable',
         '--rpc',
+        '--rpcapi', 'eth,net,web3,debug',
         '--rpcaddr', '0.0.0.0',
         '--networkid', '627',
         '--verbosity', str(verbosity),
