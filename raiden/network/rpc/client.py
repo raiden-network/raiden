@@ -79,7 +79,11 @@ def check_transaction_threw(client, transaction_hash):
     encoded_transaction = data_encoder(transaction_hash.decode('hex'))
     debug = client.call('debug_traceTransaction', encoded_transaction)
 
-    if debug['structLogs'][-1]['op'] not in ('RETURN', 'STOP'):
+    # struct_logs will be empty if it's a call to a contract that previously
+    # self destructed:
+    # https://github.com/ethereum/go-ethereum/issues/2542
+    struct_logs = debug['structLogs']
+    if struct_logs == list() or struct_logs[-1]['op'] not in ('RETURN', 'STOP'):
         return debug
 
 
