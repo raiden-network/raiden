@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+from __future__ import division
+
 import os
 
 import pytest
 from ethereum import _solidity
 from pyethapp.rpc_client import data_encoder, quantity_decoder
+
+from raiden.network.rpc.client import check_transaction_threw
 
 # pylint: disable=unused-argument,protected-access
 
@@ -66,9 +70,14 @@ def test_call_throws(deploy_client, blockchain_backend):
     assert contract_proxy.fail.call() == ''
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_transact_throws(deploy_client, blockchain_backend):
-    """ A JSON RPC call to a function that throws returns uses all gas. """
+    """ A JSON RPC call to a function that throws, uses all gas.
+
+    This is not true anymore, after Byzantium a new opcode called REVERT was
+    introduced that stops the transaction without consuming all gas.
+    """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.address
@@ -83,3 +92,57 @@ def test_transact_throws(deploy_client, blockchain_backend):
 
     receipt = deploy_client.call('eth_getTransactionReceipt', data_encoder(transaction))
     assert gas == quantity_decoder(receipt['gasUsed'])
+
+
+@pytest.mark.parametrize('blockchain_type', ['geth'])
+def test_transact_opcode(deploy_client, blockchain_backend):
+    """ The last opcode of a transaction that did NOT throw is STOP/RETURN. """
+    contract_proxy = deploy_rpc_test_contract(deploy_client)
+
+    address = contract_proxy.address
+    assert deploy_client.eth_getCode(address) != '0x'
+
+    gas = contract_proxy.ret.estimate_gas() * 2
+
+    transaction_hex = contract_proxy.ret.transact(startgas=gas)
+    transaction = transaction_hex.decode('hex')
+
+    deploy_client.poll(transaction)
+
+    assert check_transaction_threw(deploy_client, transaction_hex) is None, 'must be empty'
+
+
+@pytest.mark.parametrize('blockchain_type', ['geth'])
+def test_transact_throws_opcode(deploy_client, blockchain_backend):
+    """ The last opcode of a transaction that threw is not STOP. """
+    contract_proxy = deploy_rpc_test_contract(deploy_client)
+
+    address = contract_proxy.address
+    assert deploy_client.eth_getCode(address) != '0x'
+
+    gas = contract_proxy.fail.estimate_gas()
+
+    transaction_hex = contract_proxy.fail.transact(startgas=gas)
+    transaction = transaction_hex.decode('hex')
+
+    deploy_client.poll(transaction)
+
+    assert check_transaction_threw(deploy_client, transaction_hex), 'must not be empty'
+
+
+@pytest.mark.parametrize('blockchain_type', ['geth'])
+def test_transact_opcode_oog(deploy_client, blockchain_backend):
+    """ The last opcode of a transaction that did NOT throw is STOP. """
+    contract_proxy = deploy_rpc_test_contract(deploy_client)
+
+    address = contract_proxy.address
+    assert deploy_client.eth_getCode(address) != '0x'
+
+    gas = contract_proxy.loop.estimate_gas(1000) // 2
+
+    transaction_hex = contract_proxy.loop.transact(1000, startgas=gas)
+    transaction = transaction_hex.decode('hex')
+
+    deploy_client.poll(transaction)
+
+    assert check_transaction_threw(deploy_client, transaction_hex), 'must not be empty'

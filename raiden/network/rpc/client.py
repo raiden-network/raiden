@@ -77,13 +77,10 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 def check_transaction_threw(client, transaction_hash):
     """Check if the transaction threw or if it executed properly"""
     encoded_transaction = data_encoder(transaction_hash.decode('hex'))
-    transaction = client.call('eth_getTransactionByHash', encoded_transaction)
-    receipt = client.call('eth_getTransactionReceipt', encoded_transaction)
+    debug = client.call('debug_traceTransaction', encoded_transaction)
 
-    if int(transaction['gas'], 0) != int(receipt['gasUsed'], 0):
-        return None
-
-    return receipt
+    if debug['structLogs'][-1]['op'] not in ('RETURN', 'STOP'):
+        return debug
 
 
 def check_address_has_code(client, address):
