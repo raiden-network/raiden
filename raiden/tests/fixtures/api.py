@@ -16,10 +16,14 @@ from raiden.network.discovery import Discovery
 from raiden.tests.utils.apitestcontext import ApiTestContext
 
 
-def wait_for_listening_port(port_number, tries=10, sleep=0.1):
+def wait_for_listening_port(port_number, tries=10, sleep=0.1, pid=None):
+    if pid is None:
+        pid = os.getpid()
     for _ in range(tries):
         gevent.sleep(sleep)
-        connections = psutil.net_connections()
+        # macoOS requires root access for the connections api to work
+        # so get connections of the current process only
+        connections = psutil.Process(pid).connections()
         for conn in connections:
             if conn.status == 'LISTEN' and conn.laddr[1] == port_number:
                 return

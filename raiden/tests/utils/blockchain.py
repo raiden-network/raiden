@@ -262,11 +262,12 @@ def geth_create_blockchain(
         # HACK: Use only the first 8 characters to avoid golang's issue
         # https://github.com/golang/go/issues/6895 (IPC bind fails with path
         # longer than 108 characters).
+        # BSD (and therefore macOS) socket path length limit is 104 chars
         nodekey_part = config['nodekeyhex'][:8]
         nodedir = os.path.join(base_datadir, nodekey_part)
         node_genesis_path = os.path.join(nodedir, 'custom_genesis.json')
 
-        assert len(nodedir + '/geth.ipc') < 108, 'geth data path is too large'
+        assert len(nodedir + '/geth.ipc') <= 104, 'geth data path is too large'
 
         os.makedirs(nodedir)
 
