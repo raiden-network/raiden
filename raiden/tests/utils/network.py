@@ -232,25 +232,8 @@ def create_apps(
         nat_keepalive_retries,
         nat_keepalive_timeout):
 
-    """ Create the apps.
-
-    Note:
-        The generated network will use two subnets, 127.0.0.10 and 127.0.0.11,
-        for this test to work in a mac both virtual interfaces must be created
-        prior to the test execution::
-
-            MacOSX (tested on 10.11.5):
-                         interface       ip address netmask
-                ifconfig lo0       alias 127.0.0.10 255.255.255.0
-                ifconfig lo0       alias 127.0.0.11 255.255.255.0
-
-            Alternative syntax:
-                ifconfig lo:0 127.0.0.10
-                ifconfig lo:1 127.0.0.11
-    """
+    """ Create the apps."""
     # pylint: disable=too-many-locals
-    half_of_nodes = len(blockchain_services) // 2
-
     services = zip(blockchain_services, endpoint_discovery_services)
 
     apps = []
@@ -259,12 +242,7 @@ def create_apps(
         private_key = blockchain.private_key
         nodeid = privatekey_to_address(private_key)
 
-        # split the nodes into two different networks
-        if idx > half_of_nodes:
-            # TODO: check if the loopback interfaces exists
-            host = '127.0.0.11'
-        else:
-            host = '127.0.0.10'
+        host = '127.0.0.1'
 
         discovery.register(nodeid, host, port)
 
