@@ -8,9 +8,16 @@ env:
   global:
   - GETH_URL_LINUX='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.7.0-6c6c7b2a.tar.gz'
   - GETH_URL_MACOS='https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.7.0-6c6c7b2a.tar.gz'
+<<<<<<< HEAD
   - GETH_VERSION='1.7.2'
   - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.16/solc-static-linux'
   - SOLC_VERSION='v0.4.18'
+=======
+  - GETH_VERSION='1.7.0'
+  - SOLC_URL_LINUX='https://github.com/ethereum/solidity/releases/download/v0.4.16/solc-static-linux'
+  - SOLC_URL_MACOS='https://raw.githubusercontent.com/ethereum/homebrew-ethereum/22092fef49ef1c7f701db4f69ae28615ecad90a7/solidity.rb'
+  - SOLC_VERSION='v0.4.16'
+>>>>>>> travis
   matrix:
   - TEST_TYPE='unit'
   - TEST_TYPE='smart_contracts'
@@ -21,12 +28,13 @@ env:
   - TEST_TYPE='integration' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
   - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=tester'
   - TEST_TYPE='api' BLOCKCHAIN_TYPE='--blockchain-type=geth --blockchain-cache'
-#cache:
-#  pip: true
-#  directories:
-#  - "$HOME/.cache/pip"
-#  - "$HOME/.ethash"
-#  - "$HOME/.bin"
+cache:
+  pip: true
+  directories:
+  - "$HOME/.cache/pip"
+  - "$HOME/.ethash"
+  - "$HOME/.bin"
+  - "/usr/local/Cellar/solidity"
 before_install: true
 #  - mkdir -p $HOME/.bin
 #  - export PATH=$PATH:$HOME/.bin:$HOME/Library/Python/2.7/bin
