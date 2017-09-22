@@ -62,7 +62,7 @@ export class RaidenService {
     public getTokens(refresh: boolean = false): Observable<Array<Usertoken>> {
         return this.http.get<Array<string>>(`${this.raidenConfig.api}/tokens`)
             .combineLatest(refresh ?
-                this.http.get<Connections>(`${this.raidenConfig.api}/connection`) :
+                this.http.get<Connections>(`${this.raidenConfig.api}/connections`) :
                 Observable.of(null))
             .map(([tokenArray, connections]): Array<Observable<Usertoken>> =>
                 tokenArray
@@ -154,12 +154,12 @@ export class RaidenService {
         const data = {
             'funds': funds
         }
-        return this.http.put(`${this.raidenConfig.api}/connection/${tokenAddress}`, data)
+        return this.http.put(`${this.raidenConfig.api}/connections/${tokenAddress}`, data)
             .catch((error) => this.handleError(error));
     }
 
     public leaveTokenNetwork(tokenAddress: string): Observable<any> {
-        return this.http.delete(`${this.raidenConfig.api}/connection/${tokenAddress}`)
+        return this.http.delete(`${this.raidenConfig.api}/connections/${tokenAddress}`)
             .catch((error) => this.handleError(error));
     }
 
