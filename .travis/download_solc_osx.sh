@@ -42,10 +42,14 @@ warn() {
 [ -z "${SOLC_URL_MACOS}" ] && fail 'missing SOLC_URL_MACOS'
 [ -z "${SOLC_VERSION}" ] && fail 'missing SOLC_VERSION'
 
-if [ ! -x /usr/local/Cellar/solidity/${SOLC_VERSION/v/}/bin/solc ]; then
+SOLC_CACHE_PATH=$HOME/.bin/solc-macos-${SOLC_VERSION}
+SOLC_PATH=/usr/local/Cellar/solidity/${SOLC_VERSION/v/}/bin/solc
+
+if [ ! -x ${SOLC_CACHE_PATH} ]; then
     brew install ${SOLC_URL_MACOS}
+    cp ${SOLC_PATH} ${SOLC_CACHE_PATH}
     success "solc ${SOLC_VERSION} installed"
 else
-    ln -sf /usr/local/Cellar/solidity/${SOLC_VERSION/v/}/bin/solc /usr/local/bin/solc
+    ln -sf ${SOLC_CACHE_PATH} $HOME/.bin/solc
     info 'using cached solc'
 fi
