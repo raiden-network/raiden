@@ -17,6 +17,7 @@ from ethereum.utils import encode_hex
 from raiden.constants import (
     UINT64_MAX,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
 )
 from raiden.blockchain.events import (
     get_relevant_proxies,
@@ -174,9 +175,13 @@ class RaidenService(object):
         if not isinstance(private_key_bin, bytes) or len(private_key_bin) != 32:
             raise ValueError('invalid private_key')
 
-        if config['settle_timeout'] < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
-            raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
-                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+        invalid_timeout = (
+            config['settle_timeout'] < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN or
+            config['settle_timeout'] > NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+        )
+        if invalid_timeout:
+            raise ValueError('settle_timeout must be in range [{}, {}]'.format(
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
             ))
 
         self.token_to_channelgraph = dict()

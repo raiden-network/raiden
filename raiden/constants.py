@@ -18,6 +18,11 @@ MINUTE_SEC = 60
 MINUTE_MS = 60 * 1000
 
 NETTINGCHANNEL_SETTLE_TIMEOUT_MIN = 6
+# The maximum settle timeout is chosen as something above
+# 1 year with the assumption of very fast block times of 12 seconds.
+# There is a maximum to avoidpotential overflows as described here:
+# https://github.com/raiden-network/raiden/issues/1038
+NETTINGCHANNEL_SETTLE_TIMEOUT_MAX = 2700000
 
 # TODO: add this as an attribute of the transport class
 UDP_MAX_MESSAGE_SIZE = 1200
