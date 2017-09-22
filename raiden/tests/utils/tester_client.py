@@ -17,7 +17,11 @@ from raiden.exceptions import (
     UnknownAddress,
     DuplicatedChannelError,
 )
-from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, DISCOVERY_REGISTRATION_GAS
+from raiden.constants import (
+    NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
+    DISCOVERY_REGISTRATION_GAS
+)
 from raiden.utils import (
     isaddress,
     pex,
@@ -520,9 +524,13 @@ class ChannelManagerTesterMock(object):
         if peer1 == peer2:
             raise SamePeerAddress('peer1 and peer2 must not be equal')
 
-        if settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
-            raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
-                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+        invalid_timeout = (
+            settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN or
+            settle_timeout > NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+        )
+        if invalid_timeout:
+            raise ValueError('settle_timeout must be in range [{}, {}]'.format(
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
             ))
 
         if privatekey_to_address(self.private_key) == peer1:

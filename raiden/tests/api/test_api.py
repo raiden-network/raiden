@@ -27,7 +27,7 @@ from raiden.settings import (
     DEFAULT_INITIAL_CHANNEL_TARGET,
     DEFAULT_REVEAL_TIMEOUT,
 )
-from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
 
 
 def assert_no_content_response(response):
@@ -459,6 +459,14 @@ def test_api_open_channel_invalid_input(
         'settle_timeout': settle_timeout,
         'reveal_timeout': reveal_timeout,
     }
+    request = grequests.put(
+        api_url_for(api_backend, 'channelsresource'),
+        json=channel_data_obj
+    )
+    response = request.send().response
+    assert_response_with_error(response, status_code=httplib.CONFLICT)
+
+    channel_data_obj['settle_timeout'] = NETTINGCHANNEL_SETTLE_TIMEOUT_MAX + 1
     request = grequests.put(
         api_url_for(api_backend, 'channelsresource'),
         json=channel_data_obj
