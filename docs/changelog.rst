@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`1038` Introduce an upper limit for the settle_timeout attribute of the netting channel
 * :bug:`1044` Rename ``/connection`` API endpoint to ``/connections`` for consistency
 * :bug: `1049` Make raiden byzantium compatible by no longer relying on ``estimateGas``.
 * :feature: `507` Making python's channels crash resilient (recoverable). Note, this is a breaking change, the serialization format of channel objects changed to a WAL compatible representation.
