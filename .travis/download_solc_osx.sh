@@ -85,7 +85,7 @@ SOLC_CACHE_PATH=$HOME/.bin/solc-macos-${SOLC_VERSION}
 SOLC_PATH=/usr/local/Cellar/solidity/${SOLC_VERSION/v/}/bin/solc
 
 if [ ! -x ${SOLC_CACHE_PATH} ]; then
-    travis_wait 30 brew install ${SOLC_URL_MACOS}
+    travis_wait brew install ${SOLC_URL_MACOS}
     cp ${SOLC_PATH} ${SOLC_CACHE_PATH}
     success "solc ${SOLC_VERSION} installed"
 else
