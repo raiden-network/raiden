@@ -28,7 +28,6 @@ cache:
   - "$HOME/.cache/pip"
   - "$HOME/.ethash"
   - "$HOME/.bin"
-  - "/usr/local/Cellar/solidity"
 before_install: true
 #  - mkdir -p $HOME/.bin
 #  - export PATH=$PATH:$HOME/.bin:$HOME/Library/Python/2.7/bin
