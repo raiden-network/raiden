@@ -570,14 +570,14 @@ Connecting to a token network
 You can automatically join a token network by making a ``PUT`` request to the following endpoint along with a json payload
 containing the connection details such as the funding you want to put into the network, the initial target for amount of channels to create and the target for joinable funds.
 
-``PUT /api/<version>/connection/<token_address>``
+``PUT /api/<version>/connections/<token_address>``
 
 The request will only return once all blockchain calls for opening and/or depositing to a channel have completed.
 
 Example Request
 ^^^^^^^^^^^^^^^
 
-``PUT /api/1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
+``PUT /api/1/connections/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
 with payload::
 
@@ -607,7 +607,7 @@ Leaving a token network
 
 You can leave a token network by making a ``DELETE`` request to the following endpoint along with a json payload containing details about the way you want to leave the network.
 
-``DELETE /api/<version>/connection/<token_address>``
+``DELETE /api/<version>/connections/<token_address>``
 
 The request will only return once all blockchain calls for closing/settling a channel have completed.
 
@@ -620,7 +620,7 @@ A list with the addresses of all the closed channels will be returned.
 Example Request
 ^^^^^^^^^^^^^^^
 
-``DELETE /api/1/connection/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
+``DELETE /api/1/connections/0x2a65aca4d5fc5b5c859090a6c34d164135398226``
 
 with payload::
 
@@ -657,7 +657,7 @@ Querying connections details
 
 You can query for details of previously joined token networks by making a GET request to the connection endpoint.
 
-``GET /api/<version>/connection``
+``GET /api/<version>/connections``
 
 The request will return a JSON object where each key is a token address for which you have open channels.
 The values are a JSON object containing numeric values for ``funds`` from last connect request, ``sum_deposits``
@@ -666,7 +666,7 @@ of all currently open channels and number of ``channels`` currently open for tha
 Example Request
 ^^^^^^^^^^^^^^^
 
-``GET /api/1/connection``
+``GET /api/1/connections``
 
 Example Response
 ^^^^^^^^^^^^^^^^
