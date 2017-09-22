@@ -204,11 +204,11 @@ class APIServer(object):
         )
         self.add_resource(
             ConnectionsResource,
-            '/connection/<hexaddress:token_address>'
+            '/connections/<hexaddress:token_address>'
         )
         self.add_resource(
             ConnectionManagersResource,
-            '/connection'
+            '/connections'
         )
 
     def _serve_webui(self, file='index.html'):
