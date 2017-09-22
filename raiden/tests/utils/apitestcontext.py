@@ -21,7 +21,7 @@ from raiden.transfer.state import (
 )
 from raiden.utils import pex, isaddress
 from raiden.exceptions import InvalidAddress, InvalidSettleTimeout
-from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
 from raiden.tests.utils.factories import make_address
 
 
@@ -238,9 +238,13 @@ class ApiTestContext():
             settle_timeout=None,
             reveal_timeout=None):
 
-        if settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
-            raise InvalidSettleTimeout('Configured minimum `settle_timeout` is {} blocks.'.format(
-                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+        invalid_timeout = (
+            settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN or
+            settle_timeout > NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+        )
+        if invalid_timeout:
+            raise InvalidSettleTimeout('`settle_timeout` should be in range [{}, {}].'.format(
+                NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
             ))
 
         if not isaddress(token_address):

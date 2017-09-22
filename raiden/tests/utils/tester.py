@@ -4,6 +4,7 @@ from ethereum.utils import decode_hex
 
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
+    NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
 )
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -286,9 +287,13 @@ def new_nettingcontract(
         channelmanager,
         settle_timeout):
 
-    if settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN:
-        raise ValueError('settle_timeout must be larger-or-equal to {}'.format(
-            NETTINGCHANNEL_SETTLE_TIMEOUT_MIN
+    invalid_timeout = (
+        settle_timeout < NETTINGCHANNEL_SETTLE_TIMEOUT_MIN or
+        settle_timeout > NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
+    )
+    if invalid_timeout:
+        raise ValueError('settle_timeout must be in range [{}, {}]'.format(
+            NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
         ))
 
     netting_channel_address0_hex = channelmanager.newChannel(
