@@ -15,7 +15,7 @@ contract NettingChannelContract {
     event ChannelSecretRevealed(bytes32 secret, address receiver_address);
 
     modifier settleTimeoutNotTooLow(uint t) {
-        assert(t >= 6);
+        require(t >= 6);
         _;
     }
 
