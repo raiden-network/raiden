@@ -194,27 +194,27 @@ def sanity_check(state):
         (pair.payer_state for pair in state.transfers_pair),
     )
     if any(state in STATE_TRANSFER_PAID for state in all_transfers_states):
-        assert state.secret is not None
+        assert state.secret is not None, repr(state)
 
     # the "transitivity" for these values is checked below as part of
     # almost_equal check
     if state.transfers_pair:
         first_pair = state.transfers_pair[0]
-        assert state.hashlock == first_pair.payer_transfer.hashlock
+        assert state.hashlock == first_pair.payer_transfer.hashlock, repr(state)
         if state.secret is not None:
-            assert first_pair.payer_transfer.secret == state.secret
+            assert first_pair.payer_transfer.secret == state.secret, repr(state)
 
     for pair in state.transfers_pair:
-        assert pair.payer_transfer.almost_equal(pair.payee_transfer)
-        assert pair.payer_transfer.expiration > pair.payee_transfer.expiration
+        assert pair.payer_transfer.almost_equal(pair.payee_transfer), repr(pair)
+        assert pair.payer_transfer.expiration > pair.payee_transfer.expiration, repr(pair)
 
-        assert pair.payer_state in pair.valid_payer_states
-        assert pair.payee_state in pair.valid_payee_states
+        assert pair.payer_state in pair.valid_payer_states, repr(pair)
+        assert pair.payee_state in pair.valid_payee_states, repr(pair)
 
     for original, refund in zip(state.transfers_pair[:-1], state.transfers_pair[1:]):
-        assert original.payee_transfer.almost_equal(refund.payer_transfer)
-        assert original.payee_route.node_address == refund.payer_route.node_address
-        assert original.payee_transfer.expiration > refund.payer_transfer.expiration
+        assert original.payee_transfer.almost_equal(refund.payer_transfer), repr(state)
+        assert original.payee_route.node_address == refund.payer_route.node_address, repr(state)
+        assert original.payee_transfer.expiration > refund.payer_transfer.expiration, repr(state)
 
 
 def clear_if_finalized(iteration):
@@ -293,7 +293,7 @@ def next_transfer_pair(payer_route, payer_transfer, routes_state, timeout_blocks
     )
 
     if payee_route:
-        assert payee_route.reveal_timeout < timeout_blocks
+        assert payee_route.reveal_timeout < timeout_blocks, repr(payee_route)
 
         lock_timeout = timeout_blocks - payee_route.reveal_timeout
         lock_expiration = lock_timeout + block_number
@@ -350,7 +350,7 @@ def set_payee_state_and_check_reveal_order(  # pylint: disable=invalid-name
         The elements from transfers_pair are changed in place, the list must
         contain all the known transfers to properly check reveal order.
     """
-    assert new_payee_state in MediationPairState.valid_payee_states
+    assert new_payee_state in MediationPairState.valid_payee_states, repr(new_payee_state)
 
     wrong_reveal_order = False
     for back in reversed(transfers_pair):
@@ -378,8 +378,8 @@ def set_expired_pairs(transfers_pair, block_number):
     events = list()
     for pair in pending_transfers_pairs:
         if block_number > pair.payer_transfer.expiration:
-            assert pair.payee_state == 'payee_expired'
-            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
+            assert pair.payee_state == 'payee_expired', repr(pair)
+            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration, repr(pair)
 
             if pair.payer_state != 'payer_expired':
                 pair.payer_state = 'payer_expired'
@@ -391,8 +391,8 @@ def set_expired_pairs(transfers_pair, block_number):
                 events.append(withdraw_failed)
 
         elif block_number > pair.payee_transfer.expiration:
-            assert pair.payee_state not in STATE_TRANSFER_PAID
-            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
+            assert pair.payee_state not in STATE_TRANSFER_PAID, repr(pair)
+            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration, repr(pair)
 
             if pair.payee_state != 'payee_expired':
                 pair.payee_state = 'payee_expired'
