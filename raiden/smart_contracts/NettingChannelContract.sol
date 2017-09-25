@@ -23,7 +23,9 @@ contract NettingChannelContract {
         address token_address,
         address participant1,
         address participant2,
-        uint timeout)
+        uint timeout
+    )
+        public
         settleTimeoutValid(timeout)
     {
         require(participant1 != participant2);
@@ -41,7 +43,10 @@ contract NettingChannelContract {
     /// @notice Caller makes a deposit into their channel balance.
     /// @param amount The amount caller wants to deposit.
     /// @return True if deposit is successful.
-    function deposit(uint256 amount) returns (bool) {
+    function deposit(uint256 amount)
+        public
+        returns (bool)
+    {
         bool success;
         uint256 balance;
 
@@ -57,12 +62,9 @@ contract NettingChannelContract {
     /// @notice Get the address and balance of both partners in a channel.
     /// @return The address and balance pairs.
     function addressAndBalance()
+        public
         constant
-        returns (
-        address participant1,
-        uint balance1,
-        address participant2,
-        uint balance2)
+        returns (address participant1, uint balance1, address participant2, uint balance2)
     {
         NettingChannelLibrary.Participant storage node1 = data.participants[0];
         NettingChannelLibrary.Participant storage node2 = data.participants[1];
@@ -80,7 +82,9 @@ contract NettingChannelContract {
         bytes32 locksroot,
         bytes32 extra_hash,
         bytes signature
-    ) {
+    )
+        public
+    {
         data.close(
             nonce,
             transferred_amount,
@@ -99,7 +103,9 @@ contract NettingChannelContract {
         bytes32 locksroot,
         bytes32 extra_hash,
         bytes signature
-    ) {
+    )
+        public
+    {
         data.updateTransfer(
             nonce,
             transferred_amount,
@@ -114,7 +120,7 @@ contract NettingChannelContract {
     /// @param locked_encoded The locked transfer to be unlocked.
     /// @param merkle_proof The merke_proof for the locked transfer.
     /// @param secret The secret to unlock the locked transfer.
-    function withdraw(bytes locked_encoded, bytes merkle_proof, bytes32 secret) {
+    function withdraw(bytes locked_encoded, bytes merkle_proof, bytes32 secret) public {
         // throws if sender is not a participant
         data.withdraw(locked_encoded, merkle_proof, secret);
         ChannelSecretRevealed(secret, msg.sender);
@@ -124,40 +130,40 @@ contract NettingChannelContract {
     ///         each participant. Can only be called after the channel is closed
     ///         and only after the number of blocks in the settlement timeout
     ///         have passed.
-    function settle() {
+    function settle() public {
         data.settle();
         ChannelSettled();
     }
 
     /// @notice Returns the number of blocks until the settlement timeout.
     /// @return The number of blocks until the settlement timeout.
-    function settleTimeout() constant returns (uint) {
+    function settleTimeout() public constant returns (uint) {
         return data.settle_timeout;
     }
 
     /// @notice Returns the address of the token.
     /// @return The address of the token.
-    function tokenAddress() constant returns (address) {
+    function tokenAddress() public constant returns (address) {
         return data.token;
     }
 
     /// @notice Returns the block number for when the channel was opened.
     /// @return The block number for when the channel was opened.
-    function opened() constant returns (uint) {
+    function opened() public constant returns (uint) {
         return data.opened;
     }
 
     /// @notice Returns the block number for when the channel was closed.
     /// @return The block number for when the channel was closed.
-    function closed() constant returns (uint) {
+    function closed() public constant returns (uint) {
         return data.closed;
     }
 
     /// @notice Returns the address of the closing participant.
     /// @return The address of the closing participant.
-    function closingAddress() constant returns (address) {
+    function closingAddress() public constant returns (address) {
         return data.closing_address;
     }
 
-    function () { revert(); }
+    function () public { revert(); }
 }

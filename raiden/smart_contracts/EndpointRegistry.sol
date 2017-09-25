@@ -69,7 +69,7 @@ contract EndpointRegistry{
 
     function equals(string a, string b) internal constant returns (bool result)
     {
-        if (sha3(a) == sha3(b)) {
+        if (keccak256(a) == keccak256(b)) {
             return true;
         }
 

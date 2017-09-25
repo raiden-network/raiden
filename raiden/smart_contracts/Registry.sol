@@ -29,6 +29,7 @@ contract Registry {
     /// @return The address of the channel manager
     function addToken(address token_address)
         doesNotExist(token_address)
+        public
         returns (address)
     {
         address manager_address;
@@ -48,6 +49,7 @@ contract Registry {
     /// @return Address of channel manager
     function channelManagerByToken(address token_address)
         addressExists(token_address)
+        public
         constant
         returns (address)
     {
@@ -57,6 +59,7 @@ contract Registry {
     /// @notice Get all registered tokens
     /// @return addresses of all registered tokens
     function tokenAddresses()
+        public
         constant
         returns (address[])
     {
@@ -66,6 +69,7 @@ contract Registry {
     /// @notice Get the addresses of all channel managers for all registered tokens
     /// @return addresses of all channel managers
     function channelManagerAddresses()
+        public
         constant
         returns (address[])
     {
@@ -83,5 +87,5 @@ contract Registry {
         return result;
     }
 
-    function () { revert(); }
+    function () public { revert(); }
 }
