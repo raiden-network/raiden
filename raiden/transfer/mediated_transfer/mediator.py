@@ -377,31 +377,32 @@ def set_expired_pairs(transfers_pair, block_number):
 
     events = list()
     for pair in pending_transfers_pairs:
-        if block_number > pair.payer_transfer.expiration:
-            assert pair.payee_state == 'payee_expired', repr(pair)
-            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration, repr(pair)
-
-            if pair.payer_state != 'payer_expired':
-                pair.payer_state = 'payer_expired'
-                withdraw_failed = EventWithdrawFailed(
-                    pair.payer_transfer.identifier,
-                    pair.payer_transfer.hashlock,
-                    'lock expired',
-                )
-                events.append(withdraw_failed)
-
-        elif block_number > pair.payee_transfer.expiration:
-            assert pair.payee_state not in STATE_TRANSFER_PAID, repr(pair)
-            assert pair.payee_transfer.expiration < pair.payer_transfer.expiration, repr(pair)
-
-            if pair.payee_state != 'payee_expired':
-                pair.payee_state = 'payee_expired'
-                unlock_failed = EventUnlockFailed(
-                    pair.payee_transfer.identifier,
-                    pair.payee_transfer.hashlock,
-                    'lock expired',
-                )
-                events.append(unlock_failed)
+        assert pair.payee_transfer.expiration < pair.payer_transfer.expiration, repr(pair)
+        payer_expired = (
+            block_number > pair.payer_transfer.expiration and
+            pair.payer_state != 'payer_expired'
+        )
+        payee_expired = (
+            block_number > pair.payee_transfer.expiration and
+            pair.payee_state != 'payee_expired' and
+            pair.payee_state not in STATE_TRANSFER_PAID
+        )
+        if payer_expired:
+            pair.payer_state = 'payer_expired'
+            withdraw_failed = EventWithdrawFailed(
+                pair.payer_transfer.identifier,
+                pair.payer_transfer.hashlock,
+                'lock expired',
+            )
+            events.append(withdraw_failed)
+        elif payee_expired:
+            pair.payee_state = 'payee_expired'
+            unlock_failed = EventUnlockFailed(
+                pair.payee_transfer.identifier,
+                pair.payee_transfer.hashlock,
+                'lock expired',
+            )
+            events.append(unlock_failed)
 
     return events
 
