@@ -5,7 +5,7 @@ contract Utils {
     /// @notice Check if a contract exists
     /// @param channel The address to check whether a contract is deployed or not
     /// @return True if a contract exists, false otherwise
-    function contractExists(address channel) constant returns (bool) {
+    function contractExists(address channel) public constant returns (bool) {
         uint size;
 
         assembly {

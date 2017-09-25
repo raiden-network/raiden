@@ -16,23 +16,12 @@ library ChannelManagerLibrary {
         mapping(address => mapping(address => uint)) node_index;
     }
 
-    /// @notice Get the address of channel with a partner
-    /// @param partner The address of the partner
-    /// @return The address of the channel
-    function getChannelWith(Data storage self, address partner) constant returns (address) {
-        bytes32 party_hash = partyHash(msg.sender, partner);
-        uint channel_pos = self.partyhash_to_channelpos[party_hash];
-
-        if (channel_pos != 0) {
-            return self.all_channels[channel_pos - 1];
-        }
-    }
-
     /// @notice Create a new payment channel between two parties
     /// @param partner The address of the partner
     /// @param settle_timeout The settle timeout in blocks
     /// @return The address of the newly created NettingChannelContract.
     function newChannel(Data storage self, address partner, uint settle_timeout)
+        public
         returns (address)
     {
         address[] storage caller_channels = self.nodeaddress_to_channeladdresses[msg.sender];
@@ -76,18 +65,19 @@ library ChannelManagerLibrary {
         return new_channel_address;
     }
 
-    /// @notice Get the hash of the two addresses
-    /// @param address_one address of one party
-    /// @param address_two of the other party
-    /// @return The sha3 hash of both parties sorted by size of address
-    function partyHash(address address_one, address address_two) internal constant returns (bytes32) {
-        if (address_one < address_two) {
-            return sha3(address_one, address_two);
-        } else {
-            // The two participants can't be the same here due to this check in
-            // the netting channel constructor:
-            // https://github.com/raiden-network/raiden/blob/e17d96db375d31b134ae7b4e2ad2c1f905b47857/raiden/smart_contracts/NettingChannelContract.sol#L27
-            return sha3(address_two, address_one);
+    /// @notice Get the address of channel with a partner
+    /// @param partner The address of the partner
+    /// @return The address of the channel
+    function getChannelWith(Data storage self, address partner)
+        public
+        constant
+        returns (address)
+    {
+        bytes32 party_hash = partyHash(msg.sender, partner);
+        uint channel_pos = self.partyhash_to_channelpos[party_hash];
+
+        if (channel_pos != 0) {
+            return self.all_channels[channel_pos - 1];
         }
     }
 
@@ -97,7 +87,11 @@ library ChannelManagerLibrary {
     /// @notice Check if a contract exists
     /// @param channel The address to check whether a contract is deployed or not
     /// @return True if a contract exists, false otherwise
-    function contractExists(address channel) private constant returns (bool) {
+    function contractExists(address channel)
+        private
+        constant
+        returns (bool)
+    {
         uint size;
 
         assembly {
@@ -105,5 +99,24 @@ library ChannelManagerLibrary {
         }
 
         return size > 0;
+    }
+
+    /// @notice Get the hash of the two addresses
+    /// @param address_one address of one party
+    /// @param address_two of the other party
+    /// @return The keccak256 hash of both parties sorted by size of address
+    function partyHash(address address_one, address address_two)
+        internal
+        pure
+        returns (bytes32)
+    {
+        if (address_one < address_two) {
+            return keccak256(address_one, address_two);
+        } else {
+            // The two participants can't be the same here due to this check in
+            // the netting channel constructor:
+            // https://github.com/raiden-network/raiden/blob/e17d96db375d31b134ae7b4e2ad2c1f905b47857/raiden/smart_contracts/NettingChannelContract.sol#L27
+            return keccak256(address_two, address_one);
+        }
     }
 }

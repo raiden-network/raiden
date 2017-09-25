@@ -65,6 +65,7 @@ library NettingChannelLibrary {
     /// @return Success if the transfer was successful
     /// @return The new balance of the invoker
     function deposit(Data storage self, uint256 amount)
+        public
         returns (bool success, uint256 balance)
     {
         uint8 index;
@@ -96,7 +97,9 @@ library NettingChannelLibrary {
         bytes32 locksroot,
         bytes32 extra_hash,
         bytes signature
-    ) {
+    )
+        public
+    {
         address transfer_address;
         uint closer_index;
         uint counterparty_index;
@@ -149,6 +152,7 @@ library NettingChannelLibrary {
     )
         isClosed(self)
         stillTimeout(self)
+        public
     {
         address transfer_address;
         uint8 caller_index;
@@ -190,13 +194,15 @@ library NettingChannelLibrary {
         bytes32 extra_hash,
         bytes signature
     )
-        constant internal returns (address)
+        constant
+        internal
+        returns (address)
     {
         bytes32 signed_hash;
 
         require(signature.length == 65);
 
-        signed_hash = sha3(
+        signed_hash = keccak256(
             nonce,
             transferred_amount,
             locksroot,
@@ -213,8 +219,14 @@ library NettingChannelLibrary {
     /// @param locked_encoded The lock
     /// @param merkle_proof The merkle proof
     /// @param secret The secret
-    function withdraw(Data storage self, bytes locked_encoded, bytes merkle_proof, bytes32 secret)
+    function withdraw(
+        Data storage self,
+        bytes locked_encoded,
+        bytes merkle_proof,
+        bytes32 secret 
+    )
         isClosed(self)
+        public
     {
         uint amount;
         uint8 index;
@@ -240,7 +252,7 @@ library NettingChannelLibrary {
         // The lock must not have expired, it does not matter how far in the
         // future it would have expired
         require(expiration >= block.number);
-        require(hashlock == sha3(secret));
+        require(hashlock == keccak256(secret));
 
         h = computeMerkleRoot(locked_encoded, merkle_proof);
 
@@ -261,39 +273,13 @@ library NettingChannelLibrary {
         counterparty.transferred_amount += amount;
     }
 
-    function computeMerkleRoot(bytes lock, bytes merkle_proof)
-        internal
-        constant
-        returns (bytes32)
-    {
-        require(merkle_proof.length % 32 == 0);
-
-        uint i;
-        bytes32 h;
-        bytes32 el;
-
-        h = sha3(lock);
-        for (i = 32; i <= merkle_proof.length; i += 32) {
-            assembly {
-                el := mload(add(merkle_proof, i))
-            }
-
-            if (h < el) {
-                h = sha3(h, el);
-            } else {
-                h = sha3(el, h);
-            }
-        }
-
-        return h;
-    }
-
     /// @notice Settles the balance between the two parties
     /// @dev Settles the balances of the two parties fo the channel
     /// @return The participants with netted balances
     function settle(Data storage self)
         isClosed(self)
         timeoutOver(self)
+        public
     {
         uint8 closing_index;
         uint8 counter_index;
@@ -345,6 +331,18 @@ library NettingChannelLibrary {
         selfdestruct(0x00000000000000000000);
     }
 
+    function index_or_throw(Data storage self, address participant_address)
+        constant
+        private
+        returns (uint8)
+    {
+        uint8 n;
+        // Return index of participant, or throw
+        n = self.participant_index[participant_address];
+        assert(n != 0);
+        return n - 1;
+    }
+
     // NOTES:
     //
     // - The EVM is a big-endian, byte addressing machine, with 32bytes/256bits
@@ -387,7 +385,11 @@ library NettingChannelLibrary {
     // - https://github.com/ethereum/wiki/wiki/Ethereum-Contract-ABI
     // - http://solidity.readthedocs.io/en/develop/assembly.html
 
-    function decodeLock(bytes lock) internal returns (uint64 expiration, uint amount, bytes32 hashlock) {
+    function decodeLock(bytes lock)
+        pure
+        internal
+        returns (uint64 expiration, uint amount, bytes32 hashlock)
+    {
         require(lock.length == 72);
 
         // Lock format:
@@ -401,7 +403,11 @@ library NettingChannelLibrary {
         }
     }
 
-    function signatureSplit(bytes signature) internal returns (bytes32 r, bytes32 s, uint8 v) {
+    function signatureSplit(bytes signature)
+        pure
+        internal
+        returns (bytes32 r, bytes32 s, uint8 v)
+    {
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
@@ -419,19 +425,40 @@ library NettingChannelLibrary {
         require(v == 27 || v == 28);
     }
 
-    function index_or_throw(Data storage self, address participant_address) private returns (uint8) {
-        uint8 n;
-        // Return index of participant, or throw
-        n = self.participant_index[participant_address];
-        assert(n != 0);
-        return n - 1;
+    function computeMerkleRoot(bytes lock, bytes merkle_proof)
+        pure
+        internal
+        returns (bytes32)
+    {
+        require(merkle_proof.length % 32 == 0);
+
+        uint i;
+        bytes32 h;
+        bytes32 el;
+
+        h = keccak256(lock);
+        for (i = 32; i <= merkle_proof.length; i += 32) {
+            assembly {
+                el := mload(add(merkle_proof, i))
+            }
+
+            if (h < el) {
+                h = keccak256(h, el);
+            } else {
+                h = keccak256(el, h);
+            }
+        }
+
+        return h;
     }
 
-    function min(uint a, uint b) constant internal returns (uint) {
+    function min(uint a, uint b) pure internal returns (uint)
+    {
         return a > b ? b : a;
     }
 
-    function max(uint a, uint b) constant internal returns (uint) {
+    function max(uint a, uint b) pure internal returns (uint)
+    {
         return a > b ? a : b;
     }
 }

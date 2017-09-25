@@ -25,19 +25,62 @@ contract ChannelManagerContract is Utils {
         address partner
     );
 
-    function ChannelManagerContract(address token_address) {
+    function ChannelManagerContract(address token_address) public {
         data.token = Token(token_address);
+    }
+
+    /// @notice Create a new payment channel between two parties
+    /// @param partner The address of the partner
+    /// @param settle_timeout The settle timeout in blocks
+    /// @return The address of the newly created NettingChannelContract.
+    function newChannel(address partner, uint settle_timeout)
+        public
+        returns (address)
+    {
+        address old_channel = getChannelWith(partner);
+        if (old_channel != 0) {
+            ChannelDeleted(msg.sender, partner);
+        }
+
+        address new_channel = data.newChannel(partner, settle_timeout);
+        ChannelNew(new_channel, msg.sender, partner, settle_timeout);
+        return new_channel;
     }
 
     /// @notice Get all channels
     /// @return All the open channels
-    function getChannelsAddresses() constant returns (address[]) {
+    function getChannelsAddresses() public constant returns (address[]) {
         return data.all_channels;
+    }
+
+    /// @notice Get the address of the channel token
+    /// @return The token
+    function tokenAddress() public constant returns (address) {
+        return data.token;
+    }
+
+    /// @notice Get the address of channel with a partner
+    /// @param partner The address of the partner
+    /// @return The address of the channel
+    function getChannelWith(address partner) public constant returns (address) {
+        return data.getChannelWith(partner);
+    }
+
+    /// @notice Get all channels that an address participates in.
+    /// @param node_address The address of the node
+    /// @return The channel's addresses that node_address participates in.
+    function nettingContractsByAddress(address node_address)
+        public
+        constant
+        returns (address[])
+    {
+        return data.nodeaddress_to_channeladdresses[node_address];
     }
 
     /// @notice Get all participants of all channels
     /// @return All participants in all channels
-    function getChannelsParticipants() constant returns (address[]) {
+    function getChannelsParticipants() public constant returns (address[])
+    {
         uint i;
         uint pos;
         address[] memory result;
@@ -69,40 +112,5 @@ contract ChannelManagerContract is Utils {
         return result;
     }
 
-    /// @notice Get all channels that an address participates in.
-    /// @param node_address The address of the node
-    /// @return The channel's addresses that node_address participates in.
-    function nettingContractsByAddress(address node_address) constant returns (address[]) {
-        return data.nodeaddress_to_channeladdresses[node_address];
-    }
-
-    /// @notice Get the address of the channel token
-    /// @return The token
-    function tokenAddress() constant returns (address) {
-        return data.token;
-    }
-
-    /// @notice Get the address of channel with a partner
-    /// @param partner The address of the partner
-    /// @return The address of the channel
-    function getChannelWith(address partner) constant returns (address) {
-        return data.getChannelWith(partner);
-    }
-
-    /// @notice Create a new payment channel between two parties
-    /// @param partner The address of the partner
-    /// @param settle_timeout The settle timeout in blocks
-    /// @return The address of the newly created NettingChannelContract.
-    function newChannel(address partner, uint settle_timeout) returns (address) {
-        address old_channel = getChannelWith(partner);
-        if (old_channel != 0) {
-            ChannelDeleted(msg.sender, partner);
-        }
-
-        address new_channel = data.newChannel(partner, settle_timeout);
-        ChannelNew(new_channel, msg.sender, partner, settle_timeout);
-        return new_channel;
-    }
-
-    function () { revert(); }
+    function () public { revert(); }
 }
