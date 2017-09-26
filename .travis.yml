@@ -88,6 +88,8 @@ jobs:
         - export PATH=$PATH:$HOME/.bin:$HOME/Library/Python/2.7/bin
         - .travis/before_install.sh
         - ls -la $HOME/.bin
+        - uname -a
+        - sw_vers
         - solc --version
         - geth --version
       install:
