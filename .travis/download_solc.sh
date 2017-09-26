@@ -42,9 +42,9 @@ warn() {
 
 
 if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-    GETH_URL=${GETH_URL_MACOS}
+    SOLC_URL=${SOLC_URL_MACOS}
 else
-    GETH_URL=${GETH_URL_LINUX}
+    SOLC_URL=${SOLC_URL_LINUX}
 fi
 
 [ -z "${SOLC_URL}" ] && fail 'missing SOLC_URL'
