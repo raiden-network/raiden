@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+set -x
 
 fail() {
     if [[ $- == *i* ]]; then
@@ -39,14 +40,21 @@ warn() {
     fi
 }
 
-[ -z "${SOLC_URL_LINUX}" ] && fail 'missing SOLC_URL_LINUX'
+
+if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+    GETH_URL=${GETH_URL_MACOS}
+else
+    GETH_URL=${GETH_URL_LINUX}
+fi
+
+[ -z "${SOLC_URL}" ] && fail 'missing SOLC_URL'
 [ -z "${SOLC_VERSION}" ] && fail 'missing SOLC_VERSION'
 
-if [ ! -x $HOME/.bin/solc-${SOLC_VERSION} ]; then
+if [ ! -x $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME} ]; then
     mkdir -p $HOME/.bin
 
-    curl -L ${SOLC_URL_LINUX} > $HOME/.bin/solc-${SOLC_VERSION}
-    chmod 775 $HOME/.bin/solc-${SOLC_VERSION}
+    curl -L ${SOLC_URL} > $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME}
+    chmod 775 $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME}
 
     success "solc ${SOLC_VERSION} installed"
 else
@@ -56,4 +64,4 @@ fi
 # always recreate the symlink since we dont know if it's pointing to a different
 # version
 [ -h $HOME/.bin/solc ] && unlink $HOME/.bin/solc
-ln -s $HOME/.bin/solc-${SOLC_VERSION} $HOME/.bin/solc
+ln -s $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME} $HOME/.bin/solc

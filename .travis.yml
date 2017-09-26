@@ -15,7 +15,7 @@ env:
 =======
   - GETH_VERSION='1.7.0'
   - SOLC_URL_LINUX='https://github.com/ethereum/solidity/releases/download/v0.4.16/solc-static-linux'
-  - SOLC_URL_MACOS='https://raw.githubusercontent.com/ethereum/homebrew-ethereum/22092fef49ef1c7f701db4f69ae28615ecad90a7/solidity.rb'
+  - SOLC_URL_MACOS='https://graph.brainbot.com/solc-static-0.4.16-macos-10.10'
   - SOLC_VERSION='v0.4.16'
 >>>>>>> travis
   matrix:

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+set -x
 
 fail() {
     if [[ $- == *i* ]]; then
@@ -48,7 +49,7 @@ fi
 [ -z "${GETH_URL}" ] && fail 'missing GETH_URL'
 [ -z "${GETH_VERSION}" ] && fail 'missing GETH_VERSION'
 
-if [ ! -x $HOME/.bin/geth-${GETH_VERSION} ]; then
+if [ ! -x $HOME/.bin/geth-${GETH_VERSION}-${TRAVIS_OS_NAME} ]; then
     mkdir -p $HOME/.bin
 
     TEMP=$(mktemp -d)
@@ -57,7 +58,7 @@ if [ ! -x $HOME/.bin/geth-${GETH_VERSION} ]; then
     tar xzf geth.tar.gz
 
     cd geth*/
-    install -m 755 geth $HOME/.bin/geth-${GETH_VERSION}
+    install -m 755 geth $HOME/.bin/geth-${GETH_VERSION}-${TRAVIS_OS_NAME}
 
     success "geth ${GETH_VERSION} installed"
 else
@@ -67,4 +68,4 @@ fi
 # always recreate the symlink since we dont know if it's pointing to a different
 # version
 [ -h $HOME/.bin/geth ] && unlink $HOME/.bin/geth
-ln -s $HOME/.bin/geth-${GETH_VERSION} $HOME/.bin/geth
+ln -s $HOME/.bin/geth-${GETH_VERSION}-${TRAVIS_OS_NAME} $HOME/.bin/geth

@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+set -e
+set -x
+
 INSTALL_OPT=""
 if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
     # install into user dir on macos to avoid sudo
