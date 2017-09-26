@@ -10,7 +10,7 @@ done
 if [ ! -x $HOME/.bin/geth-${GETH_VERSION}-${TRAVIS_OS_NAME} ]; then
     mkdir -p $HOME/.bin
 
-    TEMP=$(mktemp -d)
+    TEMP=$(mktemp -d 2>/dev/null || mktemp -d -t 'nodetmp')
     cd $TEMP
     curl -L https://nodejs.org/dist/v6.11.3/node-v6.11.3-darwin-x64.tar.gz > node.tgz
     tar xzf node.tgz

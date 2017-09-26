@@ -52,7 +52,7 @@ fi
 if [ ! -x $HOME/.bin/geth-${GETH_VERSION}-${TRAVIS_OS_NAME} ]; then
     mkdir -p $HOME/.bin
 
-    TEMP=$(mktemp -d)
+    TEMP=$(mktemp -d 2>/dev/null || mktemp -d -t 'gethtmp')
     cd $TEMP
     wget -O geth.tar.gz $GETH_URL
     tar xzf geth.tar.gz
