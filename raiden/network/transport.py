@@ -116,6 +116,14 @@ class UDPTransport(object):
 
     def stop(self):
         self.server.stop()
+        # Calling `.close()` on a gevent socket doesn't actually close the underlying os socket
+        # so we do that ourselves here.
+        # See: https://github.com/gevent/gevent/blob/master/src/gevent/_socket2.py#L208
+        # and: https://groups.google.com/forum/#!msg/gevent/Ro8lRra3nH0/ZENgEXrr6M0J
+        try:
+            self.server._socket.close()
+        except Exception:
+            pass
 
     def stop_accepting(self):
         self.server.stop_accepting()

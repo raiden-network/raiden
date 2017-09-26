@@ -136,6 +136,7 @@ def read_version_from_git():
         git_version, err = subprocess.Popen(
             shlex.split('git describe --tags'),
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         ).communicate()
         if git_version.startswith('v'):
             git_version = git_version[1:]

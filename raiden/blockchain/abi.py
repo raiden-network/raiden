@@ -122,7 +122,7 @@ def contract_checksum(contract_path):
         return checksum
 
 
-class ContractManager():
+class ContractManager(object):
 
     def __init__(self):
         self.is_instantiated = False
