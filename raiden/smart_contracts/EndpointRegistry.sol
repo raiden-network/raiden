@@ -29,7 +29,9 @@ contract EndpointRegistry{
      * @dev Registers the Ethereum Address to the Endpoint socket.
      * @param string of socket in this format "127.0.0.1:40001"
      */
-    function registerEndpoint(string socket) noEmptyString(socket)
+    function registerEndpoint(string socket)
+        public
+        noEmptyString(socket)
     {
         string storage old_socket = address_to_socket[msg.sender];
 
@@ -51,7 +53,7 @@ contract EndpointRegistry{
      * @param An eth_address which is a 20 byte Ethereum Address
      * @return A socket which the current Ethereum Address is using.
      */
-    function findEndpointByAddress(address eth_address) constant returns (string socket)
+    function findEndpointByAddress(address eth_address) public constant returns (string socket)
     {
         return address_to_socket[eth_address];
     }
@@ -62,12 +64,12 @@ contract EndpointRegistry{
      * @param string of socket in this format "127.0.0.1:40001"
      * @return An ethereum address
      */
-    function findAddressByEndpoint(string socket) constant returns (address eth_address)
+    function findAddressByEndpoint(string socket) public constant returns (address eth_address)
     {
         return socket_to_address[socket];
     }
 
-    function equals(string a, string b) internal constant returns (bool result)
+    function equals(string a, string b) internal pure returns (bool result)
     {
         if (keccak256(a) == keccak256(b)) {
             return true;
