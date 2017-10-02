@@ -236,6 +236,9 @@ class BlockChainServiceTesterMock(object):
     def block_number(self):
         return self.tester_state.block.number
 
+    def block_gas_limit(self, blocknumber):
+        return self.tester_state.block_gas_limit
+
     def is_synced(self):
         return True
 

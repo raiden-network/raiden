@@ -13,6 +13,7 @@ from gevent.event import AsyncResult
 from coincurve import PrivateKey
 from ethereum import slogging
 from ethereum.utils import encode_hex
+from raiden.network.rpc.client import set_block_gas_limit
 
 from raiden.constants import (
     UINT64_MAX,
@@ -275,6 +276,7 @@ class RaidenService(object):
         self._blocknumber = self.alarm.last_block_number
         self.alarm.register_callback(self.poll_blockchain_events)
         self.alarm.register_callback(self.set_block_number)
+        self.alarm.register_callback(self.update_block_gas_limit)
 
         # Registry registration must start *after* the alarm task, this avoid
         # corner cases were the registry is queried in block A, a new block B
@@ -377,6 +379,9 @@ class RaidenService(object):
         # To avoid races, only update the internal cache after all the state
         # tasks have been updated.
         self._blocknumber = blocknumber
+
+    def update_block_gas_limit(self, blocknumber):
+        set_block_gas_limit(self.chain.block_gas_limit(blocknumber))
 
     def set_node_network_state(self, node_address, network_state):
         for graph in self.token_to_channelgraph.itervalues():
