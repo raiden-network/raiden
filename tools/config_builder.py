@@ -2,10 +2,10 @@
 import json
 
 import click
-from pyethapp.accounts import Account
 
 from create_compilation_dump import deploy_all
 from genesis_builder import generate_accounts, mk_genesis
+from raiden.accounts import Account
 from raiden.utils import safe_address_decode
 from startcluster import create_node_configuration, to_cmd
 from startcluster import RAIDEN_PORT as START_PORT
