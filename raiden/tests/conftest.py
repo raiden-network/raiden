@@ -104,7 +104,7 @@ def logging_level(request):
 @pytest.fixture(scope='session', autouse=True)
 def enable_greenlet_debugger(request):
     if request.config.option.usepdb:
-        from pyethapp.utils import enable_greenlet_debugger
+        from raiden.utils.debug import enable_greenlet_debugger
         enable_greenlet_debugger()
 
 

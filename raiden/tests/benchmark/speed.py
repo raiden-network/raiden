@@ -212,7 +212,7 @@ def main():
     )
 
     if args.pdb:
-        from pyethapp.utils import enable_greenlet_debugger
+        from raiden.utils.debug import enable_greenlet_debugger
         enable_greenlet_debugger()
 
         try:
