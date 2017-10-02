@@ -8,7 +8,6 @@ from collections import namedtuple
 import pytest
 from ethereum import slogging
 from ethereum._solidity import compile_file
-from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.utils import (
     address_decoder,
@@ -26,6 +25,7 @@ from raiden.network.rpc.client import (
     patch_send_message,
     patch_send_transaction,
     BlockChainService,
+    JSONRPCClient,
 )
 from raiden.network.discovery import (
     ContractDiscovery,
@@ -408,10 +408,9 @@ def deploy_client(blockchain_type, blockchain_rpc_ports, deploy_key):
         rpc_port = blockchain_rpc_ports[0]
 
         deploy_client = JSONRPCClient(
-            host=host,
-            port=rpc_port,
-            privkey=deploy_key,
-            print_communication=False,
+            host,
+            rpc_port,
+            deploy_key,
         )
 
         # cant patch transaction because the blockchain may not be running yet
@@ -497,10 +496,9 @@ def _jsonrpc_services(
     blockchain_services = list()
     for privkey in private_keys:
         rpc_client = JSONRPCClient(
-            privkey=privkey,
-            host=host,
-            port=deploy_client.port,
-            print_communication=False,
+            host,
+            deploy_client.port,
+            privkey,
         )
         patch_send_transaction(rpc_client)
         patch_send_message(rpc_client)
