@@ -23,28 +23,28 @@ from raiden.transfer.mediated_transfer.state_change import (
 )
 from raiden.exceptions import AddressWithoutCode
 
-PyethappEventListener = namedtuple(
+EventListener = namedtuple(
     'EventListener',
-    ('event_name', 'pyethapp_filter', 'translator'),
+    ('event_name', 'filter', 'translator'),
 )
-PyethappEvent = namedtuple(
+Event = namedtuple(
     'BlockchainEvent',
     ('originating_contract', 'event_data'),
 )
-PyethappProxies = namedtuple(
-    'PyethappProxies',
+Proxies = namedtuple(
+    'Proxies',
     ('registry', 'channel_managers', 'channelmanager_nettingchannels'),
 )
 
-# Pyethapp's `new_filter` uses None to signal the absence of topics filters
+# `new_filter` uses None to signal the absence of topics filters
 ALL_EVENTS = None
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def poll_event_listener(pyethapp_filter, translator):
+def poll_event_listener(filter, translator):
     result = list()
 
-    for log_event in pyethapp_filter.changes():
+    for log_event in filter.changes():
         decoded_event = translator.decode_event(
             log_event['topics'],
             log_event['data'],
@@ -52,17 +52,17 @@ def poll_event_listener(pyethapp_filter, translator):
 
         if decoded_event is not None:
             decoded_event['block_number'] = log_event.get('block_number')
-            pyethapp_event = PyethappEvent(
+            event = Event(
                 log_event['address'],
                 decoded_event,
             )
-            result.append(pyethapp_event)
+            result.append(event)
 
     return result
 
 
 def get_contract_events(
-        pyethapp_chain,
+        chain,
         translator,
         contract_address,
         topics,
@@ -78,7 +78,7 @@ def get_contract_events(
     # to be implemented though.
 
     events = get_filter_events(
-        pyethapp_chain.client,
+        chain.client,
         contract_address,
         topics=topics,
         from_block=from_block,
@@ -98,7 +98,7 @@ def get_contract_events(
 # the caller.
 
 def get_all_channel_manager_events(
-        pyethapp_chain,
+        chain,
         channel_manager_address,
         events=ALL_EVENTS,
         from_block=0,
@@ -108,7 +108,7 @@ def get_all_channel_manager_events(
     """
 
     return get_contract_events(
-        pyethapp_chain,
+        chain,
         CONTRACT_MANAGER.get_translator(CONTRACT_CHANNEL_MANAGER),
         channel_manager_address,
         events,
@@ -118,7 +118,7 @@ def get_all_channel_manager_events(
 
 
 def get_all_registry_events(
-        pyethapp_chain,
+        chain,
         registry_address,
         events=ALL_EVENTS,
         from_block=0,
@@ -127,7 +127,7 @@ def get_all_registry_events(
     `registry_address`.
     """
     return get_contract_events(
-        pyethapp_chain,
+        chain,
         CONTRACT_MANAGER.get_translator(CONTRACT_REGISTRY),
         registry_address,
         events,
@@ -137,7 +137,7 @@ def get_all_registry_events(
 
 
 def get_all_netting_channel_events(
-        pyethapp_chain,
+        chain,
         netting_channel_address,
         events=ALL_EVENTS,
         from_block=0,
@@ -147,7 +147,7 @@ def get_all_netting_channel_events(
     """
 
     return get_contract_events(
-        pyethapp_chain,
+        chain,
         CONTRACT_MANAGER.get_translator(CONTRACT_NETTING_CHANNEL),
         netting_channel_address,
         events,
@@ -156,8 +156,8 @@ def get_all_netting_channel_events(
     )
 
 
-def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
-    registry = pyethapp_chain.registry(registry_address)
+def get_relevant_proxies(chain, node_address, registry_address):
+    registry = chain.registry(registry_address)
 
     channel_managers = list()
     manager_channels = defaultdict(list)
@@ -171,7 +171,7 @@ def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
         for channel_address in participating_channels:
             # FIXME: implement proper cleanup of self-killed channel after close+settle
             try:
-                netting_channels.append(pyethapp_chain.netting_channel(channel_address))
+                netting_channels.append(chain.netting_channel(channel_address))
             except AddressWithoutCode:
                 log.debug(
                     'Settled channel found when starting raiden. Safely ignored',
@@ -179,7 +179,7 @@ def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
                 )
         manager_channels[channel_manager_address] = netting_channels
 
-    proxies = PyethappProxies(
+    proxies = Proxies(
         registry,
         channel_managers,
         manager_channels,
@@ -188,13 +188,11 @@ def get_relevant_proxies(pyethapp_chain, node_address, registry_address):
     return proxies
 
 
-def pyethapp_event_to_state_change(pyethapp_event):  # pylint: disable=too-many-return-statements
-    contract_address = pyethapp_event.originating_contract
-    event = pyethapp_event.event_data
+def event_to_state_change(event):  # pylint: disable=too-many-return-statements
+    contract_address = event.originating_contract
+    event = event.event_data
 
-    # Raiden uses the binary representation of address internally, pyethapp
-    # keeps the addresses in hex representation inside the events, so all
-    # addresses inside the event_data must be decoded.
+    # Note: All addresses inside the event_data must be decoded.
 
     if event['_event_type'] == 'TokenAdded':
         return ContractReceiveTokenAdded(
@@ -245,8 +243,8 @@ def pyethapp_event_to_state_change(pyethapp_event):  # pylint: disable=too-many-
         return None
 
 
-class PyethappBlockchainEvents(object):
-    """ Pyethapp events polling. """
+class BlockchainEvents(object):
+    """ Events polling. """
 
     def __init__(self):
         self.event_listeners = list()
@@ -256,7 +254,7 @@ class PyethappBlockchainEvents(object):
 
         for event_listener in self.event_listeners:
             decoded_events = poll_event_listener(
-                event_listener.pyethapp_filter,
+                event_listener.filter,
                 event_listener.translator,
             )
             result.extend(decoded_events)
@@ -265,23 +263,23 @@ class PyethappBlockchainEvents(object):
 
     def poll_state_change(self):
         for event in self.poll_all_event_listeners():
-            yield pyethapp_event_to_state_change(event)
+            yield event_to_state_change(event)
 
     def uninstall_all_event_listeners(self):
         for listener in self.event_listeners:
-            listener.pyethapp_filter.uninstall()
+            listener.filter.uninstall()
 
         self.event_listeners = list()
 
-    def add_event_listener(self, event_name, pyethapp_filter, translator):
-        event = PyethappEventListener(
+    def add_event_listener(self, event_name, filter, translator):
+        event = EventListener(
             event_name,
-            pyethapp_filter,
+            filter,
             translator,
         )
         self.event_listeners.append(event)
 
-        return poll_event_listener(pyethapp_filter, translator)
+        return poll_event_listener(filter, translator)
 
     def add_registry_listener(self, registry_proxy):
         tokenadded = registry_proxy.tokenadded_filter()
@@ -313,14 +311,14 @@ class PyethappBlockchainEvents(object):
             CONTRACT_MANAGER.get_translator('netting_channel'),
         )
 
-    def add_proxies_listeners(self, pyethapp_proxies):
-        self.add_registry_listener(pyethapp_proxies.registry)
+    def add_proxies_listeners(self, proxies):
+        self.add_registry_listener(proxies.registry)
 
-        for manager in pyethapp_proxies.channel_managers:
+        for manager in proxies.channel_managers:
             self.add_channel_manager_listener(manager)
 
         all_netting_channels = itertools.chain(
-            *pyethapp_proxies.channelmanager_nettingchannels.itervalues()
+            *proxies.channelmanager_nettingchannels.itervalues()
         )
         for channel in all_netting_channels:
             self.add_netting_channel_listener(channel)
