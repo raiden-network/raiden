@@ -12,10 +12,12 @@ import gevent
 
 from ethereum import slogging
 from ethereum.utils import denoms, encode_hex
-from pyethapp.jsonrpc import address_encoder
 from requests import ConnectionError
 
-from raiden.utils import privatekey_to_address
+from raiden.utils import (
+    address_encoder,
+    privatekey_to_address,
+)
 from raiden.utils.crypto import privtopub
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.network.rpc.client import patch_send_transaction

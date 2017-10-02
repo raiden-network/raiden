@@ -2,7 +2,6 @@
 import itertools
 from collections import namedtuple, defaultdict
 
-from pyethapp.jsonrpc import address_decoder
 from ethereum import slogging
 
 from raiden.blockchain.abi import (
@@ -11,7 +10,7 @@ from raiden.blockchain.abi import (
     CONTRACT_NETTING_CHANNEL,
     CONTRACT_REGISTRY,
 )
-from raiden.utils import pex
+from raiden.utils import address_decoder, pex
 from raiden.network.rpc.client import get_filter_events
 
 from raiden.transfer.mediated_transfer.state_change import (

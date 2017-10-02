@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
 import re
-import sys
 import string
+import sys
 import time
-import gevent
 
+import gevent
 from coincurve import PrivateKey
 from ethereum.utils import remove_0x_head
 from sha3 import keccak_256
@@ -44,6 +44,59 @@ def ishash(data):
 
 def isaddress(data):
     return isinstance(data, (bytes, bytearray)) and len(data) == 20
+
+
+def address_decoder(addr):
+    if addr[:2] == '0x':
+        addr = addr[2:]
+
+    addr = addr.decode('hex')
+    assert len(addr) in (20, 0)
+    return addr
+
+
+def address_encoder(address):
+    assert len(address) in (20, 0)
+    return '0x' + address.encode('hex')
+
+
+def block_tag_encoder(val):
+    if isinstance(val, int):
+        return hex(val).rstrip('L')
+
+    assert val in ('latest', 'pending')
+    return '0x' + val.encode('hex')
+
+
+def data_encoder(data, length=None):
+    data = data.encode('hex')
+    length = length or 0
+    return '0x' + data.rjust(length * 2, '0')
+
+
+def data_decoder(data):
+    assert data[:2] == '0x'
+    data = data[2:]  # remove 0x
+    data = data.decode('hex')
+    return data
+
+
+def quantity_decoder(data):
+    assert data[:2] == '0x'
+    data = data[2:]  # remove 0x
+    return int(data, 16)
+
+
+def topic_encoder(topic):
+    assert isinstance(topic, (int, long))
+
+    if topic == 0:
+        return '0x'
+
+    topic = hex(topic).rstrip('L')
+    if len(topic) % 2:
+        topic = '0x0' + topic[2:]
+    return topic
 
 
 def pex(data):

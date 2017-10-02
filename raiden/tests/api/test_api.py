@@ -5,7 +5,6 @@ import json
 import pytest
 import grequests
 from flask import url_for
-from pyethapp.jsonrpc import address_encoder, address_decoder
 
 from raiden.api.v1.encoding import (
     AddressField,
@@ -16,7 +15,7 @@ from raiden.channel import (
     Channel,
     ChannelEndState,
 )
-from raiden.utils import channel_to_api_dict
+from raiden.utils import address_encoder, address_decoder, channel_to_api_dict
 from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,

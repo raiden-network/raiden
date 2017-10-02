@@ -2,8 +2,6 @@
 import gevent
 import pytest
 
-from pyethapp.jsonrpc import address_encoder
-
 from raiden.tests.utils.transfer import (
     assert_synched_channels,
     channel,
@@ -23,7 +21,7 @@ from raiden.blockchain.events import (
     get_all_netting_channel_events,
     get_all_registry_events,
 )
-from raiden.utils import sha3
+from raiden.utils import address_encoder, sha3
 
 
 def event_dicts_are_equal(dict1, dict2):

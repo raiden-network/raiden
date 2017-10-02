@@ -5,9 +5,8 @@ import random
 
 import pytest
 from raiden.network.utils import get_free_port
-from pyethapp.jsonrpc import address_encoder
 
-from raiden.utils import privatekey_to_address
+from raiden.utils import address_encoder, privatekey_to_address
 from raiden.settings import (
     DEFAULT_EVENTS_POLL_TIMEOUT,
     DEFAULT_POLL_TIMEOUT,

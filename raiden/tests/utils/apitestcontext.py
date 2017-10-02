@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
 
-from pyethapp.jsonrpc import address_decoder
-
 from raiden.channel import (
     BalanceProof,
     Channel,
@@ -19,7 +17,11 @@ from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
 )
-from raiden.utils import pex, isaddress
+from raiden.utils import (
+    address_decoder,
+    isaddress,
+    pex,
+)
 from raiden.exceptions import InvalidAddress, InvalidSettleTimeout
 from raiden.constants import NETTINGCHANNEL_SETTLE_TIMEOUT_MIN, NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
 from raiden.tests.utils.factories import make_address

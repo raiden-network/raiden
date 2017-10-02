@@ -13,11 +13,6 @@ from werkzeug.routing import (
     BaseConverter,
     ValidationError,
 )
-from pyethapp.jsonrpc import (
-    address_encoder,
-    data_encoder,
-    data_decoder,
-)
 
 from raiden.api.objects import (
     Address,
@@ -37,6 +32,11 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
+)
+from raiden.utils import (
+    address_encoder,
+    data_encoder,
+    data_decoder,
 )
 
 
