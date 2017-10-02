@@ -18,8 +18,15 @@ from requests.exceptions import RequestException
 from ethereum import slogging
 from ethereum.utils import denoms
 from ipaddress import IPv4Address, AddressValueError
-from pyethapp.jsonrpc import address_decoder, address_encoder, quantity_decoder
-from pyethapp.rpc_client import JSONRPCClient
+from pyethapp.jsonrpc import (
+    address_decoder,
+    address_encoder,
+    quantity_decoder,
+)
+from pyethapp.rpc_client import (
+    JSONRPCClient,
+    JSONRPCClientReplyError,
+)
 from tinyrpc import BadRequestError
 
 from raiden.accounts import AccountManager
@@ -90,12 +97,61 @@ def toggle_trace_profiler(raiden):
         raiden.profiler.start()
 
 
+def check_json_rpc(client):
+    try:
+        client_version = client.call('web3_clientVersion')
+    except (requests.exceptions.ConnectionError, JSONRPCClientReplyError):
+        print(
+            "\n"
+            "Couldn't contact the ethereum node through JSON-RPC.\n"
+            "Please make sure the JSON-RPC is enabled for these interfaces:\n"
+            "\n"
+            "    eth_*, net_*, web3_*, and debug_*\n"
+            "\n"
+            "geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n"
+        )
+        sys.exit(1)
+    else:
+        if client_version.startswith('Parity'):
+            print(
+                "Parity is not currently supported.\n"
+                "Waiting for the clients to expose the transaction's status code in the receipt.\n"
+                "https://github.com/ethereum/EIPs/pull/658"
+            )
+            sys.exit(1)
+
+
+def check_synced(blockchain_service):
+    try:
+        net_id = int(blockchain_service.client.call('net_version'))
+        network = ID_TO_NETWORKNAME[net_id]
+    except:
+        print(
+            "Couldn't determine the network the ethereum node is connected.\n"
+            "Because of this there is no way to determine the latest\n"
+            "block with an oracle, and the events from the ethereum\n"
+            "node cannot be trusted. Giving up.\n"
+        )
+        sys.exit(1)
+
+    url = ETHERSCAN_API.format(
+        network=network,
+        action='eth_blockNumber',
+    )
+    wait_for_sync(
+        blockchain_service,
+        url=url,
+        tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
+        sleep=3,
+    )
+
+
 def etherscan_query_with_retries(url, sleep, retries=3):
     for _ in range(retries - 1):
         try:
             etherscan_block = quantity_decoder(requests.get(url).json()['result'])
         except (RequestException, ValueError, KeyError):
-            pass
+            gevent.sleep(sleep)
         else:
             return etherscan_block
 
@@ -130,7 +186,7 @@ def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
         print(syncing_str.format(local_block, etherscan_block), end='')
 
 
-def wait_for_sync_rpc_api(blockchain_service, url, tolerance, sleep):
+def wait_for_sync_rpc_api(blockchain_service, sleep):
     if blockchain_service.is_synced():
         return
 
@@ -160,7 +216,7 @@ def wait_for_sync(blockchain_service, url, tolerance, sleep):
         print('Cannot use {}. Request failed'.format(url))
         print('Falling back to eth_sync api.')
 
-        wait_for_sync_rpc_api(blockchain_service, url, tolerance, sleep)
+        wait_for_sync_rpc_api(blockchain_service, sleep)
 
 
 class AddressType(click.ParamType):
@@ -462,44 +518,15 @@ def app(address,
     # this assumes the eth node is already online
     patch_send_transaction(rpc_client)
     patch_send_message(rpc_client)
+    check_json_rpc(rpc_client)
 
-    try:
-        blockchain_service = BlockChainService(
-            privatekey_bin,
-            rpc_client,
-        )
-    except ValueError as e:
-        # ValueError exception raised if:
-        # - The registry contract address doesn't have code, this might happen
-        # if the connected geth process is not synced or if the wrong address
-        # is provided (e.g. using the address from a smart contract deployed on
-        # ropsten with a geth node connected to morden)
-        print(e.message)
-        sys.exit(1)
+    blockchain_service = BlockChainService(
+        privatekey_bin,
+        rpc_client,
+    )
 
     if sync_check:
-        try:
-            net_id = int(blockchain_service.client.call('net_version'))
-            network = ID_TO_NETWORKNAME[net_id]
-        except:  # pylint: disable=bare-except
-            print(
-                "Couldn't determine the network the ethereum node is connected to.\n"
-                "Because of this there is not way to determine the latest\n"
-                "block with an oracle, and the events from the ethereum\n"
-                "node cannot be trusted. Giving up.\n"
-            )
-            sys.exit(1)
-
-        url = ETHERSCAN_API.format(
-            network=network,
-            action='eth_blockNumber',
-        )
-        wait_for_sync(
-            blockchain_service,
-            url=url,
-            tolerance=ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
-            sleep=3,
-        )
+        check_synced(blockchain_service)
 
     discovery_tx_cost = GAS_PRICE * DISCOVERY_REGISTRATION_GAS
     while True:
