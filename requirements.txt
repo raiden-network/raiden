@@ -3,6 +3,7 @@ git+https://github.com/konradkonrad/pystun@develop#egg=pystun
 # temporary until new version of pyethereum is released, that supports interfaces
 git+https://github.com/LefterisJP/pyethereum@take_solidity_interface_into_account#egg=ethereum
 
+tinyrpc[gevent,httpclient,jsonext,websocket,wsgi]
 pysha3
 ipython<5.0.0
 rlp>=0.4.3,<0.6.0
