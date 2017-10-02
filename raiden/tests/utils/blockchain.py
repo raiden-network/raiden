@@ -10,13 +10,13 @@ import termios
 import time
 import gevent
 
-from devp2p.crypto import privtopub
 from ethereum import slogging
 from ethereum.utils import denoms, encode_hex
 from pyethapp.jsonrpc import address_encoder
 from requests import ConnectionError
 
 from raiden.utils import privatekey_to_address
+from raiden.utils.crypto import privtopub
 from raiden.tests.utils.genesis import GENESIS_STUB
 from raiden.network.rpc.client import patch_send_transaction
 
