@@ -9,7 +9,6 @@ from ethereum import _solidity
 from ethereum._solidity import compile_file
 from ethereum.tester import TransactionFailed
 from ethereum.utils import denoms
-from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
@@ -18,6 +17,7 @@ from raiden.network.rpc.client import (
     patch_send_transaction,
     patch_send_message,
     check_transaction_threw,
+    JSONRPCClient,
 )
 from raiden.settings import GAS_PRICE
 from raiden.tests.utils.blockchain import wait_until_block
@@ -235,10 +235,11 @@ def test_blockchain(
     address = privatekey_to_address(privatekey)
     total_token = 100
 
+    host = '127.0.0.1'
     jsonrpc_client = JSONRPCClient(
-        port=blockchain_rpc_ports[0],
-        privkey=privatekey,
-        print_communication=False,
+        host,
+        blockchain_rpc_ports[0],
+        privatekey,
     )
     patch_send_transaction(jsonrpc_client)
     patch_send_message(jsonrpc_client)

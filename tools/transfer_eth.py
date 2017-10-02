@@ -1,7 +1,11 @@
+# -*- coding: utf-8 -*-
 import click
-from pyethapp.rpc_client import JSONRPCClient
 
-from raiden.network.rpc.client import patch_send_transaction, patch_send_message
+from raiden.network.rpc.client import (
+    patch_send_transaction,
+    patch_send_message,
+    JSONRPCClient,
+)
 
 
 WEI_TO_ETH = 10 ** 18
@@ -15,10 +19,9 @@ WEI_TO_ETH = 10 ** 18
 @click.option("-h", "--host", default="127.0.0.1")
 def main(private_key, eth_amount, targets_file, port, host):
     client = JSONRPCClient(
-        host=host,
-        port=port,
-        privkey=private_key,
-        print_communication=False,
+        host,
+        port,
+        private_key,
     )
     patch_send_transaction(client)
     patch_send_message(client)

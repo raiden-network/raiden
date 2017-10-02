@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
-from pyethapp.rpc_client import JSONRPCClient
 from ethereum._solidity import compile_file
 
 from raiden.utils import get_contract_path, sha3
-from raiden.network.rpc.client import patch_send_transaction, patch_send_message
+from raiden.network.rpc.client import (
+    patch_send_transaction,
+    patch_send_message,
+    JSONRPCClient,
+)
 from raiden.settings import GAS_PRICE
 
 
-def connect(host='127.0.0.1',
-            port=8545,
-            use_ssl=False):
-    """Create a jsonrpcclient instance, using the 'zero-privatekey'.
-    """
+def connect(host='127.0.0.1', port=8545):
+    """Create a jsonrpcclient instance, using the 'zero-privatekey'. """
     client = JSONRPCClient(
         host,
         port,
         privkey='1' * 64,
-        print_communication=False,
-        use_ssl=use_ssl,
     )
     patch_send_transaction(client)
     patch_send_message(client)

@@ -13,12 +13,11 @@ import sys
 import yaml
 import gevent
 import networkx
-from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.app import App
 from raiden.network.discovery import Discovery
-from raiden.network.rpc.client import BlockChainService
+from raiden.network.rpc.client import BlockChainService, JSONRPCClient
 from raiden.utils import sha3, privatekey_to_address
 
 TRANSFER_AMOUNT = 1
@@ -96,10 +95,9 @@ def setup_tps(
     """
     host, port = rpc_server.split(':')
     rpc_client = JSONRPCClient(
-        privkey=privatekey,
-        host=host,
-        port=port,
-        print_communication=False,
+        host,
+        port,
+        privatekey,
     )
 
     blockchain_service = BlockChainService(
@@ -164,10 +162,9 @@ def tps_run(
     host, port = (rpc_connection[0], int(rpc_connection[1]))
 
     rpc_client = JSONRPCClient(
-        privkey=privatekey,
-        host=host,
-        port=port,
-        print_communication=False,
+        host,
+        port,
+        privatekey,
     )
 
     blockchain_service = BlockChainService(

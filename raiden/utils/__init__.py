@@ -87,6 +87,15 @@ def quantity_decoder(data):
     return int(data, 16)
 
 
+def quantity_encoder(i):
+    """Encode integer quantity `data`."""
+    return hex(i).rstrip('L')
+
+
+def topic_decoder(topic):
+    return int(topic[2:], 16)
+
+
 def topic_encoder(topic):
     assert isinstance(topic, (int, long))
 

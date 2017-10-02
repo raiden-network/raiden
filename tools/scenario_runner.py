@@ -12,13 +12,14 @@ import gevent
 from gevent import monkey
 from ethereum import slogging
 from ethereum.utils import decode_hex
-from pyethapp.rpc_client import JSONRPCClient
 
 from raiden.app import App
-from raiden.network.rpc.client import BlockChainService
+from raiden.api.python import RaidenAPI
 from raiden.network.discovery import ContractDiscovery
-from raiden.utils import split_endpoint
+from raiden.network.rpc.client import BlockChainService, JSONRPCClient
+from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.ui.console import ConsoleTools
+from raiden.utils import split_endpoint
 
 
 monkey.patch_all()
@@ -87,10 +88,9 @@ def run(privatekey,
     privatekey_bin = decode_hex(privatekey)
 
     rpc_client = JSONRPCClient(
-        privkey=privatekey_bin,
-        host='127.0.0.1',
-        port='8545',
-        print_communication=False,
+        '127.0.0.1',
+        '8545',
+        privatekey_bin,
     )
 
     blockchain_service = BlockChainService(
@@ -145,6 +145,12 @@ def run(privatekey,
             if our_node not in nodes:
                 continue
 
+            partner_nodes = [
+                node
+                for node in nodes
+                if node != our_node
+            ]
+
             # allow for prefunded tokens
             if 'token_address' in token:
                 token_address = token['token_address']
@@ -163,7 +169,20 @@ def run(privatekey,
 
             log.warning("Waiting for all nodes to come online")
 
-            while not all(tools.ping(node) for node in nodes if node != our_node):
+            api = RaidenAPI(app.raiden)
+
+            for node in partner_nodes:
+                api.start_health_check_for(node)
+
+            while True:
+                all_reachable = all(
+                    api.get_node_network_state(node) == NODE_NETWORK_REACHABLE
+                    for node in partner_nodes
+                )
+
+                if all_reachable:
+                    break
+
                 gevent.sleep(5)
 
             log.warning("All nodes are online")
@@ -186,7 +205,7 @@ def run(privatekey,
                 while True:
                     try:
                         log.warning("Opening channel with {} for {}".format(peer, token_address))
-                        app.raiden.api.open(token_address, peer)
+                        api.open(token_address, peer)
                         break
                     except KeyError:
                         log.warning("Error: could not open channel with {}".format(peer))
@@ -195,7 +214,7 @@ def run(privatekey,
                 while True:
                     try:
                         log.warning("Funding channel with {} for {}".format(peer, token_address))
-                        app.raiden.api.deposit(token_address, peer, amount)
+                        api.deposit(token_address, peer, amount)
                         break
                     except Exception:
                         log.warning("Error: could not deposit {} for {}".format(amount, peer))
@@ -222,7 +241,7 @@ def run(privatekey,
                 initial_time = time.time()
                 times = [0] * total_transfers
                 for index in xrange(total_transfers):
-                    app.raiden.api.transfer(
+                    RaidenAPI(app.raiden).transfer(
                         token_address.decode('hex'),
                         amount_per_transfer,
                         peer,

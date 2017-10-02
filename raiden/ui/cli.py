@@ -18,10 +18,6 @@ from requests.exceptions import RequestException
 from ethereum import slogging
 from ethereum.utils import denoms
 from ipaddress import IPv4Address, AddressValueError
-from pyethapp.rpc_client import (
-    JSONRPCClient,
-    JSONRPCClientReplyError,
-)
 from tinyrpc import BadRequestError
 
 from raiden.accounts import AccountManager
@@ -32,12 +28,14 @@ from raiden.constants import (
     ROPSTEN_DISCOVERY_ADDRESS,
     ROPSTEN_REGISTRY_ADDRESS,
 )
+from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.discovery import ContractDiscovery
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.network.rpc.client import (
     patch_send_message,
     patch_send_transaction,
+    JSONRPCClient,
 )
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
@@ -101,7 +99,7 @@ def toggle_trace_profiler(raiden):
 def check_json_rpc(client):
     try:
         client_version = client.call('web3_clientVersion')
-    except (requests.exceptions.ConnectionError, JSONRPCClientReplyError):
+    except (requests.exceptions.ConnectionError, EthNodeCommunicationError):
         print(
             "\n"
             "Couldn't contact the ethereum node through JSON-RPC.\n"
@@ -510,10 +508,9 @@ def app(address,
         rpc_host, rpc_port = split_endpoint(endpoint)
 
     rpc_client = JSONRPCClient(
-        privkey=privatekey_bin,
-        host=rpc_host,
-        port=rpc_port,
-        print_communication=eth_client_communication,
+        rpc_host,
+        rpc_port,
+        privatekey_bin,
     )
 
     # this assumes the eth node is already online

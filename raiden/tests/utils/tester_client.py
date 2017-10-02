@@ -8,7 +8,6 @@ from ethereum.tester import TransactionFailed
 from ethereum.abi import ContractTranslator
 from ethereum.utils import decode_hex, encode_hex
 from ethereum._solidity import solidity_get_contract_key
-from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
 from raiden import messages
 from raiden.exceptions import (
@@ -39,6 +38,10 @@ from raiden.blockchain.abi import (
 
     EVENT_CHANNEL_NEW,
     EVENT_TOKEN_ADDED,
+)
+from raiden.network.rpc.client import (
+    deploy_dependencies_symbols,
+    dependencies_order_of_build,
 )
 from raiden.exceptions import SamePeerAddress
 
