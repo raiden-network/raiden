@@ -7,17 +7,17 @@ import sys
 import time
 from logging import StreamHandler, Formatter
 
-import gevent
-from gevent.event import Event
-import IPython
-from IPython.lib.inputhook import inputhook_manager
-from devp2p.service import BaseService
 from ethereum.slogging import getLogger
 from ethereum._solidity import compile_file
 from ethereum.utils import denoms
-from pyethapp.utils import bcolors as bc
-from pyethapp.jsonrpc import default_gasprice
+import gevent
+from gevent.event import Event
+from gevent import Greenlet
+import IPython
+from IPython.lib.inputhook import inputhook_manager
 from pyethapp.console_service import GeventInputHook, SigINTHandler
+from pyethapp.jsonrpc import default_gasprice
+from pyethapp.utils import bcolors as bc
 
 from raiden.api.python import RaidenAPI
 from raiden.utils import events, get_contract_path, safe_address_decode
@@ -44,13 +44,26 @@ def print_usage():
     print("\n" + bc.ENDC)
 
 
-class Console(BaseService):
+class BaseService(Greenlet):
+    def __init__(self, app):
+        Greenlet.__init__(self)
+        self.is_stopped = False
+        self.app = app
+        self.config = app.config
 
-    """A service starting an interactive ipython session when receiving the
+    def start(self):
+        self.is_stopped = False
+        Greenlet.start(self)
+
+    def stop(self):
+        self.is_stopped = True
+        Greenlet.kill(self)
+
+
+class Console(BaseService):
+    """ A service starting an interactive ipython session when receiving the
     SIGSTP signal (e.g. via keyboard shortcut CTRL-Z).
     """
-
-    name = 'console'
 
     def __init__(self, app):
         super(Console, self).__init__(app)
@@ -87,7 +100,7 @@ class Console(BaseService):
             usage=print_usage,
         )
 
-    def _run(self):
+    def _run(self):  # pylint: disable=method-hidden
         self.interrupt.wait()
         print('\n' * 2)
         print("Entering Console" + bc.OKGREEN)

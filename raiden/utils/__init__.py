@@ -163,7 +163,6 @@ def get_system_spec():
     """Collect informations about the system and installation.
     """
     import pkg_resources
-    import raiden
     import platform
     system_spec = dict(
         raiden=pkg_resources.require(raiden.__name__)[0].version,
