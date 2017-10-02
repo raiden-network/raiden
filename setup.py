@@ -108,15 +108,14 @@ with open('README.rst') as readme_file:
 history = ''
 
 
+ethereum_url = (
+    'git+https://github.com/LefterisJP/pyethereum'
+    '@take_solidity_interface_into_account#egg=ethereum'
+)
+
 install_requires_replacements = {
-    "git+https://github.com/LefterisJP/pyethapp@raiden_pyethapp_fork#egg=pyethapp": "pyethapp",
-    (
-        "git+https://github.com/LefterisJP/pyethereum"
-        "@take_solidity_interface_into_account#egg=ethereum"): "ethereum",
-    (
-        "git+https://github.com/LefterisJP/pyelliptic"
-        "@make_compatible_with_openssl1_1#egg=pyelliptic"): "pyelliptic",
-    "git+https://github.com/konradkonrad/pystun@develop#egg=pystun": "pystun",
+    ethereum_url: 'ethereum',
+    'git+https://github.com/konradkonrad/pystun@develop#egg=pystun': 'pystun',
 }
 
 install_requires = list(set(
@@ -131,9 +130,8 @@ version = '0.1.0'  # Do not edit: this is maintained by bumpversion (see .bumpve
 
 def read_version_from_git():
     try:
-        import subprocess
         import shlex
-        git_version, err = subprocess.Popen(
+        git_version, _ = subprocess.Popen(
             shlex.split('git describe --tags'),
             stdout=subprocess.PIPE,
         ).communicate()
@@ -143,7 +141,7 @@ def read_version_from_git():
         git_version = git_version.strip()
         # if this is has commits after the tag, it's a prerelease:
         if git_version.count('-') == 2:
-            spec, _, commit = git_version.split('-')
+            _, _, commit = git_version.split('-')
             if commit.startswith('g'):
                 commit = commit[1:]
             return '{}+git.r{}'.format(version, commit)
@@ -159,7 +157,7 @@ def read_version_from_git():
 setup(
     name='raiden',
     version=read_version_from_git(),
-    description="",
+    description='',
     long_description=readme + '\n\n' + history,
     author='HeikoHeiko',
     author_email='heiko@brainbot.com',
@@ -174,7 +172,7 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
     ],
     cmdclass={
