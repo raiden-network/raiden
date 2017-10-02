@@ -10,15 +10,6 @@ from ethereum import slogging
 from ethereum import _solidity
 from ethereum.transactions import Transaction
 from ethereum.utils import encode_hex, normalize_address
-from pyethapp.jsonrpc import (
-    address_encoder,
-    address_decoder,
-    data_decoder,
-    data_encoder,
-    quantity_decoder,
-    default_gasprice,
-)
-from pyethapp.rpc_client import topic_encoder, block_tag_encoder
 import requests
 
 from raiden import messages
@@ -40,9 +31,16 @@ from raiden.settings import (
     GAS_PRICE,
 )
 from raiden.utils import (
+    address_decoder,
+    address_encoder,
+    block_tag_encoder,
+    data_decoder,
+    data_encoder,
     isaddress,
     pex,
     privatekey_to_address,
+    quantity_decoder,
+    topic_encoder,
 )
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -455,7 +453,7 @@ class BlockChainService(object):
             dict(),
             constructor_parameters,
             contract_path=contract_path,
-            gasprice=default_gasprice,
+            gasprice=GAS_PRICE,
             timeout=self.poll_timeout,
         )
         return proxy.address

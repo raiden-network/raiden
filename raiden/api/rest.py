@@ -10,7 +10,6 @@ from webargs.flaskparser import parser
 from werkzeug.exceptions import NotFound
 from gevent.wsgi import WSGIServer
 
-from pyethapp.jsonrpc import address_encoder
 from ethereum import slogging
 
 from raiden.exceptions import (
@@ -60,7 +59,7 @@ from raiden.raiden_service import (
     create_default_identifier,
 )
 from raiden.api.objects import ChannelList, PartnersPerTokenList, AddressList
-from raiden.utils import channel_to_api_dict, split_endpoint
+from raiden.utils import address_encoder, channel_to_api_dict, split_endpoint
 
 log = slogging.get_logger(__name__)
 

@@ -9,20 +9,19 @@ from ethereum import _solidity
 from ethereum._solidity import compile_file
 from ethereum.tester import TransactionFailed
 from ethereum.utils import denoms
-from pyethapp.jsonrpc import default_gasprice
 from pyethapp.rpc_client import JSONRPCClient
 
-from raiden.tests.utils.blockchain import wait_until_block
+from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
+from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import (
     decode_topic,
     patch_send_transaction,
     patch_send_message,
     check_transaction_threw,
 )
-from raiden.exceptions import AddressWithoutCode
+from raiden.settings import GAS_PRICE
+from raiden.tests.utils.blockchain import wait_until_block
 from raiden.utils import privatekey_to_address, get_contract_path
-from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
-from raiden.exceptions import SamePeerAddress
 
 
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
@@ -253,7 +252,7 @@ def test_blockchain(
         dict(),
         (total_token, 'raiden', 2, 'Rd'),
         contract_path=humantoken_path,
-        gasprice=default_gasprice,
+        gasprice=GAS_PRICE,
         timeout=poll_timeout,
     )
 
@@ -266,7 +265,7 @@ def test_blockchain(
         dict(),
         tuple(),
         contract_path=registry_path,
-        gasprice=default_gasprice,
+        gasprice=GAS_PRICE,
         timeout=poll_timeout,
     )
 

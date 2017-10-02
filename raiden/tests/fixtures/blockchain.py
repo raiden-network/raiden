@@ -9,9 +9,14 @@ import pytest
 from ethereum import slogging
 from ethereum._solidity import compile_file
 from pyethapp.rpc_client import JSONRPCClient
-from pyethapp.jsonrpc import address_decoder, address_encoder, default_gasprice
 
-from raiden.utils import privatekey_to_address, get_contract_path, fix_tester_storage
+from raiden.utils import (
+    address_decoder,
+    address_encoder,
+    fix_tester_storage,
+    get_contract_path,
+    privatekey_to_address,
+)
 from raiden.network.transport import DummyTransport
 from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
@@ -34,6 +39,7 @@ from raiden.tests.utils.network import (
     create_network_channels,
     create_sequential_channels,
 )
+from raiden.settings import GAS_PRICE
 
 BlockchainServices = namedtuple(
     'BlockchainServices',
@@ -475,7 +481,7 @@ def _jsonrpc_services(
             dict(),
             tuple(),
             contract_path=registry_path,
-            gasprice=default_gasprice,
+            gasprice=GAS_PRICE,
             timeout=poll_timeout,
         )
         registry_address = registry_proxy.address

@@ -2,9 +2,9 @@
 """
 from ethereum.abi import ContractTranslator
 from ethereum.utils import normalize_address
-from pyethapp.jsonrpc import address_encoder, data_decoder
 from pyethapp.rpc_client import ContractProxy
 
+from raiden.utils import address_encoder, data_decoder
 from raiden.network.rpc.client import decode_topic
 
 __all__ = (

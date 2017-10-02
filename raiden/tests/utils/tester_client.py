@@ -8,7 +8,6 @@ from ethereum.tester import TransactionFailed
 from ethereum.abi import ContractTranslator
 from ethereum.utils import decode_hex, encode_hex
 from ethereum._solidity import solidity_get_contract_key
-from pyethapp.jsonrpc import address_decoder, address_encoder
 from pyethapp.rpc_client import deploy_dependencies_symbols, dependencies_order_of_build
 
 from raiden import messages
@@ -23,6 +22,8 @@ from raiden.constants import (
     DISCOVERY_REGISTRATION_GAS
 )
 from raiden.utils import (
+    address_decoder,
+    address_encoder,
     isaddress,
     pex,
     privatekey_to_address,

@@ -16,11 +16,11 @@ from gevent import Greenlet
 import IPython
 from IPython.lib.inputhook import inputhook_manager
 from pyethapp.console_service import GeventInputHook, SigINTHandler
-from pyethapp.jsonrpc import default_gasprice
 from pyethapp.utils import bcolors as bc
 
 from raiden.api.python import RaidenAPI
 from raiden.utils import events, get_contract_path, safe_address_decode
+from raiden.settings import GAS_PRICE
 
 # ipython needs to accept "--gui gevent" option
 IPython.core.shellapp.InteractiveShellApp.gui.values += ('gevent',)
@@ -176,7 +176,7 @@ class ConsoleTools(object):
             symbol='RDT',
             decimals=2,
             timeout=60,
-            gasprice=default_gasprice,
+            gasprice=GAS_PRICE,
             auto_register=True):
         """Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).

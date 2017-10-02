@@ -5,9 +5,9 @@ import os
 
 import pytest
 from ethereum import _solidity
-from pyethapp.rpc_client import data_encoder, quantity_decoder
 
 from raiden.network.rpc.client import check_transaction_threw
+from raiden.utils import data_encoder, quantity_decoder
 
 # pylint: disable=unused-argument,protected-access
 

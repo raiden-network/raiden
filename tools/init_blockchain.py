@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 from pyethapp.rpc_client import JSONRPCClient
-from pyethapp.jsonrpc import default_gasprice
 from ethereum._solidity import compile_file
 
 from raiden.utils import get_contract_path, sha3
 from raiden.network.rpc.client import patch_send_transaction, patch_send_message
+from raiden.settings import GAS_PRICE
 
 
 def connect(host='127.0.0.1',
@@ -29,9 +29,8 @@ def create_and_distribute_token(
         receivers,
         amount_per_receiver=1000,
         name=None,
-        gasprice=default_gasprice,
-        timeout=120
-):
+        gasprice=GAS_PRICE,
+        timeout=120):
     """Create a new ERC-20 token and distribute it among `receivers`.
     If `name` is None, the name will be derived from hashing all receivers.
     """
@@ -41,7 +40,7 @@ def create_and_distribute_token(
         client.sender,
         'HumanStandardToken',
         compile_file(contract_path),
-        dict()
+        dict(),
         (
             len(receivers) * amount_per_receiver,
             name,

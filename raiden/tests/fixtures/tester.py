@@ -5,9 +5,13 @@ import ethereum.blocks
 import ethereum.config
 from ethereum import tester
 from ethereum.utils import int_to_addr, zpad
-from pyethapp.jsonrpc import address_decoder, data_decoder, quantity_decoder
 
-from raiden.utils import privatekey_to_address
+from raiden.utils import (
+    address_decoder,
+    data_decoder,
+    quantity_decoder,
+    privatekey_to_address,
+)
 from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.tests.utils.tester import (
     approve_and_deposit,

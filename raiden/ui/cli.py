@@ -18,11 +18,6 @@ from requests.exceptions import RequestException
 from ethereum import slogging
 from ethereum.utils import denoms
 from ipaddress import IPv4Address, AddressValueError
-from pyethapp.jsonrpc import (
-    address_decoder,
-    address_encoder,
-    quantity_decoder,
-)
 from pyethapp.rpc_client import (
     JSONRPCClient,
     JSONRPCClientReplyError,
@@ -51,7 +46,13 @@ from raiden.settings import (
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
-from raiden.utils import split_endpoint, get_system_spec
+from raiden.utils import (
+    address_decoder,
+    address_encoder,
+    quantity_decoder,
+    split_endpoint,
+    get_system_spec,
+)
 from raiden.tests.utils.smoketest import (
     load_or_create_smoketest_config,
     start_ethereum,
