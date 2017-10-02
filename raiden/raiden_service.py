@@ -21,7 +21,7 @@ from raiden.constants import (
 )
 from raiden.blockchain.events import (
     get_relevant_proxies,
-    PyethappBlockchainEvents,
+    BlockchainEvents,
 )
 from raiden.event_handler import StateMachineEventHandler
 from raiden.message_handler import RaidenMessageHandler
@@ -231,7 +231,7 @@ class RaidenService(object):
 
         self.message_handler = RaidenMessageHandler(self)
         self.state_machine_event_handler = StateMachineEventHandler(self)
-        self.pyethapp_blockchain_events = PyethappBlockchainEvents()
+        self.blockchain_events = BlockchainEvents()
         self.greenlet_task_dispatcher = GreenletTasksDispatcher()
         self.on_message = self.message_handler.on_message
         self.alarm = AlarmTask(chain)
@@ -315,7 +315,7 @@ class RaidenService(object):
         # the events are polled by a alarm task callback, if the filters are
         # uninstalled before the alarm task is fully stopped the callback
         # `poll_blockchain_events` will fail.
-        self.pyethapp_blockchain_events.uninstall_all_event_listeners()
+        self.blockchain_events.uninstall_all_event_listeners()
 
         # save the state after all tasks are done
         if self.serialization_file:
@@ -395,7 +395,7 @@ class RaidenService(object):
         # pylint: disable=unused-argument
         on_statechange = self.state_machine_event_handler.on_blockchain_statechange
 
-        for state_change in self.pyethapp_blockchain_events.poll_state_change():
+        for state_change in self.blockchain_events.poll_state_change():
             on_statechange(state_change)
 
     def find_channel_by_address(self, netting_channel_address_bin):
@@ -696,7 +696,7 @@ class RaidenService(object):
 
         # Install the filters first to avoid missing changes, as a consequence
         # some events might be applied twice.
-        self.pyethapp_blockchain_events.add_proxies_listeners(proxies)
+        self.blockchain_events.add_proxies_listeners(proxies)
 
         for manager in proxies.channel_managers:
             token_address = manager.token_address()
@@ -738,9 +738,9 @@ class RaidenService(object):
 
         # Install the filters first to avoid missing changes, as a consequence
         # some events might be applied twice.
-        self.pyethapp_blockchain_events.add_channel_manager_listener(manager)
+        self.blockchain_events.add_channel_manager_listener(manager)
         for channel in netting_channels:
-            self.pyethapp_blockchain_events.add_netting_channel_listener(channel)
+            self.blockchain_events.add_netting_channel_listener(channel)
 
         token_address = manager.token_address()
         edge_list = manager.channels_addresses()
@@ -768,7 +768,7 @@ class RaidenService(object):
 
     def register_netting_channel(self, token_address, channel_address):
         netting_channel = self.chain.netting_channel(channel_address)
-        self.pyethapp_blockchain_events.add_netting_channel_listener(netting_channel)
+        self.blockchain_events.add_netting_channel_listener(netting_channel)
 
         detail = self.get_channel_details(token_address, netting_channel)
         graph = self.token_to_channelgraph[token_address]
