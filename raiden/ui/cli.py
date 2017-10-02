@@ -528,7 +528,7 @@ def app(address,
 
     discovery_tx_cost = GAS_PRICE * DISCOVERY_REGISTRATION_GAS
     while True:
-        balance = blockchain_service.client.balance(address_hex)
+        balance = blockchain_service.client.balance(address)
         if discovery_tx_cost <= balance:
             break
         print(
