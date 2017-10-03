@@ -45,7 +45,6 @@ def find_keystoredir():
 
 
 class AccountManager(object):
-
     def __init__(self, keystore_path=None):
         self.keystore_path = keystore_path
         self.accounts = {}
@@ -81,11 +80,13 @@ class AccountManager(object):
     def get_privkey(self, address, password=None):
         """Find the keystore file for an account, unlock it and get the private key
 
-        :param str address: The Ethereum address for which to find the keyfile in the system
-        :param str password: Mostly for testing purposes. A password can be provided
-                             as the function argument here. If it's not then the
-                             user is interactively queried for one.
-        :return str: The private key associated with the address
+        Args:
+            address(str): The Ethereum address for which to find the keyfile in the system
+            password(str): Mostly for testing purposes. A password can be provided
+                           as the function argument here. If it's not then the
+                           user is interactively queried for one.
+        Returns
+            str: The private key associated with the address
         """
 
         if address.startswith('0x'):
@@ -107,16 +108,16 @@ class AccountManager(object):
 
 
 class Account(object):
-
-    """Represents an account.
-
-    :ivar keystore: the key store as a dictionary (as decoded from json)
-    :ivar locked: `True` if the account is locked and neither private nor public keys can be
-                  accessed, otherwise `False`
-    :ivar path: absolute path to the associated keystore file (`None` for in-memory accounts)
-    """
+    """Represents an account.  """
 
     def __init__(self, keystore, password=None, path=None):
+        """
+        Args:
+            keystore: the key store as a dictionary (as decoded from json)
+            locked: `True` if the account is locked and neither private nor public keys can be
+                      accessed, otherwise `False`
+            path: absolute path to the associated keystore file (`None` for in-memory accounts)
+        """
         if path is not None:
             path = os.path.abspath(path)
 
@@ -138,8 +139,9 @@ class Account(object):
     def load(cls, path, password=None):
         """Load an account from a keystore file.
 
-        :param path: full path to the keyfile
-        :param password: the password to decrypt the key file or `None` to leave it encrypted
+        Args:
+            path: full path to the keyfile
+            password: the password to decrypt the key file or `None` to leave it encrypted
         """
         with open(path) as f:
             keystore = json.load(f)
@@ -156,8 +158,9 @@ class Account(object):
 
         If address or id are not known, they are not added, even if requested.
 
-        :param include_address: flag denoting if the address should be included or not
-        :param include_id: flag denoting if the id should be included or not
+        Args:
+            include_address: flag denoting if the address should be included or not
+            include_id: flag denoting if the id should be included or not
         """
         d = {}
         d['crypto'] = self.keystore['crypto']
@@ -173,8 +176,8 @@ class Account(object):
 
         If the account is already unlocked, nothing happens, even if the password is wrong.
 
-        :raises: :exc:`ValueError` (originating in ethereum.keys) if the password is wrong (and the
-                 account is locked)
+        Raises:
+            ValueError: (originating in ethereum.keys) if the password is wrong (and the account is locked)
         """
         if self.locked:
             self._privkey = keys.decode_keystore_json(self.keystore, password)
@@ -244,8 +247,11 @@ class Account(object):
 
         If the account is unlocked, this is equivalent to ``tx.sign(account.privkey)``.
 
-        :param tx: the :class:`ethereum.transactions.Transaction` to sign
-        :raises: :exc:`ValueError` if the account is locked
+        Args:
+            tx: the :class:`ethereum.transactions.Transaction` to sign
+
+        Raises:
+            ValueError: if the account is locked
         """
         if self.privkey:
             log.info('signing tx', tx=tx, account=self)
