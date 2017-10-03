@@ -72,25 +72,25 @@ class GeventInputHook(object):
         self._current_gui = GUI_GEVENT
 
     def enable(self, app=None):
-        """Enable event loop integration with gevent.
-        Parameters
-        ----------
-        app : ignored
-            Ignored, it's only a placeholder to keep the call signature of all
-            gui activation methods consistent, which simplifies the logic of
-            supporting magics.
-        Notes
-        -----
-        This methods sets the PyOS_InputHook for gevent, which allows
-        gevent greenlets to run in the background while interactively using
-        IPython.
+        """ Enable event loop integration with gevent.
+
+        Args:
+            app: Ignored, it's only a placeholder to keep the call signature of all
+                gui activation methods consistent, which simplifies the logic of
+                supporting magics.
+
+        Notes:
+            This methods sets the PyOS_InputHook for gevent, which allows
+            gevent greenlets to run in the background while interactively using
+            IPython.
         """
         self.manager.set_inputhook(inputhook_gevent)
         self._current_gui = GUI_GEVENT
         return app
 
     def disable(self):
-        """Disable event loop integration with gevent.
+        """ Disable event loop integration with gevent.
+
         This merely sets PyOS_InputHook to NULL.
         """
         self.manager.clear_inputhook()
@@ -122,18 +122,16 @@ class SigINTHandler(object):
         gevent.spawn(self._confirm_enter_console)
 
     def handle_force(self):  # pylint: disable=no-self-use
-        """
-        User pressed ^C a second time. Send SIGTERM to ourself.
-        """
+        """ User pressed ^C a second time. Send SIGTERM to ourself. """
         os.kill(os.getpid(), signal.SIGTERM)
 
     def _confirm_enter_console(self):
         start = time.time()
-        sys.stdout.write("\n")
+        sys.stdout.write('\n')
         enter_console = False
         while time.time() - start < ENTER_CONSOLE_TIMEOUT:
             prompt = (
-                "\r{}{}Hit [ENTER], to launch console; [Ctrl+C] again to quit! [{:1.0f}s]{}"
+                '\r{}{}Hit [ENTER], to launch console; [Ctrl+C] again to quit! [{:1.0f}s]{}'
             ).format(
                 OKGREEN,
                 BOLD,
@@ -147,8 +145,8 @@ class SigINTHandler(object):
             try:
                 r, _, _ = select.select([sys.stdin], [], [], .5)
             except select.error as ex:
-                sys.stdout.write("\n")
-                # "Interrupted sytem call" means the user pressed ^C again
+                sys.stdout.write('\n')
+                # "Interrupted system call" means the user pressed ^C again
                 if ex.args[0] == errno.EINTR:
                     self.handle_force()
                     return
@@ -159,13 +157,18 @@ class SigINTHandler(object):
                 enter_console = True
                 break
         if enter_console:
-            sys.stdout.write("\n")
+            sys.stdout.write('\n')
             self.installed_force.cancel()
             self.event.set()
         else:
-            sys.stdout.write(
-                "\n{}{}No answer after {}s. Resuming.{}\n".format(
-                    WARNING, BOLD, ENTER_CONSOLE_TIMEOUT, ENDC))
+            msg = '\n{}{}No answer after {}s. Resuming.{}\n'.format(
+                WARNING,
+                BOLD,
+                ENTER_CONSOLE_TIMEOUT,
+                ENDC,
+            )
+
+            sys.stdout.write(msg)
             sys.stdout.flush()
             # Restore regular handler
             self.install_handler()
@@ -230,8 +233,8 @@ class Console(BaseService):
     def _run(self):  # pylint: disable=method-hidden
         self.interrupt.wait()
         print('\n' * 2)
-        print("Entering Console" + OKGREEN)
-        print("Tip:" + OKBLUE)
+        print('Entering Console' + OKGREEN)
+        print('Tip:' + OKBLUE)
         print_usage()
 
         # Remove handlers that log to stderr
@@ -242,11 +245,11 @@ class Console(BaseService):
 
         stream = cStringIO.StringIO()
         handler = StreamHandler(stream=stream)
-        handler.formatter = Formatter("%(levelname)s:%(name)s %(message)s")
+        handler.formatter = Formatter('%(levelname)s:%(name)s %(message)s')
         root.addHandler(handler)
 
         def lastlog(n=10, prefix=None, level=None):
-            """Print the last `n` log lines to stdout.
+            """ Print the last `n` log lines to stdout.
             Use `prefix='p2p'` to filter for a specific logger.
             Use `level=INFO` to filter for a specific level.
             Level- and prefix-filtering are applied before tailing the log.
@@ -273,8 +276,7 @@ class Console(BaseService):
         sys.stderr = err
 
         def lasterr(n=1):
-            """Print the last `n` entries of stderr to stdout.
-            """
+            """ Print the last `n` entries of stderr to stdout. """
             for line in (err.getvalue().strip().split('\n') or [])[-n:]:
                 print(line)
 
@@ -305,7 +307,7 @@ class ConsoleTools(object):
             timeout=60,
             gasprice=GAS_PRICE,
             auto_register=True):
-        """Create a proxy for a new HumanStandardToken (ERC20), that is
+        """ Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).
         Per default it will be registered with 'raiden'.
 
@@ -342,7 +344,7 @@ class ConsoleTools(object):
         return token_address_hex
 
     def register_token(self, token_address_hex):
-        """Register a token with the raiden token manager.
+        """ Register a token with the raiden token manager.
 
         Args:
             token_address_hex (string): a hex encoded token address.
@@ -368,7 +370,7 @@ class ConsoleTools(object):
             amount,
             settle_timeout=None,
             reveal_timeout=None):
-        """Convenience method to open a channel.
+        """ Convenience method to open a channel.
 
         Args:
             token_address_hex (str): hex encoded address of the token for the channel.
@@ -399,7 +401,7 @@ class ConsoleTools(object):
         return self._api.deposit(token_address, peer_address, amount)
 
     def channel_stats_for(self, token_address_hex, peer_address_hex, pretty=False):
-        """Collect information about sent and received transfers
+        """ Collect information about sent and received transfers
         between yourself and your peer for the given token.
 
         Args:
@@ -456,7 +458,7 @@ class ConsoleTools(object):
             print(json.dumps(stats, indent=2, sort_keys=True))
 
     def show_events_for(self, token_address_hex, peer_address_hex):
-        """Find all EVM-EventLogs for a channel.
+        """ Find all EVM-EventLogs for a channel.
 
         Args:
             token_address_hex (string): hex encoded address of the token
@@ -479,7 +481,7 @@ class ConsoleTools(object):
         return events.netting_channel_events(self._chain.client, netting_channel)
 
     def wait_for_contract(self, contract_address_hex, timeout=None):
-        """Wait until a contract is mined
+        """ Wait until a contract is mined
 
         Args:
             contract_address_hex (string): hex encoded address of the contract

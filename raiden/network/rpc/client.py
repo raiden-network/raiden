@@ -142,7 +142,7 @@ def deploy_dependencies_symbols(all_contract):
 
 def dependencies_order_of_build(target_contract, dependencies_map):
     """ Return an ordered list of contracts that is sufficient to sucessfully
-    deploys the target contract.
+    deploy the target contract.
 
     Note:
         This function assumes that the `dependencies_map` is an acyclic graph.
@@ -161,7 +161,7 @@ def dependencies_order_of_build(target_contract, dependencies_map):
         target_pos = len(order)
 
         for dependency in dependencies_map[target_contract]:
-            # we need to add the current contract before all it's depedencies
+            # we need to add the current contract before all its depedencies
             if dependency in order:
                 target_pos = order.index(dependency)
             else:
@@ -385,8 +385,16 @@ class MethodProxy(object):
     """ A callable interface that exposes a contract function. """
     valid_kargs = set(('gasprice', 'startgas', 'value'))
 
-    def __init__(self, sender, contract_address, function_name, translator,
-                 call_function, transaction_function, estimate_function=None):
+    def __init__(
+            self,
+            sender,
+            contract_address,
+            function_name,
+            translator,
+            call_function,
+            transaction_function,
+            estimate_function=None):
+
         self.sender = sender
         self.contract_address = contract_address
         self.function_name = function_name
@@ -428,7 +436,7 @@ class MethodProxy(object):
 
     def estimate_gas(self, *args, **kargs):
         if not self.estimate_function:
-            raise RuntimeError('estimate_function wasnt supplied.')
+            raise RuntimeError('estimate_function was not supplied.')
 
         assert set(kargs.keys()).issubset(self.valid_kargs)
         data = self.translator.encode(self.function_name, args)
@@ -582,8 +590,8 @@ class JSONRPCClient(object):
             libraries (list): A list of libraries to use in deployment
             constructor_parameters (tuple): A tuple of arguments to pass to the constructor
             contract_path (str): If we are dealing with solc >= v0.4.9 then the path
-                                 to the contract is a required argument a required argument
-                                 to extract the contract data from the `all_contracts` dict.
+                                 to the contract is a required argument to extract the contract data
+                                 from the `all_contracts` dict.
             timeout (int): Amount of time to poll the chain to confirm deployment
             gasprice: The gasprice to provide for the transaction
         """
@@ -754,12 +762,12 @@ class JSONRPCClient(object):
         ]
 
     def call(self, method, *args):
-        """ Do the request and returns the result.
+        """ Do the request and return the result.
 
         Args:
             method (str): The RPC method.
             args: The encoded arguments expected by the method.
-                - Object arguments must be supplied as an dictionary.
+                - Object arguments must be supplied as a dictionary.
                 - Quantity arguments must be hex encoded starting with '0x' and
                 without left zeros.
                 - Data arguments must be hex encoded starting with '0x'
@@ -777,8 +785,15 @@ class JSONRPCClient(object):
 
     __call__ = call
 
-    def send_transaction(self, sender, to, value=0, data='', startgas=0,
-                         gasprice=GAS_PRICE, nonce=None):
+    def send_transaction(
+            self,
+            sender,
+            to,
+            value=0,
+            data='',
+            startgas=0,
+            gasprice=GAS_PRICE,
+            nonce=None):
         """ Helper to send signed messages.
 
         This method will use the `privkey` provided in the constructor to
@@ -825,24 +840,33 @@ class JSONRPCClient(object):
         assert len(res) in (20, 32)
         return res.encode('hex')
 
-    def eth_sendTransaction(self, nonce=None, sender='', to='', value=0, data='',
-                            gasPrice=GAS_PRICE, gas=GAS_PRICE,
-                            v=None, r=None, s=None):
+    def eth_sendTransaction(
+            self,
+            nonce=None,
+            sender='',
+            to='',
+            value=0,
+            data='',
+            gasPrice=GAS_PRICE,
+            gas=GAS_PRICE,
+            v=None,
+            r=None,
+            s=None):
         """ Creates new message call transaction or a contract creation, if the
         data field contains code.
 
         Note:
             The support for local signing through the variables v,r,s is not
-            part of the standard spec, a extended server is required.
+            part of the standard spec, an extended server is required.
 
         Args:
-            from (address): The 20 bytes address the transaction is send from.
+            from (address): The 20 bytes address the transaction is sent from.
             to (address): DATA, 20 Bytes - (optional when creating new
                 contract) The address the transaction is directed to.
             gas (int): Gas provided for the transaction execution. It will
                 return unused gas.
-            gasPrice (int): gasPrice used for each paid gas.
-            value (int): Value send with this transaction.
+            gasPrice (int): gasPrice used for each unit of gas paid.
+            value (int): Value sent with this transaction.
             data (bin): The compiled code of a contract OR the hash of the
                 invoked method signature and encoded parameters.
             nonce (int): This allows to overwrite your own pending transactions
@@ -857,7 +881,7 @@ class JSONRPCClient(object):
             )
 
         if to == '0' * 40:
-            warnings.warn('For contract creating the empty string must be used.')
+            warnings.warn('For contract creation the empty string must be used.')
 
         json_data = {
             'to': data_encoder(normalize_address(to, allow_blank=True)),
@@ -868,7 +892,7 @@ class JSONRPCClient(object):
         }
 
         if not sender and not (v and r and s):
-            raise ValueError('Either sender or v, r, s needs to be informed.')
+            raise ValueError('Either sender or v, r, s needs to be provided.')
 
         if sender is not None:
             json_data['from'] = address_encoder(sender)
@@ -885,8 +909,14 @@ class JSONRPCClient(object):
 
         return data_decoder(res)
 
-    def _format_call(self, sender='', to='', value=0, data='',
-                     startgas=GAS_PRICE, gasprice=GAS_PRICE):
+    def _format_call(
+            self,
+            sender='',
+            to='',
+            value=0,
+            data='',
+            startgas=GAS_PRICE,
+            gasprice=GAS_PRICE):
         """ Helper to format the transaction data. """
 
         json_data = dict()
@@ -911,20 +941,26 @@ class JSONRPCClient(object):
 
         return json_data
 
-    def eth_call(self, sender='', to='', value=0, data='',
-                 startgas=GAS_PRICE, gasprice=GAS_PRICE,
-                 block_number='latest'):
+    def eth_call(
+            self,
+            sender='',
+            to='',
+            value=0,
+            data='',
+            startgas=GAS_PRICE,
+            gasprice=GAS_PRICE,
+            block_number='latest'):
         """ Executes a new message call immediately without creating a
-        transaction on the block chain.
+        transaction on the blockchain.
 
         Args:
-            from: The address the transaction is send from.
+            from: The address the transaction is sent from.
             to: The address the transaction is directed to.
             gas (int): Gas provided for the transaction execution. eth_call
                 consumes zero gas, but this parameter may be needed by some
                 executions.
-            gasPrice (int): gasPrice used for each paid gas.
-            value (int): Integer of the value send with this transaction.
+            gasPrice (int): gasPrice used for unit of gas paid.
+            value (int): Integer of the value sent with this transaction.
             data (bin): Hash of the method signature and encoded parameters.
                 For details see Ethereum Contract ABI.
             block_number: Determines the state of ethereum used in the
@@ -943,20 +979,26 @@ class JSONRPCClient(object):
 
         return data_decoder(res)
 
-    def eth_estimateGas(self, sender='', to='', value=0, data='',
-                        startgas=GAS_PRICE, gasprice=GAS_PRICE):
+    def eth_estimateGas(
+            self,
+            sender='',
+            to='',
+            value=0,
+            data='',
+            startgas=GAS_PRICE,
+            gasprice=GAS_PRICE):
         """ Makes a call or transaction, which won't be added to the blockchain
         and returns the used gas, which can be used for estimating the used
         gas.
 
         Args:
-            from: The address the transaction is send from.
+            from: The address the transaction is sent from.
             to: The address the transaction is directed to.
             gas (int): Gas provided for the transaction execution. eth_call
                 consumes zero gas, but this parameter may be needed by some
                 executions.
-            gasPrice (int): gasPrice used for each paid gas.
-            value (int): Integer of the value send with this transaction.
+            gasPrice (int): gasPrice used for unit of gas paid.
+            value (int): Integer of the value sent with this transaction.
             data (bin): Hash of the method signature and encoded parameters.
                 For details see Ethereum Contract ABI.
             block_number: Determines the state of ethereum used in the
@@ -993,7 +1035,7 @@ class JSONRPCClient(object):
 
         if len(transaction_hash) != 32:
             raise ValueError(
-                'transaction_hash length must be 32 (it might be hex encode)'
+                'transaction_hash length must be 32 (it might be hex encoded)'
             )
 
         transaction_hash = data_encoder(transaction_hash)
@@ -1015,7 +1057,7 @@ class JSONRPCClient(object):
 
         if len(address) != 20:
             raise ValueError(
-                'address length must be 20 (it might be hex encode)'
+                'address length must be 20 (it might be hex encoded)'
             )
 
         return self.call(
@@ -1037,7 +1079,7 @@ class JSONRPCClient(object):
 
         if len(transaction_hash) != 32:
             raise ValueError(
-                'transaction_hash length must be 32 (it might be hex encode)'
+                'transaction_hash length must be 32 (it might be hex encoded)'
             )
 
         transaction_hash = data_encoder(transaction_hash)
@@ -1062,7 +1104,7 @@ class JSONRPCClient(object):
 
         if len(transaction_hash) != 32:
             raise ValueError(
-                'transaction_hash length must be 32 (it might be hex encode)'
+                'transaction_hash length must be 32 (it might be hex encoded)'
             )
 
         transaction_hash = data_encoder(transaction_hash)
@@ -1074,7 +1116,7 @@ class JSONRPCClient(object):
 
         try:
             # used to check if the transaction was removed, this could happen
-            # if gas price is to low:
+            # if gas price is too low:
             #
             # > Transaction (acbca3d6) below gas price (tx=1 Wei ask=18
             # > Shannon). All sequential txs from this address(7d0eae79)
