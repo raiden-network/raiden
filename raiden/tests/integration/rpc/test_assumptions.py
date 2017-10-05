@@ -29,17 +29,6 @@ def deploy_rpc_test_contract(deploy_client):
     return contract_proxy
 
 
-def sanitize_gas(estimated_gas, client):
-    """Make sure the estimated gas is within the gas limit"""
-    last_block = client.call(
-        'eth_getBlockByNumber',
-        quantity_encoder(client.blocknumber()),
-        True
-    )
-    gas_limit = quantity_decoder(last_block['gasLimit'])
-    return min(estimated_gas, gas_limit)
-
-
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_call_inexisting_address(deploy_client, blockchain_backend):
     """ A JSON RPC call to an inexisting address returns the empty string. """
@@ -118,7 +107,7 @@ def test_transact_throws_opcode(deploy_client, blockchain_backend):
     address = contract_proxy.address
     assert deploy_client.eth_getCode(address) != '0x'
 
-    gas = sanitize_gas(contract_proxy.fail.estimate_gas(), deploy_client)
+    gas = min(contract_proxy.fail.estimate_gas(), deploy_client.gaslimit())
     transaction_hex = contract_proxy.fail.transact(startgas=gas)
     transaction = transaction_hex.decode('hex')
 
@@ -135,7 +124,7 @@ def test_transact_opcode_oog(deploy_client, blockchain_backend):
     address = contract_proxy.address
     assert deploy_client.eth_getCode(address) != '0x'
 
-    gas = sanitize_gas(contract_proxy.loop.estimate_gas(1000) // 2, deploy_client)
+    gas = min(contract_proxy.loop.estimate_gas(1000) // 2, deploy_client.gaslimit)
     transaction_hex = contract_proxy.loop.transact(1000, startgas=gas)
     transaction = transaction_hex.decode('hex')
 
