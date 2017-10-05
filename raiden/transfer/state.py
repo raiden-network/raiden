@@ -179,3 +179,19 @@ class BalanceProofState(State):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+
+class AllTransfersState(State):
+    def __init__(self, identifier_to_transfers):
+        self.identifier_to_transfers = identifier_to_transfers
+
+    def __eq__(self, other):
+        if isinstance(other, AllTransfersState):
+            return (
+                self.identifier_to_transfers == other.identifier_to_transfers
+            )
+
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)

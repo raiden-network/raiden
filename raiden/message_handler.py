@@ -81,8 +81,8 @@ class RaidenMessageHandler(object):
             balance_proof,
         )
 
-        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
-            balance_proof.identifier,
+        self.raiden.state_machine_event_handler.log_and_dispatch(
+            self.raiden.get_block_number(),
             balance_proof,
         )
 
@@ -97,7 +97,10 @@ class RaidenMessageHandler(object):
         self.raiden.register_secret(secret)
 
         state_change = ReceiveSecretReveal(secret, sender)
-        self.raiden.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
+        self.raiden.state_machine_event_handler.log_and_dispatch(
+            self.raiden.get_block_number(),
+            state_change,
+        )
 
     def message_secretrequest(self, message):
         self.raiden.greenlet_task_dispatcher.dispatch_message(
@@ -112,8 +115,8 @@ class RaidenMessageHandler(object):
             message.sender,
         )
 
-        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
-            message.identifier,
+        self.raiden.state_machine_event_handler.log_and_dispatch(
+            self.raiden.get_block_number(),
             state_change,
         )
 
@@ -147,8 +150,8 @@ class RaidenMessageHandler(object):
             message.sender,
         )
 
-        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
-            identifier,
+        self.raiden.state_machine_event_handler.log_and_dispatch(
+            self.raiden.get_block_number(),
             state_change,
         )
 
@@ -185,12 +188,14 @@ class RaidenMessageHandler(object):
             hashlock=message.lock.hashlock,
             secret=None,
         )
+
         state_change = ReceiveTransferRefund(
             message.sender,
             transfer_state,
         )
-        self.raiden.state_machine_event_handler.log_and_dispatch_by_identifier(
-            message.identifier,
+
+        self.raiden.state_machine_event_handler.log_and_dispatch(
+            self.raiden.get_block_number(),
             state_change,
         )
 

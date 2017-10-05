@@ -29,7 +29,7 @@ def test_event_transfer_received_success(token_addresses, raiden_chain):
             amount,
             receiver_app.raiden.address,
         )
-        transfer_event.wait(timeout=20)
+        assert transfer_event.wait(timeout=2)
         expected[app.raiden.address] = amount
 
     initiators = list()
@@ -160,8 +160,16 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
     ).wait(timeout=20)
     expected.append(amount)
 
-    while echo_node.num_handled_transfers < len(expected):
+    timeout = 120
+    sleep = 0.5
+    iterations = int(timeout / sleep)
+    for _ in range(iterations):
+        if echo_node.num_handled_transfers >= len(expected):
+            break
+
         gevent.sleep(.5)
+    else:
+        assert False, 'didnt handle the expected # of transfers after {}s'.format(timeout)
 
     received = {}
     # Check that payout was generated and pool_size_query answered

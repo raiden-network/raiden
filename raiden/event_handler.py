@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import itertools
 import logging
 
 import gevent
@@ -51,55 +50,28 @@ UNEVENTFUL_EVENTS = (
 
 
 class StateMachineEventHandler(object):
-    def __init__(self, raiden):
+    def __init__(self, raiden, transaction_log, state_manager):
         self.raiden = raiden
+        self.transaction_log = transaction_log
+        self.state_manager = state_manager
 
-    def log_and_dispatch_to_all_tasks(self, state_change):
-        """Log a state change, dispatch it to all state managers and log generated events"""
-        state_change_id = self.raiden.transaction_log.log(state_change)
-        manager_lists = self.raiden.identifier_to_statemanagers.itervalues()
-
-        for manager in itertools.chain(*manager_lists):
-            events = self.dispatch(manager, state_change)
-            self.raiden.transaction_log.log_events(
-                state_change_id,
-                events,
-                self.raiden.get_block_number()
-            )
-
-    def log_and_dispatch_by_identifier(self, identifier, state_change):
-        """Log a state change, dispatch it to the state manager corresponding to `idenfitier`
-        and log generated events"""
-        state_change_id = self.raiden.transaction_log.log(state_change)
-        manager_list = self.raiden.identifier_to_statemanagers[identifier]
-
-        for manager in manager_list:
-            events = self.dispatch(manager, state_change)
-            self.raiden.transaction_log.log_events(
-                state_change_id,
-                events,
-                self.raiden.get_block_number()
-            )
-
-    def log_and_dispatch(self, state_manager, state_change):
+    def log_and_dispatch(self, block_number, state_change):
         """Log a state change, dispatch it to the given state manager and log generated events"""
-        state_change_id = self.raiden.transaction_log.log(state_change)
-        events = self.dispatch(state_manager, state_change)
-        self.raiden.transaction_log.log_events(
-            state_change_id,
-            events,
-            self.raiden.get_block_number()
-        )
-
-    def dispatch(self, state_manager, state_change):
-        all_events = state_manager.dispatch(state_change)
+        state_change_id = self.transaction_log.log(state_change)
+        all_events = self.state_manager.dispatch(state_change)
 
         for event in all_events:
             self.on_event(event)
 
-        return all_events
+        self.transaction_log.log_events(
+            state_change_id,
+            all_events,
+            block_number,
+        )
 
     def on_event(self, event):
+        # pylint: disable=too-many-branches
+
         if isinstance(event, SendMediatedTransfer):
             receiver = event.receiver
             fee = 0

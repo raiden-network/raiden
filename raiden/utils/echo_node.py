@@ -219,6 +219,12 @@ class EchoNode(object):
                 transfer = random.choice(tickets)
                 echo_amount = 49
             else:
+                log.info(
+                    'new lottery ticket',
+                    initiator=pex(transfer['initiator']),
+                    identifier=transfer['identifier'],
+                    poolsize=len(tickets),
+                )
                 self.lottery_pool.put(transfer)
 
         else:
