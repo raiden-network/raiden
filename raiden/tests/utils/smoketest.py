@@ -52,7 +52,7 @@ $RST_GETH_BINARY
     --ipcdisable
     --rpc
     --rpcaddr 127.0.0.1
-    --rpcapi eth,net,web3,debug
+    --rpcapi eth,net,web3
     --rpcport $RST_RPC_PORT
     --mine
     --etherbase 0
