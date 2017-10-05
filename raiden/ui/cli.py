@@ -487,6 +487,7 @@ def app(address,
 
     address_hex = address_encoder(address) if address else None
     address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
+    address = address_decoder(address_hex)
 
     privatekey_hex = privatekey_bin.encode('hex')
     config['privatekey_hex'] = privatekey_hex
