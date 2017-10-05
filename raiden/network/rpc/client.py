@@ -560,9 +560,6 @@ class JSONRPCClient(object):
         gas_limit = quantity_decoder(last_block['gasLimit'])
         return gas_limit
 
-    def lastgasprice(self):
-        return quantity_decoder(self.call('eth_lastGasPrice'))
-
     def new_abi_contract(self, contract_interface, address):
         warnings.warn('deprecated, use new_contract_proxy', DeprecationWarning)
         return self.new_contract_proxy(contract_interface, address)
