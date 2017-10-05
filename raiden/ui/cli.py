@@ -105,7 +105,7 @@ def check_json_rpc(client):
             "Couldn't contact the ethereum node through JSON-RPC.\n"
             "Please make sure the JSON-RPC is enabled for these interfaces:\n"
             "\n"
-            "    eth_*, net_*, web3_*, and debug_*\n"
+            "    eth_*, net_*, web3_*\n"
             "\n"
             "geth: https://github.com/ethereum/go-ethereum/wiki/Management-APIs\n"
         )
