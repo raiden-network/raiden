@@ -7,7 +7,7 @@ import pytest
 from ethereum import _solidity
 
 from raiden.network.rpc.client import check_transaction_threw
-from raiden.utils import data_encoder, quantity_decoder
+from raiden.utils import data_encoder, quantity_decoder, quantity_encoder
 
 # pylint: disable=unused-argument,protected-access
 
@@ -27,6 +27,17 @@ def deploy_rpc_test_contract(deploy_client):
     )
 
     return contract_proxy
+
+
+def sanitize_gas(estimated_gas, client):
+    """Make sure the estimated gas is within the gas limit"""
+    last_block = client.call(
+        'eth_getBlockByNumber',
+        quantity_encoder(client.blocknumber()),
+        True
+    )
+    gas_limit = quantity_decoder(last_block['gasLimit'])
+    return min(estimated_gas, gas_limit)
 
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
@@ -59,24 +70,11 @@ def test_call_invalid_selector(deploy_client, blockchain_backend):
     assert result == ''
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
-def test_call_throws(deploy_client, blockchain_backend):
-    """ A JSON RPC call to a function that throws returns the empty string. """
-    contract_proxy = deploy_rpc_test_contract(deploy_client)
-
-    address = contract_proxy.address
-    assert deploy_client.eth_getCode(address) != '0x'
-
-    assert contract_proxy.fail.call() == ''
-
-
 @pytest.mark.skip
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_transact_throws(deploy_client, blockchain_backend):
-    """ A JSON RPC call to a function that throws, uses all gas.
-
-    This is not true anymore, after Byzantium a new opcode called REVERT was
-    introduced that stops the transaction without consuming all gas.
+    """ A JSON RPC call to a function that throws any kind of exception has
+    a status field in its receipt of 0x0.
     """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
@@ -91,7 +89,7 @@ def test_transact_throws(deploy_client, blockchain_backend):
     deploy_client.poll(transaction)
 
     receipt = deploy_client.call('eth_getTransactionReceipt', data_encoder(transaction))
-    assert gas == quantity_decoder(receipt['gasUsed'])
+    assert 'status' in receipt and receipt['status'] == '0x0'
 
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
@@ -120,8 +118,7 @@ def test_transact_throws_opcode(deploy_client, blockchain_backend):
     address = contract_proxy.address
     assert deploy_client.eth_getCode(address) != '0x'
 
-    gas = contract_proxy.fail.estimate_gas()
-
+    gas = sanitize_gas(contract_proxy.fail.estimate_gas(), deploy_client)
     transaction_hex = contract_proxy.fail.transact(startgas=gas)
     transaction = transaction_hex.decode('hex')
 
@@ -138,8 +135,7 @@ def test_transact_opcode_oog(deploy_client, blockchain_backend):
     address = contract_proxy.address
     assert deploy_client.eth_getCode(address) != '0x'
 
-    gas = contract_proxy.loop.estimate_gas(1000) // 2
-
+    gas = sanitize_gas(contract_proxy.loop.estimate_gas(1000) // 2, deploy_client)
     transaction_hex = contract_proxy.loop.transact(1000, startgas=gas)
     transaction = transaction_hex.decode('hex')
 
