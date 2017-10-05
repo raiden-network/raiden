@@ -152,7 +152,7 @@ Connect
 ---------
 Connecting to an already existing token network is quite simple. All that is needed, is as mentioned above, the address of the token network to join and the amount of the corresponding token that the user is willing to deposit in channels::
 
-    PUT /api/v1/connections/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
+    PUT /api/1/connections/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
 
 With the payload::
 
@@ -171,7 +171,7 @@ Leave
 ------
 If at some point it is desired to leave the token network, the ``leave`` endpoint is available. This endpoint will take care of closing and settling all open channels for a specific in the token network::
 
-    DELETE /api/v1/connections/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
+    DELETE /api/1/connections/0xc9d55C7bbd80C0c2AEd865e9CA13D015096ce671
 
 This call will take some time to finalize, due to the nature of the way that settlement of payment channels work. For instance there is a ``settlement_timeout`` period after calling ``close`` that needs to expire before ``settle`` can be called.
 
