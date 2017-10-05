@@ -93,16 +93,22 @@ solidity = _solidity.get_solidity()  # pylint: disable=invalid-name
 
 
 def check_transaction_threw(client, transaction_hash):
-    """Check if the transaction threw or if it executed properly"""
+    """Check if the transaction threw/reverted or if it executed properly
+       Returns None in case of success and the transaction receipt if the
+       transaction's status indicator is 0x0.
+    """
     encoded_transaction = data_encoder(transaction_hash.decode('hex'))
-    debug = client.call('debug_traceTransaction', encoded_transaction)
+    receipt = client.call('eth_getTransactionReceipt', encoded_transaction)
 
-    # struct_logs will be empty if it's a call to a contract that previously
-    # self destructed:
-    # https://github.com/ethereum/go-ethereum/issues/2542
-    struct_logs = debug['structLogs']
-    if not struct_logs or struct_logs[-1]['op'] not in ('RETURN', 'STOP'):
-        return debug
+    if 'status' not in receipt:
+        raise ValueError(
+            'Transaction receipt does not contain a status field. Upgrade your client'
+        )
+
+    if receipt['status'] == '0x0':
+        return receipt
+
+    return None
 
 
 def check_address_has_code(client, address):
