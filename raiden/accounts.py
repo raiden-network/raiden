@@ -177,7 +177,8 @@ class Account(object):
         If the account is already unlocked, nothing happens, even if the password is wrong.
 
         Raises:
-            ValueError: (originating in ethereum.keys) if the password is wrong (and the account is locked)
+            ValueError: (originating in ethereum.keys) if the password is wrong
+            (and the account is locked)
         """
         if self.locked:
             self._privkey = keys.decode_keystore_json(self.keystore, password)

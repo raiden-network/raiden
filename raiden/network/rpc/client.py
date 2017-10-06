@@ -595,8 +595,8 @@ class JSONRPCClient(object):
             libraries (list): A list of libraries to use in deployment
             constructor_parameters (tuple): A tuple of arguments to pass to the constructor
             contract_path (str): If we are dealing with solc >= v0.4.9 then the path
-                                 to the contract is a required argument to extract the contract data
-                                 from the `all_contracts` dict.
+                                 to the contract is a required argument to extract
+                                 the contract data from the `all_contracts` dict.
             timeout (int): Amount of time to poll the chain to confirm deployment
             gasprice: The gasprice to provide for the transaction
         """
