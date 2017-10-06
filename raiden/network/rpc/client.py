@@ -552,11 +552,7 @@ class JSONRPCClient(object):
         return quantity_decoder(res)
 
     def gaslimit(self):
-        last_block = self.call(
-            'eth_getBlockByNumber',
-            quantity_encoder(self.blocknumber()),
-            True
-        )
+        last_block = self.call('eth_getBlockByNumber', 'latest', True)
         gas_limit = quantity_decoder(last_block['gasLimit'])
         return gas_limit
 
