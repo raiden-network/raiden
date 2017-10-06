@@ -59,31 +59,20 @@ def test_call_invalid_selector(deploy_client, blockchain_backend):
     assert result == ''
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize('blockchain_type', ['geth'])
-def test_transact_throws(deploy_client, blockchain_backend):
-    """ A JSON RPC call to a function that throws any kind of exception has
-    a status field in its receipt of 0x0.
-    """
+def test_call_throws(deploy_client, blockchain_backend):
+    """ A JSON RPC call to a function that throws returns the empty string. """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.address
     assert deploy_client.eth_getCode(address) != '0x'
 
-    gas = contract_proxy.fail.estimate_gas()
-
-    transaction_hex = contract_proxy.fail.transact(startgas=gas)
-    transaction = transaction_hex.decode('hex')
-
-    deploy_client.poll(transaction)
-
-    receipt = deploy_client.call('eth_getTransactionReceipt', data_encoder(transaction))
-    assert 'status' in receipt and receipt['status'] == '0x0'
+    assert contract_proxy.fail.call() == ''
 
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_transact_opcode(deploy_client, blockchain_backend):
-    """ The last opcode of a transaction that did NOT throw is STOP/RETURN. """
+    """ The receipt status field of a transaction that did not throw is 0x1 """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.address
@@ -101,7 +90,7 @@ def test_transact_opcode(deploy_client, blockchain_backend):
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_transact_throws_opcode(deploy_client, blockchain_backend):
-    """ The last opcode of a transaction that threw is not STOP. """
+    """ The receipt status field of a transaction that threw is 0x0 """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.address
@@ -118,7 +107,7 @@ def test_transact_throws_opcode(deploy_client, blockchain_backend):
 
 @pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_transact_opcode_oog(deploy_client, blockchain_backend):
-    """ The last opcode of a transaction that did NOT throw is STOP. """
+    """ The receipt status field of a transaction that did NOT throw is 0x0. """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
     address = contract_proxy.address
