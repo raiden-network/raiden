@@ -58,7 +58,7 @@ Raiden Glossary
        Balance proof is any kind of message we use in order to cryptographically prove to our counterparty (or them to us) that their balance has changed and that we have received a transfer. 
 
    hashlock
-       A hashlock is the hashed secret that accompanis a locked message: ``sha3(secret``
+       A hashlock is the hashed secret that accompanies a locked message: ``sha3(secret)``
 
    lock expiration
        The lock expiration is the highest block_number until which the transfer can be settled.
