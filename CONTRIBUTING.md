@@ -313,6 +313,9 @@ function thisFunctionNameIsReallyLong(
 }
 ```
 
+**Documentation**
+
+Code should be documented. For docstrings the [Google conventions](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html) are used.
 
 
 ### Workflow
