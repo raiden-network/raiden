@@ -114,14 +114,14 @@ def check_json_rpc(client):
     else:
         if client_version.startswith('Parity'):
             major, minor, patch = [
-                int(x) for x in re.search('//v(\d)\.(\d)\.(\d)', client_version).groups()
+                int(x) for x in re.search('//v(\d+)\.(\d+)\.(\d+)', client_version).groups()
             ]
             if (major, minor, patch) < (1, 7, 6):
                 print('You need Byzantium enabled parity. >= 1.7.6 / 1.8.0')
                 sys.exit(1)
         elif client_version.startswith('Geth'):
             major, minor, patch = [
-                int(x) for x in re.search('/v(\d)\.(\d)\.(\d)', client_version).groups()
+                int(x) for x in re.search('/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
             ]
             if (major, minor, patch) < (1, 7, 2):
                 print('You need Byzantium enabled geth. >= 1.7.2')
