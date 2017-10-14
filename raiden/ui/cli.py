@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import sys
 import os
+import re
 import tempfile
 import json
 import socket
@@ -112,12 +113,12 @@ def check_json_rpc(client):
         sys.exit(1)
     else:
         if client_version.startswith('Parity'):
-            print(
-                "Parity is not currently supported.\n"
-                "Waiting for the clients to expose the transaction's status code in the receipt.\n"
-                "https://github.com/ethereum/EIPs/pull/658"
-            )
-            sys.exit(1)
+            major, minor, patch = [
+                int(x) for x in re.search('//v(\d)\.(\d)\.(\d)', client_version).groups()
+            ]
+            if minor < 7 or (minor == 7 and patch < 6):
+                print('You need Byzantium enabled parity. >= 1.7.6 / 1.8.0')
+                sys.exit(1)
 
 
 def check_synced(blockchain_service):
