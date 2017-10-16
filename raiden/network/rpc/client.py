@@ -452,11 +452,6 @@ class JSONRPCClient(object):
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
 
-    @property
-    def coinbase(self):
-        """ Return the client coinbase address. """
-        return address_decoder(self.call('eth_coinbase'))
-
     def blocknumber(self):
         """ Return the most recent block. """
         return quantity_decoder(self.call('eth_blockNumber'))
