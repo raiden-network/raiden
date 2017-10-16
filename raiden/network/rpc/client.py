@@ -519,10 +519,6 @@ class JSONRPCClient(object):
         gas_limit = quantity_decoder(last_block['gasLimit'])
         return gas_limit
 
-    def new_abi_contract(self, contract_interface, address):
-        warnings.warn('deprecated, use new_contract_proxy', DeprecationWarning)
-        return self.new_contract_proxy(contract_interface, address)
-
     def new_contract_proxy(self, contract_interface, address):
         """ Return a proxy for interacting with a smart contract.
 
@@ -1357,7 +1353,7 @@ class Discovery(object):
                 address_encoder(discovery_address),
             ))
 
-        proxy = jsonrpc_client.new_abi_contract(
+        proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_ENDPOINT_REGISTRY),
             address_encoder(discovery_address),
         )
@@ -1432,7 +1428,7 @@ class Token(object):
                 address_encoder(token_address),
             ))
 
-        proxy = jsonrpc_client.new_abi_contract(
+        proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_HUMAN_STANDARD_TOKEN),
             address_encoder(token_address),
         )
@@ -1497,7 +1493,7 @@ class Registry(object):
 
         check_address_has_code(jsonrpc_client, registry_address)
 
-        proxy = jsonrpc_client.new_abi_contract(
+        proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
             address_encoder(registry_address),
         )
@@ -1661,7 +1657,7 @@ class ChannelManager(object):
                 address_encoder(manager_address),
             ))
 
-        proxy = jsonrpc_client.new_abi_contract(
+        proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
             address_encoder(manager_address),
         )
@@ -1803,7 +1799,7 @@ class NettingChannel(object):
 
         self.client = jsonrpc_client
         self.node_address = privatekey_to_address(self.client.privkey)
-        self.proxy = jsonrpc_client.new_abi_contract(
+        self.proxy = jsonrpc_client.new_contract_proxy(
             CONTRACT_MANAGER.get_abi(CONTRACT_NETTING_CHANNEL),
             address_encoder(channel_address),
         )
