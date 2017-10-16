@@ -756,8 +756,6 @@ class JSONRPCClient(object):
         else:
             raise EthNodeCommunicationError('Unknown type of JSONRPC reply')
 
-    __call__ = call
-
     def send_transaction(
             self,
             sender,
