@@ -179,6 +179,38 @@ def dependencies_order_of_build(target_contract, dependencies_map):
     return order
 
 
+def format_data_for_call(
+        sender='',
+        to='',
+        value=0,
+        data='',
+        startgas=GAS_PRICE,
+        gasprice=GAS_PRICE):
+    """ Helper to format the transaction data. """
+
+    json_data = dict()
+
+    if sender is not None:
+        json_data['from'] = address_encoder(sender)
+
+    if to is not None:
+        json_data['to'] = data_encoder(to)
+
+    if value is not None:
+        json_data['value'] = quantity_encoder(value)
+
+    if gasprice is not None:
+        json_data['gasPrice'] = quantity_encoder(gasprice)
+
+    if startgas is not None:
+        json_data['gas'] = quantity_encoder(startgas)
+
+    if data is not None:
+        json_data['data'] = data_encoder(data)
+
+    return json_data
+
+
 def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_block=None):
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     if isinstance(from_block, int):
@@ -820,38 +852,6 @@ class JSONRPCClient(object):
 
         return data_decoder(res)
 
-    def _format_call(
-            self,
-            sender='',
-            to='',
-            value=0,
-            data='',
-            startgas=GAS_PRICE,
-            gasprice=GAS_PRICE):
-        """ Helper to format the transaction data. """
-
-        json_data = dict()
-
-        if sender is not None:
-            json_data['from'] = address_encoder(sender)
-
-        if to is not None:
-            json_data['to'] = data_encoder(to)
-
-        if value is not None:
-            json_data['value'] = quantity_encoder(value)
-
-        if gasprice is not None:
-            json_data['gasPrice'] = quantity_encoder(gasprice)
-
-        if startgas is not None:
-            json_data['gas'] = quantity_encoder(startgas)
-
-        if data is not None:
-            json_data['data'] = data_encoder(data)
-
-        return json_data
-
     def eth_call(
             self,
             sender='',
@@ -878,7 +878,7 @@ class JSONRPCClient(object):
                 call.
         """
 
-        json_data = self._format_call(
+        json_data = format_data_for_call(
             sender,
             to,
             value,
@@ -916,7 +916,7 @@ class JSONRPCClient(object):
                 call.
         """
 
-        json_data = self._format_call(
+        json_data = format_data_for_call(
             sender,
             to,
             value,
