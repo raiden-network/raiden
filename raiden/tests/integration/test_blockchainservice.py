@@ -14,7 +14,6 @@ from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import (
     decode_topic,
-    patch_send_message,
     check_transaction_threw,
     JSONRPCClient,
 )
@@ -240,7 +239,6 @@ def test_blockchain(
         blockchain_rpc_ports[0],
         privatekey,
     )
-    patch_send_message(jsonrpc_client)
 
     humantoken_path = get_contract_path('HumanStandardToken.sol')
     humantoken_contracts = compile_file(humantoken_path, libraries=dict())

@@ -33,7 +33,6 @@ from raiden.network.discovery import ContractDiscovery
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
 from raiden.network.rpc.client import (
-    patch_send_message,
     JSONRPCClient,
 )
 from raiden.settings import (
@@ -526,7 +525,6 @@ def app(address,
     )
 
     # this assumes the eth node is already online
-    patch_send_message(rpc_client)
     if not check_json_rpc(rpc_client):
         sys.exit(1)
 
