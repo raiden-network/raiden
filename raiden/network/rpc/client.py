@@ -667,17 +667,6 @@ class JSONRPCClient(object):
             contract_address,
         )
 
-    def find_block(self, condition):
-        """Query all blocks one by one and return the first one for which
-        `condition(block)` evaluates to `True`.
-        """
-        i = 0
-        while True:
-            block = self.call('eth_getBlockByNumber', quantity_encoder(i), True)
-            if condition(block) or not block:
-                return block
-            i += 1
-
     def new_filter(self, fromBlock=None, toBlock=None, address=None, topics=None):
         """ Creates a filter object, based on filter options, to notify when
         the state changes (logs). To check if the state has changed, call
