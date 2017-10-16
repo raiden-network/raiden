@@ -233,7 +233,7 @@ def get_filter_events(jsonrpc_client, contract_address, topics, from_block=None,
         address = address_decoder(log_event['address'])
         data = data_decoder(log_event['data'])
         topics = [
-            decode_topic(topic)
+            topic_decoder(topic)
             for topic in log_event['topics']
         ]
         block_number = log_event.get('blockNumber')
@@ -250,10 +250,6 @@ def get_filter_events(jsonrpc_client, contract_address, topics, from_block=None,
         })
 
     return result
-
-
-def decode_topic(topic):
-    return int(topic[2:], 16)
 
 
 def estimate_and_transact(classobject, callobj, *args):
@@ -1257,7 +1253,7 @@ class Filter(object):
             address = address_decoder(log_event['address'])
             data = data_decoder(log_event['data'])
             topics = [
-                decode_topic(topic)
+                topic_decoder(topic)
                 for topic in log_event['topics']
             ]
             block_number = log_event.get('blockNumber')

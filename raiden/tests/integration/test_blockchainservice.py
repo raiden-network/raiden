@@ -13,13 +13,12 @@ from ethereum.utils import denoms
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
 from raiden.network.rpc.client import (
-    decode_topic,
     check_transaction_threw,
     JSONRPCClient,
 )
 from raiden.settings import GAS_PRICE
 from raiden.tests.utils.blockchain import wait_until_block
-from raiden.utils import privatekey_to_address, get_contract_path
+from raiden.utils import privatekey_to_address, get_contract_path, topic_decoder
 
 
 solidity = _solidity.get_solidity()   # pylint: disable=invalid-name
@@ -304,7 +303,7 @@ def test_blockchain(
 
     log = log_list[0]
     log_topics = [
-        decode_topic(topic)
+        topic_decoder(topic)
         for topic in log['topics']  # pylint: disable=invalid-sequence-index
     ]
     log_data = log['data']
