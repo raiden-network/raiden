@@ -3,7 +3,6 @@ from ethereum._solidity import compile_file
 
 from raiden.utils import get_contract_path, sha3
 from raiden.network.rpc.client import (
-    patch_send_transaction,
     patch_send_message,
     JSONRPCClient,
 )
@@ -17,7 +16,6 @@ def connect(host='127.0.0.1', port=8545):
         port,
         privkey='1' * 64,
     )
-    patch_send_transaction(client)
     patch_send_message(client)
     return client
 

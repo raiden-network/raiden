@@ -20,7 +20,6 @@ from raiden.utils import (
 )
 from raiden.utils.crypto import privtopub
 from raiden.tests.utils.genesis import GENESIS_STUB
-from raiden.network.rpc.client import patch_send_transaction
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -323,7 +322,6 @@ def geth_create_blockchain(
         processes_list.append(process)
 
     geth_wait_and_check(deploy_client, private_keys, random_marker)
-    patch_send_transaction(deploy_client)
 
     # reenter echo mode (disabled by geth pasphrase prompt)
     if isinstance(sys.stdin, file):

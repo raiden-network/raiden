@@ -179,82 +179,6 @@ def dependencies_order_of_build(target_contract, dependencies_map):
     return order
 
 
-def patch_send_transaction(client, nonce_offset=0):
-    """Check if the remote supports extended jsonrpc spec for local tx signing.
-    If not, replace the `send_transaction` method with a more generic one.
-    """
-    patch_necessary = False
-
-    try:
-        client.call('eth_nonce', encode_hex(client.sender), 'pending')
-    except:
-        patch_necessary = True
-        client.last_nonce_update = 0
-        client.current_nonce = None
-        client.nonce_lock = Semaphore()
-
-    def send_transaction(sender, to, value=0, data='', startgas=GAS_LIMIT,
-                         gasprice=GAS_PRICE, nonce=None):
-        """Custom implementation for `send_transaction`.
-        This is necessary to support other remotes that don't support extended specs.
-        @see https://github.com/ethereum/pyethapp/blob/develop/pyethapp/rpc_client.py#L359
-        """
-        def get_nonce():
-            """Eventually syncing nonce counter.
-            This will keep a local nonce counter that is only syncing against
-            the remote every `UPDATE_INTERVAL`.
-
-            If the remote counter is lower than the current local counter,
-            it will wait for the remote to catch up.
-            """
-            with client.nonce_lock:
-                UPDATE_INTERVAL = 5.
-                query_time = now()
-                needs_update = abs(query_time - client.last_nonce_update) > UPDATE_INTERVAL
-                not_initialized = client.current_nonce is None
-                if needs_update or not_initialized:
-                    nonce = _query_nonce()
-                    # we may have hammered the server and not all tx are
-                    # registered as `pending` yet
-                    while nonce < client.current_nonce:
-                        log.debug(
-                            "nonce on server too low; retrying",
-                            server=nonce,
-                            local=client.current_nonce
-                        )
-                        nonce = _query_nonce()
-                        query_time = now()
-                    client.current_nonce = nonce
-                    client.last_nonce_update = query_time
-                else:
-                    client.current_nonce += 1
-                return client.current_nonce
-
-        def _query_nonce():
-            pending_transactions_hex = client.call(
-                'eth_getTransactionCount',
-                address_encoder(sender),
-                'pending',
-            )
-            pending_transactions = int(pending_transactions_hex, 16)
-            nonce = pending_transactions + nonce_offset
-            return nonce
-
-        nonce = get_nonce()
-
-        tx = Transaction(nonce, gasprice, startgas, to, value, data)
-        tx.sign(client.privkey)
-
-        result = client.call(
-            'eth_sendRawTransaction',
-            data_encoder(rlp.encode(tx)),
-        )
-        return result[2 if result.startswith('0x') else 0:]
-
-    if patch_necessary:
-        client.send_transaction = send_transaction
-
-
 def patch_send_message(client, pool_maxsize=50):
     """Monkey patch fix for issue #253. This makes the underlying `tinyrpc`
     transport class use a `requests.session` instead of regenerating sessions
@@ -508,7 +432,7 @@ class ContractProxy(object):
 
 class JSONRPCClient(object):
 
-    def __init__(self, host, port, privkey):
+    def __init__(self, host, port, privkey, nonce_update_interval=5.0, nonce_offset=0):
         self.transport = HttpPostClientTransport(
             'http://{}:{}'.format(host, port),
             headers={'content-type': 'application/json'},
@@ -518,6 +442,12 @@ class JSONRPCClient(object):
         self.privkey = privkey
         self.protocol = JSONRPCProtocol()
         self.sender = privatekey_to_address(privkey)
+
+        self.nonce_last_update = 0
+        self.nonce_current_value = None
+        self.nonce_lock = Semaphore()
+        self.nonce_update_interval = nonce_update_interval
+        self.nonce_offset = nonce_offset
 
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
@@ -535,16 +465,54 @@ class JSONRPCClient(object):
         if len(address) == 40:
             address = address.decode('hex')
 
-        try:
-            res = self.call('eth_nonce', address_encoder(address), 'pending')
-            return quantity_decoder(res)
-        except EthNodeCommunicationError as e:
-            if e.message == 'Method not found':
-                raise EthNodeCommunicationError(
-                    "'eth_nonce' is not supported by your endpoint (pyethapp only). "
-                    "For transactions use server-side nonces: "
-                    "('eth_sendTransaction' with 'nonce=None')")
-            raise e
+        with self.nonce_lock:
+            initialized = self.nonce_current_value is not None
+            query_time = now()
+
+            if self.nonce_last_update > query_time:
+                # Python's 2.7 time is not monotonic and it's affected by clock
+                # resets, force an update.
+                self.nonce_update_interval = query_time - self.nonce_update_interval
+                needs_update = True
+
+            else:
+                last_update_interval = query_time - self.nonce_last_update
+                needs_update = last_update_interval > self.nonce_update_interval
+
+            if initialized and not needs_update:
+                self.nonce_current_value += 1
+                return self.nonce_current_value
+
+            pending_transactions_hex = self.call(
+                'eth_getTransactionCount',
+                address_encoder(address),
+                'pending',
+            )
+            pending_transactions = quantity_decoder(pending_transactions_hex)
+            nonce = pending_transactions + self.nonce_offset
+
+            # we may have hammered the server and not all tx are
+            # registered as `pending` yet
+            while nonce < self.nonce_current_value:
+                log.debug(
+                    'nonce on server too low; retrying',
+                    server=nonce,
+                    local=self.nonce_current_value,
+                )
+
+                query_time = now()
+                pending_transactions_hex = self.call(
+                    'eth_getTransactionCount',
+                    address_encoder(address),
+                    'pending',
+                )
+                pending_transactions = quantity_decoder(pending_transactions_hex)
+                nonce = pending_transactions + self.nonce_offset
+
+            self.nonce_current_value = nonce
+            self.nonce_last_update = query_time
+
+            return self.nonce_current_value
 
     def balance(self, account):
         """ Return the balance of the account of given address. """
@@ -809,13 +777,11 @@ class JSONRPCClient(object):
         if not self.privkey and not sender:
             raise ValueError('Either privkey or sender needs to be supplied.')
 
-        if self.privkey and not sender:
-            sender = privatekey_to_address(self.privkey)
+        if self.privkey:
+            privkey_address = privatekey_to_address(self.privkey)
+            sender = sender or privkey_address
 
-            if nonce is None:
-                nonce = self.nonce(sender)
-        elif self.privkey:
-            if sender != privatekey_to_address(self.privkey):
+            if sender != privkey_address:
                 raise ValueError('sender for a different privkey.')
 
             if nonce is None:
@@ -830,18 +796,24 @@ class JSONRPCClient(object):
         tx = Transaction(nonce, gasprice, startgas, to=to, value=value, data=data)
 
         if self.privkey:
-            # add the fields v, r and s
             tx.sign(self.privkey)
+            result = self.call(
+                'eth_sendRawTransaction',
+                data_encoder(rlp.encode(tx)),
+            )
+            return result[2 if result.startswith('0x') else 0:]
 
-        tx_dict = tx.to_dict()
+        else:
 
-        # rename the fields to match the eth_sendTransaction signature
-        tx_dict.pop('hash')
-        tx_dict['sender'] = sender
-        tx_dict['gasPrice'] = tx_dict.pop('gasprice')
-        tx_dict['gas'] = tx_dict.pop('startgas')
+            # rename the fields to match the eth_sendTransaction signature
+            tx_dict = tx.to_dict()
+            tx_dict.pop('hash')
+            tx_dict['sender'] = sender
+            tx_dict['gasPrice'] = tx_dict.pop('gasprice')
+            tx_dict['gas'] = tx_dict.pop('startgas')
 
-        res = self.eth_sendTransaction(**tx_dict)
+            res = self.eth_sendTransaction(**tx_dict)
+
         assert len(res) in (20, 32)
         return res.encode('hex')
 
@@ -853,16 +825,9 @@ class JSONRPCClient(object):
             value=0,
             data='',
             gasPrice=GAS_PRICE,
-            gas=GAS_PRICE,
-            v=None,
-            r=None,
-            s=None):
+            gas=GAS_PRICE):
         """ Creates new message call transaction or a contract creation, if the
         data field contains code.
-
-        Note:
-            The support for local signing through the variables v,r,s is not
-            part of the standard spec, an extended server is required.
 
         Args:
             from (address): The 20 bytes address the transaction is sent from.
@@ -888,24 +853,17 @@ class JSONRPCClient(object):
         if to == '0' * 40:
             warnings.warn('For contract creation the empty string must be used.')
 
+        if sender is None:
+            raise ValueError('sender needs to be provided.')
+
         json_data = {
             'to': data_encoder(normalize_address(to, allow_blank=True)),
             'value': quantity_encoder(value),
             'gasPrice': quantity_encoder(gasPrice),
             'gas': quantity_encoder(gas),
             'data': data_encoder(data),
+            'from': address_encoder(sender),
         }
-
-        if not sender and not (v and r and s):
-            raise ValueError('Either sender or v, r, s needs to be provided.')
-
-        if sender is not None:
-            json_data['from'] = address_encoder(sender)
-
-        if v and r and s:
-            json_data['v'] = quantity_encoder(v)
-            json_data['r'] = quantity_encoder(r)
-            json_data['s'] = quantity_encoder(s)
 
         if nonce is not None:
             json_data['nonce'] = quantity_encoder(nonce)
