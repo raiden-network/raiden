@@ -592,6 +592,12 @@ def prompt_account(address_hex, keystore_path, password_file):
         raise RuntimeError('No Ethereum accounts found in the user\'s system')
 
     if not accmgr.address_in_keystore(address_hex):
+        # check if an address has been passed
+        if address_hex is not None:
+            print("Account '{}' could not be found on the system. Aborting ...".format(
+                address_hex))
+            sys.exit(1)
+
         addresses = list(accmgr.accounts.keys())
         formatted_addresses = [
             '[{:3d}] - 0x{}'.format(idx, addr)
