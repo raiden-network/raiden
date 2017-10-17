@@ -19,7 +19,6 @@ from requests.exceptions import RequestException
 from ethereum import slogging
 from ethereum.utils import denoms
 from ipaddress import IPv4Address, AddressValueError
-from tinyrpc import BadRequestError
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -237,7 +236,7 @@ class AddressType(click.ParamType):
     def convert(self, value, param, ctx):
         try:
             return address_decoder(value)
-        except BadRequestError:
+        except TypeError:
             self.fail('Please specify a valid hex-encoded address.')
 
 
