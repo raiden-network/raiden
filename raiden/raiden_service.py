@@ -29,17 +29,14 @@ from raiden.tasks import (
     AlarmTask,
 )
 from raiden.token_swap import GreenletTasksDispatcher
+from raiden.transfer import transfer
 from raiden.transfer.architecture import StateManager
 from raiden.transfer.state_change import Block
 from raiden.transfer.state import (
+    AllTransfersState,
     RoutesState,
     CHANNEL_STATE_SETTLED,
 )
-from raiden.transfer.mediated_transfer import (
-    initiator,
-    mediator,
-)
-from raiden.transfer.mediated_transfer import target as target_task
 from raiden.transfer.mediated_transfer.state import (
     lockedtransfer_from_message,
     LockedTransferState,
@@ -127,7 +124,7 @@ def save_snapshot(serialization_file, raiden):
         'queues': all_queues,
         'receivedhashes_to_acks': raiden.protocol.receivedhashes_to_acks,
         'nodeaddresses_to_nonces': raiden.protocol.nodeaddresses_to_nonces,
-        'transfers': raiden.identifier_to_statemanagers,
+        'state_manager_state': raiden.state_manager.current_state,
         'registry_address': ROPSTEN_REGISTRY_ADDRESS,
     }
 
@@ -190,7 +187,6 @@ class RaidenService(object):
         self.swapkey_to_tokenswap = dict()
         self.swapkey_to_greenlettask = dict()
 
-        self.identifier_to_statemanagers = defaultdict(list)
         self.identifier_to_results = defaultdict(list)
 
         # This is a map from a hashlock to a list of channels, the same
@@ -215,6 +211,7 @@ class RaidenService(object):
 
         self.private_key = PrivateKey(private_key_bin)
         self.pubkey = self.private_key.public_key.format(compressed=False)
+
         self.protocol = RaidenProtocol(
             transport,
             discovery,
@@ -225,12 +222,10 @@ class RaidenService(object):
             config['protocol']['nat_keepalive_timeout'],
             config['protocol']['nat_invitation_timeout'],
         )
-
         # TODO: remove this cyclic dependency
         transport.protocol = self.protocol
 
         self.message_handler = RaidenMessageHandler(self)
-        self.state_machine_event_handler = StateMachineEventHandler(self)
         self.blockchain_events = BlockchainEvents()
         self.greenlet_task_dispatcher = GreenletTasksDispatcher()
         self.on_message = self.message_handler.on_message
@@ -241,6 +236,17 @@ class RaidenService(object):
             storage_instance=StateChangeLogSQLiteBackend(
                 database_path=config['database_path']
             )
+        )
+
+        self.state_manager = StateManager(
+            transfer.state_transition,
+            AllTransfersState(dict()),
+        )
+
+        self.state_machine_event_handler = StateMachineEventHandler(
+            self,
+            self.transaction_log,
+            self.state_manager,
         )
 
         if config['database_path'] != ':memory:':
@@ -363,12 +369,18 @@ class RaidenService(object):
 
             self.protocol.receivedhashes_to_acks = data['receivedhashes_to_acks']
             self.protocol.nodeaddresses_to_nonces = data['nodeaddresses_to_nonces']
-
-            self.restore_transfer_states(data['transfers'])
+            self.state_manager = StateManager(
+                transfer.state_transition,
+                data['state_manager_state'],
+            )
 
     def set_block_number(self, blocknumber):
         state_change = Block(blocknumber)
-        self.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
+
+        self.state_machine_event_handler.log_and_dispatch(
+            blocknumber,
+            state_change,
+        )
 
         for graph in self.token_to_channelgraph.itervalues():
             for channel in graph.address_to_channel.itervalues():
@@ -618,6 +630,7 @@ class RaidenService(object):
         return channel_detail
 
     def restore_channel(self, serialized_channel):
+        # pylint: disable=too-many-locals
         token_address = serialized_channel.token_address
 
         netting_channel = self.chain.netting_channel(
@@ -683,9 +696,6 @@ class RaidenService(object):
 
         for messagedata in serialized_queue['messages']:
             queue.put(messagedata)
-
-    def restore_transfer_states(self, transfer_states):
-        self.identifier_to_statemanagers = transfer_states
 
     def register_registry(self, registry_address):
         proxies = get_relevant_proxies(
@@ -1017,19 +1027,20 @@ class RaidenService(object):
             block_number=block_number,
         )
 
-        state_manager = StateManager(initiator.state_transition, None)
-        self.state_machine_event_handler.log_and_dispatch(state_manager, init_initiator)
+        block_number = self.get_block_number()
+        self.state_machine_event_handler.log_and_dispatch(
+            block_number,
+            init_initiator,
+        )
 
         # TODO: implement the network timeout raiden.config['msg_timeout'] and
         # cancel the current transfer if it hapens (issue #374)
-        self.identifier_to_statemanagers[identifier].append(state_manager)
         self.identifier_to_results[identifier].append(async_result)
 
         return async_result
 
     def mediate_mediated_transfer(self, message):
         # pylint: disable=too-many-locals
-        identifier = message.identifier
         amount = message.lock.amount
         target = message.target
         token = message.token
@@ -1060,11 +1071,11 @@ class RaidenService(object):
             block_number,
         )
 
-        state_manager = StateManager(mediator.state_transition, None)
-
-        self.state_machine_event_handler.log_and_dispatch(state_manager, init_mediator)
-
-        self.identifier_to_statemanagers[identifier].append(state_manager)
+        block_number = self.get_block_number()
+        self.state_machine_event_handler.log_and_dispatch(
+            block_number,
+            init_mediator,
+        )
 
     def target_mediated_transfer(self, message):
         graph = self.token_to_channelgraph[message.token]
@@ -1082,8 +1093,8 @@ class RaidenService(object):
             block_number,
         )
 
-        state_manager = StateManager(target_task.state_transition, None)
-        self.state_machine_event_handler.log_and_dispatch(state_manager, init_target)
-
-        identifier = message.identifier
-        self.identifier_to_statemanagers[identifier].append(state_manager)
+        block_number = self.get_block_number()
+        self.state_machine_event_handler.log_and_dispatch(
+            block_number,
+            init_target,
+        )

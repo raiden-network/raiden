@@ -49,4 +49,4 @@ def test_snapshotting(raiden_network, token_addresses):
 
         assert data['receivedhashes_to_acks'] == app.raiden.protocol.receivedhashes_to_acks
         assert data['nodeaddresses_to_nonces'] == app.raiden.protocol.nodeaddresses_to_nonces
-        assert data['transfers'] == app.raiden.identifier_to_statemanagers
+        assert data['state_manager_state'] == app.raiden.state_manager.current_state
