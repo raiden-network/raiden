@@ -7,10 +7,6 @@ import gevent
 
 from raiden.utils import get_project_root
 
-__all__ = (
-    'cleanup_tasks',
-)
-
 
 def get_test_contract_path(contract_name):
     contract_path = os.path.join(
@@ -84,11 +80,11 @@ def fixture_all_combinations(invalid_values):
     # - {a: 1, b:4}
     # - {a: 2, b:3}
     # - {a: 2, b:4}
-    for invalid_values in all_invalid_values:
+    for invalid_combinations in all_invalid_values:
         # expand the value list `(key, [v1,v2])` to `((key, v1), (key, v2))`
         keys_values = (
             product((key,), values)
-            for key, values in invalid_values
+            for key, values in invalid_combinations
         )
 
         # now make the cartesian product of all possible invalid keys and values

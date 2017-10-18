@@ -53,15 +53,6 @@ from raiden.network.protocol import (
 HASH2 = sha3('terribleweathermuchstayinside___')
 
 
-def unique(messages):
-    seen = set()
-
-    for m in messages:
-        if m not in seen:
-            seen.add(m)
-            yield m
-
-
 def get_messages_by_type(messages, type_):
     return [
         m
@@ -93,13 +84,15 @@ class MediatedTransferTestHelper(object):
         self.raiden_network = raiden_network
         self.graph = graph
         self.token_address = graph.token_address
-        self.ams_by_address = dict(
-            (app.raiden.address, app.raiden.token_to_channelgraph)
+        self.nodes = {
+            app.raiden.address: app
             for app in self.raiden_network
-        )
+        }
 
     def get_channel(self, from_, to_):
-        return self.ams_by_address[from_][self.token_address].partneraddress_to_channel[to_]
+        raiden = self.nodes[from_].raiden
+        graph = raiden.token_to_channelgraph[self.token_address]
+        return graph.partneraddress_to_channel[to_]
 
     def get_paths_of_length(self, initiator_address, num_hops):
         """
@@ -162,7 +155,7 @@ def test_direct_transfer(raiden_network):
         identifier=1,
     )
 
-    result.wait(timeout=10)
+    assert result.wait(timeout=10)
     gevent.sleep(5)
 
     assert_synched_channels(
@@ -233,8 +226,8 @@ def test_transfer_noroutes(raiden_network, token_addresses):
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
-@pytest.mark.parametrize('channels_per_node', [2])
-@pytest.mark.parametrize('number_of_nodes', [10])
+@pytest.mark.parametrize('channels_per_node', [CHAIN])
+@pytest.mark.parametrize('number_of_nodes', [4])
 def test_mediated_transfer(raiden_network):
     alice_app = raiden_network[0]
 
@@ -267,6 +260,8 @@ def test_mediated_transfer(raiden_network):
         identifier=1,
     )
 
+    # The assert is for an in-flight transfer
+    assert not result.ready()
     assert channel_ab.locked == amount
 
     # Cannot assert the intermediary state of the channels since the code is
@@ -275,7 +270,7 @@ def test_mediated_transfer(raiden_network):
     # assert channel_bc.locked == amount
     # assert channel_cb.outstanding == amount
 
-    assert result.wait(timeout=10)
+    assert result.wait(timeout=1)
     gevent.sleep(.1)  # wait for the other nodes to sync
 
     assert initial_balance_ab - amount == channel_ab.balance
@@ -403,7 +398,7 @@ def test_cancel_transfer(raiden_chain, token, deposit):
         channel(app3, app2, token), deposit + amount23, []
     )
 
-    assert len(unique(messages)) == 12  # DT + DT + SMT + MT + RT + RT + ACKs
+    assert len(set(messages)) == 12  # DT + DT + SMT + MT + RT + RT + ACKs
 
     app1_messages = mlogger.get_node_messages(pex(app1.raiden.address), only='sent')
     assert isinstance(app1_messages[-1], RefundTransfer)
@@ -414,40 +409,34 @@ def test_cancel_transfer(raiden_chain, token, deposit):
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
-def test_healthcheck_with_normal_peer(raiden_network):
+def test_healthcheck_with_normal_peer(raiden_network, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
     messages = setup_messages_cb()
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    token_address = token_addresses[0]
 
+    address0 = app0.raiden.address
+    address1 = app1.raiden.address
+
+    graph0 = app0.raiden.token_to_channelgraph[token_address]
+    graph1 = app1.raiden.token_to_channelgraph[token_address]
+
+    # check the nodes have a channel
     assert graph0.token_address == graph1.token_address
-    assert app1.raiden.address in graph0.partneraddress_to_channel
+    assert address1 in graph0.partneraddress_to_channel
+    assert address0 in graph1.partneraddress_to_channel
 
-    amount = 10
-    target = app1.raiden.address
-    result = app0.raiden.direct_transfer_async(
-        graph0.token_address,
-        amount,
-        target,
-        identifier=1,
-    )
-    assert result.wait(timeout=10)
+    # check both have started the healthcheck
+    assert address0 in app1.raiden.protocol.addresses_events
+    assert address1 in app0.raiden.protocol.addresses_events
 
-    assert graph0.has_path(
-        app0.raiden.address,
-        app1.raiden.address
-    )
+    # wait for the healthcheck task to send a ping
+    gevent.sleep(app0.raiden.protocol.nat_keepalive_timeout)
+    gevent.sleep(app1.raiden.protocol.nat_keepalive_timeout)
 
-    # At this point we should have sent a direct transfer and got back the ack
-    # and gotten at least 1 ping - ack for a normal healthcheck
-    decoded_messages = [decode(m) for m in unique(messages)]
-    direct_messages = get_messages_by_type(decoded_messages, DirectTransfer)
-
-    assert len(direct_messages) == 1
-    assert_ack_for(app1, direct_messages[0], decoded_messages)
-
+    decoded_messages = [decode(m) for m in set(messages)]
     ping_messages = get_messages_by_type(decoded_messages, Ping)
+
     assert ping_messages
 
 
