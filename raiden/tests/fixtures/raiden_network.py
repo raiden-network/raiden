@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+import gevent
 import pytest
 from ethereum import slogging
 
+from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.network import (
     CHAIN,
@@ -25,6 +27,28 @@ def _raiden_cleanup(request, raiden_apps):
         # from a previous test interferes with a new one.
         cleanup_tasks()
     request.addfinalizer(_cleanup)
+
+
+def wait_for_partners(app_list, sleep=0.5, timeout=10):
+    waiting = list(app_list)
+
+    while waiting:
+        # Poll the events to register the new channels
+        waiting[0].raiden.poll_blockchain_events()
+
+        all_healthy = all(
+            status == NODE_NETWORK_REACHABLE
+            for status in waiting[0].raiden.protocol.nodeaddresses_networkstatuses.values()
+        )
+
+        if sleep <= 0:
+            raise RuntimeError('fixture setup failed, nodes are unreachable')
+
+        if all_healthy:
+            waiting.pop(0)
+        else:
+            timeout -= sleep
+            gevent.sleep(sleep)
 
 
 @pytest.fixture
@@ -87,6 +111,7 @@ def raiden_chain(
     for app in raiden_apps:
         app.raiden.register_registry(app.raiden.default_registry.address)
 
+    wait_for_partners(raiden_apps)
     _raiden_cleanup(request, raiden_apps)
 
     return raiden_apps
@@ -141,6 +166,7 @@ def raiden_network(
             settle_timeout
         )
 
+    wait_for_partners(raiden_apps)
     _raiden_cleanup(request, raiden_apps)
 
     # The block_number is primed on the app creation, but after the app is

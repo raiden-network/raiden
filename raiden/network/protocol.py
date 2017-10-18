@@ -492,6 +492,11 @@ class RaidenProtocol(object):
                 {'nonce': 0},  # HACK: Allows the task to mutate the object
             )
 
+            # set the value right away to create the key in the dictionary,
+            # this is /not/ necessary for normal execution, but for fixture
+            # setup
+            self.nodeaddresses_networkstatuses[receiver_address] = NODE_NETWORK_UNREACHABLE
+
             events = HealthEvents(
                 event_healthy=Event(),
                 event_unhealthy=Event(),

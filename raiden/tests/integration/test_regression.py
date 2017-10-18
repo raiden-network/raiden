@@ -7,7 +7,10 @@ from raiden.messages import (
     RevealSecret,
     Secret,
 )
-from raiden.tests.fixtures.raiden_network import CHAIN
+from raiden.tests.fixtures.raiden_network import (
+    CHAIN,
+    wait_for_partners,
+)
 from raiden.tests.utils.network import setup_channels
 from raiden.tests.utils.transfer import channel
 from raiden.transfer.mediated_transfer.events import (
@@ -46,8 +49,7 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
     )
 
     # poll the channel manager events
-    for app in raiden_network:
-        app.raiden.poll_blockchain_events()
+    wait_for_partners(raiden_network)
 
     transfer = app0.raiden.mediated_transfer_async(
         token_address=token,

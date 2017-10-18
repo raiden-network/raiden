@@ -16,7 +16,6 @@ from raiden.channel.netting_channel import (
     Channel,
 )
 from raiden.network.protocol import (
-    NODE_NETWORK_UNKNOWN,
     NODE_NETWORK_REACHABLE,
 )
 
@@ -134,14 +133,20 @@ def get_best_routes(
     # distributable amount, but to sort them based on available balance and
     # let the task use as many as required to finish the transfer.
 
-    online_nodes = list()
-    unknown_nodes = list()
+    online_nodes = []
 
     neighbors_heap = ordered_neighbors(
         channel_graph.graph,
         our_address,
         target_address,
     )
+
+    if not neighbors_heap and log.isEnabledFor(logging.WARNING):
+        log.warn(
+            'no routes available from %s to %s',
+            pex(our_address),
+            pex(target_address),
+        )
 
     while neighbors_heap:
         _, partner_address = heappop(neighbors_heap)
@@ -151,6 +156,15 @@ def get_best_routes(
         if partner_address == previous_address:
             continue
 
+        if channel.state != CHANNEL_STATE_OPENED:
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'channel %s - %s is not opened, ignoring',
+                    pex(our_address),
+                    pex(partner_address),
+                )
+            continue
+
         if not channel.can_transfer:
             if log.isEnabledFor(logging.INFO):
                 log.info(
@@ -158,7 +172,6 @@ def get_best_routes(
                     pex(our_address),
                     pex(partner_address),
                 )
-
             continue
 
         if amount > channel.distributable:
@@ -171,19 +184,22 @@ def get_best_routes(
                 )
             continue
 
-        if channel.state != CHANNEL_STATE_OPENED:
-            continue
-
         network_state = nodeaddresses_statuses[partner_address]
         route_state = channel_to_routestate(channel, partner_address)
 
-        if network_state == NODE_NETWORK_REACHABLE:
-            online_nodes.append(route_state)
+        if network_state != NODE_NETWORK_REACHABLE:
+            if log.isEnabledFor(logging.INFO):
+                log.info(
+                    'partner for channel %s - %s is not %s, ignoring',
+                    pex(our_address),
+                    pex(partner_address),
+                    NODE_NETWORK_REACHABLE,
+                )
+            continue
 
-        elif network_state == NODE_NETWORK_UNKNOWN:
-            unknown_nodes.append(route_state)
+        online_nodes.append(route_state)
 
-    return online_nodes + unknown_nodes
+    return online_nodes
 
 
 class ChannelGraph(object):
