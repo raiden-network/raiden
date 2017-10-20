@@ -41,7 +41,7 @@ def wait_for_partners(app_list, sleep=0.5, timeout=10):
             for status in waiting[0].raiden.protocol.nodeaddresses_networkstatuses.values()
         )
 
-        if sleep <= 0:
+        if timeout <= 0:
             raise RuntimeError('fixture setup failed, nodes are unreachable')
 
         if all_healthy:

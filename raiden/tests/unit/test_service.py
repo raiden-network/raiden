@@ -9,7 +9,7 @@ from raiden.messages import (
     Ack,
     Ping,
 )
-from raiden.network.transport import UnreliableTransport
+from raiden.tests.utils.transport import UnreliableTransport
 from raiden.tests.utils.messages import setup_messages_cb
 from raiden.tests.utils.transfer import channel
 from raiden.tests.fixtures.raiden_network import CHAIN
@@ -52,11 +52,13 @@ def test_ping(raiden_network):
 def test_ping_unreachable(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    UnreliableTransport.droprate = 1  # drop everything to force disabling of re-sends
+    # drop everything to force disabling of re-sends
+    app0.raiden.protocol.transport.droprate = 1
+    app1.raiden.protocol.transport.droprate = 1
+
     app0.raiden.protocol.retry_interval = 0.1  # for fast tests
 
     messages = setup_messages_cb()
-    UnreliableTransport.network.counter = 0
 
     ping_message = Ping(nonce=0)
     app0.raiden.sign(ping_message)
