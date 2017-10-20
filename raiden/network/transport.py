@@ -7,12 +7,6 @@ from time import time
 
 import gevent
 from gevent.server import DatagramServer
-from ethereum import slogging
-
-from raiden.network.protocol import RaidenProtocol
-from raiden.utils import pex, sha3
-
-log = slogging.get_logger('raiden.network.transport')  # pylint: disable=invalid-name
 
 
 class DummyPolicy(object):
@@ -110,10 +104,6 @@ class UDPTransport(object):
         # enable debugging using the DummyNetwork callbacks
         DummyTransport.network.track_send(sender, host_port, bytes_)
 
-    def register(self, proto, host, port):  # pylint: disable=unused-argument
-        assert isinstance(proto, RaidenProtocol)
-        self.protocol = proto
-
     def stop(self):
         self.server.stop()
 
@@ -177,6 +167,12 @@ class DummyTransport(object):
         self.network.register(self, host, port)
         self.throttle_policy = throttle_policy
 
+        # The protocol checks if the transport is still running prior to
+        # sending ACKs
+        class ServerMock(object):
+            started = True
+        self.server = ServerMock()
+
     def send(self, sender, host_port, bytes_):
         gevent.sleep(self.throttle_policy.consume(1))
         self.network.send(sender, host_port, bytes_)
@@ -198,27 +194,3 @@ class DummyTransport(object):
 
     def start(self):
         pass
-
-
-class UnreliableTransport(DummyTransport):
-    """ A transport that simulates random losses of UDP messages. """
-
-    droprate = 2  # drop every Nth message
-
-    def send(self, sender, host_port, bytes_):
-        # even dropped packages have to go through throttle_policy
-        gevent.sleep(self.throttle_policy.consume(1))
-        drop = bool(self.network.counter % self.droprate == 0)
-
-        if not drop:
-            self.network.send(sender, host_port, bytes_)
-        else:
-            # since this path wont go to super.send we need to call track
-            # ourselves
-            self.network.track_send(sender, host_port, bytes_)
-
-            log.debug(
-                'dropped packet',
-                counter=self.network.counter,
-                msghash=format(pex(sha3(bytes_)))
-            )

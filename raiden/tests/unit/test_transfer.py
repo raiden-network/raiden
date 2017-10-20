@@ -17,11 +17,13 @@ from raiden.messages import (
     Secret,
     SecretRequest,
 )
-from raiden.network.transport import UnreliableTransport
+from raiden.tests.utils.transport import UnreliableTransport
 from raiden.tests.utils.messages import (
     setup_messages_cb,
     make_refund_transfer,
-    MessageLogger,
+)
+from raiden.tests.utils.transport import (
+    MessageLoggerTransport,
 )
 from raiden.tests.utils.transfer import (
     assert_synched_channels,
@@ -37,15 +39,15 @@ from raiden.tests.utils.factories import (
     make_privkey_address,
 )
 from raiden.utils import (
-    pex,
     sha3,
     privatekey_to_address,
 )
 from raiden.raiden_service import create_default_identifier
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.network.protocol import (
-    NODE_NETWORK_UNREACHABLE,
+    NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
+    NODE_NETWORK_UNREACHABLE,
 )
 
 
@@ -327,19 +329,26 @@ def test_mediated_transfer_with_entire_deposit(raiden_network, token_addresses, 
     assert result.wait(timeout=10)
 
 
-@pytest.mark.xfail(reason='MediatedTransfer doesnt yet update balances on Refund')
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
-@pytest.mark.parametrize('number_of_nodes', [4])
+@pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('token', [sha3('cancel_transfer')[:20]])
-@pytest.mark.parametrize('deposit', [100])
-def test_cancel_transfer(raiden_chain, token, deposit):
+@pytest.mark.parametrize('transport_class', [MessageLoggerTransport])
+def test_cancel_transfer(raiden_chain, token_addresses, deposit):
+    """ A failed transfer must send a refund back.
 
-    app0, app1, app2, app3 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
+    TODO:
+        - Unlock the token on refund #1091
+        - Clear the merkletree and update the locked amount #193
+        - Remove the refund message type #490
+    """
+    # Topology:
+    #
+    #  0 -> 1 -> 2
+    #
+    app0, app1, app2 = raiden_chain  # pylint: disable=unbalanced-tuple-unpacking
 
-    messages = setup_messages_cb()
-    mlogger = MessageLogger()
+    token = token_addresses[0]
 
     assert_synched_channels(
         channel(app0, app1, token), deposit, [],
@@ -351,60 +360,75 @@ def test_cancel_transfer(raiden_chain, token, deposit):
         channel(app2, app1, token), deposit, []
     )
 
-    assert_synched_channels(
-        channel(app2, app3, token), deposit, [],
-        channel(app3, app2, token), deposit, []
-    )
-
-    assert_synched_channels(
-        channel(app0, app1, token), deposit, [],
-        channel(app1, app0, token), deposit, []
-    )
+    # make a transfer to test the path app0 -> app1 -> app2
+    identifier_path = 1
+    amount_path = 1
+    transfer(app0, app2, token, amount_path, identifier_path)
 
     # drain the channel app1 -> app2
-    amount12 = 50
-    direct_transfer(app1, app2, token, amount12, identifier=1)
+    identifier_drain = 2
+    amount_drain = int(deposit * 0.8)
+    direct_transfer(app1, app2, token, amount_drain, identifier_drain)
 
-    # drain the channel app2 -> app3
-    amount23 = 80
-    direct_transfer(app2, app3, token, amount23, identifier=2)
+    # wait for the nodes to sync
+    gevent.sleep(0.2)
 
     assert_synched_channels(
-        channel(app1, app2, token), deposit - amount12, [],
-        channel(app2, app1, token), deposit + amount12, []
+        channel(app0, app1, token), deposit - amount_path, [],
+        channel(app1, app0, token), deposit + amount_path, []
     )
 
     assert_synched_channels(
-        channel(app2, app3, token), deposit - amount23, [],
-        channel(app3, app2, token), deposit + amount23, []
+        channel(app1, app2, token), deposit - amount_path - amount_drain, [],
+        channel(app2, app1, token), deposit + amount_path + amount_drain, []
     )
 
-    # app1 -> app3 is the only available path but app2 -> app3 doesnt have
-    # resources and needs to send a RefundTransfer down the path
-    transfer(app0, app3, token, amount=50, identifier=1)
+    # app0 -> app1 -> app2 is the only available path but the channel app1 ->
+    # app2 doesnt have resources and needs to send a RefundTransfer down the
+    # path
+    identifier_refund = 3
+    amount_refund = 50
+    async_result = app0.raiden.mediated_transfer_async(
+        token,
+        amount_refund,
+        app2.raiden.address,
+        identifier_refund,
+    )
+    assert async_result.wait() is False, 'there is not path with capacity, the transfer must fail'
+
+    gevent.sleep(0.2)
+
+    # A lock structure with the correct amount
+    app0_messages = app0.raiden.protocol.transport.get_sent_messages(app0.raiden.address)
+    mediated_message = list(
+        message
+        for message in app0_messages
+        if isinstance(message, MediatedTransfer) and message.target == app2.raiden.address
+    )[-1]
+    assert mediated_message
+
+    app1_messages = app1.raiden.protocol.transport.get_sent_messages(app1.raiden.address)
+    refund_message = next(
+        message
+        for message in app1_messages
+        if isinstance(message, RefundTransfer) and message.recipient == app0.raiden.address
+    )
+    assert refund_message
+
+    assert mediated_message.lock.amount == refund_message.lock.amount
+    assert mediated_message.lock.hashlock == refund_message.lock.hashlock
+    assert mediated_message.lock.expiration > refund_message.lock.expiration
+
+    # Both channels have the amount locked because of the refund message
+    assert_synched_channels(
+        channel(app0, app1, token), deposit - amount_path, [refund_message.lock],
+        channel(app1, app0, token), deposit + amount_path, [mediated_message.lock],
+    )
 
     assert_synched_channels(
-        channel(app0, app1, token), deposit, [],
-        channel(app1, app0, token), deposit, []
+        channel(app1, app2, token), deposit - amount_path - amount_drain, [],
+        channel(app2, app1, token), deposit + amount_path + amount_drain, []
     )
-
-    assert_synched_channels(
-        channel(app1, app2, token), deposit - amount12, [],
-        channel(app2, app1, token), deposit + amount12, []
-    )
-
-    assert_synched_channels(
-        channel(app2, app3, token), deposit - amount23, [],
-        channel(app3, app2, token), deposit + amount23, []
-    )
-
-    assert len(set(messages)) == 12  # DT + DT + SMT + MT + RT + RT + ACKs
-
-    app1_messages = mlogger.get_node_messages(pex(app1.raiden.address), only='sent')
-    assert isinstance(app1_messages[-1], RefundTransfer)
-
-    app2_messages = mlogger.get_node_messages(pex(app2.raiden.address), only='sent')
-    assert isinstance(app2_messages[-1], RefundTransfer)
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
@@ -442,6 +466,27 @@ def test_healthcheck_with_normal_peer(raiden_network, token_addresses):
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
+@pytest.mark.parametrize('channels_per_node', [0])
+def test_healthcheck_with_unconnected_node(raiden_network, nat_keepalive_timeout):
+    """ Nodes start at the unknown state. """
+    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
+
+    address0 = app0.raiden.address
+    address1 = app1.raiden.address
+
+    assert app0.raiden.protocol.nodeaddresses_networkstatuses[address1] == NODE_NETWORK_UNKNOWN
+    assert app1.raiden.protocol.nodeaddresses_networkstatuses[address0] == NODE_NETWORK_UNKNOWN
+
+    app0.raiden.start_health_check_for(address1)
+
+    gevent.sleep(nat_keepalive_timeout)
+
+    assert app0.raiden.protocol.nodeaddresses_networkstatuses[address1] == NODE_NETWORK_REACHABLE
+    assert app1.raiden.protocol.nodeaddresses_networkstatuses[address0] == NODE_NETWORK_UNKNOWN
+
+
+@pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
 def test_healthcheck_with_bad_peer(raiden_network, nat_keepalive_retries, nat_keepalive_timeout):
     """ If the Ping messages are not answered, the node must be set to
@@ -449,20 +494,22 @@ def test_healthcheck_with_bad_peer(raiden_network, nat_keepalive_retries, nat_ke
     """
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
+    address0 = app0.raiden.address
+    address1 = app1.raiden.address
+
+    assert app0.raiden.protocol.nodeaddresses_networkstatuses[address1] == NODE_NETWORK_REACHABLE
+    assert app1.raiden.protocol.nodeaddresses_networkstatuses[address0] == NODE_NETWORK_REACHABLE
+
     # Drop all Ping and Ack messages
-    UnreliableTransport.droprate = 1
-    UnreliableTransport.network.counter = 0
-
-    app0.raiden.protocol.start_health_check(app1.raiden.address)
-
-    statuses = app0.raiden.protocol.nodeaddresses_networkstatuses
-    assert statuses[app1.raiden.address] == NODE_NETWORK_UNKNOWN
+    app0.raiden.protocol.transport.droprate = 1
+    app1.raiden.protocol.transport.droprate = 1
 
     gevent.sleep(
-        nat_keepalive_retries * nat_keepalive_timeout + 0.5
+        (nat_keepalive_retries + 2) * nat_keepalive_timeout
     )
 
-    assert statuses[app1.raiden.address] == NODE_NETWORK_UNREACHABLE
+    assert app0.raiden.protocol.nodeaddresses_networkstatuses[address1] == NODE_NETWORK_UNREACHABLE
+    assert app1.raiden.protocol.nodeaddresses_networkstatuses[address0] == NODE_NETWORK_UNREACHABLE
 
 
 @pytest.mark.parametrize('blockchain_type', ['tester'])

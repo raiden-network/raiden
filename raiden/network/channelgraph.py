@@ -165,15 +165,6 @@ def get_best_routes(
                 )
             continue
 
-        if not channel.can_transfer:
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'channel %s - %s is closed or has zero funding, ignoring',
-                    pex(our_address),
-                    pex(partner_address),
-                )
-            continue
-
         if amount > channel.distributable:
             if log.isEnabledFor(logging.INFO):
                 log.info(
