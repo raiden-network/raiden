@@ -125,7 +125,7 @@ install_requires = list(set(
 
 test_requirements = []
 
-version = '0.1.0'  # Do not edit: this is maintained by bumpversion (see .bumpversion.cfg)
+version = '0.2.0'  # Do not edit: this is maintained by bumpversion (see .bumpversion.cfg)
 
 
 def read_version_from_git():

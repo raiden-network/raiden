@@ -8,7 +8,7 @@ import "./ChannelManagerLibrary.sol";
 // deployment the logic is moved into a library and this contract will work
 // only as a proxy/state container.
 contract ChannelManagerContract is Utils {
-    string constant public contract_version = "0.1._";
+    string constant public contract_version = "0.2._";
 
     using ChannelManagerLibrary for ChannelManagerLibrary.Data;
     ChannelManagerLibrary.Data data;

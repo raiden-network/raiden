@@ -4,7 +4,7 @@ import "./Token.sol";
 import "./NettingChannelContract.sol";
 
 library ChannelManagerLibrary {
-    string constant public contract_version = "0.1._";
+    string constant public contract_version = "0.2._";
 
     struct Data {
         Token token;
