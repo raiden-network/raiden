@@ -35,7 +35,7 @@ RUN curl -L -o /tmp/node.tar.gz https://nodejs.org/download/release/v8.2.1/node-
     chmod -R a+rwX /tmp/node_modules
 
 # install solc
-RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.16/solc-static-linux && \
+RUN curl -L -o /usr/bin/solc https://github.com/ethereum/solidity/releases/download/v0.4.18/solc-static-linux && \
     chmod +x /usr/bin/solc
 
 # use --build-arg RAIDENVERSION=v0.0.3 to build a specific (tagged) version

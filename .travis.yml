@@ -8,8 +8,8 @@ env:
   global:
   - GETH_URL='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.7.2-1db4ecdc.tar.gz'
   - GETH_VERSION='1.7.2'
-  - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.17/solc-static-linux'
-  - SOLC_VERSION='v0.4.17'
+  - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.18/solc-static-linux'
+  - SOLC_VERSION='v0.4.18'
   matrix:
   - TEST_TYPE='unit'
   - TEST_TYPE='smart_contracts'
