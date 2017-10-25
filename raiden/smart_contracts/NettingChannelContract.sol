@@ -3,7 +3,7 @@ pragma solidity ^0.4.11;
 import "./NettingChannelLibrary.sol";
 
 contract NettingChannelContract {
-    string constant public contract_version = "0.1._";
+    string constant public contract_version = "0.2._";
 
     using NettingChannelLibrary for NettingChannelLibrary.Data;
     NettingChannelLibrary.Data public data;
