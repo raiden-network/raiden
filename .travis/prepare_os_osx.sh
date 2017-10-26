@@ -10,6 +10,7 @@ done
 brew tap caskroom/cask
 brew cask install docker
 ln -s /Applications/Docker.app/Contents/Resources/bin /usr/local/bin/docker
+docker run hellow-world
 
 if [ ! -x $HOME/.bin/geth-${GETH_VERSION}-${TRAVIS_OS_NAME} ]; then
     mkdir -p $HOME/.bin
