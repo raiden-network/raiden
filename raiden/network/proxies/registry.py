@@ -54,6 +54,10 @@ class Registry:
             CONTRACT_MANAGER.get_abi(CONTRACT_REGISTRY),
             address_encoder(registry_address),
         )
+        CONTRACT_MANAGER.check_contract_version(
+            proxy.call('contract_version').decode(),
+            CONTRACT_REGISTRY
+        )
 
         self.address = registry_address
         self.proxy = proxy
