@@ -255,38 +255,6 @@ def patch_send_transaction(client, nonce_offset=0):
         client.send_transaction = send_transaction
 
 
-def patch_send_message(client, pool_maxsize=50):
-    """Monkey patch fix for issue #253. This makes the underlying `tinyrpc`
-    transport class use a `requests.session` instead of regenerating sessions
-    for each request.
-
-    See also: https://github.com/mbr/tinyrpc/pull/31 for a proposed upstream
-    fix.
-
-    Args:
-        client (JSONRPCClient): the instance to patch
-        pool_maxsize: the maximum poolsize to be used by the `requests.Session()`
-    """
-    session = requests.Session()
-    adapter = requests.adapters.HTTPAdapter(pool_maxsize=pool_maxsize)
-    session.mount(client.transport.endpoint, adapter)
-
-    def send_message(message, expect_reply=True):
-        if not isinstance(message, str):
-            raise TypeError('str expected')
-
-        r = session.post(
-            client.transport.endpoint,
-            data=message,
-            **client.transport.request_kwargs
-        )
-
-        if expect_reply:
-            return r.content
-
-    client.transport.send_message = send_message
-
-
 def new_filter(jsonrpc_client, contract_address, topics, from_block=None, to_block=None):
     """ Custom new filter implementation to handle bad encoding from geth rpc. """
     if isinstance(from_block, int):
@@ -509,8 +477,12 @@ class ContractProxy(object):
 class JSONRPCClient(object):
 
     def __init__(self, host, port, privkey):
+        session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_maxsize=100)
+        session.mount('http://', adapter)
         self.transport = HttpPostClientTransport(
             'http://{}:{}'.format(host, port),
+            post_method=session.post,
             headers={'content-type': 'application/json'},
         )
 
