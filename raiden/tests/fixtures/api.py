@@ -15,11 +15,15 @@ from raiden.raiden_service import RaidenService
 from raiden.network.discovery import Discovery
 from raiden.tests.utils.apitestcontext import ApiTestContext
 
+_SELF = object()
 
-def wait_for_listening_port(port_number, tries=10, sleep=0.1):
+
+def wait_for_listening_port(port_number, tries=10, sleep=0.1, pid=_SELF):
+    if pid is _SELF:
+        pid = os.getpid()
     for _ in range(tries):
         gevent.sleep(sleep)
-        connections = psutil.net_connections()
+        connections = psutil.Process(pid).connections()
         for conn in connections:
             if conn.status == 'LISTEN' and conn.laddr[1] == port_number:
                 return

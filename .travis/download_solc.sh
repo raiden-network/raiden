@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -e
+set -x
 
 fail() {
     if [[ $- == *i* ]]; then
@@ -39,15 +40,20 @@ warn() {
     fi
 }
 
-[ -z "${SOLC_URL}" ] && fail 'missing SOLC_URL'
 [ -z "${SOLC_VERSION}" ] && fail 'missing SOLC_VERSION'
 
-if [ ! -x $HOME/.bin/solc-${SOLC_VERSION} ]; then
+if [ ! -x $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME} ]; then
     mkdir -p $HOME/.bin
 
-    curl -L $SOLC_URL > $HOME/.bin/solc-${SOLC_VERSION}
-    chmod 775 $HOME/.bin/solc-${SOLC_VERSION}
+    # use docker for macOS
+    if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+        cp .travis/solc.sh $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME}
+    else
+        SOLC_URL=${SOLC_URL_LINUX}
+        curl -L ${SOLC_URL} > $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME}
+    fi
 
+    chmod 775 $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME}
     success "solc ${SOLC_VERSION} installed"
 else
     info 'using cached solc'
@@ -56,4 +62,4 @@ fi
 # always recreate the symlink since we dont know if it's pointing to a different
 # version
 [ -h $HOME/.bin/solc ] && unlink $HOME/.bin/solc
-ln -s $HOME/.bin/solc-${SOLC_VERSION} $HOME/.bin/solc
+ln -s $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME} $HOME/.bin/solc

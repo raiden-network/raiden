@@ -2,6 +2,8 @@
 
 import httplib
 import json
+
+import sys
 from flask import Flask, make_response, url_for, send_from_directory, request
 from flask.json import jsonify
 from flask_restful import Api, abort
@@ -155,6 +157,10 @@ class APIServer(object):
         self.flask_app.register_blueprint(self.blueprint)
 
         self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
+        if is_frozen():
+            # Inside frozen pyinstaller image
+            self.flask_app.config['WEBUI_PATH'] = '{}/raiden/ui/web/dist/'.format(sys.prefix)
+
         if eth_rpc_endpoint:
             if not eth_rpc_endpoint.startswith('http'):
                 eth_rpc_endpoint = 'http://' + eth_rpc_endpoint
