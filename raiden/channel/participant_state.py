@@ -84,7 +84,7 @@ class ChannelEndState(object):
         return self.balance(other) - self.amount_locked
 
     def is_known(self, hashlock):
-        """ True if the `hashlock` correspond to a known lock. """
+        """ True if the `hashlock` corresponds to a known lock. """
         return (
             hashlock in self.hashlocks_to_pendinglocks or
             hashlock in self.hashlocks_to_unclaimedlocks
