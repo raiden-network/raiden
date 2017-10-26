@@ -247,8 +247,8 @@ def assert_locked(from_channel, pending_locks):
     """ Assert the locks created from `from_channel`. """
     # a locked transfer is registered in the _partner_ state
     if pending_locks:
-        leafs = [sha3(lock.as_bytes) for lock in pending_locks]
-        layers = compute_layers(leafs)
+        leaves = [sha3(lock.as_bytes) for lock in pending_locks]
+        layers = compute_layers(leaves)
         tree = MerkleTreeState(layers)
         root = merkleroot(tree)
     else:
