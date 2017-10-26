@@ -10,8 +10,6 @@ from ethereum._solidity import compile_contract
 from ethereum.utils import decode_hex
 
 from raiden.network.rpc.client import (
-    patch_send_message,
-    patch_send_transaction,
     JSONRPCClient,
 )
 from raiden.settings import GAS_PRICE
@@ -143,8 +141,6 @@ def main(privatekey_hex, pretty, gas_price, port):
         port,
         privatekey,
     )
-    patch_send_transaction(client)
-    patch_send_message(client)
 
     deployed = deploy_all(client, gas_price)
     print(json.dumps(deployed, indent=2 if pretty else None))

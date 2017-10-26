@@ -7,8 +7,7 @@ from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_NETTING_CHANNEL,
 )
-from raiden.utils import address_encoder, data_decoder
-from raiden.network.rpc.client import decode_topic
+from raiden.utils import address_encoder, data_decoder, topic_decoder
 
 
 def all_contract_events_raw(rpc, contract_address, start_block=None, end_block=None):
@@ -55,7 +54,7 @@ def all_contract_events(rpc, contract_address, abi, start_block=None, end_block=
     events = list()
     for event_encoded in events_raw:
         topics_ids = [
-            decode_topic(topic)
+            topic_decoder(topic)
             for topic in event_encoded['topics']
         ]
         event_data = data_decoder(event_encoded['data'])
