@@ -13,7 +13,7 @@ LEAVES = 0
 MERKLEROOT = -1
 
 EMPTY_MERKLE_TREE = MerkleTreeState([
-    [],                   # the leaves is empty
+    [],                   # the leaves are empty
     [EMPTY_MERKLE_ROOT],  # the root is the constant 0
 ])
 
@@ -75,7 +75,7 @@ def compute_layers(elements):
 
 
 def compute_merkleproof_for(merkletree, element):
-    """ Contaiment proof for element.
+    """ Containment proof for element.
 
     The proof contains only the entries that are sufficient to recompute the
     merkleroot, from the leaf `element` up to `root`.
@@ -92,7 +92,7 @@ def compute_merkleproof_for(merkletree, element):
         else:
             pair = idx + 1
 
-        # with an odd number of elements the rightmost does not have a pair.
+        # with an odd number of elements the rightmost one does not have a pair.
         if pair < len(layer):
             proof.append(layer[pair])
 
@@ -116,7 +116,7 @@ def validate_proof(proof, root, leaf_element):
 
 def merkleroot(merkletree):
     """ Return the root element of the merkle tree. """
-    assert merkletree.layers, 'the merkle tree layers is empty'
+    assert merkletree.layers, 'the merkle tree layers are empty'
     assert merkletree.layers[MERKLEROOT], 'the root layer is empty'
 
     return merkletree.layers[MERKLEROOT][0]
