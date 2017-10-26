@@ -42,21 +42,12 @@ warn() {
 
 [ -z "${SOLC_VERSION}" ] && fail 'missing SOLC_VERSION'
 
-# if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-#     # SOLC_URL=${SOLC_URL_MACOS}
-#     cp solc.txt $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME}
-# else
-#     SOLC_URL=${SOLC_URL_LINUX}
-# fi
-
-[ -z "${SOLC_URL}" ] && fail 'missing SOLC_URL'
-
 if [ ! -x $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME} ]; then
     mkdir -p $HOME/.bin
 
     # use docker for macOS
     if [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-        cp solc.sh $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME}
+        cp .travis/solc.sh $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME}
     else
         SOLC_URL=${SOLC_URL_LINUX}
         curl -L ${SOLC_URL} > $HOME/.bin/solc-${SOLC_VERSION}-${TRAVIS_OS_NAME}
