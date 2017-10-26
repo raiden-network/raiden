@@ -15,6 +15,7 @@ ln -s /Applications/Docker.app/Contents/Resources/bin/docker /usr/local/bin/dock
 ln -s /Applications/Docker.app/Contents/Resources/bin/docker $HOME/.bin/docker
 open --hide --background -a /Applications/Docker.app
 echo $PATH
+sleep 30
 
 which docker
 docker run hellow-world
