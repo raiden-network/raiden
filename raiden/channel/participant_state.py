@@ -34,17 +34,17 @@ class ChannelEndState(object):
         if not isinstance(participant_balance, (int, long)):
             raise ValueError('participant_balance must be an integer.')
 
-        # This participant balance on-chain
+        # This participant's on-chain balance
         self.contract_balance = participant_balance
 
-        # This participant address
+        # This participant's address
         self.address = participant_address
 
-        # Locks from mediated transfers which the secret is unknown.
+        # Locks from mediated transfers for which the secret is unknown.
         self.hashlocks_to_pendinglocks = dict()
 
-        # locks from mediated transfers which the secret is known but there is
-        # no balance proof unlocking it.
+        # locks from mediated transfers for which the secret is known but there
+        # is no balance proof unlocking it.
         self.hashlocks_to_unclaimedlocks = dict()
 
         # A merkletree of the keccak hash of the locks.
@@ -84,7 +84,7 @@ class ChannelEndState(object):
         return self.balance(other) - self.amount_locked
 
     def is_known(self, hashlock):
-        """ True if the `hashlock` correspond to an known lock. """
+        """ True if the `hashlock` correspond to a known lock. """
         return (
             hashlock in self.hashlocks_to_pendinglocks or
             hashlock in self.hashlocks_to_unclaimedlocks
@@ -247,7 +247,7 @@ class ChannelEndState(object):
         hashlock = sha3(secret)
 
         if not self.is_known(hashlock):
-            raise ValueError('secret doest not correspond to any hashlock')
+            raise ValueError('secret does not correspond to any hashlock')
 
         if self.is_locked(hashlock):
             pendinglock = self.hashlocks_to_pendinglocks[hashlock]
@@ -277,7 +277,7 @@ class ChannelEndState(object):
         if tree is None:
             tree = self.merkletree
 
-        # forcing bytes because ethereum.abi doesnt work with bytearray
+        # forcing bytes because ethereum.abi doesn't work with bytearray
         lock_encoded = bytes(lock.as_bytes)
         lock_hash = sha3(lock_encoded)
 
