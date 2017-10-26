@@ -22,7 +22,6 @@ from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
 from raiden.network.rpc.client import (
-    patch_send_message,
     patch_send_transaction,
     BlockChainService,
     JSONRPCClient,
@@ -415,7 +414,6 @@ def deploy_client(blockchain_type, blockchain_rpc_ports, deploy_key):
 
         # cant patch transaction because the blockchain may not be running yet
         # patch_send_transaction(deploy_client)
-        patch_send_message(deploy_client)
 
         return deploy_client
 
@@ -501,7 +499,6 @@ def _jsonrpc_services(
             privkey,
         )
         patch_send_transaction(rpc_client)
-        patch_send_message(rpc_client)
 
         blockchain = BlockChainService(
             privkey,

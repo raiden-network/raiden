@@ -3,7 +3,6 @@ import click
 
 from raiden.network.rpc.client import (
     patch_send_transaction,
-    patch_send_message,
     JSONRPCClient,
 )
 
@@ -24,7 +23,6 @@ def main(private_key, eth_amount, targets_file, port, host):
         private_key,
     )
     patch_send_transaction(client)
-    patch_send_message(client)
 
     targets = [t.strip() for t in targets_file]
     balance = client.balance(client.sender)
