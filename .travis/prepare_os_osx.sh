@@ -13,6 +13,7 @@ brew tap caskroom/cask
 brew cask install docker
 ln -s /Applications/Docker.app/Contents/Resources/bin/docker /usr/local/bin/docker
 ln -s /Applications/Docker.app/Contents/Resources/bin/docker $HOME/.bin/docker
+open --hide --background -a /Applications/Docker.app
 echo $PATH
 
 which docker
