@@ -39,7 +39,7 @@ from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     ETHERSCAN_API,
     GAS_LIMIT,
-    GAS_PRICE,
+    GAS_PRICE_ROPSTEN,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
@@ -281,7 +281,7 @@ OPTIONS = [
     click.option(
         '--gas-price',
         help="Set the Ethereum transaction's gas price",
-        default=GAS_PRICE,
+        default=GAS_PRICE_ROPSTEN,
         type=int,
         show_default=True,
     ),

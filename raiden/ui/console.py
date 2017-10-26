@@ -22,7 +22,6 @@ from IPython.lib.inputhook import inputhook_manager, stdin_ready
 
 from raiden.api.python import RaidenAPI
 from raiden.utils import events, get_contract_path, safe_address_decode
-from raiden.settings import GAS_PRICE
 
 ENTER_CONSOLE_TIMEOUT = 3
 GUI_GEVENT = 'gevent'
@@ -305,7 +304,7 @@ class ConsoleTools(object):
             symbol='RDT',
             decimals=2,
             timeout=60,
-            gasprice=GAS_PRICE,
+            gasprice=None,
             auto_register=True):
         """ Create a proxy for a new HumanStandardToken (ERC20), that is
         initialized with Args(below).
@@ -324,8 +323,11 @@ class ConsoleTools(object):
         Returns:
             token_address_hex: the hex encoded address of the new token/token.
         """
+        if gasprice is None:
+            gasprice = self._chain.gasprice
+
         contract_path = get_contract_path('HumanStandardToken.sol')
-        # Deploy a new ERC20 token
+
         token_proxy = self._chain.client.deploy_solidity_contract(
             self._raiden.address, 'HumanStandardToken',
             compile_file(contract_path),
@@ -335,12 +337,13 @@ class ConsoleTools(object):
             gasprice=gasprice,
             timeout=timeout)
         token_address_hex = token_proxy.address.encode('hex')
+
         if auto_register:
             self.register_token(token_address_hex)
-        print("Successfully created {}the token '{}'.".format(
-            'and registered ' if auto_register else ' ',
-            name
-        ))
+            print("Successfully created and registered the token '{}'.".format(name))
+        else:
+            print("Successfully created the token '{}'.".format(name))
+
         return token_address_hex
 
     def register_token(self, token_address_hex):
