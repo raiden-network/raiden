@@ -427,6 +427,16 @@ class ContractProxy(object):
 
 
 class JSONRPCClient(object):
+    """ Ethereum JSON RPC client.
+
+    Args:
+        host (str): Ethereum node host address.
+        port (int): Ethereum node port number.
+        privkey (bin): Local user private key, used to sign transactions.
+        nonce_update_interval (float): Update the account nonce every
+            `nonce_update_interval` seconds.
+        nonce_offset (int): Network's default base nonce number.
+    """
 
     def __init__(self, host, port, privkey, nonce_update_interval=5.0, nonce_offset=0):
         endpoint = 'http://{}:{}'.format(host, port)
