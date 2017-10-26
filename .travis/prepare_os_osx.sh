@@ -7,6 +7,10 @@ for tool in automake libtool pkg-config libffi gmp openssl ; do
     brew install ${tool} || brew upgrade ${tool}
 done
 
+brew tap caskroom/cask
+brew cask install docker
+ln -s /Applications/Docker.app/Contents/Resources/bin /usr/local/bin/docker
+
 if [ ! -x $HOME/.bin/geth-${GETH_VERSION}-${TRAVIS_OS_NAME} ]; then
     mkdir -p $HOME/.bin
 

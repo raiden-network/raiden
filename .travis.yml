@@ -8,16 +8,10 @@ env:
   global:
   - GETH_URL_LINUX='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.7.0-6c6c7b2a.tar.gz'
   - GETH_URL_MACOS='https://gethstore.blob.core.windows.net/builds/geth-darwin-amd64-1.7.0-6c6c7b2a.tar.gz'
-<<<<<<< HEAD
   - GETH_VERSION='1.7.2'
-  - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.16/solc-static-linux'
-  - SOLC_VERSION='v0.4.18'
-=======
-  - GETH_VERSION='1.7.0'
   - SOLC_URL_LINUX='https://github.com/ethereum/solidity/releases/download/v0.4.16/solc-static-linux'
-  - SOLC_URL_MACOS='https://graph.brainbot.com/solc-static-0.4.16-macos-10.10'
-  - SOLC_VERSION='v0.4.16'
->>>>>>> travis
+  # - SOLC_URL_MACOS='https://graph.brainbot.com/solc-static-0.4.16-macos-10.10'
+  - SOLC_VERSION='v0.4.18'
   matrix:
   - TEST_TYPE='unit'
   - TEST_TYPE='smart_contracts'
