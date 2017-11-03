@@ -1,0 +1,41 @@
+name: raiden
+version: git
+summary: Fast, cheap, scalable token transfers for Ethereum
+description: |
+  The Raiden Network is an off-chain scaling solution, enabling near-instant,
+  low-fee and scalable payments. It’s complementary to the Ethereum blockchain
+  and works with any ERC20 compatible token.
+
+  The Raiden project is work in progress. Its goal is to research state channel
+  technology, define protocols and develop reference implementations.
+
+  For more information please visit http://raiden.network/.
+
+grade: devel # must be 'stable' to release into candidate/stable channels
+confinement: devmode # use 'strict' once you have the right plugs and slots
+
+apps:
+  raiden:
+    command: raiden
+
+parts:
+  raiden:
+    source: .
+    plugin: python
+    python-version: python2
+    prepare: |
+      apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 2A518C819BE37D2C2031944D1C52189C923F6CA9
+      add-apt-repository --yes ppa:ethereum/ethereum
+      apt update
+      apt install --yes solc
+    build-packages:
+      - libssl-dev
+      - libpython2.7-dev
+    after: [requirements]
+  requirements:
+    source: .
+    plugin: python
+    python-version: python2
+    requirements: requirements.txt
+    # XXX: https://bugs.launchpad.net/snapcraft/+bug/1712634
+    prepare: rm setup.py
