@@ -22,6 +22,6 @@ marshmallow_polyfield==3.0
 Flask-Cors==3.0.2
 pytest>=3.0.4
 psutil
-filelock
+filelock>=2.0.13,<3.0.0
 netifaces
 ipaddress
