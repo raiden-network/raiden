@@ -499,7 +499,7 @@ class RestAPI(object):
         return api_response(result=result.data)
 
     def _deposit(self, channel, balance):
-        if channel.current_state != CHANNEL_STATE_OPENED:
+        if channel.state != CHANNEL_STATE_OPENED:
             return api_error(
                 errors="Can't deposit on a closed channel",
                 status_code=httplib.CONFLICT,
@@ -521,7 +521,7 @@ class RestAPI(object):
         return api_response(result=result.data)
 
     def _close(self, channel):
-        if channel.current_state != CHANNEL_STATE_OPENED:
+        if channel.state != CHANNEL_STATE_OPENED:
             return api_error(
                 errors='Attempted to close an already closed channel',
                 status_code=httplib.CONFLICT,
@@ -535,10 +535,10 @@ class RestAPI(object):
         return api_response(result=result.data)
 
     def _settle(self, channel):
-        if channel.current_state != CHANNEL_STATE_CLOSED:
+        if channel.state != CHANNEL_STATE_CLOSED:
             return api_error(
                 errors='Attempted to settle a channel at its {} state'.format(
-                    channel.current_state,
+                    channel.state,
                 ),
                 status_code=httplib.CONFLICT,
             )
