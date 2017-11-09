@@ -65,28 +65,28 @@ class SocketFactory(object):
         self.storage = {}
 
     def __enter__(self):
-        log.debug("Acquiring socket", strategy=self.strategy_description)
+        log.debug('Acquiring socket', strategy=self.strategy_description)
 
         self._open_socket()
 
         for method in self.STRATEGY_TO_METHODS[self.strategy]:
-            log.debug("Trying", method=method)
+            log.debug('Trying', method=method)
 
             mapped_socket = getattr(self, 'map_{}'.format(method))()
             if mapped_socket:
                 assert isinstance(mapped_socket, PortMappedSocket)
                 self.method = method
-                log.debug("Success", method=method)
+                log.debug('Success', method=method)
                 break
-            log.debug("Unavailable", method=method)
+            log.debug('Unavailable', method=method)
         else:
             # This should not happen unless the method mapping has been broken (e.g. by
             # removing the 'none' fallback)
             raise RuntimeError("Couldn't create PortMappedSocket!")
 
         if method == 'ext':
-            method = "ext:{}".format(
-                ":".join(str(s) for s in self.strategy_args)
+            method = 'ext:{}'.format(
+                ':'.join(str(s) for s in self.strategy_args)
             )
         log.info(
             'Network port opened',
@@ -145,7 +145,7 @@ class SocketFactory(object):
                 log.critical("Couldn't get interface address. "
                              "Try specifying with '--nat ext:<ip>'.")
                 raise
-        log.warning("Using internal interface address. Connectivity issues are likely.")
+        log.warning('Using internal interface address. Connectivity issues are likely.')
         return PortMappedSocket(self.socket, 'NONE', self.source_ip, self.source_port)
 
     def unmap_none(self):
@@ -175,4 +175,4 @@ class SocketFactory(object):
     def strategy_description(self):
         if self.strategy != 'ext':
             return self.strategy
-        return '{}:{}'.format(self.strategy, ":".join(str(s) for s in self.strategy_args))
+        return '{}:{}'.format(self.strategy, ':'.join(str(s) for s in self.strategy_args))

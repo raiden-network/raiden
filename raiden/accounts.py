@@ -61,12 +61,12 @@ class AccountManager(object):
                             self.accounts[str(data['address']).lower()] = str(fullpath)
                     except (ValueError, KeyError, IOError) as ex:
                         # Invalid file - skip
-                        if f.startswith("UTC--"):
+                        if f.startswith('UTC--'):
                             # Should be a valid account file - warn user
-                            msg = "Invalid account file"
+                            msg = 'Invalid account file'
                             if isinstance(ex, IOError):
-                                msg = "Can not read account file"
-                            log.warning("%s %s: %s", msg, fullpath, ex)
+                                msg = 'Can not read account file'
+                            log.warning('%s %s: %s', msg, fullpath, ex)
 
     def address_in_keystore(self, address):
         if address is None:
@@ -95,14 +95,14 @@ class AccountManager(object):
         address = address.lower()
 
         if not self.address_in_keystore(address):
-            raise ValueError("Keystore file not found for %s" % address)
+            raise ValueError('Keystore file not found for %s' % address)
 
         with open(self.accounts[address]) as data_file:
             data = json.load(data_file)
 
         # Since file was found prompt for a password if not already given
         if password is None:
-            password = getpass.getpass("Enter the password to unlock %s: " % address)
+            password = getpass.getpass('Enter the password to unlock %s: ' % address)
         acc = Account(data, password, self.accounts[address])
         return acc.privkey
 

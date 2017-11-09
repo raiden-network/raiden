@@ -296,7 +296,7 @@ def test_close_channel_lack_of_balance_proof(
     assert channel01.state != CHANNEL_STATE_OPENED
 
 
-@pytest.mark.xfail(reason="test incomplete")
+@pytest.mark.xfail(reason='test incomplete')
 @pytest.mark.parametrize('privatekey_seed', ['start_end_attack:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout):

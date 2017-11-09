@@ -388,7 +388,7 @@ class ConsoleTools(object):
         try:
             self._discovery.get(peer_address)
         except KeyError:
-            print("Error: peer {} not found in discovery".format(peer_address_hex))
+            print('Error: peer {} not found in discovery'.format(peer_address_hex))
             return
 
         self._api.open(

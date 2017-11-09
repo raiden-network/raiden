@@ -208,14 +208,14 @@ class ApiTestContext():
                     channel.partner_state.address == partner_address):
                 return channel
 
-        raise ValueError("Could not find channel")
+        raise ValueError('Could not find channel')
 
     def find_channel_by_address(self, channel_address):
         for channel in self.channels:
             if channel.channel_address == channel_address:
                 return channel
 
-        raise ValueError("Could not find channel")
+        raise ValueError('Could not find channel')
 
     def query_channels(self, token_address=None, partner_address=None):
         if not token_address:
@@ -351,9 +351,9 @@ class ApiTestContext():
 
         for connection_manager in self.connection_managers:
             token_addresses[connection_manager.token_address] = {
-                "funds": connection_manager.funds,
-                "sum_deposits": connection_manager.sum_deposits,
-                "channels": len(connection_manager.open_channels)
+                'funds': connection_manager.funds,
+                'sum_deposits': connection_manager.sum_deposits,
+                'channels': len(connection_manager.open_channels),
             }
 
         return token_addresses
@@ -364,4 +364,4 @@ class ApiTestContext():
         if len(channels) > 0:
             return channels
         else:
-            raise ValueError("Could not find channel")
+            raise ValueError('Could not find channel')

@@ -100,7 +100,7 @@ ERROR_STATUS_CODES = [
 
 
 def api_error(errors, status_code):
-    assert status_code in ERROR_STATUS_CODES, "Programming error, unexpected error status code"
+    assert status_code in ERROR_STATUS_CODES, 'Programming error, unexpected error status code'
     response = make_response((
         json.dumps(dict(errors=errors)),
         status_code,
@@ -219,7 +219,7 @@ class APIServer(object):
                 if any(h in web3 for h in ('localhost', '127.0.0.1')) and host:
                     _, _port = split_endpoint(web3)
                     _host, _ = split_endpoint(host)
-                    web3 = "http://{}:{}".format(_host, _port)
+                    web3 = 'http://{}:{}'.format(_host, _port)
                 response = jsonify({'raiden': self._api_prefix, 'web3': web3})
             else:
                 response = send_from_directory(self.flask_app.config['WEBUI_PATH'], file)
@@ -514,7 +514,7 @@ class RestAPI(object):
             channel = self.raiden_api.get_channel(channel_address)
         except ChannelNotFound:
             return api_error(
-                errors="Requested channel {} not found".format(
+                errors='Requested channel {} not found'.format(
                     address_encoder(channel_address)
                 ),
                 status_code=httplib.CONFLICT

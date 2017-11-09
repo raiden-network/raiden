@@ -59,8 +59,8 @@ def fixture_all_combinations(invalid_values):
     values, this is not sufficient for an exhaustive failing test with default
     values, example::
 
-        @pytest.mark.parametrize("x", [0, 1])
-        @pytest.mark.parametrize("y", [2, 3])
+        @pytest.mark.parametrize('x', [0, 1])
+        @pytest.mark.parametrize('y', [2, 3])
         def test_foo(x, y):
             with pytest.raises(Exception):
                 # failing computation with x and y

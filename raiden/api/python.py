@@ -160,9 +160,9 @@ class RaidenAPI(object):
                 connection_manager = None
             if connection_manager is not None and connection_manager.open_channels:
                 connection_managers[connection_manager.token_address] = {
-                    "funds": connection_manager.funds,
-                    "sum_deposits": connection_manager.sum_deposits,
-                    "channels": len(connection_manager.open_channels),
+                    'funds': connection_manager.funds,
+                    'sum_deposits': connection_manager.sum_deposits,
+                    'channels': len(connection_manager.open_channels),
                 }
 
         return connection_managers
