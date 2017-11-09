@@ -469,18 +469,19 @@ class RaidenAPI(object):
         if partner_address and not isaddress(partner_address):
             raise InvalidAddress('Expected binary address format for partner in get_channel_list')
 
+        result = None
+
         if token_address and partner_address:
             graph = self.raiden.token_to_channelgraph[token_address]
 
             # Let it raise the KeyError
             channel = graph.partneraddress_to_channel[partner_address]
-
-            return [channel]
+            result = [channel]
 
         elif token_address:
             graph = self.raiden.token_to_channelgraph[token_address]
             token_channels = graph.address_to_channel.values()
-            return token_channels
+            result = token_channels
 
         elif partner_address:
             partner_channels = [
@@ -489,14 +490,16 @@ class RaidenAPI(object):
                 if partner_address in graph.partneraddress_to_channel
             ]
 
-            return partner_channels
+            result = partner_channels
 
         else:
             all_channels = list()
             for graph in self.raiden.token_to_channelgraph.itervalues():
                 all_channels.extend(graph.address_to_channel.itervalues())
 
-            return all_channels
+            result = all_channels
+
+        return result
 
     def get_node_network_state(self, node_address):
         """ Returns the currently network status of `node_address`. """

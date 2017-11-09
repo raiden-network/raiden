@@ -63,6 +63,59 @@ from raiden.utils import address_encoder, channel_to_api_dict, split_endpoint
 
 log = slogging.get_logger(__name__)
 
+ERROR_STATUS_CODES = [
+    httplib.CONFLICT,
+    httplib.REQUEST_TIMEOUT,
+    httplib.PAYMENT_REQUIRED,
+    httplib.BAD_REQUEST,
+    httplib.NOT_FOUND,
+]
+
+URLS_V1 = [
+    ('/address', AddressResource),
+    ('/channels', ChannelsResource),
+    ('/channels/<hexaddress:channel_address>', ChannelsResourceByChannelAddress),
+    ('/tokens', TokensResource),
+    ('/tokens/<hexaddress:token_address>/partners', PartnersResourceByTokenAddress),
+    ('/tokens/<hexaddress:token_address>', RegisterTokenResource),
+    ('/events/network', NetworkEventsResource),
+    ('/events/tokens/<hexaddress:token_address>', TokenEventsResource),
+    ('/events/channels/<hexaddress:channel_address>', ChannelEventsResource),
+    ('/token_swaps/<hexaddress:target_address>/<int:identifier>', TokenSwapsResource),
+    (
+        '/transfers/<hexaddress:token_address>/<hexaddress:target_address>',
+        TransferToTargetResource,
+    ),
+    ('/connections/<hexaddress:token_address>', ConnectionsResource),
+    ('/connections', ConnectionManagersResource),
+]
+
+
+def api_response(result, status_code=httplib.OK):
+    response = make_response((
+        json.dumps(result),
+        status_code,
+        {'mimetype': 'application/json', 'Content-Type': 'application/json'}
+    ))
+    return response
+
+
+def api_error(errors, status_code):
+    assert status_code in ERROR_STATUS_CODES, 'Programming error, unexpected error status code'
+    response = make_response((
+        json.dumps(dict(errors=errors)),
+        status_code,
+        {'mimetype': 'application/json', 'Content-Type': 'application/json'}
+    ))
+    return response
+
+
+@parser.error_handler
+def handle_request_parsing_error(err):
+    """ This handles request parsing errors generated for example by schema
+    field validation failing."""
+    abort(httplib.BAD_REQUEST, errors=err.messages)
+
 
 def normalize_events_list(old_list):
     """Internally the `event_type` key is prefixed with underscore but the API
@@ -81,39 +134,24 @@ def normalize_events_list(old_list):
     return new_list
 
 
-def api_response(result, status_code=httplib.OK):
-    response = make_response((
-        json.dumps(result),
-        status_code,
-        {'mimetype': 'application/json', 'Content-Type': 'application/json'}
-    ))
-    return response
+def restapi_setup_urls(flask_api_context, rest_api, urls):
+    for route, resource_cls in urls:
+        flask_api_context.add_resource(
+            resource_cls,
+            route,
+            resource_class_kwargs={'rest_api_object': rest_api}
+        )
 
 
-ERROR_STATUS_CODES = [
-    httplib.CONFLICT,
-    httplib.REQUEST_TIMEOUT,
-    httplib.PAYMENT_REQUIRED,
-    httplib.BAD_REQUEST,
-    httplib.NOT_FOUND,
-]
-
-
-def api_error(errors, status_code):
-    assert status_code in ERROR_STATUS_CODES, 'Programming error, unexpected error status code'
-    response = make_response((
-        json.dumps(dict(errors=errors)),
-        status_code,
-        {'mimetype': 'application/json', 'Content-Type': 'application/json'}
-    ))
-    return response
+def restapi_setup_type_converters(flask_app, names_to_converters):
+    for key, value in names_to_converters.items():
+        flask_app.url_map.converters[key] = value
 
 
 class APIServer(object):
     """
     Runs the API-server that routes the endpoint to the resources.
     The API is wrapped in multiple layers, and the Server should be invoked this way::
-
 
         # instance of the raiden-api
         raiden_api = RaidenAPI(...)
@@ -129,88 +167,56 @@ class APIServer(object):
 
     """
 
-    # flask TypeConverter
-    # links argument-placeholder in route (e.g. '/<hexaddress: channel_address>') to the Converter
-    _type_converter_mapping = {
-        'hexaddress': HexAddressConverter
-    }
     _api_prefix = '/api/1'
 
     def __init__(self, rest_api, cors_domain_list=None, web_ui=False, eth_rpc_endpoint=None):
-        self.rest_api = rest_api
-        self.blueprint = create_blueprint()
-        if self.rest_api.version == 1:
-            self.flask_api_context = Api(
-                self.blueprint,
-                prefix=self._api_prefix,
+        if rest_api.version != 1:
+            raise ValueError(
+                'Invalid api version: {}'.format(rest_api.version)
             )
-        else:
-            raise ValueError('Invalid api version: {}'.format(self.rest_api.version))
 
-        self.flask_app = Flask(__name__)
+        flask_app = Flask(__name__)
         if cors_domain_list:
-            CORS(self.flask_app, origins=cors_domain_list)
-        self._add_default_resources()
-        self._register_type_converters()
-        self.flask_app.register_blueprint(self.blueprint)
+            CORS(flask_app, origins=cors_domain_list)
 
-        self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
         if eth_rpc_endpoint:
             if not eth_rpc_endpoint.startswith('http'):
-                eth_rpc_endpoint = 'http://' + eth_rpc_endpoint
-            self.flask_app.config['WEB3_ENDPOINT'] = eth_rpc_endpoint
+                eth_rpc_endpoint = 'http://{}'.format(eth_rpc_endpoint)
+            flask_app.config['WEB3_ENDPOINT'] = eth_rpc_endpoint
+
+        blueprint = create_blueprint()
+        flask_api_context = Api(blueprint, prefix=self._api_prefix)
+
+        restapi_setup_type_converters(
+            flask_app,
+            {'hexaddress': HexAddressConverter},
+        )
+
+        restapi_setup_urls(
+            flask_api_context,
+            rest_api,
+            URLS_V1,
+        )
+
+        self.rest_api = rest_api
+        self.flask_app = flask_app
+        self.blueprint = blueprint
+        self.flask_api_context = flask_api_context
+
+        self.wsgiserver = None
+        self.flask_app.register_blueprint(self.blueprint)
+        self.flask_app.config['WEBUI_PATH'] = '../ui/web/dist/'
+
         if web_ui:
-            for route in ['/ui/<path:file>', '/ui', '/ui/', '/index.html', '/']:
+            for route in ('/ui/<path:file>', '/ui', '/ui/', '/index.html', '/'):
                 self.flask_app.add_url_rule(
                     route,
                     route,
                     view_func=self._serve_webui,
-                    methods=['GET'],
+                    methods=('GET', ),
                 )
 
-    def _add_default_resources(self):
-        self.add_resource(AddressResource, '/address')
-        self.add_resource(ChannelsResource, '/channels')
-        self.add_resource(
-            ChannelsResourceByChannelAddress,
-            '/channels/<hexaddress:channel_address>'
-        )
-        self.add_resource(TokensResource, '/tokens')
-        self.add_resource(
-            PartnersResourceByTokenAddress,
-            '/tokens/<hexaddress:token_address>/partners'
-        )
-        self.add_resource(
-            RegisterTokenResource,
-            '/tokens/<hexaddress:token_address>'
-        )
-        self.add_resource(NetworkEventsResource, '/events/network')
-        self.add_resource(
-            TokenEventsResource,
-            '/events/tokens/<hexaddress:token_address>'
-        )
-        self.add_resource(
-            ChannelEventsResource,
-            '/events/channels/<hexaddress:channel_address>'
-        )
-        self.add_resource(
-            TokenSwapsResource,
-            '/token_swaps/<hexaddress:target_address>/<int:identifier>'
-        )
-        self.add_resource(
-            TransferToTargetResource,
-            '/transfers/<hexaddress:token_address>/<hexaddress:target_address>'
-        )
-        self.add_resource(
-            ConnectionsResource,
-            '/connections/<hexaddress:token_address>'
-        )
-        self.add_resource(
-            ConnectionManagersResource,
-            '/connections'
-        )
-
-    def _serve_webui(self, file='index.html'):
+    def _serve_webui(self, file='index.html'):  # pylint: disable=redefined-builtin
         try:
             assert file
             web3 = self.flask_app.config.get('WEB3_ENDPOINT')
@@ -226,23 +232,6 @@ class APIServer(object):
         except (NotFound, AssertionError):
             response = send_from_directory(self.flask_app.config['WEBUI_PATH'], 'index.html')
         return response
-
-    def _register_type_converters(self, additional_mapping=None):
-        # an additional mapping concats to class-mapping and will overwrite existing keys
-        if additional_mapping:
-            mapping = dict(self._type_converter_mapping, **additional_mapping)
-        else:
-            mapping = self._type_converter_mapping
-
-        for key, value in mapping.items():
-            self.flask_app.url_map.converters[key] = value
-
-    def add_resource(self, resource_cls, route):
-        self.flask_api_context.add_resource(
-            resource_cls,
-            route,
-            resource_class_kwargs={'rest_api_object': self.rest_api}
-        )
 
     def run(self, host='127.0.0.1', port=5001, **kwargs):
         self.flask_app.run(host=host, port=port, **kwargs)
@@ -497,91 +486,102 @@ class RestAPI(object):
         result = self.transfer_schema.dump(transfer)
         return api_response(result=result.data)
 
+    def _deposit(self, channel, balance):
+        if channel.current_state != CHANNEL_STATE_OPENED:
+            return api_error(
+                errors="Can't deposit on a closed channel",
+                status_code=httplib.CONFLICT,
+            )
+
+        try:
+            raiden_service_result = self.raiden_api.deposit(
+                channel.token_address,
+                channel.partner_address,
+                balance
+            )
+        except InsufficientFunds as e:
+            return api_error(
+                errors=str(e),
+                status_code=httplib.PAYMENT_REQUIRED
+            )
+
+        result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
+        return api_response(result=result.data)
+
+    def _close(self, channel):
+        if channel.current_state != CHANNEL_STATE_OPENED:
+            return api_error(
+                errors='Attempted to close an already closed channel',
+                status_code=httplib.CONFLICT,
+            )
+
+        raiden_service_result = self.raiden_api.close(
+            channel.token_address,
+            channel.partner_address
+        )
+        result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
+        return api_response(result=result.data)
+
+    def _settle(self, channel):
+        if channel.current_state != CHANNEL_STATE_CLOSED:
+            return api_error(
+                errors='Attempted to settle a channel at its {} state'.format(
+                    channel.current_state,
+                ),
+                status_code=httplib.CONFLICT,
+            )
+
+        try:
+            raiden_service_result = self.raiden_api.settle(
+                channel.token_address,
+                channel.partner_address
+            )
+        except InvalidState:
+            return api_error(
+                errors='Settlement period is not yet over',
+                status_code=httplib.CONFLICT,
+            )
+
+        result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
+        return api_response(result=result.data)
+
     def patch_channel(self, channel_address, balance=None, state=None):
         if balance is not None and state is not None:
             return api_error(
                 errors='Can not update balance and change channel state at the same time',
                 status_code=httplib.CONFLICT,
             )
-        elif balance is None and state is None:
+
+        if balance is None and state is None:
             return api_error(
                 errors="Nothing to do. Should either provide 'balance' or 'state' argument",
                 status_code=httplib.BAD_REQUEST,
             )
 
-        # find the channel
         try:
             channel = self.raiden_api.get_channel(channel_address)
         except ChannelNotFound:
             return api_error(
-                errors='Requested channel {} not found'.format(
-                    address_encoder(channel_address)
-                ),
-                status_code=httplib.CONFLICT
+                errors='Requested channel {} not found'.format(address_encoder(channel_address)),
+                status_code=httplib.CONFLICT,
             )
 
-        current_state = channel.state
-
-        # if we patch with `balance` it's a deposit
         if balance is not None:
-            if current_state != CHANNEL_STATE_OPENED:
-                return api_error(
-                    errors="Can't deposit on a closed channel",
-                    status_code=httplib.CONFLICT,
-                )
-            try:
-                raiden_service_result = self.raiden_api.deposit(
-                    channel.token_address,
-                    channel.partner_address,
-                    balance
-                )
-            except InsufficientFunds as e:
-                return api_error(
-                    errors=str(e),
-                    status_code=httplib.PAYMENT_REQUIRED
-                )
-            result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-            return api_response(result=result.data)
+            result = self._deposit(channel, balance)
 
-        if state == CHANNEL_STATE_CLOSED:
-            if current_state != CHANNEL_STATE_OPENED:
-                return api_error(
-                    errors='Attempted to close an already closed channel',
-                    status_code=httplib.CONFLICT,
-                )
-            raiden_service_result = self.raiden_api.close(
-                channel.token_address,
-                channel.partner_address
+        elif state == CHANNEL_STATE_CLOSED:
+            result = self._close(channel)
+
+        elif state == CHANNEL_STATE_SETTLED:
+            result = self._settle(channel)
+
+        else:  # should never happen, channel_state is validated in the schema
+            result = api_error(
+                errors='Provided invalid channel state {}'.format(state),
+                status_code=httplib.BAD_REQUEST,
             )
-            result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-            return api_response(result=result.data)
 
-        if state == CHANNEL_STATE_SETTLED:
-            if current_state != CHANNEL_STATE_CLOSED:
-                return api_error(
-                    errors='Attempted to settle a channel at its '
-                    '{} state'.format(current_state),
-                    status_code=httplib.CONFLICT,
-                )
-            try:
-                raiden_service_result = self.raiden_api.settle(
-                    channel.token_address,
-                    channel.partner_address
-                )
-            except InvalidState:
-                return api_error(
-                    errors='Settlement period is not yet over',
-                    status_code=httplib.CONFLICT,
-                )
-            else:
-                result = self.channel_schema.dump(channel_to_api_dict(raiden_service_result))
-                return api_response(result=result.data)
-
-        # should never happen, channel_state is validated in the schema
-        return api_error(
-            errors='Provided invalid channel state {}'.format(state),
-            status_code=httplib.BAD_REQUEST,
-        )
+        return result
 
     def token_swap(
             self,
@@ -621,10 +621,3 @@ class RestAPI(object):
             )
 
         return api_response(result=dict(), status_code=httplib.CREATED)
-
-
-@parser.error_handler
-def handle_request_parsing_error(err):
-    """ This handles request parsing errors generated for example by schema
-    field validation failing."""
-    abort(httplib.BAD_REQUEST, errors=err.messages)
