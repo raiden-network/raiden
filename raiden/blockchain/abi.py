@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
+
 import os
 import json
 import hashlib
@@ -102,12 +104,13 @@ def get_static_or_compile(
         return precompiled
     if _solidity.get_solidity() is None:
         raise RuntimeError('The solidity compiler, `solc`, is not available.')
+
     compiled = _solidity.compile_contract(
         contract_path,
         contract_name,
-        combined='abi',
-        optimize=False
+        **compiler_flags
     )
+
     if store_updated:
         compiled['checksum'] = checksum
         with open(precompiled_path, 'w') as f:
@@ -122,19 +125,24 @@ def contract_checksum(contract_path):
         return checksum
 
 
-class ContractManager():
-
+class ContractManager(object):
     def __init__(self):
         self.is_instantiated = False
         self.lock = Lock()
-        self.event_to_contract = dict(
-            ChannelNew=CONTRACT_CHANNEL_MANAGER,
-            ChannelNewBalance=CONTRACT_NETTING_CHANNEL,
-            ChannelClosed=CONTRACT_NETTING_CHANNEL,
-            ChannelSecretRevealed=CONTRACT_NETTING_CHANNEL,
-            ChannelSettled=CONTRACT_NETTING_CHANNEL,
-            TokenAdded=CONTRACT_REGISTRY,
-        )
+        self.event_to_contract = {
+            'ChannelNew': CONTRACT_CHANNEL_MANAGER,
+            'ChannelNewBalance': CONTRACT_NETTING_CHANNEL,
+            'ChannelClosed': CONTRACT_NETTING_CHANNEL,
+            'ChannelSecretRevealed': CONTRACT_NETTING_CHANNEL,
+            'ChannelSettled': CONTRACT_NETTING_CHANNEL,
+            'TokenAdded': CONTRACT_REGISTRY,
+        }
+
+        self.human_standard_token_compiled = None
+        self.channel_manager_compiled = None
+        self.endpoint_registry_compiled = None
+        self.netting_channel_compiled = None
+        self.registry_compiled = None
 
     def instantiate(self):
         with self.lock:
@@ -145,30 +153,35 @@ class ContractManager():
                 get_contract_path('HumanStandardToken.sol'),
                 'HumanStandardToken',
                 combined='abi',
+                optimize=False,
             )
 
             self.channel_manager_compiled = get_static_or_compile(
                 get_contract_path('ChannelManagerContract.sol'),
                 'ChannelManagerContract',
                 combined='abi',
+                optimize=False,
             )
 
             self.endpoint_registry_compiled = get_static_or_compile(
                 get_contract_path('EndpointRegistry.sol'),
                 'EndpointRegistry',
                 combined='abi',
+                optimize=False,
             )
 
             self.netting_channel_compiled = get_static_or_compile(
                 get_contract_path('NettingChannelContract.sol'),
                 'NettingChannelContract',
                 combined='abi',
+                optimize=False,
             )
 
             self.registry_compiled = get_static_or_compile(
                 get_contract_path('Registry.sol'),
                 'Registry',
                 combined='abi',
+                optimize=False,
             )
 
             self.is_instantiated = True

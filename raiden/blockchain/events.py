@@ -41,10 +41,10 @@ ALL_EVENTS = None
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
 
 
-def poll_event_listener(filter, translator):
+def poll_event_listener(eth_filter, translator):
     result = list()
 
-    for log_event in filter.changes():
+    for log_event in eth_filter.changes():
         decoded_event = translator.decode_event(
             log_event['topics'],
             log_event['data'],
@@ -195,14 +195,14 @@ def event_to_state_change(event):  # pylint: disable=too-many-return-statements
     # Note: All addresses inside the event_data must be decoded.
 
     if event['_event_type'] == 'TokenAdded':
-        return ContractReceiveTokenAdded(
+        result = ContractReceiveTokenAdded(
             contract_address,
             address_decoder(event['token_address']),
             address_decoder(event['channel_manager_address']),
         )
 
     elif event['_event_type'] == 'ChannelNew':
-        return ContractReceiveNewChannel(
+        result = ContractReceiveNewChannel(
             contract_address,
             address_decoder(event['netting_channel']),
             address_decoder(event['participant1']),
@@ -211,7 +211,7 @@ def event_to_state_change(event):  # pylint: disable=too-many-return-statements
         )
 
     elif event['_event_type'] == 'ChannelNewBalance':
-        return ContractReceiveBalance(
+        result = ContractReceiveBalance(
             contract_address,
             address_decoder(event['token_address']),
             address_decoder(event['participant']),
@@ -220,27 +220,29 @@ def event_to_state_change(event):  # pylint: disable=too-many-return-statements
         )
 
     elif event['_event_type'] == 'ChannelClosed':
-        return ContractReceiveClosed(
+        result = ContractReceiveClosed(
             contract_address,
             address_decoder(event['closing_address']),
             event['block_number'],
         )
 
     elif event['_event_type'] == 'ChannelSettled':
-        return ContractReceiveSettled(
+        result = ContractReceiveSettled(
             contract_address,
             event['block_number'],
         )
 
     elif event['_event_type'] == 'ChannelSecretRevealed':
-        return ContractReceiveWithdraw(
+        result = ContractReceiveWithdraw(
             contract_address,
             event['secret'],
             address_decoder(event['receiver_address']),
         )
 
     else:
-        return None
+        result = None
+
+    return result
 
 
 class BlockchainEvents(object):
@@ -271,10 +273,10 @@ class BlockchainEvents(object):
 
         self.event_listeners = list()
 
-    def add_event_listener(self, event_name, filter, translator):
+    def add_event_listener(self, event_name, eth_filter, translator):
         event = EventListener(
             event_name,
-            filter,
+            eth_filter,
             translator,
         )
         self.event_listeners.append(event)
