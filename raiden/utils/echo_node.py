@@ -257,7 +257,7 @@ class EchoNode(object):
 
 @click.group(invoke_without_command=True)
 @options
-@click.option("--token-address", type=ADDRESS_TYPE, required=True)
+@click.option('--token-address', type=ADDRESS_TYPE, required=True)
 @click.pass_context
 def runner(ctx, **kwargs):
     """ Start a raiden Echo Node that will send received transfers back to the initiator. """
@@ -301,13 +301,13 @@ def runner(ctx, **kwargs):
                 cors_domain_list=domain_list,
                 web_ui=ctx.params['web_ui'],
             )
-            (api_host, api_port) = split_endpoint(kwargs["api_address"])
+            (api_host, api_port) = split_endpoint(kwargs['api_address'])
             api_server.start(api_host, api_port)
 
             print(
-                "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
-                "See the Raiden documentation for all available endpoints at\n"
-                "http://raiden-network.readthedocs.io/en/stable/rest_api.html".format(
+                'The Raiden API RPC server is now running at http://{}:{}/.\n\n'
+                'See the Raiden documentation for all available endpoints at\n'
+                'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
                     api_host,
                     api_port,
                 )

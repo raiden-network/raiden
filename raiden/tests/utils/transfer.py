@@ -90,7 +90,7 @@ def mediated_transfer(initiator_app, target_app, token, amount, identifier=None)
 
     if has_channel:
         raise NotImplementedError(
-            "There is a direct channel with the target, skipping mediated transfer."
+            'There is a direct channel with the target, skipping mediated transfer.'
         )
 
     else:

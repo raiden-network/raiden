@@ -18,5 +18,5 @@ GENESIS_STUB = {
     'extraData': '0x' + 'raiden'.encode('hex'),
     'gasLimit': GAS_LIMIT_HEX,
     # add precompiled addresses with minimal balance to avoid deletion
-    'alloc': {'%040x' % precompiled: {"balance": "0x1"} for precompiled in range(256)}
+    'alloc': {'%040x' % precompiled: {'balance': '0x1'} for precompiled in range(256)}
 }

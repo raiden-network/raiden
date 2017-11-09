@@ -12,7 +12,7 @@ from raiden.transfer.state import RouteState
 
 
 def init_database(tmpdir, in_memory_database):
-    database_path = ":memory:"
+    database_path = ':memory:'
     if not in_memory_database:
         database_path = os.path.join(tmpdir.strpath, 'database.db')
     return StateChangeLog(

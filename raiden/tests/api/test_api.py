@@ -1128,7 +1128,7 @@ def test_get_connection_managers_info(
     assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 1
     assert token_address1 in token_addresses
     assert isinstance(token_addresses[token_address1], dict)
-    assert set(token_addresses[token_address1].keys()) == {"funds", "sum_deposits", "channels"}
+    assert set(token_addresses[token_address1].keys()) == {'funds', 'sum_deposits', 'channels'}
 
     funds = 100
     token_address2 = '0x3edf0f56aa9716b898ec8ea674fdde714fd979de'
@@ -1151,4 +1151,4 @@ def test_get_connection_managers_info(
     assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 2
     assert token_address2 in token_addresses
     assert isinstance(token_addresses[token_address2], dict)
-    assert set(token_addresses[token_address2].keys()) == {"funds", "sum_deposits", "channels"}
+    assert set(token_addresses[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}

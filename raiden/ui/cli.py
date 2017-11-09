@@ -302,14 +302,14 @@ OPTIONS = [
     click.option(
         '--listen-address',
         help='"host:port" for the raiden service to listen on.',
-        default="0.0.0.0:{}".format(INITIAL_PORT),
+        default='0.0.0.0:{}'.format(INITIAL_PORT),
         type=str,
         show_default=True,
     ),
     click.option(
         '--rpccorsdomain',
         help='Comma separated list of domains to accept cross origin requests.',
-        default="http://localhost:*/*",
+        default='http://localhost:*/*',
         type=str,
         show_default=True,
     ),
@@ -329,7 +329,7 @@ OPTIONS = [
     ),
     click.option(
         '--log-json',
-        help="Output log lines in JSON format",
+        help='Output log lines in JSON format',
         is_flag=True
     ),
     click.option(
@@ -376,7 +376,7 @@ OPTIONS = [
     click.option(
         '--api-address',
         help='"host:port" for the RPC server to listen on.',
-        default="127.0.0.1:5001",
+        default='127.0.0.1:5001',
         type=str,
         show_default=True,
     ),
@@ -506,11 +506,11 @@ def app(address,
 
     # Fallback default port if only an IP address is given
     rpc_port = 8545
-    if eth_rpc_endpoint.startswith("http://"):
-        endpoint = eth_rpc_endpoint[len("http://"):]
+    if eth_rpc_endpoint.startswith('http://'):
+        endpoint = eth_rpc_endpoint[len('http://'):]
         rpc_port = 80
-    elif eth_rpc_endpoint.startswith("https://"):
-        endpoint = eth_rpc_endpoint[len("https://"):]
+    elif eth_rpc_endpoint.startswith('https://'):
+        endpoint = eth_rpc_endpoint[len('https://'):]
         rpc_port = 443
 
     if ':' not in endpoint:  # no port was given in url
@@ -703,13 +703,13 @@ def run(ctx, **kwargs):
                         web_ui=ctx.params['web_ui'],
                         eth_rpc_endpoint=ctx.params['eth_rpc_endpoint'],
                     )
-                    (api_host, api_port) = split_endpoint(kwargs["api_address"])
+                    (api_host, api_port) = split_endpoint(kwargs['api_address'])
                     api_server.start(api_host, api_port)
 
                     print(
-                        "The Raiden API RPC server is now running at http://{}:{}/.\n\n"
-                        "See the Raiden documentation for all available endpoints at\n"
-                        "http://raiden-network.readthedocs.io/en/stable/rest_api.html".format(
+                        'The Raiden API RPC server is now running at http://{}:{}/.\n\n'
+                        'See the Raiden documentation for all available endpoints at\n'
+                        'http://raiden-network.readthedocs.io/en/stable/rest_api.html'.format(
                             api_host,
                             api_port,
                         )
@@ -736,8 +736,8 @@ def run(ctx, **kwargs):
                     pass
         except socket.error as v:
             if v.args[0] == errno.EADDRINUSE:
-                print("ERROR: Address %s:%s is in use. "
-                      "Use --listen-address <host:port> to specify port to listen on." %
+                print('ERROR: Address %s:%s is in use. '
+                      'Use --listen-address <host:port> to specify port to listen on.' %
                       (listen_host, listen_port))
                 sys.exit(1)
             raise
@@ -776,7 +776,7 @@ def smoketest(ctx, debug, **kwargs):
     """
     from raiden.api.python import RaidenAPI
 
-    report_file = tempfile.mktemp(suffix=".log")
+    report_file = tempfile.mktemp(suffix='.log')
     open(report_file, 'w+')
 
     def append_report(subject, data):
@@ -788,10 +788,10 @@ def smoketest(ctx, debug, **kwargs):
     append_report('raiden version', json.dumps(get_system_spec()))
     append_report('raiden log', None)
 
-    print("[1/5] getting smoketest configuration")
+    print('[1/5] getting smoketest configuration')
     smoketest_config = load_or_create_smoketest_config()
 
-    print("[2/5] starting ethereum")
+    print('[2/5] starting ethereum')
     ethereum, ethereum_config = start_ethereum(smoketest_config['genesis'])
 
     print('[3/5] starting raiden')
@@ -833,7 +833,7 @@ def smoketest(ctx, debug, **kwargs):
     raiden_api = RaidenAPI(app_.raiden)
     rest_api = RestAPI(raiden_api)
     api_server = APIServer(rest_api)
-    (api_host, api_port) = split_endpoint(args["api_address"])
+    (api_host, api_port) = split_endpoint(args['api_address'])
     api_server.start(api_host, api_port)
 
     success = False
@@ -892,7 +892,7 @@ def removedb(ctx):
         )
 
     if not sane:
-        print("WARNING: The specified directory does not appear to be a Raiden data directory.")
+        print('WARNING: The specified directory does not appear to be a Raiden data directory.')
 
     prompt = 'Are you sure you want to delete {}?'.format(user_db_dir)
 

@@ -4,7 +4,7 @@ import ipaddress
 from ethereum import slogging
 
 MAX_PORT = 65535
-RAIDEN_IDENTIFICATOR = "raiden-network udp service"
+RAIDEN_IDENTIFICATOR = 'raiden-network udp service'
 
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 

@@ -30,7 +30,7 @@ def test_ping(raiden_network):
         ping_encoded,
         app1.raiden.address,
     )
-    assert async_result.wait(2), "The message was not acknowledged"
+    assert async_result.wait(2), 'The message was not acknowledged'
 
     expected_echohash = sha3(ping_encoded + app1.raiden.address)
 

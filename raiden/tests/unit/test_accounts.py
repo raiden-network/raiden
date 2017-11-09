@@ -8,17 +8,17 @@ from raiden.accounts import AccountManager
 from raiden.utils import get_project_root
 
 
-KEYFILE_INACCESSIBLE = "UTC--2017-06-20T16-33-00.000000000Z--inaccessible"
-KEYFILE_INVALID = "UTC--2017-06-20T16-06-00.000000000Z--invalid"
+KEYFILE_INACCESSIBLE = 'UTC--2017-06-20T16-33-00.000000000Z--inaccessible'
+KEYFILE_INVALID = 'UTC--2017-06-20T16-06-00.000000000Z--invalid'
 
 
-@pytest.yield_fixture(scope="module")
+@pytest.yield_fixture(scope='module')
 def test_keystore():
     keystore = os.path.join(get_project_root(), 'tests', 'test_files')
     # Create inaccessible keyfile
     inaccessible_file = os.path.join(keystore, KEYFILE_INACCESSIBLE)
     if not os.path.exists(inaccessible_file):
-        open(inaccessible_file, "w").close()
+        open(inaccessible_file, 'w').close()
     os.chmod(inaccessible_file, 0)
     yield keystore
     # Cleanup to leave no undeletable files behind
@@ -80,8 +80,8 @@ def test_account_manager_invalid_files(test_keystore, caplog):
         AccountManager(test_keystore)
 
     for msg, file_name, reason in [
-        ("Invalid account file", KEYFILE_INVALID, "No JSON object"),
-        ("Can not read account file", KEYFILE_INACCESSIBLE, "Permission denied")
+        ('Invalid account file', KEYFILE_INVALID, 'No JSON object'),
+        ('Can not read account file', KEYFILE_INACCESSIBLE, 'Permission denied')
     ]:
         for record in caplog.records:
             message = record.getMessage()

@@ -207,7 +207,7 @@ def benchmark_alternatives():
 
     for variable_name in ('m0', 'm1', 'm2'):
         message = locals()[variable_name]
-        print("\n{}".format(message))
+        print('\n{}'.format(message))
 
         for codec_name, code_base in codecs.items():
             code = code_base.format(variable_name)

@@ -638,7 +638,7 @@ class JSONRPCClient(object):
                 deployed_code = self.eth_getCode(contract_address.decode('hex'))
 
                 if deployed_code == '0x':
-                    raise RuntimeError("Contract address has no code, check gas usage.")
+                    raise RuntimeError('Contract address has no code, check gas usage.')
 
             hex_bytecode = solidity_resolve_symbols(contract['bin_hex'], libraries)
             bytecode = hex_bytecode.decode('hex')
@@ -967,8 +967,8 @@ class JSONRPCClient(object):
 
         Args:
             address: An address.
-            block_number: Integer block number, or the string "latest",
-                "earliest" or "pending".
+            block_number: Integer block number, or the string 'latest',
+                'earliest' or 'pending'.
         """
         if address.startswith('0x'):
             warnings.warn(

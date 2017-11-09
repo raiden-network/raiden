@@ -47,7 +47,7 @@ def sample_stack(stack_count, frame):
 
 def sample_memory(timestamp, pid, stream):
     memory = process_memory_mb(pid)
-    stream.write("{timestamp:.6f} {memory:.4f}\n".format(
+    stream.write('{timestamp:.6f} {memory:.4f}\n'.format(
         timestamp=timestamp,
         memory=memory,
     ))

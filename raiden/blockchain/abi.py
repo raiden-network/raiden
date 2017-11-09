@@ -101,7 +101,7 @@ def get_static_or_compile(
     if precompiled and precompiled['checksum'] == checksum:
         return precompiled
     if _solidity.get_solidity() is None:
-        raise RuntimeError("The solidity compiler, `solc`, is not available.")
+        raise RuntimeError('The solidity compiler, `solc`, is not available.')
     compiled = _solidity.compile_contract(
         contract_path,
         contract_name,

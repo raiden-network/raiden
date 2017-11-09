@@ -50,7 +50,7 @@ def get_lines_from_file(filename, lineno, context_lines, loader=None, module_nam
     """
 
     source = None
-    if loader is not None and hasattr(loader, "get_source"):
+    if loader is not None and hasattr(loader, 'get_source'):
         try:
             source = loader.get_source(module_name)
         except ImportError:
@@ -153,7 +153,7 @@ def get_trace_info(frame):
     # This changes /foo/site-packages/baz/bar.py into baz/bar.py
     try:
         base_filename = sys.modules[module_name.split('.', 1)[0]].__file__
-        filename = abs_path.split(base_filename.rsplit('/', 2)[0], 1)[-1].lstrip("/")
+        filename = abs_path.split(base_filename.rsplit('/', 2)[0], 1)[-1].lstrip('/')
     except:
         filename = abs_path
 

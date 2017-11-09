@@ -11,5 +11,5 @@ def main():
     run(auto_envvar_prefix='RAIDEN')
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

@@ -74,7 +74,7 @@ class StateChangeLogSQLiteBackend(StateChangeLogStorageBackend):
     def __init__(self, database_path):
         self.conn = sqlite3.connect(database_path)
         self.conn.text_factory = str
-        self.conn.execute("PRAGMA foreign_keys=ON")
+        self.conn.execute('PRAGMA foreign_keys=ON')
         cursor = self.conn.cursor()
         cursor.execute(
             'CREATE TABLE IF NOT EXISTS state_changes ('

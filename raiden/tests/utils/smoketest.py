@@ -67,22 +67,24 @@ if RST_GETH_BINARY is not None and 'RST_GETH_BINARY' not in os.environ:
 
 
 TEST_ACCOUNT = {
-    "version": 3,
-    "crypto": {
-        "ciphertext": "4d9fecf81ca312f7b1ee1bd57196e9c51737d461d7faa019f566834d4d3d4615",
-        "cipherparams": {
-            "iv": "d19d1a6a1a66fb8d86755eeee0cc5da8"
+    'version': 3,
+    'crypto': {
+        'ciphertext': '4d9fecf81ca312f7b1ee1bd57196e9c51737d461d7faa019f566834d4d3d4615',
+        'cipherparams': {
+            'iv': 'd19d1a6a1a66fb8d86755eeee0cc5da8',
         },
-        "kdf": "pbkdf2",
-        "kdfparams": {
-            "dklen": 32, "c": 262144,
-            "prf": "hmac-sha256", "salt": "6725f3e185b3f0475e52507e512b1b2c"
+        'kdf': 'pbkdf2',
+        'kdfparams': {
+            'dklen': 32,
+            'c': 262144,
+            'prf': 'hmac-sha256',
+            'salt': '6725f3e185b3f0475e52507e512b1b2c',
         },
-        "mac": "ec86b1e6188dc2e7e415fa4214153636387338dbffe2edf1b04fac6be23eead4",
-        "cipher": "aes-128-ctr",
-        "version": 1
+        'mac': 'ec86b1e6188dc2e7e415fa4214153636387338dbffe2edf1b04fac6be23eead4',
+        'cipher': 'aes-128-ctr',
+        'version': 1
     },
-    "address": "67a5e21e34a58ed8d47c719fe291ddd2ea825e12"
+    'address': '67a5e21e34a58ed8d47c719fe291ddd2ea825e12',
 }
 TEST_ACCOUNT_PASSWORD = 'password'
 TEST_PRIVKEY = 'add4d310ba042468791dd7bf7f6eae85acc4dd143ffa810ef1809a6a11f2bc44'
@@ -99,7 +101,7 @@ def run_restapi_smoketests(raiden_service, test_config):
 
     response_json = response.json()
     assert (response_json[0]['partner_address'] ==
-            "0x" + str(ConnectionManager.BOOTSTRAP_ADDR).encode('hex'))
+            '0x' + str(ConnectionManager.BOOTSTRAP_ADDR).encode('hex'))
     assert response_json[0]['state'] == 'opened'
     assert response_json[0]['balance'] > 0
 
