@@ -27,7 +27,7 @@ NETTINGCHANNEL_SETTLE_TIMEOUT_MAX = 2700000
 # TODO: add this as an attribute of the transport class
 UDP_MAX_MESSAGE_SIZE = 1200
 
-MAINNET = 'mainnet'
+MAINNET = 'api'
 ROPSTEN = 'ropsten'
 RINKEBY = 'rinkeby'
 KOVAN = 'kovan'
