@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 from ethereum._solidity import compile_file
 
-from raiden.utils import get_contract_path, sha3
-from raiden.network.rpc.client import (
-    JSONRPCClient,
-)
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.settings import GAS_PRICE
+from raiden.utils import get_contract_path, sha3
 
 
 def connect(host='127.0.0.1', port=8545):

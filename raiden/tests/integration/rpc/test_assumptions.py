@@ -6,7 +6,7 @@ import os
 import pytest
 from ethereum import _solidity
 
-from raiden.network.rpc.client import check_transaction_threw
+from raiden.network.rpc.transactions import check_transaction_threw
 
 # pylint: disable=unused-argument,protected-access
 

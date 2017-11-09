@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 import click
 
-from raiden.network.rpc.client import (
-    JSONRPCClient,
-)
+from raiden.network.rpc.client import JSONRPCClient
 
 
 WEI_TO_ETH = 10 ** 18

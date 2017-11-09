@@ -16,7 +16,8 @@ from ethereum.utils import decode_hex
 from raiden.app import App
 from raiden.api.python import RaidenAPI
 from raiden.network.discovery import ContractDiscovery
-from raiden.network.rpc.client import BlockChainService, JSONRPCClient
+from raiden.network.blockchain_service import BlockChainService
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.ui.console import ConsoleTools
 from raiden.utils import split_endpoint

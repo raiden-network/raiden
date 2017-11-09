@@ -30,11 +30,9 @@ from raiden.constants import (
 )
 from raiden.exceptions import EthNodeCommunicationError
 from raiden.network.discovery import ContractDiscovery
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.network.sockfactory import SocketFactory
 from raiden.network.utils import get_free_port
-from raiden.network.rpc.client import (
-    JSONRPCClient,
-)
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     ETHERSCAN_API,
@@ -477,7 +475,7 @@ def app(address,
     # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
 
     from raiden.app import App
-    from raiden.network.rpc.client import BlockChainService
+    from raiden.network.blockchain_service import BlockChainService
 
     (listen_host, listen_port) = split_endpoint(listen_address)
     (api_host, api_port) = split_endpoint(api_address)

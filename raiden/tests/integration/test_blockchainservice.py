@@ -12,10 +12,8 @@ from ethereum.utils import denoms
 
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
 from raiden.exceptions import AddressWithoutCode, SamePeerAddress
-from raiden.network.rpc.client import (
-    check_transaction_threw,
-    JSONRPCClient,
-)
+from raiden.network.rpc.client import JSONRPCClient
+from raiden.network.rpc.transactions import check_transaction_threw
 from raiden.settings import GAS_PRICE
 from raiden.tests.utils.blockchain import wait_until_block
 from raiden.utils import privatekey_to_address, get_contract_path, topic_decoder

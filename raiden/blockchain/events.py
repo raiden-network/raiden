@@ -11,7 +11,7 @@ from raiden.blockchain.abi import (
     CONTRACT_REGISTRY,
 )
 from raiden.utils import address_decoder, pex
-from raiden.network.rpc.client import get_filter_events
+from raiden.network.rpc.filters import get_filter_events
 
 from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveTokenAdded,
@@ -281,7 +281,7 @@ class BlockchainEvents(object):
         )
         self.event_listeners.append(event)
 
-        return poll_event_listener(filter, translator)
+        return poll_event_listener(eth_filter, translator)
 
     def add_registry_listener(self, registry_proxy):
         tokenadded = registry_proxy.tokenadded_filter()
