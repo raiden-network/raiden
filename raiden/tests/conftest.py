@@ -10,7 +10,7 @@ from ethereum.keys import PBKDF2_CONSTANTS
 from ethereum import processblock
 from ethereum import tester
 
-from raiden.network.rpc.client import GAS_LIMIT
+from raiden.settings import GAS_LIMIT
 from raiden.tests.fixtures import *  # noqa: F401,F403
 
 gevent.get_hub().SYSTEM_ERROR = BaseException

@@ -21,13 +21,9 @@ from raiden.tests.fixtures.tester import tester_state
 from raiden.tests.utils.blockchain import GENESIS_STUB, DEFAULT_BALANCE_BIN
 from raiden.tests.utils.tests import cleanup_tasks
 from raiden.tests.utils.tester_client import tester_deploy_contract, BlockChainServiceTesterMock
-from raiden.network.rpc.client import (
-    BlockChainService,
-    JSONRPCClient,
-)
-from raiden.network.discovery import (
-    ContractDiscovery,
-)
+from raiden.network.blockchain_service import BlockChainService
+from raiden.network.discovery import ContractDiscovery
+from raiden.network.rpc.client import JSONRPCClient
 from raiden.tests.utils.blockchain import (
     clique_extradata,
     geth_create_blockchain,

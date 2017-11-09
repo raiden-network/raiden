@@ -16,8 +16,9 @@ import networkx
 
 from raiden.settings import DEFAULT_SETTLE_TIMEOUT
 from raiden.app import App
+from raiden.network.blockchain_service import BlockChainService
 from raiden.network.discovery import Discovery
-from raiden.network.rpc.client import BlockChainService, JSONRPCClient
+from raiden.network.rpc import JSONRPCClient
 from raiden.utils import sha3, privatekey_to_address
 from raiden.settings import (
     GAS_LIMIT,

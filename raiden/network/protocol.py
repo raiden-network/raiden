@@ -614,7 +614,7 @@ class RaidenProtocol(object):
     def maybe_send_ack(self, receiver_address, ack_message):
         """ Send ack_message to receiver_address if the transport is running. """
         if not isaddress(receiver_address):
-            raise ValueError('Invalid address {}'.format(pex(receiver_address)))
+            raise InvalidAddress('Invalid address {}'.format(pex(receiver_address)))
 
         if not isinstance(ack_message, Ack):
             raise ValueError('Use maybe_send_ack only for Ack messages')
@@ -699,91 +699,103 @@ class RaidenProtocol(object):
         message = decode(data)
 
         if isinstance(message, Ack):
-            waitack = self.senthashes_to_states.get(message.echo)
-
-            if waitack is None:
-                if log.isEnabledFor(logging.DEBUG):
-                    log.debug(
-                        'ACK FOR UNKNOWN ECHO',
-                        node=pex(self.raiden.address),
-                        echohash=pex(message.echo),
-                    )
-
-            else:
-                if log.isEnabledFor(logging.DEBUG):
-                    log.debug(
-                        'ACK RECEIVED',
-                        node=pex(self.raiden.address),
-                        receiver=pex(waitack.receiver_address),
-                        echohash=pex(message.echo),
-                    )
-
-                waitack.async_result.set(True)
+            self.receive_ack(message)
 
         elif isinstance(message, Ping):
-            if ping_log.isEnabledFor(logging.DEBUG):
-                ping_log.debug(
-                    'PING RECEIVED',
-                    node=pex(self.raiden.address),
-                    echohash=pex(echohash),
-                    message=message,
-                    sender=pex(message.sender),
-                )
-
-            ack = Ack(
-                self.raiden.address,
-                echohash,
-            )
-
-            self.maybe_send_ack(
-                message.sender,
-                ack,
-            )
+            self.receive_ping(message, echohash)
 
         elif isinstance(message, SignedMessage):
-            if log.isEnabledFor(logging.INFO):
-                log.info(
-                    'MESSAGE RECEIVED',
-                    node=pex(self.raiden.address),
-                    echohash=pex(echohash),
-                    message=message,
-                    message_sender=pex(message.sender)
-                )
-
-            try:
-                self.raiden.on_message(message, echohash)
-
-                # only send the Ack if the message was handled without exceptions
-                ack = Ack(
-                    self.raiden.address,
-                    echohash,
-                )
-
-                try:
-                    if log.isEnabledFor(logging.DEBUG):
-                        log.debug(
-                            'SENDING ACK',
-                            node=pex(self.raiden.address),
-                            to=pex(message.sender),
-                            echohash=pex(echohash),
-                        )
-
-                    self.maybe_send_ack(
-                        message.sender,
-                        ack,
-                    )
-                except (InvalidAddress, UnknownAddress) as e:
-                    log.debug("Couldn't send the ACK", e=e)
-
-            except (UnknownAddress, InvalidNonce, TransferWhenClosed, TransferUnwanted) as e:
-                log.DEV('maybe unwanted transfer', e=e)
-
-            except (UnknownTokenAddress, InvalidLocksRoot) as e:
-                if log.isEnabledFor(logging.WARN):
-                    log.warn(str(e))
+            self.receive_message(message, echohash)
 
         elif log.isEnabledFor(logging.ERROR):
             log.error(
                 'Invalid message',
                 message=data.encode('hex'),
             )
+
+    def receive_ack(self, ack):
+        waitack = self.senthashes_to_states.get(ack.echo)
+
+        if waitack is None:
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'ACK FOR UNKNOWN ECHO',
+                    node=pex(self.raiden.address),
+                    echohash=pex(ack.echo),
+                )
+
+        else:
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'ACK RECEIVED',
+                    node=pex(self.raiden.address),
+                    receiver=pex(waitack.receiver_address),
+                    echohash=pex(ack.echo),
+                )
+
+            waitack.async_result.set(True)
+
+    def receive_ping(self, ping, echohash):
+        if ping_log.isEnabledFor(logging.DEBUG):
+            ping_log.debug(
+                'PING RECEIVED',
+                node=pex(self.raiden.address),
+                echohash=pex(echohash),
+                message=ping,
+                sender=pex(ping.sender),
+            )
+
+        ack = Ack(
+            self.raiden.address,
+            echohash,
+        )
+
+        try:
+            self.maybe_send_ack(
+                ping.sender,
+                ack,
+            )
+        except (InvalidAddress, UnknownAddress) as e:
+            log.debug("Couldn't send the ACK", e=e)
+
+    def receive_message(self, message, echohash):
+        if log.isEnabledFor(logging.INFO):
+            log.info(
+                'MESSAGE RECEIVED',
+                node=pex(self.raiden.address),
+                echohash=pex(echohash),
+                message=message,
+                message_sender=pex(message.sender)
+            )
+
+        try:
+            self.raiden.on_message(message, echohash)
+
+            # only send the Ack if the message was handled without exceptions
+            ack = Ack(
+                self.raiden.address,
+                echohash,
+            )
+
+            try:
+                if log.isEnabledFor(logging.DEBUG):
+                    log.debug(
+                        'SENDING ACK',
+                        node=pex(self.raiden.address),
+                        to=pex(message.sender),
+                        echohash=pex(echohash),
+                    )
+
+                self.maybe_send_ack(
+                    message.sender,
+                    ack,
+                )
+            except (InvalidAddress, UnknownAddress) as e:
+                log.debug("Couldn't send the ACK", e=e)
+
+        except (UnknownAddress, InvalidNonce, TransferWhenClosed, TransferUnwanted) as e:
+            log.DEV('maybe unwanted transfer', e=e)
+
+        except (UnknownTokenAddress, InvalidLocksRoot) as e:
+            if log.isEnabledFor(logging.WARN):
+                log.warn(str(e))
