@@ -37,7 +37,10 @@ from raiden.tests.utils.network import (
     create_network_channels,
     create_sequential_channels,
 )
-from raiden.settings import GAS_PRICE
+from raiden.settings import (
+    GAS_LIMIT,
+    GAS_PRICE,
+)
 
 BlockchainServices = namedtuple(
     'BlockchainServices',
@@ -482,7 +485,12 @@ def _jsonrpc_services(
     # at this point the blockchain must be running, this will overwrite the
     # method so even if the client is patched twice, it should work fine
 
-    deploy_blockchain = BlockChainService(deploy_key, deploy_client)
+    deploy_blockchain = BlockChainService(
+        deploy_key,
+        deploy_client,
+        GAS_LIMIT,
+        GAS_PRICE,
+    )
     deploy_registry = deploy_blockchain.registry(registry_address)
 
     host = '0.0.0.0'
@@ -497,6 +505,8 @@ def _jsonrpc_services(
         blockchain = BlockChainService(
             privkey,
             rpc_client,
+            GAS_LIMIT,
+            GAS_PRICE,
         )
         blockchain_services.append(blockchain)
 

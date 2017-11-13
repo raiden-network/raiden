@@ -38,6 +38,7 @@ from raiden.network.rpc.client import (
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     ETHERSCAN_API,
+    GAS_LIMIT,
     GAS_PRICE,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
@@ -278,6 +279,13 @@ OPTIONS = [
         show_default=True,
     ),
     click.option(
+        '--gas-price',
+        help="Set the Ethereum transaction's gas price",
+        default=GAS_PRICE,
+        type=int,
+        show_default=True,
+    ),
+    click.option(
         '--eth-rpc-endpoint',
         help='"host:port" address of ethereum JSON-RPC server.\n'
         'Also accepts a protocol prefix (http:// or https://) with optional port',
@@ -444,6 +452,7 @@ def options(func):
 @click.command()
 def app(address,
         keystore_path,
+        gas_price,
         eth_rpc_endpoint,
         registry_contract_address,
         discovery_contract_address,
@@ -531,12 +540,14 @@ def app(address,
     blockchain_service = BlockChainService(
         privatekey_bin,
         rpc_client,
+        GAS_LIMIT,
+        gas_price,
     )
 
     if sync_check:
         check_synced(blockchain_service)
 
-    discovery_tx_cost = GAS_PRICE * DISCOVERY_REGISTRATION_GAS
+    discovery_tx_cost = gas_price * DISCOVERY_REGISTRATION_GAS
     while True:
         balance = blockchain_service.client.balance(address)
         if discovery_tx_cost <= balance:
