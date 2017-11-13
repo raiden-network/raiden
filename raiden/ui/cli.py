@@ -10,6 +10,7 @@ import socket
 import errno
 import signal
 from itertools import count
+from ipaddress import IPv4Address, AddressValueError
 
 import click
 import gevent
@@ -18,7 +19,6 @@ import requests
 from requests.exceptions import RequestException
 from ethereum import slogging
 from ethereum.utils import denoms
-from ipaddress import IPv4Address, AddressValueError
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -111,14 +111,14 @@ def check_json_rpc(client):
     else:
         if client_version.startswith('Parity'):
             major, minor, patch = [
-                int(x) for x in re.search('//v(\d+)\.(\d+)\.(\d+)', client_version).groups()
+                int(x) for x in re.search(r'//v(\d+)\.(\d+)\.(\d+)', client_version).groups()
             ]
             if (major, minor, patch) < (1, 7, 6):
                 print('You need Byzantium enabled parity. >= 1.7.6 / 1.8.0')
                 return False
         elif client_version.startswith('Geth'):
             major, minor, patch = [
-                int(x) for x in re.search('/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
+                int(x) for x in re.search(r'/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
             ]
             if (major, minor, patch) < (1, 7, 2):
                 print('You need Byzantium enabled geth. >= 1.7.2')
@@ -134,7 +134,7 @@ def check_synced(blockchain_service):
     try:
         net_id = int(blockchain_service.client.call('net_version'))
         network = ID_TO_NETWORKNAME[net_id]
-    except:
+    except (EthNodeCommunicationError, RequestException):
         print(
             "Couldn't determine the network the ethereum node is connected.\n"
             "Because of this there is no way to determine the latest\n"
