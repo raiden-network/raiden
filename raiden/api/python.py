@@ -31,6 +31,9 @@ from raiden.exceptions import (
     NoPathError,
     NoTokenManager,
 )
+from raiden.settings import (
+    DEFAULT_POLL_TIMEOUT,
+)
 from raiden.utils import (
     isaddress,
     pex,
@@ -210,7 +213,7 @@ class RaidenAPI(object):
         channel = graph.partneraddress_to_channel[partner_address]
         return channel
 
-    def deposit(self, token_address, partner_address, amount):
+    def deposit(self, token_address, partner_address, amount, poll_timeout=DEFAULT_POLL_TIMEOUT):
         """ Deposit `amount` in the channel with the peer at `partner_address` and the
         given `token_address` in order to be able to do transfers.
 
@@ -268,17 +271,16 @@ class RaidenAPI(object):
         #
         # Usually a single sleep is sufficient, since the `deposit` waits for
         # the transaction to be polled.
-        wait_timeout_secs = 10  # FIXME: hardcoded timeout
         sucess = wait_until(
             lambda: channel.contract_balance != old_balance,
-            wait_timeout_secs,
+            poll_timeout,
             self.raiden.alarm.wait_time,
         )
 
         if not sucess:
             raise EthNodeCommunicationError(
                 'After {} seconds the deposit was not properly processed.'.format(
-                    wait_timeout_secs
+                    poll_timeout
                 )
             )
 
