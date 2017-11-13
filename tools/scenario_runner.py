@@ -20,6 +20,10 @@ from raiden.network.rpc.client import BlockChainService, JSONRPCClient
 from raiden.network.protocol import NODE_NETWORK_REACHABLE
 from raiden.ui.console import ConsoleTools
 from raiden.utils import split_endpoint
+from raiden.settings import (
+    GAS_LIMIT,
+    GAS_PRICE,
+)
 
 
 monkey.patch_all()
@@ -96,6 +100,8 @@ def run(privatekey,
     blockchain_service = BlockChainService(
         privatekey_bin,
         rpc_client,
+        GAS_LIMIT,
+        GAS_PRICE,
     )
 
     discovery = ContractDiscovery(

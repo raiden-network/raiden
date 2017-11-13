@@ -10,6 +10,7 @@ import socket
 import errno
 import signal
 from itertools import count
+from ipaddress import IPv4Address, AddressValueError
 
 import click
 import gevent
@@ -18,7 +19,6 @@ import requests
 from requests.exceptions import RequestException
 from ethereum import slogging
 from ethereum.utils import denoms
-from ipaddress import IPv4Address, AddressValueError
 
 from raiden.accounts import AccountManager
 from raiden.api.rest import APIServer, RestAPI
@@ -38,7 +38,8 @@ from raiden.network.rpc.client import (
 from raiden.settings import (
     DEFAULT_NAT_KEEPALIVE_RETRIES,
     ETHERSCAN_API,
-    GAS_PRICE,
+    GAS_LIMIT,
+    GAS_PRICE_ROPSTEN,
     INITIAL_PORT,
     ORACLE_BLOCKNUMBER_DRIFT_TOLERANCE,
 )
@@ -111,14 +112,14 @@ def check_json_rpc(client):
     else:
         if client_version.startswith('Parity'):
             major, minor, patch = [
-                int(x) for x in re.search('//v(\d+)\.(\d+)\.(\d+)', client_version).groups()
+                int(x) for x in re.search(r'//v(\d+)\.(\d+)\.(\d+)', client_version).groups()
             ]
             if (major, minor, patch) < (1, 7, 6):
                 print('You need Byzantium enabled parity. >= 1.7.6 / 1.8.0')
                 return False
         elif client_version.startswith('Geth'):
             major, minor, patch = [
-                int(x) for x in re.search('/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
+                int(x) for x in re.search(r'/v(\d+)\.(\d+)\.(\d+)', client_version).groups()
             ]
             if (major, minor, patch) < (1, 7, 2):
                 print('You need Byzantium enabled geth. >= 1.7.2')
@@ -134,7 +135,7 @@ def check_synced(blockchain_service):
     try:
         net_id = int(blockchain_service.client.call('net_version'))
         network = ID_TO_NETWORKNAME[net_id]
-    except:
+    except (EthNodeCommunicationError, RequestException):
         print(
             "Couldn't determine the network the ethereum node is connected.\n"
             "Because of this there is no way to determine the latest\n"
@@ -275,6 +276,13 @@ OPTIONS = [
               ' provide it using this argument.'),
         default=None,
         type=click.Path(exists=True),
+        show_default=True,
+    ),
+    click.option(
+        '--gas-price',
+        help="Set the Ethereum transaction's gas price",
+        default=GAS_PRICE_ROPSTEN,
+        type=int,
         show_default=True,
     ),
     click.option(
@@ -444,6 +452,7 @@ def options(func):
 @click.command()
 def app(address,
         keystore_path,
+        gas_price,
         eth_rpc_endpoint,
         registry_contract_address,
         discovery_contract_address,
@@ -531,12 +540,14 @@ def app(address,
     blockchain_service = BlockChainService(
         privatekey_bin,
         rpc_client,
+        GAS_LIMIT,
+        gas_price,
     )
 
     if sync_check:
         check_synced(blockchain_service)
 
-    discovery_tx_cost = GAS_PRICE * DISCOVERY_REGISTRATION_GAS
+    discovery_tx_cost = gas_price * DISCOVERY_REGISTRATION_GAS
     while True:
         balance = blockchain_service.client.balance(address)
         if discovery_tx_cost <= balance:

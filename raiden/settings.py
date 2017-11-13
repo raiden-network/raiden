@@ -8,6 +8,7 @@ ESTIMATED_BLOCK_TIME = 7
 GAS_LIMIT = 3141592  # Morden's gasLimit.
 GAS_LIMIT_HEX = '0x' + int_to_big_endian(GAS_LIMIT).encode('hex')
 GAS_PRICE = denoms.shannon * 20
+GAS_PRICE_ROPSTEN = denoms.shannon * 200
 
 DEFAULT_PROTOCOL_RETRIES_BEFORE_BACKOFF = 5
 DEFAULT_PROTOCOL_THROTTLE_CAPACITY = 10.

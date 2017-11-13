@@ -284,7 +284,7 @@ def get_filter_events(jsonrpc_client, contract_address, topics, from_block=None,
     return result
 
 
-def estimate_and_transact(classobject, callobj, *args):
+def estimate_and_transact(callobj, startgas, gasprice, *args):
     """Estimate gas using eth_estimateGas. Multiply by 2 to make sure sufficient gas is provided
     Limit maximum gas to GAS_LIMIT to avoid exceeding blockgas limit
     """
@@ -295,14 +295,14 @@ def estimate_and_transact(classobject, callobj, *args):
     #
     # estimated_gas = callobj.estimate_gas(
     #     *args,
-    #     startgas=classobject.startgas,
-    #     gasprice=classobject.gasprice
+    #     startgas=startgas,
+    #     gasprice=gasprice
     # )
     estimated_gas = GAS_LIMIT
     transaction_hash = callobj.transact(
         *args,
         startgas=estimated_gas,
-        gasprice=classobject.gasprice
+        gasprice=gasprice
     )
     return transaction_hash
 
@@ -1085,7 +1085,14 @@ class BlockChainService(object):
     """ Exposes the blockchain's state through JSON-RPC. """
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, privatekey_bin, jsonrpc_client, poll_timeout=DEFAULT_POLL_TIMEOUT):
+    def __init__(
+            self,
+            privatekey_bin,
+            jsonrpc_client,
+            startgas,
+            gasprice,
+            poll_timeout=DEFAULT_POLL_TIMEOUT):
+
         self.address_to_token = dict()
         self.address_to_discovery = dict()
         self.address_to_nettingchannel = dict()
@@ -1095,6 +1102,8 @@ class BlockChainService(object):
         self.private_key = privatekey_bin
         self.node_address = privatekey_to_address(privatekey_bin)
         self.poll_timeout = poll_timeout
+        self.startgas = startgas
+        self.gasprice = gasprice
 
     def block_number(self):
         return self.client.blocknumber()
@@ -1159,7 +1168,9 @@ class BlockChainService(object):
             self.address_to_token[token_address] = Token(
                 self.client,
                 token_address,
-                poll_timeout=self.poll_timeout,
+                self.startgas,
+                self.gasprice,
+                self.poll_timeout,
             )
 
         return self.address_to_token[token_address]
@@ -1173,7 +1184,9 @@ class BlockChainService(object):
             self.address_to_discovery[discovery_address] = Discovery(
                 self.client,
                 discovery_address,
-                poll_timeout=self.poll_timeout
+                self.startgas,
+                self.gasprice,
+                self.poll_timeout,
             )
 
         return self.address_to_discovery[discovery_address]
@@ -1187,7 +1200,9 @@ class BlockChainService(object):
             channel = NettingChannel(
                 self.client,
                 netting_channel_address,
-                poll_timeout=self.poll_timeout,
+                self.startgas,
+                self.gasprice,
+                self.poll_timeout,
             )
             self.address_to_nettingchannel[netting_channel_address] = channel
 
@@ -1201,7 +1216,9 @@ class BlockChainService(object):
             self.address_to_registry[registry_address] = Registry(
                 self.client,
                 registry_address,
-                poll_timeout=self.poll_timeout,
+                self.startgas,
+                self.gasprice,
+                self.poll_timeout,
             )
 
         return self.address_to_registry[registry_address]
@@ -1304,8 +1321,8 @@ class Discovery(object):
             self,
             jsonrpc_client,
             discovery_address,
-            startgas=GAS_LIMIT,
-            gasprice=GAS_PRICE,
+            startgas,
+            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         if not isaddress(discovery_address):
@@ -1341,7 +1358,7 @@ class Discovery(object):
         transaction_hash = self.proxy.registerEndpoint.transact(
             endpoint,
             gasprice=self.gasprice,
-            startgas=DISCOVERY_REGISTRATION_GAS
+            startgas=DISCOVERY_REGISTRATION_GAS,
         )
 
         self.client.poll(
@@ -1379,8 +1396,8 @@ class Token(object):
             self,
             jsonrpc_client,
             token_address,
-            startgas=GAS_LIMIT,
-            gasprice=GAS_PRICE,
+            startgas,
+            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         if not isaddress(token_address):
@@ -1416,8 +1433,9 @@ class Token(object):
         # `NettingChannel` and keep this straight forward)
 
         transaction_hash = estimate_and_transact(
-            self,
             self.proxy.approve,
+            self.startgas,
+            self.gasprice,
             contract_address,
             allowance,
         )
@@ -1433,8 +1451,9 @@ class Token(object):
 
     def transfer(self, to_address, amount):
         transaction_hash = estimate_and_transact(
-            self,
             self.proxy.transfer,  # pylint: disable=no-member
+            self.startgas,
+            self.gasprice,
             to_address,
             amount,
         )
@@ -1452,8 +1471,8 @@ class Registry(object):
             self,
             jsonrpc_client,
             registry_address,
-            startgas=GAS_LIMIT,
-            gasprice=GAS_PRICE,
+            startgas,
+            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
@@ -1497,8 +1516,9 @@ class Registry(object):
             raise ValueError('token_address must be a valid address')
 
         transaction_hash = estimate_and_transact(
-            self,
             self.proxy.addToken,
+            self.startgas,
+            self.gasprice,
             token_address,
         )
 
@@ -1561,7 +1581,9 @@ class Registry(object):
             manager = ChannelManager(
                 self.client,
                 manager_address,
-                poll_timeout=self.poll_timeout,
+                self.startgas,
+                self.gasprice,
+                self.poll_timeout,
             )
 
             token_address = manager.token_address()
@@ -1593,7 +1615,9 @@ class Registry(object):
             manager = ChannelManager(
                 self.client,
                 manager_address,
-                poll_timeout=self.poll_timeout,
+                self.startgas,
+                self.gasprice,
+                self.poll_timeout,
             )
 
             self.token_to_channelmanager[token_address] = manager
@@ -1607,8 +1631,8 @@ class ChannelManager(object):
             self,
             jsonrpc_client,
             manager_address,
-            startgas=GAS_LIMIT,
-            gasprice=GAS_PRICE,
+            startgas,
+            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
         # pylint: disable=too-many-arguments
 
@@ -1667,8 +1691,9 @@ class ChannelManager(object):
             other = peer1
 
         transaction_hash = estimate_and_transact(
-            self,
             self.proxy.newChannel,
+            self.startgas,
+            self.gasprice,
             other,
             settle_timeout,
         )
@@ -1756,8 +1781,8 @@ class NettingChannel(object):
             self,
             jsonrpc_client,
             channel_address,
-            startgas=GAS_LIMIT,
-            gasprice=GAS_PRICE,
+            startgas,
+            gasprice,
             poll_timeout=DEFAULT_POLL_TIMEOUT):
 
         self.address = channel_address
@@ -1931,7 +1956,9 @@ class NettingChannel(object):
         token = Token(
             self.client,
             token_address,
-            poll_timeout=self.poll_timeout,
+            self.startgas,
+            self.gasprice,
+            self.poll_timeout,
         )
         current_balance = token.balance_of(self.node_address)
 
@@ -1944,7 +1971,12 @@ class NettingChannel(object):
         if log.isEnabledFor(logging.INFO):
             log.info('deposit called', contract=pex(self.address), amount=amount)
 
-        transaction_hash = estimate_and_transact(self, self.proxy.deposit, amount)
+        transaction_hash = estimate_and_transact(
+            self.proxy.deposit,
+            self.startgas,
+            self.gasprice,
+            amount,
+        )
 
         self.client.poll(
             transaction_hash.decode('hex'),
@@ -1978,8 +2010,9 @@ class NettingChannel(object):
             )
 
         transaction_hash = estimate_and_transact(
-            self,
             self.proxy.close,
+            self.startgas,
+            self.gasprice,
             nonce,
             transferred_amount,
             locksroot,
@@ -2027,8 +2060,9 @@ class NettingChannel(object):
                 )
 
             transaction_hash = estimate_and_transact(
-                self,
                 self.proxy.updateTransfer,
+                self.startgas,
+                self.gasprice,
                 nonce,
                 transferred_amount,
                 locksroot,
@@ -2081,8 +2115,9 @@ class NettingChannel(object):
             merkleproof_encoded = ''.join(merkle_proof)
 
             transaction_hash = estimate_and_transact(
-                self,
                 self.proxy.withdraw,
+                self.startgas,
+                self.gasprice,
                 locked_encoded,
                 merkleproof_encoded,
                 secret,
@@ -2116,8 +2151,9 @@ class NettingChannel(object):
             log.info('settle called')
 
         transaction_hash = estimate_and_transact(
-            self,
             self.proxy.settle,
+            self.startgas,
+            self.gasprice,
         )
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
