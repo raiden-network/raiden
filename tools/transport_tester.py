@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """  # noqa
 Usage:
     transport_tester.py [--stun-host=<stun host>] [--ip=<ip>] [--port=<port>] [<target_ip_optional_port>]
