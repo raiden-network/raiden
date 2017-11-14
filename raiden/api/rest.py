@@ -374,12 +374,24 @@ class RestAPI(object):
             initial_channel_target=None,
             joinable_funds_target=None):
 
-        self.raiden_api.connect_token_network(
-            token_address,
-            funds,
-            initial_channel_target,
-            joinable_funds_target
-        )
+        try:
+            self.raiden_api.connect_token_network(
+                token_address,
+                funds,
+                initial_channel_target,
+                joinable_funds_target
+            )
+        except EthNodeCommunicationError as e:
+            return api_error(
+                errors=str(e),
+                status_code=httplib.REQUEST_TIMEOUT
+            )
+        except InsufficientFunds as e:
+            return api_error(
+                errors=str(e),
+                status_code=httplib.PAYMENT_REQUIRED
+            )
+
         return api_response(
             result=dict(),
             status_code=httplib.NO_CONTENT
