@@ -22,7 +22,7 @@ class MessageLoggerTransport(DummyTransport):
             throttle_policy=DummyPolicy()):
 
         super(MessageLoggerTransport, self).__init__(host, port, protocol, throttle_policy)
-        self.addresses_to_messages = {}
+        self.addresses_to_messages = dict()
 
     def send(self, sender, host_port, bytes_):
         self.addresses_to_messages.setdefault(sender.address, []).append(decode(bytes_))
