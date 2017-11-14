@@ -105,6 +105,8 @@ def get_static_or_compile(
     if _solidity.get_solidity() is None:
         raise RuntimeError('The solidity compiler, `solc`, is not available.')
 
+    validate_solc()
+
     compiled = _solidity.compile_contract(
         contract_path,
         contract_name,
@@ -123,6 +125,31 @@ def contract_checksum(contract_path):
     with open(contract_path) as f:
         checksum = hashlib.sha1(f.read()).hexdigest()
         return checksum
+
+
+def validate_solc():
+    import subprocess
+
+    try:
+        _solidity.compile_contract(
+            get_contract_path('HumanStandardToken.sol'),
+            'HumanStandardToken',
+            combined='abi',
+            optimize=False,
+        )
+    except subprocess.CalledProcessError as e:
+        msg = (
+            'The solidity compiler failed to execute. Please make sure that you\n'
+            'are using the binary version of the compiler (solc-js is not compatible)\n'
+        )
+
+        if e.output:
+            msg += (
+                '\n'
+                'Output: ' + e.output
+            )
+
+        raise RuntimeError(msg)
 
 
 class ContractManager(object):
