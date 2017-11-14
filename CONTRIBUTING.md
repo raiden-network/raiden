@@ -247,6 +247,8 @@ Lists of objects:
 
 - `<name>s`, e.g. `channels` for a list `Channel` object instances.
 
+- to initialize an empty list use `list()` instead of `[]`. Note this is only for style consistency's sake and may change in the future as there [may be](https://stackoverflow.com/questions/5790860/and-vs-list-and-dict-which-is-better) a tiny change in performance.
+
 Mappings/dicts:
 
 If it is a simple one to one mapping
@@ -256,6 +258,8 @@ If it is a simple one to one mapping
 If the mapped to object is a list then add an `s`
 
 `<name>_to_<name>s`, e.g. `tokenaddress_to_taskmanagers = defaultdict(list())`
+
+To initialize an empty dict use `dict()` instead of `{}`. Note this is only for style consistency's sake and may change in the future as there [may be](https://stackoverflow.com/questions/5790860/and-vs-list-and-dict-which-is-better) a tiny change in performance.
 
 #### Solidity
 
