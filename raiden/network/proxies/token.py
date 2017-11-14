@@ -71,8 +71,43 @@ class Token(object):
 
         self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
+
         if receipt_or_none:
-            raise TransactionThrew('Approve', receipt_or_none)
+            user_balance = self.balance_of(self.client.sender)
+
+            # If the balance is zero, either the smart contract doesnt have a
+            # balanceOf function or the actual balance is zero
+            if user_balance == 0:
+                msg = (
+                    "Approve failed. \n"
+                    "Your account balance is 0 (zero), either the smart "
+                    "contract is not a valid ERC20 token or you don't have funds "
+                    "to use for openning a channel. "
+                )
+                raise TransactionThrew(msg, receipt_or_none)
+
+            # The approve call failed, check the user has enough balance
+            # (assuming the token smart contract may check for the maximum
+            # allowance, which is not necessarily the case)
+            elif user_balance < allowance:
+                msg = (
+                    'Approve failed. \n'
+                    'Your account balance is {}, nevertheless the call to '
+                    'approve failed. Please make sure the corresponding smart '
+                    'contract is a valid ERC20 token.'
+                ).format(user_balance)
+                raise TransactionThrew(msg, receipt_or_none)
+
+            # If the user has enough balance, warn the user the smart contract
+            # may not have the approve function.
+            else:
+                msg = (
+                    'Approve failed. \n'
+                    'Your account balance is {}, the request allowance is {}. '
+                    'The smart contract may be rejecting your request for the '
+                    'lack of balance.'
+                ).format(user_balance, allowance)
+                raise TransactionThrew(msg, receipt_or_none)
 
     def balance_of(self, address):
         """ Return the balance of `address`. """
