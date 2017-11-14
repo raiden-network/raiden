@@ -124,6 +124,13 @@ def monkey_patch_tester():
     tester.processblock.apply_transaction = apply_transaction
 
 
+@pytest.fixture(scope='session', autouse=True)
+def validate_solidity_compiler():
+    """ Check the solc prior to running any test. """
+    from raiden.blockchain.abi import validate_solc
+    validate_solc()
+
+
 # Connect catchlog's handler to slogging's root logger
 @pytest.hookimpl(hookwrapper=True, trylast=True)
 def pytest_runtest_call(item):

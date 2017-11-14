@@ -784,6 +784,7 @@ def smoketest(ctx, debug, **kwargs):
     """ Test, that the raiden installation is sane.
     """
     from raiden.api.python import RaidenAPI
+    from raiden.blockchain.abi import validate_solc
 
     report_file = tempfile.mktemp(suffix='.log')
     open(report_file, 'w+')
@@ -796,6 +797,8 @@ def smoketest(ctx, debug, **kwargs):
 
     append_report('raiden version', json.dumps(get_system_spec()))
     append_report('raiden log', None)
+
+    validate_solc()
 
     print('[1/5] getting smoketest configuration')
     smoketest_config = load_or_create_smoketest_config()
