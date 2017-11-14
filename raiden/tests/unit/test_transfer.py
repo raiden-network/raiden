@@ -394,7 +394,7 @@ def test_cancel_transfer(raiden_chain, token_addresses, deposit):
         app2.raiden.address,
         identifier_refund,
     )
-    assert async_result.wait() is False, 'there is not path with capacity, the transfer must fail'
+    assert async_result.wait() is False, 'there is no path with capacity, the transfer must fail'
 
     gevent.sleep(0.2)
 

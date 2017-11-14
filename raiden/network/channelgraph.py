@@ -133,7 +133,7 @@ def get_best_routes(
     # distributable amount, but to sort them based on available balance and
     # let the task use as many as required to finish the transfer.
 
-    online_nodes = []
+    online_nodes = list()
 
     neighbors_heap = ordered_neighbors(
         channel_graph.graph,
