@@ -599,6 +599,14 @@ Possible Responses
 | 204 NO CONTENT   | For a successful          |
 |                  | connection creation       |
 +------------------+---------------------------+
+| 402 Payment      | If any of the channel     |
+|     required     | deposits fail  due to     |
+|                  | insufficient ETH balance  |
++------------------+---------------------------+
+| 408 Timeout      | If a timeout happened     |
+|                  | during any of the         |
+|                  | transactions              |
++------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
 +------------------+---------------------------+
 
