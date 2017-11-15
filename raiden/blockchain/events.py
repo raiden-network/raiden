@@ -254,7 +254,7 @@ class BlockchainEvents(object):
     def __init__(self):
         self.event_listeners = list()
 
-    def poll_all_event_listeners(self):
+    def poll_all_event_listeners(self, from_block=None):
         result = list()
         reinstalled_filters = False
 
@@ -277,15 +277,13 @@ class BlockchainEvents(object):
                     updated_event_listerners = list()
 
                     for event_listener in self.event_listeners:
-                        print "reinstalling filter for", event_listener.event_name
                         new_listener = EventListener(
                             event_listener.event_name,
-                            event_listener.filter_creation_function(),
+                            event_listener.filter_creation_function(from_block=from_block),
                             event_listener.translator,
                             event_listener.filter_creation_function,
                         )
                         updated_event_listerners.append(new_listener)
-                        del event_listener  #FIXME: remove this after testing
 
                     self.event_listeners = updated_event_listerners
                 else:
@@ -293,8 +291,8 @@ class BlockchainEvents(object):
 
         return result
 
-    def poll_state_change(self):
-        for event in self.poll_all_event_listeners():
+    def poll_state_change(self, from_block=None):
+        for event in self.poll_all_event_listeners(from_block):
             yield event_to_state_change(event)
 
     def uninstall_all_event_listeners(self):
@@ -337,8 +335,8 @@ class BlockchainEvents(object):
         )
 
     def add_netting_channel_listener(self, netting_channel_proxy):
-        channel_address = netting_channel_proxy.address
         netting_channel_events = netting_channel_proxy.all_events_filter()
+        channel_address = netting_channel_proxy.address
 
         self.add_event_listener(
             'NettingChannel Event {}'.format(pex(channel_address)),
