@@ -407,7 +407,7 @@ class RaidenService(object):
         # pylint: disable=unused-argument
         on_statechange = self.state_machine_event_handler.on_blockchain_statechange
 
-        for state_change in self.blockchain_events.poll_state_change():
+        for state_change in self.blockchain_events.poll_state_change(self._blocknumber):
             on_statechange(state_change)
 
     def find_channel_by_address(self, netting_channel_address_bin):
