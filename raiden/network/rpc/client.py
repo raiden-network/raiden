@@ -22,12 +22,14 @@ from tinyrpc.protocols.jsonrpc import (
     JSONRPCSuccessResponse,
 )
 from tinyrpc.transports.http import HttpPostClientTransport
+from tinyrpc.exc import InvalidReplyError
 import requests
 
 from raiden.exceptions import (
     AddressWithoutCode,
     EthNodeCommunicationError,
 )
+from raiden.network.protocol import timeout_two_stage
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
 from raiden.settings import (
     GAS_PRICE,
@@ -160,6 +162,25 @@ class JSONRPCClient(object):
             `nonce_update_interval` seconds.
         nonce_offset (int): Network's default base nonce number.
     """
+
+    def _check_node_connection(func):
+
+        def retry_if_disconnect(self, *args, **kwargs):
+            for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
+                try:
+                    result = func(self, *args, **kwargs)
+                    if i > 0:
+                        log.info('Client reconnected')
+                    return result
+
+                except (requests.exceptions.ConnectionError, InvalidReplyError):
+                    log.info(
+                        'Timeout in eth client connection. Is the client offline? Trying'
+                        ' again in {}s.'.format(timeout)
+                    )
+                gevent.sleep(timeout)
+
+        return retry_if_disconnect
 
     def __init__(self, host, port, privkey, nonce_update_interval=5.0, nonce_offset=0):
         endpoint = 'http://{}:{}'.format(host, port)
@@ -449,6 +470,7 @@ class JSONRPCClient(object):
             for c in changes
         ]
 
+    @_check_node_connection
     def call(self, method, *args):
         """ Do the request and return the result.
 
@@ -543,7 +565,7 @@ class JSONRPCClient(object):
         data field contains code.
 
         Args:
-            from (address): The 20 bytes address the transaction is sent from.
+            sender (address): The 20 bytes address the transaction is sent from.
             to (address): DATA, 20 Bytes - (optional when creating new
                 contract) The address the transaction is directed to.
             gas (int): Gas provided for the transaction execution. It will
@@ -598,7 +620,7 @@ class JSONRPCClient(object):
         transaction on the blockchain.
 
         Args:
-            from: The address the transaction is sent from.
+            sender: The address the transaction is sent from.
             to: The address the transaction is directed to.
             gas (int): Gas provided for the transaction execution. eth_call
                 consumes zero gas, but this parameter may be needed by some
@@ -636,7 +658,7 @@ class JSONRPCClient(object):
         gas.
 
         Args:
-            from: The address the transaction is sent from.
+            sender: The address the transaction is sent from.
             to: The address the transaction is directed to.
             gas (int): Gas provided for the transaction execution. eth_call
                 consumes zero gas, but this parameter may be needed by some
@@ -690,7 +712,7 @@ class JSONRPCClient(object):
 
         Args:
             address: An address.
-            block_number: Integer block number, or the string 'latest',
+            block: Integer block number, or the string 'latest',
                 'earliest' or 'pending'.
         """
         if address.startswith('0x'):

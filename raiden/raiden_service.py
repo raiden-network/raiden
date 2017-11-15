@@ -18,6 +18,7 @@ from raiden.constants import (
     UINT64_MAX,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX,
+    ROPSTEN_REGISTRY_ADDRESS,
 )
 from raiden.blockchain.events import (
     get_relevant_proxies,
@@ -85,7 +86,6 @@ from raiden.transfer.merkle_tree import (
 from raiden.network.protocol import (
     RaidenProtocol,
 )
-from raiden.constants import ROPSTEN_REGISTRY_ADDRESS
 from raiden.connection_manager import ConnectionManager
 from raiden.utils import (
     isaddress,
@@ -237,6 +237,7 @@ class RaidenService(object):
         self.greenlet_task_dispatcher = GreenletTasksDispatcher()
         self.on_message = self.message_handler.on_message
         self.alarm = AlarmTask(chain)
+        self.shutdown_timeout = config['shutdown_timeout']
         self._blocknumber = None
 
         self.transaction_log = StateChangeLog(
@@ -311,13 +312,22 @@ class RaidenService(object):
         wait_for = [self.alarm]
         wait_for.extend(self.protocol.greenlets)
         wait_for.extend(self.greenlet_task_dispatcher.stop())
-        gevent.wait(wait_for)
+        # We need a timeout to prevent an endless loop from trying to
+        # contact the disconnected client
+        gevent.wait(wait_for, timeout=self.shutdown_timeout)
 
         # Filters must be uninstalled after the alarm task has stopped. Since
         # the events are polled by a alarm task callback, if the filters are
         # uninstalled before the alarm task is fully stopped the callback
         # `poll_blockchain_events` will fail.
-        self.blockchain_events.uninstall_all_event_listeners()
+        #
+        # We need a timeout to prevent an endless loop from trying to
+        # contact the disconnected client
+        try:
+            with gevent.Timeout(self.shutdown_timeout):
+                self.blockchain_events.uninstall_all_event_listeners()
+        except gevent.timeout.Timeout:
+            pass
 
         # save the state after all tasks are done
         if self.serialization_file:

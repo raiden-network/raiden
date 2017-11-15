@@ -103,6 +103,18 @@ def timeout_exponential_backoff(retries, timeout, maximum):
         yield maximum
 
 
+def timeout_two_stage(retries, timeout1, timeout2):
+    """ Timeouts generator with a two stage strategy
+
+    Timeouts start spaced by `timeout1`, after `retries` increase
+    to `timeout2` which is repeated indefinitely.
+    """
+    for _ in xrange(retries):
+        yield timeout1
+    while True:
+        yield timeout2
+
+
 def retry(protocol, data, receiver_address, event_stop, timeout_backoff):
     """ Send data until it's acknowledged.
 
