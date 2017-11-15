@@ -15,6 +15,7 @@ from raiden.settings import (
     DEFAULT_PROTOCOL_RETRY_INTERVAL,
     DEFAULT_REVEAL_TIMEOUT,
     DEFAULT_SETTLE_TIMEOUT,
+    DEFAULT_SHUTDOWN_TIMEOUT,
     INITIAL_PORT,
 )
 from raiden.network.transport import UDPTransport, TokenBucket
@@ -46,6 +47,7 @@ class App(object):  # pylint: disable=too-few-public-methods
         },
         'rpc': True,
         'console': False,
+        'shutdown_timeout': DEFAULT_SHUTDOWN_TIMEOUT,
     }
 
     def __init__(self, config, chain, default_registry, discovery, transport_class=UDPTransport):

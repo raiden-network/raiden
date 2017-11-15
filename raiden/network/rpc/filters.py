@@ -128,7 +128,4 @@ class Filter(object):
         return self._query_filter('eth_getFilterLogs')
 
     def uninstall(self):
-        self.client.call(
-            'eth_uninstallFilter',
-            self.filter_id_raw,
-        )
+        self.client.call('eth_uninstallFilter', self.filter_id_raw)

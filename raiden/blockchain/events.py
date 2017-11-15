@@ -21,11 +21,14 @@ from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveSettled,
     ContractReceiveWithdraw,
 )
-from raiden.exceptions import AddressWithoutCode
+from raiden.exceptions import (
+    AddressWithoutCode,
+    EthNodeCommunicationError,
+)
 
 EventListener = namedtuple(
     'EventListener',
-    ('event_name', 'filter', 'translator'),
+    ('event_name', 'filter', 'translator', 'filter_creation_function'),
 )
 Event = namedtuple(
     'BlockchainEvent',
@@ -253,13 +256,40 @@ class BlockchainEvents(object):
 
     def poll_all_event_listeners(self):
         result = list()
+        reinstalled_filters = False
 
-        for event_listener in self.event_listeners:
-            decoded_events = poll_event_listener(
-                event_listener.filter,
-                event_listener.translator,
-            )
-            result.extend(decoded_events)
+        while True:
+            try:
+                for event_listener in self.event_listeners:
+                    decoded_events = poll_event_listener(
+                        event_listener.filter,
+                        event_listener.translator,
+                    )
+                    result.extend(decoded_events)
+                break
+            except EthNodeCommunicationError as e:
+                # If the eth client has restarted and we reconnected to it then
+                # filters will no longer exist there. In that case we will need
+                # to recreate all the filters.
+                if not reinstalled_filters and str(e) == 'filter not found':
+                    result = list()
+                    reinstalled_filters = True
+                    updated_event_listerners = list()
+
+                    for event_listener in self.event_listeners:
+                        print "reinstalling filter for", event_listener.event_name
+                        new_listener = EventListener(
+                            event_listener.event_name,
+                            event_listener.filter_creation_function(),
+                            event_listener.translator,
+                            event_listener.filter_creation_function,
+                        )
+                        updated_event_listerners.append(new_listener)
+                        del event_listener  #FIXME: remove this after testing
+
+                    self.event_listeners = updated_event_listerners
+                else:
+                    raise e
 
         return result
 
@@ -273,11 +303,12 @@ class BlockchainEvents(object):
 
         self.event_listeners = list()
 
-    def add_event_listener(self, event_name, eth_filter, translator):
+    def add_event_listener(self, event_name, eth_filter, translator, filter_creation_function):
         event = EventListener(
             event_name,
             eth_filter,
             translator,
+            filter_creation_function,
         )
         self.event_listeners.append(event)
 
@@ -291,6 +322,7 @@ class BlockchainEvents(object):
             'Registry {}'.format(pex(registry_address)),
             tokenadded,
             CONTRACT_MANAGER.get_translator(CONTRACT_REGISTRY),
+            registry_proxy.tokenadded_filter,
         )
 
     def add_channel_manager_listener(self, channel_manager_proxy):
@@ -301,6 +333,7 @@ class BlockchainEvents(object):
             'ChannelManager {}'.format(pex(manager_address)),
             channelnew,
             CONTRACT_MANAGER.get_translator('channel_manager'),
+            channel_manager_proxy.channelnew_filter,
         )
 
     def add_netting_channel_listener(self, netting_channel_proxy):
@@ -311,6 +344,7 @@ class BlockchainEvents(object):
             'NettingChannel Event {}'.format(pex(channel_address)),
             netting_channel_events,
             CONTRACT_MANAGER.get_translator('netting_channel'),
+            netting_channel_proxy.all_events_filter,
         )
 
     def add_proxies_listeners(self, proxies):
