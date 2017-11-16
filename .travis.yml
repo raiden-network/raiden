@@ -4,6 +4,9 @@ sudo: true
 language: python
 python:
 - '2.7'
+os:
+  - linux
+  - osx
 env:
   global:
   - GETH_URL='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.7.2-1db4ecdc.tar.gz'
