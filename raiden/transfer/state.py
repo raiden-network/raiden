@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 from raiden.transfer.architecture import State
 from raiden.utils import pex
-from raiden.exceptions import HashLengthNot32
 # pylint: disable=too-few-public-methods,too-many-arguments,too-many-instance-attributes
 
 CHANNEL_STATE_CLOSED = 'closed'

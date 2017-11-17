@@ -285,7 +285,7 @@ if __name__ == '__main__':
                 num_nodes=args.nodes,
                 channels_per_node=args.channels_per_node,
             )
-        except:
+        except: # noqa
             import pdb
             pdb.xpm()
     else:

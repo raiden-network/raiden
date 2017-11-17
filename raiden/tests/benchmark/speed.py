@@ -220,7 +220,7 @@ def main():
                 test_throughput(apps, tokens, args.transfers, amount)
             else:
                 test_latency(apps, tokens, args.transfers, amount)
-        except:
+        except: # noqa
             import pdb
             pdb.xpm()
     else:

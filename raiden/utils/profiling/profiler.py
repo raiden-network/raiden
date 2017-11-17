@@ -44,7 +44,7 @@ _state = None
 #        perf_counter = It does include time elapsed during sleep and is system-wide.
 try:
     clock = time.perf_counter  # pylint: disable=no-member
-except:
+except AttributeError:
     clock = time.clock
 
 # info is used to store the function name/module/lineno
