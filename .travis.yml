@@ -8,15 +8,15 @@ env:
   - GETH_VERSION='1.7.2'
   - SOLC_URL='https://github.com/ethereum/solidity/releases/download/v0.4.18/solc-static-linux'
   - SOLC_VERSION='v0.4.18'
-  matrix:
-    include:
-    - os: linux
-      sudo: required
-      python: 2.7
-      env: TEST_TYPE='unit'
-    - os: osx
-      language: generic
-      env: TEST_TYPE='unit'
+matrix:
+  include:
+  - os: linux
+    sudo: required
+    python: 2.7
+    env: TEST_TYPE='unit'
+  - os: osx
+    language: generic
+    env: TEST_TYPE='unit'
   # - TEST_TYPE='smart_contracts'
   # - TEST_TYPE='property'
   # - TEST_TYPE='long_running' BLOCKCHAIN_TYPE='--blockchain-type=tester'
