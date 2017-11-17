@@ -82,7 +82,6 @@ def test_end_state():
     assert state1.balance(state2) == balance1
     assert state2.balance(state1) == balance2
 
-
     assert state1.is_locked(lock_hashlock) is False
     assert state2.is_locked(lock_hashlock) is False
 
@@ -177,7 +176,6 @@ def test_end_state():
     assert state2.contract_balance == balance2
     assert state1.balance(state2) == balance1 + 10
     assert state2.balance(state1) == balance2
-
 
     assert state1.is_locked(lock_hashlock) is False
     assert state2.is_locked(lock_hashlock) is False

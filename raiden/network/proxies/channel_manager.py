@@ -27,8 +27,6 @@ from raiden.exceptions import (
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
-    GAS_LIMIT,
-    GAS_PRICE,
 )
 from raiden.utils import (
     address_decoder,

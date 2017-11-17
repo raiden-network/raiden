@@ -21,8 +21,6 @@ from raiden.utils import (
 )
 from raiden.settings import (
     DEFAULT_POLL_TIMEOUT,
-    GAS_LIMIT,
-    GAS_PRICE,
 )
 from raiden.network.proxies.channel_manager import ChannelManager
 from raiden.network.rpc.client import check_address_has_code

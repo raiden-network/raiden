@@ -105,7 +105,7 @@ class AlarmTask(Task):
             for callback in self.callbacks:
                 try:
                     result = callback(current_block)
-                except:  # pylint: disable=bare-except
+                except:  # pylint: disable=bare-except # noqa
                     log.exception('unexpected exception on alarm')
                 else:
                     if result is REMOVE_CALLBACK:

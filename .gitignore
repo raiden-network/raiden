@@ -80,3 +80,7 @@ raiden/raidenwebui/node_modules/
 # never check in the smoketest_config.json
 smoketest_config.json
 /raiden/ui/web/node_modules/*
+
+# editors
+.idea
+.vscode
