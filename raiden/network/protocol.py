@@ -36,7 +36,8 @@ from raiden.utils import isaddress, sha3, pex
 from raiden.utils.notifying_queue import NotifyingQueue
 
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
-ping_log = slogging.get_logger(__name__ + '.ping')  # pylint: disable=invalid-name
+healthcheck_log = slogging.get_logger(__name__ + '.healthcheck')
+ping_log = slogging.get_logger(__name__ + '.ping')
 
 # - async_result available for code that wants to block on message acknowledgment
 # - receiver_address used to tie back the echohash to the receiver (mainly for
@@ -319,6 +320,13 @@ def healthcheck(
 
     """ Sends a periodical Ping to `receiver_address` to check its health. """
 
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug(
+            'starting healthcheck for',
+            node=pex(protocol.raiden.address),
+            to=pex(receiver_address),
+        )
+
     # The state of the node is unknown, the events are set to allow the tasks
     # to do work.
     protocol.set_node_network_state(
@@ -333,6 +341,13 @@ def healthcheck(
     try:
         protocol.get_host_port(receiver_address)
     except UnknownAddress:
+        if log.isEnabledFor(logging.DEBUG):
+            log.debug(
+                'waiting for endpoint registration',
+                node=pex(protocol.raiden.address),
+                to=pex(receiver_address),
+            )
+
         event_healthy.clear()
         event_unhealthy.set()
 
@@ -378,6 +393,17 @@ def healthcheck(
             return
 
         if not acknowledged:
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'node is unresponsive',
+                    node=pex(protocol.raiden.address),
+                    to=pex(receiver_address),
+                    current_state=protocol.get_node_network_state(receiver_address),
+                    new_state=NODE_NETWORK_UNREACHABLE,
+                    retries=nat_keepalive_retries,
+                    timeout=nat_keepalive_timeout,
+                )
+
             # The node is not healthy, clear the event to stop all queue
             # tasks
             protocol.set_node_network_state(
@@ -399,6 +425,15 @@ def healthcheck(
             )
 
         if acknowledged:
+            if log.isEnabledFor(logging.DEBUG):
+                log.debug(
+                    'node answered',
+                    node=pex(protocol.raiden.address),
+                    to=pex(receiver_address),
+                    current_state=protocol.get_node_network_state(receiver_address),
+                    new_state=NODE_NETWORK_REACHABLE,
+                )
+
             event_unhealthy.clear()
             event_healthy.set()
             protocol.set_node_network_state(
@@ -697,6 +732,9 @@ class RaidenProtocol(object):
 
     def set_node_network_state(self, node_address, node_state):
         self.nodeaddresses_networkstatuses[node_address] = node_state
+
+    def get_node_network_state(self, node_address):
+        return self.nodeaddresses_networkstatuses[node_address]
 
     def receive(self, data):
         if len(data) > UDP_MAX_MESSAGE_SIZE:
