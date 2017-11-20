@@ -151,6 +151,21 @@ def validate_solc():
 
         raise RuntimeError(msg)
 
+    except OSError as e:
+        msg = (
+            'The solidity compiler failed to execute. Please make sure the\n'
+            'binary is compatible with your architecture and you can execute it.'
+        )
+
+        child_traceback = getattr(e, 'child_traceback', None)
+        if child_traceback:
+            msg += (
+                '\n'
+                'Traceback: ' + child_traceback
+            )
+
+        raise RuntimeError(msg)
+
 
 class ContractManager(object):
     def __init__(self):
