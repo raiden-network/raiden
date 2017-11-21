@@ -138,7 +138,7 @@ def test_filter_start_block_inclusive(deploy_client, blockchain_backend):
     """ A filter includes events from the block given in from_block """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
 
-    # call the create event function twice and wait for confirmtion each time
+    # call the create event function twice and wait for confirmation each time
     gas = contract_proxy.createEvent.estimate_gas() * 2
     transaction_hex_1 = contract_proxy.createEvent.transact(1, startgas=gas)
     deploy_client.poll(transaction_hex_1.decode('hex'))
