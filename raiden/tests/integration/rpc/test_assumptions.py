@@ -6,6 +6,7 @@ import os
 import pytest
 from ethereum import _solidity
 
+from raiden.network.rpc.filters import new_filter, get_filter_events
 from raiden.network.rpc.transactions import check_transaction_threw
 
 # pylint: disable=unused-argument,protected-access
@@ -119,3 +120,49 @@ def test_transact_opcode_oog(deploy_client, blockchain_backend):
     deploy_client.poll(transaction)
 
     assert check_transaction_threw(deploy_client, transaction_hex), 'must not be empty'
+
+
+def get_list_of_block_numbers(item):
+    """ Creates a list of block numbers of the given list/single event"""
+    if isinstance(item, list):
+        return [element['block_number'] for element in item]
+    elif isinstance(item, dict):
+        block_number = item['block_number']
+        return [block_number]
+    else:
+        return []
+
+
+@pytest.mark.parametrize('blockchain_type', ['geth'])
+def test_filter_start_block_inclusive(deploy_client, blockchain_backend):
+    """ A filter includes events from the block given in from_block """
+    contract_proxy = deploy_rpc_test_contract(deploy_client)
+
+    # call the create event function twice and wait for confirmtion each time
+    gas = contract_proxy.createEvent.estimate_gas() * 2
+    transaction_hex_1 = contract_proxy.createEvent.transact(1, startgas=gas)
+    deploy_client.poll(transaction_hex_1.decode('hex'))
+    transaction_hex_2 = contract_proxy.createEvent.transact(2, startgas=gas)
+    deploy_client.poll(transaction_hex_2.decode('hex'))
+
+    # create a new filter in the node
+    new_filter(deploy_client, contract_proxy.address, None)
+
+    result_1 = get_filter_events(deploy_client, contract_proxy.address, None)
+    block_number_events = get_list_of_block_numbers(result_1)
+    block_number_event_1 = block_number_events[0]
+    block_number_event_2 = block_number_events[1]
+
+    # inclusive from_block should return both events
+    result_2 = get_filter_events(deploy_client,
+                                 contract_proxy.address,
+                                 None,
+                                 from_block=block_number_event_1)
+    assert get_list_of_block_numbers(result_2) == block_number_events
+
+    # a higher from_block must not contain the first event
+    result_3 = get_filter_events(deploy_client,
+                                 contract_proxy.address,
+                                 None,
+                                 from_block=block_number_event_1 + 1)
+    assert get_list_of_block_numbers(result_3) == [block_number_event_2]
