@@ -24,8 +24,7 @@ def test_snapshotting(raiden_network, token_addresses):
     channel_0_1 = api0.get_channel_list(token_addresses[0], app1.raiden.address)
     channel_0_2 = api0.get_channel_list(token_addresses[0], app2.raiden.address)
 
-    with pytest.raises(KeyError):
-        api1.get_channel_list(token_addresses[0], app2.raiden.address)
+    assert not api1.get_channel_list(token_addresses[0], app2.raiden.address)
 
     assert len(channel_0_1) == 1
     assert len(channel_0_2) == 1

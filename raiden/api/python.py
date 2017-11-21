@@ -459,10 +459,7 @@ class RaidenAPI(object):
             filtered by a token address and/or partner address.
 
         Raises:
-            KeyError:
-                - An error occurred when the given partner address isn't associated
-                  with the given token address.
-                - An error occurred when the token address is unknown to the node.
+            KeyError: An error occurred when the token address is unknown to the node.
         """
 
         if token_address and not isaddress(token_address):
@@ -471,19 +468,22 @@ class RaidenAPI(object):
         if partner_address and not isaddress(partner_address):
             raise InvalidAddress('Expected binary address format for partner in get_channel_list')
 
-        result = None
+        result = list()
 
         if token_address and partner_address:
             graph = self.raiden.token_to_channelgraph[token_address]
 
-            # Let it raise the KeyError
-            channel = graph.partneraddress_to_channel[partner_address]
-            result = [channel]
+            channel = graph.partneraddress_to_channel.get(partner_address)
+
+            if channel:
+                result = [channel]
 
         elif token_address:
-            graph = self.raiden.token_to_channelgraph[token_address]
-            token_channels = graph.address_to_channel.values()
-            result = token_channels
+            graph = self.raiden.token_to_channelgraph.get(token_address)
+
+            if graph:
+                token_channels = graph.address_to_channel.values()
+                result = token_channels
 
         elif partner_address:
             partner_channels = [
@@ -598,7 +598,7 @@ class RaidenAPI(object):
         graph = self.raiden.token_to_channelgraph[token_address]
         channel = graph.partneraddress_to_channel[partner_address]
 
-        balance_proof = channel.our_state.balance_proof
+        balance_proof = channel.partner_state.balance_proof
         channel.external_state.close(balance_proof)
 
         return channel

@@ -40,16 +40,14 @@ def test_get_channel_list(raiden_network, token_addresses):
     assert channel1 in api1.get_channel_list(token_addresses[0], app0.raiden.address)
     assert not api1.get_channel_list(partner_address=app2.raiden.address)
 
-    with pytest.raises(KeyError):
-        api1.get_channel_list(
-            token_address=token_addresses[0],
-            partner_address=app2.raiden.address,
-        )
+    assert not api1.get_channel_list(
+        token_address=token_addresses[0],
+        partner_address=app2.raiden.address,
+    )
 
-    with pytest.raises(KeyError):
-        api2.get_channel_list(
-            token_address=app2.raiden.address,
-        )
+    assert not api2.get_channel_list(
+        token_address=app2.raiden.address,
+    )
 
 
 @pytest.mark.parametrize('channels_per_node', [0])
