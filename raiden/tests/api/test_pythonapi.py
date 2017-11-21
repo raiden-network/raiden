@@ -7,13 +7,13 @@ from raiden.network.protocol import (
     NODE_NETWORK_REACHABLE,
     NODE_NETWORK_UNKNOWN,
 )
+from raiden.tests.utils.blockchain import wait_until_block
 from raiden.transfer.state import (
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_SETTLED,
 )
 from raiden.utils import get_contract_path
-from raiden.tests.utils.blockchain import wait_until_block
 
 
 @pytest.mark.parametrize('privatekey_seed', ['test_token_addresses:{}'])
@@ -112,7 +112,7 @@ def test_channel_lifecycle(blockchain_type, raiden_network, token_addresses, dep
     assert channel12.contract_balance == deposit
     assert api1.get_channel_list(token_address, api2.address) == [channel12]
 
-    # there is a channel open, they must be checking each other
+    # there is a channel open, they must be healthchecking each other
     assert api1.get_node_network_state(api2.address) == NODE_NETWORK_REACHABLE
     assert api2.get_node_network_state(api1.address) == NODE_NETWORK_REACHABLE
 
