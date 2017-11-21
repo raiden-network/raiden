@@ -5,7 +5,6 @@ from raiden.utils import pex
 
 CHANNEL_STATE_CLOSED = 'closed'
 CHANNEL_STATE_CLOSING = 'waiting_for_close'
-CHANNEL_STATE_INITIALIZING = 'initializing'
 CHANNEL_STATE_OPENED = 'opened'
 CHANNEL_STATE_SETTLED = 'settled'
 CHANNEL_STATE_SETTLING = 'waiting_for_settle'
@@ -44,7 +43,6 @@ class RouteState(State):
         CHANNEL_STATE_OPENED,
         CHANNEL_STATE_CLOSED,
         CHANNEL_STATE_SETTLED,
-        CHANNEL_STATE_INITIALIZING,
     )
 
     def __init__(self,

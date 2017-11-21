@@ -24,7 +24,6 @@ from raiden.transfer.state import (
     CHANNEL_STATE_OPENED,
     CHANNEL_STATE_CLOSED,
     CHANNEL_STATE_SETTLED,
-    CHANNEL_STATE_INITIALIZING,
 )
 from raiden.transfer.mediated_transfer.state_change import (
     ContractReceiveBalance,
@@ -47,6 +46,8 @@ class ChannelExternalState(object):
         self._closed_block = netting_channel.closed()
         self._settled_block = 0
 
+        assert self._opened_block, 'this value is set by the NettingChannelContract constructor'
+
         self.close_event = Event()
         self.settle_event = Event()
 
@@ -64,18 +65,6 @@ class ChannelExternalState(object):
     @property
     def settled_block(self):
         return self._settled_block
-
-    def set_opened(self, block_number):
-        if block_number <= 0:
-            raise ValueError('opened block must be non-zero and positive')
-
-        if self._opened_block != 0 and self._opened_block != block_number:
-            raise RuntimeError(
-                'channel is already open on different block prior:%s new:%s'
-                % (self._opened_block, block_number)
-            )
-
-        self._opened_block = block_number
 
     def set_closed(self, block_number):
         if block_number <= 0:
@@ -206,11 +195,8 @@ class Channel(object):
         if self.external_state.closed_block != 0:
             return CHANNEL_STATE_CLOSED
 
-        if self.external_state.opened_block != 0:
-            return CHANNEL_STATE_OPENED
-
-        # waiting for the first deposit
-        return CHANNEL_STATE_INITIALIZING
+        assert self.external_state.opened_block
+        return CHANNEL_STATE_OPENED
 
     @property
     def our_address(self):
@@ -825,13 +811,9 @@ class Channel(object):
             participant_address = state_change.participant_address
             balance = state_change.balance
             channel_state = self.get_state_for(participant_address)
-            block_number = state_change.block_number
 
             if channel_state.contract_balance != balance:
                 channel_state.update_contract_balance(balance)
-
-            if self.external_state.opened_block == 0:
-                self.external_state.set_opened(block_number)
 
     def serialize(self):
         return ChannelSerialization(self)
