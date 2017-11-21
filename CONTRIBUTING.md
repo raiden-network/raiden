@@ -43,6 +43,8 @@ All PRs should be:
 In order for a Pull Request to get merged into the main repository you should have one
 approved review from one of the core developers of Raiden and also all Continuous Integration tests should be passing and the CI build should be green.
 
+Additionally you need to sign the raiden project CLA (Contributor License Agreement). Our CLA bot will help you with that after you created a pull request. If you or your employer do not hold the whole copyright of the authorship submitted we can not accept your contribution.
+
 ## Setup
 
 ### System dependencies
