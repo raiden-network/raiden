@@ -16,4 +16,12 @@ contract RpcTest {
         }
         return result;
     }
+
+    event RpcEvent(
+        uint _someNumber
+    );
+
+    function createEvent(uint _someId) public {
+        RpcEvent(_someId);
+    }
 }
