@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-import os
-import json
 import hashlib
+import json
+import os
+import subprocess
 
 from threading import Lock
 
@@ -102,8 +103,6 @@ def get_static_or_compile(
         checksum = contract_checksum(contract_path)
     if precompiled and precompiled['checksum'] == checksum:
         return precompiled
-    if _solidity.get_solidity() is None:
-        raise RuntimeError('The solidity compiler, `solc`, is not available.')
 
     validate_solc()
 
@@ -128,7 +127,11 @@ def contract_checksum(contract_path):
 
 
 def validate_solc():
-    import subprocess
+    if _solidity.get_solidity() is None:
+        raise RuntimeError(
+            "Couldn't find the solc in the current $PATH.\n"
+            "Make sure the solidity compiler is installed and available on your $PATH."
+        )
 
     try:
         _solidity.compile_contract(
