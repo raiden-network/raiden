@@ -2,6 +2,7 @@
 Changelog
 =========
 
+* :feature:`1015` Added macOS compatibility and binary releases
 * :feature:`1093` Reconnect raiden to ethereum node after disconnect
 * :bug:`1138` REST and Python API close did not work if a transfer was made.
 * :feature:`1097` Added `--gas-price` command line option.
