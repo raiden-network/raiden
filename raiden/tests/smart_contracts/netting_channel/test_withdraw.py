@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
+
 import pytest
 from ethereum.tester import TransactionFailed
 from coincurve import PrivateKey
@@ -133,7 +135,7 @@ def test_withdraw_at_settlement_block(
         identifier=1,
         nonce=nonce,
         token=tester_token.address,
-        channel=nettingchannel.address.decode('hex'),
+        channel=unhexlify(nettingchannel.address),
         transferred_amount=0,
         recipient=address1,
         locksroot=lock0_hash,

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -76,7 +77,7 @@ class Discovery(object):
         )
 
         self.client.poll(
-            transaction_hash.decode('hex'),
+            unhexlify(transaction_hash),
             timeout=self.poll_timeout,
         )
 
@@ -99,7 +100,7 @@ class Discovery(object):
         if set(address) == {'0'}:  # the 0 address means nothing found
             return None
 
-        return address.decode('hex')
+        return unhexlify(address)
 
     def version(self):
         return self.proxy.contract_version.call()

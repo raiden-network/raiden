@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
 import os
 import string
 from itertools import chain, product
@@ -221,4 +222,4 @@ def test_recoverAddressFromSignature(tester_state, tester_nettingchannel_library
         signature
     )
 
-    assert computed_address.decode('hex') == msg.sender
+    assert unhexlify(computed_address) == msg.sender

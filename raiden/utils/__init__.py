@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
 import os
 import re
 import string
@@ -19,7 +20,7 @@ LETTERS = string.printable
 def safe_address_decode(address):
     try:
         address = safe_lstrip_hex(address)
-        address = address.decode('hex')
+        address = unhexlify(address)
     except TypeError:
         pass
 
@@ -50,7 +51,7 @@ def address_decoder(addr):
     if addr[:2] == '0x':
         addr = addr[2:]
 
-    addr = addr.decode('hex')
+    addr = unhexlify(addr)
     assert len(addr) in (20, 0)
     return addr
 
@@ -77,7 +78,7 @@ def data_encoder(data, length=None):
 def data_decoder(data):
     assert data[:2] == '0x'
     data = data[2:]  # remove 0x
-    data = data.decode('hex')
+    data = unhexlify(data)
     return data
 
 
@@ -132,7 +133,7 @@ def split_endpoint(endpoint):
     host, port = match.groups()
     if port:
         port = int(port)
-    return (host, port)
+    return host, port
 
 
 def publickey_to_address(publickey):
