@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 
+from binascii import unhexlify
 import os
 import itertools
 
@@ -280,7 +281,7 @@ def test_blockchain(
         token_proxy.address,
         gasprice=denoms.wei,
     )
-    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=poll_timeout)
+    jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)
 
     assert len(registry_proxy.tokenAddresses.call()) == 1
 
@@ -297,7 +298,7 @@ def test_blockchain(
     channel_manager_address_encoded = registry_proxy.channelManagerByToken.call(
         token_proxy.address,
     )
-    channel_manager_address = channel_manager_address_encoded.decode('hex')
+    channel_manager_address = unhexlify(channel_manager_address_encoded)
 
     log = log_list[0]
     log_topics = [
@@ -307,11 +308,11 @@ def test_blockchain(
     log_data = log['data']
     event = registry_proxy.translator.decode_event(
         log_topics,
-        log_data[2:].decode('hex'),
+        unhexlify(log_data[2:]),
     )
 
-    assert channel_manager_address == event['channel_manager_address'].decode('hex')
-    assert token_proxy.address == event['token_address'].decode('hex')
+    assert channel_manager_address == unhexlify(event['channel_manager_address'])
+    assert token_proxy.address == unhexlify(event['token_address'])
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
@@ -323,7 +324,7 @@ def test_blockchain(
         10,
         gasprice=denoms.wei,
     )
-    jsonrpc_client.poll(transaction_hash.decode('hex'), timeout=poll_timeout)
+    jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)
 
     log_list = jsonrpc_client.call(
         'eth_getLogs',

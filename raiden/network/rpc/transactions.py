@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
+
 from raiden.utils import data_encoder
 from raiden.settings import GAS_LIMIT
 
@@ -8,7 +10,7 @@ def check_transaction_threw(client, transaction_hash):
        Returns None in case of success and the transaction receipt if the
        transaction's status indicator is 0x0.
     """
-    encoded_transaction = data_encoder(transaction_hash.decode('hex'))
+    encoded_transaction = data_encoder(unhexlify(transaction_hash))
     receipt = client.call('eth_getTransactionReceipt', encoded_transaction)
 
     if 'status' not in receipt:

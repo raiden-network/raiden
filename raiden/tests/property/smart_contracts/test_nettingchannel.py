@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
 import contextlib
 
 from coincurve import PrivateKey
@@ -136,12 +137,12 @@ class NettingChannelStateMachine(GenericStateMachine):
         self.closing_address = None
         self.update_transfer_called = False
         self.participant_addresses = {
-            address_and_balance[0].decode('hex'),
-            address_and_balance[2].decode('hex'),
+            unhexlify(address_and_balance[0]),
+            unhexlify(address_and_balance[2]),
         }
 
         self.channel_addresses = [
-            self.netting_channel.address.decode('hex'),
+            unhexlify(self.netting_channel.address),
             make_address(),  # used to test invalid transfers
         ]
 
@@ -309,7 +310,7 @@ class NettingChannelStateMachine(GenericStateMachine):
                     sender=sender_pkey,
                 )
 
-        elif transfer.channel != self.netting_channel.address.decode('hex'):
+        elif transfer.channel != unhexlify(self.netting_channel.address):
             msg = 'close called with a transfer for a different channe didnt fail'
             with transaction_must_fail(msg):
                 self.netting_channel.close(  # pylint: disable=no-member
@@ -395,7 +396,7 @@ class NettingChannelStateMachine(GenericStateMachine):
                     sender=sender_pkey,
                 )
 
-        elif transfer.channel != self.netting_channel.address.decode('hex'):
+        elif transfer.channel != unhexlify(self.netting_channel.address):
             msg = 'updateTransfer called with a transfer for a different channel didnt fail'
             with transaction_must_fail(msg):
                 self.netting_channel.updateTransfer(  # pylint: disable=no-member

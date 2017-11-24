@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+from binascii import unhexlify
 
 from ethereum import slogging
 
@@ -92,7 +93,7 @@ class Registry(object):
             token_address,
         )
 
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
             raise TransactionThrew('AddToken', receipt_or_none)

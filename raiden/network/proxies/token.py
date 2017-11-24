@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
+
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
     CONTRACT_HUMAN_STANDARD_TOKEN,
@@ -69,7 +71,7 @@ class Token(object):
             allowance,
         )
 
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
 
         if receipt_or_none:
@@ -122,7 +124,7 @@ class Token(object):
             amount,
         )
 
-        self.client.poll(transaction_hash.decode('hex'))
+        self.client.poll(unhexlify(transaction_hash))
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
             raise TransactionThrew('Transfer', receipt_or_none)

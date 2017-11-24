@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import division
 
+from binascii import unhexlify
 import os
 
 import pytest
@@ -81,7 +82,7 @@ def test_transact_opcode(deploy_client, blockchain_backend):
     gas = contract_proxy.ret.estimate_gas() * 2
 
     transaction_hex = contract_proxy.ret.transact(startgas=gas)
-    transaction = transaction_hex.decode('hex')
+    transaction = unhexlify(transaction_hex)
 
     deploy_client.poll(transaction)
 
@@ -98,7 +99,7 @@ def test_transact_throws_opcode(deploy_client, blockchain_backend):
 
     gas = min(contract_proxy.fail.estimate_gas(), deploy_client.gaslimit())
     transaction_hex = contract_proxy.fail.transact(startgas=gas)
-    transaction = transaction_hex.decode('hex')
+    transaction = unhexlify(transaction_hex)
 
     deploy_client.poll(transaction)
 
@@ -115,7 +116,7 @@ def test_transact_opcode_oog(deploy_client, blockchain_backend):
 
     gas = min(contract_proxy.loop.estimate_gas(1000) // 2, deploy_client.gaslimit)
     transaction_hex = contract_proxy.loop.transact(1000, startgas=gas)
-    transaction = transaction_hex.decode('hex')
+    transaction = unhexlify(transaction_hex)
 
     deploy_client.poll(transaction)
 
@@ -141,9 +142,9 @@ def test_filter_start_block_inclusive(deploy_client, blockchain_backend):
     # call the create event function twice and wait for confirmation each time
     gas = contract_proxy.createEvent.estimate_gas() * 2
     transaction_hex_1 = contract_proxy.createEvent.transact(1, startgas=gas)
-    deploy_client.poll(transaction_hex_1.decode('hex'))
+    deploy_client.poll(unhexlify(transaction_hex_1))
     transaction_hex_2 = contract_proxy.createEvent.transact(2, startgas=gas)
-    deploy_client.poll(transaction_hex_2.decode('hex'))
+    deploy_client.poll(unhexlify(transaction_hex_2))
 
     # create a new filter in the node
     new_filter(deploy_client, contract_proxy.address, None)

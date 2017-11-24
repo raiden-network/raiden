@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
 import os
 from collections import defaultdict
 from itertools import count
@@ -6,7 +7,7 @@ from itertools import count
 from ethereum import tester, slogging, _solidity
 from ethereum.tester import TransactionFailed
 from ethereum.abi import ContractTranslator
-from ethereum.utils import decode_hex, encode_hex
+from ethereum.utils import encode_hex
 from ethereum._solidity import solidity_get_contract_key
 
 from raiden import messages
@@ -80,7 +81,7 @@ def tester_deploy_contract(
             dependency_contract['bin_hex'],
             libraries,
         )
-        bytecode = decode_hex(hex_bytecode)
+        bytecode = unhexlify(hex_bytecode)
 
         dependency_contract['bin_hex'] = hex_bytecode
         dependency_contract['bin'] = bytecode
@@ -556,7 +557,7 @@ class ChannelManagerTesterMock(object):
             netting_channel_address_hex,
         )
 
-        return decode_hex(channel.address)
+        return unhexlify(channel.address)
 
     def channels_addresses(self):
         channel_flat_encoded = self.proxy.getChannelsParticipants()
