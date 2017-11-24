@@ -784,7 +784,18 @@ def smoketest(ctx, debug, **kwargs):
     """ Test, that the raiden installation is sane.
     """
     from raiden.api.python import RaidenAPI
-    from raiden.blockchain.abi import validate_solc
+    from raiden.blockchain.abi import get_static_or_compile
+    from raiden.utils import get_contract_path
+
+    # Check the solidity compiler early in the smoketest.
+    #
+    # Binary distributions don't need the solidity compiler but source
+    # distributions do. Since this is checked by `get_static_or_compile`
+    # function, use it as a proxy for validating the setup.
+    get_static_or_compile(
+        get_contract_path('HumanStandardToken.sol'),
+        'HumanStandardToken',
+    )
 
     report_file = tempfile.mktemp(suffix='.log')
     open(report_file, 'w+')
@@ -797,8 +808,6 @@ def smoketest(ctx, debug, **kwargs):
 
     append_report('raiden version', json.dumps(get_system_spec()))
     append_report('raiden log', None)
-
-    validate_solc()
 
     print('[1/5] getting smoketest configuration')
     smoketest_config = load_or_create_smoketest_config()
