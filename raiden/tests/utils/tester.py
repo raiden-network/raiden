@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
+
 from ethereum import tester
-from ethereum.utils import decode_hex
 
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
@@ -192,9 +193,9 @@ def channel_from_nettingcontract(
     address_balance = netting_contract.addressAndBalance(sender=our_key)
     address1_hex, balance1, address2_hex, balance2 = address_balance
 
-    token_address = decode_hex(token_address_hex)
-    address1 = decode_hex(address1_hex)
-    address2 = decode_hex(address2_hex)
+    token_address = unhexlify(token_address_hex)
+    address1 = unhexlify(address1_hex)
+    address2 = unhexlify(address2_hex)
 
     if our_address == address1:
         our_balance = balance1

@@ -2,6 +2,7 @@
 import os
 import warnings
 from time import time as now
+from binascii import unhexlify
 
 import rlp
 import gevent
@@ -215,7 +216,7 @@ class JSONRPCClient(object):
 
     def nonce(self, address):
         if len(address) == 40:
-            address = address.decode('hex')
+            address = unhexlify(address)
 
         with self.nonce_lock:
             initialized = self.nonce_current_value is not None
@@ -358,7 +359,7 @@ class JSONRPCClient(object):
                 dependency_contract = all_contracts[deploy_contract]
 
                 hex_bytecode = solidity_resolve_symbols(dependency_contract['bin_hex'], libraries)
-                bytecode = hex_bytecode.decode('hex')
+                bytecode = unhexlify(hex_bytecode)
 
                 dependency_contract['bin_hex'] = hex_bytecode
                 dependency_contract['bin'] = bytecode
@@ -369,7 +370,7 @@ class JSONRPCClient(object):
                     data=bytecode,
                     gasprice=gasprice,
                 )
-                transaction_hash = transaction_hash_hex.decode('hex')
+                transaction_hash = unhexlify(transaction_hash_hex)
 
                 self.poll(transaction_hash, timeout=timeout)
                 receipt = self.eth_getTransactionReceipt(transaction_hash)
@@ -380,13 +381,13 @@ class JSONRPCClient(object):
 
                 libraries[deploy_contract] = contract_address
 
-                deployed_code = self.eth_getCode(contract_address.decode('hex'))
+                deployed_code = self.eth_getCode(unhexlify(contract_address))
 
                 if deployed_code == '0x':
                     raise RuntimeError('Contract address has no code, check gas usage.')
 
             hex_bytecode = solidity_resolve_symbols(contract['bin_hex'], libraries)
-            bytecode = hex_bytecode.decode('hex')
+            bytecode = unhexlify(hex_bytecode)
 
             contract['bin_hex'] = hex_bytecode
             contract['bin'] = bytecode
@@ -404,13 +405,13 @@ class JSONRPCClient(object):
             data=bytecode,
             gasprice=gasprice,
         )
-        transaction_hash = transaction_hash_hex.decode('hex')
+        transaction_hash = unhexlify(transaction_hash_hex)
 
         self.poll(transaction_hash, timeout=timeout)
         receipt = self.eth_getTransactionReceipt(transaction_hash)
         contract_address = receipt['contractAddress']
 
-        deployed_code = self.eth_getCode(contract_address[2:].decode('hex'))
+        deployed_code = self.eth_getCode(unhexlify(contract_address[2:]))
 
         if deployed_code == '0x':
             raise RuntimeError(

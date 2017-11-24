@@ -3,6 +3,7 @@ import getpass
 import json
 import os
 import sys
+from binascii import unhexlify
 
 from bitcoin import privtopub
 from ethereum import keys
@@ -128,7 +129,7 @@ class Account(object):
         self._address = None
 
         try:
-            self._address = self.keystore['address'].decode('hex')
+            self._address = unhexlify(self.keystore['address'])
         except KeyError:
             pass
 
@@ -218,7 +219,7 @@ class Account(object):
         if self._address:
             pass
         elif 'address' in self.keystore:
-            self._address = self.keystore['address'].decode('hex')
+            self._address = unhexlify(self.keystore['address'])
         elif not self.locked:
             self._address = keys.privtoaddr(self.privkey)
         else:

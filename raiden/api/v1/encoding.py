@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
 
 from marshmallow import (
     fields,
@@ -46,7 +47,7 @@ class HexAddressConverter(BaseConverter):
             raise ValidationError()
 
         try:
-            value = value[2:].decode('hex')
+            value = unhexlify(value[2:])
         except TypeError:
             raise ValidationError()
 
@@ -74,7 +75,7 @@ class AddressField(fields.Field):
             self.fail('missing_prefix')
 
         try:
-            value = value[2:].decode('hex')
+            value = unhexlify(value[2:])
         except TypeError:
             self.fail('invalid_data')
 

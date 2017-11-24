@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
+
 import gevent
 from gevent.lock import Semaphore
 from gevent.event import AsyncResult
@@ -32,7 +34,7 @@ class ConnectionManager(object):
     # XXX Hack: for bootstrapping, the first node on a network opens a channel
     # with this address to become visible.
     BOOTSTRAP_ADDR_HEX = '2' * 40
-    BOOTSTRAP_ADDR = BOOTSTRAP_ADDR_HEX.decode('hex')
+    BOOTSTRAP_ADDR = unhexlify(BOOTSTRAP_ADDR_HEX)
 
     def __init__(
             self,

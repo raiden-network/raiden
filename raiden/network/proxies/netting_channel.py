@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+from binascii import unhexlify
 
 from ethereum import slogging
 from ethereum.utils import encode_hex
@@ -238,7 +239,7 @@ class NettingChannel(object):
         )
 
         self.client.poll(
-            transaction_hash.decode('hex'),
+            unhexlify(transaction_hash),
             timeout=self.poll_timeout,
         )
 
@@ -278,7 +279,7 @@ class NettingChannel(object):
             extra_hash,
             signature,
         )
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
 
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
@@ -330,7 +331,7 @@ class NettingChannel(object):
             )
 
             self.client.poll(
-                transaction_hash.decode('hex'),
+                unhexlify(transaction_hash),
                 timeout=self.poll_timeout,
             )
 
@@ -382,7 +383,7 @@ class NettingChannel(object):
                 secret,
             )
 
-            self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+            self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
             receipt_or_none = check_transaction_threw(self.client, transaction_hash)
             lock = messages.Lock.from_bytes(locked_encoded)
             if receipt_or_none:
@@ -415,7 +416,7 @@ class NettingChannel(object):
             self.gasprice,
         )
 
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
         receipt_or_none = check_transaction_threw(self.client, transaction_hash)
         if receipt_or_none:
             log.info('settle failed', contract=pex(self.address))

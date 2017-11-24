@@ -5,6 +5,7 @@ transactions.
 """
 from __future__ import print_function
 
+from binascii import unhexlify
 import codecs
 import random
 import signal
@@ -259,7 +260,7 @@ def main():
             args.host,
             args.port,
             args.config,
-            args.privatekey.decode('hex'),
+            unhexlify(args.privatekey),
             args.rpc_server,
             args.registry_address,
             TOKEN_ADDRESS,
@@ -271,7 +272,7 @@ def main():
         setup_tps(
             args.rpc_server,
             args.config,
-            args.privatekey.decode('hex'),
+            unhexlify(args.privatekey),
             args.registry_address,
             TOKEN_ADDRESS,
             deposit,
