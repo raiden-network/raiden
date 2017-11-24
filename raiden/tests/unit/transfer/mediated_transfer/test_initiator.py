@@ -247,7 +247,12 @@ def test_init_without_routes():
 
     assert len(events) == 1
     assert any(isinstance(e, EventTransferSentFailed) for e in events)
-    assert initiator_state_machine.current_state is None
+    assert initiator_state_machine.current_state.revealsecret is None
+    assert initiator_state_machine.current_state.transfer.secret is None
+    assert initiator_state_machine.current_state.transfer.hashlock is None
+    assert initiator_state_machine.current_state.message is None
+    assert initiator_state_machine.current_state.route is None
+    assert initiator_state_machine.current_state.secretrequest is None
 
 
 def test_state_wait_secretrequest_valid():
@@ -435,13 +440,17 @@ def test_refund_transfer_next_route():
     assert initiator_state_machine.current_state is not None
 
     events = initiator_state_machine.dispatch(state_change)
-    assert len(events) == 1
+    assert len(events) == 2
     assert any(
         isinstance(e, SendMediatedTransfer) for e in events
     ), 'No mediated transfer event emitted, should have tried a new route'
+    assert any(
+        isinstance(e, SendRevealSecret) for e in events
+    ), 'Secret not revealed. Refund funds still locked up.'
 
     assert initiator_state_machine.current_state is not None
     assert initiator_state_machine.current_state.routes.canceled_routes[0] == prior_state.route
+    assert initiator_state_machine.current_state.revealsecret is not None
 
 
 def test_refund_transfer_no_more_routes():
@@ -483,9 +492,15 @@ def test_refund_transfer_no_more_routes():
     assert initiator_state_machine.current_state is not None
 
     events = initiator_state_machine.dispatch(state_change)
-    assert len(events) == 1
+    assert len(events) == 2
+    assert any(isinstance(e, SendRevealSecret) for e in events)
     assert any(isinstance(e, EventTransferSentFailed) for e in events)
-    assert initiator_state_machine.current_state is None
+    assert initiator_state_machine.current_state.revealsecret is not None
+    assert initiator_state_machine.current_state.transfer.secret is None
+    assert initiator_state_machine.current_state.transfer.hashlock is None
+    assert initiator_state_machine.current_state.message is None
+    assert initiator_state_machine.current_state.route is None
+    assert initiator_state_machine.current_state.secretrequest is None
 
 
 def test_refund_transfer_invalid_sender():
