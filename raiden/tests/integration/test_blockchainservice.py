@@ -8,7 +8,6 @@ import itertools
 import pytest
 from ethereum import _solidity
 from ethereum._solidity import compile_file
-from ethereum.tester import TransactionFailed
 from ethereum.utils import denoms
 
 from raiden.blockchain.abi import CONTRACT_MANAGER, CONTRACT_CHANNEL_MANAGER
@@ -210,17 +209,11 @@ def test_channelmanager_graph_building(
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(
-        blockchain_type,
         blockchain_backend,  # required to start the geth backend
         blockchain_rpc_ports,
         private_keys,
         poll_timeout):
     # pylint: disable=too-many-locals
-
-    # this test is for interaction with a blockchain using json-rpc, so it
-    # doesnt make sense to execute it against tester
-    if blockchain_type not in ('geth',):
-        return
 
     addresses = [
         privatekey_to_address(priv)
@@ -339,7 +332,7 @@ def test_blockchain(
 
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_channel_with_self(raiden_network, settle_timeout, blockchain_type):
+def test_channel_with_self(raiden_network, settle_timeout):
     app0, = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
     token_address = app0.raiden.default_registry.token_addresses()[0]
@@ -356,11 +349,7 @@ def test_channel_with_self(raiden_network, settle_timeout, blockchain_type):
         )
         assert 'Peer1 and peer2 must not be equal' in str(excinfo.value)
 
-    if blockchain_type == 'tester':
-        with pytest.raises(TransactionFailed):
-            graph0.proxy.newChannel(app0.raiden.address, settle_timeout)
-    else:
-        tx = graph0.proxy.newChannel(app0.raiden.address, settle_timeout)
-        # wait to make sure we get the receipt
-        wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + 5)
-        assert check_transaction_threw(app0.raiden.chain.client, tx)
+    tx = graph0.proxy.newChannel(app0.raiden.address, settle_timeout)
+    # wait to make sure we get the receipt
+    wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + 5)
+    assert check_transaction_threw(app0.raiden.chain.client, tx)

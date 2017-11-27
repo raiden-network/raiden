@@ -21,7 +21,6 @@ TEST_TOKEN_SWAP_SETTLE_TIMEOUT = (
 )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_get_channel_list(raiden_network, token_addresses):
     app0, app1, app2 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -119,7 +118,6 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
     assert returned_channel.contract_balance == old_balance + 10
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_transfer_to_unknownchannel(raiden_network):
@@ -141,7 +139,6 @@ def test_transfer_to_unknownchannel(raiden_network):
         )
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_tokens', [2])
 @pytest.mark.parametrize('settle_timeout', [TEST_TOKEN_SWAP_SETTLE_TIMEOUT])
@@ -192,7 +189,6 @@ def test_token_swap(raiden_network, deposit, settle_timeout):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_api_channel_events(raiden_chain):
@@ -232,7 +228,6 @@ def test_api_channel_events(raiden_chain):
     assert not results
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.xfail

@@ -583,7 +583,6 @@ def test_channel_increase_nonce_and_transferred_amount():
         previous_transferred = new_transferred
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_setup(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -608,7 +607,6 @@ def test_setup(raiden_network, deposit, token_addresses):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('deposit', [2 ** 30])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('number_of_transfers', [100])
@@ -733,7 +731,6 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
             assert channel0.distributable == contract_balance0 - distributed_amount
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_transfer(raiden_network, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -801,7 +798,6 @@ def test_transfer(raiden_network, token_addresses):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_locked_transfer(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -869,7 +865,6 @@ def test_locked_transfer(raiden_network, settle_timeout):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_register_invalid_transfer(raiden_network, settle_timeout):
     """ Regression test for registration of invalid transfer.

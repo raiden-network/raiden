@@ -43,12 +43,7 @@ def test_token_addresses(raiden_network, token_addresses):
 @pytest.mark.parametrize('privatekey_seed', ['test_token_registration:{}'])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('number_of_tokens', [0])
-def test_token_registration(blockchain_type, raiden_network, tester_state):
-    if blockchain_type == 'tester':
-        pytest.skip(
-            'current version of the pyethereum dependency does not support the REVERT opcode'
-        )
-
+def test_token_registration(raiden_network, tester_state):
     node1 = raiden_network[0]
     token_amount = 1000
 
@@ -75,12 +70,7 @@ def test_token_registration(blockchain_type, raiden_network, tester_state):
 @pytest.mark.parametrize('privatekey_seed', ['test_channel_lifetime:{}'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
-def test_channel_lifecycle(blockchain_type, raiden_network, token_addresses, deposit):
-    if blockchain_type == 'tester':
-        pytest.skip(
-            'there is not support ATM for retrieving events from tester'
-        )
-
+def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     node1, node2 = raiden_network
     token_address = token_addresses[0]
 

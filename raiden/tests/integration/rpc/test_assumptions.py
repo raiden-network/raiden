@@ -4,7 +4,6 @@ from __future__ import division
 from binascii import unhexlify
 import os
 
-import pytest
 from ethereum import _solidity
 
 from raiden.network.rpc.filters import new_filter, get_filter_events
@@ -30,7 +29,6 @@ def deploy_rpc_test_contract(deploy_client):
     return contract_proxy
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_call_inexisting_address(deploy_client, blockchain_backend):
     """ A JSON RPC call to an inexisting address returns the empty string. """
 
@@ -40,7 +38,6 @@ def test_call_inexisting_address(deploy_client, blockchain_backend):
     assert deploy_client.eth_call(sender=deploy_client.sender, to=inexisting_address) == ''
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_call_invalid_selector(deploy_client, blockchain_backend):
     """ A JSON RPC call to a valid address but with an invalid selector returns
     the empty string.
@@ -60,7 +57,6 @@ def test_call_invalid_selector(deploy_client, blockchain_backend):
     assert result == ''
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_call_throws(deploy_client, blockchain_backend):
     """ A JSON RPC call to a function that throws returns the empty string. """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
@@ -71,7 +67,6 @@ def test_call_throws(deploy_client, blockchain_backend):
     assert contract_proxy.fail.call() == ''
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_transact_opcode(deploy_client, blockchain_backend):
     """ The receipt status field of a transaction that did not throw is 0x1 """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
@@ -89,7 +84,6 @@ def test_transact_opcode(deploy_client, blockchain_backend):
     assert check_transaction_threw(deploy_client, transaction_hex) is None, 'must be empty'
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_transact_throws_opcode(deploy_client, blockchain_backend):
     """ The receipt status field of a transaction that threw is 0x0 """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
@@ -106,7 +100,6 @@ def test_transact_throws_opcode(deploy_client, blockchain_backend):
     assert check_transaction_threw(deploy_client, transaction_hex), 'must not be empty'
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_transact_opcode_oog(deploy_client, blockchain_backend):
     """ The receipt status field of a transaction that did NOT throw is 0x0. """
     contract_proxy = deploy_rpc_test_contract(deploy_client)
@@ -134,7 +127,6 @@ def get_list_of_block_numbers(item):
         return []
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 def test_filter_start_block_inclusive(deploy_client, blockchain_backend):
     """ A filter includes events from the block given in from_block """
     contract_proxy = deploy_rpc_test_contract(deploy_client)

@@ -98,7 +98,7 @@ def _token_addresses(
 
 
 @pytest.fixture
-def cached_genesis(request, blockchain_type):
+def cached_genesis(request):
     """
     Deploy all contracts that are required by the fixtures into a tester and
     then serialize the accounts into a genesis block.
@@ -108,9 +108,6 @@ def cached_genesis(request, blockchain_type):
     """
 
     if not request.config.option.blockchain_cache:
-        return
-
-    if blockchain_type != 'geth':
         return
 
     # this will create the tester _and_ deploy the Registry
@@ -325,18 +322,11 @@ def blockchain_services(
             registry_address,  # _jsonrpc_services will handle the None value
         )
 
-    if blockchain_type == 'tester':
-        return _tester_services(
-            deploy_key,
-            private_keys,
-            tester_blockgas_limit,
-        )
-
     raise ValueError('unknown cluster type {}'.format(blockchain_type))
 
 
 @pytest.fixture
-def endpoint_discovery_services(blockchain_services, blockchain_type, cached_genesis):
+def endpoint_discovery_services(blockchain_services, cached_genesis):
     discovery_address = None
 
     if cached_genesis and 'defaultDiscoveryAddress' in cached_genesis['config']:
@@ -391,9 +381,6 @@ def blockchain_backend(
             genesis_path,
         )
 
-    if blockchain_type == 'tester':
-        return ()
-
     # check pytest_addoption
     raise ValueError('unknow cluster type {}'.format(blockchain_type))
 
@@ -411,6 +398,8 @@ def deploy_client(blockchain_type, blockchain_rpc_ports, deploy_key):
         )
 
         return deploy_client
+
+    raise ValueError('unknow cluster type {}'.format(blockchain_type))
 
 
 def _geth_blockchain(

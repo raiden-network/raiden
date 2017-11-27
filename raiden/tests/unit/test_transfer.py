@@ -129,7 +129,6 @@ class MediatedTransferTestHelper(object):
         return None
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_direct_transfer(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -178,7 +177,6 @@ def test_direct_transfer(raiden_network):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_transfer_channels(raiden_network, token_addresses):
@@ -197,7 +195,6 @@ def test_transfer_channels(raiden_network, token_addresses):
     assert async_result.wait() is False
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_transfer_noroutes(raiden_network, token_addresses):
@@ -227,7 +224,6 @@ def test_transfer_noroutes(raiden_network, token_addresses):
     assert async_result.wait() is False
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [4])
 def test_mediated_transfer(raiden_network):
@@ -281,7 +277,6 @@ def test_mediated_transfer(raiden_network):
     assert initial_balance_cb + amount == channel_cb.balance
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_direct_transfer_exceeding_distributable(raiden_network, token_addresses, deposit):
@@ -298,7 +293,6 @@ def test_direct_transfer_exceeding_distributable(raiden_network, token_addresses
     assert not result.wait(timeout=10)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_mediated_transfer_with_entire_deposit(raiden_network, token_addresses, deposit):
@@ -329,7 +323,6 @@ def test_mediated_transfer_with_entire_deposit(raiden_network, token_addresses, 
     assert result.wait(timeout=10)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('privatekey_seed', ['cancel_transfer:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
@@ -431,7 +424,6 @@ def test_cancel_transfer(raiden_chain, token_addresses, deposit):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_healthcheck_with_normal_peer(raiden_network, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -464,7 +456,6 @@ def test_healthcheck_with_normal_peer(raiden_network, token_addresses):
     assert ping_messages
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_healthcheck_with_unconnected_node(raiden_network, nat_keepalive_timeout):
@@ -485,7 +476,6 @@ def test_healthcheck_with_unconnected_node(raiden_network, nat_keepalive_timeout
     assert app1.raiden.protocol.nodeaddresses_networkstatuses[address0] == NODE_NETWORK_UNKNOWN
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
 def test_healthcheck_with_bad_peer(raiden_network, nat_keepalive_retries, nat_keepalive_timeout):
@@ -512,7 +502,6 @@ def test_healthcheck_with_bad_peer(raiden_network, nat_keepalive_retries, nat_ke
     assert app1.raiden.protocol.nodeaddresses_networkstatuses[address0] == NODE_NETWORK_UNREACHABLE
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_directtransfer_unknown(raiden_network):
@@ -532,7 +521,6 @@ def test_receive_directtransfer_unknown(raiden_network):
     sign_and_send(direct_transfer_message, other_key, other_address, app0)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_mediatedtransfer_unknown(raiden_network):
@@ -557,7 +545,6 @@ def test_receive_mediatedtransfer_unknown(raiden_network):
     sign_and_send(mediated_transfer, other_key, other_address, app0)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [1])
 @pytest.mark.parametrize('channels_per_node', [0])
 def test_receive_hashlocktransfer_unknown(raiden_network):
@@ -598,7 +585,6 @@ def test_receive_hashlocktransfer_unknown(raiden_network):
     sign_and_send(reveal_secret, other_key, other_address, app0)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_receive_directtransfer_outoforder(raiden_network, private_keys):
@@ -649,7 +635,6 @@ def test_receive_directtransfer_outoforder(raiden_network, private_keys):
     sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
@@ -702,7 +687,6 @@ def test_receive_mediatedtransfer_outoforder(raiden_network, private_keys):
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [5])
 @pytest.mark.parametrize('channels_per_node', [2])
 def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
@@ -756,7 +740,6 @@ def test_receive_mediatedtransfer_invalid_address(raiden_network, private_keys):
     sign_and_send(mediated_transfer, alice_key, alice_address, target_app)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
@@ -805,7 +788,6 @@ def test_receive_directtransfer_wrongtoken(raiden_network, private_keys):
     sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
@@ -854,7 +836,6 @@ def test_receive_directtransfer_invalidlocksroot(raiden_network, private_keys):
     sign_and_send(direct_transfer_message, app0_key, app0.raiden.address, app1)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('settle_timeout', [30])

@@ -27,10 +27,7 @@ def settle_timeout(blockchain_type):
     If using geth we set it considerably lower since waiting for
     too many blocks to be mined is very costly time-wise.
     """
-    if blockchain_type == 'geth':
-        return 16
-
-    return 400
+    return 16
 
 
 @pytest.fixture
@@ -40,10 +37,7 @@ def reveal_timeout(blockchain_type):
     If using geth we set it considerably lower since waiting for
     too many blocks to be mined is very costly time-wise.
     """
-    if blockchain_type == 'geth':
-        return 4
-
-    return 20
+    return 4
 
 
 @pytest.fixture
