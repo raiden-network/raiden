@@ -23,8 +23,13 @@ from raiden.utils import sha3
 
 @pytest.mark.parametrize('number_of_nodes', [5])
 @pytest.mark.parametrize('channels_per_node', [0])
-@pytest.mark.parametrize('blockchain_type', ['tester'])
+@pytest.mark.parametrize('settle_timeout', [32])  # default settlement is too low for 3 hops
 def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_timeout, deposit):
+    """ The transfer should proceed without triggering an assert.
+
+    Transfers failed in networks where two or more paths to the destination are
+    possible but they share same node as a first hop.
+    """
     app0, app1, app2, app3, app4 = raiden_network
     token = token_addresses[0]
 
@@ -62,7 +67,6 @@ def test_regression_unfiltered_routes(raiden_network, token_addresses, settle_ti
 
 @pytest.mark.parametrize('number_of_nodes', [3])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 def test_regression_revealsecret_after_secret(raiden_network, token_addresses):
     """ A RevealSecret message received after a Secret message must be cleanly
     handled.
@@ -101,7 +105,6 @@ def test_regression_revealsecret_after_secret(raiden_network, token_addresses):
 
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 def test_regression_multiple_revealsecret(raiden_network, token_addresses):
     """ Multiple RevealSecret messages arriving at the same time must be
     handled properly.

@@ -18,7 +18,6 @@ from raiden.tests.utils.log import (
 )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('privatekey_seed', ['test_initiator_log_directransfer_action:{}'])
@@ -55,7 +54,6 @@ def test_initiator_log_directransfer_action(
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('privatekey_seed', ['test_initiator_log_directransfer_success:{}'])
@@ -89,7 +87,6 @@ def test_initiator_log_directransfer_success(
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('privatekey_seed', ['test_target_log_directransfer_message:{}'])
@@ -125,7 +122,6 @@ def test_target_log_directransfer_message(
     )
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('channels_per_node', [1])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('privatekey_seed', ['test_target_log_directransfer_success:{}'])

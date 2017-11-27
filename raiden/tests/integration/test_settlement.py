@@ -188,7 +188,6 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 @pytest.mark.parametrize('privatekey_seed', ['settled_lock:{}'])
 @pytest.mark.parametrize('number_of_nodes', [4])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 def test_settled_lock(token_addresses, raiden_network, settle_timeout, reveal_timeout):
     """ Any transfer following a secret revealed must update the locksroot, so
     that an attacker cannot reuse a secret to double claim a lock.
@@ -384,7 +383,6 @@ def test_start_end_attack(token_addresses, raiden_chain, deposit, reveal_timeout
     assert hub_contract.participants[app1.raiden.address]['netted'] == deposit - amount
 
 
-@pytest.mark.parametrize('blockchain_type', ['geth'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_automatic_dispute(raiden_network, deposit, settle_timeout):
     app0, app1 = raiden_network

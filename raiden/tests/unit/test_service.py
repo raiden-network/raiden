@@ -15,7 +15,6 @@ from raiden.tests.utils.transfer import channel
 from raiden.tests.fixtures.raiden_network import CHAIN
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 def test_ping(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
@@ -46,7 +45,6 @@ def test_ping(raiden_network):
     assert ack_message
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('number_of_nodes', [2])
 @pytest.mark.parametrize('transport_class', [UnreliableTransport])
 def test_ping_unreachable(raiden_network):
@@ -81,7 +79,6 @@ def test_ping_unreachable(raiden_network):
         assert isinstance(message, Ping)
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('deposit', [0])
 def test_receive_direct_before_deposit(raiden_network):
     """Regression test that ensures we accept incoming direct transfers, even if we don't have
@@ -113,7 +110,6 @@ def test_receive_direct_before_deposit(raiden_network):
     assert back_channel.distributable == transfer_amount
 
 
-@pytest.mark.parametrize('blockchain_type', ['tester'])
 @pytest.mark.parametrize('deposit', [0])
 @pytest.mark.parametrize('channels_per_node', [CHAIN])
 def test_receive_mediated_before_deposit(raiden_network, token_addresses):

@@ -23,7 +23,7 @@ log = logging.getLogger(__name__)
 @pytest.mark.parametrize('register_tokens', [True, False])
 @pytest.mark.parametrize('settle_timeout', [6])
 @pytest.mark.parametrize('reveal_timeout', [3])
-def test_participant_selection(raiden_network, token_addresses, blockchain_type):
+def test_participant_selection(raiden_network, token_addresses):
     # pylint: disable=too-many-locals
     token_address = token_addresses[0]
 
@@ -45,9 +45,6 @@ def test_participant_selection(raiden_network, token_addresses, blockchain_type)
                 app.raiden.chain,
                 app.raiden.chain.block_number() + 1
             )
-        # tester needs an explicit context switch :(
-        if blockchain_type == 'tester':
-            gevent.sleep(1)
 
     connection_managers = [
         app.raiden.connection_manager_for_token(token_address) for app in raiden_network

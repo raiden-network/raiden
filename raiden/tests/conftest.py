@@ -26,7 +26,7 @@ CATCH_LOG_HANDLER_NAME = 'catch_log_handler'
 def pytest_addoption(parser):
     parser.addoption(
         '--blockchain-type',
-        choices=['geth', 'tester'],
+        choices=['geth'],
         default='geth',
     )
 
