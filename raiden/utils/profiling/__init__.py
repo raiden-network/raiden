@@ -1,2 +1,3 @@
 # -*- coding: utf-8 -*-
-from profiler import *  # noqa
+from __future__ import absolute_import
+from .profiler import *  # noqa

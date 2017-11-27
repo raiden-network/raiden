@@ -134,7 +134,7 @@ class StateManager(object):
 
         self.current_state, events = iteration
 
-        assert isinstance(self.current_state, (State, types.NoneType))
+        assert isinstance(self.current_state, (State, type(None)))
         assert all(isinstance(e, Event) for e in events)
 
         return events

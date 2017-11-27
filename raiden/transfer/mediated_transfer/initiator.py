@@ -128,7 +128,7 @@ def try_new_route(state):
     else:
         state.route = try_route
 
-        secret = state.random_generator.next()
+        secret = next(state.random_generator)
         hashlock = sha3(secret)
 
         # The initiator doesn't need to learn the secret, so there is no need
