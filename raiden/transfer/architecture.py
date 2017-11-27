@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-few-public-methods
-import types
 from collections import namedtuple
 from copy import deepcopy
 
