@@ -310,7 +310,7 @@ def init_with_genesis(smoketest_genesis):
 
 
 def start_ethereum(smoketest_genesis):
-    RST_RPC_PORT = get_free_port('127.0.0.1', 27854).next()
+    RST_RPC_PORT = next(get_free_port('127.0.0.1', 27854))
     os.environ['RST_RPC_PORT'] = str(RST_RPC_PORT)
     cmd = os.environ.get('RST_ETH_COMMAND', DEFAULT_ETH_COMMAND)
     args = shlex.split(

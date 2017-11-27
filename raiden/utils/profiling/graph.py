@@ -26,6 +26,7 @@ using ImageMagick:
     convert -append memory_timeline.png latency_scatter.png memory_objcount.png collage.png
 """
 from __future__ import absolute_import
+from __future__ import print_function
 
 # Improvements:
 # - Draw the composite graphs with matplotlib instead of using convert and make
@@ -140,7 +141,7 @@ def memory_objcount(output, data_list, topn=10):
     values = [alltime_data[label] for label in labels]
 
     if not values:
-        print 'file is empty'
+        print('file is empty')
         return
 
     # plot only once to share the labels and colors

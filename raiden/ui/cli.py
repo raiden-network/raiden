@@ -845,7 +845,7 @@ def smoketest(ctx, debug, **kwargs):
     args['mapped_socket'] = None
     args['password_file'] = click.File()(password_file)
     args['datadir'] = args['keystore_path']
-    args['api_address'] = 'localhost:' + str(get_free_port('127.0.0.1', 5001).next())
+    args['api_address'] = 'localhost:' + str(next(get_free_port('127.0.0.1', 5001)))
     args['sync_check'] = False
 
     # invoke the raiden app

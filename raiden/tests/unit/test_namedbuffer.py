@@ -37,10 +37,10 @@ def test_decoder_long():
     packed_data = HugeInt(data)
     assert packed_data.huge == 0
 
-    packed_data.huge = 1L
+    packed_data.huge = 1
     assert packed_data.huge == 1
 
-    packed_data.huge = 2L ** 32
+    packed_data.huge = 2 ** 32
     assert packed_data.huge == 2 ** 32
 
     huge = 2 ** (8 * 100) - 1
