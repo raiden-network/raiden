@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import unhexlify
+
 import pytest
 import ethereum.db
 import ethereum.blocks
@@ -254,7 +256,7 @@ def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
         first_externalstate = ChannelExternalStateTester(
             tester_state,
             first_key,
-            nettingcontract.address.decode('hex'),
+            unhexlify(nettingcontract.address),
         )
         first_channel = channel_from_nettingcontract(
             first_key,
@@ -266,7 +268,7 @@ def tester_channels(tester_state, tester_nettingcontracts, reveal_timeout):
         second_externalstate = ChannelExternalStateTester(
             tester_state,
             second_key,
-            nettingcontract.address.decode('hex'),
+            unhexlify(nettingcontract.address),
         )
         second_channel = channel_from_nettingcontract(
             second_key,

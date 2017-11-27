@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+from binascii import unhexlify
 
 from ethereum import slogging
 
@@ -111,7 +112,7 @@ class ChannelManager(object):
             settle_timeout,
         )
 
-        self.client.poll(transaction_hash.decode('hex'), timeout=self.poll_timeout)
+        self.client.poll(unhexlify(transaction_hash), timeout=self.poll_timeout)
 
         if check_transaction_threw(self.client, transaction_hash):
             raise DuplicatedChannelError('Duplicated channel')
