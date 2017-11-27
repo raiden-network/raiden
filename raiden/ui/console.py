@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
-import cStringIO
+from future import standard_library
+standard_library.install_aliases()
+import io
 import errno
 import json
 import os
@@ -243,7 +245,7 @@ class Console(BaseService):
             if isinstance(handler, StreamHandler) and handler.stream == sys.stderr:
                 root.removeHandler(handler)
 
-        stream = cStringIO.StringIO()
+        stream = io.StringIO()
         handler = StreamHandler(stream=stream)
         handler.formatter = Formatter('%(levelname)s:%(name)s %(message)s')
         root.addHandler(handler)
@@ -272,7 +274,7 @@ class Console(BaseService):
 
         self.console_locals['lastlog'] = lastlog
 
-        err = cStringIO.StringIO()
+        err = io.StringIO()
         sys.stderr = err
 
         def lasterr(n=1):

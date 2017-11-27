@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from future import standard_library
+standard_library.install_aliases()
 import os
 import time
 import json
@@ -9,7 +11,7 @@ import distutils.spawn
 import pdb
 import traceback
 import requests
-import httplib
+import http.client
 from string import Template
 
 from ethereum._solidity import get_solidity
@@ -97,7 +99,7 @@ def run_restapi_smoketests(raiden_service, test_config):
     ).format(port=5001)
     response = requests.get(url)
 
-    assert response.status_code == httplib.OK
+    assert response.status_code == http.client.OK
 
     response_json = response.json()
     assert (response_json[0]['partner_address'] ==
