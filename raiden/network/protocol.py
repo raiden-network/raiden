@@ -844,7 +844,8 @@ class RaidenProtocol(object):
                 log.debug("Couldn't send the ACK", e=e)
 
         except (UnknownAddress, InvalidNonce, TransferWhenClosed, TransferUnwanted) as e:
-            log.DEV('maybe unwanted transfer', e=e)
+            if log.isEnabledFor(logging.WARN):
+                log.warn('maybe unwanted transfer', e=e)
 
         except (UnknownTokenAddress, InvalidLocksRoot) as e:
             if log.isEnabledFor(logging.WARN):
