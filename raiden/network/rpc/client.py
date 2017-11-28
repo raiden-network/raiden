@@ -33,9 +33,7 @@ from raiden.exceptions import (
 )
 from raiden.network.protocol import timeout_two_stage
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
-from raiden.settings import (
-    GAS_PRICE,
-)
+from raiden.settings import GAS_PRICE
 from raiden.utils import (
     address_decoder,
     address_encoder,

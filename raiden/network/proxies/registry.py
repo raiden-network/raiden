@@ -71,7 +71,8 @@ class Registry(object):
         """ Return the channel manager address for the given token or None if
         there is no correspoding address.
         """
-        address = self.proxy.channelManagerByToken.call(
+        address = self.proxy.call(
+            'channelManagerByToken',
             token_address,
             startgas=self.startgas,
         )
@@ -87,7 +88,8 @@ class Registry(object):
             raise ValueError('token_address must be a valid address')
 
         transaction_hash = estimate_and_transact(
-            self.proxy.addToken,
+            self.proxy,
+            'addToken',
             self.startgas,
             self.gasprice,
             token_address,
@@ -117,19 +119,19 @@ class Registry(object):
     def token_addresses(self):
         return [
             address_decoder(address)
-            for address in self.proxy.tokenAddresses.call(startgas=self.startgas)
+            for address in self.proxy.call('tokenAddresses', startgas=self.startgas)
         ]
 
     def manager_addresses(self):
         return [
             address_decoder(address)
-            for address in self.proxy.channelManagerAddresses.call(startgas=self.startgas)
+            for address in self.proxy.call('channelManagerAddresses', startgas=self.startgas)
         ]
 
     def tokenadded_filter(self, from_block=None, to_block=None):
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_TOKEN_ADDED)]
 
-        registry_address_bin = self.proxy.address
+        registry_address_bin = self.proxy.contract_address
         filter_id_raw = new_filter(
             self.client,
             registry_address_bin,

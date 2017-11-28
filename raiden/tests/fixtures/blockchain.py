@@ -465,7 +465,7 @@ def _jsonrpc_services(
             gasprice=GAS_PRICE,
             timeout=poll_timeout,
         )
-        registry_address = registry_proxy.address
+        registry_address = registry_proxy.contract_address
 
     # at this point the blockchain must be running, this will overwrite the
     # method so even if the client is patched twice, it should work fine

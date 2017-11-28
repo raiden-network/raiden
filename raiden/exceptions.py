@@ -16,6 +16,10 @@ class HashLengthNot32(RaidenError):
     pass
 
 
+class InvalidFunctionName(RaidenError):
+    """ Raised by the rpc proxy when a call to an unknown function is made. """
+
+
 # Exceptions raised due to user interaction (the user may be another software)
 
 class ChannelNotFound(RaidenError):

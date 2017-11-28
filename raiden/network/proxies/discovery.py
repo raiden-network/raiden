@@ -70,7 +70,8 @@ class Discovery(object):
         if node_address != self.client.sender:
             raise ValueError("node_address doesnt match this node's address")
 
-        transaction_hash = self.proxy.registerEndpoint.transact(
+        transaction_hash = self.proxy.transact(
+            'registerEndpoint',
             endpoint,
             gasprice=self.gasprice,
             startgas=DISCOVERY_REGISTRATION_GAS,
@@ -87,7 +88,7 @@ class Discovery(object):
 
     def endpoint_by_address(self, node_address_bin):
         node_address_hex = hexlify(node_address_bin)
-        endpoint = self.proxy.findEndpointByAddress.call(node_address_hex)
+        endpoint = self.proxy.call('findEndpointByAddress', node_address_hex)
 
         if endpoint == '':
             raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))
@@ -95,7 +96,7 @@ class Discovery(object):
         return endpoint
 
     def address_by_endpoint(self, endpoint):
-        address = self.proxy.findAddressByEndpoint.call(endpoint)
+        address = self.proxy.call('findAddressByEndpoint', endpoint)
 
         if set(address) == {'0'}:  # the 0 address means nothing found
             return None
@@ -103,4 +104,4 @@ class Discovery(object):
         return unhexlify(address)
 
     def version(self):
-        return self.proxy.contract_version.call()
+        return self.proxy.call('contract_version')

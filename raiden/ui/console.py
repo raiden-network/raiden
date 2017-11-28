@@ -336,7 +336,7 @@ class ConsoleTools(object):
             contract_path=contract_path,
             gasprice=gasprice,
             timeout=timeout)
-        token_address_hex = hexlify(token_proxy.address)
+        token_address_hex = hexlify(token_proxy.contract_address)
         if auto_register:
             self.register_token(token_address_hex)
         print("Successfully created {}the token '{}'.".format(

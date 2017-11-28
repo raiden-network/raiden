@@ -46,5 +46,5 @@ def create_and_distribute_token(
         timeout=timeout
     )
     for receiver in receivers:
-        token_proxy.transfer(receiver, amount_per_receiver)
-    return hexlify(token_proxy.address)
+        token_proxy.transact('transfer', receiver, amount_per_receiver)
+    return hexlify(token_proxy.contract_address)

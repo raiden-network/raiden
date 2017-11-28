@@ -24,10 +24,12 @@ def check_transaction_threw(client, transaction_hash):
     return None
 
 
-def estimate_and_transact(callobj, startgas, gasprice, *args):
+def estimate_and_transact(proxy, function_name, startgas, gasprice, *args):
     """Estimate gas using eth_estimateGas. Multiply by 2 to make sure sufficient gas is provided
     Limit maximum gas to GAS_LIMIT to avoid exceeding blockgas limit
     """
+    # pylint: disable=unused-argument
+
     # XXX: From Byzantium and on estimate gas is not giving an accurate estimation
     #      and as such we not longer utilize its result but use the GAS_LIMIT in
     #      all transactions. With the revert() call not consumin all given gas that
@@ -39,7 +41,8 @@ def estimate_and_transact(callobj, startgas, gasprice, *args):
     #     gasprice=gasprice
     # )
     estimated_gas = GAS_LIMIT
-    transaction_hash = callobj.transact(
+    transaction_hash = proxy.transact(
+        function_name,
         *args,
         startgas=estimated_gas,
         gasprice=gasprice
