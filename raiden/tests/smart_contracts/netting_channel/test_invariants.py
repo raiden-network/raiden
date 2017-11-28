@@ -72,5 +72,4 @@ def test_nettingchannel_settle_timeout_inrange(private_keys, tester_channelmanag
         log_listener=log_listener,
         default_key=INVALID_KEY,
     )
-    # pylint: disable=no-member
     assert netting_channel2.settleTimeout(sender=pkey0) == max_settle_timeout

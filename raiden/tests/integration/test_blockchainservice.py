@@ -209,7 +209,7 @@ def test_channelmanager_graph_building(
 @pytest.mark.parametrize('privatekey_seed', ['blockchain:{}'])
 @pytest.mark.parametrize('number_of_nodes', [3])
 def test_blockchain(
-        blockchain_backend,  # required to start the geth backend
+        blockchain_backend,  # required to start the geth backend pylint: disable=unused-argument
         blockchain_rpc_ports,
         private_keys,
         poll_timeout):
@@ -265,18 +265,17 @@ def test_blockchain(
             'topics': [],
         },
     )
-    assert len(log_list) == 0
+    assert not log_list
 
-    # pylint: disable=no-member
-
-    assert token_proxy.balanceOf(address) == total_token
-    transaction_hash = registry_proxy.addToken.transact(
-        token_proxy.address,
+    assert token_proxy.call('balanceOf', address) == total_token
+    transaction_hash = registry_proxy.transact(
+        'addToken',
+        token_proxy.contract_address,
         gasprice=denoms.wei,
     )
     jsonrpc_client.poll(unhexlify(transaction_hash), timeout=poll_timeout)
 
-    assert len(registry_proxy.tokenAddresses.call()) == 1
+    assert len(registry_proxy.call('tokenAddresses')) == 1
 
     log_list = jsonrpc_client.call(
         'eth_getLogs',
@@ -288,8 +287,9 @@ def test_blockchain(
     )
     assert len(log_list) == 1
 
-    channel_manager_address_encoded = registry_proxy.channelManagerByToken.call(
-        token_proxy.address,
+    channel_manager_address_encoded = registry_proxy.call(
+        'channelManagerByToken',
+        token_proxy.contract_address,
     )
     channel_manager_address = unhexlify(channel_manager_address_encoded)
 
@@ -298,21 +298,22 @@ def test_blockchain(
         topic_decoder(topic)
         for topic in log['topics']  # pylint: disable=invalid-sequence-index
     ]
-    log_data = log['data']
+    log_data = log['data']  # pylint: disable=invalid-sequence-index
     event = registry_proxy.translator.decode_event(
         log_topics,
         unhexlify(log_data[2:]),
     )
 
     assert channel_manager_address == unhexlify(event['channel_manager_address'])
-    assert token_proxy.address == unhexlify(event['token_address'])
+    assert token_proxy.contract_address == unhexlify(event['token_address'])
 
     channel_manager_proxy = jsonrpc_client.new_contract_proxy(
         CONTRACT_MANAGER.get_abi(CONTRACT_CHANNEL_MANAGER),
         channel_manager_address,
     )
 
-    transaction_hash = channel_manager_proxy.newChannel.transact(
+    transaction_hash = channel_manager_proxy.transact(
+        'newChannel',
         addresses[1],
         10,
         gasprice=denoms.wei,
@@ -337,7 +338,7 @@ def test_channel_with_self(raiden_network, settle_timeout):
 
     token_address = app0.raiden.default_registry.token_addresses()[0]
 
-    assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 0
+    assert not app0.raiden.token_to_channelgraph[token_address].address_to_channel
 
     graph0 = app0.raiden.default_registry.manager_by_token(token_address)
 
@@ -347,9 +348,15 @@ def test_channel_with_self(raiden_network, settle_timeout):
             app0.raiden.address,
             settle_timeout,
         )
-        assert 'Peer1 and peer2 must not be equal' in str(excinfo.value)
 
-    tx = graph0.proxy.newChannel(app0.raiden.address, settle_timeout)
+    assert 'Peer1 and peer2 must not be equal' in str(excinfo.value)
+
+    transaction_hash = graph0.proxy.transact(
+        'newChannel',
+        app0.raiden.address,
+        settle_timeout,
+    )
+
     # wait to make sure we get the receipt
     wait_until_block(app0.raiden.chain, app0.raiden.chain.block_number() + 5)
-    assert check_transaction_threw(app0.raiden.chain.client, tx)
+    assert check_transaction_threw(app0.raiden.chain.client, transaction_hash)

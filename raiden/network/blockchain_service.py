@@ -188,7 +188,7 @@ class BlockChainService(object):
             gasprice=GAS_PRICE,
             timeout=self.poll_timeout,
         )
-        return proxy.address
+        return proxy.contract_address
 
     def deploy_and_register_token(
             self,
@@ -202,6 +202,6 @@ class BlockChainService(object):
             contract_path,
             constructor_parameters,
         )
-        registry.add_token(token_address)  # pylint: disable=no-member
+        registry.add_token(token_address)
 
         return token_address

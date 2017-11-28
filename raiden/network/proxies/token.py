@@ -64,7 +64,8 @@ class Token(object):
         # `NettingChannel` and keep this straight forward)
 
         transaction_hash = estimate_and_transact(
-            self.proxy.approve,
+            self.proxy,
+            'approve',
             self.startgas,
             self.gasprice,
             contract_address,
@@ -113,11 +114,12 @@ class Token(object):
 
     def balance_of(self, address):
         """ Return the balance of `address`. """
-        return self.proxy.balanceOf.call(address)
+        return self.proxy.call('balanceOf', address)
 
     def transfer(self, to_address, amount):
         transaction_hash = estimate_and_transact(
-            self.proxy.transfer,  # pylint: disable=no-member
+            self.proxy,
+            'transfer',
             self.startgas,
             self.gasprice,
             to_address,

@@ -80,7 +80,7 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        address = self.proxy.tokenAddress.call()
+        address = self.proxy.call('tokenAddress')
 
         if address == '':
             self._check_exists()
@@ -96,7 +96,7 @@ class NettingChannel(object):
         """
         our_address = privatekey_to_address(self.client.privkey)
 
-        data = self.proxy.addressAndBalance.call(startgas=self.startgas)
+        data = self.proxy.call('addressAndBalance', startgas=self.startgas)
 
         if data == '':
             self._check_exists()
@@ -134,7 +134,7 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        settle_timeout = self.proxy.settleTimeout.call()
+        settle_timeout = self.proxy.call('settleTimeout')
 
         if settle_timeout == '':
             self._check_exists()
@@ -148,7 +148,7 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        opened = self.proxy.opened.call()
+        opened = self.proxy.call('opened')
 
         if opened == '':
             self._check_exists()
@@ -162,7 +162,7 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        closed = self.proxy.closed.call()
+        closed = self.proxy.call('closed')
 
         if closed == '':
             self._check_exists()
@@ -177,7 +177,7 @@ class NettingChannel(object):
         Raises:
             AddressWithoutCode: If the channel was settled prior to the call.
         """
-        closer = self.proxy.closingAddress()
+        closer = self.proxy.call('closingAddress')
 
         if closer:
             return address_decoder(closer)
@@ -232,7 +232,8 @@ class NettingChannel(object):
             log.info('deposit called', contract=pex(self.address), amount=amount)
 
         transaction_hash = estimate_and_transact(
-            self.proxy.deposit,
+            self.proxy,
+            'deposit',
             self.startgas,
             self.gasprice,
             amount,
@@ -270,7 +271,8 @@ class NettingChannel(object):
             )
 
         transaction_hash = estimate_and_transact(
-            self.proxy.close,
+            self.proxy,
+            'close',
             self.startgas,
             self.gasprice,
             nonce,
@@ -320,7 +322,8 @@ class NettingChannel(object):
                 )
 
             transaction_hash = estimate_and_transact(
-                self.proxy.updateTransfer,
+                self.proxy,
+                'updateTransfer',
                 self.startgas,
                 self.gasprice,
                 nonce,
@@ -375,7 +378,8 @@ class NettingChannel(object):
             merkleproof_encoded = ''.join(merkle_proof)
 
             transaction_hash = estimate_and_transact(
-                self.proxy.withdraw,
+                self.proxy,
+                'withdraw',
                 self.startgas,
                 self.gasprice,
                 locked_encoded,
@@ -411,7 +415,8 @@ class NettingChannel(object):
             log.info('settle called')
 
         transaction_hash = estimate_and_transact(
-            self.proxy.settle,
+            self.proxy,
+            'settle',
             self.startgas,
             self.gasprice,
         )
@@ -435,7 +440,7 @@ class NettingChannel(object):
         Return:
             Filter: The filter instance.
         """
-        netting_channel_address_bin = self.proxy.address
+        netting_channel_address_bin = self.proxy.contract_address
         filter_id_raw = new_filter(
             self.client,
             netting_channel_address_bin,

@@ -78,7 +78,7 @@ class ChannelManager(object):
 
     def token_address(self):
         """ Return the token of this manager. """
-        return address_decoder(self.proxy.tokenAddress.call())
+        return address_decoder(self.proxy.call('tokenAddress'))
 
     def new_netting_channel(self, peer1, peer2, settle_timeout):
         if not isaddress(peer1):
@@ -105,7 +105,8 @@ class ChannelManager(object):
             other = peer1
 
         transaction_hash = estimate_and_transact(
-            self.proxy.newChannel,
+            self.proxy,
+            'newChannel',
             self.startgas,
             self.gasprice,
             other,
@@ -117,7 +118,8 @@ class ChannelManager(object):
         if check_transaction_threw(self.client, transaction_hash):
             raise DuplicatedChannelError('Duplicated channel')
 
-        netting_channel_results_encoded = self.proxy.getChannelWith.call(
+        netting_channel_results_encoded = self.proxy.call(
+            'getChannelWith',
             other,
             startgas=self.startgas,
         )
@@ -144,7 +146,10 @@ class ChannelManager(object):
     def channels_addresses(self):
         # for simplicity the smart contract return a shallow list where every
         # second item forms a tuple
-        channel_flat_encoded = self.proxy.getChannelsParticipants.call(startgas=self.startgas)
+        channel_flat_encoded = self.proxy.call(
+            'getChannelsParticipants',
+            startgas=self.startgas,
+        )
 
         channel_flat = [
             address_decoder(channel)
@@ -157,7 +162,8 @@ class ChannelManager(object):
 
     def channels_by_participant(self, participant_address):  # pylint: disable=invalid-name
         """ Return a list of channel address that `participant_address` is a participant. """
-        address_list = self.proxy.nettingContractsByAddress.call(
+        address_list = self.proxy.call(
+            'nettingContractsByAddress',
             participant_address,
             startgas=self.startgas,
         )
@@ -175,7 +181,7 @@ class ChannelManager(object):
         """
         topics = [CONTRACT_MANAGER.get_event_id(EVENT_CHANNEL_NEW)]
 
-        channel_manager_address_bin = self.proxy.address
+        channel_manager_address_bin = self.proxy.contract_address
         filter_id_raw = new_filter(
             self.client,
             channel_manager_address_bin,

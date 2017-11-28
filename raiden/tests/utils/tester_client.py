@@ -326,7 +326,7 @@ class BlockChainServiceTesterMock(object):
             contract_path,
             constructor_parameters,
         )
-        registry.add_token(token_address)  # pylint: disable=no-member
+        registry.add_token(token_address)
 
         return token_address
 

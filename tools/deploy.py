@@ -108,8 +108,8 @@ def deploy_file(contract, compiled_contracts, client, gas_price=GAS_PRICE):
         contract_path=filename,
         gasprice=gas_price
     )
-    log.info("Deployed %s @ 0x%s", name, hexlify(proxy.address))
-    libraries[contract] = hexlify(proxy.address)
+    log.info("Deployed %s @ 0x%s", name, hexlify(proxy.contract_address))
+    libraries[contract] = hexlify(proxy.contract_address)
     return libraries
 
 
