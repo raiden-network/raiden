@@ -654,7 +654,7 @@ Possible Responses
 +------------------+---------------------------+
 | HTTP Code        | Condition                 |
 +==================+===========================+
-| 204 NO CONTENT   | For successfully leaving  |
+| 200 OK           | For successfully leaving  |
 |                  | a token network           |
 +------------------+---------------------------+
 | 500 Server Error | Internal Raiden node error|
