@@ -28,7 +28,12 @@ without any specific system dependencies, other than an Ethereum client installe
 macOS
 *****
 
-We are currently working on prebuilt binary version of Raiden for macOS. Until then please refer to the :ref:`detailed step-by-step guide <macos_development_setup>` for setting up a macOS development environment.
+Download the latest :code:`raiden-<version>-macOS.zip`, and extract it:
+
+    unzip raiden-<version>-macOS.zip
+
+The resulting binary will work on any version of macOS from 10.12 onwards without any other
+dependencies. An Ethereum client is required.
 
 Dependencies
 ************
