@@ -2,6 +2,7 @@
 # -*- coding: utf-8
 from __future__ import print_function
 
+from binascii import hexlify
 import json
 
 from ethereum import tester
@@ -28,12 +29,12 @@ def deploy_all(token_groups=None):
     log.DEV(  # pylint: disable=no-member
         'default key',
         raw=tester.DEFAULT_KEY,
-        enc=tester.DEFAULT_KEY.encode('hex'),
+        enc=hexlify(tester.DEFAULT_KEY),
     )
     log.DEV(  # pylint: disable=no-member
         'default account',
         raw=tester.DEFAULT_ACCOUNT,
-        enc=tester.DEFAULT_ACCOUNT.encode('hex'),
+        enc=hexlify(tester.DEFAULT_ACCOUNT),
     )
 
     tester.DEFAULT_KEY = DEFAULT_KEY
@@ -44,19 +45,19 @@ def deploy_all(token_groups=None):
     log.DEV(  # pylint: disable=no-member
         'default key',
         raw=tester.DEFAULT_KEY,
-        enc=tester.DEFAULT_KEY.encode('hex'),
+        enc=hexlify(tester.DEFAULT_KEY),
     )
     log.DEV(  # pylint: disable=no-member
         'default account',
         raw=tester.DEFAULT_ACCOUNT,
-        enc=tester.DEFAULT_ACCOUNT.encode('hex'),
+        enc=hexlify(tester.DEFAULT_ACCOUNT),
     )
 
     state = tester.state(num_accounts=1)
 
     log.DEV(  # pylint: disable=no-member
         'state',
-        coinbase=state.block.coinbase.encode('hex'),
+        coinbase=hexlify(state.block.coinbase),
         balance=state.block.get_balance(DEFAULT_ACCOUNT),
     )
     tester.gas_limit = 10 * 10 ** 6
@@ -123,7 +124,7 @@ def create_and_distribute_token(state,
     for receiver in receivers:
         proxy.transfer(receiver, amount_per_receiver)
     state.mine(number_of_blocks=1)
-    return (name, proxy.address.encode('hex'))
+    return (name, hexlify(proxy.address))
 
 
 def deploy_with_dependencies(contract_name, state, libraries=None):
@@ -159,7 +160,7 @@ def deploy_with_dependencies(contract_name, state, libraries=None):
             sender=DEFAULT_KEY,
         )
 
-        libraries[dependency.split('.')[0]] = deployed.address.encode('hex')
+        libraries[dependency.split('.')[0]] = hexlify(deployed.address)
         state.mine()
 
     log.DEV('deploying target', name=contract_name)  # pylint: disable=no-member
@@ -173,7 +174,7 @@ def deploy_with_dependencies(contract_name, state, libraries=None):
         sender=DEFAULT_KEY,
     )
 
-    libraries[contract_name.split('.')[0]] = contract.address.encode('hex')
+    libraries[contract_name.split('.')[0]] = hexlify(contract.address)
     state.mine()
     return libraries
 

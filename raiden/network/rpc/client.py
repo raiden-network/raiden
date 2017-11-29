@@ -2,7 +2,7 @@
 import os
 import warnings
 from time import time as now
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 
 import rlp
 import gevent
@@ -552,7 +552,7 @@ class JSONRPCClient(object):
             res = self.eth_sendTransaction(**tx_dict)
 
         assert len(res) in (20, 32)
-        return res.encode('hex')
+        return hexlify(res)
 
     def eth_sendTransaction(
             self,

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 import os
 import string
 from itertools import chain, product
@@ -44,7 +44,7 @@ def deploy_auxiliary_tester(tester_state, tester_nettingchannel_library_address)
         None,
         path=get_relative_contract(__file__, 'AuxiliaryTester.sol'),
         language='solidity',
-        libraries={'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex')},
+        libraries={'NettingChannelLibrary': hexlify(tester_nettingchannel_library_address)},
         extra_args=raiden_remap,
     )
     tester_state.mine(number_of_blocks=1)

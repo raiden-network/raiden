@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import hexlify
+
 import pytest
 from ethereum.tester import TransactionFailed
 from coincurve import PrivateKey
@@ -45,7 +47,7 @@ def test_transfer_update_event(tester_state, tester_channels, tester_events):
 
     assert tester_events[-1] == {
         '_event_type': 'TransferUpdated',
-        'node_address': address1.encode('hex'),
+        'node_address': hexlify(address1),
     }
 
 

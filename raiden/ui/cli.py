@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+from binascii import hexlify
 import sys
 import os
 import re
@@ -506,7 +507,7 @@ def app(address,
     address_hex, privatekey_bin = prompt_account(address_hex, keystore_path, password_file)
     address = address_decoder(address_hex)
 
-    privatekey_hex = privatekey_bin.encode('hex')
+    privatekey_hex = hexlify(privatekey_bin)
     config['privatekey_hex'] = privatekey_hex
 
     endpoint = eth_rpc_endpoint

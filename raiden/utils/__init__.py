@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 import os
 import re
 import string
@@ -58,7 +58,7 @@ def address_decoder(addr):
 
 def address_encoder(address):
     assert len(address) in (20, 0)
-    return '0x' + address.encode('hex')
+    return '0x' + hexlify(address)
 
 
 def block_tag_encoder(val):
@@ -66,11 +66,11 @@ def block_tag_encoder(val):
         return hex(val).rstrip('L')
 
     assert val in ('latest', 'pending')
-    return '0x' + val.encode('hex')
+    return '0x' + hexlify(val)
 
 
 def data_encoder(data, length=None):
-    data = data.encode('hex')
+    data = hexlify(data)
     length = length or 0
     return '0x' + data.rjust(length * 2, '0')
 
@@ -110,7 +110,7 @@ def topic_encoder(topic):
 
 
 def pex(data):
-    return str(data).encode('hex')[:8]
+    return hexlify(str(data))[:8]
 
 
 def lpex(lst):

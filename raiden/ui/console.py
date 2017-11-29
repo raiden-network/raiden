@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
-
 from future import standard_library
 standard_library.install_aliases()
+from binascii import hexlify
 import io
 import errno
 import json
@@ -336,7 +336,7 @@ class ConsoleTools(object):
             contract_path=contract_path,
             gasprice=gasprice,
             timeout=timeout)
-        token_address_hex = token_proxy.address.encode('hex')
+        token_address_hex = hexlify(token_proxy.address)
         if auto_register:
             self.register_token(token_address_hex)
         print("Successfully created {}the token '{}'.".format(
@@ -437,7 +437,7 @@ class ConsoleTools(object):
             ),
             channel=(channel
                      if not pretty
-                     else channel.external_state.netting_channel.address.encode('hex')),
+                     else hexlify(channel.external_state.netting_channel.address)),
             lifecycle=dict(
                 opened_at=channel.external_state.opened_block or 'not yet',
                 can_transfer=channel.can_transfer,
@@ -452,8 +452,8 @@ class ConsoleTools(object):
                 symbol=token.proxy.symbol(),
             ),
         )
-        stats['funding']['our_address'] = stats['funding']['our_address'].encode('hex')
-        stats['funding']['partner_address'] = stats['funding']['partner_address'].encode('hex')
+        stats['funding']['our_address'] = hexlify(stats['funding']['our_address'])
+        stats['funding']['partner_address'] = hexlify(stats['funding']['partner_address'])
         if not pretty:
             return stats
         else:

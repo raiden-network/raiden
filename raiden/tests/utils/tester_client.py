@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 import os
 from collections import defaultdict
 from itertools import count
@@ -349,7 +349,7 @@ class DiscoveryTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
 
     def endpoint_by_address(self, node_address_bin):
-        node_address_hex = node_address_bin.encode('hex')
+        node_address_hex = hexlify(node_address_bin)
         endpoint = self.proxy.findEndpointByAddress(node_address_hex)
 
         if endpoint is '':

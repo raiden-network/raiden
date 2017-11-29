@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 
 from ethereum import slogging
 
@@ -180,7 +180,7 @@ class Registry(object):
 
             if manager_address is None:
                 raise NoTokenManager(
-                    'Manager for token 0x{} does not exist'.format(token_address.encode('hex'))
+                    'Manager for token 0x{} does not exist'.format(hexlify(token_address))
                 )
 
             manager = ChannelManager(

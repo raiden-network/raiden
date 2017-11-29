@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+from binascii import hexlify
 from ethereum import tester
 from raiden.utils import get_contract_path
 
 
 def test_endpointregistry(tester_state, tester_events):
     account0 = tester.DEFAULT_ACCOUNT
-    sender = account0.encode('hex')
+    sender = hexlify(account0)
 
     endpointregistry_path = get_contract_path('EndpointRegistry.sol')
     registry_contract = tester_state.abi_contract(

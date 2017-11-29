@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import hexlify
+
 import gevent
 from gevent.event import AsyncResult
 from ethereum import slogging
@@ -254,7 +256,7 @@ class RaidenAPI(object):
         # Checking the balance is not helpful since this requires multiple
         # transactions that can race, e.g. the deposit check succeed but the
         # user spent his balance before deposit.
-        balance = token.balance_of(self.raiden.address.encode('hex'))
+        balance = token.balance_of(hexlify(self.raiden.address))
         if not balance >= amount:
             msg = 'Not enough balance to deposit. {} Available={} Tried={}'.format(
                 pex(token_address),

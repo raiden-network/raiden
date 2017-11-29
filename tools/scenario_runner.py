@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
+from binascii import hexlify
 import signal
 import json
 import time
@@ -144,7 +145,7 @@ def run(privatekey,
         tokens = script['tokens']
         token_address = None
         peer = None
-        our_node = app.raiden.address.encode('hex')
+        our_node = hexlify(app.raiden.address)
         log.warning("our address is {}".format(our_node))
         for token in tokens:
             # skip tokens that we're not part of

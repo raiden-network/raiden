@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import hexlify
+
 import pytest
 
 from ethereum import slogging
@@ -44,17 +46,17 @@ def test_registry(tester_registry, tester_events, private_keys, tester_state):
     addresses = tester_registry.tokenAddresses(sender=privatekey0)
 
     assert len(addresses) == 2
-    assert addresses[0] == token_address1.encode('hex')
-    assert addresses[1] == token_address2.encode('hex')
+    assert addresses[0] == hexlify(token_address1)
+    assert addresses[1] == hexlify(token_address2)
 
     assert len(tester_events) == 2
 
     assert tester_events[0]['_event_type'] == 'TokenAdded'
-    assert tester_events[0]['token_address'] == token_address1.encode('hex')
+    assert tester_events[0]['token_address'] == hexlify(token_address1)
     assert tester_events[0]['channel_manager_address'] == contract_address1
 
     assert tester_events[1]['_event_type'] == 'TokenAdded'
-    assert tester_events[1]['token_address'] == token_address2.encode('hex')
+    assert tester_events[1]['token_address'] == hexlify(token_address2)
     assert tester_events[1]['channel_manager_address'] == contract_address2
 
 

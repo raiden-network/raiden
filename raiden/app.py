@@ -2,7 +2,7 @@
 from __future__ import print_function
 import filelock
 import sys
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 
 from raiden.raiden_service import RaidenService
 from raiden.settings import (
@@ -82,7 +82,7 @@ class App(object):  # pylint: disable=too-few-public-methods
         except filelock.Timeout:
             pubkey = privatekey_to_address(unhexlify(self.config['privatekey_hex']))
             print ('FATAL: Another Raiden instance already running for account 0x%s' %
-                   str(pubkey).encode('hex'))
+                   hexlify(str(pubkey)))
             sys.exit(1)
         self.start_console = self.config['console']
 

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division
 
+from binascii import hexlify
 import json
 import os
 import shutil
@@ -104,7 +105,7 @@ def geth_create_account(datadir, privkey):
     """
     keyfile_path = os.path.join(datadir, 'keyfile')
     with open(keyfile_path, 'w') as handler:
-        handler.write(privkey.encode('hex'))
+        handler.write(hexlify(privkey))
 
     create = subprocess.Popen(
         ['geth', '--datadir', datadir, 'account', 'import', keyfile_path],

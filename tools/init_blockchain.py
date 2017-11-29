@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import hexlify
+
 from ethereum._solidity import compile_file
 
 from raiden.network.rpc.client import JSONRPCClient
@@ -26,7 +28,7 @@ def create_and_distribute_token(
     """Create a new ERC-20 token and distribute it among `receivers`.
     If `name` is None, the name will be derived from hashing all receivers.
     """
-    name = name or sha3(''.join(receivers)).encode('hex')
+    name = name or hexlify(sha3(''.join(receivers)))
     contract_path = get_contract_path('HumanStandardToken.sol')
     token_proxy = client.deploy_solidity_contract(
         client.sender,
@@ -45,4 +47,4 @@ def create_and_distribute_token(
     )
     for receiver in receivers:
         token_proxy.transfer(receiver, amount_per_receiver)
-    return token_proxy.address.encode('hex')
+    return hexlify(token_proxy.address)

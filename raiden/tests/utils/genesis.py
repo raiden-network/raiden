@@ -1,5 +1,8 @@
 # -*- coding: utf-8
+from binascii import hexlify
+
 from raiden.settings import GAS_LIMIT_HEX
+
 GENESIS_STUB = {
     'config': {
         'homesteadBlock': 0,
@@ -15,7 +18,7 @@ GENESIS_STUB = {
     'coinbase': '0x0000000000000000000000000000000000000000',
     'timestamp': '0x00',
     'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'extraData': '0x' + 'raiden'.encode('hex'),
+    'extraData': '0x' + hexlify('raiden'),
     'gasLimit': GAS_LIMIT_HEX,
     # add precompiled addresses with minimal balance to avoid deletion
     'alloc': {'%040x' % precompiled: {'balance': '0x1'} for precompiled in range(256)}
