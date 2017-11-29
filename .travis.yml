@@ -48,10 +48,11 @@ notifications:
 jobs:
   include:
     - stage: deploy
-      before_install: if [ -n "$TRAVIS_TAG" ]; then mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; ./.travis/before_install.sh; fi
-      install: if [ -n "$TRAVIS_TAG" ]; then ./.travis/install.sh; fi
-      before_script: if [ -n "$TRAVIS_TAG" ]; then ./.travis/before_script.sh; fi
-      script: if [ -n "$TRAVIS_TAG" ]; then RAIDENVERSION=$TRAVIS_TAG make bundle; fi
+      if: tag IS present
+      before_install: mkdir -p $HOME/.bin; export PATH=$PATH:$HOME/.bin; ./.travis/before_install.sh
+      install: ./.travis/install.sh
+      before_script: ./.travis/before_script.sh
+      script: RAIDENVERSION=$TRAVIS_TAG make bundle
       env: TEST_TYPE=""
       deploy:
       - provider: releases
@@ -74,6 +75,7 @@ jobs:
           repo: raiden-network/raiden
           branch: master
     - stage: deploy
+      if: tag IS present
       os: osx
       language: generic
       osx_image: xcode8.3
@@ -99,3 +101,13 @@ jobs:
         - pip uninstall -y pdbpp
         - pyinstaller --noconfirm --clean raiden.spec
         - cd dist && zip -9 -r raiden-${TRAVIS_TAG}-macOS.zip raiden*
+      deploy:
+        - provider: releases
+          api_key:
+            secure: O85yltVQ1OacJQoNQWDJqOsXuSb+x7IMJTtUPuFM5iAOIGLmzhk0/qzJInixCGbAfWMYT4wTjA6OfxeiAWYzC5pCgqedZOsjp+8bXjn2Ek443Y+FBay3g38ebn3KBFBat3iMOamdrFSGTENugdG418GdK6yFVYpyCCUJXWLBcBUPOi7BlakI8TkznsaCad7OVRrPfMHWRe11WI3b4fajPnH/M7JRdDpT5GTisEchwKzYHnBttYySDZcQS3gtAEK7Srg9AkdEYCW3DOkmW4DeEgrQAQVcHHAV7eZREC1M3SrsrCotEqhEmIy29akOVKpOZtYWMxNFIsScDt39Y2hJLXRo1NjN0RBgIOg+Asl3B1cuK3Zfzc30r+Fyfkl9yFXpC35xddh2dHz5PFyssmtVZMEdxECtQT0DN08FB1JNdBbz3tfNw84IvR2ymYcQdRFWQM51rBUjUGspzDftAdITKkk3Z67jgYnaVvL0iBMbuuFjZDs8375IjIo7hxJ5UY7YWLV8Ic2r89wq5Dw7EsL5cyc4BVfj1kByZ1BJ6sZEKaqVdDdEc1Bv2/SYk6Da/muPB9gYK8Baw1gumLvrVS65EUVvwGmnq0zKrKmvTLl0aNPRNInaOVOloK63HdOwJhiLRn50YfCARrX+5kKBIQxdtNtmfPmdYJ3cm5bNhaXQ8fs=
+          file: dist/raiden-${TRAVIS_TAG}-macOS.zip
+          skip_cleanup: true
+          on:
+            tags: true
+            repo: raiden-network/raiden
+            branch: master
