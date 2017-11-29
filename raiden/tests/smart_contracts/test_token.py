@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from binascii import hexlify
 import os
 
 from ethereum import tester
@@ -23,7 +24,7 @@ def test_token():
     )
 
     contract_libraries = {
-        'StandardToken': standard_token.address.encode('hex'),
+        'StandardToken': hexlify(standard_token.address),
     }
     human_token = state.abi_contract(
         None,
@@ -60,7 +61,7 @@ def test_token_approve():
     )
 
     contract_libraries = {
-        'StandardToken': standard_token.address.encode('hex'),
+        'StandardToken': hexlify(standard_token.address),
     }
     human_token = state.abi_contract(
         None,

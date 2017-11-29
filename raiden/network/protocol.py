@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from binascii import hexlify
 import logging
 import random
 from collections import (
@@ -760,7 +761,7 @@ class RaidenProtocol(object):
         elif log.isEnabledFor(logging.ERROR):
             log.error(
                 'Invalid message',
-                message=data.encode('hex'),
+                message=hexlify(data),
             )
 
     def receive_ack(self, ack):

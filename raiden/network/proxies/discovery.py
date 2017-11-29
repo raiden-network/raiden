@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,
@@ -86,7 +86,7 @@ class Discovery(object):
             raise TransactionThrew('Register Endpoint', receipt_or_none)
 
     def endpoint_by_address(self, node_address_bin):
-        node_address_hex = node_address_bin.encode('hex')
+        node_address_hex = hexlify(node_address_bin)
         endpoint = self.proxy.findEndpointByAddress.call(node_address_hex)
 
         if endpoint == '':

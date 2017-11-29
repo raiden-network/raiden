@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import print_function
 
+from binascii import hexlify
 import json
 import os
 
@@ -107,8 +108,8 @@ def deploy_file(contract, compiled_contracts, client, gas_price=GAS_PRICE):
         contract_path=filename,
         gasprice=gas_price
     )
-    log.info("Deployed %s @ 0x%s", name, proxy.address.encode('hex'))
-    libraries[contract] = proxy.address.encode('hex')
+    log.info("Deployed %s @ 0x%s", name, hexlify(proxy.address))
+    libraries[contract] = hexlify(proxy.address)
     return libraries
 
 

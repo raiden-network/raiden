@@ -3,7 +3,7 @@ import getpass
 import json
 import os
 import sys
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 
 from bitcoin import privtopub
 from ethereum import keys
@@ -167,7 +167,7 @@ class Account(object):
         d['crypto'] = self.keystore['crypto']
         d['version'] = self.keystore['version']
         if include_address and self.address is not None:
-            d['address'] = self.address.encode('hex')
+            d['address'] = hexlify(self.address)
         if include_id and self.uuid is not None:
             d['id'] = self.uuid
         return json.dumps(d)
@@ -263,7 +263,7 @@ class Account(object):
 
     def __repr__(self):
         if self.address is not None:
-            address = self.address.encode('hex')
+            address = hexlify(self.address)
         else:
             address = '?'
         return '<Account(address={address}, id={id})>'.format(address=address, id=self.uuid)

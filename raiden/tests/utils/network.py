@@ -2,6 +2,7 @@
 """ Utilities to set-up a Raiden network. """
 from __future__ import print_function, division
 
+from binascii import hexlify
 
 from ethereum import slogging
 
@@ -251,7 +252,7 @@ def create_apps(
             'port': port,
             'external_ip': host,
             'external_port': port,
-            'privatekey_hex': private_key.encode('hex'),
+            'privatekey_hex': hexlify(private_key),
             'reveal_timeout': reveal_timeout,
             'settle_timeout': settle_timeout,
             'database_path': database_paths[idx],

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from binascii import hexlify
 import itertools
 
 import pytest
@@ -81,8 +82,8 @@ def test_channeldeleted_event(
     channeldelete_event = tester_events[-2]
     assert channeldelete_event == {
         '_event_type': 'ChannelDeleted',
-        'caller_address': address0.encode('hex'),
-        'partner': address1.encode('hex')
+        'caller_address': hexlify(address0),
+        'partner': hexlify(address1)
     }
 
 
@@ -270,8 +271,8 @@ def test_for_issue_892(
         else:
             # this is brittle, relying on an implicit ordering of addresses
             participant_pairs.extend((
-                address0.encode('hex'),
-                address1.encode('hex'),
+                hexlify(address0),
+                hexlify(address1),
             ))
 
         assert participant_pairs == tester_channelmanager.getChannelsParticipants(sender=pkey0)

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from binascii import unhexlify
+from binascii import hexlify, unhexlify
 
 from ethereum import tester
 
@@ -59,7 +59,7 @@ def deploy_standard_token(deploy_key, tester_state, token_amount):
     tester_state.mine(number_of_blocks=1)
 
     human_token_libraries = {
-        'StandardToken': standard_token_address.encode('hex'),
+        'StandardToken': hexlify(standard_token_address),
     }
     # using abi_contract because of the constructor_parameters
     human_token_proxy = tester_state.abi_contract(
@@ -97,7 +97,7 @@ def deploy_channelmanager_library(deploy_key, tester_state, tester_nettingchanne
         language='solidity',
         contract_name='ChannelManagerLibrary',
         libraries={
-            'NettingChannelLibrary': tester_nettingchannel_library_address.encode('hex'),
+            'NettingChannelLibrary': hexlify(tester_nettingchannel_library_address),
         },
         sender=deploy_key,
     )
@@ -113,7 +113,7 @@ def deploy_registry(deploy_key, tester_state, channel_manager_library_address):
         language='solidity',
         contract_name='Registry',
         libraries={
-            'ChannelManagerLibrary': channel_manager_library_address.encode('hex')
+            'ChannelManagerLibrary': hexlify(channel_manager_library_address)
         },
         sender=deploy_key,
     )

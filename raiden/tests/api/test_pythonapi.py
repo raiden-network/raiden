@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+from binascii import hexlify
+
 import pytest
 
 from raiden.api.python import RaidenAPI
@@ -123,7 +125,7 @@ def test_channel_lifecycle(blockchain_type, raiden_network, token_addresses, dep
     assert any(
         (
             event['_event_type'] == 'ChannelNewBalance' and
-            event['participant'] == api1.address.encode('hex')
+            event['participant'] == hexlify(api1.address)
         )
         for event in event_list2
     )
@@ -142,7 +144,7 @@ def test_channel_lifecycle(blockchain_type, raiden_network, token_addresses, dep
     assert any(
         (
             event['_event_type'] == 'ChannelClosed' and
-            event['closing_address'] == api1.address.encode('hex')
+            event['closing_address'] == hexlify(api1.address)
         )
         for event in event_list3
     )

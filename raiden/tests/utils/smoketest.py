@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from future import standard_library
 standard_library.install_aliases()
+from binascii import hexlify
 import os
 import time
 import json
@@ -103,7 +104,7 @@ def run_restapi_smoketests(raiden_service, test_config):
 
     response_json = response.json()
     assert (response_json[0]['partner_address'] ==
-            '0x' + str(ConnectionManager.BOOTSTRAP_ADDR).encode('hex'))
+            '0x' + hexlify(str(ConnectionManager.BOOTSTRAP_ADDR)))
     assert response_json[0]['state'] == 'opened'
     assert response_json[0]['balance'] > 0
 
@@ -260,12 +261,12 @@ def deploy_and_open_channel_alloc(deployment_key):
         channel_address=channel_address,
     )
     for k, v in contracts.iteritems():
-        contracts[k] = v.encode('hex')
+        contracts[k] = hexlify(v)
 
     alloc = dict()
     # preserve all accounts and contracts
     for address in state.block.state.to_dict().keys():
-        address = address.encode('hex')
+        address = hexlify(address)
         alloc[address] = state.block.account_to_dict(address)
 
     for account, content in alloc.iteritems():
@@ -281,7 +282,7 @@ def complete_genesis():
     smoketest_genesis = GENESIS_STUB.copy()
     smoketest_genesis['config']['clique'] = {'period': 1, 'epoch': 30000}
     smoketest_genesis['extraData'] = '0x{:0<64}{:0<170}'.format(
-        'raiden'.encode('hex'),
+        hexlify('raiden'),
         TEST_ACCOUNT['address'],
     )
     smoketest_genesis['alloc'][TEST_ACCOUNT['address']] = dict(balance=hex(10 ** 18))
