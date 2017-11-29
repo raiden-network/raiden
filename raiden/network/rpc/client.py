@@ -151,6 +151,26 @@ def format_data_for_call(
     return json_data
 
 
+def check_node_connection(func):
+    """ A decorator to reconnect if the connection to the node is lost """
+    def retry_on_disconnect(self, *args, **kwargs):
+        for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
+            try:
+                result = func(self, *args, **kwargs)
+                if i > 0:
+                    log.info('Client reconnected')
+                return result
+
+            except (requests.exceptions.ConnectionError, InvalidReplyError):
+                log.info(
+                    'Timeout in eth client connection. Is the client offline? Trying '
+                    'again in {}s.'.format(timeout)
+                )
+            gevent.sleep(timeout)
+
+    return retry_on_disconnect
+
+
 class JSONRPCClient(object):
     """ Ethereum JSON RPC client.
 
@@ -162,25 +182,6 @@ class JSONRPCClient(object):
             `nonce_update_interval` seconds.
         nonce_offset (int): Network's default base nonce number.
     """
-
-    def _check_node_connection(func):
-
-        def retry_if_disconnect(self, *args, **kwargs):
-            for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
-                try:
-                    result = func(self, *args, **kwargs)
-                    if i > 0:
-                        log.info('Client reconnected')
-                    return result
-
-                except (requests.exceptions.ConnectionError, InvalidReplyError):
-                    log.info(
-                        'Timeout in eth client connection. Is the client offline? Trying'
-                        ' again in {}s.'.format(timeout)
-                    )
-                gevent.sleep(timeout)
-
-        return retry_if_disconnect
 
     def __init__(self, host, port, privkey, nonce_update_interval=5.0, nonce_offset=0):
         endpoint = 'http://{}:{}'.format(host, port)
@@ -470,7 +471,7 @@ class JSONRPCClient(object):
             for c in changes
         ]
 
-    @_check_node_connection
+    @check_node_connection
     def call(self, method, *args):
         """ Do the request and return the result.
 
