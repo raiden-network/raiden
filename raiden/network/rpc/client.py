@@ -210,7 +210,7 @@ class JSONRPCClient(object):
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
 
-    def blocknumber(self):
+    def block_number(self):
         """ Return the most recent block. """
         return quantity_decoder(self.call('eth_blockNumber'))
 
@@ -814,11 +814,11 @@ class JSONRPCClient(object):
                 transaction_block = quantity_decoder(transaction['blockNumber'])
                 confirmation_block = transaction_block + confirmations
 
-                block_number = self.blocknumber()
+                block_number = self.block_number()
 
                 while block_number < confirmation_block:
                     gevent.sleep(.5)
-                    block_number = self.blocknumber()
+                    block_number = self.block_number()
 
         except gevent.Timeout:
             raise Exception('timeout when polling for transaction')

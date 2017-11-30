@@ -169,7 +169,7 @@ def etherscan_query_with_retries(url, sleep, retries=3):
 
 
 def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
-    local_block = blockchain_service.client.blocknumber()
+    local_block = blockchain_service.client.block_number()
     etherscan_block = etherscan_query_with_retries(url, sleep)
     syncing_str = 'Syncing ... Current: {} / Target: ~{}'
 
@@ -182,7 +182,7 @@ def wait_for_sync_etherscan(blockchain_service, url, tolerance, sleep):
     for i in count():
         sys.stdout.flush()
         gevent.sleep(sleep)
-        local_block = blockchain_service.client.blocknumber()
+        local_block = blockchain_service.client.block_number()
 
         # update the oracle block number sparsely to not spam the server
         if local_block >= etherscan_block or i % 50 == 0:

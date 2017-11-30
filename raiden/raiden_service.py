@@ -240,7 +240,7 @@ class RaidenService(object):
         self.on_message = self.message_handler.on_message
         self.alarm = AlarmTask(chain)
         self.shutdown_timeout = config['shutdown_timeout']
-        self._blocknumber = None
+        self._block_number = None
 
         self.transaction_log = StateChangeLog(
             storage_instance=StateChangeLogSQLiteBackend(
@@ -277,7 +277,7 @@ class RaidenService(object):
         self.alarm.start()
 
         # Prime the block number cache and set the callbacks
-        self._blocknumber = self.alarm.last_block_number
+        self._block_number = self.alarm.last_block_number
         self.alarm.register_callback(self.poll_blockchain_events)
         self.alarm.register_callback(self.set_block_number)
 
@@ -380,8 +380,8 @@ class RaidenService(object):
 
             self.restore_transfer_states(data['transfers'])
 
-    def set_block_number(self, blocknumber):
-        state_change = Block(blocknumber)
+    def set_block_number(self, block_number):
+        state_change = Block(block_number)
         self.state_machine_event_handler.log_and_dispatch_to_all_tasks(state_change)
 
         for graph in self.token_to_channelgraph.itervalues():
@@ -390,7 +390,7 @@ class RaidenService(object):
 
         # To avoid races, only update the internal cache after all the state
         # tasks have been updated.
-        self._blocknumber = blocknumber
+        self._block_number = block_number
 
     def set_node_network_state(self, node_address, network_state):
         for graph in self.token_to_channelgraph.itervalues():
@@ -403,13 +403,13 @@ class RaidenService(object):
         self.protocol.start_health_check(node_address)
 
     def get_block_number(self):
-        return self._blocknumber
+        return self._block_number
 
     def poll_blockchain_events(self, current_block=None):
         # pylint: disable=unused-argument
         on_statechange = self.state_machine_event_handler.on_blockchain_statechange
 
-        for state_change in self.blockchain_events.poll_state_change(self._blocknumber):
+        for state_change in self.blockchain_events.poll_state_change(self._block_number):
             on_statechange(state_change)
 
     def find_channel_by_address(self, netting_channel_address_bin):
