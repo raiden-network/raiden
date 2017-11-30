@@ -50,7 +50,7 @@ class BlockChainService(object):
         self.gasprice = gasprice
 
     def block_number(self):
-        return self.client.blocknumber()
+        return self.client.block_number()
 
     def is_synced(self):
         result = self.client.call('eth_syncing')

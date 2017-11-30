@@ -121,7 +121,7 @@ class BaseMediatedTransferTask(Task):
             )
 
     def _send_and_wait_block(self, raiden, recipient, transfer, expiration_block):
-        """ Utility to handle multiple messages and timeout on a blocknumber. """
+        """ Utility to handle multiple messages and timeout on a block number. """
         raiden.send_async(recipient, transfer)
 
         current_block = raiden.get_block_number()
