@@ -378,7 +378,18 @@ def set_expired_pairs(transfers_pair, block_number):
     events = list()
     for pair in pending_transfers_pairs:
         if block_number > pair.payer_transfer.expiration:
-            assert pair.payee_state == 'payee_expired'
+            if pair.payee_state == 'payee_pending':
+                # If we get here it means that we were offline for a long period
+                # of time and had a pending transfer that should have expired but
+                # that did not happen since we were offline.
+                pair.payee_state = 'payee_expired'
+                withdraw_failed = EventWithdrawFailed(
+                    pair.payee_transfer.identifier,
+                    pair.payee_transfer.hashlock,
+                    'lock expired',
+                )
+                events.append(withdraw_failed)
+
             assert pair.payee_transfer.expiration < pair.payer_transfer.expiration
 
             if pair.payer_state != 'payer_expired':
