@@ -59,6 +59,26 @@ contract NettingChannelContract {
         return success;
     }
 
+    /// @notice From makes a deposit of msg.sender token into channel balance.
+    /// @param amount The amount caller wants to deposit.
+    /// @return True if deposit is successful.
+    function tokenFallback(address from, uint256 amount, bytes metadata)
+        public
+        returns (bool)
+    {
+        require(msg.sender == address(data.token));
+        bool success;
+        uint256 balance;
+
+        (success, balance) = data.depositERC223(from, amount);
+
+        if (success == true) {
+            ChannelNewBalance(data.token, from, balance);
+        }
+
+        return success;
+    }
+
     /// @notice Get the address and balance of both partners in a channel.
     /// @return The address and balance pairs.
     function addressAndBalance()
