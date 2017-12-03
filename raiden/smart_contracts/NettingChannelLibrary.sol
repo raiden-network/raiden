@@ -4,14 +4,14 @@ import "./Token.sol";
 
 library NettingChannelLibrary {
     string constant public contract_version = "0.2._";
-
+    
     struct Participant
     {
         address node_address;
 
         // Total amount of token transferred to this smart contract through the
-        // `deposit` function, note that direct token transfer cannot be
-        // tracked and will be burned.
+        // `deposit` function, note that direct ERC-20 token transfer cannot be
+        // tracked and will be burned. ERC-223 direct transfer will work fine.
         uint256 balance;
 
         // The latest known merkle root of the pending hash-time locks, used to
@@ -78,6 +78,40 @@ library NettingChannelLibrary {
         Participant storage participant = self.participants[index];
 
         success = self.token.transferFrom(msg.sender, this, amount);
+        if (success == true) {
+            balance = participant.balance;
+            balance += amount;
+            participant.balance = balance;
+
+            return (true, balance);
+        }
+
+        return (false, 0);
+    }
+
+    /// @notice Deposit amount to channel.
+    /// @dev Deposit an amount to the channel. At least one of the participants
+    /// must deposit before the channel is opened.
+    /// @param amount The amount to be deposited to the address
+    /// @return Success if the transfer was successful
+    /// @return The new balance of the invoker
+    function depositERC223(Data storage self, address sender, uint256 amount)
+        public
+        returns (bool success, uint256 balance)
+    {
+        uint8 index;
+
+        require(self.opened > 0);
+        require(self.closed == 0);
+        require(self.token == msg.sender); // check whether the sender has deposited valid token
+        // require(self.token.balanceOf(sender) >= amount); no need to check this condition
+        // in case of ERC223 the function is only called when deposit already occurs.
+        
+        index = index_or_throw(self, sender);
+        Participant storage participant = self.participants[index];
+
+        success = true; // we don't need to transfer tokens here,
+        // this function is only called when ERC223 tokens are ALREADY transferred.
         if (success == true) {
             balance = participant.balance;
             balance += amount;
