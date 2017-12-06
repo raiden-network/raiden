@@ -9,14 +9,14 @@ RAIDEN_IDENTIFICATOR = 'raiden-network udp service'
 log = slogging.getLogger(__name__)  # pylint: disable=invalid-name
 
 NON_MAPPABLE = [
-    u'127.0.0.1',
-    u'0.0.0.0',
+    '127.0.0.1',
+    '0.0.0.0',
 ]
 
 
 def valid_mappable_ipv4(address):
     try:
-        address_uni = unicode(address, errors='ignore')
+        address_uni = str(address, errors='ignore')
     except TypeError:
         address_uni = address
 

@@ -569,7 +569,7 @@ class ChannelManagerTesterMock(object):
 
         # [a,b,c,d] -> [(a,b),(c,d)]
         channel_iter = iter(channel_flat)
-        return zip(channel_iter, channel_iter)
+        return list(zip(channel_iter, channel_iter))
 
     def channels_by_participant(self, peer_address):
         result = [
@@ -658,13 +658,13 @@ class NettingChannelTesterMock(object):
     def opened(self):
         self._check_exists()
         opened = self.proxy.opened()
-        assert isinstance(opened, (int, long)), 'opened must not be None nor empty string'
+        assert isinstance(opened, int), 'opened must not be None nor empty string'
         return opened
 
     def closed(self):
         self._check_exists()
         closed = self.proxy.closed()
-        assert isinstance(closed, (int, long)), 'closed must not be None nor empty string'
+        assert isinstance(closed, int), 'closed must not be None nor empty string'
         return closed
 
     def closing_address(self):

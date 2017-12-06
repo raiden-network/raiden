@@ -484,13 +484,13 @@ class RaidenAPI(object):
             graph = self.raiden.token_to_channelgraph.get(token_address)
 
             if graph:
-                token_channels = graph.address_to_channel.values()
+                token_channels = list(graph.address_to_channel.values())
                 result = token_channels
 
         elif partner_address:
             partner_channels = [
                 graph.partneraddress_to_channel[partner_address]
-                for graph in self.raiden.token_to_channelgraph.itervalues()
+                for graph in self.raiden.token_to_channelgraph.values()
                 if partner_address in graph.partneraddress_to_channel
             ]
 
@@ -498,8 +498,8 @@ class RaidenAPI(object):
 
         else:
             all_channels = list()
-            for graph in self.raiden.token_to_channelgraph.itervalues():
-                all_channels.extend(graph.address_to_channel.itervalues())
+            for graph in self.raiden.token_to_channelgraph.values():
+                all_channels.extend(iter(graph.address_to_channel.values()))
 
             result = all_channels
 
@@ -516,7 +516,7 @@ class RaidenAPI(object):
 
     def get_tokens_list(self):
         """Returns a list of tokens the node knows about"""
-        tokens_list = list(self.raiden.token_to_channelgraph.iterkeys())
+        tokens_list = list(self.raiden.token_to_channelgraph.keys())
         return tokens_list
 
     def transfer_and_wait(
@@ -549,7 +549,7 @@ class RaidenAPI(object):
             identifier=None):
         # pylint: disable=too-many-arguments
 
-        if not isinstance(amount, (int, long)):
+        if not isinstance(amount, int):
             raise InvalidAmount('Amount not a number')
 
         if amount <= 0:

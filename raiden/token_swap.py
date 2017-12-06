@@ -79,7 +79,7 @@ class GreenletTasksDispatcher(object):
     def stop(self):
         wait_for = list()
 
-        for greenlets in self.hashlocks_greenlets.itervalues():
+        for greenlets in self.hashlocks_greenlets.values():
             for task in greenlets:
                 task.kill()
 

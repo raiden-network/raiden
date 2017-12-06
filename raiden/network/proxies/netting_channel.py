@@ -208,7 +208,7 @@ class NettingChannel(object):
             AddressWithoutCode: If the channel was settled prior to the call.
             RuntimeError: If the netting channel token address is empty.
         """
-        if not isinstance(amount, (int, long)):
+        if not isinstance(amount, int):
             raise ValueError('amount needs to be an integral number.')
 
         token_address = self.token_address()

@@ -77,7 +77,7 @@ def deploy_dependencies_symbols(all_contract):
 
         symbols_to_contract[symbol] = contract_name
 
-    for contract_name, contract in all_contract.items():
+    for contract_name, contract in list(all_contract.items()):
         unresolved_symbols = solidity_unresolved_symbols(contract['bin_hex'])
         dependencies[contract_name] = [
             symbols_to_contract[unresolved]
@@ -338,7 +338,7 @@ class JSONRPCClient(object):
         symbols = solidity_unresolved_symbols(contract['bin_hex'])
 
         if symbols:
-            available_symbols = map(solidity_library_symbol, all_contracts.keys())
+            available_symbols = list(map(solidity_library_symbol, list(all_contracts.keys())))
 
             unknown_symbols = set(symbols) - set(available_symbols)
             if unknown_symbols:
@@ -468,7 +468,7 @@ class JSONRPCClient(object):
             'transactionIndex': quantity_decoder
         }
         return [
-            {k: decoders[k](v) for k, v in c.items() if v is not None}
+            {k: decoders[k](v) for k, v in list(c.items()) if v is not None}
             for c in changes
         ]
 

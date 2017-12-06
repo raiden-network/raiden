@@ -3,7 +3,7 @@
 A benchmark script to configure a test network and execute random Raiden
 transactions.
 """
-from __future__ import print_function
+
 
 from binascii import unhexlify
 import codecs

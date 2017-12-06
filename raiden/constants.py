@@ -41,5 +41,5 @@ ID_TO_NETWORKNAME = {
 
 NETWORKNAME_TO_ID = {
     name: id
-    for id, name in ID_TO_NETWORKNAME.iteritems()
+    for id, name in ID_TO_NETWORKNAME.items()
 }
