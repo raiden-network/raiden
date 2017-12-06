@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import print_function
+
 
 from binascii import hexlify
 import json
@@ -73,7 +73,7 @@ def patch_deploy_solidity_contract():
 
     exec(  # pylint: disable=exec-used
         code,
-        JSONRPCClient.deploy_solidity_contract.im_func.__globals__,
+        JSONRPCClient.deploy_solidity_contract.__func__.__globals__,
         ctx,
     )
 

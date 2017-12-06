@@ -152,7 +152,7 @@ def test_getchannelwith_must_return_zero_for_non_existing_channels(
     """ Queries to the channel manager for a non-existing channel with a partner
     must return zero.
     """
-    addresses = map(privatekey_to_address, private_keys)
+    addresses = list(map(privatekey_to_address, private_keys))
 
     sender_key = private_keys[0]
     sender_addr = privatekey_to_address(sender_key)

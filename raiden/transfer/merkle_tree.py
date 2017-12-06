@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
 
-from itertools import izip_longest
+
+from itertools import zip_longest
 
 from raiden.exceptions import HashLengthNot32
 from raiden.messages import EMPTY_MERKLE_ROOT
@@ -66,7 +66,7 @@ def compute_layers(elements):
     while len(layer) > 1:
         # [a, b, c, d, e] -> [(a, b), (c, d), (e, None)]
         iterator = iter(layer)
-        paired_items = izip_longest(iterator, iterator)
+        paired_items = zip_longest(iterator, iterator)
 
         layer = [hash_pair(a, b) for a, b in paired_items]
         tree.append(layer)

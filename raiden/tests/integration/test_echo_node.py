@@ -102,7 +102,7 @@ def test_echo_node_response(token_addresses, raiden_chain):
                 received[repr(event)] = event
 
         assert len(received) == 1
-        transfer = received.values()[0]
+        transfer = list(received.values())[0]
         assert transfer['initiator'] == echo_app.raiden.address
         assert transfer['identifier'] == (
             handled_transfer['identifier'] + transfer['amount']
@@ -183,7 +183,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
 
     assert len(received) == 2
 
-    received = sorted(received.values(), key=lambda transfer: transfer['amount'])
+    received = sorted(list(received.values()), key=lambda transfer: transfer['amount'])
 
     pool_query = received[0]
     assert pool_query['amount'] == 6

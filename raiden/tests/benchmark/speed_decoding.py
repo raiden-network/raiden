@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function
+
 
 import contextlib
 import timeit
@@ -209,7 +209,7 @@ def benchmark_alternatives():
         message = locals()[variable_name]
         print('\n{}'.format(message))
 
-        for codec_name, code_base in codecs.items():
+        for codec_name, code_base in list(codecs.items()):
             code = code_base.format(variable_name)
 
             exec(code)

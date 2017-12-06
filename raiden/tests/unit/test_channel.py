@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-locals,too-many-statements
-from __future__ import division
+
 
 import pytest
 from ethereum import slogging
@@ -586,8 +586,8 @@ def test_channel_increase_nonce_and_transferred_amount():
 def test_setup(raiden_network, deposit, token_addresses):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    tokens0 = app0.raiden.token_to_channelgraph.keys()
-    tokens1 = app1.raiden.token_to_channelgraph.keys()
+    tokens0 = list(app0.raiden.token_to_channelgraph.keys())
+    tokens1 = list(app1.raiden.token_to_channelgraph.keys())
 
     assert len(tokens0) == 1
     assert len(tokens1) == 1
@@ -633,11 +633,11 @@ def test_interwoven_transfers(number_of_transfers, raiden_network, settle_timeou
 
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
-    channel0 = graph0.partneraddress_to_channel.values()[0]
-    channel1 = graph1.partneraddress_to_channel.values()[0]
+    channel0 = list(graph0.partneraddress_to_channel.values())[0]
+    channel1 = list(graph1.partneraddress_to_channel.values())[0]
 
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
@@ -740,14 +740,14 @@ def test_transfer(raiden_network, token_addresses):
     contract_balance0 = channel0.contract_balance
     contract_balance1 = channel1.contract_balance
 
-    app0_token = app0.raiden.token_to_channelgraph.keys()[0]
-    app1_token = app1.raiden.token_to_channelgraph.keys()[0]
+    app0_token = list(app0.raiden.token_to_channelgraph.keys())[0]
+    app1_token = list(app1.raiden.token_to_channelgraph.keys())[0]
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
-    app0_partners = graph0.partneraddress_to_channel.keys()
-    app1_partners = graph1.partneraddress_to_channel.keys()
+    app0_partners = list(graph0.partneraddress_to_channel.keys())
+    app1_partners = list(graph1.partneraddress_to_channel.keys())
 
     assert channel0.token_address == channel1.token_address
     assert app0_token == app1_token
@@ -801,11 +801,11 @@ def test_transfer(raiden_network, token_addresses):
 def test_locked_transfer(raiden_network, settle_timeout):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
-    channel0 = graph0.partneraddress_to_channel.values()[0]
-    channel1 = graph1.partneraddress_to_channel.values()[0]
+    channel0 = list(graph0.partneraddress_to_channel.values())[0]
+    channel1 = list(graph1.partneraddress_to_channel.values())[0]
 
     balance0 = channel0.balance
     balance1 = channel1.balance

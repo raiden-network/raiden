@@ -51,6 +51,6 @@ class Timer(object):
     def __del__(self):
         self.stop()
 
-    def __nonzero__(self):
+    def __bool__(self):
         # we're always truthy
         return True

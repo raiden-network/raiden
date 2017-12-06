@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Utilities to set-up a Raiden network. """
-from __future__ import print_function, division
+
 
 from binascii import hexlify
 
@@ -235,7 +235,7 @@ def create_apps(
 
     """ Create the apps."""
     # pylint: disable=too-many-locals
-    services = zip(blockchain_services, endpoint_discovery_services)
+    services = list(zip(blockchain_services, endpoint_discovery_services))
 
     apps = []
     for idx, (blockchain, discovery) in enumerate(services):

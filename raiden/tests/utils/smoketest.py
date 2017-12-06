@@ -122,16 +122,16 @@ def run_smoketests(raiden_service, test_config, debug=False):
             raiden_service.default_registry.token_addresses() ==
             [test_config['contracts']['token_address'].decode('hex')]
         )
-        assert len(chain.address_to_discovery.keys()) == 1
+        assert len(list(chain.address_to_discovery.keys())) == 1
         assert (
-            chain.address_to_discovery.keys()[0] ==
+            list(chain.address_to_discovery.keys())[0] ==
             test_config['contracts']['discovery_address'].decode('hex')
         )
-        discovery = chain.address_to_discovery.values()[0]
+        discovery = list(chain.address_to_discovery.values())[0]
         assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
-        assert len(raiden_service.token_to_channelgraph.values()) == 1
-        graph = raiden_service.token_to_channelgraph.values()[0]
+        assert len(list(raiden_service.token_to_channelgraph.values())) == 1
+        graph = list(raiden_service.token_to_channelgraph.values())[0]
         channel = graph.partneraddress_to_channel[TEST_PARTNER_ADDRESS.decode('hex')]
         assert channel.can_transfer
         assert channel.contract_balance == channel.distributable == TEST_DEPOSIT_AMOUNT
@@ -168,7 +168,7 @@ def load_or_create_smoketest_config():
         with open(smoketest_config_path) as handler:
             smoketest_config = json.load(handler)
         # if the file versions still fit, return the genesis config (ignore solc if not available)
-        if all(versions[key] == smoketest_config['versions'][key] for key in versions.keys()):
+        if all(versions[key] == smoketest_config['versions'][key] for key in list(versions.keys())):
             return smoketest_config
 
     # something did not fit -- we will create the genesis
@@ -260,16 +260,16 @@ def deploy_and_open_channel_alloc(deployment_key):
         discovery_address=discovery_address,
         channel_address=channel_address,
     )
-    for k, v in contracts.iteritems():
+    for k, v in contracts.items():
         contracts[k] = hexlify(v)
 
     alloc = dict()
     # preserve all accounts and contracts
-    for address in state.block.state.to_dict().keys():
+    for address in list(state.block.state.to_dict().keys()):
         address = hexlify(address)
         alloc[address] = state.block.account_to_dict(address)
 
-    for account, content in alloc.iteritems():
+    for account, content in alloc.items():
         alloc[account]['storage'] = fix_tester_storage(content['storage'])
 
     return dict(

@@ -98,7 +98,7 @@ def topic_decoder(topic):
 
 
 def topic_encoder(topic):
-    assert isinstance(topic, (int, long))
+    assert isinstance(topic, int)
 
     if topic == 0:
         return '0x'
@@ -162,7 +162,7 @@ def get_contract_path(contract_name):
 
 
 def safe_lstrip_hex(val):
-    if isinstance(val, basestring):
+    if isinstance(val, str):
         return remove_0x_head(val)
     return val
 
@@ -215,7 +215,7 @@ def fix_tester_storage(storage):
         newstorage (dict): the canonical representation
     """
     new_storage = dict()
-    for key, val in storage.iteritems():
+    for key, val in storage.items():
         new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
         new_val = '0x%064x' % int(val, 16)
         new_storage[new_key] = new_val

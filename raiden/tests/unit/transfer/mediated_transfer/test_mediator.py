@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=invalid-name,too-many-locals,too-many-arguments,too-many-lines
-from __future__ import division
+
 
 import pytest
 
