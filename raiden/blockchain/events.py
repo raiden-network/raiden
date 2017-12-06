@@ -352,7 +352,7 @@ class BlockchainEvents(object):
             self.add_channel_manager_listener(manager)
 
         all_netting_channels = itertools.chain(
-            *proxies.channelmanager_nettingchannels.itervalues()
+            *iter(proxies.channelmanager_nettingchannels.values())
         )
         for channel in all_netting_channels:
             self.add_netting_channel_listener(channel)

@@ -38,7 +38,7 @@ class ChannelEndState(object):
     def __init__(self, participant_address, participant_balance, balance_proof, merkletree):
 
         # since ethereum only uses integral values we cannot use float/Decimal
-        if not isinstance(participant_balance, (int, long)):
+        if not isinstance(participant_balance, int):
             raise ValueError('participant_balance must be an integer.')
 
         # This participant's on-chain balance
@@ -69,8 +69,8 @@ class ChannelEndState(object):
     @property
     def amount_locked(self):
         alllocks = chain(
-            self.hashlocks_to_pendinglocks.values(),
-            self.hashlocks_to_unclaimedlocks.values(),
+            list(self.hashlocks_to_pendinglocks.values()),
+            list(self.hashlocks_to_unclaimedlocks.values()),
         )
 
         return sum(
@@ -291,7 +291,7 @@ class ChannelEndState(object):
                 partialproof.lock,
                 tree,
             )
-            for partialproof in self.hashlocks_to_unclaimedlocks.itervalues()
+            for partialproof in self.hashlocks_to_unclaimedlocks.values()
         ]
 
     def compute_proof_for_lock(self, secret, lock, tree=None):

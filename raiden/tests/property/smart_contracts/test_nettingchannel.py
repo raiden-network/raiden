@@ -68,7 +68,7 @@ class NettingChannelStateMachine(GenericStateMachine):
             sha3('p2'),
             sha3('p3'),  # third key used to generate signed but invalid transfers
         ]
-        self.addresses = map(privatekey_to_address, self.private_keys)
+        self.addresses = list(map(privatekey_to_address, self.private_keys))
         self.log = list()
         self.tester_state = tester_state(
             deploy_key,

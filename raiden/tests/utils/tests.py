@@ -66,7 +66,7 @@ def fixture_all_combinations(invalid_values):
     {x:1}, {y:2}, {y:3}.
     """
     # all_combinations needs an object with length
-    invalid_values_items = list(invalid_values.iteritems())
+    invalid_values_items = list(invalid_values.items())
 
     # Generate all possible test combinations. E.g. `{a: [..], b: [..]}` will
     # produce tests for:

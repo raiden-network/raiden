@@ -43,10 +43,10 @@ NODE_CONFIG = [
 # privkey = sha3('127.0.0.1:`raiden_port + i`')
 DEFAULTACCOUNTS = [
     value['address']
-    for value in generate_accounts([
+    for value in list(generate_accounts([
         '127.0.0.1:{}'.format(RAIDEN_PORT + i)
         for i in range(NUM_RAIDEN_ACCOUNTS)
-    ]).values()
+    ]).values())
 ]
 
 
@@ -83,13 +83,13 @@ def to_cmd(node, datadir=None):
     """
     cmd = ['geth']
     cmd.extend(
-        ['--{} {}'.format(k, v) for k, v in node.items() if k in NODE_CONFIG])
+        ['--{} {}'.format(k, v) for k, v in list(node.items()) if k in NODE_CONFIG])
     cmd.extend(DEFAULT_ARGS)
     if 'minerthreads' in node:
         cmd.append('--mine')
         cmd.append('--etherbase 0')
     if datadir:
-        assert isinstance(datadir, basestring)
+        assert isinstance(datadir, str)
         cmd.append('--datadir {}'.format(datadir))
     return shlex.split(' '.join(cmd))
 

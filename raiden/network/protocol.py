@@ -112,7 +112,7 @@ def timeout_two_stage(retries, timeout1, timeout2):
     Timeouts start spaced by `timeout1`, after `retries` increase
     to `timeout2` which is repeated indefinitely.
     """
-    for _ in xrange(retries):
+    for _ in range(retries):
         yield timeout1
     while True:
         yield timeout2
@@ -528,7 +528,7 @@ class RaidenProtocol(object):
         self.transport.stop()
 
         # Set all the pending results to False
-        for waitack in self.senthashes_to_states.itervalues():
+        for waitack in self.senthashes_to_states.values():
             waitack.async_result.set(False)
 
     def get_health_events(self, receiver_address):

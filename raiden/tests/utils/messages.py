@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Utilities to track and assert transferred messages. """
-from __future__ import print_function
+
 
 import string
 

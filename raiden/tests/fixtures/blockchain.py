@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
+
 
 import json
 from os import path
@@ -223,7 +223,7 @@ def cached_genesis(request):
 
     alloc = {
         address_encoder(address_maybe_bin): data
-        for address_maybe_bin, data in genesis_alloc.iteritems()
+        for address_maybe_bin, data in genesis_alloc.items()
     }
 
     genesis = GENESIS_STUB.copy()

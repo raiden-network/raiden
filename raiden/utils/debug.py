@@ -9,7 +9,7 @@ from IPython.core import ultratb
 def enable_greenlet_debugger():
     def _print_exception(self, context, type_, value, traceback):
         ultratb.VerboseTB(call_pdb=True)(type_, value, traceback)
-        resp = raw_input('Debugger exited. Do you want to quit raiden? [Y/n] ').strip().lower()
+        resp = input('Debugger exited. Do you want to quit raiden? [Y/n] ').strip().lower()
 
         if not resp or resp.startswith('y'):
             os.kill(os.getpid(), signal.SIGTERM)

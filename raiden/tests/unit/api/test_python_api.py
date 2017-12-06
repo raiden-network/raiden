@@ -123,8 +123,8 @@ def test_deposit_updates_balance_immediately(raiden_chain, token_addresses):
 def test_transfer_to_unknownchannel(raiden_network):
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
     assert graph0.token_address == graph1.token_address
     assert app1.raiden.address in graph0.partneraddress_to_channel
@@ -148,7 +148,7 @@ def test_token_swap(raiden_network, deposit, settle_timeout):
     maker_address = app0.raiden.address
     taker_address = app1.raiden.address
 
-    maker_token, taker_token = app0.raiden.token_to_channelgraph.keys()[:2]
+    maker_token, taker_token = list(app0.raiden.token_to_channelgraph.keys())[:2]
     maker_amount = 70
     taker_amount = 30
 
@@ -236,8 +236,8 @@ def test_insufficient_funds(raiden_network):
     fail, as at the moment RaidenAPI is mocked and will always succeed."""
     app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
 
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
+    graph0 = list(app0.raiden.token_to_channelgraph.values())[0]
+    graph1 = list(app1.raiden.token_to_channelgraph.values())[0]
 
     assert graph0.token_address == graph1.token_address
     assert app1.raiden.address in graph0.partneraddress_to_channel

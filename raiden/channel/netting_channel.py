@@ -169,10 +169,10 @@ class Channel(object):
             #
             raise ValueError('reveal_timeout must be at least 3')
 
-        if not isinstance(settle_timeout, (int, long)):
+        if not isinstance(settle_timeout, int):
             raise ValueError('settle_timeout must be integral')
 
-        if not isinstance(reveal_timeout, (int, long)):
+        if not isinstance(reveal_timeout, int):
             raise ValueError('reveal_timeout must be integral')
 
         self.our_state = our_state
@@ -455,7 +455,7 @@ class Channel(object):
                 # this may occur on normal operation
                 if log.isEnabledFor(logging.INFO):
                     lockhashes = list(from_state.hashlocks_to_unclaimedlocks.values())
-                    lockhashes.extend(from_state.hashlocks_to_pendinglocks.values())
+                    lockhashes.extend(list(from_state.hashlocks_to_pendinglocks.values()))
                     log.info(
                         'duplicated lock',
                         node=pex(self.our_address),
@@ -476,7 +476,7 @@ class Channel(object):
                 # this should not happen
                 if log.isEnabledFor(logging.WARN):
                     lockhashes = list(from_state.hashlocks_to_unclaimedlocks.values())
-                    lockhashes.extend(from_state.hashlocks_to_pendinglocks.values())
+                    lockhashes.extend(list(from_state.hashlocks_to_pendinglocks.values()))
                     log.warn(
                         'LOCKSROOT MISMATCH',
                         node=pex(self.our_address),
@@ -567,7 +567,7 @@ class Channel(object):
         if isinstance(transfer, LockedTransfer):
             if log.isEnabledFor(logging.DEBUG):
                 lockhashes = list(from_state.hashlocks_to_unclaimedlocks.values())
-                lockhashes.extend(from_state.hashlocks_to_pendinglocks.values())
+                lockhashes.extend(list(from_state.hashlocks_to_pendinglocks.values()))
                 log.debug(
                     'REGISTERED LOCK',
                     node=pex(self.our_state.address),
