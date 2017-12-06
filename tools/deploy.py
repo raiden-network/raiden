@@ -141,7 +141,8 @@ def main(privatekey_hex, pretty, gas_price, port):
         privatekey,
     )
 
-    deployed = deploy_all(client, gas_price)
+    gas_price_in_wei = gas_price * 1000000000
+    deployed = deploy_all(client, gas_price_in_wei)
     print(json.dumps(deployed, indent=2 if pretty else None))
 
 
