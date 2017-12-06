@@ -873,8 +873,6 @@ class RaidenService(object):
         # blocktime from the past
 
         current_block = last_block
-        avg_block_time = self.chain.estimate_blocktime()
-        wait_blocks_left = blocks_to_wait()
         while current_block < earliest_settlement:
             gevent.sleep(self.alarm.wait_time)
             last_block = self.chain.block_number()

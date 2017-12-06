@@ -18,7 +18,7 @@ GENESIS_STUB = {
     'coinbase': '0x0000000000000000000000000000000000000000',
     'timestamp': '0x00',
     'parentHash': '0x0000000000000000000000000000000000000000000000000000000000000000',
-    'extraData': '0x' + hexlify('raiden'),
+    'extraData': '0x' + hexlify(b'raiden').decode(),
     'gasLimit': GAS_LIMIT_HEX,
     # add precompiled addresses with minimal balance to avoid deletion
     'alloc': {'%040x' % precompiled: {'balance': '0x1'} for precompiled in range(256)}

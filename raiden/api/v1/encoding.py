@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import binascii
 from binascii import unhexlify
 
 from marshmallow import (
@@ -76,7 +77,7 @@ class AddressField(fields.Field):
 
         try:
             value = unhexlify(value[2:])
-        except TypeError:
+        except binascii.Error:
             self.fail('invalid_data')
 
         if len(value) != 20:

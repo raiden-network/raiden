@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-
-
 from binascii import hexlify
 import json
+import io
 import os
 import shutil
 import subprocess
@@ -105,7 +104,7 @@ def geth_create_account(datadir, privkey):
     """
     keyfile_path = os.path.join(datadir, 'keyfile')
     with open(keyfile_path, 'w') as handler:
-        handler.write(hexlify(privkey))
+        handler.write(hexlify(privkey).decode())
 
     create = subprocess.Popen(
         ['geth', '--datadir', datadir, 'account', 'import', keyfile_path],
@@ -240,8 +239,8 @@ def geth_create_blockchain(
             config['unlock'] = 0
 
         config['nodekey'] = key
-        config['nodekeyhex'] = encode_hex(key)
-        config['pub'] = encode_hex(privtopub(key))
+        config['nodekeyhex'] = encode_hex(key).decode()
+        config['pub'] = encode_hex(privtopub(key)).decode()
         config['address'] = address
         config['port'] = p2p_port
         config['rpcport'] = rpc_port
@@ -286,7 +285,7 @@ def geth_create_blockchain(
         cmds.append(commandline)
 
     # save current term settings before running geth
-    if isinstance(sys.stdin, file):  # check that the test is running on non-capture mode
+    if isinstance(sys.stdin, io.IOBase):  # check that the test is running on non-capture mode
         term_settings = termios.tcgetattr(sys.stdin)
 
     stdout = None
@@ -326,7 +325,7 @@ def geth_create_blockchain(
     geth_wait_and_check(deploy_client, private_keys, random_marker)
 
     # reenter echo mode (disabled by geth pasphrase prompt)
-    if isinstance(sys.stdin, file):
+    if isinstance(sys.stdin, io.IOBase):
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
 
     for process in processes_list:

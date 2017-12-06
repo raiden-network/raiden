@@ -817,7 +817,7 @@ def smoketest(ctx, debug, **kwargs):
         with open(report_file, 'a') as handler:
             handler.write('{:=^80}'.format(' %s ' % subject.upper()) + os.linesep)
             if data is not None:
-                handler.writelines([(data + os.linesep).encode('utf-8')])
+                handler.writelines([(data + os.linesep)])
 
     append_report('raiden version', json.dumps(get_system_spec()))
     append_report('raiden log', None)

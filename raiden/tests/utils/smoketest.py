@@ -10,7 +10,7 @@ import distutils.spawn
 import pdb
 import traceback
 import requests
-import http.client
+from http import HTTPStatus
 from string import Template
 
 from ethereum._solidity import get_solidity
@@ -98,7 +98,7 @@ def run_restapi_smoketests(raiden_service, test_config):
     ).format(port=5001)
     response = requests.get(url)
 
-    assert response.status_code == http.client.OK
+    assert response.status_code == HTTPStatus.OK
 
     response_json = response.json()
     assert (response_json[0]['partner_address'] ==
