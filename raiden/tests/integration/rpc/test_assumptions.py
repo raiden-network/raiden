@@ -44,10 +44,10 @@ def get_list_of_block_numbers(item):
 def test_call_inexisting_address(deploy_client, blockchain_backend):
     """ A JSON RPC call to an inexisting address returns the empty string. """
 
-    inexisting_address = '\x01\x02\x03\x04\x05' * 4
+    inexisting_address = b'\x01\x02\x03\x04\x05' * 4
 
     assert deploy_client.eth_getCode(inexisting_address) == '0x'
-    assert deploy_client.eth_call(sender=deploy_client.sender, to=inexisting_address) == ''
+    assert deploy_client.eth_call(sender=deploy_client.sender, to=inexisting_address) == b''
 
 
 def test_call_invalid_selector(deploy_client, blockchain_backend):
@@ -59,14 +59,14 @@ def test_call_invalid_selector(deploy_client, blockchain_backend):
     assert deploy_client.eth_getCode(address) != '0x'
 
     selector = contract_proxy.translator.encode_function_call('ret', args=[])
-    next_byte = chr(ord(selector[0]) + 1)
+    next_byte = chr(selector[0] + 1).encode()
     wrong_selector = next_byte + selector[1:]
     result = deploy_client.eth_call(
         sender=deploy_client.sender,
         to=address,
         data=wrong_selector,
     )
-    assert result == ''
+    assert result == b''
 
 
 def test_call_throws(deploy_client, blockchain_backend):
@@ -76,7 +76,7 @@ def test_call_throws(deploy_client, blockchain_backend):
     address = contract_proxy.contract_address
     assert deploy_client.eth_getCode(address) != '0x'
 
-    assert contract_proxy.call('fail') == ''
+    assert contract_proxy.call('fail') == b''
 
 
 def test_transact_opcode(deploy_client, blockchain_backend):
@@ -123,11 +123,7 @@ def test_transact_opcode_oog(deploy_client, blockchain_backend):
     address = contract_proxy.contract_address
     assert deploy_client.eth_getCode(address) != '0x'
 
-    gas = min(
-        contract_proxy.estimate_gas('loop', 1000) // 2,
-        deploy_client.gaslimit,
-    )
-
+    gas = min(contract_proxy.estimate_gas('loop', 1000) // 2, deploy_client.gaslimit())
     transaction_hex = contract_proxy.transact('loop', 1000, startgas=gas)
     transaction = unhexlify(transaction_hex)
 

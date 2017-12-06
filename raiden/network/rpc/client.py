@@ -58,7 +58,7 @@ def check_address_has_code(client, address):
         'latest',
     )
 
-    if result == '0x':
+    if result == b'0x':
         raise AddressWithoutCode('Address {} does not contain code'.format(
             address_encoder(address),
         ))
@@ -624,7 +624,7 @@ class JSONRPCClient(object):
             sender='',
             to='',
             value=0,
-            data='',
+            data=b'',
             startgas=GAS_PRICE,
             gasprice=GAS_PRICE,
             block_number='latest'):

@@ -197,14 +197,14 @@ def event_to_state_change(event):  # pylint: disable=too-many-return-statements
 
     # Note: All addresses inside the event_data must be decoded.
 
-    if event['_event_type'] == 'TokenAdded':
+    if event['_event_type'] == b'TokenAdded':
         result = ContractReceiveTokenAdded(
             contract_address,
             address_decoder(event['token_address']),
             address_decoder(event['channel_manager_address']),
         )
 
-    elif event['_event_type'] == 'ChannelNew':
+    elif event['_event_type'] == b'ChannelNew':
         result = ContractReceiveNewChannel(
             contract_address,
             address_decoder(event['netting_channel']),
@@ -213,7 +213,7 @@ def event_to_state_change(event):  # pylint: disable=too-many-return-statements
             event['settle_timeout'],
         )
 
-    elif event['_event_type'] == 'ChannelNewBalance':
+    elif event['_event_type'] == b'ChannelNewBalance':
         result = ContractReceiveBalance(
             contract_address,
             address_decoder(event['token_address']),
@@ -222,20 +222,20 @@ def event_to_state_change(event):  # pylint: disable=too-many-return-statements
             event['block_number'],
         )
 
-    elif event['_event_type'] == 'ChannelClosed':
+    elif event['_event_type'] == b'ChannelClosed':
         result = ContractReceiveClosed(
             contract_address,
             address_decoder(event['closing_address']),
             event['block_number'],
         )
 
-    elif event['_event_type'] == 'ChannelSettled':
+    elif event['_event_type'] == b'ChannelSettled':
         result = ContractReceiveSettled(
             contract_address,
             event['block_number'],
         )
 
-    elif event['_event_type'] == 'ChannelSecretRevealed':
+    elif event['_event_type'] == b'ChannelSecretRevealed':
         result = ContractReceiveWithdraw(
             contract_address,
             event['secret'],

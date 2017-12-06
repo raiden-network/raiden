@@ -82,7 +82,7 @@ class NettingChannel(object):
         """
         address = self.proxy.call('tokenAddress')
 
-        if address == '':
+        if address == b'':
             self._check_exists()
             raise RuntimeError('token address returned empty')
 
@@ -98,7 +98,7 @@ class NettingChannel(object):
 
         data = self.proxy.call('addressAndBalance', startgas=self.startgas)
 
-        if data == '':
+        if data == b'':
             self._check_exists()
             raise RuntimeError('address and balance returned empty')
 
@@ -136,7 +136,7 @@ class NettingChannel(object):
         """
         settle_timeout = self.proxy.call('settleTimeout')
 
-        if settle_timeout == '':
+        if settle_timeout == b'':
             self._check_exists()
             raise RuntimeError('settle_timeout returned empty')
 
@@ -150,7 +150,7 @@ class NettingChannel(object):
         """
         opened = self.proxy.call('opened')
 
-        if opened == '':
+        if opened == b'':
             self._check_exists()
             raise RuntimeError('opened returned empty')
 
@@ -164,7 +164,7 @@ class NettingChannel(object):
         """
         closed = self.proxy.call('closed')
 
-        if closed == '':
+        if closed == b'':
             self._check_exists()
             raise RuntimeError('closed returned empty')
 

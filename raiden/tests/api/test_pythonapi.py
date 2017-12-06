@@ -114,7 +114,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     )
     assert any(
         (
-            event['_event_type'] == 'ChannelNewBalance' and
+            event['_event_type'] == b'ChannelNewBalance' and
             event['participant'] == hexlify(api1.address)
         )
         for event in event_list2
@@ -133,7 +133,7 @@ def test_channel_lifecycle(raiden_network, token_addresses, deposit):
     assert len(event_list3) > len(event_list2)
     assert any(
         (
-            event['_event_type'] == 'ChannelClosed' and
+            event['_event_type'] == b'ChannelClosed' and
             event['closing_address'] == hexlify(api1.address)
         )
         for event in event_list3

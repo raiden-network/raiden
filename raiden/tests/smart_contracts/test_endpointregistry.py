@@ -18,12 +18,12 @@ def test_endpointregistry(tester_state, tester_events):
 
     registry_contract.registerEndpoint('127.0.0.1:4001')
     assert registry_contract.findAddressByEndpoint('127.0.0.1:4001') == sender
-    assert registry_contract.findEndpointByAddress(sender) == '127.0.0.1:4001'
+    assert registry_contract.findEndpointByAddress(sender) == b'127.0.0.1:4001'
 
     registry_contract.registerEndpoint('192.168.0.1:4002')
     assert registry_contract.findAddressByEndpoint('192.168.0.1:4002') == sender
-    assert registry_contract.findEndpointByAddress(sender) == '192.168.0.1:4002'
+    assert registry_contract.findEndpointByAddress(sender) == b'192.168.0.1:4002'
 
     assert len(tester_events) == 2
-    assert tester_events[0]['_event_type'] == 'AddressRegistered'
-    assert tester_events[1]['_event_type'] == 'AddressRegistered'
+    assert tester_events[0]['_event_type'] == b'AddressRegistered'
+    assert tester_events[1]['_event_type'] == b'AddressRegistered'
