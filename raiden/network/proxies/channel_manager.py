@@ -59,7 +59,7 @@ class ChannelManager(object):
             'latest',
         )
 
-        if result == '0x':
+        if result == b'0x':
             raise AddressWithoutCode('Channel manager address {} does not contain code'.format(
                 address_encoder(manager_address),
             ))

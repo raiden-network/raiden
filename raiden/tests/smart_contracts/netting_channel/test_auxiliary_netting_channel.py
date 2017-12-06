@@ -23,7 +23,7 @@ from raiden.utils import get_project_root, sha3
 # The computeMerkleRoot function only computes the proof regardless of what the
 # hashes are encoding, so just use some arbitrary data to produce a merkle tree.
 ARBITRARY_DATA = [
-    letter * 32
+    letter.encode() * 32
     for letter in string.ascii_uppercase[:7]
 ]
 FAKE_TREE = [
@@ -120,7 +120,7 @@ def test_merkle_proof(
 
         smart_contact_root = auxiliary.computeMerkleRoot(
             element,
-            ''.join(proof),
+            b''.join(proof),
         )
 
         assert smart_contact_root == merkleroot(merkletree)
@@ -150,7 +150,7 @@ def test_merkle_proof_missing_byte(
         with pytest.raises(TransactionFailed):
             auxiliary.computeMerkleRoot(
                 element,
-                ''.join(tampered_proof),
+                b''.join(tampered_proof),
             )
 
         tampered_proof = list(proof)
@@ -159,7 +159,7 @@ def test_merkle_proof_missing_byte(
         with pytest.raises(TransactionFailed):
             auxiliary.computeMerkleRoot(
                 element,
-                ''.join(tampered_proof),
+                b''.join(tampered_proof),
             )
 
 
@@ -181,18 +181,18 @@ def test_signature_split(tester_state, tester_nettingchannel_library_address):
     # signature = len(msg) - 65
     signature = msg[len(msg) - 65:]
 
-    signature = signature[:-1] + chr(27)
+    signature = signature[:-1] + chr(27).encode()
     r, s, v = auxiliary.signatureSplit(signature)
     assert v == 27
     assert r == signature[:32]
     assert s == signature[32:64]
 
-    signature = signature[:-1] + chr(28)
+    signature = signature[:-1] + chr(28).encode()
     _, _, v = auxiliary.signatureSplit(signature)
     assert v == 28
 
     with pytest.raises(TransactionFailed):
-        signature = signature[:-1] + chr(4)
+        signature = signature[:-1] + chr(4).encode()
         r, s, v = auxiliary.signatureSplit(signature)
 
 

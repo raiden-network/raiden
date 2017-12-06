@@ -134,7 +134,7 @@ def test_transfer_to_unknownchannel(raiden_network):
             graph0.token_address,
             10,
             # sending to an unknown/non-existant address
-            target='\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1',
+            target=b'\xf0\xef3\x01\xcd\xcfe\x0f4\x9c\xf6d\xa2\x01?X4\x84\xa9\xf1',
             timeout=10
         )
 
@@ -218,7 +218,7 @@ def test_api_channel_events(raiden_chain):
             assert result['amount'] == amount
             assert result['target'] == app1.raiden.address
         else:
-            assert result['_event_type'] == 'ChannelNewBalance'
+            assert result['_event_type'] == b'ChannelNewBalance'
 
     assert max_block != 0
 

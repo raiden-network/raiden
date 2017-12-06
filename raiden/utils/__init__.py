@@ -133,6 +133,8 @@ def host_port_to_endpoint(host, port):
 
 
 def split_endpoint(endpoint):
+    if not isinstance(endpoint, str):
+        endpoint = endpoint.decode()
     match = re.match(r'(?:[a-z0-9]*:?//)?([^:/]+)(?::(\d+))?', endpoint, re.I)
     if not match:
         raise ValueError('Invalid endpoint', endpoint)

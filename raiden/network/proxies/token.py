@@ -40,7 +40,7 @@ class Token(object):
             'latest',
         )
 
-        if result == '0x':
+        if result == b'0x':
             raise AddressWithoutCode('Token address {} does not contain code'.format(
                 address_encoder(token_address),
             ))

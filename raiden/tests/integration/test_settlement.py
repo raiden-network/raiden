@@ -56,7 +56,7 @@ def test_settlement(raiden_network, settle_timeout, reveal_timeout):
 
     alice_to_bob_amount = 10
     expiration = alice_app.raiden.chain.block_number() + reveal_timeout + 1
-    secret = 'secretsecretsecretsecretsecretse'
+    secret = b'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
     assert bob_app.raiden.address in alice_graph.partneraddress_to_channel

@@ -19,13 +19,13 @@ from raiden.messages import (
 
 PRIVKEY, ADDRESS = make_privkey_address()
 INVALID_ADDRESSES = [
-    ' ',
-    ' ' * 19,
-    ' ' * 21,
+    b' ',
+    b' ' * 19,
+    b' ' * 21,
 ]
 
 VALID_SECRETS = [
-    letter * 32
+    letter.encode() * 32
     for letter in string.ascii_uppercase[:7]
 ]
 HASHLOCKS_SECRESTS = {

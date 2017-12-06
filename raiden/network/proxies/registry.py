@@ -77,7 +77,7 @@ class Registry(object):
             startgas=self.startgas,
         )
 
-        if address == '':
+        if address == b'':
             check_address_has_code(self.client, self.address)
             return None
 

@@ -49,7 +49,7 @@ class Discovery(object):
             'latest',
         )
 
-        if result == '0x':
+        if result == b'0x':
             raise AddressWithoutCode('Discovery address {} does not contain code'.format(
                 address_encoder(discovery_address),
             ))
@@ -65,6 +65,7 @@ class Discovery(object):
         self.startgas = startgas
         self.gasprice = gasprice
         self.poll_timeout = poll_timeout
+        self.not_found_address = b'0' * 40
 
     def register_endpoint(self, node_address, endpoint):
         if node_address != self.client.sender:
@@ -90,7 +91,7 @@ class Discovery(object):
         node_address_hex = hexlify(node_address_bin)
         endpoint = self.proxy.call('findEndpointByAddress', node_address_hex)
 
-        if endpoint == '':
+        if endpoint == b'':
             raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
@@ -98,7 +99,7 @@ class Discovery(object):
     def address_by_endpoint(self, endpoint):
         address = self.proxy.call('findAddressByEndpoint', endpoint)
 
-        if set(address) == {'0'}:  # the 0 address means nothing found
+        if address == self.not_found_address:  # the 0 address means nothing found
             return None
 
         return unhexlify(address)

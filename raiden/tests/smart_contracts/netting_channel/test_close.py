@@ -28,7 +28,7 @@ def test_close_event(tester_state, tester_nettingcontracts, tester_events):
 
     close_event = tester_events[-1]
     assert close_event == {
-        '_event_type': 'ChannelClosed',
+        '_event_type': b'ChannelClosed',
         'closing_address': encode_hex(address),
     }
 

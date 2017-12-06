@@ -361,7 +361,7 @@ class DiscoveryTesterMock(object):
         node_address_hex = hexlify(node_address_bin)
         endpoint = self.proxy.findEndpointByAddress(node_address_hex)
 
-        if endpoint is '':
+        if endpoint is b'':
             raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))
 
         return endpoint
@@ -659,7 +659,7 @@ class NettingChannelTesterMock(object):
         self.tester_state.mine(number_of_blocks=1)
 
     def _check_exists(self):
-        if self.tester_state.block.get_code(self.address) == '':
+        if self.tester_state.block.get_code(self.address) == b'':
             raise AddressWithoutCode('Netting channel address {} does not contain code'.format(
                 address_encoder(self.address),
             ))
