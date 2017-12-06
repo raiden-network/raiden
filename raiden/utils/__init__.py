@@ -36,6 +36,9 @@ def sha3(data):
         TypeError: This function does not accept unicode objects, they must be
         encoded prior to usage.
     """
+    # FIXME: check that only bytes objects get here
+    if isinstance(data, str):
+        data = data.encode()
     return keccak_256(data).digest()
 
 
