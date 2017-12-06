@@ -79,7 +79,7 @@ def assert_on_major_minor_version(raidenversion, versionstring):
     """ Compare only the {major}.{minor} part of the versionstring with raidenversion. """
     RAIDEN_VERSION = raidenversion.split('+')[0]
     MAJOR, MINOR, PATCH = RAIDEN_VERSION.split('.')
-    assert tuple(versionstring.split('.')[:2]) == (MAJOR, MINOR)
+    assert tuple(versionstring.decode().split('.')[:2]) == (MAJOR, MINOR)
 
 
 def test_all_contracts_same_version(

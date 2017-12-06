@@ -56,10 +56,10 @@ def test_participant_selection(raiden_network, token_addresses):
 
     assert all(open_channels_count(connection_managers))
 
-    def not_saturated(connection_managers):
+    def not_saturated(connection_managers_):
         return [
-            1 for connection_manager in connection_managers
-            if len(connection_manager.open_channels) < connection_manager.initial_channel_target
+            1 for connection_manager_ in connection_managers_
+            if len(connection_manager_.open_channels) < connection_manager_.initial_channel_target
         ]
 
     chain = raiden_network[-1].raiden.chain

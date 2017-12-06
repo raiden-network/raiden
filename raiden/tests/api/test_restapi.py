@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import http.client
+from http import HTTPStatus
 import json
 
 import pytest
@@ -35,7 +35,7 @@ def assert_no_content_response(response):
     assert(
         response is not None and
         response.text == '' and
-        response.status_code == http.client.NO_CONTENT
+        response.status_code == HTTPStatus.NO_CONTENT
     )
 
 
@@ -55,7 +55,7 @@ def assert_response_with_error(response, status_code):
     )
 
 
-def assert_proper_response(response, status_code=http.client.OK):
+def assert_proper_response(response, status_code=HTTPStatus.OK):
     assert (
         response is not None and
         response.status_code == status_code and
@@ -186,7 +186,7 @@ def test_url_with_invalid_address(rest_api_port_number, api_backend):
     )
     response = request.send().response
 
-    assert_response_with_code(response, http.client.NOT_FOUND)
+    assert_response_with_code(response, HTTPStatus.NOT_FOUND)
 
 
 def test_payload_with_address_without_prefix(api_backend):
@@ -202,7 +202,7 @@ def test_payload_with_address_without_prefix(api_backend):
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
 def test_payload_with_address_invalid_chars(api_backend):
@@ -218,7 +218,7 @@ def test_payload_with_address_invalid_chars(api_backend):
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
 def test_payload_with_address_invalid_length(api_backend):
@@ -234,7 +234,7 @@ def test_payload_with_address_invalid_length(api_backend):
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
 
 def test_api_query_our_address(
@@ -291,7 +291,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = 0
@@ -318,7 +318,7 @@ def test_api_open_and_deposit_channel(
     )
     response = request.send().response
 
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -397,7 +397,7 @@ def test_api_open_close_and_settle_channel(
     response = request.send().response
 
     balance = 0
-    assert_proper_response(response, status_code=http.client.CREATED)
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
     response = response.json()
     expected_response = channel_data_obj
     expected_response['balance'] = balance
@@ -476,7 +476,7 @@ def test_api_open_channel_invalid_input(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, status_code=http.client.CONFLICT)
+    assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
     channel_data_obj['settle_timeout'] = NETTINGCHANNEL_SETTLE_TIMEOUT_MAX + 1
     request = grequests.put(
@@ -484,7 +484,7 @@ def test_api_open_channel_invalid_input(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_response_with_error(response, status_code=http.client.CONFLICT)
+    assert_response_with_error(response, status_code=HTTPStatus.CONFLICT)
 
 
 def test_api_channel_state_change_errors(
@@ -507,7 +507,7 @@ def test_api_channel_state_change_errors(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     channel_address = response['channel_address']
 
@@ -521,7 +521,7 @@ def test_api_channel_state_change_errors(
         json=dict(state=CHANNEL_STATE_SETTLED)
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
     # let's try to set a random state
     request = grequests.patch(
         api_url_for(
@@ -532,7 +532,7 @@ def test_api_channel_state_change_errors(
         json=dict(state='inlimbo')
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
     # let's try to set both new state and balance
     request = grequests.patch(
         api_url_for(
@@ -543,7 +543,7 @@ def test_api_channel_state_change_errors(
         json=dict(state=CHANNEL_STATE_CLOSED, balance=200)
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
     # let's try to path with no arguments
     request = grequests.patch(
         api_url_for(
@@ -553,7 +553,7 @@ def test_api_channel_state_change_errors(
         ),
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.BAD_REQUEST)
+    assert_response_with_error(response, HTTPStatus.BAD_REQUEST)
 
     # ok now let's close and settle for real
     request = grequests.patch(
@@ -587,7 +587,7 @@ def test_api_channel_state_change_errors(
         json=dict(balance=500)
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
 
     # and now let's try to settle again
     request = grequests.patch(
@@ -599,7 +599,7 @@ def test_api_channel_state_change_errors(
         json=dict(state=CHANNEL_STATE_SETTLED)
     )
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
 
 
 def test_api_tokens(
@@ -620,7 +620,7 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
 
     partner_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
     token_address = '0x61c808d82a3ac53231750dadc13c777b59310bd9'
@@ -635,7 +635,7 @@ def test_api_tokens(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
 
     # and now let's get the token list
     request = grequests.get(
@@ -670,7 +670,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     first_channel_address = response['channel_address']
 
@@ -680,7 +680,7 @@ def test_query_partners_by_token(
         json=channel_data_obj,
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
     response = response.json()
     second_channel_address = response['channel_address']
 
@@ -692,7 +692,7 @@ def test_query_partners_by_token(
         json=channel_data_obj
     )
     response = request.send().response
-    assert_proper_response(response, http.client.CREATED)
+    assert_proper_response(response, HTTPStatus.CREATED)
 
     # and now let's query our partners per token for the first token
     request = grequests.get(
@@ -932,7 +932,7 @@ def test_api_token_swaps(
         json=tokenswap_obj
     )
     response = request.send().response
-    assert_proper_response(response, status_code=http.client.CREATED)
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
 
     tokenswap_obj = {
         'role': 'taker',
@@ -957,7 +957,7 @@ def test_api_token_swaps(
         json=tokenswap_obj
     )
     response = request.send().response
-    assert_proper_response(response, status_code=http.client.CREATED)
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
 
 
 def test_api_transfers(
@@ -1081,7 +1081,7 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
         token_address=token_address,
     ))
     response = request.send().response
-    assert_proper_response(response, status_code=http.client.CREATED)
+    assert_proper_response(response, status_code=HTTPStatus.CREATED)
     assert 'channel_manager_address' in response.json()
 
     # now try to reregister it and get the error
@@ -1091,7 +1091,7 @@ def test_register_token(api_backend, api_test_context, api_raiden_service):
         token_address=token_address,
     ))
     response = request.send().response
-    assert_response_with_error(response, http.client.CONFLICT)
+    assert_response_with_error(response, HTTPStatus.CONFLICT)
 
 
 def test_get_connection_managers_info(

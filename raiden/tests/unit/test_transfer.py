@@ -75,7 +75,7 @@ def assert_ack_for(receiver, message, message_list):
 
 def sign_and_send(message, key, address, app):
     message.sign(key, address)
-    message_data = str(message.packed().data)
+    message_data = bytes(message.packed().data)
     app.raiden.protocol.receive(message_data)
     # Give it some time to see if the unknown sender causes an error in the logic
     gevent.sleep(3)

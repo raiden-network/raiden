@@ -39,7 +39,7 @@ HOP3_TIMEOUT = HOP2_TIMEOUT - UNIT_REVEAL_TIMEOUT
 
 
 def make_address():
-    return bytes(''.join(random.choice(string.printable) for _ in range(20)))
+    return bytes(''.join(random.choice(string.printable) for _ in range(20)), encoding='utf-8')
 
 
 def make_privkey_address():

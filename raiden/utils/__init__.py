@@ -36,6 +36,9 @@ def sha3(data):
         TypeError: This function does not accept unicode objects, they must be
         encoded prior to usage.
     """
+    # FIXME: check that only bytes objects get here
+    if isinstance(data, str):
+        data = data.encode()
     return keccak_256(data).digest()
 
 
@@ -58,7 +61,7 @@ def address_decoder(addr):
 
 def address_encoder(address):
     assert len(address) in (20, 0)
-    return '0x' + hexlify(address)
+    return '0x' + hexlify(address).decode()
 
 
 def block_tag_encoder(val):
@@ -66,13 +69,13 @@ def block_tag_encoder(val):
         return hex(val).rstrip('L')
 
     assert val in ('latest', 'pending')
-    return '0x' + hexlify(val)
+    return '0x' + hexlify(val).decode()
 
 
 def data_encoder(data, length=None):
     data = hexlify(data)
     length = length or 0
-    return '0x' + data.rjust(length * 2, '0')
+    return '0x' + data.rjust(length * 2, b'0').decode()
 
 
 def data_decoder(data):
@@ -110,7 +113,10 @@ def topic_encoder(topic):
 
 
 def pex(data):
-    return hexlify(str(data))[:8]
+    # FIXME: see if there is a better way
+    if not isinstance(data, bytes):
+        data = str(data).encode()
+    return hexlify(data)[:8]
 
 
 def lpex(lst):
@@ -216,7 +222,7 @@ def fix_tester_storage(storage):
     """
     new_storage = dict()
     for key, val in storage.items():
-        new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
+        new_key = '0x%064x' % int(key if key != b'0x' else b'0x0', 16)
         new_val = '0x%064x' % int(val, 16)
         new_storage[new_key] = new_val
     return new_storage
