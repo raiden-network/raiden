@@ -53,16 +53,16 @@ def test_get_account_in_keystore(test_keystore):
 
 def test_get_privkey(test_keystore):
     account_manager = AccountManager(test_keystore)
-    assert 'f696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
+    assert b'f696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
         account_manager.get_privkey('0d5a0e4fece4b84365b9b8dba6e6d41348c73645', '123')
     )
-    assert 'f696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
+    assert b'f696ecb5c767263c797a035db6f6008d38d852960ed33a491a58390b003fb605' == encode_hex(
         account_manager.get_privkey('0x0d5a0e4fece4b84365b9b8dba6e6d41348c73645', '123')
     )
-    assert '36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
+    assert b'36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
         account_manager.get_privkey('3593403033d18b82f7b4a0f18e1ed24623d23b20', '123')
     )
-    assert '36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
+    assert b'36fa966441f259501110ba88f8212dfd7f8bacb07862a7d5cf8f31c1a64551e5' == encode_hex(
         account_manager.get_privkey('0x3593403033d18b82f7b4a0f18e1ed24623d23b20', '123')
     )
 
@@ -80,7 +80,7 @@ def test_account_manager_invalid_files(test_keystore, caplog):
         AccountManager(test_keystore)
 
     for msg, file_name, reason in [
-        ('Invalid account file', KEYFILE_INVALID, 'No JSON object'),
+        ('Invalid account file', KEYFILE_INVALID, 'Expecting value: line 1 column 1 (char 0)'),
         ('Can not read account file', KEYFILE_INACCESSIBLE, 'Permission denied')
     ]:
         for record in caplog.records:
