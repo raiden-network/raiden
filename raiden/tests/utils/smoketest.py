@@ -26,7 +26,7 @@ from raiden.utils import get_contract_path, get_project_root, fix_tester_storage
 from raiden.blockchain.abi import contract_checksum
 from raiden.transfer.state import CHANNEL_STATE_OPENED
 from raiden.tests.utils.genesis import GENESIS_STUB
-from raiden.tests.fixtures import tester_state
+from raiden.tests.utils.tester import create_tester_state
 from raiden.network.utils import get_free_port
 from raiden.connection_manager import ConnectionManager
 
@@ -193,7 +193,7 @@ def deploy_and_open_channel_alloc(deployment_key):
         - return the state dump and the contract addresses
     """
     deployment_key_bin = deployment_key.decode('hex')
-    state = tester_state(
+    state = create_tester_state(
         deployment_key_bin,
         [deployment_key_bin],
         6 * 10 ** 6
