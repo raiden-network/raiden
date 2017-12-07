@@ -145,6 +145,12 @@ class Channel(object):
             reveal_timeout,
             settle_timeout):
 
+        if not isinstance(settle_timeout, int):
+            raise ValueError('settle_timeout must be integral')
+
+        if not isinstance(reveal_timeout, int):
+            raise ValueError('reveal_timeout must be integral')
+
         if settle_timeout <= reveal_timeout:
             raise ValueError('reveal_timeout can not be larger-or-equal to settle_timeout')
 
@@ -168,12 +174,6 @@ class Channel(object):
             # channel and then to unlock a lock on chain.
             #
             raise ValueError('reveal_timeout must be at least 3')
-
-        if not isinstance(settle_timeout, int):
-            raise ValueError('settle_timeout must be integral')
-
-        if not isinstance(reveal_timeout, int):
-            raise ValueError('reveal_timeout must be integral')
 
         self.our_state = our_state
         self.partner_state = partner_state
