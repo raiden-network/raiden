@@ -92,13 +92,13 @@ def test_deposit_events(
     newbalance_event = tester_events[-1]
 
     assert transfer_event == {
-        '_event_type': 'Transfer',
+        '_event_type': b'Transfer',
         '_from': encode_hex(address),
         '_to': nettingchannel.address,
         '_value': deposit_amount,
     }
 
-    assert newbalance_event['_event_type'] == 'ChannelNewBalance'
+    assert newbalance_event['_event_type'] == b'ChannelNewBalance'
     assert newbalance_event['token_address'] == encode_hex(tester_token.address)
     assert newbalance_event['participant'] == encode_hex(address)
     assert newbalance_event['balance'] == deposit_amount

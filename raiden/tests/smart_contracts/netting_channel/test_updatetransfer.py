@@ -46,7 +46,7 @@ def test_transfer_update_event(tester_state, tester_channels, tester_events):
     assert len(previous_events) + 1 == len(tester_events)
 
     assert tester_events[-1] == {
-        '_event_type': 'TransferUpdated',
+        '_event_type': b'TransferUpdated',
         'node_address': hexlify(address1),
     }
 

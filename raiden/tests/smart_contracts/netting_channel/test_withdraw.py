@@ -41,7 +41,7 @@ def test_withdraw(
 
     lock_amount = 31
     lock_expiration = tester_state.block.number + reveal_timeout + 5
-    secret = 'secretsecretsecretsecretsecretse'
+    secret = b'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
     new_block = Block(tester_state.block.number)
     channel0.state_transition(new_block)
@@ -79,7 +79,7 @@ def test_withdraw(
 
     nettingchannel.withdraw(
         proof.lock_encoded,
-        ''.join(proof.merkle_proof),
+        b''.join(proof.merkle_proof),
         proof.secret,
         sender=pkey1,
     )
@@ -117,7 +117,7 @@ def test_withdraw_at_settlement_block(
 
     lock_amount = 31
     lock_expiration = tester_state.block.number + settle_timeout
-    secret = 'settlementsettlementsettlementse'
+    secret = b'settlementsettlementsettlementse'
     hashlock = sha3(secret)
 
     lock0 = Lock(
@@ -164,7 +164,7 @@ def test_withdraw_at_settlement_block(
     assert lock_expiration == tester_state.block.number
     nettingchannel.withdraw(
         lock0_bytes,
-        '',  # the lock itself it the root, the proof is empty
+        b'',  # the lock itself it the root, the proof is empty
         secret,
         sender=pkey1,
     )
@@ -184,7 +184,7 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_state):
 
     lock_timeout = reveal_timeout + 5
     lock_expiration = tester_state.block.number + lock_timeout
-    secret = 'expiredlockexpiredlockexpiredloc'
+    secret = b'expiredlockexpiredlockexpiredloc'
     hashlock = sha3(secret)
     new_block = Block(tester_state.block.number)
     channel0.state_transition(new_block)
@@ -221,7 +221,7 @@ def test_withdraw_expired_lock(reveal_timeout, tester_channels, tester_state):
     with pytest.raises(TransactionFailed):
         nettingchannel.withdraw(
             proof.lock_encoded,
-            ''.join(proof.merkle_proof),
+            b''.join(proof.merkle_proof),
             proof.secret,
             sender=pkey0,
         )
@@ -245,7 +245,7 @@ def test_withdraw_both_participants(
     initial_balance0 = tester_token.balanceOf(address0, sender=pkey0)
     initial_balance1 = tester_token.balanceOf(address1, sender=pkey0)
 
-    secret = 'secretsecretsecretsecretsecretse'
+    secret = b'secretsecretsecretsecretsecretse'
     hashlock = sha3(secret)
 
     lock_amount = 31
@@ -310,7 +310,7 @@ def test_withdraw_both_participants(
     )
     nettingchannel.withdraw(
         proof01.lock_encoded,
-        ''.join(proof01.merkle_proof),
+        b''.join(proof01.merkle_proof),
         proof01.secret,
         sender=pkey1,
     )
@@ -321,7 +321,7 @@ def test_withdraw_both_participants(
     )
     nettingchannel.withdraw(
         proof10.lock_encoded,
-        ''.join(proof10.merkle_proof),
+        b''.join(proof10.merkle_proof),
         proof10.secret,
         sender=pkey0,
     )
@@ -341,7 +341,7 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
     pkey0, pkey1, nettingchannel, channel0, channel1 = tester_channels[0]
 
     lock_expiration = tester_state.block.number + reveal_timeout + 5
-    secret = 'secretsecretsecretsecretsecretse'
+    secret = b'secretsecretsecretsecretsecretse'
     new_block = Block(tester_state.block.number)
     channel0.state_transition(new_block)
     channel1.state_transition(new_block)
@@ -373,7 +373,7 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
 
     nettingchannel.withdraw(
         proof.lock_encoded,
-        ''.join(proof.merkle_proof),
+        b''.join(proof.merkle_proof),
         proof.secret,
         sender=pkey0,
     )
@@ -381,7 +381,7 @@ def test_withdraw_twice(reveal_timeout, tester_channels, tester_state):
     with pytest.raises(TransactionFailed):
         nettingchannel.withdraw(
             proof.lock_encoded,
-            ''.join(proof.merkle_proof),
+            b''.join(proof.merkle_proof),
             proof.secret,
             sender=pkey0,
         )
@@ -447,7 +447,7 @@ def test_withdraw_fails_with_partial_merkle_proof(
             with pytest.raises(TransactionFailed):
                 nettingchannel.withdraw(
                     lock_encoded,
-                    ''.join(tampered_proof),
+                    b''.join(tampered_proof),
                     secret,
                     sender=pkey1,
                 )
@@ -508,12 +508,12 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, set
             tampered_hash[5], tampered_hash[6] = tampered_hash[6], tampered_hash[5]
 
             tampered_proof = list(merkle_proof)
-            tampered_proof[pos] = str(tampered_hash)
-
+            tampered_proof[pos] = tampered_hash
+            
             with pytest.raises(TransactionFailed):
                 nettingchannel.withdraw(
                     lock_encoded,
-                    ''.join(tampered_proof),
+                    b''.join(tampered_proof),
                     secret,
                     sender=pkey1,
                 )
@@ -584,7 +584,7 @@ def test_withdraw_tampered_lock_amount(
         with pytest.raises(TransactionFailed):
             nettingchannel.withdraw(
                 tampered_lock_encoded,
-                ''.join(merkle_proof),
+                b''.join(merkle_proof),
                 secret,
                 sender=pkey1,
             )
@@ -648,7 +648,7 @@ def test_withdraw_lock_with_a_large_expiration(
 
     nettingchannel.withdraw(
         proof.lock_encoded,
-        ''.join(proof.merkle_proof),
+        b''.join(proof.merkle_proof),
         proof.secret,
         sender=pkey1,
     )
