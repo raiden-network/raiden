@@ -7,20 +7,20 @@ Raiden Network
 
 `Raiden Network documentation`_
 
-.. _Raiden Network documentation: http://raiden-network.readthedocs.io/
+.. _Raiden Network documentation: https://raiden-network.readthedocs.io/
 
 The Raiden Network is an off-chain scaling solution, enabling near-instant, low-fee and scalable payments. It’s complementary to the Ethereum blockchain and works with any ERC20 compatible token.
 
 The Raiden project is work in progress. Its goal is to research state channel technology, define protocols and develop reference implementations.
 
-For more information please visit http://raiden.network/.
+For more information please visit https://raiden.network/.
 
 Installation
 ------------
 
 Please refer to the `Installation section`_ in the official docs.
 
-.. _Installation section: http://raiden-network.readthedocs.io/en/stable/overview_and_guide.html#installation
+.. _Installation section: https://raiden-network.readthedocs.io/en/stable/overview_and_guide.html#installation
 
 
 Ropsten testnet
