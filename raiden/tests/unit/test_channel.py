@@ -401,8 +401,8 @@ def test_invalid_timeouts():
             small_settle_timeout,
         )
 
-    for invalid_value in (-1, 0, 1.1, 1.0, 'a', [], {}):
-        with pytest.raises(ValueError, TypeError):
+    for invalid_value in (-1, 0, 1.1, 1.0):
+        with pytest.raises(ValueError):
             Channel(
                 our_state,
                 partner_state,
@@ -412,7 +412,28 @@ def test_invalid_timeouts():
                 settle_timeout,
             )
 
-        with pytest.raises(ValueError, TypeError):
+        with pytest.raises(ValueError):
+            Channel(
+                our_state,
+                partner_state,
+                external_state,
+                token_address,
+                reveal_timeout,
+                invalid_value,
+            )
+
+    for invalid_value in ('a', [], {}):
+        with pytest.raises(TypeError):
+            Channel(
+                our_state,
+                partner_state,
+                external_state,
+                token_address,
+                invalid_value,
+                settle_timeout,
+            )
+
+        with pytest.raises(TypeError):
             Channel(
                 our_state,
                 partner_state,
