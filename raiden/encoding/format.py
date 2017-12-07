@@ -151,6 +151,8 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
                 value = pad_value + value
 
             data = object.__getattribute__(self, 'data')
+            if isinstance(value, str):
+                value = value.encode()
             data[slice_] = value
         else:
             super(self.__class__, self).__setattr__(name, value)
