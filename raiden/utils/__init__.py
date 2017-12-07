@@ -61,7 +61,7 @@ def address_decoder(addr):
 
 def address_encoder(address):
     assert len(address) in (20, 0)
-    return '0x' + hexlify(address)
+    return '0x' + hexlify(address).decode()
 
 
 def block_tag_encoder(val):
@@ -69,13 +69,13 @@ def block_tag_encoder(val):
         return hex(val).rstrip('L')
 
     assert val in ('latest', 'pending')
-    return '0x' + hexlify(val)
+    return '0x' + hexlify(val).decode()
 
 
 def data_encoder(data, length=None):
     data = hexlify(data)
     length = length or 0
-    return '0x' + data.rjust(length * 2, '0')
+    return '0x' + data.rjust(length * 2, b'0').decode()
 
 
 def data_decoder(data):
@@ -113,7 +113,10 @@ def topic_encoder(topic):
 
 
 def pex(data):
-    return hexlify(str(data))[:8]
+    # FIXME: see if there is a better way
+    if not isinstance(data, bytes):
+        data = data.encode()
+    return hexlify(data)[:8]
 
 
 def lpex(lst):
