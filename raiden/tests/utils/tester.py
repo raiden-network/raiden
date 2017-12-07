@@ -1,8 +1,18 @@
 # -*- coding: utf-8 -*-
 from binascii import hexlify, unhexlify
 
+import ethereum.db
+import ethereum.blocks
+import ethereum.config
 from ethereum import tester
+from ethereum.utils import int_to_addr, zpad
 
+from raiden.utils import (
+    address_decoder,
+    data_decoder,
+    quantity_decoder,
+)
+from raiden.tests.utils.blockchain import DEFAULT_BALANCE
 from raiden.constants import (
     NETTINGCHANNEL_SETTLE_TIMEOUT_MIN,
     NETTINGCHANNEL_SETTLE_TIMEOUT_MAX
@@ -32,6 +42,57 @@ class InvalidKey(str):
 
 
 INVALID_KEY = InvalidKey('default_key_was_not_set')
+
+
+def create_tester_state(deploy_key, private_keys, tester_blockgas_limit):
+    tester_state = tester.state()
+
+    # special addresses 1 to 5
+    alloc = {
+        int_to_addr(i): {'wei': 1}
+        for i in range(1, 5)
+    }
+
+    for privkey in [deploy_key] + private_keys:
+        address = privatekey_to_address(privkey)
+        alloc[address] = {
+            'balance': DEFAULT_BALANCE,
+        }
+
+    for account in tester.accounts:
+        alloc[account] = {
+            'balance': DEFAULT_BALANCE,
+        }
+
+    db = ethereum.db.EphemDB()
+    env = ethereum.config.Env(
+        db,
+        ethereum.config.default_config,
+    )
+    genesis_overwrite = {
+        'nonce': zpad(data_decoder('0x00006d6f7264656e'), 8),
+        'difficulty': quantity_decoder('0x20000'),
+        'mixhash': zpad(b'\x00', 32),
+        'coinbase': address_decoder('0x0000000000000000000000000000000000000000'),
+        'timestamp': 0,
+        'extra_data': b'',
+        'gas_limit': tester_blockgas_limit,
+        'start_alloc': alloc,
+    }
+    genesis_block = ethereum.blocks.genesis(
+        env,
+        **genesis_overwrite
+    )
+
+    # enable DELEGATECALL opcode
+    genesis_block.number = genesis_block.config['HOMESTEAD_FORK_BLKNUM'] + 1
+
+    tester_state.db = db
+    tester_state.env = env
+    tester_state.block = genesis_block
+    tester_state.blocks = [genesis_block]
+
+    return tester_state
 
 
 def approve_and_deposit(tester_token, nettingcontract, deposit, key):

@@ -2,20 +2,10 @@
 from binascii import unhexlify
 
 import pytest
-import ethereum.db
-import ethereum.blocks
-import ethereum.config
-from ethereum import tester
-from ethereum.utils import int_to_addr, zpad
 
-from raiden.utils import (
-    address_decoder,
-    data_decoder,
-    quantity_decoder,
-    privatekey_to_address,
-)
-from raiden.tests.utils.blockchain import DEFAULT_BALANCE
+from raiden.utils import privatekey_to_address
 from raiden.tests.utils.tester import (
+    create_tester_state,
     approve_and_deposit,
     channel_from_nettingcontract,
     create_registryproxy,
@@ -49,54 +39,7 @@ def tester_events():
 
 @pytest.fixture
 def tester_state(deploy_key, private_keys, tester_blockgas_limit):
-    tester_state = tester.state()
-
-    # special addresses 1 to 5
-    alloc = {
-        int_to_addr(i): {'wei': 1}
-        for i in range(1, 5)
-    }
-
-    for privkey in [deploy_key] + private_keys:
-        address = privatekey_to_address(privkey)
-        alloc[address] = {
-            'balance': DEFAULT_BALANCE,
-        }
-
-    for account in tester.accounts:
-        alloc[account] = {
-            'balance': DEFAULT_BALANCE,
-        }
-
-    db = ethereum.db.EphemDB()
-    env = ethereum.config.Env(
-        db,
-        ethereum.config.default_config,
-    )
-    genesis_overwrite = {
-        'nonce': zpad(data_decoder('0x00006d6f7264656e'), 8),
-        'difficulty': quantity_decoder('0x20000'),
-        'mixhash': zpad(b'\x00', 32),
-        'coinbase': address_decoder('0x0000000000000000000000000000000000000000'),
-        'timestamp': 0,
-        'extra_data': b'',
-        'gas_limit': tester_blockgas_limit,
-        'start_alloc': alloc,
-    }
-    genesis_block = ethereum.blocks.genesis(
-        env,
-        **genesis_overwrite
-    )
-
-    # enable DELEGATECALL opcode
-    genesis_block.number = genesis_block.config['HOMESTEAD_FORK_BLKNUM'] + 1
-
-    tester_state.db = db
-    tester_state.env = env
-    tester_state.block = genesis_block
-    tester_state.blocks = [genesis_block]
-
-    return tester_state
+    return create_tester_state(deploy_key, private_keys, tester_blockgas_limit)
 
 
 @pytest.fixture
