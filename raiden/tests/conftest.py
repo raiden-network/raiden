@@ -12,7 +12,6 @@ import pytest
 from ethereum import slogging
 from ethereum.keys import PBKDF2_CONSTANTS
 from ethereum import processblock
-from ethereum import tester
 
 from raiden.settings import GAS_LIMIT
 from raiden.tests.fixtures import *  # noqa: F401,F403
@@ -125,7 +124,7 @@ def monkey_patch_tester():
 
         return result
 
-    tester.processblock.apply_transaction = apply_transaction
+    processblock.apply_transaction = apply_transaction
 
 
 @pytest.fixture(scope='session', autouse=True)
