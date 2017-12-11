@@ -904,10 +904,10 @@ def removedb(ctx):
     # Sanity check if the specified directory is a Raiden datadir.
     sane = True
     if not address_hex:
+        address_matcher = re.compile('(0x)?[a-f0-9]{6,8}').match
         ls = os.listdir(user_db_dir)
-
         sane = all(
-            f[:2] == '0x' and
+            address_matcher(f) and
             len(f) == 8 and
             os.path.isdir(os.path.join(user_db_dir, f))
             for f in ls
