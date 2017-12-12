@@ -695,7 +695,7 @@ class JSONRPCClient(object):
             A dict representing the transaction receipt object, or null when no
             receipt was found.
         """
-        if transaction_hash.startswith('0x'):
+        if transaction_hash.startswith(b'0x'):
             warnings.warn(
                 'transaction_hash seems to be already encoded, this will'
                 ' result in unexpected behavior'
@@ -717,7 +717,7 @@ class JSONRPCClient(object):
             block: Integer block number, or the string 'latest',
                 'earliest' or 'pending'.
         """
-        if address.startswith('0x'):
+        if address.startswith(b'0x'):
             warnings.warn(
                 'address seems to be already encoded, this will result '
                 'in unexpected behavior'
@@ -739,7 +739,7 @@ class JSONRPCClient(object):
         transaction hash.
         """
 
-        if transaction_hash.startswith('0x'):
+        if transaction_hash.startswith(b'0x'):
             warnings.warn(
                 'transaction_hash seems to be already encoded, this will'
                 ' result in unexpected behavior'
@@ -764,7 +764,7 @@ class JSONRPCClient(object):
             timeout (float): Timeout in seconds, raise an Excpetion on
                 timeout.
         """
-        if transaction_hash.startswith('0x'):
+        if transaction_hash.startswith(b'0x'):
             warnings.warn(
                 'transaction_hash seems to be already encoded, this will'
                 ' result in unexpected behavior'
