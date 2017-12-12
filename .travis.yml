@@ -3,7 +3,7 @@ sudo: true
 
 language: python
 python:
-- '2.7'
+- '3.6'
 env:
   global:
   - GETH_URL_LINUX='https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.7.2-1db4ecdc.tar.gz'
