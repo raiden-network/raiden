@@ -57,6 +57,7 @@ def geth_to_cmd(node, datadir, verbosity):
     Args:
         node (dict): a node configuration
         datadir (str): the node's datadir
+        verbosity (int): geth logging verbosity, 0 - nothing, 5 - max
 
     Return:
         List[str]: cmd-args list
@@ -87,6 +88,7 @@ def geth_to_cmd(node, datadir, verbosity):
         '--networkid', '627',
         '--verbosity', str(verbosity),
         '--datadir', datadir,
+        '--password', os.path.join(datadir, 'pw'),
     ])
 
     log.debug('geth command: {}'.format(cmd))
@@ -105,6 +107,10 @@ def geth_create_account(datadir, privkey):
     keyfile_path = os.path.join(datadir, 'keyfile')
     with open(keyfile_path, 'w') as handler:
         handler.write(hexlify(privkey).decode())
+
+    password_path = os.path.join(datadir, 'pw')
+    with open(password_path, 'w') as handler:
+        handler.write(DEFAULT_PASSPHRASE)
 
     create = subprocess.Popen(
         ['geth', '--datadir', datadir, 'account', 'import', keyfile_path],
