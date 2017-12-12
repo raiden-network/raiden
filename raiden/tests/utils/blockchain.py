@@ -240,7 +240,7 @@ def geth_create_blockchain(
 
         config['nodekey'] = key
         config['nodekeyhex'] = encode_hex(key).decode()
-        config['pub'] = encode_hex(privtopub(key))
+        config['pub'] = encode_hex(privtopub(key)).decode()
         config['address'] = address
         config['port'] = p2p_port
         config['rpcport'] = rpc_port
