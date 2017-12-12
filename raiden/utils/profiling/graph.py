@@ -26,8 +26,6 @@ using ImageMagick:
     convert -append memory_timeline.png latency_scatter.png memory_objcount.png collage.png
 """
 
-
-
 # Improvements:
 # - Draw the composite graphs with matplotlib instead of using convert and make
 #   sure to aling all the points
