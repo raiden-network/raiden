@@ -509,7 +509,7 @@ def test_withdraw_tampered_merkle_proof(tree, tester_channels, tester_state, set
 
             tampered_proof = list(merkle_proof)
             tampered_proof[pos] = tampered_hash
-            
+
             with pytest.raises(TransactionFailed):
                 nettingchannel.withdraw(
                     lock_encoded,

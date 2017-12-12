@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from binascii import hexlify, unhexlify
+from binascii import unhexlify
 
 from raiden.blockchain.abi import (
     CONTRACT_MANAGER,

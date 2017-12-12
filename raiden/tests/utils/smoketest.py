@@ -168,7 +168,10 @@ def load_or_create_smoketest_config():
         with open(smoketest_config_path) as handler:
             smoketest_config = json.load(handler)
         # if the file versions still fit, return the genesis config (ignore solc if not available)
-        if all(versions[key] == smoketest_config['versions'][key] for key in list(versions.keys())):
+        if all(
+            versions[key] == smoketest_config['versions'][key]
+            for key in list(versions.keys())
+        ):
             return smoketest_config
 
     # something did not fit -- we will create the genesis
