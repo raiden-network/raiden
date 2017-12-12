@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-from raiden.ui.cli import check_json_rpc
+from raiden.ui.cli import (
+    check_json_rpc,
+    init_minified_addr_checker,
+    check_minified_address
+)
 
 
 class MockClient():
@@ -61,3 +65,12 @@ def test_check_json_rpc_parity():
     assert not check_json_rpc(MockClient(
         'Parity//v0.0.0-stable-19535333c-20171013/x86_64-linux-gnu/rustc1.20.0'
     ))
+
+
+def test_minified_address_checker():
+    re = init_minified_addr_checker()
+    assert check_minified_address('9bed7fd1', re)
+    assert check_minified_address('8c1d1f23', re)
+    assert not check_minified_address('xxxxxx', re)
+    assert not check_minified_address('123zzz', re)
+    assert not check_minified_address('$@$^$', re)
