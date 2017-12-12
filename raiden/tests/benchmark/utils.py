@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 
-
 def print_serialization(pstats):  # pylint: disable=too-many-locals
     print('ncalls         tottime  percall  %    cumtime  percall  function')
     total_pct = 0.0

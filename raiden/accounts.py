@@ -161,9 +161,10 @@ class Account(object):
             include_address: flag denoting if the address should be included or not
             include_id: flag denoting if the id should be included or not
         """
-        d = {}
-        d['crypto'] = self.keystore['crypto']
-        d['version'] = self.keystore['version']
+        d = {
+            'crypto': self.keystore['crypto'],
+            'version': self.keystore['version']
+        }
         if include_address and self.address is not None:
             d['address'] = hexlify(self.address)
         if include_id and self.uuid is not None:
