@@ -20,7 +20,7 @@ def main(eth_nodes, seed, raiden_executable, raiden_args):
     offset = sum(ord(c) for c in seed) % len(eth_nodes)
     target_eth_node = eth_nodes[offset]
     raiden_args = [raiden_executable] + list(raiden_args) + [ETH_RPC_ENDPOINT_ARG, target_eth_node]
-    print(" ".join(raiden_args))
+    print((" ".join(raiden_args)))
     # Ensure print is flushed - exec could swallow it
     sys.stdout.flush()
     os.execvp(raiden_args[0], raiden_args)
