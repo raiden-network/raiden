@@ -130,6 +130,14 @@ def check_json_rpc(client):
     return True
 
 
+def init_minified_addr_checker():
+    return re.compile('(0x)?[a-f0-9]{6,8}')
+
+
+def check_minified_address(addr, compiled_re):
+    return compiled_re.match(addr)
+
+
 def check_synced(blockchain_service):
     try:
         net_id = int(blockchain_service.client.call('net_version'))
@@ -904,10 +912,10 @@ def removedb(ctx):
     # Sanity check if the specified directory is a Raiden datadir.
     sane = True
     if not address_hex:
-        address_matcher = re.compile('(0x)?[a-f0-9]{6,8}').match
+        regex = init_minified_addr_checker()
         ls = os.listdir(user_db_dir)
         sane = all(
-            address_matcher(f) and
+            check_minified_address(f, regex) and
             len(f) == 8 and
             os.path.isdir(os.path.join(user_db_dir, f))
             for f in ls
