@@ -1,6 +1,4 @@
 """ Utilities to make and assert transfers. """
-
-
 import gevent
 from coincurve import PrivateKey
 

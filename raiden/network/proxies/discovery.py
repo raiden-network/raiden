@@ -86,8 +86,7 @@ class Discovery(object):
             raise TransactionThrew('Register Endpoint', receipt_or_none)
 
     def endpoint_by_address(self, node_address_bin):
-        node_address_hex = hexlify(node_address_bin)
-        endpoint = self.proxy.findEndpointByAddress.call(node_address_hex)
+        endpoint = self.proxy.findEndpointByAddress.call(node_address_bin)
 
         if endpoint == '':
             raise UnknownAddress('Unknown address {}'.format(pex(node_address_bin)))

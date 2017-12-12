@@ -77,7 +77,7 @@ class ContractDiscovery(Discovery):
 
         try:
             current_value = self.get(node_address)
-        except UnknownAddress:
+        except (UnknownAddress, ValueError):
             current_value = None
 
         if current_value == (host, port):
