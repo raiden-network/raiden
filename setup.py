@@ -109,7 +109,7 @@ history = ''
 
 
 ethereum_url = (
-    'git+https://github.com/LefterisJP/pyethereum'
+    'git+https://github.com/palango/pyethereum'
     '@take_solidity_interface_into_account#egg=ethereum'
 )
 
@@ -138,7 +138,7 @@ def read_version_from_git():
         ).communicate()
         # Popen return bytes
         git_version = git_version.decode()
-        
+
         if git_version.startswith('v'):
             git_version = git_version[1:]
 
