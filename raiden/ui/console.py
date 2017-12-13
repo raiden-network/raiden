@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from future import standard_library
-standard_library.install_aliases()
 from binascii import hexlify
 import StringIO
 import errno
