@@ -101,7 +101,7 @@ def check_json_rpc(client):
         print(
             "\n"
             "Couldn't contact the ethereum node through JSON-RPC.\n"
-            "Please make sure the JSON-RPC is enabled for these interfaces:\n"
+            "Please make sure that JSON-RPC is enabled for these interfaces:\n"
             "\n"
             "    eth_*, net_*, web3_*\n"
             "\n"
@@ -223,7 +223,7 @@ def wait_for_sync_rpc_api(blockchain_service, sleep):
 
 
 def wait_for_sync(blockchain_service, url, tolerance, sleep):
-    # print something since the actual test may take a few moment for the first
+    # print something since the actual test may take a few moments for the first
     # iteration
     print('Checking if the ethereum node is synchronized')
 
@@ -374,17 +374,13 @@ OPTIONS = [
     ),
     click.option(
         '--rpc/--no-rpc',
-        help=(
-            'Start with or without the RPC server.'
-        ),
+        help='Start with or without the RPC server.',
         default=True,
         show_default=True,
     ),
     click.option(
         '--sync-check/--no-sync-check',
-        help=(
-            'Checks if the ethereum node is synchronized against etherscan.'
-        ),
+        help='Checks if the ethereum node is synchronized against etherscan.',
         default=True,
         show_default=True,
     ),
@@ -411,7 +407,7 @@ OPTIONS = [
     ),
     click.option(
         '--password-file',
-        help='Text file containing password for provided account',
+        help='Text file containing the password for the provided account',
         default=None,
         type=click.File(lazy=True),
         show_default=True,
@@ -420,7 +416,7 @@ OPTIONS = [
         '--web-ui/--no-web-ui',
         help=(
             'Start with or without the web interface. Requires --rpc. '
-            'It will be acessible at http://<api-address>. '
+            'It will be accessible at http://<api-address>. '
         ),
         default=True,
         show_default=True,
@@ -520,7 +516,7 @@ def app(address,
 
     endpoint = eth_rpc_endpoint
 
-    # Fallback default port if only an IP address is given
+    # Fallback to default port if only an IP address is given
     rpc_port = 8545
     if eth_rpc_endpoint.startswith('http://'):
         endpoint = eth_rpc_endpoint[len('http://'):]
@@ -563,7 +559,7 @@ def app(address,
             'Account has insufficient funds for discovery registration.\n'
             'Needed: {} ETH\n'
             'Available: {} ETH.\n'
-            'Please deposit additional funds on this account.'
+            'Please deposit additional funds into this account.'
             .format(discovery_tx_cost / float(denoms.ether), balance / float(denoms.ether))
         )
         if not click.confirm('Try again?'):
