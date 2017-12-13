@@ -50,21 +50,12 @@ class App(object):  # pylint: disable=too-few-public-methods
         'shutdown_timeout': DEFAULT_SHUTDOWN_TIMEOUT,
     }
 
-    def __init__(self, config, chain, default_registry, discovery, transport_class=UDPTransport):
+    def __init__(self, config, chain, default_registry, discovery,
+                 transport = lambda config, transport: transport(None, None, socket=config['socket'],)
+                 if config.get('socket')
+                 else transport(config['host'], config['port'],)):
         self.config = config
         self.discovery = discovery
-
-        if config.get('socket'):
-            transport = transport_class(
-                None,
-                None,
-                socket=config['socket'],
-            )
-        else:
-            transport = transport_class(
-                config['host'],
-                config['port'],
-            )
 
         transport.throttle_policy = TokenBucket(
             config['protocol']['throttle_capacity'],
@@ -107,3 +98,16 @@ class App(object):  # pylint: disable=too-few-public-methods
             self.raiden.close_and_settle()
 
         self.raiden.stop()
+
+    def instantiate_transport(self, config):
+        if config.get('socket'):
+            return transport_class(
+            None,
+            None,
+            socket=config['socket'],
+            )
+        else:
+            return transport_class(
+                config['host'],
+                config['port'],
+            )

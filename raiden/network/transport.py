@@ -132,11 +132,10 @@ class DummyNetwork(object):
     network protocol just greenlet communication.
     """
 
-    on_send_cbs = []  # debugging
-
-    def __init__(self):
+    def __init__(self, on_send_cbs=[]):
         self.transports = dict()
         self.counter = 0
+        self.on_send_cbs = on_send_cbs
 
     def register(self, transport, host, port):
         """ Register a new node in the dummy network. """
@@ -159,15 +158,13 @@ class DummyNetwork(object):
 
 class DummyTransport(object):
     """ Communication between inter-process nodes. """
-    network = DummyNetwork()
-    on_recv_cbs = []  # debugging
-
     def __init__(
             self,
             host,
             port,
             protocol=None,
-            throttle_policy=DummyPolicy()):
+            throttle_policy=DummyPolicy(),
+            network=DummyNetwork()):
 
         self.host = host
         self.port = port
@@ -185,11 +182,6 @@ class DummyTransport(object):
     def send(self, sender, host_port, bytes_):
         gevent.sleep(self.throttle_policy.consume(1))
         self.network.send(sender, host_port, bytes_)
-
-    @classmethod
-    def track_recv(cls, raiden, host_port, data):
-        for callback in cls.on_recv_cbs:
-            callback(raiden, host_port, data)
 
     def receive(self, data, host_port=None):
         self.track_recv(self.protocol.raiden, host_port, data)
