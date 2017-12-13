@@ -100,7 +100,7 @@ def tester_deploy_contract(
         libraries[deploy_contract] = encode_hex(contract_address)
 
     hex_bytecode = _solidity.solidity_resolve_symbols(contract['bin_hex'], libraries)
-    bytecode = hex_bytecode.decode('hex')
+    bytecode = unhexlify(hex_bytecode)
 
     contract['bin_hex'] = hex_bytecode
     contract['bin'] = bytecode
@@ -429,24 +429,24 @@ class RegistryTesterMock(object):
 
     def manager_address_by_token(self, token_address):
         channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
-        return channel_manager_address_hex.decode('hex')
+        return unhexlify(channel_manager_address_hex)
 
     def add_token(self, token_address):
         self.registry_proxy.addToken(token_address)
         self.tester_state.mine(number_of_blocks=1)
         channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
-        return channel_manager_address_hex.decode('hex')
+        return unhexlify(channel_manager_address_hex)
 
     def token_addresses(self):
         result = [
-            address.decode('hex')
+            unhexlify(address)
             for address in self.registry_proxy.tokenAddresses()
         ]
         return result
 
     def manager_addresses(self):
         result = [
-            address.decode('hex')
+            unhexlify(address)
             for address in self.registry_proxy.channelManagerAddresses()
         ]
         return result

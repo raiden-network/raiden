@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 from binascii import hexlify
 import sys
 import os
@@ -58,8 +56,8 @@ from raiden.tests.utils.smoketest import (
 gevent.monkey.patch_all()
 
 # ansi escape code for moving the cursor and clearing the line
-CURSOR_STARTLINE = b'\x1b[1000D'
-CLEARLINE = b'\x1b[2K'
+CURSOR_STARTLINE = '\x1b[1000D'
+CLEARLINE = '\x1b[2K'
 
 
 def toogle_cpu_profiler(raiden):
@@ -817,7 +815,9 @@ def smoketest(ctx, debug, **kwargs):
         with open(report_file, 'a') as handler:
             handler.write('{:=^80}'.format(' %s ' % subject.upper()) + os.linesep)
             if data is not None:
-                handler.writelines([(data + os.linesep)])
+                if isinstance(data, bytes):
+                    data = data.decode()
+                handler.writelines([data + os.linesep])
 
     append_report('raiden version', json.dumps(get_system_spec()))
     append_report('raiden log', None)
