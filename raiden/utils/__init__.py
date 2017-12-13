@@ -224,7 +224,7 @@ def fix_tester_storage(storage):
     """
     new_storage = dict()
     for key, val in storage.items():
-        new_key = '0x%064x' % int(key if key != '0x' else '0x0', 16)
+        new_key = '0x%064x' % int(key if key != b'0x' else b'0x0', 16)
         new_val = '0x%064x' % int(val, 16)
         new_storage[new_key] = new_val
     return new_storage
