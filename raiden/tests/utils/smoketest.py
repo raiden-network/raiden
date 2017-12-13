@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-from future import standard_library
-standard_library.install_aliases()
-from binascii import hexlify
+from binascii import hexlify, unhexlify
 import os
 import time
 import json
@@ -192,7 +190,7 @@ def deploy_and_open_channel_alloc(deployment_key):
         - dump the complete state in a genesis['alloc'] compatible format
         - return the state dump and the contract addresses
     """
-    deployment_key_bin = deployment_key.decode('hex')
+    deployment_key_bin = unhexlify(deployment_key)
     state = create_tester_state(
         deployment_key_bin,
         [deployment_key_bin],
@@ -238,8 +236,8 @@ def deploy_and_open_channel_alloc(deployment_key):
     our_address = TEST_ACCOUNT['address']
 
     channel_address = manager.new_netting_channel(
-        our_address.decode('hex'),
-        TEST_PARTNER_ADDRESS.decode('hex'),
+        unhexlify(our_address),
+        unhexlify(TEST_PARTNER_ADDRESS),
         50
     )
 

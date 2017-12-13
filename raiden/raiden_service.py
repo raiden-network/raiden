@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
-from future import standard_library
-standard_library.install_aliases()
 import os
 import sys
 import itertools
