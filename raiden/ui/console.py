@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-
 from binascii import hexlify
-import StringIO
+import io
 import errno
 import json
 import os
@@ -243,7 +242,7 @@ class Console(BaseService):
             if isinstance(handler, StreamHandler) and handler.stream == sys.stderr:
                 root.removeHandler(handler)
 
-        stream = StringIO.StringIO()
+        stream = io.StringIO()
         handler = StreamHandler(stream=stream)
         handler.formatter = Formatter(u'%(levelname)s:%(name)s %(message)s')
         root.addHandler(handler)
@@ -272,7 +271,7 @@ class Console(BaseService):
 
         self.console_locals['lastlog'] = lastlog
 
-        err = StringIO.StringIO()
+        err = io.StringIO()
         sys.stderr = err
 
         def lasterr(n=1):
