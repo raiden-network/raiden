@@ -246,24 +246,27 @@ class JSONRPCClient(object):
 
             # we may have hammered the server and not all tx are
             # registered as `pending` yet
-            while nonce < self.nonce_current_value:
-                log.debug(
-                    'nonce on server too low; retrying',
-                    server=nonce,
-                    local=self.nonce_current_value,
-                )
+            try:
+                while nonce < self.nonce_current_value:
+                    log.debug(
+                        'nonce on server too low; retrying',
+                        server=nonce,
+                        local=self.nonce_current_value,
+                    )
 
-                query_time = now()
-                pending_transactions_hex = self.call(
-                    'eth_getTransactionCount',
-                    address_encoder(address),
-                    'pending',
-                )
-                pending_transactions = quantity_decoder(pending_transactions_hex)
-                nonce = pending_transactions + self.nonce_offset
-
-            self.nonce_current_value = nonce
-            self.nonce_last_update = query_time
+                    query_time = now()
+                    pending_transactions_hex = self.call(
+                        'eth_getTransactionCount',
+                        address_encoder(address),
+                        'pending',
+                    )
+                    pending_transactions = quantity_decoder(pending_transactions_hex)
+                    nonce = pending_transactions + self.nonce_offset
+            except TypeError:
+                pass
+            finally:
+                self.nonce_current_value = nonce
+                self.nonce_last_update = query_time
 
             return self.nonce_current_value
 
