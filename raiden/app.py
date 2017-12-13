@@ -98,16 +98,3 @@ class App(object):  # pylint: disable=too-few-public-methods
             self.raiden.close_and_settle()
 
         self.raiden.stop()
-
-    def instantiate_transport(self, config):
-        if config.get('socket'):
-            return transport_class(
-            None,
-            None,
-            socket=config['socket'],
-            )
-        else:
-            return transport_class(
-                config['host'],
-                config['port'],
-            )
