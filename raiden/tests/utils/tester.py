@@ -2,6 +2,9 @@
 from binascii import hexlify, unhexlify
 
 import ethereum.db
+import os
+print(os.listdir(os.path.dirname(ethereum.db.__file__)))
+print(ethereum.db.__file__)
 import ethereum.blocks
 import ethereum.config
 from ethereum import tester
