@@ -18,7 +18,7 @@ from raiden.settings import (
     DEFAULT_SHUTDOWN_TIMEOUT,
     INITIAL_PORT,
 )
-from raiden.network.transport import UDPTransport, TokenBucket
+from raiden.network.transport import TokenBucket
 from raiden.utils import (
     pex,
     privatekey_to_address
@@ -51,7 +51,7 @@ class App(object):  # pylint: disable=too-few-public-methods
     }
 
     def __init__(self, config, chain, default_registry, discovery,
-                 transport = lambda config, transport: transport(None, None, socket=config['socket'],)
+                 transport=lambda config, transport: transport(None, None, socket=config['socket'],)
                  if config.get('socket')
                  else transport(config['host'], config['port'],)):
         self.config = config
