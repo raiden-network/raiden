@@ -51,7 +51,8 @@ class App(object):  # pylint: disable=too-few-public-methods
     }
 
     def __init__(self, config, chain, default_registry, discovery,
-                 transport=lambda config, transport: transport(None, None, socket=config['socket'],)
+                 transport=lambda config,
+                 transport: transport(None, None, socket=config['socket'],)
                  if config.get('socket')
                  else transport(config['host'], config['port'],)):
         self.config = config
