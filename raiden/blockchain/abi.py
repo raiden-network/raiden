@@ -122,7 +122,7 @@ def get_static_or_compile(
 
 def contract_checksum(contract_path):
     with open(contract_path) as f:
-        checksum = hashlib.sha1(f.read()).hexdigest()
+        checksum = hashlib.sha1(f.read().encode()).hexdigest()
         return checksum
 
 

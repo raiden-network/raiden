@@ -202,7 +202,7 @@ def cached_genesis(request):
             account_alloc['storage'] = fix_tester_storage(account_alloc['storage'])
 
         # code must be hex encoded with 0x prefix
-        account_alloc['code'] = account_alloc.get('code', '')
+        account_alloc['code'] = account_alloc.get('code', '').decode()
 
         # account_to_dict returns accounts with nonce=0 and the nonce must
         # be encoded with 16 hex digits

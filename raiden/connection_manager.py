@@ -33,7 +33,7 @@ class ConnectionManager(object):
     """
     # XXX Hack: for bootstrapping, the first node on a network opens a channel
     # with this address to become visible.
-    BOOTSTRAP_ADDR_HEX = '2' * 40
+    BOOTSTRAP_ADDR_HEX = b'2' * 40
     BOOTSTRAP_ADDR = unhexlify(BOOTSTRAP_ADDR_HEX)
 
     def __init__(
