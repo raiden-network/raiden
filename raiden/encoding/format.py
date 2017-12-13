@@ -89,7 +89,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
     if 'data' in names_fields:
         raise ValueError('data field shadowing underlying buffer')
 
-    if any(count > 1 for count in Counter(field.name for field in fields).values()):
+    if any(count > 1 for count in list(Counter(field.name for field in fields).values())):
         raise ValueError('repeated field name')
 
     # big endian format
@@ -151,6 +151,9 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
                 value = pad_value + value
 
             data = object.__getattribute__(self, 'data')
+            # FIXME: see if there's a better solution
+            if isinstance(value, str):
+                value = value.encode()
             data[slice_] = value
         else:
             super(self.__class__, self).__setattr__(name, value)

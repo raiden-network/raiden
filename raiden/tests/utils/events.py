@@ -2,7 +2,7 @@
 
 
 def check_nested_attrs(item, data):
-    for name, value in data.iteritems():
+    for name, value in data.items():
         item_value = getattr(item, name)
 
         if isinstance(value, dict):

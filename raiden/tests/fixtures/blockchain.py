@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from __future__ import division
+
 
 import json
 from os import path
@@ -202,7 +202,7 @@ def cached_genesis(request):
             account_alloc['storage'] = fix_tester_storage(account_alloc['storage'])
 
         # code must be hex encoded with 0x prefix
-        account_alloc['code'] = account_alloc.get('code', '')
+        account_alloc['code'] = account_alloc.get('code', '').decode()
 
         # account_to_dict returns accounts with nonce=0 and the nonce must
         # be encoded with 16 hex digits
@@ -223,7 +223,7 @@ def cached_genesis(request):
 
     alloc = {
         address_encoder(address_maybe_bin): data
-        for address_maybe_bin, data in genesis_alloc.iteritems()
+        for address_maybe_bin, data in genesis_alloc.items()
     }
 
     genesis = GENESIS_STUB.copy()

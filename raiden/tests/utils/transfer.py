@@ -1,6 +1,4 @@
 """ Utilities to make and assert transfers. """
-from __future__ import print_function
-
 import gevent
 from coincurve import PrivateKey
 

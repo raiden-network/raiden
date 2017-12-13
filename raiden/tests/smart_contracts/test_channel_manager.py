@@ -41,7 +41,7 @@ def test_channelnew_event(
 
     last_event = tester_events[-1]
     assert last_event == {
-        '_event_type': 'ChannelNew',
+        '_event_type': b'ChannelNew',
         'netting_channel': netting_channel_address1_hex,
         'participant1': encode_hex(address0),
         'participant2': encode_hex(address1),
@@ -81,7 +81,7 @@ def test_channeldeleted_event(
 
     channeldelete_event = tester_events[-2]
     assert channeldelete_event == {
-        '_event_type': 'ChannelDeleted',
+        '_event_type': b'ChannelDeleted',
         'caller_address': hexlify(address0),
         'partner': hexlify(address1)
     }
@@ -152,11 +152,11 @@ def test_getchannelwith_must_return_zero_for_non_existing_channels(
     """ Queries to the channel manager for a non-existing channel with a partner
     must return zero.
     """
-    addresses = map(privatekey_to_address, private_keys)
+    addresses = list(map(privatekey_to_address, private_keys))
 
     sender_key = private_keys[0]
     sender_addr = privatekey_to_address(sender_key)
-    null_addr = '0' * 40
+    null_addr = b'0' * 40
 
     for addr in addresses:
         channel_address = tester_channelmanager.getChannelWith(addr, sender=sender_key)

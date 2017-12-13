@@ -91,9 +91,9 @@ def test_two():
 
 
 def test_three():
-    hash_0 = 'a' * 32
-    hash_1 = 'b' * 32
-    hash_2 = 'c' * 32
+    hash_0 = b'a' * 32
+    hash_1 = b'b' * 32
+    hash_2 = b'c' * 32
 
     leaves = [hash_0, hash_1, hash_2]
     layers = compute_layers(leaves)

@@ -147,7 +147,7 @@ def tester_nettingcontracts(
         tester_events,
         tester_channelmanager,
         tester_token):
-    raiden_chain = zip(private_keys[:-1], private_keys[1:])
+    raiden_chain = list(zip(private_keys[:-1], private_keys[1:]))
 
     result = list()
     for pos, (first_key, second_key) in enumerate(raiden_chain, start=1):

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """ Utilities to track and assert transferred messages. """
-from __future__ import print_function
+
 
 import string
 
@@ -25,7 +25,7 @@ INVALID_ADDRESSES = [
 ]
 
 VALID_SECRETS = [
-    letter * 32
+    letter.encode() * 32
     for letter in string.ascii_uppercase[:7]
 ]
 HASHLOCKS_SECRESTS = {

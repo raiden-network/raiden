@@ -25,8 +25,6 @@ using ImageMagick:
 
     convert -append memory_timeline.png latency_scatter.png memory_objcount.png collage.png
 """
-from __future__ import absolute_import
-from __future__ import print_function
 
 # Improvements:
 # - Draw the composite graphs with matplotlib instead of using convert and make
@@ -99,7 +97,7 @@ def memory_objcount(output, data_list, topn=10):
 
         # group the samples by class
         for index, (__, count_per_type) in enumerate(data):
-            for klass, count in count_per_type.items():
+            for klass, count in list(count_per_type.items()):
                 objcount[klass][index] = count
 
                 highcount = max(count, sample_highcount.get(klass, 0))
@@ -108,7 +106,7 @@ def memory_objcount(output, data_list, topn=10):
         # get the topn classes with the highest object count, the idea to show
         # spikes
         topn_classes = sorted(
-            ((count, klass) for klass, count in sample_highcount.items()),
+            ((count, klass) for klass, count in list(sample_highcount.items())),
             reverse=True
         )[:topn]
 
@@ -137,7 +135,7 @@ def memory_objcount(output, data_list, topn=10):
     fig, axes = plt.subplots()
 
     # we don't need a point before the first sample and after the last
-    labels = alltime_data.keys()
+    labels = list(alltime_data.keys())
     values = [alltime_data[label] for label in labels]
 
     if not values:
@@ -316,7 +314,7 @@ def memory_data(filepath):
             if line
         ]
 
-    return map(convert_line, data)
+    return list(map(convert_line, data))
 
 
 def latency_data(filepath):
@@ -372,7 +370,7 @@ def main():
             memory_data(path)
             for path in arguments.data
         ]
-        data_list = filter(len, data_list)
+        data_list = list(filter(len, data_list))
         memory_subplot(arguments.output, data_list)
 
     elif arguments.action == 'memory' and arguments.plot == 'timeline':
@@ -380,7 +378,7 @@ def main():
             memory_data(path)
             for path in arguments.data
         ]
-        data_list = filter(len, data_list)
+        data_list = list(filter(len, data_list))
         memory_timeline(arguments.output, data_list)
 
     elif arguments.action == 'memory' and arguments.plot == 'objcount':
@@ -388,7 +386,7 @@ def main():
             objcount_data(path)
             for path in arguments.data
         ]
-        data_list = filter(len, data_list)
+        data_list = list(filter(len, data_list))
         memory_objcount(arguments.output, data_list, topn=arguments.topn)
 
     elif arguments.action == 'latency' and arguments.plot == 'scatter':
@@ -396,7 +394,7 @@ def main():
             latency_data(path)
             for path in arguments.data
         ]
-        data_list = filter(len, data_list)
+        data_list = list(filter(len, data_list))
         latency_scatter(arguments.output, data_list, arguments.interval)
 
 

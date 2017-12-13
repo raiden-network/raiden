@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8
-from __future__ import print_function
+
 
 from binascii import hexlify
 import json
@@ -66,7 +66,7 @@ def deploy_all(token_groups=None):
     deployed = dict()
 
     tokens = dict()
-    for name, group in token_groups.items():
+    for name, group in list(token_groups.items()):
         token_name, address = create_and_distribute_token(state, group, name)
         tokens[token_name] = address
         deployed[token_name] = address
@@ -87,7 +87,7 @@ def deploy_all(token_groups=None):
     )
 
     genesis_alloc = dict()
-    for account_address in deployed.itervalues():
+    for account_address in deployed.values():
         genesis_alloc[account_address] = state.block.account_to_dict(
             account_address).copy()
 

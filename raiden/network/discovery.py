@@ -30,7 +30,7 @@ class Discovery(object):
         except OSError:
             raise ValueError('invalid ip address provided: {}'.format(host))
 
-        if not isinstance(port, (int, long)):
+        if not isinstance(port, int):
             raise ValueError('port must be a valid number')
 
         self.nodeid_to_hostport[node_address] = (host, port)
@@ -42,7 +42,7 @@ class Discovery(object):
             raise InvalidAddress('Unknown address {}'.format(pex(node_address)))
 
     def nodeid_by_host_port(self, host_port):
-        for nodeid, value_hostport in self.nodeid_to_hostport.items():
+        for nodeid, value_hostport in list(self.nodeid_to_hostport.items()):
             if value_hostport == host_port:
                 return nodeid
         return None
@@ -72,12 +72,12 @@ class ContractDiscovery(Discovery):
         except OSError:
             raise ValueError('invalid ip address provided: {}'.format(host))
 
-        if not isinstance(port, (int, long)):
+        if not isinstance(port, int):
             raise ValueError('port must be a valid number')
 
         try:
             current_value = self.get(node_address)
-        except UnknownAddress:
+        except (UnknownAddress, ValueError):
             current_value = None
 
         if current_value == (host, port):

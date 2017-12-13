@@ -1,7 +1,7 @@
 # temporary until pystun creates a new release
 git+https://github.com/konradkonrad/pystun@develop#egg=pystun
 # temporary until new version of pyethereum is released, that supports interfaces
-git+https://github.com/LefterisJP/pyethereum@take_solidity_interface_into_account#egg=ethereum
+git+https://github.com/palango/pyethereum@take_solidity_interface_into_account#egg=ethereum
 
 tinyrpc[gevent,httpclient,jsonext,websocket,wsgi]>=0.6,<1.0
 pysha3
@@ -24,4 +24,3 @@ psutil
 filelock>=2.0.13,<3.0.0
 netifaces
 ipaddress
-future==0.16.0

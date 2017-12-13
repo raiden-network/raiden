@@ -49,7 +49,7 @@ def main(password, private_key_seed, date_string, key_label, output_dir):
     with open(filepath, "w") as f:
         json.dump(key, f, cls=BytesJSONEncoder)
 
-    print("0x{}".format(key['address']))
+    print(("0x{}".format(key['address'])))
 
 
 def privatekey_to_address(private_key_bin):

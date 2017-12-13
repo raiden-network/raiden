@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from future import standard_library
-standard_library.install_aliases()
 import http.client
 import json
 
@@ -148,7 +146,7 @@ def restapi_setup_urls(flask_api_context, rest_api, urls):
 
 
 def restapi_setup_type_converters(flask_app, names_to_converters):
-    for key, value in names_to_converters.items():
+    for key, value in list(names_to_converters.items()):
         flask_app.url_map.converters[key] = value
 
 
@@ -409,7 +407,7 @@ class RestAPI(object):
         # encode token addresses indexes
         result = {
             address_encoder(token_address): info
-            for token_address, info in raiden_service_result.iteritems()
+            for token_address, info in raiden_service_result.items()
         }
         return api_response(result=result)
 

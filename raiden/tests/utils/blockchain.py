@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, division
-
 from binascii import hexlify
 import json
+import io
 import os
 import shutil
 import subprocess
@@ -58,6 +57,7 @@ def geth_to_cmd(node, datadir, verbosity):
     Args:
         node (dict): a node configuration
         datadir (str): the node's datadir
+        verbosity (int): geth logging verbosity, 0 - nothing, 5 - max
 
     Return:
         List[str]: cmd-args list
@@ -88,6 +88,7 @@ def geth_to_cmd(node, datadir, verbosity):
         '--networkid', '627',
         '--verbosity', str(verbosity),
         '--datadir', datadir,
+        '--password', os.path.join(datadir, 'pw'),
     ])
 
     log.debug('geth command: {}'.format(cmd))
@@ -105,7 +106,11 @@ def geth_create_account(datadir, privkey):
     """
     keyfile_path = os.path.join(datadir, 'keyfile')
     with open(keyfile_path, 'w') as handler:
-        handler.write(hexlify(privkey))
+        handler.write(hexlify(privkey).decode())
+
+    password_path = os.path.join(datadir, 'pw')
+    with open(password_path, 'w') as handler:
+        handler.write(DEFAULT_PASSPHRASE)
 
     create = subprocess.Popen(
         ['geth', '--datadir', datadir, 'account', 'import', keyfile_path],
@@ -229,7 +234,7 @@ def geth_create_blockchain(
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
 
     nodes_configuration = []
-    key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports)
+    key_p2p_rpc = list(zip(blockchain_private_keys, p2p_ports, rpc_ports))
 
     for pos, (key, p2p_port, rpc_port) in enumerate(key_p2p_rpc):
         config = dict()
@@ -240,8 +245,8 @@ def geth_create_blockchain(
             config['unlock'] = 0
 
         config['nodekey'] = key
-        config['nodekeyhex'] = encode_hex(key)
-        config['pub'] = encode_hex(privtopub(key))
+        config['nodekeyhex'] = encode_hex(key).decode()
+        config['pub'] = encode_hex(privtopub(key)).decode()
         config['address'] = address
         config['port'] = p2p_port
         config['rpcport'] = rpc_port
@@ -286,7 +291,7 @@ def geth_create_blockchain(
         cmds.append(commandline)
 
     # save current term settings before running geth
-    if isinstance(sys.stdin, file):  # check that the test is running on non-capture mode
+    if isinstance(sys.stdin, io.IOBase):  # check that the test is running on non-capture mode
         term_settings = termios.tcgetattr(sys.stdin)
 
     stdout = None
@@ -326,7 +331,7 @@ def geth_create_blockchain(
     geth_wait_and_check(deploy_client, private_keys, random_marker)
 
     # reenter echo mode (disabled by geth pasphrase prompt)
-    if isinstance(sys.stdin, file):
+    if isinstance(sys.stdin, io.IOBase):
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, term_settings)
 
     for process in processes_list:

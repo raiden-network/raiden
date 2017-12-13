@@ -25,16 +25,16 @@ from raiden.utils import address_encoder, sha3
 
 
 def event_dicts_are_equal(dict1, dict2):
-    for k, v in dict1.iteritems():
+    for k, v in dict1.items():
         if k not in dict2:
             return False
         if k == 'block_number':
             continue
 
         v2 = dict2[k]
-        if isinstance(v2, basestring) and v2.startswith('0x'):
+        if isinstance(v2, str) and v2.startswith('0x'):
             v2 = v2[2:]
-        if isinstance(v, basestring) and v.startswith('0x'):
+        if isinstance(v, str) and v.startswith('0x'):
             v = v[2:]
         if v2 != v:
             return False
@@ -73,8 +73,12 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel0 = list(
+        app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()
+    )[0]
+    channel1 = list(
+        app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()
+    )[0]
 
     assert_synched_channels(
         channel0, 0, [],
@@ -90,8 +94,12 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel0 = list(
+        app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()
+    )[0]
+    channel1 = list(
+        app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()
+    )[0]
 
     assert_synched_channels(
         channel0, deposit, [],
@@ -107,8 +115,12 @@ def test_event_new_channel(raiden_chain, deposit, settle_timeout, events_poll_ti
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel0 = list(
+        app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()
+    )[0]
+    channel1 = list(
+        app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()
+    )[0]
 
     assert_synched_channels(
         channel0, deposit, [],
@@ -197,8 +209,12 @@ def test_query_events(raiden_chain, deposit, settle_timeout, events_poll_timeout
     assert len(app0.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
     assert len(app1.raiden.token_to_channelgraph[token_address].address_to_channel) == 1
 
-    channel0 = app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
-    channel1 = app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()[0]
+    channel0 = list(
+        app0.raiden.token_to_channelgraph[token_address].address_to_channel.values()
+    )[0]
+    channel1 = list(
+        app1.raiden.token_to_channelgraph[token_address].address_to_channel.values()
+    )[0]
 
     assert_synched_channels(
         channel0, 0, [],

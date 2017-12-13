@@ -19,7 +19,7 @@ class integer(object):  # pylint: disable=invalid-name
 
     def validate(self, value):
         ''' Validates the integer is in the value range. '''
-        if not isinstance(value, (int, long)):
+        if not isinstance(value, int):
             raise ValueError('value is not an integer')
 
         if self.minimum > value or self.maximum < value:

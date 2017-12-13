@@ -100,7 +100,7 @@ def tester_deploy_contract(
         libraries[deploy_contract] = encode_hex(contract_address)
 
     hex_bytecode = _solidity.solidity_resolve_symbols(contract['bin_hex'], libraries)
-    bytecode = hex_bytecode.decode('hex')
+    bytecode = unhexlify(hex_bytecode)
 
     contract['bin_hex'] = hex_bytecode
     contract['bin'] = bytecode
@@ -420,24 +420,24 @@ class RegistryTesterMock(object):
 
     def manager_address_by_token(self, token_address):
         channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
-        return channel_manager_address_hex.decode('hex')
+        return unhexlify(channel_manager_address_hex)
 
     def add_token(self, token_address):
         self.registry_proxy.addToken(token_address)
         self.tester_state.mine(number_of_blocks=1)
         channel_manager_address_hex = self.registry_proxy.channelManagerByToken(token_address)
-        return channel_manager_address_hex.decode('hex')
+        return unhexlify(channel_manager_address_hex)
 
     def token_addresses(self):
         result = [
-            address.decode('hex')
+            unhexlify(address)
             for address in self.registry_proxy.tokenAddresses()
         ]
         return result
 
     def manager_addresses(self):
         result = [
-            address.decode('hex')
+            unhexlify(address)
             for address in self.registry_proxy.channelManagerAddresses()
         ]
         return result
@@ -569,7 +569,7 @@ class ChannelManagerTesterMock(object):
 
         # [a,b,c,d] -> [(a,b),(c,d)]
         channel_iter = iter(channel_flat)
-        return zip(channel_iter, channel_iter)
+        return list(zip(channel_iter, channel_iter))
 
     def channels_by_participant(self, peer_address):
         result = [
@@ -658,13 +658,13 @@ class NettingChannelTesterMock(object):
     def opened(self):
         self._check_exists()
         opened = self.proxy.opened()
-        assert isinstance(opened, (int, long)), 'opened must not be None nor empty string'
+        assert isinstance(opened, int), 'opened must not be None nor empty string'
         return opened
 
     def closed(self):
         self._check_exists()
         closed = self.proxy.closed()
-        assert isinstance(closed, (int, long)), 'closed must not be None nor empty string'
+        assert isinstance(closed, int), 'closed must not be None nor empty string'
         return closed
 
     def closing_address(self):

@@ -77,7 +77,7 @@ def deploy_dependencies_symbols(all_contract):
 
         symbols_to_contract[symbol] = contract_name
 
-    for contract_name, contract in all_contract.items():
+    for contract_name, contract in list(all_contract.items()):
         unresolved_symbols = solidity_unresolved_symbols(contract['bin_hex'])
         dependencies[contract_name] = [
             symbols_to_contract[unresolved]
@@ -246,24 +246,27 @@ class JSONRPCClient(object):
 
             # we may have hammered the server and not all tx are
             # registered as `pending` yet
-            while nonce < self.nonce_current_value:
-                log.debug(
-                    'nonce on server too low; retrying',
-                    server=nonce,
-                    local=self.nonce_current_value,
-                )
+            try:
+                while nonce < self.nonce_current_value:
+                    log.debug(
+                        'nonce on server too low; retrying',
+                        server=nonce,
+                        local=self.nonce_current_value,
+                    )
 
-                query_time = now()
-                pending_transactions_hex = self.call(
-                    'eth_getTransactionCount',
-                    address_encoder(address),
-                    'pending',
-                )
-                pending_transactions = quantity_decoder(pending_transactions_hex)
-                nonce = pending_transactions + self.nonce_offset
-
-            self.nonce_current_value = nonce
-            self.nonce_last_update = query_time
+                    query_time = now()
+                    pending_transactions_hex = self.call(
+                        'eth_getTransactionCount',
+                        address_encoder(address),
+                        'pending',
+                    )
+                    pending_transactions = quantity_decoder(pending_transactions_hex)
+                    nonce = pending_transactions + self.nonce_offset
+            except TypeError:
+                pass
+            finally:
+                self.nonce_current_value = nonce
+                self.nonce_last_update = query_time
 
             return self.nonce_current_value
 
@@ -338,7 +341,7 @@ class JSONRPCClient(object):
         symbols = solidity_unresolved_symbols(contract['bin_hex'])
 
         if symbols:
-            available_symbols = map(solidity_library_symbol, all_contracts.keys())
+            available_symbols = list(map(solidity_library_symbol, list(all_contracts.keys())))
 
             unknown_symbols = set(symbols) - set(available_symbols)
             if unknown_symbols:
@@ -468,7 +471,7 @@ class JSONRPCClient(object):
             'transactionIndex': quantity_decoder
         }
         return [
-            {k: decoders[k](v) for k, v in c.items() if v is not None}
+            {k: decoders[k](v) for k, v in list(c.items()) if v is not None}
             for c in changes
         ]
 
@@ -695,7 +698,7 @@ class JSONRPCClient(object):
             A dict representing the transaction receipt object, or null when no
             receipt was found.
         """
-        if transaction_hash.startswith('0x'):
+        if transaction_hash.startswith(b'0x'):
             warnings.warn(
                 'transaction_hash seems to be already encoded, this will'
                 ' result in unexpected behavior'
@@ -717,7 +720,7 @@ class JSONRPCClient(object):
             block: Integer block number, or the string 'latest',
                 'earliest' or 'pending'.
         """
-        if address.startswith('0x'):
+        if address.startswith(b'0x'):
             warnings.warn(
                 'address seems to be already encoded, this will result '
                 'in unexpected behavior'
@@ -739,7 +742,7 @@ class JSONRPCClient(object):
         transaction hash.
         """
 
-        if transaction_hash.startswith('0x'):
+        if transaction_hash.startswith(b'0x'):
             warnings.warn(
                 'transaction_hash seems to be already encoded, this will'
                 ' result in unexpected behavior'
@@ -764,7 +767,7 @@ class JSONRPCClient(object):
             timeout (float): Timeout in seconds, raise an Excpetion on
                 timeout.
         """
-        if transaction_hash.startswith('0x'):
+        if transaction_hash.startswith(b'0x'):
             warnings.warn(
                 'transaction_hash seems to be already encoded, this will'
                 ' result in unexpected behavior'

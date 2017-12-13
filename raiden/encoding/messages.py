@@ -30,7 +30,7 @@ def make_message(message, **attrs):
     message = klass(buffer_for(klass))
     message.cmdid = from_bigendian(message)
 
-    for name, value in attrs.items():
+    for name, value in list(attrs.items()):
         setattr(message, name, value)
 
     return message
@@ -222,9 +222,9 @@ CMDID_MESSAGE = {
 
 
 def wrap(data):
-    ''' Try to decode data into a message, might return None if the data is invalid. '''
+    """ Try to decode data into a message, might return None if the data is invalid. """
     try:
-        first_byte = data[0]
+        first_byte = data[0:1]
     except KeyError:
         log.warn('data is empty')
         return

@@ -153,7 +153,7 @@ class ChannelManager(object):
 
         # [a,b,c,d] -> [(a,b),(c,d)]
         channel_iter = iter(channel_flat)
-        return zip(channel_iter, channel_iter)
+        return list(zip(channel_iter, channel_iter))
 
     def channels_by_participant(self, participant_address):  # pylint: disable=invalid-name
         """ Return a list of channel address that `participant_address` is a participant. """

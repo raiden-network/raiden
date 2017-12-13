@@ -27,7 +27,7 @@ def test_settle_event(settle_timeout, tester_state, tester_events, tester_nettin
 
     settle_event = tester_events[-1]
     assert settle_event == {
-        '_event_type': 'ChannelSettled',
+        '_event_type': b'ChannelSettled',
     }
 
 

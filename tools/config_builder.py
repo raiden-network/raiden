@@ -46,7 +46,7 @@ def nodes(ctx, hosts, nodes_per_host):
     if hosts is None:
         hosts = ['127.0.0.1']
     node_list = build_node_list(hosts, nodes_per_host)
-    print json.dumps(node_list, indent=2 if pretty else None)
+    print(json.dumps(node_list, indent=2 if pretty else None))
 
 
 @click.argument(
@@ -66,11 +66,11 @@ def genesis(ctx, hosts, nodes_per_host):
     node_list = build_node_list(hosts, nodes_per_host)
 
     accounts = generate_accounts(node_list)  # pylint: disable=redefined-outer-name
-    all_addresses = [account['address'] for account in accounts.values()]
+    all_addresses = [account['address'] for account in list(accounts.values())]
 
     genesis = mk_genesis(all_addresses)  # pylint: disable=redefined-outer-name
 
-    print json.dumps(genesis, indent=2 if pretty else None)
+    print(json.dumps(genesis, indent=2 if pretty else None))
 
 
 @click.argument(
@@ -88,7 +88,7 @@ def genesis(ctx, hosts, nodes_per_host):
 def accounts(ctx, hosts, nodes_per_host):
     pretty = ctx.obj['pretty']
     node_list = build_node_list(hosts, nodes_per_host)
-    print json.dumps(generate_accounts(node_list), indent=2 if pretty else None)
+    print(json.dumps(generate_accounts(node_list), indent=2 if pretty else None))
 
 
 @click.argument(
@@ -110,7 +110,7 @@ def private_to_account(ctx, privatekey, password):
     privkey = bytes(privatekey)
 
     account = Account.new(password, key=privkey)
-    print account.dump()
+    print(account.dump())
 
 
 @click.argument(
@@ -142,7 +142,7 @@ def build_scenario(ctx, hosts, nodes_per_host, nodes_per_transfer):
 
     addresses = []
     for node, data in sorted(accounts.items()):
-        for k, v in data.items():
+        for k, v in list(data.items()):
             if k == 'address':
                 addresses.append(v)
 
@@ -165,7 +165,7 @@ def build_scenario(ctx, hosts, nodes_per_host, nodes_per_transfer):
         tokens.append(data_for_token)
         index += nodes_per_transfer
 
-    print json.dumps(scenario, indent=2 if pretty else None)
+    print(json.dumps(scenario, indent=2 if pretty else None))
 
 
 @click.argument(
@@ -200,10 +200,10 @@ def geth_commands(ctx, geth_hosts, datadir):
     if pretty:
         indent = 2
 
-    print json.dumps(
+    print(json.dumps(
         config,
         indent=indent,
-    )
+    ))
 
 
 @click.argument(
@@ -225,14 +225,14 @@ def merge(ctx, genesis_json, state_json):
 
     accounts = [key for key in genesis['alloc']]  # pylint: disable=redefined-outer-name
 
-    for account, data in state['accounts'].items():
+    for account, data in list(state['accounts'].items()):
         if account not in accounts:
             for key in ('nonce', 'root', 'codeHash'):
                 data.pop(key, None)
 
             genesis['alloc'][account] = data
 
-    print json.dumps(genesis, indent=2 if pretty else None)
+    print(json.dumps(genesis, indent=2 if pretty else None))
 
 
 @click.argument(
@@ -266,7 +266,7 @@ def full_genesis(ctx, hosts, nodes_per_host, scenario):
     accounts = generate_accounts(node_list)  # pylint: disable=redefined-outer-name
 
     all_addresses = [
-        account['address'] for account in accounts.values()
+        account['address'] for account in list(accounts.values())
     ]
 
     genesis = mk_genesis(all_addresses)  # pylint: disable=redefined-outer-name
@@ -283,12 +283,12 @@ def full_genesis(ctx, hosts, nodes_per_host, scenario):
         # create tokens for addresses x addresses
         token_groups = {
             account['address']: all_addresses
-            for account in accounts.values()
+            for account in list(accounts.values())
         }
 
     dump, blockchain_config = deploy_all(token_groups=token_groups)
 
-    for account, data in dump.items():
+    for account, data in list(dump.items()):
         if account not in genesis['alloc']:
             genesis['alloc'][account] = data
 
@@ -302,13 +302,13 @@ def full_genesis(ctx, hosts, nodes_per_host, scenario):
         with open(scenario, 'w') as handler:
             json.dump(script, handler)
 
-    print json.dumps(genesis, indent=2 if pretty else None)
+    print(json.dumps(genesis, indent=2 if pretty else None))
 
 
 @cli.command()
 def account_file():
     account = Account.new('', key="1" * 64)
-    print account.dump()
+    print(account.dump())
 
 
 @cli.command()
@@ -342,7 +342,7 @@ config_builder.py private_to_account deadbeef...feedbead password
 -> encrypt the privatekey "deadbeef...feadbead" with "password" and print json accountfile.
 """
 
-    print usage_text
+    print(usage_text)
 
 
 if __name__ == '__main__':

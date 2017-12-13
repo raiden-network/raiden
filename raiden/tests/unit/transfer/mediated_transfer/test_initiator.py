@@ -48,7 +48,7 @@ class SequenceGenerator(object):
     def __next__(self):
         # pad the secret to the correct length by repeating the current character
         import string
-        new_secret = string.letters[self.i % len(string.letters)] * 40
+        new_secret = string.ascii_letters[self.i % len(string.ascii_letters)] * 40
         self.secrets.append(new_secret)
         return new_secret
 

@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from future import standard_library
-standard_library.install_aliases()
 import http.client
 import json
 
@@ -68,8 +66,8 @@ def assert_proper_response(response, status_code=http.client.OK):
 def api_url_for(api_backend, endpoint, **kwargs):
     api_server, _ = api_backend
     # url_for() expects binary address so we have to convert here
-    for key, val in kwargs.iteritems():
-        if isinstance(val, basestring) and val.startswith('0x'):
+    for key, val in kwargs.items():
+        if isinstance(val, str) and val.startswith('0x'):
             kwargs[key] = address_decoder(val)
     with api_server.flask_app.app_context():
         return url_for('v1_resources.{}'.format(endpoint), **kwargs)
@@ -1127,7 +1125,7 @@ def test_get_connection_managers_info(
     )
     response = request.send().response
     token_addresses = response.json()
-    assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 1
+    assert isinstance(token_addresses, dict) and len(list(token_addresses.keys())) == 1
     assert token_address1 in token_addresses
     assert isinstance(token_addresses[token_address1], dict)
     assert set(token_addresses[token_address1].keys()) == {'funds', 'sum_deposits', 'channels'}
@@ -1150,7 +1148,7 @@ def test_get_connection_managers_info(
     )
     response = request.send().response
     token_addresses = response.json()
-    assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 2
+    assert isinstance(token_addresses, dict) and len(list(token_addresses.keys())) == 2
     assert token_address2 in token_addresses
     assert isinstance(token_addresses[token_address2], dict)
     assert set(token_addresses[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}
