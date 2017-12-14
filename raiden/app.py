@@ -51,7 +51,7 @@ class App(object):  # pylint: disable=too-few-public-methods
     }
 
     def __init__(self, config, chain, default_registry, discovery, transport=UDPTransport):
-        transport = self.transport_instantiation(self, config, transport)
+        transport = self.transport_instantiation(config, transport)
         self.config = config
         self.discovery = discovery
 
@@ -97,7 +97,7 @@ class App(object):  # pylint: disable=too-few-public-methods
 
         self.raiden.stop()
 
-    def transport_instantiation(self, config, transport):
+    def transport_instantiation(config, transport):
         if config.get('socket'):
             return transport(None, None, socket=config['socket'],)
         else:
