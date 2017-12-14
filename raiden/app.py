@@ -18,7 +18,7 @@ from raiden.settings import (
     DEFAULT_SHUTDOWN_TIMEOUT,
     INITIAL_PORT,
 )
-from raiden.network.transport import UDPTransport, TokenBucket
+from raiden.network.transport import TokenBucket
 from raiden.utils import (
     pex,
     privatekey_to_address
