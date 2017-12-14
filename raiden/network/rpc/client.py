@@ -153,7 +153,7 @@ def format_data_for_call(
 
 
 def check_node_connection(func):
-    """ A decorator to reconnect if the connection to the node is lost """
+    """ A decorator to reconnect if the connection to the node is lost."""
     def retry_on_disconnect(self, *args, **kwargs):
         for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
             try:
@@ -164,8 +164,8 @@ def check_node_connection(func):
 
             except (requests.exceptions.ConnectionError, InvalidReplyError):
                 log.info(
-                    'Timeout in eth client connection. Is the client offline? Trying '
-                    'again in {}s.'.format(timeout)
+                    'Timeout in eth client connection to {}. Is the client offline? Trying '
+                    'again in {}s.'.format(self.transport.endpoint, timeout)
                 )
             gevent.sleep(timeout)
 
