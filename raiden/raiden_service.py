@@ -69,7 +69,7 @@ from raiden.channel import (
 from raiden.channel.netting_channel import (
     ChannelSerialization,
 )
-from raiden.exceptions import InvalidAddress, AddressWithoutCode
+from raiden.exceptions import InvalidAddress, AddressWithoutCode, RaidenShuttingDown
 from raiden.network.channelgraph import (
     get_best_routes,
     channel_to_routestate,
@@ -308,10 +308,10 @@ class RaidenService(object):
 
     def stop(self):
         """ Stop the node. """
-        self.alarm.stop_async()
-        self.protocol.stop_and_wait()
-        # Needs to come before the greenlets joining
+        # Needs to come before any greenlets joining
         self.chain.client.shutting_down = True
+        self.protocol.stop_and_wait()
+        self.alarm.stop_async()
 
         wait_for = [self.alarm]
         wait_for.extend(self.protocol.greenlets)
@@ -321,7 +321,7 @@ class RaidenService(object):
         gevent.wait(wait_for, timeout=self.shutdown_timeout)
 
         # Filters must be uninstalled after the alarm task has stopped. Since
-        # the events are polled by a alarm task callback, if the filters are
+        # the events are polled by an alarm task callback, if the filters are
         # uninstalled before the alarm task is fully stopped the callback
         # `poll_blockchain_events` will fail.
         #
@@ -330,7 +330,7 @@ class RaidenService(object):
         try:
             with gevent.Timeout(self.shutdown_timeout):
                 self.blockchain_events.uninstall_all_event_listeners()
-        except gevent.timeout.Timeout:
+        except (gevent.timeout.Timeout, RaidenShuttingDown):
             pass
 
         # save the state after all tasks are done

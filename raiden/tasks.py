@@ -8,6 +8,7 @@ from gevent.event import AsyncResult
 from gevent.queue import (
     Queue,
 )
+from raiden.exceptions import RaidenShuttingDown
 
 REMOVE_CALLBACK = object()
 log = slogging.get_logger(__name__)  # pylint: disable=invalid-name
@@ -64,7 +65,10 @@ class AlarmTask(Task):
 
         sleep_time = 0
         while self.stop_event.wait(sleep_time) is not True:
-            self.poll_for_new_block()
+            try:
+                self.poll_for_new_block()
+            except RaidenShuttingDown:
+                break
 
             # we want this task to iterate in the tick of `wait_time`, so take
             # into account how long we spent executing one tick.

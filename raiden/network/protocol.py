@@ -25,6 +25,7 @@ from raiden.exceptions import (
     TransferUnwanted,
     UnknownAddress,
     UnknownTokenAddress,
+    RaidenShuttingDown,
 )
 from raiden.constants import (
     UDP_MAX_MESSAGE_SIZE,
@@ -284,15 +285,18 @@ def single_queue_send(
             message_retry_max_timeout,
         )
 
-        acknowledged = retry_with_recovery(
-            protocol,
-            data,
-            receiver_address,
-            event_stop,
-            event_healthy,
-            event_unhealthy,
-            backoff,
-        )
+        try:
+            acknowledged = retry_with_recovery(
+                protocol,
+                data,
+                receiver_address,
+                event_stop,
+                event_healthy,
+                event_unhealthy,
+                backoff,
+            )
+        except RaidenShuttingDown:  # For a clean shutdown process
+            return
 
         if acknowledged:
             queue.get()
@@ -382,13 +386,16 @@ def healthcheck(
         )
 
         # Send Ping a few times before setting the node as unreachable
-        acknowledged = retry(
-            protocol,
-            data,
-            receiver_address,
-            event_stop,
-            [nat_keepalive_timeout] * nat_keepalive_retries,
-        )
+        try:
+            acknowledged = retry(
+                protocol,
+                data,
+                receiver_address,
+                event_stop,
+                [nat_keepalive_timeout] * nat_keepalive_retries,
+            )
+        except RaidenShuttingDown:  # For a clean shutdown process
+            return
 
         if event_stop.is_set():
             return
@@ -417,13 +424,16 @@ def healthcheck(
             # Retry until recovery, used for:
             # - Checking node status.
             # - Nat punching.
-            acknowledged = retry(
-                protocol,
-                data,
-                receiver_address,
-                event_stop,
-                repeat(nat_invitation_timeout),
-            )
+            try:
+                acknowledged = retry(
+                    protocol,
+                    data,
+                    receiver_address,
+                    event_stop,
+                    repeat(nat_invitation_timeout),
+                )
+            except RaidenShuttingDown:  # For a clean shutdown process
+                return
 
         if acknowledged:
             if log.isEnabledFor(logging.DEBUG):

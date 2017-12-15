@@ -9,6 +9,8 @@ import socket
 import gevent
 from gevent.server import DatagramServer
 
+from raiden.exceptions import RaidenShuttingDown
+
 
 class DummyPolicy(object):
     """Dummy implementation for the throttling policy that always
@@ -77,7 +79,10 @@ class UDPTransport(object):
         self.throttle_policy = throttle_policy
 
     def receive(self, data, host_port):  # pylint: disable=unused-argument
-        self.protocol.receive(data)
+        try:
+            self.protocol.receive(data)
+        except RaidenShuttingDown:  # For a clean shutdown
+            return
 
         # enable debugging using the DummyNetwork callbacks
         DummyTransport.track_recv(self.protocol.raiden, host_port, data)
