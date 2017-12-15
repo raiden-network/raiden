@@ -155,7 +155,12 @@ def format_data_for_call(
 def check_node_connection(func):
     """ A decorator to reconnect if the connection to the node is lost."""
     def retry_on_disconnect(self, *args, **kwargs):
+        """self here is always an obhect of JSONRPCClient"""
         for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
+
+            if self.shutting_down:
+                return None
+
             try:
                 result = func(self, *args, **kwargs)
                 if i > 0:
@@ -206,6 +211,7 @@ class JSONRPCClient(object):
         self.nonce_lock = Semaphore()
         self.nonce_update_interval = nonce_update_interval
         self.nonce_offset = nonce_offset
+        self.shutting_down = False
 
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
