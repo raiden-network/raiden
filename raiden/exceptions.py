@@ -142,6 +142,13 @@ class STUNUnavailableException(RaidenError):
     pass
 
 
+class RaidenShuttingDown(RaidenError):
+    """ Raised when Raiden is in the process of shutting down to help with a
+    clean shutdown and not have exceptions thrown in all greenlets when there
+    is a connection timeout with the rpc client before shutting down."""
+    pass
+
+
 class EthNodeCommunicationError(RaidenError):
     """ Raised when something unexpected has happened during
     communication with the underlying ethereum node"""

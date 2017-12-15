@@ -29,6 +29,7 @@ import requests
 from raiden.exceptions import (
     AddressWithoutCode,
     EthNodeCommunicationError,
+    RaidenShuttingDown,
 )
 from raiden.network.protocol import timeout_two_stage
 from raiden.network.rpc.smartcontract_proxy import ContractProxy
@@ -159,7 +160,7 @@ def check_node_connection(func):
         for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
 
             if self.shutting_down:
-                return None
+                raise RaidenShuttingDown()
 
             try:
                 result = func(self, *args, **kwargs)
