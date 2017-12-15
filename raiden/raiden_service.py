@@ -310,6 +310,8 @@ class RaidenService(object):
         """ Stop the node. """
         self.alarm.stop_async()
         self.protocol.stop_and_wait()
+        # Needs to come before the greenlets joining
+        self.chain.client.shutting_down = True
 
         wait_for = [self.alarm]
         wait_for.extend(self.protocol.greenlets)
