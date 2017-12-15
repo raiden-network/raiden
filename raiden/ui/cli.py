@@ -150,6 +150,14 @@ def check_synced(blockchain_service):
             "node cannot be trusted. Giving up.\n"
         )
         sys.exit(1)
+    except KeyError:
+        print(
+            'Your ethereum client is connected to a non-recognized private \n'
+            'network with network-ID {}. Since we can not check if the client \n'
+            'is synced please restart raiden with the --no-sync-check argument.'
+            '\n'.format(net_id)
+        )
+        sys.exit(1)
 
     url = ETHERSCAN_API.format(
         network=network,
