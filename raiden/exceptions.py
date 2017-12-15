@@ -40,8 +40,8 @@ class InvalidAddress(RaidenError):
 
 
 class InvalidAmount(RaidenError):
-    """ Raised when the user provided value is not a integer and cannot be used
-    to defined a transfer value.
+    """ Raised when the user provided value is not an integer and cannot be
+    used to defined a transfer value.
     """
     pass
 
@@ -78,7 +78,7 @@ class InvalidState(RaidenError):
 
 
 class TransferWhenClosed(RaidenError):
-    """ Raised when a user tries to request a transfer is a closed channel. """
+    """ Raised when a user tries to request a transfer in a closed channel. """
     pass
 
 
@@ -89,14 +89,14 @@ class UnknownAddress(RaidenError):
 
 
 # Exceptions raised due to protocol errors (this includes messages received
-# from a bizantine node)
+# from a byzantine node)
 
 
 class InsufficientBalance(RaidenError):
-    """ Raised when the netting channel doesn't enough available capacity to
-    pay for the transfer.
+    """ Raised when the netting channel doesn't have enough available capacity
+    to pay for the transfer.
 
-    Used for the validation of an *incoming* messages.
+    Used for the validation of *incoming* messages.
     """
     pass
 
@@ -105,7 +105,7 @@ class InvalidLocksRoot(RaidenError):
     """ Raised when the received message has an invalid locksroot.
 
     Used to reject a message when a pending lock is missing from the locksroot,
-    otherwise if the message is accepted there is a pontential loss of token.
+    otherwise if the message is accepted there is a potential loss of token.
     """
     def __init__(self, expected_locksroot, got_locksroot):
         msg = 'Locksroot mismatch. Expected {} but got {}'.format(
