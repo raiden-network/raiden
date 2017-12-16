@@ -15,7 +15,6 @@ from raiden.exceptions import (
 )
 from raiden.messages import (
     EMPTY_MERKLE_ROOT,
-    DirectTransfer,
     Lock,
     LockedTransfer,
     Secret,
@@ -862,92 +861,6 @@ def test_locked_transfer(raiden_network, settle_timeout):
     assert_synched_channels(
         channel0, balance0 - amount, [],
         channel1, balance1 + amount, [],
-    )
-
-
-@pytest.mark.parametrize('number_of_nodes', [2])
-def test_register_invalid_transfer(raiden_network, settle_timeout):
-    """ Regression test for registration of invalid transfer.
-
-    The bug occurred if a transfer with an invalid allowance but a valid secret
-    was registered, when the local end registered the transfer it would
-    "unlock" the partners' token, but the transfer wouldn't be sent because the
-    allowance check failed, leaving the channel in an inconsistent state.
-    """
-    app0, app1 = raiden_network  # pylint: disable=unbalanced-tuple-unpacking
-
-    graph0 = app0.raiden.token_to_channelgraph.values()[0]
-    graph1 = app1.raiden.token_to_channelgraph.values()[0]
-
-    channel0 = graph0.partneraddress_to_channel.values()[0]
-    channel1 = graph1.partneraddress_to_channel.values()[0]
-
-    balance0 = channel0.balance
-    balance1 = channel1.balance
-
-    amount = 10
-    block_number = app0.raiden.chain.block_number()
-    expiration = block_number + settle_timeout - 1
-
-    secret = 'secret'
-    hashlock = sha3(secret)
-
-    transfer1 = channel0.create_mediatedtransfer(
-        transfer_initiator=app0.raiden.address,
-        transfer_target=app1.raiden.address,
-        fee=0,
-        amount=amount,
-        identifier=1,
-        expiration=expiration,
-        hashlock=hashlock,
-    )
-
-    # register a locked transfer
-    app0.raiden.sign(transfer1)
-    channel0.register_transfer(
-        app0.raiden.chain.block_number(),
-        transfer1,
-    )
-    channel1.register_transfer(
-        app1.raiden.chain.block_number(),
-        transfer1,
-    )
-
-    # assert the locked transfer is registered
-    assert_synched_channels(
-        channel0, balance0, [],
-        channel1, balance1, [transfer1.lock],
-    )
-
-    # handcrafted transfer because channel.create_transfer won't create it
-    transfer2 = DirectTransfer(
-        1,
-        nonce=channel0.get_next_nonce(),
-        token=channel0.token_address,
-        channel=channel0.channel_address,
-        transferred_amount=channel1.balance + balance0 + amount,
-        recipient=channel0.partner_state.address,
-        locksroot=merkleroot(channel0.partner_state.merkletree),
-    )
-    app0.raiden.sign(transfer2)
-
-    # this need to fail because the allowance is incorrect
-    with pytest.raises(Exception):
-        channel0.register_transfer(
-            app0.raiden.chain.block_number(),
-            transfer2,
-        )
-
-    with pytest.raises(Exception):
-        channel1.register_transfer(
-            app1.raiden.chain.block_number(),
-            transfer2,
-        )
-
-    # the registration of a bad transfer need fail equaly on both channels
-    assert_synched_channels(
-        channel0, balance0, [],
-        channel1, balance1, [transfer1.lock],
     )
 
 

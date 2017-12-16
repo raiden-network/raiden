@@ -101,7 +101,7 @@ def check_json_rpc(client):
         print(
             "\n"
             "Couldn't contact the ethereum node through JSON-RPC.\n"
-            "Please make sure the JSON-RPC is enabled for these interfaces:\n"
+            "Please make sure that JSON-RPC is enabled for these interfaces:\n"
             "\n"
             "    eth_*, net_*, web3_*\n"
             "\n"
@@ -130,6 +130,14 @@ def check_json_rpc(client):
     return True
 
 
+def init_minified_addr_checker():
+    return re.compile('(0x)?[a-f0-9]{6,8}')
+
+
+def check_minified_address(addr, compiled_re):
+    return compiled_re.match(addr)
+
+
 def check_synced(blockchain_service):
     try:
         net_id = int(blockchain_service.client.call('net_version'))
@@ -140,6 +148,14 @@ def check_synced(blockchain_service):
             "Because of this there is no way to determine the latest\n"
             "block with an oracle, and the events from the ethereum\n"
             "node cannot be trusted. Giving up.\n"
+        )
+        sys.exit(1)
+    except KeyError:
+        print(
+            'Your ethereum client is connected to a non-recognized private \n'
+            'network with network-ID {}. Since we can not check if the client \n'
+            'is synced please restart raiden with the --no-sync-check argument.'
+            '\n'.format(net_id)
         )
         sys.exit(1)
 
@@ -215,7 +231,7 @@ def wait_for_sync_rpc_api(blockchain_service, sleep):
 
 
 def wait_for_sync(blockchain_service, url, tolerance, sleep):
-    # print something since the actual test may take a few moment for the first
+    # print something since the actual test may take a few moments for the first
     # iteration
     print('Checking if the ethereum node is synchronized')
 
@@ -366,17 +382,13 @@ OPTIONS = [
     ),
     click.option(
         '--rpc/--no-rpc',
-        help=(
-            'Start with or without the RPC server.'
-        ),
+        help='Start with or without the RPC server.',
         default=True,
         show_default=True,
     ),
     click.option(
         '--sync-check/--no-sync-check',
-        help=(
-            'Checks if the ethereum node is synchronized against etherscan.'
-        ),
+        help='Checks if the ethereum node is synchronized against etherscan.',
         default=True,
         show_default=True,
     ),
@@ -403,7 +415,7 @@ OPTIONS = [
     ),
     click.option(
         '--password-file',
-        help='Text file containing password for provided account',
+        help='Text file containing the password for the provided account',
         default=None,
         type=click.File(lazy=True),
         show_default=True,
@@ -412,7 +424,7 @@ OPTIONS = [
         '--web-ui/--no-web-ui',
         help=(
             'Start with or without the web interface. Requires --rpc. '
-            'It will be acessible at http://<api-address>. '
+            'It will be accessible at http://<api-address>. '
         ),
         default=True,
         show_default=True,
@@ -512,7 +524,7 @@ def app(address,
 
     endpoint = eth_rpc_endpoint
 
-    # Fallback default port if only an IP address is given
+    # Fallback to default port if only an IP address is given
     rpc_port = 8545
     if eth_rpc_endpoint.startswith('http://'):
         endpoint = eth_rpc_endpoint[len('http://'):]
@@ -555,7 +567,7 @@ def app(address,
             'Account has insufficient funds for discovery registration.\n'
             'Needed: {} ETH\n'
             'Available: {} ETH.\n'
-            'Please deposit additional funds on this account.'
+            'Please deposit additional funds into this account.'
             .format(discovery_tx_cost / float(denoms.ether), balance / float(denoms.ether))
         )
         if not click.confirm('Try again?'):
@@ -904,10 +916,10 @@ def removedb(ctx):
     # Sanity check if the specified directory is a Raiden datadir.
     sane = True
     if not address_hex:
+        regex = init_minified_addr_checker()
         ls = os.listdir(user_db_dir)
-
         sane = all(
-            f[:2] == '0x' and
+            check_minified_address(f, regex) and
             len(f) == 8 and
             os.path.isdir(os.path.join(user_db_dir, f))
             for f in ls

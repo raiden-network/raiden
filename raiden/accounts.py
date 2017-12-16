@@ -16,8 +16,6 @@ def find_datadir():
     home = os.path.expanduser('~')
     if home == '~':  # Could not expand user path
         return None
-    datadir = None
-
     if sys.platform == 'darwin':
         datadir = os.path.join(home, 'Library', 'Ethereum')
     # NOTE: Not really sure about cygwin here

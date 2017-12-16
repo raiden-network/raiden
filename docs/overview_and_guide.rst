@@ -125,7 +125,7 @@ After syncing the chain, create an account on the Ropsten testnet by navigating 
 
 After account creation, launch Raiden with the path of your keystore supplied::
 
-    raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test"
+    raiden --keystore-path ~/.local/share/io.parity.ethereum/keys/test
 
 Select the Ethereum account when prompted, and type in the account's password.
 

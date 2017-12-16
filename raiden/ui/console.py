@@ -3,7 +3,7 @@ from __future__ import print_function
 from future import standard_library
 standard_library.install_aliases()
 from binascii import hexlify
-import io
+import StringIO
 import errno
 import json
 import os
@@ -245,9 +245,9 @@ class Console(BaseService):
             if isinstance(handler, StreamHandler) and handler.stream == sys.stderr:
                 root.removeHandler(handler)
 
-        stream = io.StringIO()
+        stream = StringIO.StringIO()
         handler = StreamHandler(stream=stream)
-        handler.formatter = Formatter('%(levelname)s:%(name)s %(message)s')
+        handler.formatter = Formatter(u'%(levelname)s:%(name)s %(message)s')
         root.addHandler(handler)
 
         def lastlog(n=10, prefix=None, level=None):
@@ -274,7 +274,7 @@ class Console(BaseService):
 
         self.console_locals['lastlog'] = lastlog
 
-        err = io.StringIO()
+        err = StringIO.StringIO()
         sys.stderr = err
 
         def lasterr(n=1):

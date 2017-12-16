@@ -1,5 +1,5 @@
 import { Injectable, NgZone } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
@@ -279,6 +279,8 @@ export class RaidenService {
             }
             const err = body || JSON.stringify(body);
             errMsg = `${error.status} - ${error.statusText || ''} ${err}`;
+        } else if (error instanceof HttpErrorResponse && error.error['errors']) {
+            errMsg = `${error.message} => ${error.error.errors}`;
         } else {
             errMsg = error.message ? error.message : error.toString();
         }

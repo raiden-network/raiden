@@ -19,7 +19,9 @@ an Issue or if you have programming abilities open a Pull Request.
 
 ### Creating an Issue
 
-If you experience a problem while using Raiden or want to request a feature then you should open an issue against the repository. All issues should contain:
+If you experience a problem while using Raiden or want to request a feature
+then you should open an issue against the repository. All issues should
+contain:
 
 **For Feature Requests:**
 - A description of what you would like to see implemented
@@ -33,15 +35,23 @@ If you experience a problem while using Raiden or want to request a feature then
 
 ### Creating a Pull Request
 
-If you have some coding abilities and would like to contribute to the actual codebase of Raiden then you can open a Pull Request(PR) against the repository.
+If you have some coding abilities and would like to contribute to the actual
+codebase of Raiden then you can open a Pull Request(PR) against the repository.
 
 All PRs should be:
 - Self-contained
 - As short as possible and address a single issue or even a part of an issue.
   Consider breaking long PRs into smaller ones.
 
-In order for a Pull Request to get merged into the main repository you should have one
-approved review from one of the core developers of Raiden and also all Continuous Integration tests should be passing and the CI build should be green.
+In order for a Pull Request to get merged into the main repository you should
+have one approved review from one of the core developers of Raiden and also all
+Continuous Integration tests should be passing and the CI build should be
+green.
+
+Additionally you need to sign the raiden project CLA (Contributor License
+Agreement). Our CLA bot will help you with that after you created a pull
+request. If you or your employer do not hold the whole copyright of the
+authorship submitted we can not accept your contribution.
 
 ## Setup
 
@@ -49,7 +59,9 @@ approved review from one of the core developers of Raiden and also all Continuou
 
 #### Debian/Ubuntu
 
-Raiden requires Python 2, Geth (Ethereum client), and the Solidity compiler `solc`. The easiest way to get the last two is to add the official Ethereum ppa to your repositories:
+Raiden requires Python 2, Geth (Ethereum client), and the Solidity compiler
+`solc`. The easiest way to get the last two is to add the official Ethereum ppa
+to your repositories:
 
     sudo add-apt-repository -y ppa:ethereum/ethereum
     sudo apt-get update
@@ -74,7 +86,8 @@ For other ways to install `solc` or Geth see the official docs:
 
 #### Setup
 
-First, create a `virtualenv` to keep your `pip` packages clean. If you haven't already, install `virtualenv`:
+First, create a `virtualenv` to keep your `pip` packages clean. If you haven't
+already, install `virtualenv`:
 
     sudo pip install virtualenv
 
@@ -92,51 +105,67 @@ Run the tests using
 
     env/bin/pytest raiden
 
-Tests, especially integration tests, will take some time. If you want to run single tests simply specify them on the command line, like so:
+Tests, especially integration tests, will take some time. If you want to run
+single tests simply specify them on the command line, like so:
 
     env/bin/pytest raiden/tests/<path-to-test(s)>
 
 ## Development Guidelines
 
-In this section we are going to describe the coding rules for contributing to the raiden repository. All code you write should strive to comply with these rules.
+In this section we are going to describe the coding rules for contributing to
+the raiden repository. All code you write should strive to comply with these
+rules.
 
 ### Commiting Rules
 
-For an exchaustive guide read [this](http://chris.beams.io/posts/git-commit/) guide. It's all really good advice. Some rules that
-you should always follow though are:
+For an exchaustive guide read [this](http://chris.beams.io/posts/git-commit/)
+guide. It's all really good advice. Some rules that you should always follow though are:
 
 - A commit title not exceeding 50 characters
 - A blank line after the title (optional if there is no description)
 - A description of what the commit did (optional if the commit is really small)
 
-Why are these rules important? All tools that consume git repos and show you information treat the first 80 characters as a title.
-Even Github itself does this. And the git history looks really nice and neat if these simple rules are followed.
+Why are these rules important? All tools that consume git repos and show you
+information treat the first 80 characters as a title. Even Github itself does
+this. And the git history looks really nice and neat if these simple rules are
+followed.
 
 ### Encoding
 
-Addresses should follow "sandwich encoding" so that each point of entry does its own encoding into binary but the core programmatic API
-accepts only binary. Thus we setup the following rules:
+Addresses should follow "sandwich encoding" so that each point of entry does
+its own encoding into binary but the core programmatic API accepts only binary.
+Thus we setup the following rules:
 
-- Programmatic API should only expect binary and break if it accepts anything else. It should do type checking on its input and provide meaningful error for hex encoded addresses
-or length mismatch.
-- All other places from which we receive addresses need to do their own encoding from whatever the input encoding is to binary. Such places are: CLI, Rest-API e.t.c.
-- All modules which generate output to the outside world should also encode from binary to whatever the expected output encoding of that module is. Such places are stdout, communication with the ethereum node e.t.c.
+- Programmatic API should only expect binary and break if it accepts anything
+  else. It should do type checking on its input and provide meaningful error
+  for hex encoded addresses or length mismatch.
+- All other places from which we receive addresses need to do their own
+  encoding from whatever the input encoding is to binary. Such places are: CLI,
+  Rest-API e.t.c.
+- All modules which generate output to the outside world should also encode
+  from binary to whatever the expected output encoding of that module is. Such
+  places are stdout, communication with the ethereum node e.t.c.
 
 ### Coding Style
 
 #### Python
 
-Raiden is written in Python and we follow the official Python style guide [PEP8](https://www.python.org/dev/peps/pep-0008/). It is highly
-recommended to use the [flake8](https://pypi.python.org/pypi/flake8) tool in order to automatically determine any and all style violations. The customizeable part of flake can be seen in the [configuration file](setup.cfg). For all the rest which are not
-configurable here is some general guidelines.
+Raiden is written in Python and we follow the official Python style guide
+[PEP8](https://www.python.org/dev/peps/pep-0008/). It is highly recommended to
+use the [flake8](https://pypi.python.org/pypi/flake8) tool in order to
+automatically determine any and all style violations. The customizeable part of
+flake can be seen in the [configuration file](setup.cfg). For all the rest
+which are not configurable here is some general guidelines.
 
 **Line Length**
-Flake8 will warn you for 99 characters which is the hard limit on the max length. Try not to go above it. We also have a soft
-limit on 80 characters but that is not enforced and is there just to encourage short lines.
+Flake8 will warn you for 99 characters which is the hard limit on the max
+length. Try not to go above it. We also have a soft limit on 80 characters but
+that is not enforced and is there just to encourage short lines.
 
 **Breaking function definitions when line is above 99 characters**
 
-Always put each argument into its own line. Look at the following examples to understand:
+Always put each argument into its own line. Look at the following examples to
+understand:
 
 The following should be avoided
 ```python
@@ -204,7 +233,8 @@ Good:
 s = 'foo'
 ```
 
-The only reason to use double quotes is to avoid escaping the single quote in a string. So this is okay:
+The only reason to use double quotes is to avoid escaping the single quote in a
+string. So this is okay:
 
 ```python
 s = "Augusto's computer is awesome"
@@ -213,7 +243,9 @@ s = "Augusto's computer is awesome"
 
 **Naming Style**
 
-Use [Snake Case](https://en.wikipedia.org/wiki/Snake_case) for variable and function names and [Camel Case](https://en.wikipedia.org/wiki/Camel_case) for class names.
+Use [Snake Case](https://en.wikipedia.org/wiki/Snake_case) for variable and
+function names and [Camel Case](https://en.wikipedia.org/wiki/Camel_case) for
+class names.
 
 **Naming Convention**
 
@@ -235,8 +267,9 @@ balance_holder = AccountBalanceHolder()
 service = RaidenService()
 ```
 
-We try to follow a consistent naming convention throughout the codebase to make it easy for the reader of the code to understand what is going on.
-Thus we introduce the following rules:
+We try to follow a consistent naming convention throughout the codebase to make
+it easy for the reader of the code to understand what is going on. Thus we
+introduce the following rules:
 
 For addresses:
 
@@ -247,7 +280,10 @@ Lists of objects:
 
 - `<name>s`, e.g. `channels` for a list `Channel` object instances.
 
-- to initialize an empty list use `list()` instead of `[]`. Note this is only for style consistency's sake and may change in the future as there [may be](https://stackoverflow.com/questions/5790860/and-vs-list-and-dict-which-is-better) a tiny change in performance.
+- to initialize an empty list use `list()` instead of `[]`. Note this is only
+  for style consistency's sake and may change in the future as there [may
+  be](https://stackoverflow.com/questions/5790860/and-vs-list-and-dict-which-is-better)
+  a tiny change in performance.
 
 Mappings/dicts:
 
@@ -259,18 +295,24 @@ If the mapped to object is a list then add an `s`
 
 `<name>_to_<name>s`, e.g. `tokenaddress_to_taskmanagers = defaultdict(list())`
 
-To initialize an empty dict use `dict()` instead of `{}`. Note this is only for style consistency's sake and may change in the future as there [may be](https://stackoverflow.com/questions/5790860/and-vs-list-and-dict-which-is-better) a tiny change in performance.
+To initialize an empty dict use `dict()` instead of `{}`. Note this is only for
+style consistency's sake and may change in the future as there [may
+be](https://stackoverflow.com/questions/5790860/and-vs-list-and-dict-which-is-better)
+a tiny change in performance.
 
 #### Solidity
 
-For solidity we generally follow the style guide as shown in the [solidity documentation](http://solidity.readthedocs.io/en/develop/style-guide.html)
-with a few notable exceptions:
+For solidity we generally follow the style guide as shown in the [solidity
+documentation](http://solidity.readthedocs.io/en/develop/style-guide.html) with
+a few notable exceptions:
 
 **Variable Names**
 
-All variable name should be in snake case, just like in python. Function names on the other hand should be mixedCase.
-MixedCase is essentially like CamelCase but with the initial letter being a small letter.
-This helps us to easily determine which function calls are smart contract calls in the python code side.
+All variable name should be in snake case, just like in python. Function names
+on the other hand should be mixedCase. MixedCase is essentially like CamelCase
+but with the initial letter being a small letter. This helps us to easily
+determine which function calls are smart contract calls in the python code
+side.
 
 ```js
 function iDoSomething(uint awesome_argument) {
@@ -298,9 +340,10 @@ function thisFunctionNameIsReallyLong(
 }
 ```
 
-This is the minor modification we make in order to make the code more readable when quickly skimming through it.
-The thinking here is to easily spot the start of the function's block when skimming and not have the modifiers
-appearing as if they are a block on their own due to the hanging parentheses.
+This is the minor modification we make in order to make the code more readable
+when quickly skimming through it. The thinking here is to easily spot the start
+of the function's block when skimming and not have the modifiers appearing as
+if they are a block on their own due to the hanging parentheses.
 
 ```js
 function thisFunctionNameIsReallyLong(
@@ -319,27 +362,32 @@ function thisFunctionNameIsReallyLong(
 
 **Documentation**
 
-Code should be documented. For docstrings the [Google conventions](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html) are used.
+Code should be documented. For docstrings the [Google
+conventions](https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html)
+are used.
 
 
 ### Workflow
 
-When developing a feature, or a bug fix you should always start by writting a **test** for it, or by modifying
-existing tests to test for your feature. Once you see that test failing you should implement the feature and confirm
-that all your new tests pass.
+When developing a feature, or a bug fix you should always start by writting a
+**test** for it, or by modifying existing tests to test for your feature. Once
+you see that test failing you should implement the feature and confirm that all
+your new tests pass.
 
-Afterwards you should open a Pull Request from your fork or feature branch against master. You will be given feedback from
-the core developers of raiden and you should try to incorporate that feedback into your branch. Once you do so and all tests
-pass your feature/fix will be merged.
+Afterwards you should open a Pull Request from your fork or feature branch
+against master. You will be given feedback from the core developers of raiden
+and you should try to incorporate that feedback into your branch. Once you do
+so and all tests pass your feature/fix will be merged.
 
 #### Contributing to other people's PRs
 
-If you are a core developer of Raiden with write privileges to the repository then you can add commits or rebase to master
-any Pull Request by other people.
+If you are a core developer of Raiden with write privileges to the repository
+then you can add commits or rebase to master any Pull Request by other people.
 
-Let us take [this](https://github.com/raiden-network/raiden/pull/221) PR as an example. The contributor has everything ready
-and all is looking good apart from a minor glitch. You can wait until he fixes it himself but you can always help him by
-contributing to his branch's PR:
+Let us take [this](https://github.com/raiden-network/raiden/pull/221) PR as an
+example. The contributor has everything ready and all is looking good apart
+from a minor glitch. You can wait until he fixes it himself but you can always
+help him by contributing to his branch's PR:
 
 ```
 git remote add hackaugusto git@github.com:hackaugusto/raiden.git
@@ -347,8 +395,9 @@ git fetch hackaugusto
 git checkout travis_build
 ```
 
-Right now you are working on the contributor's Pull Request. **Make sure** to coordinate to avoid any conflicts and always warn people
-beforehand if you are to work on their branch. Once you are done:
+Right now you are working on the contributor's Pull Request. **Make sure** to
+coordinate to avoid any conflicts and always warn people beforehand if you are
+to work on their branch. Once you are done:
 
 ```
 git commit -m "your additions"
