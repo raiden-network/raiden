@@ -751,7 +751,7 @@ def run(ctx, **kwargs):
                 gevent.signal(signal.SIGUSR2, toggle_trace_profiler)
 
                 event.wait()
-
+                print('Signal received. Shutting down ...')
                 try:
                     api_server.stop()
                 except NameError:
