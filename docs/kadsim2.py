@@ -3,7 +3,7 @@ import random
 import sys
 random.seed(42)
 # sys.setrecursionlimit(2000)
-print "use pypy"
+print("use pypy")
 DEBUG = False
 
 
@@ -61,7 +61,7 @@ class Node(object):
             if d < 0:
                 d += self.sim.max_id
             return d
-        nodeids = sorted(self.channels.keys(), lambda a, b: cmp(_distance(a), _distance(b)))
+        nodeids = sorted(self.channels.keys(), key=_distance)
         assert len(nodeids) < 2 or _distance(nodeids[0]) <= _distance(nodeids[1])
         return [nid for nid in nodeids if self.channels[nid] >= amount]
 
@@ -87,7 +87,7 @@ class Node(object):
                 distance_channel.append((_distance(nodeid), nodeid))
         distance_channel.sort()
         if DEBUG:
-            print 'closest d,nodeid', distance_channel[0]
+            print('closest d,nodeid', distance_channel[0])
         return [n for d, n in distance_channel]
 
     def transfer(self, transfer, proactive_routing=False):
@@ -109,9 +109,9 @@ class Node(object):
 
         if len(transfer.tried) > self.sim.max_tried:
             if DEBUG:
-                print target_id
-                print [n.id for n in transfer.path]
-                print [n.id for n in transfer.tried]
+                print(target_id)
+                print([n.id for n in transfer.path])
+                print([n.id for n in transfer.tried])
             return False
 
         if not proactive_routing:
@@ -120,10 +120,10 @@ class Node(object):
             candidates = self._channels_by_distance_plus(target_id, transfer.amount)
             if DEBUG:
                 candidates2 = self._channels_by_distance(target_id, transfer.amount)
-                print
-                print "node:", self.id, "target", target_id
-                print candidates
-                print candidates2
+                print()
+                print("node:", self.id, "target", target_id)
+                print(candidates)
+                print(candidates2)
                 assert len(candidates2) >= len(candidates)
             # candidates = candidates2
         res = False
@@ -191,7 +191,7 @@ class Simulation(object):
     def get_closest_node_id(self, target_id):
         start, end = 0, len(self.nodeids) - 1
         while end - start > 1:
-            idx = start + (end - start) / 2
+            idx = start + (end - start) // 2
             if self.nodeids[idx] > target_id:
                 end = idx
             else:
@@ -210,7 +210,7 @@ class Simulation(object):
                 yield nid, c
 
     def setup_network(self):
-        print 'setting up nodes'
+        print('setting up nodes')
         for i in range(self.num_nodes):
             node_id = random.randrange(self.max_id)
             if node_id in self.node_by_id:
@@ -219,9 +219,9 @@ class Simulation(object):
             node = Node(self, node_id, self.num_channels, capacity)
             self.node_by_id[node.id] = node
         self.nodeids = sorted(self.node_by_id.keys())
-        print 'num_nodes', len(self.nodeids)
+        print('num_nodes', len(self.nodeids))
 
-        print 'setting up channels'
+        print('setting up channels')
         for node in self.node_by_id.values():
             node.initiate_channels()
             if self.randomize_capacity:
@@ -230,25 +230,25 @@ class Simulation(object):
         capacities = [c for nid, c in self._iteredges()]
         num_edges = len(capacities)
         median_num_edges_per_node = sorted(len(n.channels)
-                                           for n in self.node_by_id.values())[self.num_nodes / 2]
+                                           for n in self.node_by_id.values())[self.num_nodes // 2]
         avg_capacity = sum(capacities) / float(len(capacities))
-        median_capacity = sorted(capacities)[len(capacities) / 2]
+        median_capacity = sorted(capacities)[len(capacities) // 2]
 
         fmt = 'num_edges:{} per node:{:.1f} median per node:{:.1f}'
-        print fmt.format(num_edges, num_edges / float(len(self.nodeids)),
-                         median_num_edges_per_node)
-        print 'avg_capacity:{} median capacity:{}'.format(avg_capacity, median_capacity)
+        print(fmt.format(num_edges, num_edges / float(len(self.nodeids)),
+                         median_num_edges_per_node))
+        print('avg_capacity:{} median capacity:{}'.format(avg_capacity, median_capacity))
 
     def dump_nodes(self, num=4):
         # dump some nodes and their channels
         for nodeid in self.nodeids[:num]:
-            print
+            print()
             node = self.node_by_id[nodeid]
             assert len(node.targets) < len(node.channels)
             # print node, zip(sorted(node.channels.keys()), sorted(node.targets))
-            print 'targets:', sorted(node.targets)
-            print 'edges:', sorted(node.channels.keys())
-            print 'capacities:', sorted(node.channels.values())
+            print('targets:', sorted(node.targets))
+            print('edges:', sorted(node.channels.keys()))
+            print('capacities:', sorted(node.channels.values()))
 
     def rand_transfer(self, amount):
         candidates = [n for n in self.node_by_id.values() if n.capacity_per_channel >= amount]
@@ -257,8 +257,8 @@ class Simulation(object):
         while receiver is sender:
             receiver = random.choice(candidates)
         if DEBUG:
-            print
-            print "new transfer", receiver
+            print()
+            print("new transfer", receiver)
         t = Transfer(sender.id, receiver.id, amount)
         res = sender.transfer(t, self.proactive_routing)
         t.success = res
@@ -292,9 +292,9 @@ class Simulation(object):
 
             fmt = 'value:{:-5.2f}{:-5.2f} success:{:.2f} p_len:{:-4.0f} {:-4.0f} {:-4.0f} ' + \
                 'tried:{:-4.0f} {:-4.0f} {:-4.0f}'
-            print fmt.format(value, usable_nodes, pct_successful, avg_path_len,
+            print(fmt.format(value, usable_nodes, pct_successful, avg_path_len,
                              median_path_len, max_path_len, avg_tried_len,
-                             median_tried_len, max_tried_len)
+                             median_tried_len, max_tried_len))
 
 
 if __name__ == '__main__':
@@ -314,10 +314,10 @@ if __name__ == '__main__':
     sim.dump_nodes(4)
 
     # run sim
-    print "running simulation w/proactive routing"
+    print("running simulation w/proactive routing")
     sim.run(steps=10, samples=100)
     sim.proactive_routing = False
-    print "running simulation"
+    print("running simulation")
     sim.run(steps=10, samples=100)
     # sim.rand_transfer(1.5)
 
