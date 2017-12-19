@@ -109,6 +109,8 @@ class AlarmTask(Task):
             for callback in self.callbacks:
                 try:
                     result = callback(current_block)
+                except RaidenShuttingDown:
+                    break
                 except:  # pylint: disable=bare-except # noqa
                     log.exception('unexpected exception on alarm')
                 else:
