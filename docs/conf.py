@@ -66,15 +66,15 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'Raiden Network'
-author = u'Raiden Project'
+project = 'Raiden Network'
+author = 'Raiden Project'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
 # The short X.Y version.
-version = u'0.2.0'
+version = '0.2.0'
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -278,8 +278,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Raiden.tex', u'Raiden Network Documentation',
-     u'Raiden Project', 'manual'),
+    (master_doc, 'Raiden.tex', 'Raiden Network Documentation',
+     'Raiden Project', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -320,7 +320,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'raiden', u'Raiden Network Documentation',
+    (master_doc, 'raiden', 'Raiden Network Documentation',
      [author], 1)
 ]
 
@@ -335,7 +335,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Raiden', u'Raiden Network Documentation',
+    (master_doc, 'Raiden', 'Raiden Network Documentation',
      author, 'Raiden', 'One line description of project.',
      'Miscellaneous'),
 ]

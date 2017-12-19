@@ -8,7 +8,7 @@ num_channels = 4
 node_by_id = dict()
 nodeids = []
 
-print "use pypy"
+print("use pypy")
 
 
 def get_closest_node_id(target_id):
@@ -24,7 +24,7 @@ class Node(object):
         self.id = id
         assert num_channels % 2 == 0
         self.num_channels = num_channels
-        self.num_initiated_channels = num_channels / 2
+        self.num_initiated_channels = num_channels // 2
         self.deposit = deposit
         self.channels = dict()  # nodeid => capacity
 
@@ -36,7 +36,7 @@ class Node(object):
         """
         connect to closest node larger than self!
         """
-        distances = [max_id / 2**i for i in range(self.num_initiated_channels)]
+        distances = [max_id // 2**i for i in range(self.num_initiated_channels)]
         return [(self.id + d) % max_id for d in distances]
 
     def initiate_channels(self):
@@ -77,7 +77,7 @@ class Node(object):
             return d
 
         res = False
-        channels = sorted(self.channels.keys(), lambda a, b: cmp(_distance(a), _distance(b)))
+        channels = sorted(self.channels.keys(), key=_distance)
         # print target_id, channels
         for cid in channels:
             if cid > target_id:
@@ -117,10 +117,10 @@ class Transfer(object):
         return '<Transfer v=%d t=%s>' % (self.amount, self.receiver)
 
 deposit_distribution = [100 * 2**i for i in range(5)]
-print deposit_distribution
+print(deposit_distribution)
 
 
-print 'setting up nodes'
+print('setting up nodes')
 for i in range(num_nodes):
     node_id = random.randrange(max_id)
     deposit = random.choice(deposit_distribution)
@@ -128,13 +128,13 @@ for i in range(num_nodes):
     node_by_id[node.id] = node
 nodeids = sorted(node_by_id.keys())
 
-print 'setting up channels'
+print('setting up channels')
 for node in node_by_id.values():
     node.initiate_channels()
 
-num_edges = sum([len(n.channels) for n in node_by_id.values()]) / 2
-print 'num_nodes', len(nodeids)
-print 'num_edges', num_edges
+num_edges = sum([len(n.channels) for n in node_by_id.values()]) // 2
+print('num_nodes', len(nodeids))
+print('num_edges', num_edges)
 
 # dump some nodes and their channels
 # for nodeid in nodeids[:4]:
@@ -160,13 +160,13 @@ for value in deposit_distribution:
         t = rand_transfer(value)
         transfers.append(t)
 
-    avg_path_len = sum([len(t.path) for t in transfers]) / float(len(transfers))
-    avg_tried_len = sum([len(t.tried) for t in transfers]) / float(len(transfers))
-    median_tried_len = sorted([len(t.tried) for t in transfers])[len(transfers) / 2]
+    avg_path_len = sum([len(t.path) for t in transfers]) / len(transfers)
+    avg_tried_len = sum([len(t.tried) for t in transfers]) / len(transfers)
+    median_tried_len = sorted([len(t.tried) for t in transfers])[len(transfers) // 2]
     max_tried_len = max([len(t.tried) for t in transfers])
     num_successful = sum(1 for t in transfers if t.success)
 
-    print 'value', value, deposit_distribution
-    print 'avg_path_len', avg_path_len
-    print 'avg_tried_len', avg_tried_len, median_tried_len, max_tried_len
-    print 'num_successful', num_successful, num_successful / float(len(transfers))
+    print('value', value, deposit_distribution)
+    print('avg_path_len', avg_path_len)
+    print('avg_tried_len', avg_tried_len, median_tried_len, max_tried_len)
+    print('num_successful', num_successful, num_successful / len(transfers))
