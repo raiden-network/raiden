@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-
 import time
 
 from raiden.settings import (
@@ -130,7 +129,7 @@ def transfer_speed(num_transfers=100, max_locked=100):  # pylint: disable=too-ma
             channel1.register_secret(secret)
 
     elapsed = time.time() - start
-    print('%d transfers per second' % (num_transfers / elapsed))
+    print('{} transfers per second'.format(num_transfers / elapsed))
 
 
 def main():

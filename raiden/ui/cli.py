@@ -566,7 +566,7 @@ def app(address,
             'Needed: {} ETH\n'
             'Available: {} ETH.\n'
             'Please deposit additional funds into this account.'
-            .format(discovery_tx_cost / float(denoms.ether), balance / float(denoms.ether))
+            .format(discovery_tx_cost / denoms.ether, balance / denoms.ether)
         )
         if not click.confirm('Try again?'):
             sys.exit(1)
