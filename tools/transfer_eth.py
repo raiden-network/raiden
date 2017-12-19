@@ -26,16 +26,16 @@ def main(private_key, eth_amount, targets_file, port, host):
 
     balance_needed = len(targets) * eth_amount
     if balance_needed * WEI_TO_ETH > balance:
-        print(("Not enough balance to fund {} accounts with {} eth each. Need {}, have {}".format(
+        print("Not enough balance to fund {} accounts with {} eth each. Need {}, have {}".format(
             len(targets),
             eth_amount,
             balance_needed,
             balance / WEI_TO_ETH
-        )))
+        ))
 
-    print(("Sending {} eth to:".format(eth_amount)))
+    print("Sending {} eth to:".format(eth_amount))
     for target in targets:
-        print(("  - {}".format(target)))
+        print("  - {}".format(target))
         client.send_transaction(sender=client.sender, to=target, value=eth_amount * WEI_TO_ETH)
 
 

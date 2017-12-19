@@ -846,7 +846,7 @@ def smoketest(ctx, debug, **kwargs):
         address=ethereum_config['address'],
     )
     for option in app.params:
-        if option.name in list(args.keys()):
+        if option.name in args.keys():
             args[option.name] = option.process_value(ctx, args[option.name])
         else:
             args[option.name] = option.default

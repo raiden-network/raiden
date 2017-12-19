@@ -183,7 +183,7 @@ def test_echo_node_lottery(token_addresses, raiden_chain):
 
     assert len(received) == 2
 
-    received = sorted(list(received.values()), key=lambda transfer: transfer['amount'])
+    received = sorted(received.values(), key=lambda transfer: transfer['amount'])
 
     pool_query = received[0]
     assert pool_query['amount'] == 6

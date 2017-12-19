@@ -455,7 +455,7 @@ class Channel(object):
                 # this may occur on normal operation
                 if log.isEnabledFor(logging.INFO):
                     lockhashes = list(from_state.hashlocks_to_unclaimedlocks.values())
-                    lockhashes.extend(list(from_state.hashlocks_to_pendinglocks.values()))
+                    lockhashes.extend(from_state.hashlocks_to_pendinglocks.values())
                     log.info(
                         'duplicated lock',
                         node=pex(self.our_address),
@@ -476,7 +476,7 @@ class Channel(object):
                 # this should not happen
                 if log.isEnabledFor(logging.WARN):
                     lockhashes = list(from_state.hashlocks_to_unclaimedlocks.values())
-                    lockhashes.extend(list(from_state.hashlocks_to_pendinglocks.values()))
+                    lockhashes.extend(from_state.hashlocks_to_pendinglocks.values())
                     log.warn(
                         'LOCKSROOT MISMATCH',
                         node=pex(self.our_address),
@@ -567,7 +567,7 @@ class Channel(object):
         if isinstance(transfer, LockedTransfer):
             if log.isEnabledFor(logging.DEBUG):
                 lockhashes = list(from_state.hashlocks_to_unclaimedlocks.values())
-                lockhashes.extend(list(from_state.hashlocks_to_pendinglocks.values()))
+                lockhashes.extend(from_state.hashlocks_to_pendinglocks.values())
                 log.debug(
                     'REGISTERED LOCK',
                     node=pex(self.our_state.address),

@@ -57,7 +57,7 @@ class StateMachineEventHandler(object):
     def log_and_dispatch_to_all_tasks(self, state_change):
         """Log a state change, dispatch it to all state managers and log generated events"""
         state_change_id = self.raiden.transaction_log.log(state_change)
-        manager_lists = iter(self.raiden.identifier_to_statemanagers.values())
+        manager_lists = self.raiden.identifier_to_statemanagers.values()
 
         for manager in itertools.chain(*manager_lists):
             events = self.dispatch(manager, state_change)

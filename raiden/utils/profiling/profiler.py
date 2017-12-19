@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import contextlib
 import sys
 import threading
@@ -559,7 +557,7 @@ def print_thread_profile(thread_state):
 def print_merged():
     global _state
 
-    merged = merge_threadstates(*list(_state.values()))
+    merged = merge_threadstates(*_state.values())
     print_info_tree(filter_fast(merged))
 
 

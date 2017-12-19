@@ -111,8 +111,8 @@ def load_snapshot(serialization_file):
 def save_snapshot(serialization_file, raiden):
     all_channels = [
         ChannelSerialization(channel)
-        for network in list(raiden.token_to_channelgraph.values())
-        for channel in list(network.address_to_channel.values())
+        for network in raiden.token_to_channelgraph.values()
+        for channel in network.address_to_channel.values()
     ]
 
     all_queues = list()
@@ -310,7 +310,7 @@ class RaidenService(object):
         self.start_event.set()
 
     def start_neighbours_healthcheck(self):
-        for graph in list(self.token_to_channelgraph.values()):
+        for graph in self.token_to_channelgraph.values():
             for neighbour in graph.get_neighbours():
                 if neighbour != ConnectionManager.BOOTSTRAP_ADDR:
                     self.start_health_check_for(neighbour)
@@ -823,21 +823,20 @@ class RaidenService(object):
     def connection_manager_for_token(self, token_address):
         if not isaddress(token_address):
             raise InvalidAddress('token address is not valid.')
-        if token_address in list(self.tokens_to_connectionmanagers.keys()):
+        if token_address in self.tokens_to_connectionmanagers.keys():
             manager = self.tokens_to_connectionmanagers[token_address]
         else:
             raise InvalidAddress('token is not registered.')
         return manager
 
     def leave_all_token_networks_async(self):
-        token_addresses = list(self.token_to_channelgraph.keys())
         leave_results = []
-        for token_address in token_addresses:
+        for token_address in self.token_to_channelgraph.keys():
             try:
                 connection_manager = self.connection_manager_for_token(token_address)
+                leave_results.append(connection_manager.leave_async())
             except InvalidAddress:
                 pass
-            leave_results.append(connection_manager.leave_async())
         combined_result = AsyncResult()
         gevent.spawn(gevent.wait, leave_results).link(combined_result)
         return combined_result

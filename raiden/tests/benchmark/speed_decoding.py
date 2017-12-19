@@ -209,7 +209,7 @@ def benchmark_alternatives():
         message = locals()[variable_name]
         print('\n{}'.format(message))
 
-        for codec_name, code_base in list(codecs.items()):
+        for codec_name, code_base in codecs.items():
             code = code_base.format(variable_name)
 
             exec(code)

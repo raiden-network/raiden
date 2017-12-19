@@ -24,11 +24,11 @@ def process_results(results_dir, plot_filename):
         if 'timestamps' in contents:
             result = contents['timestamps']
             min_, max_ = result[0], result[-1]
-            print(("Node {} sent messages from {} to {}".format(
+            print("Node {} sent messages from {} to {}".format(
                 filename,
                 datetime.fromtimestamp(min_).strftime("%H:%M:%S.%f"),
                 datetime.fromtimestamp(max_).strftime("%H:%M:%S.%f"),
-            )))
+            ))
             results.append(result)
 
     min_, max_ = results[0][0], results[0][-1]
@@ -36,10 +36,10 @@ def process_results(results_dir, plot_filename):
         min_ = min(min_, result[0])
         max_ = max(max_, result[-1])
 
-    print(("First transfer was at {}".format(
-        datetime.fromtimestamp(min_).strftime("%H:%M:%S.%f"))))
-    print(("Last transfer was at {}".format(
-        datetime.fromtimestamp(max_).strftime("%H:%M:%S.%f"))))
+    print("First transfer was at {}".format(
+        datetime.fromtimestamp(min_).strftime("%H:%M:%S.%f")))
+    print("Last transfer was at {}".format(
+        datetime.fromtimestamp(max_).strftime("%H:%M:%S.%f")))
 
     for result in results:
         result.reverse()
@@ -55,20 +55,20 @@ def process_results(results_dir, plot_filename):
             while len(result) > 0 and result[-1] < time + 1.0:
                 result.pop()
                 amount_per_time[index] += 1
-        print(("Total transfers from {} to {} was {}".format(
+        print("Total transfers from {} to {} was {}".format(
             datetime.fromtimestamp(time).strftime("%H:%M:%S"),
             datetime.fromtimestamp(time + 1).strftime("%H:%M:%S"),
             amount_per_time[index],
-        )))
+        ))
         if amount_per_time[index] > max_amount[1]:
             max_amount = (time, amount_per_time[index])
         index += 1
 
-    print(("Maximum transfers happened from {} to {} and was {}".format(
+    print("Maximum transfers happened from {} to {} and was {}".format(
         datetime.fromtimestamp(max_amount[0]).strftime("%H:%M:%S"),
         datetime.fromtimestamp(max_amount[0] + 1).strftime("%H:%M:%S"),
         max_amount[1],
-    )))
+    ))
 
     times = [time for time in range(initial_time, last_time)]  # + 1 ?
 
@@ -89,7 +89,7 @@ def process_results(results_dir, plot_filename):
             plt.plot(dates, amount_per_time)
             plt.savefig(plot_filename)
         except ImportError as exc:
-            print(("Error creating plot results: {}".format(exc.message)))
+            print("Error creating plot results: {}".format(exc.message))
 
 
 if __name__ == '__main__':

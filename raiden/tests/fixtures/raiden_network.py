@@ -38,7 +38,7 @@ def wait_for_partners(app_list, sleep=0.5, timeout=10):
 
         all_healthy = all(
             status == NODE_NETWORK_REACHABLE
-            for status in list(waiting[0].raiden.protocol.nodeaddresses_networkstatuses.values())
+            for status in waiting[0].raiden.protocol.nodeaddresses_networkstatuses.values()
         )
 
         if timeout <= 0:
