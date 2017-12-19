@@ -14,7 +14,7 @@ def test_direct_transfer_to_offline_node(raiden_network, token_addresses):
     app0, app1 = raiden_network
 
     # Wait until the initialization of the node is complete and then stop it
-    gevent.wait([app1.raiden.initialization_complete_event])
+    gevent.wait([app1.raiden.start_event])
     app1.raiden.stop()
 
     amount = 10

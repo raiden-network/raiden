@@ -227,10 +227,10 @@ class FilterTesterMock(object):
 
 class ClientMock(object):
     def __init__(self):
-        self.shutting_down_event = None
+        self.stop_event = None
 
-    def inject_shutting_down_event(self, event):
-        self.shutting_down_event = event
+    def inject_stop_event(self, event):
+        self.stop_event = event
 
 
 class BlockChainServiceTesterMock(object):
