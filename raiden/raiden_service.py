@@ -11,7 +11,7 @@ from collections import defaultdict
 
 import filelock
 import gevent
-from gevent.event import AsyncResult
+from gevent.event import AsyncResult, Event
 from coincurve import PrivateKey
 from ethereum import slogging
 from ethereum.utils import encode_hex
@@ -241,6 +241,8 @@ class RaidenService(object):
         self.alarm = AlarmTask(chain)
         self.shutdown_timeout = config['shutdown_timeout']
         self._block_number = None
+        self.shutting_down_event = Event()
+        self.chain.client.inject_shutting_down_event(self.shutting_down_event)
 
         self.transaction_log = StateChangeLog(
             storage_instance=StateChangeLogSQLiteBackend(
@@ -309,7 +311,7 @@ class RaidenService(object):
     def stop(self):
         """ Stop the node. """
         # Needs to come before any greenlets joining
-        self.chain.client.shutting_down = True
+        self.shutting_down_event.set()
         self.protocol.stop_and_wait()
         self.alarm.stop_async()
 

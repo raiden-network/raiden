@@ -159,7 +159,7 @@ def check_node_connection(func):
         """self here is always an obhect of JSONRPCClient"""
         for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
 
-            if self.shutting_down:
+            if self.shutting_down_event and self.shutting_down_event.is_set():
                 raise RaidenShuttingDown()
 
             try:
@@ -206,13 +206,15 @@ class JSONRPCClient(object):
         self.privkey = privkey
         self.protocol = JSONRPCProtocol()
         self.sender = privatekey_to_address(privkey)
+        # Needs to be initialized to None in the beginning since JSONRPCClient
+        # gets constructed before the RaidenService Object.
+        self.shutting_down_event = None
 
         self.nonce_last_update = 0
         self.nonce_current_value = None
         self.nonce_lock = Semaphore()
         self.nonce_update_interval = nonce_update_interval
         self.nonce_offset = nonce_offset
-        self.shutting_down = False
 
     def __repr__(self):
         return '<JSONRPCClient @%d>' % self.port
@@ -273,6 +275,9 @@ class JSONRPCClient(object):
             self.nonce_last_update = query_time
 
             return self.nonce_current_value
+
+    def inject_shutting_down_event(self, event):
+        self.shutting_down_event = event
 
     def balance(self, account):
         """ Return the balance of the account of given address. """
