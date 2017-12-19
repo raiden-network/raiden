@@ -242,6 +242,7 @@ class RaidenService(object):
         self.shutdown_timeout = config['shutdown_timeout']
         self._block_number = None
         self.shutting_down_event = Event()
+        self.initialization_complete_event = Event()
         self.chain.client.inject_shutting_down_event(self.shutting_down_event)
 
         self.transaction_log = StateChangeLog(
@@ -276,6 +277,12 @@ class RaidenService(object):
 
     def start(self):
         """ Start the node. """
+        # XXX Should this really be here? Or will start() never be called again
+        # after stop() in the lifetime of Raiden apart from the tests? This is
+        # at least at the moment prompted by tests/integration/test_transer.py
+        if self.shutting_down_event and self.shutting_down_event.is_set():
+            self.shutting_down_event.clear()
+
         self.alarm.start()
 
         # Prime the block number cache and set the callbacks
@@ -301,6 +308,8 @@ class RaidenService(object):
 
         # Health check needs the protocol layer
         self.start_neighbours_healthcheck()
+
+        self.initialization_complete_event.set()
 
     def start_neighbours_healthcheck(self):
         for graph in self.token_to_channelgraph.values():
