@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import pytest
 from ethereum import abi
 from ethereum.utils import encode_hex

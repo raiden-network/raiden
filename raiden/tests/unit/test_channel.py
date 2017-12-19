@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-locals,too-many-statements
-
-
 import pytest
 from ethereum import slogging
 

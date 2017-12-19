@@ -30,7 +30,7 @@ def make_message(message, **attrs):
     message = klass(buffer_for(klass))
     message.cmdid = from_bigendian(message)
 
-    for name, value in list(attrs.items()):
+    for name, value in attrs.items():
         setattr(message, name, value)
 
     return message

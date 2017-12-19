@@ -69,8 +69,8 @@ class ChannelEndState(object):
     @property
     def amount_locked(self):
         alllocks = chain(
-            list(self.hashlocks_to_pendinglocks.values()),
-            list(self.hashlocks_to_unclaimedlocks.values()),
+            self.hashlocks_to_pendinglocks.values(),
+            self.hashlocks_to_unclaimedlocks.values(),
         )
 
         return sum(

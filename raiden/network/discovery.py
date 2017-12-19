@@ -42,7 +42,7 @@ class Discovery(object):
             raise InvalidAddress('Unknown address {}'.format(pex(node_address)))
 
     def nodeid_by_host_port(self, host_port):
-        for nodeid, value_hostport in list(self.nodeid_to_hostport.items()):
+        for nodeid, value_hostport in self.nodeid_to_hostport.items():
             if value_hostport == host_port:
                 return nodeid
         return None

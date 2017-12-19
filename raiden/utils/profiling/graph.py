@@ -97,7 +97,7 @@ def memory_objcount(output, data_list, topn=10):
 
         # group the samples by class
         for index, (__, count_per_type) in enumerate(data):
-            for klass, count in list(count_per_type.items()):
+            for klass, count in count_per_type.items():
                 objcount[klass][index] = count
 
                 highcount = max(count, sample_highcount.get(klass, 0))
@@ -106,7 +106,7 @@ def memory_objcount(output, data_list, topn=10):
         # get the topn classes with the highest object count, the idea to show
         # spikes
         topn_classes = sorted(
-            ((count, klass) for klass, count in list(sample_highcount.items())),
+            ((count, klass) for klass, count in sample_highcount.items()),
             reverse=True
         )[:topn]
 
@@ -135,7 +135,7 @@ def memory_objcount(output, data_list, topn=10):
     fig, axes = plt.subplots()
 
     # we don't need a point before the first sample and after the last
-    labels = list(alltime_data.keys())
+    labels = alltime_data.keys()
     values = [alltime_data[label] for label in labels]
 
     if not values:

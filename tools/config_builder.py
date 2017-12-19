@@ -66,7 +66,7 @@ def genesis(ctx, hosts, nodes_per_host):
     node_list = build_node_list(hosts, nodes_per_host)
 
     accounts = generate_accounts(node_list)  # pylint: disable=redefined-outer-name
-    all_addresses = [account['address'] for account in list(accounts.values())]
+    all_addresses = [account['address'] for account in accounts.values()]
 
     genesis = mk_genesis(all_addresses)  # pylint: disable=redefined-outer-name
 
@@ -142,7 +142,7 @@ def build_scenario(ctx, hosts, nodes_per_host, nodes_per_transfer):
 
     addresses = []
     for node, data in sorted(accounts.items()):
-        for k, v in list(data.items()):
+        for k, v in data.items():
             if k == 'address':
                 addresses.append(v)
 
@@ -225,7 +225,7 @@ def merge(ctx, genesis_json, state_json):
 
     accounts = [key for key in genesis['alloc']]  # pylint: disable=redefined-outer-name
 
-    for account, data in list(state['accounts'].items()):
+    for account, data in state['accounts'].items():
         if account not in accounts:
             for key in ('nonce', 'root', 'codeHash'):
                 data.pop(key, None)
@@ -266,7 +266,7 @@ def full_genesis(ctx, hosts, nodes_per_host, scenario):
     accounts = generate_accounts(node_list)  # pylint: disable=redefined-outer-name
 
     all_addresses = [
-        account['address'] for account in list(accounts.values())
+        account['address'] for account in accounts.values()
     ]
 
     genesis = mk_genesis(all_addresses)  # pylint: disable=redefined-outer-name
@@ -283,12 +283,12 @@ def full_genesis(ctx, hosts, nodes_per_host, scenario):
         # create tokens for addresses x addresses
         token_groups = {
             account['address']: all_addresses
-            for account in list(accounts.values())
+            for account in accounts.values()
         }
 
     dump, blockchain_config = deploy_all(token_groups=token_groups)
 
-    for account, data in list(dump.items()):
+    for account, data in dump.items():
         if account not in genesis['alloc']:
             genesis['alloc'][account] = data
 

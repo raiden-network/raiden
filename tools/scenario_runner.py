@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 from binascii import hexlify
 import signal
 import json
@@ -272,7 +271,7 @@ def run(privatekey,
         # keep it simple and just send to the single target on my thread.
         if len(transfers_by_peer) > 1:
             greenlets = []
-            for peer_, amount in list(transfers_by_peer.items()):
+            for peer_, amount in transfers_by_peer.items():
                 greenlet = transfer(token_address, 1, amount, peer_, True)
                 if greenlet is not None:
                     greenlets.append(greenlet)
@@ -280,7 +279,7 @@ def run(privatekey,
             gevent.joinall(greenlets)
 
         elif len(transfers_by_peer) == 1:
-            for peer_, amount in list(transfers_by_peer.items()):
+            for peer_, amount in transfers_by_peer.items():
                 transfer(token_address, 1, amount, peer_, False)
 
         log.warning("Waiting for termination")

@@ -89,7 +89,7 @@ def namedbuffer(buffer_name, fields_spec):  # noqa (ignore ciclomatic complexity
     if 'data' in names_fields:
         raise ValueError('data field shadowing underlying buffer')
 
-    if any(count > 1 for count in list(Counter(field.name for field in fields).values())):
+    if any(count > 1 for count in Counter(field.name for field in fields).values()):
         raise ValueError('repeated field name')
 
     # big endian format

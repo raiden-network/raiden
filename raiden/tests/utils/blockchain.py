@@ -234,7 +234,7 @@ def geth_create_blockchain(
     # pylint: disable=too-many-locals,too-many-statements,too-many-arguments,too-many-branches
 
     nodes_configuration = []
-    key_p2p_rpc = list(zip(blockchain_private_keys, p2p_ports, rpc_ports))
+    key_p2p_rpc = zip(blockchain_private_keys, p2p_ports, rpc_ports)
 
     for pos, (key, p2p_port, rpc_port) in enumerate(key_p2p_rpc):
         config = dict()

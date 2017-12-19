@@ -1125,7 +1125,7 @@ def test_get_connection_managers_info(
     )
     response = request.send().response
     token_addresses = response.json()
-    assert isinstance(token_addresses, dict) and len(list(token_addresses.keys())) == 1
+    assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 1
     assert token_address1 in token_addresses
     assert isinstance(token_addresses[token_address1], dict)
     assert set(token_addresses[token_address1].keys()) == {'funds', 'sum_deposits', 'channels'}
@@ -1148,7 +1148,7 @@ def test_get_connection_managers_info(
     )
     response = request.send().response
     token_addresses = response.json()
-    assert isinstance(token_addresses, dict) and len(list(token_addresses.keys())) == 2
+    assert isinstance(token_addresses, dict) and len(token_addresses.keys()) == 2
     assert token_address2 in token_addresses
     assert isinstance(token_addresses[token_address2], dict)
     assert set(token_addresses[token_address2].keys()) == {'funds', 'sum_deposits', 'channels'}

@@ -118,7 +118,7 @@ def run_smoketests(raiden_service, test_config, debug=False):
             raiden_service.default_registry.token_addresses() ==
             [unhexlify(test_config['contracts']['token_address'])]
         )
-        assert len(list(chain.address_to_discovery.keys())) == 1
+        assert len(chain.address_to_discovery.keys()) == 1
         assert (
             list(chain.address_to_discovery.keys())[0] ==
             unhexlify(test_config['contracts']['discovery_address'])
@@ -126,7 +126,7 @@ def run_smoketests(raiden_service, test_config, debug=False):
         discovery = list(chain.address_to_discovery.values())[0]
         assert discovery.endpoint_by_address(raiden_service.address) != TEST_ENDPOINT
 
-        assert len(list(raiden_service.token_to_channelgraph.values())) == 1
+        assert len(raiden_service.token_to_channelgraph.values()) == 1
         graph = list(raiden_service.token_to_channelgraph.values())[0]
         channel = graph.partneraddress_to_channel[unhexlify(TEST_PARTNER_ADDRESS)]
         assert channel.can_transfer
@@ -166,7 +166,7 @@ def load_or_create_smoketest_config():
         # if the file versions still fit, return the genesis config (ignore solc if not available)
         if all(
             versions[key] == smoketest_config['versions'][key]
-            for key in list(versions.keys())
+            for key in versions.keys()
         ):
             return smoketest_config
 
@@ -259,7 +259,7 @@ def deploy_and_open_channel_alloc(deployment_key):
 
     alloc = dict()
     # preserve all accounts and contracts
-    for address in list(state.block.state.to_dict().keys()):
+    for address in state.block.state.to_dict().keys():
         address = hexlify(address).decode()
         alloc[address] = state.block.account_to_dict(address)
 

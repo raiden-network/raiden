@@ -5,7 +5,7 @@ def print_serialization(pstats):  # pylint: disable=too-many-locals
     print('ncalls         tottime  percall  %    cumtime  percall  function')
     total_pct = 0.0
 
-    for path_line_func, data in list(pstats.sort_stats('module', 'cumulative').stats.items()):
+    for path_line_func, data in pstats.sort_stats('module', 'cumulative').stats.items():
         path, line, func = path_line_func  # pylint: disable=unused-variable
 
         is_rlp = 'rlp' in path

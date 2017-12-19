@@ -146,7 +146,7 @@ def restapi_setup_urls(flask_api_context, rest_api, urls):
 
 
 def restapi_setup_type_converters(flask_app, names_to_converters):
-    for key, value in list(names_to_converters.items()):
+    for key, value in names_to_converters.items():
         flask_app.url_map.converters[key] = value
 
 

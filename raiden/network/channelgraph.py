@@ -303,7 +303,7 @@ class ChannelGraph(object):
 
         return [
             path
-            for path in list(all_paths.values())
+            for path in all_paths.values()
             if len(path) == num_hops + 1
         ]
 

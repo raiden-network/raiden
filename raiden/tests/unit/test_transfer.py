@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 import gevent
 import pytest
 from coincurve import PrivateKey
