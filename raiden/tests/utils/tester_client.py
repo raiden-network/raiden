@@ -225,6 +225,14 @@ class FilterTesterMock(object):
         self.events = list()
 
 
+class ClientMock(object):
+    def __init__(self):
+        self.shutting_down_event = None
+
+    def inject_shutting_down_event(self, event):
+        self.shutting_down_event = event
+
+
 class BlockChainServiceTesterMock(object):
     def __init__(self, private_key, tester_state):
         self.tester_state = tester_state
@@ -237,6 +245,7 @@ class BlockChainServiceTesterMock(object):
         self.address_to_discovery = dict()
         self.address_to_nettingchannel = dict()
         self.address_to_registry = dict()
+        self.client = ClientMock()
 
     def block_number(self):
         return self.tester_state.block.number
