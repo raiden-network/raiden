@@ -154,12 +154,12 @@ def format_data_for_call(
 
 
 def check_node_connection(func):
-    """ A decorator to reconnect if the connection to the node is lost."""
+    """ A decorator to reconnect if the connection to the node is lost.
+    Decorator should only wrap methods of the JSONRPCClient class"""
     def retry_on_disconnect(self, *args, **kwargs):
-        """self here is always an obhect of JSONRPCClient"""
         for i, timeout in enumerate(timeout_two_stage(10, 3, 10)):
 
-            if self.shutting_down_event and self.shutting_down_event.is_set():
+            if self.stop_event and self.stop_event.is_set():
                 raise RaidenShuttingDown()
 
             try:
@@ -208,7 +208,7 @@ class JSONRPCClient(object):
         self.sender = privatekey_to_address(privkey)
         # Needs to be initialized to None in the beginning since JSONRPCClient
         # gets constructed before the RaidenService Object.
-        self.shutting_down_event = None
+        self.stop_event = None
 
         self.nonce_last_update = 0
         self.nonce_current_value = None
@@ -276,8 +276,8 @@ class JSONRPCClient(object):
 
             return self.nonce_current_value
 
-    def inject_shutting_down_event(self, event):
-        self.shutting_down_event = event
+    def inject_stop_event(self, event):
+        self.stop_event = event
 
     def balance(self, account):
         """ Return the balance of the account of given address. """
