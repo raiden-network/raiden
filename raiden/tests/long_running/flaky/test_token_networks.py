@@ -85,7 +85,7 @@ def test_participant_selection(raiden_network, token_addresses):
     # average channel count
     acc = (
         sum(len(connection_manager.open_channels) for connection_manager in connection_managers) /
-        float(len(connection_managers))
+        len(connection_managers)
     )
 
     try:
